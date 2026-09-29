@@ -2,7 +2,7 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 36086:
+/***/ 18538:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -53,7 +53,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.exec = exec;
 exports.getExecOutput = getExecOutput;
 const string_decoder_1 = __nccwpck_require__(71576);
-const tr = __importStar(__nccwpck_require__(55908));
+const tr = __importStar(__nccwpck_require__(4094));
 /**
  * Exec a command.
  * Output will be streamed to the live console.
@@ -125,7 +125,7 @@ function getExecOutput(commandLine, args, options) {
 
 /***/ }),
 
-/***/ 55908:
+/***/ 4094:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -179,8 +179,8 @@ const os = __importStar(__nccwpck_require__(22037));
 const events = __importStar(__nccwpck_require__(82361));
 const child = __importStar(__nccwpck_require__(32081));
 const path = __importStar(__nccwpck_require__(71017));
-const io = __importStar(__nccwpck_require__(15476));
-const ioUtil = __importStar(__nccwpck_require__(90188));
+const io = __importStar(__nccwpck_require__(34166));
+const ioUtil = __importStar(__nccwpck_require__(4813));
 const timers_1 = __nccwpck_require__(39512);
 /* eslint-disable @typescript-eslint/unbound-method */
 const IS_WINDOWS = process.platform === 'win32';
@@ -757,7 +757,7 @@ class ExecState extends events.EventEmitter {
 
 /***/ }),
 
-/***/ 81103:
+/***/ 26402:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -820,7 +820,7 @@ exports.Context = Context;
 
 /***/ }),
 
-/***/ 87211:
+/***/ 78227:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -861,8 +861,8 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.context = void 0;
 exports.getOctokit = getOctokit;
-const Context = __importStar(__nccwpck_require__(81103));
-const utils_1 = __nccwpck_require__(76954);
+const Context = __importStar(__nccwpck_require__(26402));
+const utils_1 = __nccwpck_require__(33536);
 exports.context = new Context.Context();
 /**
  * Returns a hydrated octokit ready to use for GitHub Actions
@@ -878,7 +878,7 @@ function getOctokit(token, options, ...additionalPlugins) {
 
 /***/ }),
 
-/***/ 8423:
+/***/ 92746:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -931,8 +931,8 @@ exports.getProxyAgent = getProxyAgent;
 exports.getProxyAgentDispatcher = getProxyAgentDispatcher;
 exports.getProxyFetch = getProxyFetch;
 exports.getApiBaseUrl = getApiBaseUrl;
-const httpClient = __importStar(__nccwpck_require__(33843));
-const undici_1 = __nccwpck_require__(79868);
+const httpClient = __importStar(__nccwpck_require__(75784));
+const undici_1 = __nccwpck_require__(18381);
 function getAuthString(token, options) {
     if (!token && !options.auth) {
         throw new Error('Parameter token or opts.auth is required');
@@ -964,7 +964,7 @@ function getApiBaseUrl() {
 
 /***/ }),
 
-/***/ 76954:
+/***/ 33536:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1005,12 +1005,12 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitHub = exports.defaults = exports.context = void 0;
 exports.getOctokitOptions = getOctokitOptions;
-const Context = __importStar(__nccwpck_require__(81103));
-const Utils = __importStar(__nccwpck_require__(8423));
+const Context = __importStar(__nccwpck_require__(26402));
+const Utils = __importStar(__nccwpck_require__(92746));
 // octokit + plugins
-const core_1 = __nccwpck_require__(47216);
-const plugin_rest_endpoint_methods_1 = __nccwpck_require__(57496);
-const plugin_paginate_rest_1 = __nccwpck_require__(55347);
+const core_1 = __nccwpck_require__(922);
+const plugin_rest_endpoint_methods_1 = __nccwpck_require__(50305);
+const plugin_paginate_rest_1 = __nccwpck_require__(36738);
 exports.context = new Context.Context();
 const baseUrl = Utils.getApiBaseUrl();
 exports.defaults = {
@@ -1040,7 +1040,7 @@ function getOctokitOptions(token, options) {
 
 /***/ }),
 
-/***/ 33843:
+/***/ 75784:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -1094,9 +1094,9 @@ exports.getProxyUrl = getProxyUrl;
 exports.isHttps = isHttps;
 const http = __importStar(__nccwpck_require__(13685));
 const https = __importStar(__nccwpck_require__(95687));
-const pm = __importStar(__nccwpck_require__(67906));
-const tunnel = __importStar(__nccwpck_require__(98787));
-const undici_1 = __nccwpck_require__(79868);
+const pm = __importStar(__nccwpck_require__(34583));
+const tunnel = __importStar(__nccwpck_require__(64249));
+const undici_1 = __nccwpck_require__(18381);
 var HttpCodes;
 (function (HttpCodes) {
     HttpCodes[HttpCodes["OK"] = 200] = "OK";
@@ -1784,7 +1784,7 @@ const lowercaseKeys = (obj) => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCa
 
 /***/ }),
 
-/***/ 67906:
+/***/ 34583:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -1885,7 +1885,7 @@ class DecodedURL extends URL {
 
 /***/ }),
 
-/***/ 90188:
+/***/ 4813:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -2116,7 +2116,7 @@ function getCmdPath() {
 
 /***/ }),
 
-/***/ 15476:
+/***/ 34166:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -2172,7 +2172,7 @@ exports.which = which;
 exports.findInPath = findInPath;
 const assert_1 = __nccwpck_require__(39491);
 const path = __importStar(__nccwpck_require__(71017));
-const ioUtil = __importStar(__nccwpck_require__(90188));
+const ioUtil = __importStar(__nccwpck_require__(4813));
 /**
  * Copies a file or folder.
  * Based off of shelljs - https://github.com/shelljs/shelljs/blob/9237f66c52e5daa40458f94f9565e18e8132f5a6/src/cp.js
@@ -2435,13 +2435,13 @@ function copyFile(srcFile, destFile, force) {
 
 /***/ }),
 
-/***/ 6465:
+/***/ 61570:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const stringWidth = __nccwpck_require__(78963)
+const stringWidth = __nccwpck_require__(77486)
 
 function ansiAlign (text, opts) {
   if (!text) return text
@@ -2504,7 +2504,7 @@ function fullDiff (maxWidth, curWidth) {
 
 /***/ }),
 
-/***/ 16083:
+/***/ 75207:
 /***/ ((module) => {
 
 "use strict";
@@ -2522,12 +2522,12 @@ module.exports = ({onlyFirst = false} = {}) => {
 
 /***/ }),
 
-/***/ 76291:
+/***/ 77755:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const cliBoxes = __nccwpck_require__(70106);
+const cliBoxes = __nccwpck_require__(57227);
 
 module.exports = cliBoxes;
 // TODO: Remove this for the next major release
@@ -2536,7 +2536,7 @@ module.exports["default"] = cliBoxes;
 
 /***/ }),
 
-/***/ 25863:
+/***/ 33104:
 /***/ ((module) => {
 
 module.exports = () => {
@@ -2547,7 +2547,7 @@ module.exports = () => {
 
 /***/ }),
 
-/***/ 44393:
+/***/ 29311:
 /***/ ((module) => {
 
 "use strict";
@@ -2561,7 +2561,7 @@ module.exports = function () {
 
 /***/ }),
 
-/***/ 22439:
+/***/ 24063:
 /***/ ((module) => {
 
 "use strict";
@@ -2619,7 +2619,7 @@ module.exports["default"] = isFullwidthCodePoint;
 
 /***/ }),
 
-/***/ 87969:
+/***/ 783:
 /***/ ((__unused_webpack_module, exports) => {
 
 /*! js-yaml 5.4.1 https://github.com/nodeca/js-yaml @license MIT */
@@ -6350,19 +6350,19 @@ exports.visit = visit;
 
 /***/ }),
 
-/***/ 18342:
+/***/ 75430:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-exports.quote = __nccwpck_require__(17833);
-exports.parse = __nccwpck_require__(71663);
+exports.quote = __nccwpck_require__(91017);
+exports.parse = __nccwpck_require__(79131);
 
 
 /***/ }),
 
-/***/ 71663:
+/***/ 79131:
 /***/ ((module) => {
 
 "use strict";
@@ -6700,7 +6700,7 @@ module.exports = function parse(s, env, opts) {
 
 /***/ }),
 
-/***/ 17833:
+/***/ 91017:
 /***/ ((module) => {
 
 "use strict";
@@ -6773,14 +6773,14 @@ module.exports = function quote(xs) {
 
 /***/ }),
 
-/***/ 78963:
+/***/ 77486:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const stripAnsi = __nccwpck_require__(83941);
-const isFullwidthCodePoint = __nccwpck_require__(22439);
-const emojiRegex = __nccwpck_require__(44393);
+const stripAnsi = __nccwpck_require__(10828);
+const isFullwidthCodePoint = __nccwpck_require__(24063);
+const emojiRegex = __nccwpck_require__(29311);
 
 const stringWidth = string => {
 	if (typeof string !== 'string' || string.length === 0) {
@@ -6828,27 +6828,27 @@ module.exports["default"] = stringWidth;
 
 /***/ }),
 
-/***/ 83941:
+/***/ 10828:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const ansiRegex = __nccwpck_require__(16083);
+const ansiRegex = __nccwpck_require__(75207);
 
 module.exports = string => typeof string === 'string' ? string.replace(ansiRegex(), '') : string;
 
 
 /***/ }),
 
-/***/ 98787:
+/***/ 64249:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = __nccwpck_require__(27222);
+module.exports = __nccwpck_require__(30709);
 
 
 /***/ }),
 
-/***/ 27222:
+/***/ 30709:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -7120,7 +7120,7 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 37124:
+/***/ 24258:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 (function(nacl) {
@@ -9518,34 +9518,34 @@ nacl.setPRNG = function(fn) {
 
 /***/ }),
 
-/***/ 79868:
+/***/ 18381:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Client = __nccwpck_require__(41234)
-const Dispatcher = __nccwpck_require__(11588)
-const Pool = __nccwpck_require__(3639)
-const BalancedPool = __nccwpck_require__(58591)
-const Agent = __nccwpck_require__(78590)
-const ProxyAgent = __nccwpck_require__(76930)
-const EnvHttpProxyAgent = __nccwpck_require__(52673)
-const RetryAgent = __nccwpck_require__(4420)
-const errors = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
+const Client = __nccwpck_require__(85849)
+const Dispatcher = __nccwpck_require__(66071)
+const Pool = __nccwpck_require__(80229)
+const BalancedPool = __nccwpck_require__(68255)
+const Agent = __nccwpck_require__(73274)
+const ProxyAgent = __nccwpck_require__(87187)
+const EnvHttpProxyAgent = __nccwpck_require__(29941)
+const RetryAgent = __nccwpck_require__(55184)
+const errors = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
 const { InvalidArgumentError } = errors
-const api = __nccwpck_require__(56796)
-const buildConnector = __nccwpck_require__(28786)
-const MockClient = __nccwpck_require__(56607)
-const MockAgent = __nccwpck_require__(36294)
-const MockPool = __nccwpck_require__(60834)
-const mockErrors = __nccwpck_require__(63739)
-const RetryHandler = __nccwpck_require__(30160)
-const { getGlobalDispatcher, setGlobalDispatcher } = __nccwpck_require__(12621)
-const DecoratorHandler = __nccwpck_require__(63859)
-const RedirectHandler = __nccwpck_require__(71779)
-const createRedirectInterceptor = __nccwpck_require__(96329)
+const api = __nccwpck_require__(20617)
+const buildConnector = __nccwpck_require__(41429)
+const MockClient = __nccwpck_require__(4227)
+const MockAgent = __nccwpck_require__(46432)
+const MockPool = __nccwpck_require__(36575)
+const mockErrors = __nccwpck_require__(19329)
+const RetryHandler = __nccwpck_require__(64524)
+const { getGlobalDispatcher, setGlobalDispatcher } = __nccwpck_require__(19405)
+const DecoratorHandler = __nccwpck_require__(41738)
+const RedirectHandler = __nccwpck_require__(64014)
+const createRedirectInterceptor = __nccwpck_require__(40928)
 
 Object.assign(Dispatcher.prototype, api)
 
@@ -9563,10 +9563,10 @@ module.exports.DecoratorHandler = DecoratorHandler
 module.exports.RedirectHandler = RedirectHandler
 module.exports.createRedirectInterceptor = createRedirectInterceptor
 module.exports.interceptors = {
-  redirect: __nccwpck_require__(37849),
-  retry: __nccwpck_require__(19182),
-  dump: __nccwpck_require__(13413),
-  dns: __nccwpck_require__(58033)
+  redirect: __nccwpck_require__(74872),
+  retry: __nccwpck_require__(79637),
+  dump: __nccwpck_require__(12493),
+  dns: __nccwpck_require__(20346)
 }
 
 module.exports.buildConnector = buildConnector
@@ -9628,7 +9628,7 @@ function makeDispatcher (fn) {
 module.exports.setGlobalDispatcher = setGlobalDispatcher
 module.exports.getGlobalDispatcher = getGlobalDispatcher
 
-const fetchImpl = (__nccwpck_require__(9526).fetch)
+const fetchImpl = (__nccwpck_require__(78329).fetch)
 module.exports.fetch = async function fetch (init, options = undefined) {
   try {
     return await fetchImpl(init, options)
@@ -9640,39 +9640,39 @@ module.exports.fetch = async function fetch (init, options = undefined) {
     throw err
   }
 }
-module.exports.Headers = __nccwpck_require__(66089).Headers
-module.exports.Response = __nccwpck_require__(98579).Response
-module.exports.Request = __nccwpck_require__(3891).Request
-module.exports.FormData = __nccwpck_require__(26697).FormData
+module.exports.Headers = __nccwpck_require__(10561).Headers
+module.exports.Response = __nccwpck_require__(51132).Response
+module.exports.Request = __nccwpck_require__(83211).Request
+module.exports.FormData = __nccwpck_require__(62598).FormData
 module.exports.File = globalThis.File ?? (__nccwpck_require__(72254).File)
-module.exports.FileReader = __nccwpck_require__(73002).FileReader
+module.exports.FileReader = __nccwpck_require__(65153).FileReader
 
-const { setGlobalOrigin, getGlobalOrigin } = __nccwpck_require__(82470)
+const { setGlobalOrigin, getGlobalOrigin } = __nccwpck_require__(13924)
 
 module.exports.setGlobalOrigin = setGlobalOrigin
 module.exports.getGlobalOrigin = getGlobalOrigin
 
-const { CacheStorage } = __nccwpck_require__(10471)
-const { kConstruct } = __nccwpck_require__(93639)
+const { CacheStorage } = __nccwpck_require__(11069)
+const { kConstruct } = __nccwpck_require__(50591)
 
 // Cache & CacheStorage are tightly coupled with fetch. Even if it may run
 // in an older version of Node, it doesn't have any use without fetch.
 module.exports.caches = new CacheStorage(kConstruct)
 
-const { deleteCookie, getCookies, getSetCookies, setCookie } = __nccwpck_require__(30035)
+const { deleteCookie, getCookies, getSetCookies, setCookie } = __nccwpck_require__(15855)
 
 module.exports.deleteCookie = deleteCookie
 module.exports.getCookies = getCookies
 module.exports.getSetCookies = getSetCookies
 module.exports.setCookie = setCookie
 
-const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(29192)
+const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(96730)
 
 module.exports.parseMIMEType = parseMIMEType
 module.exports.serializeAMimeType = serializeAMimeType
 
-const { CloseEvent, ErrorEvent, MessageEvent } = __nccwpck_require__(46055)
-module.exports.WebSocket = __nccwpck_require__(1468).WebSocket
+const { CloseEvent, ErrorEvent, MessageEvent } = __nccwpck_require__(69459)
+module.exports.WebSocket = __nccwpck_require__(16416).WebSocket
 module.exports.CloseEvent = CloseEvent
 module.exports.ErrorEvent = ErrorEvent
 module.exports.MessageEvent = MessageEvent
@@ -9688,18 +9688,18 @@ module.exports.MockPool = MockPool
 module.exports.MockAgent = MockAgent
 module.exports.mockErrors = mockErrors
 
-const { EventSource } = __nccwpck_require__(90109)
+const { EventSource } = __nccwpck_require__(6731)
 
 module.exports.EventSource = EventSource
 
 
 /***/ }),
 
-/***/ 52872:
+/***/ 97433:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { addAbortListener } = __nccwpck_require__(39141)
-const { RequestAbortedError } = __nccwpck_require__(5425)
+const { addAbortListener } = __nccwpck_require__(50011)
+const { RequestAbortedError } = __nccwpck_require__(35990)
 
 const kListener = Symbol('kListener')
 const kSignal = Symbol('kSignal')
@@ -9759,7 +9759,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 15921:
+/***/ 93671:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -9767,9 +9767,9 @@ module.exports = {
 
 const assert = __nccwpck_require__(98061)
 const { AsyncResource } = __nccwpck_require__(92761)
-const { InvalidArgumentError, SocketError } = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
-const { addSignal, removeSignal } = __nccwpck_require__(52872)
+const { InvalidArgumentError, SocketError } = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
+const { addSignal, removeSignal } = __nccwpck_require__(97433)
 
 class ConnectHandler extends AsyncResource {
   constructor (opts, callback) {
@@ -9875,7 +9875,7 @@ module.exports = connect
 
 /***/ }),
 
-/***/ 69785:
+/***/ 281:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -9890,10 +9890,10 @@ const {
   InvalidArgumentError,
   InvalidReturnValueError,
   RequestAbortedError
-} = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
+} = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
 const { AsyncResource } = __nccwpck_require__(92761)
-const { addSignal, removeSignal } = __nccwpck_require__(52872)
+const { addSignal, removeSignal } = __nccwpck_require__(97433)
 const assert = __nccwpck_require__(98061)
 
 const kResume = Symbol('resume')
@@ -10134,17 +10134,17 @@ module.exports = pipeline
 
 /***/ }),
 
-/***/ 67177:
+/***/ 26562:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const assert = __nccwpck_require__(98061)
-const { Readable } = __nccwpck_require__(12217)
-const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
-const { getResolveErrorBodyCallback } = __nccwpck_require__(23292)
+const { Readable } = __nccwpck_require__(93401)
+const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
+const { getResolveErrorBodyCallback } = __nccwpck_require__(80710)
 const { AsyncResource } = __nccwpck_require__(92761)
 
 class RequestHandler extends AsyncResource {
@@ -10356,7 +10356,7 @@ module.exports.RequestHandler = RequestHandler
 
 /***/ }),
 
-/***/ 39777:
+/***/ 75059:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -10364,11 +10364,11 @@ module.exports.RequestHandler = RequestHandler
 
 const assert = __nccwpck_require__(98061)
 const { finished, PassThrough } = __nccwpck_require__(84492)
-const { InvalidArgumentError, InvalidReturnValueError } = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
-const { getResolveErrorBodyCallback } = __nccwpck_require__(23292)
+const { InvalidArgumentError, InvalidReturnValueError } = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
+const { getResolveErrorBodyCallback } = __nccwpck_require__(80710)
 const { AsyncResource } = __nccwpck_require__(92761)
-const { addSignal, removeSignal } = __nccwpck_require__(52872)
+const { addSignal, removeSignal } = __nccwpck_require__(97433)
 
 class StreamHandler extends AsyncResource {
   constructor (opts, factory, callback) {
@@ -10584,16 +10584,16 @@ module.exports = stream
 
 /***/ }),
 
-/***/ 7981:
+/***/ 23792:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { InvalidArgumentError, SocketError } = __nccwpck_require__(5425)
+const { InvalidArgumentError, SocketError } = __nccwpck_require__(35990)
 const { AsyncResource } = __nccwpck_require__(92761)
-const util = __nccwpck_require__(39141)
-const { addSignal, removeSignal } = __nccwpck_require__(52872)
+const util = __nccwpck_require__(50011)
+const { addSignal, removeSignal } = __nccwpck_require__(97433)
 const assert = __nccwpck_require__(98061)
 
 class UpgradeHandler extends AsyncResource {
@@ -10700,22 +10700,22 @@ module.exports = upgrade
 
 /***/ }),
 
-/***/ 56796:
+/***/ 20617:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-module.exports.request = __nccwpck_require__(67177)
-module.exports.stream = __nccwpck_require__(39777)
-module.exports.pipeline = __nccwpck_require__(69785)
-module.exports.upgrade = __nccwpck_require__(7981)
-module.exports.connect = __nccwpck_require__(15921)
+module.exports.request = __nccwpck_require__(26562)
+module.exports.stream = __nccwpck_require__(75059)
+module.exports.pipeline = __nccwpck_require__(281)
+module.exports.upgrade = __nccwpck_require__(23792)
+module.exports.connect = __nccwpck_require__(93671)
 
 
 /***/ }),
 
-/***/ 12217:
+/***/ 93401:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -10725,9 +10725,9 @@ module.exports.connect = __nccwpck_require__(15921)
 
 const assert = __nccwpck_require__(98061)
 const { Readable } = __nccwpck_require__(84492)
-const { RequestAbortedError, NotSupportedError, InvalidArgumentError, AbortError } = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
-const { ReadableStreamFrom } = __nccwpck_require__(39141)
+const { RequestAbortedError, NotSupportedError, InvalidArgumentError, AbortError } = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
+const { ReadableStreamFrom } = __nccwpck_require__(50011)
 
 const kConsume = Symbol('kConsume')
 const kReading = Symbol('kReading')
@@ -11108,15 +11108,15 @@ module.exports = { Readable: BodyReadable, chunksDecode }
 
 /***/ }),
 
-/***/ 23292:
+/***/ 80710:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const assert = __nccwpck_require__(98061)
 const {
   ResponseStatusCodeError
-} = __nccwpck_require__(5425)
+} = __nccwpck_require__(35990)
 
-const { chunksDecode } = __nccwpck_require__(12217)
+const { chunksDecode } = __nccwpck_require__(93401)
 const CHUNK_LIMIT = 128 * 1024
 
 async function getResolveErrorBodyCallback ({ callback, body, contentType, statusCode, statusMessage, headers }) {
@@ -11208,7 +11208,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 28786:
+/***/ 41429:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -11216,9 +11216,9 @@ module.exports = {
 
 const net = __nccwpck_require__(87503)
 const assert = __nccwpck_require__(98061)
-const util = __nccwpck_require__(39141)
-const { InvalidArgumentError, ConnectTimeoutError } = __nccwpck_require__(5425)
-const timers = __nccwpck_require__(52372)
+const util = __nccwpck_require__(50011)
+const { InvalidArgumentError, ConnectTimeoutError } = __nccwpck_require__(35990)
+const timers = __nccwpck_require__(77512)
 
 function noop () {}
 
@@ -11456,7 +11456,7 @@ module.exports = buildConnector
 
 /***/ }),
 
-/***/ 41233:
+/***/ 53451:
 /***/ ((module) => {
 
 "use strict";
@@ -11582,7 +11582,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 59241:
+/***/ 65543:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -11792,7 +11792,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 5425:
+/***/ 35990:
 /***/ ((module) => {
 
 "use strict";
@@ -12225,7 +12225,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 48356:
+/***/ 13484:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -12234,7 +12234,7 @@ module.exports = {
 const {
   InvalidArgumentError,
   NotSupportedError
-} = __nccwpck_require__(5425)
+} = __nccwpck_require__(35990)
 const assert = __nccwpck_require__(98061)
 const {
   isValidHTTPToken,
@@ -12249,9 +12249,9 @@ const {
   validateHandler,
   getServerName,
   normalizedMethodRecords
-} = __nccwpck_require__(39141)
-const { channels } = __nccwpck_require__(59241)
-const { headerNameLowerCasedRecord } = __nccwpck_require__(41233)
+} = __nccwpck_require__(50011)
+const { channels } = __nccwpck_require__(65543)
+const { headerNameLowerCasedRecord } = __nccwpck_require__(53451)
 
 // Verifies that a given path is valid does not contain control chars \x00 to \x20
 const invalidPathRegex = /[^\u0021-\u00ff]/
@@ -12649,7 +12649,7 @@ module.exports = Request
 
 /***/ }),
 
-/***/ 53606:
+/***/ 13638:
 /***/ ((module) => {
 
 module.exports = {
@@ -12723,7 +12723,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 71228:
+/***/ 30723:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -12732,7 +12732,7 @@ module.exports = {
 const {
   wellknownHeaderNames,
   headerNameLowerCasedRecord
-} = __nccwpck_require__(41233)
+} = __nccwpck_require__(53451)
 
 class TstNode {
   /** @type {any} */
@@ -12883,14 +12883,14 @@ module.exports = {
 
 /***/ }),
 
-/***/ 39141:
+/***/ 50011:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const assert = __nccwpck_require__(98061)
-const { kDestroyed, kBodyUsed, kListeners, kBody } = __nccwpck_require__(53606)
+const { kDestroyed, kBodyUsed, kListeners, kBody } = __nccwpck_require__(13638)
 const { IncomingMessage } = __nccwpck_require__(88849)
 const stream = __nccwpck_require__(84492)
 const net = __nccwpck_require__(87503)
@@ -12898,9 +12898,9 @@ const { Blob } = __nccwpck_require__(72254)
 const nodeUtil = __nccwpck_require__(47261)
 const { stringify } = __nccwpck_require__(39630)
 const { EventEmitter: EE } = __nccwpck_require__(15673)
-const { InvalidArgumentError } = __nccwpck_require__(5425)
-const { headerNameLowerCasedRecord } = __nccwpck_require__(41233)
-const { tree } = __nccwpck_require__(71228)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
+const { headerNameLowerCasedRecord } = __nccwpck_require__(53451)
+const { tree } = __nccwpck_require__(30723)
 
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(v => Number(v))
 
@@ -13610,19 +13610,19 @@ module.exports = {
 
 /***/ }),
 
-/***/ 78590:
+/***/ 73274:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { InvalidArgumentError } = __nccwpck_require__(5425)
-const { kClients, kRunning, kClose, kDestroy, kDispatch, kInterceptors } = __nccwpck_require__(53606)
-const DispatcherBase = __nccwpck_require__(92548)
-const Pool = __nccwpck_require__(3639)
-const Client = __nccwpck_require__(41234)
-const util = __nccwpck_require__(39141)
-const createRedirectInterceptor = __nccwpck_require__(96329)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
+const { kClients, kRunning, kClose, kDestroy, kDispatch, kInterceptors } = __nccwpck_require__(13638)
+const DispatcherBase = __nccwpck_require__(39504)
+const Pool = __nccwpck_require__(80229)
+const Client = __nccwpck_require__(85849)
+const util = __nccwpck_require__(50011)
+const createRedirectInterceptor = __nccwpck_require__(40928)
 
 const kOnConnect = Symbol('onConnect')
 const kOnDisconnect = Symbol('onDisconnect')
@@ -13747,7 +13747,7 @@ module.exports = Agent
 
 /***/ }),
 
-/***/ 58591:
+/***/ 68255:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -13756,7 +13756,7 @@ module.exports = Agent
 const {
   BalancedPoolMissingUpstreamError,
   InvalidArgumentError
-} = __nccwpck_require__(5425)
+} = __nccwpck_require__(35990)
 const {
   PoolBase,
   kClients,
@@ -13764,10 +13764,10 @@ const {
   kAddClient,
   kRemoveClient,
   kGetDispatcher
-} = __nccwpck_require__(24458)
-const Pool = __nccwpck_require__(3639)
-const { kUrl, kInterceptors } = __nccwpck_require__(53606)
-const { parseOrigin } = __nccwpck_require__(39141)
+} = __nccwpck_require__(1467)
+const Pool = __nccwpck_require__(80229)
+const { kUrl, kInterceptors } = __nccwpck_require__(13638)
+const { parseOrigin } = __nccwpck_require__(50011)
 const kFactory = Symbol('factory')
 
 const kOptions = Symbol('options')
@@ -13964,7 +13964,7 @@ module.exports = BalancedPool
 
 /***/ }),
 
-/***/ 9581:
+/***/ 14429:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -13973,9 +13973,9 @@ module.exports = BalancedPool
 /* global WebAssembly */
 
 const assert = __nccwpck_require__(98061)
-const util = __nccwpck_require__(39141)
-const { channels } = __nccwpck_require__(59241)
-const timers = __nccwpck_require__(52372)
+const util = __nccwpck_require__(50011)
+const { channels } = __nccwpck_require__(65543)
+const timers = __nccwpck_require__(77512)
 const {
   RequestContentLengthMismatchError,
   ResponseContentLengthMismatchError,
@@ -13988,7 +13988,7 @@ const {
   BodyTimeoutError,
   HTTPParserError,
   ResponseExceededMaxSizeError
-} = __nccwpck_require__(5425)
+} = __nccwpck_require__(35990)
 const {
   kUrl,
   kReset,
@@ -14021,9 +14021,9 @@ const {
   kOnError,
   kResume,
   kHTTPContext
-} = __nccwpck_require__(53606)
+} = __nccwpck_require__(13638)
 
-const constants = __nccwpck_require__(41227)
+const constants = __nccwpck_require__(41721)
 const EMPTY_BUF = Buffer.alloc(0)
 const FastBuffer = Buffer[Symbol.species]
 const addListener = util.addListener
@@ -14035,11 +14035,11 @@ const kSocketUsed = Symbol('kSocketUsed')
 let extractBody
 
 async function lazyllhttp () {
-  const llhttpWasmData = process.env.JEST_WORKER_ID ? __nccwpck_require__(72134) : undefined
+  const llhttpWasmData = process.env.JEST_WORKER_ID ? __nccwpck_require__(46081) : undefined
 
   let mod
   try {
-    mod = await WebAssembly.compile(__nccwpck_require__(81820))
+    mod = await WebAssembly.compile(__nccwpck_require__(97877))
   } catch (e) {
     /* istanbul ignore next */
 
@@ -14047,7 +14047,7 @@ async function lazyllhttp () {
     // being enabled, but the occurring of this other error
     // * https://github.com/emscripten-core/emscripten/issues/11495
     // got me to remove that check to avoid breaking Node 12.
-    mod = await WebAssembly.compile(llhttpWasmData || __nccwpck_require__(72134))
+    mod = await WebAssembly.compile(llhttpWasmData || __nccwpck_require__(46081))
   }
 
   return await WebAssembly.instantiate(mod, {
@@ -14963,7 +14963,7 @@ function writeH1 (client, request) {
 
   if (util.isFormDataLike(body)) {
     if (!extractBody) {
-      extractBody = (__nccwpck_require__(27134).extractBody)
+      extractBody = (__nccwpck_require__(12749).extractBody)
     }
 
     const [bodyStream, contentType] = extractBody(body)
@@ -15476,7 +15476,7 @@ module.exports = connectH1
 
 /***/ }),
 
-/***/ 2003:
+/***/ 34879:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -15484,13 +15484,13 @@ module.exports = connectH1
 
 const assert = __nccwpck_require__(98061)
 const { pipeline } = __nccwpck_require__(84492)
-const util = __nccwpck_require__(39141)
+const util = __nccwpck_require__(50011)
 const {
   RequestContentLengthMismatchError,
   RequestAbortedError,
   SocketError,
   InformationalError
-} = __nccwpck_require__(5425)
+} = __nccwpck_require__(35990)
 const {
   kUrl,
   kReset,
@@ -15509,7 +15509,7 @@ const {
   kResume,
   kSize,
   kHTTPContext
-} = __nccwpck_require__(53606)
+} = __nccwpck_require__(13638)
 
 const kOpenStreams = Symbol('open streams')
 
@@ -15868,7 +15868,7 @@ function writeH2 (client, request) {
   let contentLength = util.bodyLength(body)
 
   if (util.isFormDataLike(body)) {
-    extractBody ??= (__nccwpck_require__(27134).extractBody)
+    extractBody ??= (__nccwpck_require__(12749).extractBody)
 
     const [bodyStream, contentType] = extractBody(body)
     headers['content-type'] = contentType
@@ -16228,7 +16228,7 @@ module.exports = connectH2
 
 /***/ }),
 
-/***/ 41234:
+/***/ 85849:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -16239,16 +16239,16 @@ module.exports = connectH2
 const assert = __nccwpck_require__(98061)
 const net = __nccwpck_require__(87503)
 const http = __nccwpck_require__(88849)
-const util = __nccwpck_require__(39141)
-const { channels } = __nccwpck_require__(59241)
-const Request = __nccwpck_require__(48356)
-const DispatcherBase = __nccwpck_require__(92548)
+const util = __nccwpck_require__(50011)
+const { channels } = __nccwpck_require__(65543)
+const Request = __nccwpck_require__(13484)
+const DispatcherBase = __nccwpck_require__(39504)
 const {
   InvalidArgumentError,
   InformationalError,
   ClientDestroyedError
-} = __nccwpck_require__(5425)
-const buildConnector = __nccwpck_require__(28786)
+} = __nccwpck_require__(35990)
+const buildConnector = __nccwpck_require__(41429)
 const {
   kUrl,
   kServerName,
@@ -16290,9 +16290,9 @@ const {
   kHTTPContext,
   kMaxConcurrentStreams,
   kResume
-} = __nccwpck_require__(53606)
-const connectH1 = __nccwpck_require__(9581)
-const connectH2 = __nccwpck_require__(2003)
+} = __nccwpck_require__(13638)
+const connectH1 = __nccwpck_require__(14429)
+const connectH2 = __nccwpck_require__(34879)
 let deprecatedInterceptorWarned = false
 
 const kClosedResolve = Symbol('kClosedResolve')
@@ -16599,7 +16599,7 @@ class Client extends DispatcherBase {
   }
 }
 
-const createRedirectInterceptor = __nccwpck_require__(96329)
+const createRedirectInterceptor = __nccwpck_require__(40928)
 
 function onError (client, err) {
   if (
@@ -16859,19 +16859,19 @@ module.exports = Client
 
 /***/ }),
 
-/***/ 92548:
+/***/ 39504:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Dispatcher = __nccwpck_require__(11588)
+const Dispatcher = __nccwpck_require__(66071)
 const {
   ClientDestroyedError,
   ClientClosedError,
   InvalidArgumentError
-} = __nccwpck_require__(5425)
-const { kDestroy, kClose, kClosed, kDestroyed, kDispatch, kInterceptors } = __nccwpck_require__(53606)
+} = __nccwpck_require__(35990)
+const { kDestroy, kClose, kClosed, kDestroyed, kDispatch, kInterceptors } = __nccwpck_require__(13638)
 
 const kOnDestroyed = Symbol('onDestroyed')
 const kOnClosed = Symbol('onClosed')
@@ -17066,7 +17066,7 @@ module.exports = DispatcherBase
 
 /***/ }),
 
-/***/ 11588:
+/***/ 66071:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -17139,16 +17139,16 @@ module.exports = Dispatcher
 
 /***/ }),
 
-/***/ 52673:
+/***/ 29941:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const DispatcherBase = __nccwpck_require__(92548)
-const { kClose, kDestroy, kClosed, kDestroyed, kDispatch, kNoProxyAgent, kHttpProxyAgent, kHttpsProxyAgent } = __nccwpck_require__(53606)
-const ProxyAgent = __nccwpck_require__(76930)
-const Agent = __nccwpck_require__(78590)
+const DispatcherBase = __nccwpck_require__(39504)
+const { kClose, kDestroy, kClosed, kDestroyed, kDispatch, kNoProxyAgent, kHttpProxyAgent, kHttpsProxyAgent } = __nccwpck_require__(13638)
+const ProxyAgent = __nccwpck_require__(87187)
+const Agent = __nccwpck_require__(73274)
 
 const DEFAULT_PORTS = {
   'http:': 80,
@@ -17307,7 +17307,7 @@ module.exports = EnvHttpProxyAgent
 
 /***/ }),
 
-/***/ 79468:
+/***/ 27092:
 /***/ ((module) => {
 
 "use strict";
@@ -17432,16 +17432,16 @@ module.exports = class FixedQueue {
 
 /***/ }),
 
-/***/ 24458:
+/***/ 1467:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const DispatcherBase = __nccwpck_require__(92548)
-const FixedQueue = __nccwpck_require__(79468)
-const { kConnected, kSize, kRunning, kPending, kQueued, kBusy, kFree, kUrl, kClose, kDestroy, kDispatch } = __nccwpck_require__(53606)
-const PoolStats = __nccwpck_require__(41872)
+const DispatcherBase = __nccwpck_require__(39504)
+const FixedQueue = __nccwpck_require__(27092)
+const { kConnected, kSize, kRunning, kPending, kQueued, kBusy, kFree, kUrl, kClose, kDestroy, kDispatch } = __nccwpck_require__(13638)
+const PoolStats = __nccwpck_require__(48309)
 
 const kClients = Symbol('clients')
 const kNeedDrain = Symbol('needDrain')
@@ -17634,10 +17634,10 @@ module.exports = {
 
 /***/ }),
 
-/***/ 41872:
+/***/ 48309:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const { kFree, kConnected, kPending, kQueued, kRunning, kSize } = __nccwpck_require__(53606)
+const { kFree, kConnected, kPending, kQueued, kRunning, kSize } = __nccwpck_require__(13638)
 const kPool = Symbol('pool')
 
 class PoolStats {
@@ -17675,7 +17675,7 @@ module.exports = PoolStats
 
 /***/ }),
 
-/***/ 3639:
+/***/ 80229:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -17687,14 +17687,14 @@ const {
   kNeedDrain,
   kAddClient,
   kGetDispatcher
-} = __nccwpck_require__(24458)
-const Client = __nccwpck_require__(41234)
+} = __nccwpck_require__(1467)
+const Client = __nccwpck_require__(85849)
 const {
   InvalidArgumentError
-} = __nccwpck_require__(5425)
-const util = __nccwpck_require__(39141)
-const { kUrl, kInterceptors } = __nccwpck_require__(53606)
-const buildConnector = __nccwpck_require__(28786)
+} = __nccwpck_require__(35990)
+const util = __nccwpck_require__(50011)
+const { kUrl, kInterceptors } = __nccwpck_require__(13638)
+const buildConnector = __nccwpck_require__(41429)
 
 const kOptions = Symbol('options')
 const kConnections = Symbol('connections')
@@ -17790,20 +17790,20 @@ module.exports = Pool
 
 /***/ }),
 
-/***/ 76930:
+/***/ 87187:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kProxy, kClose, kDestroy, kDispatch, kInterceptors } = __nccwpck_require__(53606)
+const { kProxy, kClose, kDestroy, kDispatch, kInterceptors } = __nccwpck_require__(13638)
 const { URL } = __nccwpck_require__(41041)
-const Agent = __nccwpck_require__(78590)
-const Pool = __nccwpck_require__(3639)
-const DispatcherBase = __nccwpck_require__(92548)
-const { InvalidArgumentError, RequestAbortedError, SecureProxyConnectionError } = __nccwpck_require__(5425)
-const buildConnector = __nccwpck_require__(28786)
-const Client = __nccwpck_require__(41234)
+const Agent = __nccwpck_require__(73274)
+const Pool = __nccwpck_require__(80229)
+const DispatcherBase = __nccwpck_require__(39504)
+const { InvalidArgumentError, RequestAbortedError, SecureProxyConnectionError } = __nccwpck_require__(35990)
+const buildConnector = __nccwpck_require__(41429)
+const Client = __nccwpck_require__(85849)
 
 const kAgent = Symbol('proxy agent')
 const kClient = Symbol('proxy client')
@@ -18072,14 +18072,14 @@ module.exports = ProxyAgent
 
 /***/ }),
 
-/***/ 4420:
+/***/ 55184:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const Dispatcher = __nccwpck_require__(11588)
-const RetryHandler = __nccwpck_require__(30160)
+const Dispatcher = __nccwpck_require__(66071)
+const RetryHandler = __nccwpck_require__(64524)
 
 class RetryAgent extends Dispatcher {
   #agent = null
@@ -18115,7 +18115,7 @@ module.exports = RetryAgent
 
 /***/ }),
 
-/***/ 12621:
+/***/ 19405:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -18124,8 +18124,8 @@ module.exports = RetryAgent
 // We include a version number for the Dispatcher API. In case of breaking changes,
 // this version number must be increased to avoid conflicts.
 const globalDispatcher = Symbol.for('undici.globalDispatcher.1')
-const { InvalidArgumentError } = __nccwpck_require__(5425)
-const Agent = __nccwpck_require__(78590)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
+const Agent = __nccwpck_require__(73274)
 
 if (getGlobalDispatcher() === undefined) {
   setGlobalDispatcher(new Agent())
@@ -18155,7 +18155,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 63859:
+/***/ 41738:
 /***/ ((module) => {
 
 "use strict";
@@ -18207,16 +18207,16 @@ module.exports = class DecoratorHandler {
 
 /***/ }),
 
-/***/ 71779:
+/***/ 64014:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const util = __nccwpck_require__(39141)
-const { kBodyUsed } = __nccwpck_require__(53606)
+const util = __nccwpck_require__(50011)
+const { kBodyUsed } = __nccwpck_require__(13638)
 const assert = __nccwpck_require__(98061)
-const { InvalidArgumentError } = __nccwpck_require__(5425)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
 const EE = __nccwpck_require__(15673)
 
 const redirectableStatusCodes = [300, 301, 302, 303, 307, 308]
@@ -18447,21 +18447,21 @@ module.exports = RedirectHandler
 
 /***/ }),
 
-/***/ 30160:
+/***/ 64524:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 const assert = __nccwpck_require__(98061)
 
-const { kRetryHandlerDefaultRetry } = __nccwpck_require__(53606)
-const { RequestRetryError } = __nccwpck_require__(5425)
+const { kRetryHandlerDefaultRetry } = __nccwpck_require__(13638)
+const { RequestRetryError } = __nccwpck_require__(35990)
 const {
   isDisturbed,
   parseHeaders,
   parseRangeHeader,
   wrapRequestBody
-} = __nccwpck_require__(39141)
+} = __nccwpck_require__(50011)
 
 function calculateRetryAfterHeader (retryAfter) {
   const current = Date.now()
@@ -18889,15 +18889,15 @@ module.exports = RetryHandler
 
 /***/ }),
 
-/***/ 58033:
+/***/ 20346:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 const { isIP } = __nccwpck_require__(87503)
 const { lookup } = __nccwpck_require__(30604)
-const DecoratorHandler = __nccwpck_require__(63859)
-const { InvalidArgumentError, InformationalError } = __nccwpck_require__(5425)
+const DecoratorHandler = __nccwpck_require__(41738)
+const { InvalidArgumentError, InformationalError } = __nccwpck_require__(35990)
 const maxInt = Math.pow(2, 31) - 1
 
 class DNSInstance {
@@ -19272,15 +19272,15 @@ module.exports = interceptorOpts => {
 
 /***/ }),
 
-/***/ 13413:
+/***/ 12493:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const util = __nccwpck_require__(39141)
-const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(5425)
-const DecoratorHandler = __nccwpck_require__(63859)
+const util = __nccwpck_require__(50011)
+const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(35990)
+const DecoratorHandler = __nccwpck_require__(41738)
 
 class DumpHandler extends DecoratorHandler {
   #maxSize = 1024 * 1024
@@ -19403,13 +19403,13 @@ module.exports = createDumpInterceptor
 
 /***/ }),
 
-/***/ 96329:
+/***/ 40928:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const RedirectHandler = __nccwpck_require__(71779)
+const RedirectHandler = __nccwpck_require__(64014)
 
 function createRedirectInterceptor ({ maxRedirections: defaultMaxRedirections }) {
   return (dispatch) => {
@@ -19432,12 +19432,12 @@ module.exports = createRedirectInterceptor
 
 /***/ }),
 
-/***/ 37849:
+/***/ 74872:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const RedirectHandler = __nccwpck_require__(71779)
+const RedirectHandler = __nccwpck_require__(64014)
 
 module.exports = opts => {
   const globalMaxRedirections = opts?.maxRedirections
@@ -19464,12 +19464,12 @@ module.exports = opts => {
 
 /***/ }),
 
-/***/ 19182:
+/***/ 79637:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
-const RetryHandler = __nccwpck_require__(30160)
+const RetryHandler = __nccwpck_require__(64524)
 
 module.exports = globalOpts => {
   return dispatch => {
@@ -19491,14 +19491,14 @@ module.exports = globalOpts => {
 
 /***/ }),
 
-/***/ 41227:
+/***/ 41721:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
-const utils_1 = __nccwpck_require__(8318);
+const utils_1 = __nccwpck_require__(69573);
 // C headers
 var ERROR;
 (function (ERROR) {
@@ -19776,7 +19776,7 @@ exports.SPECIAL_HEADERS = {
 
 /***/ }),
 
-/***/ 72134:
+/***/ 46081:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -19789,7 +19789,7 @@ module.exports = Buffer.from('AGFzbQEAAAABJwdgAX8Bf2ADf39/AX9gAX8AYAJ/fwBgBH9/f3
 
 /***/ }),
 
-/***/ 81820:
+/***/ 97877:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -19802,7 +19802,7 @@ module.exports = Buffer.from('AGFzbQEAAAABJwdgAX8Bf2ADf39/AX9gAX8AYAJ/fwBgBH9/f3
 
 /***/ }),
 
-/***/ 8318:
+/***/ 69573:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -19824,14 +19824,14 @@ exports.enumToMap = enumToMap;
 
 /***/ }),
 
-/***/ 36294:
+/***/ 46432:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kClients } = __nccwpck_require__(53606)
-const Agent = __nccwpck_require__(78590)
+const { kClients } = __nccwpck_require__(13638)
+const Agent = __nccwpck_require__(73274)
 const {
   kAgent,
   kMockAgentSet,
@@ -19842,14 +19842,14 @@ const {
   kGetNetConnect,
   kOptions,
   kFactory
-} = __nccwpck_require__(53353)
-const MockClient = __nccwpck_require__(56607)
-const MockPool = __nccwpck_require__(60834)
-const { matchValue, buildMockOptions } = __nccwpck_require__(58405)
-const { InvalidArgumentError, UndiciError } = __nccwpck_require__(5425)
-const Dispatcher = __nccwpck_require__(11588)
-const Pluralizer = __nccwpck_require__(90583)
-const PendingInterceptorsFormatter = __nccwpck_require__(63535)
+} = __nccwpck_require__(63822)
+const MockClient = __nccwpck_require__(4227)
+const MockPool = __nccwpck_require__(36575)
+const { matchValue, buildMockOptions } = __nccwpck_require__(38053)
+const { InvalidArgumentError, UndiciError } = __nccwpck_require__(35990)
+const Dispatcher = __nccwpck_require__(66071)
+const Pluralizer = __nccwpck_require__(97472)
+const PendingInterceptorsFormatter = __nccwpck_require__(56155)
 
 class MockAgent extends Dispatcher {
   constructor (opts) {
@@ -19992,15 +19992,15 @@ module.exports = MockAgent
 
 /***/ }),
 
-/***/ 56607:
+/***/ 4227:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const { promisify } = __nccwpck_require__(47261)
-const Client = __nccwpck_require__(41234)
-const { buildMockDispatch } = __nccwpck_require__(58405)
+const Client = __nccwpck_require__(85849)
+const { buildMockDispatch } = __nccwpck_require__(38053)
 const {
   kDispatches,
   kMockAgent,
@@ -20009,10 +20009,10 @@ const {
   kOrigin,
   kOriginalDispatch,
   kConnected
-} = __nccwpck_require__(53353)
-const { MockInterceptor } = __nccwpck_require__(14791)
-const Symbols = __nccwpck_require__(53606)
-const { InvalidArgumentError } = __nccwpck_require__(5425)
+} = __nccwpck_require__(63822)
+const { MockInterceptor } = __nccwpck_require__(9238)
+const Symbols = __nccwpck_require__(13638)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
 
 /**
  * MockClient provides an API that extends the Client to influence the mockDispatches.
@@ -20059,13 +20059,13 @@ module.exports = MockClient
 
 /***/ }),
 
-/***/ 63739:
+/***/ 19329:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { UndiciError } = __nccwpck_require__(5425)
+const { UndiciError } = __nccwpck_require__(35990)
 
 const kMockNotMatchedError = Symbol.for('undici.error.UND_MOCK_ERR_MOCK_NOT_MATCHED')
 
@@ -20095,13 +20095,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 14791:
+/***/ 9238:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { getResponseData, buildKey, addMockDispatch } = __nccwpck_require__(58405)
+const { getResponseData, buildKey, addMockDispatch } = __nccwpck_require__(38053)
 const {
   kDispatches,
   kDispatchKey,
@@ -20109,9 +20109,9 @@ const {
   kDefaultTrailers,
   kContentLength,
   kMockDispatch
-} = __nccwpck_require__(53353)
-const { InvalidArgumentError } = __nccwpck_require__(5425)
-const { buildURL } = __nccwpck_require__(39141)
+} = __nccwpck_require__(63822)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
+const { buildURL } = __nccwpck_require__(50011)
 
 /**
  * Defines the scope API for an interceptor reply
@@ -20310,15 +20310,15 @@ module.exports.MockScope = MockScope
 
 /***/ }),
 
-/***/ 60834:
+/***/ 36575:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const { promisify } = __nccwpck_require__(47261)
-const Pool = __nccwpck_require__(3639)
-const { buildMockDispatch } = __nccwpck_require__(58405)
+const Pool = __nccwpck_require__(80229)
+const { buildMockDispatch } = __nccwpck_require__(38053)
 const {
   kDispatches,
   kMockAgent,
@@ -20327,10 +20327,10 @@ const {
   kOrigin,
   kOriginalDispatch,
   kConnected
-} = __nccwpck_require__(53353)
-const { MockInterceptor } = __nccwpck_require__(14791)
-const Symbols = __nccwpck_require__(53606)
-const { InvalidArgumentError } = __nccwpck_require__(5425)
+} = __nccwpck_require__(63822)
+const { MockInterceptor } = __nccwpck_require__(9238)
+const Symbols = __nccwpck_require__(13638)
+const { InvalidArgumentError } = __nccwpck_require__(35990)
 
 /**
  * MockPool provides an API that extends the Pool to influence the mockDispatches.
@@ -20377,7 +20377,7 @@ module.exports = MockPool
 
 /***/ }),
 
-/***/ 53353:
+/***/ 63822:
 /***/ ((module) => {
 
 "use strict";
@@ -20408,21 +20408,21 @@ module.exports = {
 
 /***/ }),
 
-/***/ 58405:
+/***/ 38053:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { MockNotMatchedError } = __nccwpck_require__(63739)
+const { MockNotMatchedError } = __nccwpck_require__(19329)
 const {
   kDispatches,
   kMockAgent,
   kOriginalDispatch,
   kOrigin,
   kGetNetConnect
-} = __nccwpck_require__(53353)
-const { buildURL } = __nccwpck_require__(39141)
+} = __nccwpck_require__(63822)
+const { buildURL } = __nccwpck_require__(50011)
 const { STATUS_CODES } = __nccwpck_require__(88849)
 const {
   types: {
@@ -20783,7 +20783,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 63535:
+/***/ 56155:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -20834,7 +20834,7 @@ module.exports = class PendingInterceptorsFormatter {
 
 /***/ }),
 
-/***/ 90583:
+/***/ 97472:
 /***/ ((module) => {
 
 "use strict";
@@ -20871,7 +20871,7 @@ module.exports = class Pluralizer {
 
 /***/ }),
 
-/***/ 52372:
+/***/ 77512:
 /***/ ((module) => {
 
 "use strict";
@@ -21302,21 +21302,21 @@ module.exports = {
 
 /***/ }),
 
-/***/ 34713:
+/***/ 12714:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kConstruct } = __nccwpck_require__(93639)
-const { urlEquals, getFieldValues } = __nccwpck_require__(52789)
-const { kEnumerableProperty, isDisturbed } = __nccwpck_require__(39141)
-const { webidl } = __nccwpck_require__(69293)
-const { Response, cloneResponse, fromInnerResponse } = __nccwpck_require__(98579)
-const { Request, fromInnerRequest } = __nccwpck_require__(3891)
-const { kState } = __nccwpck_require__(15575)
-const { fetching } = __nccwpck_require__(9526)
-const { urlIsHttpHttpsScheme, createDeferredPromise, readAllBytes } = __nccwpck_require__(37458)
+const { kConstruct } = __nccwpck_require__(50591)
+const { urlEquals, getFieldValues } = __nccwpck_require__(99205)
+const { kEnumerableProperty, isDisturbed } = __nccwpck_require__(50011)
+const { webidl } = __nccwpck_require__(2227)
+const { Response, cloneResponse, fromInnerResponse } = __nccwpck_require__(51132)
+const { Request, fromInnerRequest } = __nccwpck_require__(83211)
+const { kState } = __nccwpck_require__(14935)
+const { fetching } = __nccwpck_require__(78329)
+const { urlIsHttpHttpsScheme, createDeferredPromise, readAllBytes } = __nccwpck_require__(98730)
 const assert = __nccwpck_require__(98061)
 
 /**
@@ -22169,16 +22169,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 10471:
+/***/ 11069:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kConstruct } = __nccwpck_require__(93639)
-const { Cache } = __nccwpck_require__(34713)
-const { webidl } = __nccwpck_require__(69293)
-const { kEnumerableProperty } = __nccwpck_require__(39141)
+const { kConstruct } = __nccwpck_require__(50591)
+const { Cache } = __nccwpck_require__(12714)
+const { webidl } = __nccwpck_require__(2227)
+const { kEnumerableProperty } = __nccwpck_require__(50011)
 
 class CacheStorage {
   /**
@@ -22329,28 +22329,28 @@ module.exports = {
 
 /***/ }),
 
-/***/ 93639:
+/***/ 50591:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 module.exports = {
-  kConstruct: (__nccwpck_require__(53606).kConstruct)
+  kConstruct: (__nccwpck_require__(13638).kConstruct)
 }
 
 
 /***/ }),
 
-/***/ 52789:
+/***/ 99205:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const assert = __nccwpck_require__(98061)
-const { URLSerializer } = __nccwpck_require__(29192)
-const { isValidHeaderName } = __nccwpck_require__(37458)
+const { URLSerializer } = __nccwpck_require__(96730)
+const { isValidHeaderName } = __nccwpck_require__(98730)
 
 /**
  * @see https://url.spec.whatwg.org/#concept-url-equals
@@ -22395,7 +22395,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 40384:
+/***/ 16155:
 /***/ ((module) => {
 
 "use strict";
@@ -22415,16 +22415,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 30035:
+/***/ 15855:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { parseSetCookie } = __nccwpck_require__(94017)
-const { stringify } = __nccwpck_require__(82559)
-const { webidl } = __nccwpck_require__(69293)
-const { Headers } = __nccwpck_require__(66089)
+const { parseSetCookie } = __nccwpck_require__(80742)
+const { stringify } = __nccwpck_require__(93989)
+const { webidl } = __nccwpck_require__(2227)
+const { Headers } = __nccwpck_require__(10561)
 
 /**
  * @typedef {Object} Cookie
@@ -22607,15 +22607,15 @@ module.exports = {
 
 /***/ }),
 
-/***/ 94017:
+/***/ 80742:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { maxNameValuePairSize, maxAttributeValueSize } = __nccwpck_require__(40384)
-const { isCTLExcludingHtab } = __nccwpck_require__(82559)
-const { collectASequenceOfCodePointsFast } = __nccwpck_require__(29192)
+const { maxNameValuePairSize, maxAttributeValueSize } = __nccwpck_require__(16155)
+const { isCTLExcludingHtab } = __nccwpck_require__(93989)
+const { collectASequenceOfCodePointsFast } = __nccwpck_require__(96730)
 const assert = __nccwpck_require__(98061)
 
 /**
@@ -22925,7 +22925,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 82559:
+/***/ 93989:
 /***/ ((module) => {
 
 "use strict";
@@ -23285,13 +23285,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 65199:
+/***/ 41408:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 const { Transform } = __nccwpck_require__(84492)
-const { isASCIINumber, isValidLastEventId } = __nccwpck_require__(44665)
+const { isASCIINumber, isValidLastEventId } = __nccwpck_require__(19079)
 
 /**
  * @type {number[]} BOM
@@ -23786,23 +23786,23 @@ module.exports = {
 
 /***/ }),
 
-/***/ 90109:
+/***/ 6731:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const { pipeline } = __nccwpck_require__(84492)
-const { fetching } = __nccwpck_require__(9526)
-const { makeRequest } = __nccwpck_require__(3891)
-const { webidl } = __nccwpck_require__(69293)
-const { EventSourceStream } = __nccwpck_require__(65199)
-const { parseMIMEType } = __nccwpck_require__(29192)
-const { createFastMessageEvent } = __nccwpck_require__(46055)
-const { isNetworkError } = __nccwpck_require__(98579)
-const { delay } = __nccwpck_require__(44665)
-const { kEnumerableProperty } = __nccwpck_require__(39141)
-const { environmentSettingsObject } = __nccwpck_require__(37458)
+const { fetching } = __nccwpck_require__(78329)
+const { makeRequest } = __nccwpck_require__(83211)
+const { webidl } = __nccwpck_require__(2227)
+const { EventSourceStream } = __nccwpck_require__(41408)
+const { parseMIMEType } = __nccwpck_require__(96730)
+const { createFastMessageEvent } = __nccwpck_require__(69459)
+const { isNetworkError } = __nccwpck_require__(51132)
+const { delay } = __nccwpck_require__(19079)
+const { kEnumerableProperty } = __nccwpck_require__(50011)
+const { environmentSettingsObject } = __nccwpck_require__(98730)
 
 let experimentalWarned = false
 
@@ -24274,7 +24274,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 44665:
+/***/ 19079:
 /***/ ((module) => {
 
 "use strict";
@@ -24319,13 +24319,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 27134:
+/***/ 12749:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const util = __nccwpck_require__(39141)
+const util = __nccwpck_require__(50011)
 const {
   ReadableStreamFrom,
   isBlobLike,
@@ -24335,16 +24335,16 @@ const {
   fullyReadBody,
   extractMimeType,
   utf8DecodeBytes
-} = __nccwpck_require__(37458)
-const { FormData } = __nccwpck_require__(26697)
-const { kState } = __nccwpck_require__(15575)
-const { webidl } = __nccwpck_require__(69293)
+} = __nccwpck_require__(98730)
+const { FormData } = __nccwpck_require__(62598)
+const { kState } = __nccwpck_require__(14935)
+const { webidl } = __nccwpck_require__(2227)
 const { Blob } = __nccwpck_require__(72254)
 const assert = __nccwpck_require__(98061)
 const { isErrored, isDisturbed } = __nccwpck_require__(84492)
 const { isArrayBuffer } = __nccwpck_require__(93746)
-const { serializeAMimeType } = __nccwpck_require__(29192)
-const { multipartFormDataParser } = __nccwpck_require__(48294)
+const { serializeAMimeType } = __nccwpck_require__(96730)
+const { multipartFormDataParser } = __nccwpck_require__(25152)
 let random
 
 try {
@@ -24856,7 +24856,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 83686:
+/***/ 54823:
 /***/ ((module) => {
 
 "use strict";
@@ -24988,7 +24988,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 29192:
+/***/ 96730:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -25740,13 +25740,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 58330:
+/***/ 61451:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kConnected, kSize } = __nccwpck_require__(53606)
+const { kConnected, kSize } = __nccwpck_require__(13638)
 
 class CompatWeakRef {
   constructor (value) {
@@ -25794,15 +25794,15 @@ module.exports = function () {
 
 /***/ }),
 
-/***/ 37170:
+/***/ 60027:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const { Blob, File } = __nccwpck_require__(72254)
-const { kState } = __nccwpck_require__(15575)
-const { webidl } = __nccwpck_require__(69293)
+const { kState } = __nccwpck_require__(14935)
+const { webidl } = __nccwpck_require__(2227)
 
 // TODO(@KhafraDev): remove
 class FileLike {
@@ -25928,17 +25928,17 @@ module.exports = { FileLike, isFileLike }
 
 /***/ }),
 
-/***/ 48294:
+/***/ 25152:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { isUSVString, bufferToLowerCasedHeaderName } = __nccwpck_require__(39141)
-const { utf8DecodeBytes } = __nccwpck_require__(37458)
-const { HTTP_TOKEN_CODEPOINTS, isomorphicDecode } = __nccwpck_require__(29192)
-const { isFileLike } = __nccwpck_require__(37170)
-const { makeEntry } = __nccwpck_require__(26697)
+const { isUSVString, bufferToLowerCasedHeaderName } = __nccwpck_require__(50011)
+const { utf8DecodeBytes } = __nccwpck_require__(98730)
+const { HTTP_TOKEN_CODEPOINTS, isomorphicDecode } = __nccwpck_require__(96730)
+const { isFileLike } = __nccwpck_require__(60027)
+const { makeEntry } = __nccwpck_require__(62598)
 const assert = __nccwpck_require__(98061)
 const { File: NodeFile } = __nccwpck_require__(72254)
 
@@ -26410,17 +26410,17 @@ module.exports = {
 
 /***/ }),
 
-/***/ 26697:
+/***/ 62598:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { isBlobLike, iteratorMixin } = __nccwpck_require__(37458)
-const { kState } = __nccwpck_require__(15575)
-const { kEnumerableProperty } = __nccwpck_require__(39141)
-const { FileLike, isFileLike } = __nccwpck_require__(37170)
-const { webidl } = __nccwpck_require__(69293)
+const { isBlobLike, iteratorMixin } = __nccwpck_require__(98730)
+const { kState } = __nccwpck_require__(14935)
+const { kEnumerableProperty } = __nccwpck_require__(50011)
+const { FileLike, isFileLike } = __nccwpck_require__(60027)
+const { webidl } = __nccwpck_require__(2227)
 const { File: NativeFile } = __nccwpck_require__(72254)
 const nodeUtil = __nccwpck_require__(47261)
 
@@ -26670,7 +26670,7 @@ module.exports = { FormData, makeEntry }
 
 /***/ }),
 
-/***/ 82470:
+/***/ 13924:
 /***/ ((module) => {
 
 "use strict";
@@ -26718,7 +26718,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 66089:
+/***/ 10561:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -26726,14 +26726,14 @@ module.exports = {
 
 
 
-const { kConstruct } = __nccwpck_require__(53606)
-const { kEnumerableProperty } = __nccwpck_require__(39141)
+const { kConstruct } = __nccwpck_require__(13638)
+const { kEnumerableProperty } = __nccwpck_require__(50011)
 const {
   iteratorMixin,
   isValidHeaderName,
   isValidHeaderValue
-} = __nccwpck_require__(37458)
-const { webidl } = __nccwpck_require__(69293)
+} = __nccwpck_require__(98730)
+const { webidl } = __nccwpck_require__(2227)
 const assert = __nccwpck_require__(98061)
 const util = __nccwpck_require__(47261)
 
@@ -27413,7 +27413,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9526:
+/***/ 78329:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -27427,9 +27427,9 @@ const {
   filterResponse,
   makeResponse,
   fromInnerResponse
-} = __nccwpck_require__(98579)
-const { HeadersList } = __nccwpck_require__(66089)
-const { Request, cloneRequest } = __nccwpck_require__(3891)
+} = __nccwpck_require__(51132)
+const { HeadersList } = __nccwpck_require__(10561)
+const { Request, cloneRequest } = __nccwpck_require__(83211)
 const zlib = __nccwpck_require__(65628)
 const {
   bytesMatch,
@@ -27465,23 +27465,23 @@ const {
   buildContentRange,
   createInflate,
   extractMimeType
-} = __nccwpck_require__(37458)
-const { kState, kDispatcher } = __nccwpck_require__(15575)
+} = __nccwpck_require__(98730)
+const { kState, kDispatcher } = __nccwpck_require__(14935)
 const assert = __nccwpck_require__(98061)
-const { safelyExtractBody, extractBody } = __nccwpck_require__(27134)
+const { safelyExtractBody, extractBody } = __nccwpck_require__(12749)
 const {
   redirectStatusSet,
   nullBodyStatus,
   safeMethodsSet,
   requestBodyHeader,
   subresourceSet
-} = __nccwpck_require__(83686)
+} = __nccwpck_require__(54823)
 const EE = __nccwpck_require__(15673)
 const { Readable, pipeline, finished } = __nccwpck_require__(84492)
-const { addAbortListener, isErrored, isReadable, bufferToLowerCasedHeaderName } = __nccwpck_require__(39141)
-const { dataURLProcessor, serializeAMimeType, minimizeSupportedMimeType } = __nccwpck_require__(29192)
-const { getGlobalDispatcher } = __nccwpck_require__(12621)
-const { webidl } = __nccwpck_require__(69293)
+const { addAbortListener, isErrored, isReadable, bufferToLowerCasedHeaderName } = __nccwpck_require__(50011)
+const { dataURLProcessor, serializeAMimeType, minimizeSupportedMimeType } = __nccwpck_require__(96730)
+const { getGlobalDispatcher } = __nccwpck_require__(19405)
+const { webidl } = __nccwpck_require__(2227)
 const { STATUS_CODES } = __nccwpck_require__(88849)
 const GET_OR_HEAD = ['GET', 'HEAD']
 
@@ -29693,7 +29693,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 3891:
+/***/ 83211:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -29701,16 +29701,16 @@ module.exports = {
 
 
 
-const { extractBody, mixinBody, cloneBody, bodyUnusable } = __nccwpck_require__(27134)
-const { Headers, fill: fillHeaders, HeadersList, setHeadersGuard, getHeadersGuard, setHeadersList, getHeadersList } = __nccwpck_require__(66089)
-const { FinalizationRegistry } = __nccwpck_require__(58330)()
-const util = __nccwpck_require__(39141)
+const { extractBody, mixinBody, cloneBody, bodyUnusable } = __nccwpck_require__(12749)
+const { Headers, fill: fillHeaders, HeadersList, setHeadersGuard, getHeadersGuard, setHeadersList, getHeadersList } = __nccwpck_require__(10561)
+const { FinalizationRegistry } = __nccwpck_require__(61451)()
+const util = __nccwpck_require__(50011)
 const nodeUtil = __nccwpck_require__(47261)
 const {
   isValidHTTPToken,
   sameOrigin,
   environmentSettingsObject
-} = __nccwpck_require__(37458)
+} = __nccwpck_require__(98730)
 const {
   forbiddenMethodsSet,
   corsSafeListedMethodsSet,
@@ -29720,12 +29720,12 @@ const {
   requestCredentials,
   requestCache,
   requestDuplex
-} = __nccwpck_require__(83686)
+} = __nccwpck_require__(54823)
 const { kEnumerableProperty, normalizedMethodRecordsBase, normalizedMethodRecords } = util
-const { kHeaders, kSignal, kState, kDispatcher } = __nccwpck_require__(15575)
-const { webidl } = __nccwpck_require__(69293)
-const { URLSerializer } = __nccwpck_require__(29192)
-const { kConstruct } = __nccwpck_require__(53606)
+const { kHeaders, kSignal, kState, kDispatcher } = __nccwpck_require__(14935)
+const { webidl } = __nccwpck_require__(2227)
+const { URLSerializer } = __nccwpck_require__(96730)
+const { kConstruct } = __nccwpck_require__(13638)
 const assert = __nccwpck_require__(98061)
 const { getMaxListeners, setMaxListeners, getEventListeners, defaultMaxListeners } = __nccwpck_require__(15673)
 
@@ -30738,15 +30738,15 @@ module.exports = { Request, makeRequest, fromInnerRequest, cloneRequest }
 
 /***/ }),
 
-/***/ 98579:
+/***/ 51132:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { Headers, HeadersList, fill, getHeadersGuard, setHeadersGuard, setHeadersList } = __nccwpck_require__(66089)
-const { extractBody, cloneBody, mixinBody, hasFinalizationRegistry, streamRegistry, bodyUnusable } = __nccwpck_require__(27134)
-const util = __nccwpck_require__(39141)
+const { Headers, HeadersList, fill, getHeadersGuard, setHeadersGuard, setHeadersList } = __nccwpck_require__(10561)
+const { extractBody, cloneBody, mixinBody, hasFinalizationRegistry, streamRegistry, bodyUnusable } = __nccwpck_require__(12749)
+const util = __nccwpck_require__(50011)
 const nodeUtil = __nccwpck_require__(47261)
 const { kEnumerableProperty } = util
 const {
@@ -30758,16 +30758,16 @@ const {
   isErrorLike,
   isomorphicEncode,
   environmentSettingsObject: relevantRealm
-} = __nccwpck_require__(37458)
+} = __nccwpck_require__(98730)
 const {
   redirectStatusSet,
   nullBodyStatus
-} = __nccwpck_require__(83686)
-const { kState, kHeaders } = __nccwpck_require__(15575)
-const { webidl } = __nccwpck_require__(69293)
-const { FormData } = __nccwpck_require__(26697)
-const { URLSerializer } = __nccwpck_require__(29192)
-const { kConstruct } = __nccwpck_require__(53606)
+} = __nccwpck_require__(54823)
+const { kState, kHeaders } = __nccwpck_require__(14935)
+const { webidl } = __nccwpck_require__(2227)
+const { FormData } = __nccwpck_require__(62598)
+const { URLSerializer } = __nccwpck_require__(96730)
+const { kConstruct } = __nccwpck_require__(13638)
 const assert = __nccwpck_require__(98061)
 const { types } = __nccwpck_require__(47261)
 
@@ -31356,7 +31356,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 15575:
+/***/ 14935:
 /***/ ((module) => {
 
 "use strict";
@@ -31373,7 +31373,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 37458:
+/***/ 98730:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -31381,14 +31381,14 @@ module.exports = {
 
 const { Transform } = __nccwpck_require__(84492)
 const zlib = __nccwpck_require__(65628)
-const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = __nccwpck_require__(83686)
-const { getGlobalOrigin } = __nccwpck_require__(82470)
-const { collectASequenceOfCodePoints, collectAnHTTPQuotedString, removeChars, parseMIMEType } = __nccwpck_require__(29192)
+const { redirectStatusSet, referrerPolicySet: referrerPolicyTokens, badPortsSet } = __nccwpck_require__(54823)
+const { getGlobalOrigin } = __nccwpck_require__(13924)
+const { collectASequenceOfCodePoints, collectAnHTTPQuotedString, removeChars, parseMIMEType } = __nccwpck_require__(96730)
 const { performance } = __nccwpck_require__(38846)
-const { isBlobLike, ReadableStreamFrom, isValidHTTPToken, normalizedMethodRecordsBase } = __nccwpck_require__(39141)
+const { isBlobLike, ReadableStreamFrom, isValidHTTPToken, normalizedMethodRecordsBase } = __nccwpck_require__(50011)
 const assert = __nccwpck_require__(98061)
 const { isUint8Array } = __nccwpck_require__(93746)
-const { webidl } = __nccwpck_require__(69293)
+const { webidl } = __nccwpck_require__(2227)
 
 let supportedHashes = []
 
@@ -33013,7 +33013,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 69293:
+/***/ 2227:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -33021,7 +33021,7 @@ module.exports = {
 
 const { types, inspect } = __nccwpck_require__(47261)
 const { markAsUncloneable } = __nccwpck_require__(24086)
-const { toUSVString } = __nccwpck_require__(39141)
+const { toUSVString } = __nccwpck_require__(50011)
 
 /** @type {import('../../../types/webidl').Webidl} */
 const webidl = {}
@@ -33716,7 +33716,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 24696:
+/***/ 74973:
 /***/ ((module) => {
 
 "use strict";
@@ -34014,7 +34014,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 73002:
+/***/ 65153:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -34024,16 +34024,16 @@ const {
   staticPropertyDescriptors,
   readOperation,
   fireAProgressEvent
-} = __nccwpck_require__(76274)
+} = __nccwpck_require__(24277)
 const {
   kState,
   kError,
   kResult,
   kEvents,
   kAborted
-} = __nccwpck_require__(1673)
-const { webidl } = __nccwpck_require__(69293)
-const { kEnumerableProperty } = __nccwpck_require__(39141)
+} = __nccwpck_require__(30010)
+const { webidl } = __nccwpck_require__(2227)
+const { kEnumerableProperty } = __nccwpck_require__(50011)
 
 class FileReader extends EventTarget {
   constructor () {
@@ -34366,13 +34366,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 37663:
+/***/ 53788:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { webidl } = __nccwpck_require__(69293)
+const { webidl } = __nccwpck_require__(2227)
 
 const kState = Symbol('ProgressEvent state')
 
@@ -34452,7 +34452,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1673:
+/***/ 30010:
 /***/ ((module) => {
 
 "use strict";
@@ -34470,7 +34470,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 76274:
+/***/ 24277:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -34482,10 +34482,10 @@ const {
   kResult,
   kAborted,
   kLastProgressEventFired
-} = __nccwpck_require__(1673)
-const { ProgressEvent } = __nccwpck_require__(37663)
-const { getEncoding } = __nccwpck_require__(24696)
-const { serializeAMimeType, parseMIMEType } = __nccwpck_require__(29192)
+} = __nccwpck_require__(30010)
+const { ProgressEvent } = __nccwpck_require__(53788)
+const { getEncoding } = __nccwpck_require__(74973)
+const { serializeAMimeType, parseMIMEType } = __nccwpck_require__(96730)
 const { types } = __nccwpck_require__(47261)
 const { StringDecoder } = __nccwpck_require__(71576)
 const { btoa } = __nccwpck_require__(72254)
@@ -34869,28 +34869,28 @@ module.exports = {
 
 /***/ }),
 
-/***/ 72007:
+/***/ 17299:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { uid, states, sentCloseFrameState, emptyBuffer, opcodes } = __nccwpck_require__(26566)
+const { uid, states, sentCloseFrameState, emptyBuffer, opcodes } = __nccwpck_require__(44285)
 const {
   kReadyState,
   kSentClose,
   kByteParser,
   kReceivedClose,
   kResponse
-} = __nccwpck_require__(6608)
-const { fireEvent, failWebsocketConnection, isClosing, isClosed, isEstablished, parseExtensions } = __nccwpck_require__(22887)
-const { channels } = __nccwpck_require__(59241)
-const { CloseEvent } = __nccwpck_require__(46055)
-const { makeRequest } = __nccwpck_require__(3891)
-const { fetching } = __nccwpck_require__(9526)
-const { Headers, getHeadersList } = __nccwpck_require__(66089)
-const { getDecodeSplit } = __nccwpck_require__(37458)
-const { WebsocketFrameSend } = __nccwpck_require__(56248)
+} = __nccwpck_require__(34939)
+const { fireEvent, failWebsocketConnection, isClosing, isClosed, isEstablished, parseExtensions } = __nccwpck_require__(93194)
+const { channels } = __nccwpck_require__(65543)
+const { CloseEvent } = __nccwpck_require__(69459)
+const { makeRequest } = __nccwpck_require__(83211)
+const { fetching } = __nccwpck_require__(78329)
+const { Headers, getHeadersList } = __nccwpck_require__(10561)
+const { getDecodeSplit } = __nccwpck_require__(98730)
+const { WebsocketFrameSend } = __nccwpck_require__(84618)
 
 /** @type {import('crypto')} */
 let crypto
@@ -35248,7 +35248,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 26566:
+/***/ 44285:
 /***/ ((module) => {
 
 "use strict";
@@ -35322,15 +35322,15 @@ module.exports = {
 
 /***/ }),
 
-/***/ 46055:
+/***/ 69459:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { webidl } = __nccwpck_require__(69293)
-const { kEnumerableProperty } = __nccwpck_require__(39141)
-const { kConstruct } = __nccwpck_require__(53606)
+const { webidl } = __nccwpck_require__(2227)
+const { kEnumerableProperty } = __nccwpck_require__(50011)
+const { kConstruct } = __nccwpck_require__(13638)
 const { MessagePort } = __nccwpck_require__(24086)
 
 /**
@@ -35659,13 +35659,13 @@ module.exports = {
 
 /***/ }),
 
-/***/ 56248:
+/***/ 84618:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { maxUnsigned16Bit } = __nccwpck_require__(26566)
+const { maxUnsigned16Bit } = __nccwpck_require__(44285)
 
 const BUFFER_SIZE = 16386
 
@@ -35763,15 +35763,15 @@ module.exports = {
 
 /***/ }),
 
-/***/ 77885:
+/***/ 7133:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
 const { createInflateRaw, Z_DEFAULT_WINDOWBITS } = __nccwpck_require__(65628)
-const { isValidClientWindowBits } = __nccwpck_require__(22887)
-const { MessageSizeExceededError } = __nccwpck_require__(5425)
+const { isValidClientWindowBits } = __nccwpck_require__(93194)
+const { MessageSizeExceededError } = __nccwpck_require__(35990)
 
 const tail = Buffer.from([0x00, 0x00, 0xff, 0xff])
 const kBuffer = Symbol('kBuffer')
@@ -35876,7 +35876,7 @@ module.exports = { PerMessageDeflate }
 
 /***/ }),
 
-/***/ 48756:
+/***/ 46080:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
@@ -35884,9 +35884,9 @@ module.exports = { PerMessageDeflate }
 
 const { Writable } = __nccwpck_require__(84492)
 const assert = __nccwpck_require__(98061)
-const { parserStates, opcodes, states, emptyBuffer, sentCloseFrameState } = __nccwpck_require__(26566)
-const { kReadyState, kSentClose, kResponse, kReceivedClose } = __nccwpck_require__(6608)
-const { channels } = __nccwpck_require__(59241)
+const { parserStates, opcodes, states, emptyBuffer, sentCloseFrameState } = __nccwpck_require__(44285)
+const { kReadyState, kSentClose, kResponse, kReceivedClose } = __nccwpck_require__(34939)
+const { channels } = __nccwpck_require__(65543)
 const {
   isValidStatusCode,
   isValidOpcode,
@@ -35896,11 +35896,11 @@ const {
   isControlFrame,
   isTextBinaryFrame,
   isContinuationFrame
-} = __nccwpck_require__(22887)
-const { WebsocketFrameSend } = __nccwpck_require__(56248)
-const { closeWebSocketConnection } = __nccwpck_require__(72007)
-const { PerMessageDeflate } = __nccwpck_require__(77885)
-const { MessageSizeExceededError } = __nccwpck_require__(5425)
+} = __nccwpck_require__(93194)
+const { WebsocketFrameSend } = __nccwpck_require__(84618)
+const { closeWebSocketConnection } = __nccwpck_require__(17299)
+const { PerMessageDeflate } = __nccwpck_require__(7133)
+const { MessageSizeExceededError } = __nccwpck_require__(35990)
 
 function failWebsocketConnectionWithCode (ws, code, reason) {
   closeWebSocketConnection(ws, code, reason, Buffer.byteLength(reason))
@@ -36397,15 +36397,15 @@ module.exports = {
 
 /***/ }),
 
-/***/ 10774:
+/***/ 26515:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { WebsocketFrameSend } = __nccwpck_require__(56248)
-const { opcodes, sendHints } = __nccwpck_require__(26566)
-const FixedQueue = __nccwpck_require__(79468)
+const { WebsocketFrameSend } = __nccwpck_require__(84618)
+const { opcodes, sendHints } = __nccwpck_require__(44285)
+const FixedQueue = __nccwpck_require__(27092)
 
 /** @type {typeof Uint8Array} */
 const FastBuffer = Buffer[Symbol.species]
@@ -36509,7 +36509,7 @@ module.exports = { SendQueue }
 
 /***/ }),
 
-/***/ 6608:
+/***/ 34939:
 /***/ ((module) => {
 
 "use strict";
@@ -36529,17 +36529,17 @@ module.exports = {
 
 /***/ }),
 
-/***/ 22887:
+/***/ 93194:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = __nccwpck_require__(6608)
-const { states, opcodes } = __nccwpck_require__(26566)
-const { ErrorEvent, createFastMessageEvent } = __nccwpck_require__(46055)
+const { kReadyState, kController, kResponse, kBinaryType, kWebSocketURL } = __nccwpck_require__(34939)
+const { states, opcodes } = __nccwpck_require__(44285)
+const { ErrorEvent, createFastMessageEvent } = __nccwpck_require__(69459)
 const { isUtf8 } = __nccwpck_require__(72254)
-const { collectASequenceOfCodePointsFast, removeHTTPWhitespace } = __nccwpck_require__(29192)
+const { collectASequenceOfCodePointsFast, removeHTTPWhitespace } = __nccwpck_require__(96730)
 
 /* globals Blob */
 
@@ -36859,16 +36859,16 @@ module.exports = {
 
 /***/ }),
 
-/***/ 1468:
+/***/ 16416:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-const { webidl } = __nccwpck_require__(69293)
-const { URLSerializer } = __nccwpck_require__(29192)
-const { environmentSettingsObject } = __nccwpck_require__(37458)
-const { staticPropertyDescriptors, states, sentCloseFrameState, sendHints } = __nccwpck_require__(26566)
+const { webidl } = __nccwpck_require__(2227)
+const { URLSerializer } = __nccwpck_require__(96730)
+const { environmentSettingsObject } = __nccwpck_require__(98730)
+const { staticPropertyDescriptors, states, sentCloseFrameState, sendHints } = __nccwpck_require__(44285)
 const {
   kWebSocketURL,
   kReadyState,
@@ -36877,21 +36877,21 @@ const {
   kResponse,
   kSentClose,
   kByteParser
-} = __nccwpck_require__(6608)
+} = __nccwpck_require__(34939)
 const {
   isConnecting,
   isEstablished,
   isClosing,
   isValidSubprotocol,
   fireEvent
-} = __nccwpck_require__(22887)
-const { establishWebSocketConnection, closeWebSocketConnection } = __nccwpck_require__(72007)
-const { ByteParser } = __nccwpck_require__(48756)
-const { kEnumerableProperty, isBlobLike } = __nccwpck_require__(39141)
-const { getGlobalDispatcher } = __nccwpck_require__(12621)
+} = __nccwpck_require__(93194)
+const { establishWebSocketConnection, closeWebSocketConnection } = __nccwpck_require__(17299)
+const { ByteParser } = __nccwpck_require__(46080)
+const { kEnumerableProperty, isBlobLike } = __nccwpck_require__(50011)
+const { getGlobalDispatcher } = __nccwpck_require__(19405)
 const { types } = __nccwpck_require__(47261)
-const { ErrorEvent, CloseEvent } = __nccwpck_require__(46055)
-const { SendQueue } = __nccwpck_require__(10774)
+const { ErrorEvent, CloseEvent } = __nccwpck_require__(69459)
+const { SendQueue } = __nccwpck_require__(26515)
 
 // https://websockets.spec.whatwg.org/#interface-definition
 class WebSocket extends EventTarget {
@@ -37462,7 +37462,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 58486:
+/***/ 98143:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -37489,14 +37489,14 @@ function resolveActionInput(additionalParams, actionInputs, key) {
 
 /***/ }),
 
-/***/ 43128:
+/***/ 81248:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
-const agent_configuration_input_policy_1 = __nccwpck_require__(60436);
+const agent_configuration_input_policy_1 = __nccwpck_require__(7699);
 /** Builds the validated findings/fixer pair used by both action lifecycles. */
 function buildAgentTasks(values, environment = process.env) {
     return (0, agent_configuration_input_policy_1.buildAgentTaskConfiguration)(values, environment);
@@ -37505,7 +37505,7 @@ function buildAgentTasks(values, environment = process.env) {
 
 /***/ }),
 
-/***/ 65289:
+/***/ 71404:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -37513,9 +37513,9 @@ function buildAgentTasks(values, environment = process.env) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasksFromInputs = buildAgentTasksFromInputs;
 exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
-const input_keys_1 = __nccwpck_require__(83725);
-const agent_configuration_builder_1 = __nccwpck_require__(43128);
-const agent_1 = __nccwpck_require__(95407);
+const input_keys_1 = __nccwpck_require__(88539);
+const agent_configuration_builder_1 = __nccwpck_require__(81248);
+const agent_1 = __nccwpck_require__(89040);
 function buildAgentTasksFromInputs(read) {
     const provider = read(input_keys_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || agent_1.DEFAULT_AGENT_PROVIDER;
     const modelProvider = read(input_keys_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim()
@@ -37565,14 +37565,14 @@ function buildAgentTasksFromValues(values) {
 
 /***/ }),
 
-/***/ 45364:
+/***/ 30085:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBranches = buildBranches;
-const branches_1 = __nccwpck_require__(94871);
+const branches_1 = __nccwpck_require__(29506);
 function buildBranches(values) {
     return new branches_1.Branches(values.main, values.defaultBranch, values.development, values.featureTree, values.bugfixTree, values.hotfixTree, values.releaseTree, values.docsTree, values.choreTree);
 }
@@ -37580,29 +37580,29 @@ function buildBranches(values) {
 
 /***/ }),
 
-/***/ 23134:
+/***/ 42238:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mainRun = mainRun;
-const result_1 = __nccwpck_require__(61444);
-const logger_1 = __nccwpck_require__(50135);
-const main_run_route_1 = __nccwpck_require__(78693);
-const execution_setup_composition_root_1 = __nccwpck_require__(71774);
-const setup_execution_boundary_1 = __nccwpck_require__(56062);
-const main_run_route_composition_root_1 = __nccwpck_require__(7473);
-const repository_context_1 = __nccwpck_require__(57421);
-const logging_ports_1 = __nccwpck_require__(73001);
-const logger_adapter_1 = __nccwpck_require__(56932);
-const lifecycle_synchronization_context_1 = __nccwpck_require__(724);
-const agent_activity_policy_1 = __nccwpck_require__(69527);
-const push_single_action_contexts_1 = __nccwpck_require__(87805);
-const main_run_lifecycle_1 = __nccwpck_require__(70730);
-const issue_workflow_runtime_policy_1 = __nccwpck_require__(84598);
-const application_error_1 = __nccwpck_require__(2965);
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const result_1 = __nccwpck_require__(73817);
+const logger_1 = __nccwpck_require__(91151);
+const main_run_route_1 = __nccwpck_require__(8466);
+const execution_setup_composition_root_1 = __nccwpck_require__(83965);
+const setup_execution_boundary_1 = __nccwpck_require__(45805);
+const main_run_route_composition_root_1 = __nccwpck_require__(4706);
+const repository_context_1 = __nccwpck_require__(78958);
+const logging_ports_1 = __nccwpck_require__(6152);
+const logger_adapter_1 = __nccwpck_require__(72762);
+const lifecycle_synchronization_context_1 = __nccwpck_require__(28121);
+const agent_activity_policy_1 = __nccwpck_require__(15375);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
+const main_run_lifecycle_1 = __nccwpck_require__(916);
+const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
+const application_error_1 = __nccwpck_require__(75999);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
@@ -37754,7 +37754,7 @@ function applyAgentActivityOutcome(execution, outcome) {
 
 /***/ }),
 
-/***/ 28645:
+/***/ 19094:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -37769,15 +37769,15 @@ exports.buildEmoji = buildEmoji;
 exports.buildTokens = buildTokens;
 exports.buildLabels = buildLabels;
 exports.buildIssueTypes = buildIssueTypes;
-const emoji_1 = __nccwpck_require__(24750);
-const issue_1 = __nccwpck_require__(2224);
-const issue_types_1 = __nccwpck_require__(67189);
-const labels_1 = __nccwpck_require__(54505);
-const locale_1 = __nccwpck_require__(31159);
-const pull_request_1 = __nccwpck_require__(28347);
-const projects_1 = __nccwpck_require__(95230);
-const tokens_1 = __nccwpck_require__(47356);
-const workflows_1 = __nccwpck_require__(70513);
+const emoji_1 = __nccwpck_require__(24146);
+const issue_1 = __nccwpck_require__(46760);
+const issue_types_1 = __nccwpck_require__(27357);
+const labels_1 = __nccwpck_require__(79463);
+const locale_1 = __nccwpck_require__(9832);
+const pull_request_1 = __nccwpck_require__(55713);
+const projects_1 = __nccwpck_require__(13231);
+const tokens_1 = __nccwpck_require__(44153);
+const workflows_1 = __nccwpck_require__(45790);
 function buildProjects(values) {
     return new projects_1.Projects(values.projects, values.issueCreated, values.pullRequestCreated, values.issueInProgress, values.pullRequestInProgress);
 }
@@ -37809,17 +37809,17 @@ function buildIssueTypes(values) {
 
 /***/ }),
 
-/***/ 15672:
+/***/ 30098:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readDeploymentConfiguration = readDeploymentConfiguration;
-const application_error_1 = __nccwpck_require__(2965);
-const deployment_configuration_1 = __nccwpck_require__(5664);
-const input_keys_1 = __nccwpck_require__(83725);
-const merge_queue_readiness_1 = __nccwpck_require__(36637);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const input_keys_1 = __nccwpck_require__(88539);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
 function readDeploymentConfiguration(getInput, branches) {
     const errors = [];
     const readEnum = (key, allowed, fallback) => {
@@ -37872,14 +37872,14 @@ function readBoolean(value, fallback, name, errors) {
 
 /***/ }),
 
-/***/ 98884:
+/***/ 20236:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildExecution = buildExecution;
-const execution_1 = __nccwpck_require__(99925);
+const execution_1 = __nccwpck_require__(31546);
 function buildExecution(components) {
     return new execution_1.Execution(components);
 }
@@ -37887,7 +37887,7 @@ function buildExecution(components) {
 
 /***/ }),
 
-/***/ 89280:
+/***/ 18330:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -37912,7 +37912,7 @@ function parseIssueWorkflowBoolean(value, inputName, defaultValue) {
 
 /***/ }),
 
-/***/ 85160:
+/***/ 47165:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -37950,7 +37950,7 @@ function parseStrictInteger(value) {
 
 /***/ }),
 
-/***/ 39364:
+/***/ 68841:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -37967,24 +37967,24 @@ function parseDelimitedValues(value) {
 
 /***/ }),
 
-/***/ 70609:
+/***/ 76102:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runLocalAction = runLocalAction;
-const local_action_composition_root_1 = __nccwpck_require__(36426);
-const common_action_1 = __nccwpck_require__(23134);
-const local_action_output_1 = __nccwpck_require__(91598);
-const local_action_configuration_1 = __nccwpck_require__(89324);
-const local_action_execution_1 = __nccwpck_require__(13196);
-const repository_context_1 = __nccwpck_require__(57421);
-const agent_activity_composition_root_1 = __nccwpck_require__(11013);
-const application_error_context_1 = __nccwpck_require__(15491);
-const input_keys_1 = __nccwpck_require__(83725);
-const local_single_action_policy_1 = __nccwpck_require__(87929);
-const publication_message_catalog_1 = __nccwpck_require__(46042);
+const local_action_composition_root_1 = __nccwpck_require__(34760);
+const common_action_1 = __nccwpck_require__(42238);
+const local_action_output_1 = __nccwpck_require__(94290);
+const local_action_configuration_1 = __nccwpck_require__(66645);
+const local_action_execution_1 = __nccwpck_require__(47047);
+const repository_context_1 = __nccwpck_require__(78958);
+const agent_activity_composition_root_1 = __nccwpck_require__(94253);
+const application_error_context_1 = __nccwpck_require__(4034);
+const input_keys_1 = __nccwpck_require__(88539);
+const local_single_action_policy_1 = __nccwpck_require__(99190);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
 async function runLocalAction(additionalParams, options = {}) {
     return (0, application_error_context_1.runAtApplicationErrorBoundary)(async () => {
         const requestedAction = additionalParams[input_keys_1.INPUT_KEYS.SINGLE_ACTION];
@@ -38010,15 +38010,15 @@ async function runLocalAction(additionalParams, options = {}) {
 
 /***/ }),
 
-/***/ 89324:
+/***/ 66645:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildLocalActionConfiguration = buildLocalActionConfiguration;
-const yml_utils_1 = __nccwpck_require__(61047);
-const local_action_configuration_sections_1 = __nccwpck_require__(52511);
+const yml_utils_1 = __nccwpck_require__(61788);
+const local_action_configuration_sections_1 = __nccwpck_require__(27946);
 async function buildLocalActionConfiguration(additionalParams, projectRepository) {
     const actionInputs = (0, yml_utils_1.getActionInputsWithDefaults)();
     const core = (0, local_action_configuration_sections_1.readLocalCoreConfiguration)(additionalParams, actionInputs);
@@ -38039,7 +38039,7 @@ async function buildLocalActionConfiguration(additionalParams, projectRepository
 
 /***/ }),
 
-/***/ 52511:
+/***/ 27946:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -38050,19 +38050,19 @@ exports.readLocalAgentConfiguration = readLocalAgentConfiguration;
 exports.readLocalProjectConfiguration = readLocalProjectConfiguration;
 exports.readLocalLabelsAndIssueTypes = readLocalLabelsAndIssueTypes;
 exports.readLocalWorkflowConfiguration = readLocalWorkflowConfiguration;
-const locale_1 = __nccwpck_require__(31159);
-const bugbot_constants_1 = __nccwpck_require__(16868);
-const input_keys_1 = __nccwpck_require__(83725);
-const input_boolean_policy_1 = __nccwpck_require__(89280);
-const action_input_source_1 = __nccwpck_require__(58486);
-const project_details_loader_1 = __nccwpck_require__(60181);
-const input_number_policy_1 = __nccwpck_require__(85160);
-const input_values_policy_1 = __nccwpck_require__(39364);
-const agent_input_builder_1 = __nccwpck_require__(65289);
-const pull_request_description_1 = __nccwpck_require__(25623);
-const issue_inactivity_1 = __nccwpck_require__(7703);
-const review_configuration_1 = __nccwpck_require__(19249);
-const deployment_configuration_builder_1 = __nccwpck_require__(15672);
+const locale_1 = __nccwpck_require__(9832);
+const bugbot_constants_1 = __nccwpck_require__(51389);
+const input_keys_1 = __nccwpck_require__(88539);
+const input_boolean_policy_1 = __nccwpck_require__(18330);
+const action_input_source_1 = __nccwpck_require__(98143);
+const project_details_loader_1 = __nccwpck_require__(73448);
+const input_number_policy_1 = __nccwpck_require__(47165);
+const input_values_policy_1 = __nccwpck_require__(68841);
+const agent_input_builder_1 = __nccwpck_require__(71404);
+const pull_request_description_1 = __nccwpck_require__(45315);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const review_configuration_1 = __nccwpck_require__(3994);
+const deployment_configuration_builder_1 = __nccwpck_require__(30098);
 function input(additionalParams, actionInputs, key) {
     return (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, key);
 }
@@ -38302,22 +38302,22 @@ function readLocalWorkflowConfiguration(additionalParams, actionInputs) {
 
 /***/ }),
 
-/***/ 13196:
+/***/ 47047:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildLocalActionExecution = buildLocalActionExecution;
-const ai_1 = __nccwpck_require__(1465);
-const hotfix_1 = __nccwpck_require__(26127);
-const release_1 = __nccwpck_require__(40810);
-const single_action_1 = __nccwpck_require__(11457);
-const welcome_1 = __nccwpck_require__(42046);
-const execution_builder_1 = __nccwpck_require__(98884);
-const configuration_builders_1 = __nccwpck_require__(28645);
-const branches_builder_1 = __nccwpck_require__(45364);
-const size_threshold_builder_1 = __nccwpck_require__(5916);
+const ai_1 = __nccwpck_require__(37478);
+const hotfix_1 = __nccwpck_require__(18537);
+const release_1 = __nccwpck_require__(74715);
+const single_action_1 = __nccwpck_require__(45898);
+const welcome_1 = __nccwpck_require__(49834);
+const execution_builder_1 = __nccwpck_require__(20236);
+const configuration_builders_1 = __nccwpck_require__(19094);
+const branches_builder_1 = __nccwpck_require__(30085);
+const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
     const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, issueManagedBranches, preBranchSdd, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
     return (0, execution_builder_1.buildExecution)({
@@ -38387,7 +38387,7 @@ function buildLocalActionExecution(configuration, additionalParams) {
 
 /***/ }),
 
-/***/ 91598:
+/***/ 94290:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -38397,14 +38397,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.renderLocalActionResults = renderLocalActionResults;
-const chalk_1 = __importDefault(__nccwpck_require__(43920));
-const boxen_1 = __importDefault(__nccwpck_require__(32634));
-const product_identity_1 = __nccwpck_require__(44908);
-const application_error_presentation_policy_1 = __nccwpck_require__(47255);
-const result_1 = __nccwpck_require__(61444);
-const untrusted_content_1 = __nccwpck_require__(12334);
-const publication_message_catalog_1 = __nccwpck_require__(46042);
-const logger_1 = __nccwpck_require__(50135);
+const chalk_1 = __importDefault(__nccwpck_require__(8578));
+const boxen_1 = __importDefault(__nccwpck_require__(11652));
+const product_identity_1 = __nccwpck_require__(18739);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const result_1 = __nccwpck_require__(73817);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
+const logger_1 = __nccwpck_require__(91151);
 function renderLocalActionResults(results, catalog = publication_message_catalog_1.ENGLISH_PUBLICATION_CATALOG) {
     let content = '';
     const failed = results.filter(result => result.errors.length > 0 || !result.success).length;
@@ -38468,14 +38468,14 @@ function directAnswer(payload) {
 
 /***/ }),
 
-/***/ 60059:
+/***/ 28586:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.dispatchMainRunRoute = dispatchMainRunRoute;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 async function dispatchMainRunRoute(route, execution, handlers) {
     switch (route) {
         case 'single-action':
@@ -38504,7 +38504,7 @@ async function dispatchMainRunRoute(route, execution, handlers) {
 
 /***/ }),
 
-/***/ 70730:
+/***/ 916:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -38520,15 +38520,15 @@ exports.logWelcomeMessage = logWelcomeMessage;
 exports.runTokenExecution = runTokenExecution;
 exports.runNoIssueExecution = runNoIssueExecution;
 exports.runMainRoute = runMainRoute;
-const chalk_1 = __importDefault(__nccwpck_require__(43920));
-const boxen_1 = __importDefault(__nccwpck_require__(32634));
-const result_1 = __nccwpck_require__(61444);
-const product_identity_1 = __nccwpck_require__(44908);
-const logger_1 = __nccwpck_require__(50135);
-const main_run_dispatcher_1 = __nccwpck_require__(60059);
-const workflow_context_1 = __nccwpck_require__(13835);
-const workflow_queue_composition_root_1 = __nccwpck_require__(57010);
-const application_error_1 = __nccwpck_require__(2965);
+const chalk_1 = __importDefault(__nccwpck_require__(8578));
+const boxen_1 = __importDefault(__nccwpck_require__(11652));
+const result_1 = __nccwpck_require__(73817);
+const product_identity_1 = __nccwpck_require__(18739);
+const logger_1 = __nccwpck_require__(91151);
+const main_run_dispatcher_1 = __nccwpck_require__(28586);
+const workflow_context_1 = __nccwpck_require__(55224);
+const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
+const application_error_1 = __nccwpck_require__(75999);
 exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
 /**
  * Keeps provider diagnostics out of the action's externally visible failure
@@ -38634,7 +38634,7 @@ async function runMainRoute(execution, route, routeHandlers) {
 
 /***/ }),
 
-/***/ 78693:
+/***/ 8466:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -38659,7 +38659,7 @@ function resolveMainRunRoute(input) {
 
 /***/ }),
 
-/***/ 60181:
+/***/ 73448:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -38684,7 +38684,7 @@ async function loadProjectDetails(projectRepository, projectIds, owner, token) {
 
 /***/ }),
 
-/***/ 57421:
+/***/ 78958:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -38714,7 +38714,7 @@ function requireRepositoryCoordinates(value) {
 
 /***/ }),
 
-/***/ 56062:
+/***/ 45805:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -38722,7 +38722,7 @@ function requireRepositoryCoordinates(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectSetupExecutionContext = projectSetupExecutionContext;
 exports.applySetupExecutionResult = applySetupExecutionResult;
-const input_keys_1 = __nccwpck_require__(83725);
+const input_keys_1 = __nccwpck_require__(88539);
 function projectSetupExecutionContext(source) {
     const configuredIssue = readConfiguredIssue(source.inputs);
     return Object.freeze({
@@ -38842,15 +38842,15 @@ function readConfiguredIssue(inputs) {
 
 /***/ }),
 
-/***/ 5916:
+/***/ 39757:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSizeThresholds = buildSizeThresholds;
-const size_threshold_1 = __nccwpck_require__(7267);
-const size_thresholds_1 = __nccwpck_require__(97155);
+const size_threshold_1 = __nccwpck_require__(6362);
+const size_thresholds_1 = __nccwpck_require__(54820);
 function buildSizeThresholds(values) {
     return new size_thresholds_1.SizeThresholds(new size_threshold_1.SizeThreshold(values.xxl.lines, values.xxl.files, values.xxl.commits), new size_threshold_1.SizeThreshold(values.xl.lines, values.xl.files, values.xl.commits), new size_threshold_1.SizeThreshold(values.l.lines, values.l.files, values.l.commits), new size_threshold_1.SizeThreshold(values.m.lines, values.m.files, values.m.commits), new size_threshold_1.SizeThreshold(values.s.lines, values.s.files, values.s.commits), new size_threshold_1.SizeThreshold(values.xs.lines, values.xs.files, values.xs.commits));
 }
@@ -38858,7 +38858,7 @@ function buildSizeThresholds(values) {
 
 /***/ }),
 
-/***/ 13835:
+/***/ 55224:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -38887,7 +38887,7 @@ function resolveWorkflowIdentifier(workflowRef) {
 
 /***/ }),
 
-/***/ 83725:
+/***/ 88539:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -39098,7 +39098,7 @@ exports.INPUT_KEYS = {
 
 /***/ }),
 
-/***/ 44908:
+/***/ 18739:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -39110,7 +39110,7 @@ exports.TITLE = 'Copilot';
 
 /***/ }),
 
-/***/ 2965:
+/***/ 75999:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -39118,9 +39118,9 @@ exports.TITLE = 'Copilot';
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_RECOVERY_IDS = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
-const application_error_1 = __nccwpck_require__(28206);
-const application_error_context_1 = __nccwpck_require__(15491);
-var application_error_2 = __nccwpck_require__(28206);
+const application_error_1 = __nccwpck_require__(97790);
+const application_error_context_1 = __nccwpck_require__(4034);
+var application_error_2 = __nccwpck_require__(97790);
 Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
 Object.defineProperty(exports, "APPLICATION_ERROR_RECOVERY_IDS", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_RECOVERY_IDS; } }));
 /** Creates a semantic error and owns correlation identity outside the pure model. */
@@ -39144,7 +39144,7 @@ function toApplicationError(error, code, message, options = {}) {
 
 /***/ }),
 
-/***/ 15491:
+/***/ 4034:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -39156,7 +39156,7 @@ exports.runWithApplicationErrorCorrelation = runWithApplicationErrorCorrelation;
 exports.runAtApplicationErrorBoundary = runAtApplicationErrorBoundary;
 const node_async_hooks_1 = __nccwpck_require__(92761);
 const node_crypto_1 = __nccwpck_require__(6005);
-const application_error_1 = __nccwpck_require__(28206);
+const application_error_1 = __nccwpck_require__(97790);
 const applicationErrorCorrelation = new node_async_hooks_1.AsyncLocalStorage();
 function getApplicationErrorCorrelationId() {
     return applicationErrorCorrelation.getStore();
@@ -39180,7 +39180,7 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
-/***/ 93638:
+/***/ 38313:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -39199,7 +39199,7 @@ exports.SetupInteractionCancelledError = SetupInteractionCancelledError;
 
 /***/ }),
 
-/***/ 24342:
+/***/ 79966:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -39218,14 +39218,14 @@ function replaceAgentActivityLabel(currentLabels, activityLabel, active) {
 
 /***/ }),
 
-/***/ 69527:
+/***/ 15375:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
-const agent_1 = __nccwpck_require__(95407);
+const agent_1 = __nccwpck_require__(89040);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))
@@ -39278,7 +39278,7 @@ function hasTarget(execution) {
 
 /***/ }),
 
-/***/ 60436:
+/***/ 7699:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -39287,8 +39287,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentConfiguration = buildAgentConfiguration;
 exports.mergeAgentTaskValues = mergeAgentTaskValues;
 exports.buildAgentTaskConfiguration = buildAgentTaskConfiguration;
-const agent_configuration_validation_policy_1 = __nccwpck_require__(4345);
-const agent_executable_policy_1 = __nccwpck_require__(53773);
+const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const agent_executable_policy_1 = __nccwpck_require__(12570);
 function buildAgentConfiguration(values, environment) {
     const provider = (0, agent_configuration_validation_policy_1.resolveAgentProvider)(values.provider.trim().toLowerCase());
     const modelProvider = (0, agent_configuration_validation_policy_1.resolveModelProvider)(values.modelProvider, environment, provider);
@@ -39336,7 +39336,7 @@ function hasTaskOverride(value) {
 
 /***/ }),
 
-/***/ 4345:
+/***/ 60596:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -39349,7 +39349,7 @@ exports.assertProviderModelCompatibility = assertProviderModelCompatibility;
 exports.resolveModel = resolveModel;
 exports.resolveEffort = resolveEffort;
 exports.assertModelAllowlisted = assertModelAllowlisted;
-const application_error_1 = __nccwpck_require__(2965);
+const application_error_1 = __nccwpck_require__(75999);
 exports.SUPPORTED_AGENT_PROVIDERS = ['opencode', 'cursor', 'codex'];
 function resolveAgentProvider(value) {
     if (exports.SUPPORTED_AGENT_PROVIDERS.includes(value))
@@ -39410,15 +39410,15 @@ function assertIdentifier(value, message, pattern = /^[a-z0-9][a-z0-9_-]*$/i) {
 
 /***/ }),
 
-/***/ 53773:
+/***/ 12570:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateAgentExecutableSelection = validateAgentExecutableSelection;
-const agent_1 = __nccwpck_require__(95407);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_1 = __nccwpck_require__(89040);
+const application_error_1 = __nccwpck_require__(75999);
 /** Accepts only the provider basename or one absolute path to that binary. */
 function validateAgentExecutableSelection(configuration) {
     const selected = configuration.executable?.trim();
@@ -39437,17 +39437,17 @@ function validateAgentExecutableSelection(configuration) {
 
 /***/ }),
 
-/***/ 3341:
+/***/ 25690:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildProviderExecutionPolicy = buildProviderExecutionPolicy;
-const codex_execution_plan_policy_1 = __nccwpck_require__(30680);
-const cursor_execution_plan_policy_1 = __nccwpck_require__(91102);
-const opencode_execution_plan_policy_1 = __nccwpck_require__(14679);
-const provider_execution_policy_1 = __nccwpck_require__(81815);
+const codex_execution_plan_policy_1 = __nccwpck_require__(87204);
+const cursor_execution_plan_policy_1 = __nccwpck_require__(93955);
+const opencode_execution_plan_policy_1 = __nccwpck_require__(99100);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
 /** Static exhaustive dispatch: providers cannot register or bypass policy at runtime. */
 function buildProviderExecutionPolicy(input) {
     const provider = input.configuration.provider;
@@ -39462,16 +39462,16 @@ function buildProviderExecutionPolicy(input) {
 
 /***/ }),
 
-/***/ 30680:
+/***/ 87204:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCodexExecutionPolicy = buildCodexExecutionPolicy;
-const agent_execution_plan_1 = __nccwpck_require__(25901);
-const provider_execution_policy_1 = __nccwpck_require__(81815);
-const strict_output_schema_policy_1 = __nccwpck_require__(85197);
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
+const strict_output_schema_policy_1 = __nccwpck_require__(56743);
 function buildCodexExecutionPolicy(input) {
     const { configuration } = input;
     if (configuration.provider !== 'codex')
@@ -39532,15 +39532,15 @@ function tomlString(value) {
 
 /***/ }),
 
-/***/ 91102:
+/***/ 93955:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCursorExecutionPolicy = buildCursorExecutionPolicy;
-const agent_execution_plan_1 = __nccwpck_require__(25901);
-const provider_execution_policy_1 = __nccwpck_require__(81815);
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
 function buildCursorExecutionPolicy(input) {
     const { configuration } = input;
     if (configuration.provider !== 'cursor')
@@ -39607,15 +39607,15 @@ function buildCursorExecutionPolicy(input) {
 
 /***/ }),
 
-/***/ 14679:
+/***/ 99100:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildOpenCodeExecutionPolicy = buildOpenCodeExecutionPolicy;
-const agent_execution_plan_1 = __nccwpck_require__(25901);
-const provider_execution_policy_1 = __nccwpck_require__(81815);
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const provider_execution_policy_1 = __nccwpck_require__(50480);
 const READONLY_AGENT = 'copilot-controlled-readonly';
 const FIXER_AGENT = 'copilot-controlled-fixer';
 function buildOpenCodeExecutionPolicy(input) {
@@ -39705,7 +39705,7 @@ function buildOpenCodeExecutionPolicy(input) {
 
 /***/ }),
 
-/***/ 81815:
+/***/ 50480:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -39724,7 +39724,7 @@ function managedArtifactPath(runtimeDirectory, relativePath) {
 
 /***/ }),
 
-/***/ 85197:
+/***/ 56743:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -39791,7 +39791,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 2584:
+/***/ 30601:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -39801,7 +39801,7 @@ exports.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = exports.PRODUCT_FACING_AGENT_TASKS
 exports.productFacingAgentQueryOptions = productFacingAgentQueryOptions;
 exports.validateAgentOutputLocale = validateAgentOutputLocale;
 exports.agentOutputLocaleFailureMessage = agentOutputLocaleFailureMessage;
-const locale_1 = __nccwpck_require__(64552);
+const locale_1 = __nccwpck_require__(15386);
 exports.PRODUCT_FACING_AGENT_TASKS = [
     'think',
     'answer-issue-help',
@@ -39877,7 +39877,7 @@ function agentOutputLocaleFailureMessage(validation) {
 
 /***/ }),
 
-/***/ 63523:
+/***/ 25603:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -39885,7 +39885,7 @@ function agentOutputLocaleFailureMessage(validation) {
 /** Shared structured-response contracts used by agent-backed application flows. */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = exports.RECOMMEND_STEPS_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = void 0;
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 exports.LANGUAGE_ADAPTATION_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -40025,7 +40025,7 @@ exports.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA = {
 
 /***/ }),
 
-/***/ 2601:
+/***/ 85712:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -40057,7 +40057,7 @@ function resolveThinkAgentTask(commandName, destinationType) {
 
 /***/ }),
 
-/***/ 67880:
+/***/ 64809:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -40066,9 +40066,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
-const application_error_1 = __nccwpck_require__(28206);
-const message_catalog_1 = __nccwpck_require__(5313);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(98248);
+const application_error_1 = __nccwpck_require__(97790);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const LABEL_KEYS = Object.freeze([
     'impact', 'errorCode', 'action', 'retainedState', 'retryable', 'yes', 'no', 'reference',
 ]);
@@ -40331,7 +40331,7 @@ exports.readEnglishApplicationErrorMessage = readEnglishApplicationErrorMessage;
 
 /***/ }),
 
-/***/ 47255:
+/***/ 95067:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -40340,7 +40340,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
 exports.renderApplicationErrorMarkdown = renderApplicationErrorMarkdown;
-const application_error_message_catalog_1 = __nccwpck_require__(67880);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
     const descriptor = error.recovery
@@ -40388,7 +40388,7 @@ function renderApplicationErrorMarkdown(error, message = application_error_messa
 
 /***/ }),
 
-/***/ 24591:
+/***/ 36904:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -40495,7 +40495,7 @@ exports.SPANISH_APPROVAL_DOCTOR_MESSAGES = Object.freeze({
 
 /***/ }),
 
-/***/ 2426:
+/***/ 85918:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -40532,7 +40532,7 @@ function selectConfirmedAssignees(requestedMembers, assignedMembers) {
 
 /***/ }),
 
-/***/ 50189:
+/***/ 35596:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -40574,7 +40574,7 @@ async function runWithConcurrencyLimit(tasks, limit) {
 
 /***/ }),
 
-/***/ 59489:
+/***/ 97307:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -40613,7 +40613,7 @@ function findPreviousIssueBranch(branches, issueNumber, branchTypes) {
 
 /***/ }),
 
-/***/ 71641:
+/***/ 89245:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -40622,8 +40622,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BRANCH_SYNC_CATALOG_DEFINITIONS = exports.SPANISH_BRANCH_SYNC_DEFINITION = exports.ENGLISH_BRANCH_SYNC_DEFINITION = exports.BRANCH_SYNC_MESSAGE_IDS = void 0;
 exports.resolveStaticBranchSyncCatalog = resolveStaticBranchSyncCatalog;
 exports.resolveBranchSyncCatalog = resolveBranchSyncCatalog;
-const message_catalog_1 = __nccwpck_require__(5313);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(98248);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.stale.heading',
     'branchSync.stale.behind',
@@ -40706,7 +40706,7 @@ async function resolveBranchSyncCatalog(locale, configuration, resolver) {
 
 /***/ }),
 
-/***/ 90741:
+/***/ 79895:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -40722,10 +40722,10 @@ exports.buildBranchSyncStatusCommentUrl = buildBranchSyncStatusCommentUrl;
 exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
-const github_user_policy_1 = __nccwpck_require__(19596);
-const git_object_id_1 = __nccwpck_require__(36924);
-const publication_identity_policy_1 = __nccwpck_require__(12590);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const git_object_id_1 = __nccwpck_require__(88623);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 function selectBranchDependenciesForPush(dependencies, pushedBranch) {
     const selected = dependencies.filter((dependency) => dependency.parentBranch === pushedBranch
         || dependency.workingBranch === pushedBranch);
@@ -40859,7 +40859,7 @@ function safeLinkLabel(value) {
 
 /***/ }),
 
-/***/ 16868:
+/***/ 51389:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -40876,7 +40876,7 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 
 /***/ }),
 
-/***/ 51471:
+/***/ 31601:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -40886,9 +40886,9 @@ exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENG
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
 const node_crypto_1 = __nccwpck_require__(6005);
-const untrusted_content_1 = __nccwpck_require__(12334);
-const git_object_id_1 = __nccwpck_require__(36924);
-const file_ignore_policy_1 = __nccwpck_require__(56498);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const git_object_id_1 = __nccwpck_require__(88623);
+const file_ignore_policy_1 = __nccwpck_require__(20542);
 exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
 exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12000;
 exports.MAX_REVIEW_DIFF_PARTITIONS = 64;
@@ -41097,7 +41097,7 @@ function stableDiffPartitionDigest(value) {
 
 /***/ }),
 
-/***/ 10580:
+/***/ 52771:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -41119,7 +41119,7 @@ function selectPullRequestOwnerForPushReview(context) {
 
 /***/ }),
 
-/***/ 80639:
+/***/ 98024:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -41141,10 +41141,10 @@ exports.replaceMarkerInBody = replaceMarkerInBody;
 exports.extractTitleFromBody = extractTitleFromBody;
 exports.buildCommentBody = buildCommentBody;
 exports.buildResolvedFindingNote = buildResolvedFindingNote;
-const bugbot_constants_1 = __nccwpck_require__(16868);
-const application_error_1 = __nccwpck_require__(2965);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
+const bugbot_constants_1 = __nccwpck_require__(51389);
+const application_error_1 = __nccwpck_require__(75999);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 /** Maximum lossless finding identity accepted by the marker contract. */
 exports.MAX_FINDING_ID_LENGTH = 200;
 /** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). */
@@ -41294,14 +41294,14 @@ function buildResolvedFindingNote(resolution, catalog = (0, bugbot_message_catal
 
 /***/ }),
 
-/***/ 9298:
+/***/ 53822:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotFindingStatuses = projectBugbotFindingStatuses;
-const review_state_1 = __nccwpck_require__(17271);
+const review_state_1 = __nccwpck_require__(79200);
 /** Projects durable comment markers and the current analysis into a stable finding state. */
 function projectBugbotFindingStatuses(existingByFindingId, activeFindings, resolvedFindingIds = new Set(), resolvedFindingResolutions = new Map()) {
     const ids = new Set([
@@ -41347,7 +41347,7 @@ function countStatuses(statuses) {
 
 /***/ }),
 
-/***/ 84479:
+/***/ 7406:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -41358,8 +41358,8 @@ exports.resolveStaticBugbotCatalog = resolveStaticBugbotCatalog;
 exports.resolveBugbotCatalog = resolveBugbotCatalog;
 exports.renderBugbotDiagnostic = renderBugbotDiagnostic;
 exports.bugbotDiagnosticOperatorMessage = bugbotDiagnosticOperatorMessage;
-const message_catalog_1 = __nccwpck_require__(5313);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(98248);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.status.heading.partial',
     'bugbot.status.heading.verification',
@@ -41677,7 +41677,7 @@ function bugbotDiagnosticOperatorMessage(diagnostic) {
 
 /***/ }),
 
-/***/ 83782:
+/***/ 57555:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -41708,17 +41708,17 @@ function formatBugbotPartitionCompletion(input) {
 
 /***/ }),
 
-/***/ 95220:
+/***/ 85821:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotProviderEvidence = projectBugbotProviderEvidence;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const bugbot_constants_1 = __nccwpck_require__(16868);
-const github_user_policy_1 = __nccwpck_require__(19596);
-const review_state_1 = __nccwpck_require__(17271);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const bugbot_constants_1 = __nccwpck_require__(51389);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const review_state_1 = __nccwpck_require__(79200);
 /**
  * Converts a provider snapshot into semantic finding evidence. Issue and PR
  * destinations are projected independently and then folded conservatively, so
@@ -41906,7 +41906,7 @@ function containsBugbotFindingMarkerSyntax(body) {
 
 /***/ }),
 
-/***/ 54271:
+/***/ 78128:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -42031,7 +42031,7 @@ function hasMissingNonCleanDurableDestination(findingId, finding, observed) {
 
 /***/ }),
 
-/***/ 15950:
+/***/ 89189:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -42055,16 +42055,16 @@ function filterEligibleBugbotResolutionIds(claimedIds, eligibleIds, existingByFi
 
 /***/ }),
 
-/***/ 22443:
+/***/ 98117:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotResultFindingStates = projectBugbotResultFindingStates;
-const result_1 = __nccwpck_require__(61444);
-const review_state_1 = __nccwpck_require__(17271);
-const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(59783);
+const result_1 = __nccwpck_require__(73817);
+const review_state_1 = __nccwpck_require__(79200);
+const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const BUGBOT_FINDING_STATE_SET = new Set(review_state_1.BUGBOT_FINDING_STATES);
 const OUTCOMES_REQUIRING_FINDING_STATES = new Set([
     'completed',
@@ -42127,7 +42127,7 @@ function isNonNegativeSafeInteger(value) {
 
 /***/ }),
 
-/***/ 11719:
+/***/ 83288:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -42135,8 +42135,8 @@ function isNonNegativeSafeInteger(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectOwnedBugbotReviews = selectOwnedBugbotReviews;
 exports.isTrustedBugbotAuthor = isTrustedBugbotAuthor;
-const github_user_policy_1 = __nccwpck_require__(19596);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 /** Associates trusted review summaries with every child finding they own. */
 function selectOwnedBugbotReviews(input) {
     const findingById = new Map(input.findings.map((finding) => [finding.id, finding]));
@@ -42184,7 +42184,7 @@ function addFinding(findingsByReview, reviewIdentity, findingId) {
 
 /***/ }),
 
-/***/ 77193:
+/***/ 43799:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -42198,10 +42198,10 @@ exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
 exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
-const review_state_1 = __nccwpck_require__(17271);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const publication_identity_policy_1 = __nccwpck_require__(12590);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
+const review_state_1 = __nccwpck_require__(79200);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 exports.BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 exports.BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
 exports.BUGBOT_REVIEW_STATUS_START = '<!-- copilot-bugbot-review-status:start';
@@ -42376,7 +42376,7 @@ function presentationCatalog(value) {
 
 /***/ }),
 
-/***/ 59783:
+/***/ 43244:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -42384,7 +42384,7 @@ function presentationCatalog(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotTelemetry = projectBugbotTelemetry;
 exports.projectBugbotResultTelemetry = projectBugbotResultTelemetry;
-const result_1 = __nccwpck_require__(61444);
+const result_1 = __nccwpck_require__(73817);
 const BUGBOT_REVIEW_OUTCOMES = [
     'completed',
     'no-findings',
@@ -42446,7 +42446,7 @@ function hasBugbotTelemetryField(value) {
 
 /***/ }),
 
-/***/ 22406:
+/***/ 27150:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -42459,10 +42459,10 @@ exports.rebuildAdaptedComment = rebuildAdaptedComment;
 exports.hasTranslatedCommentMarker = hasTranslatedCommentMarker;
 exports.composeTranslatedComment = composeTranslatedComment;
 exports.renderTranslationContext = renderTranslationContext;
-const untrusted_content_1 = __nccwpck_require__(12334);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const copilot_command_1 = __nccwpck_require__(87134);
-const think_input_policy_1 = __nccwpck_require__(12636);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const copilot_command_1 = __nccwpck_require__(11771);
+const think_input_policy_1 = __nccwpck_require__(59687);
 /** Opaque marker: it is metadata, not an instruction for another agent. */
 exports.TRANSLATED_COMMENT_MARKER = '<!-- copilot:request-translation schema="3"';
 const MAX_TRANSLATED_COMMENT_LENGTH = untrusted_content_1.DEFAULT_UNTRUSTED_CONTENT_LIMIT;
@@ -42682,7 +42682,7 @@ function neutralizeQuotedOriginal(value) {
 
 /***/ }),
 
-/***/ 8964:
+/***/ 90108:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -42693,8 +42693,8 @@ exports.normalizeCopilotBotUsername = normalizeCopilotBotUsername;
 exports.buildCopilotHelpMessage = buildCopilotHelpMessage;
 exports.buildCopilotWelcomeMessage = buildCopilotWelcomeMessage;
 exports.buildCopilotWelcomeResult = buildCopilotWelcomeResult;
-const result_1 = __nccwpck_require__(61444);
-const publication_message_catalog_1 = __nccwpck_require__(46042);
+const result_1 = __nccwpck_require__(73817);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
 exports.DEFAULT_COPILOT_BOT_USERNAME = 'vypbot';
 const SAFE_GITHUB_USERNAME = /^[A-Za-z0-9-]+$/u;
 const READ_ONLY_COMMANDS = Object.freeze([
@@ -42777,14 +42777,14 @@ function commandLines(commands, catalog) {
 
 /***/ }),
 
-/***/ 61524:
+/***/ 8428:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveDeployWorkflowPlan = resolveDeployWorkflowPlan;
-const content_utils_1 = __nccwpck_require__(61146);
+const content_utils_1 = __nccwpck_require__(92816);
 function resolveDeployWorkflowPlan(param) {
     if (!param.issue.labeled || param.issue.labelAdded !== param.deployLabel)
         return undefined;
@@ -42829,14 +42829,14 @@ function sanitizeTitle(title) {
 
 /***/ }),
 
-/***/ 47063:
+/***/ 1779:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateDeploymentContinuation = validateDeploymentContinuation;
-const deployment_operation_1 = __nccwpck_require__(17176);
+const deployment_operation_1 = __nccwpck_require__(92730);
 /**
  * Rejects forged, stale, or out-of-order workflow continuations before a
  * publication-side mutation is attempted. Every publication command belongs to
@@ -42866,14 +42866,14 @@ function validateDeploymentContinuation(operation, expectedOperationId, allowedP
 
 /***/ }),
 
-/***/ 83013:
+/***/ 54037:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectDeploymentLabels = projectDeploymentLabels;
-const copilot_lifecycle_1 = __nccwpck_require__(4227);
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 function projectDeploymentLabels(current, operation, labels) {
     const managed = new Set((0, copilot_lifecycle_1.managedLifecycleLabelNames)(labels.lifecycle));
     let projected = current.filter((label) => !managed.has(label));
@@ -42902,7 +42902,7 @@ function projectDeploymentLabels(current, operation, labels) {
 
 /***/ }),
 
-/***/ 71375:
+/***/ 79364:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -42912,11 +42912,11 @@ exports.DEPLOYMENT_CATALOG_DEFINITIONS = exports.SPANISH_DEPLOYMENT_DEFINITION =
 exports.resolveStaticDeploymentCatalog = resolveStaticDeploymentCatalog;
 exports.resolveDeploymentCatalog = resolveDeploymentCatalog;
 exports.deploymentCopy = deploymentCopy;
-const deployment_operation_1 = __nccwpck_require__(17176);
-const message_catalog_1 = __nccwpck_require__(5313);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(98248);
-const merge_queue_message_catalog_1 = __nccwpck_require__(22459);
-const application_error_message_catalog_1 = __nccwpck_require__(67880);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
     'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
@@ -43146,7 +43146,7 @@ function deploymentCopy(catalog) {
 
 /***/ }),
 
-/***/ 86485:
+/***/ 8352:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -43162,8 +43162,8 @@ exports.reconciliationSource = reconciliationSource;
 exports.buildReconciliationTarget = buildReconciliationTarget;
 exports.buildReconciliationBranchName = buildReconciliationBranchName;
 exports.validateInitialDeploymentInput = validateInitialDeploymentInput;
-const deployment_operation_1 = __nccwpck_require__(17176);
-const merge_queue_message_catalog_1 = __nccwpck_require__(22459);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 function buildInitialDeploymentOperation(input) {
     const strategy = input.kind === "release"
         ? input.configuration.releaseReconciliationStrategy
@@ -43326,7 +43326,7 @@ function validateInitialDeploymentInput(input) {
 
 /***/ }),
 
-/***/ 85458:
+/***/ 83221:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -43339,10 +43339,10 @@ exports.renderPromotionPullRequest = renderPromotionPullRequest;
 exports.renderReconciliationPullRequest = renderReconciliationPullRequest;
 exports.renderDeploymentJobSummary = renderDeploymentJobSummary;
 exports.renderDeploymentMilestone = renderDeploymentMilestone;
-const deployment_operation_1 = __nccwpck_require__(17176);
-const managed_pull_request_1 = __nccwpck_require__(7975);
-const deployment_message_catalog_1 = __nccwpck_require__(71375);
-const publication_identity_policy_1 = __nccwpck_require__(12590);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const deployment_message_catalog_1 = __nccwpck_require__(79364);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
 exports.DEPLOYMENT_DASHBOARD_MARKER = 'copilot-deployment-dashboard';
 function deploymentDashboardMarker(operationId, issue) {
     return `<!-- ${exports.DEPLOYMENT_DASHBOARD_MARKER} operation-id="${safeMarkerValue(operationId)}" issue="${issue}" -->`;
@@ -43671,7 +43671,7 @@ function shortSha(value) {
 
 /***/ }),
 
-/***/ 56498:
+/***/ 20542:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -43733,7 +43733,7 @@ function fileMatchesIgnorePatterns(filePath, ignorePatterns) {
 
 /***/ }),
 
-/***/ 22913:
+/***/ 72712:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -43742,8 +43742,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sanitizeAgentMarkdown = sanitizeAgentMarkdown;
 exports.sanitizePublishedError = sanitizePublishedError;
 exports.escapeHtml = escapeHtml;
-const untrusted_content_1 = __nccwpck_require__(12334);
-const secret_redaction_1 = __nccwpck_require__(93523);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const secret_redaction_1 = __nccwpck_require__(254);
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
  * GitHub automation surfaces that could create side effects when published.
@@ -43786,7 +43786,7 @@ function neutralizeGithubControls(value) {
 
 /***/ }),
 
-/***/ 78447:
+/***/ 74902:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -43795,8 +43795,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.INACTIVITY_CATALOG_DEFINITIONS = exports.SPANISH_INACTIVITY_DEFINITION = exports.ENGLISH_INACTIVITY_DEFINITION = exports.INACTIVITY_MESSAGE_IDS = void 0;
 exports.resolveStaticInactivityCatalog = resolveStaticInactivityCatalog;
 exports.resolveInactivityCatalog = resolveInactivityCatalog;
-const message_catalog_1 = __nccwpck_require__(5313);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(98248);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 exports.INACTIVITY_MESSAGE_IDS = Object.freeze([
     'inactivity.closure.heading',
     'inactivity.closure.reason',
@@ -43890,7 +43890,7 @@ async function resolveInactivityCatalog(locale, configuration, resolver) {
 
 /***/ }),
 
-/***/ 62453:
+/***/ 1572:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -43898,7 +43898,7 @@ async function resolveInactivityCatalog(locale, configuration, resolver) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInactivityClosureComment = buildInactivityClosureComment;
 exports.buildInactivitySummarySteps = buildInactivitySummarySteps;
-const publication_identity_policy_1 = __nccwpck_require__(12590);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
 function buildInactivityClosureComment(input) {
     const digest = (0, publication_identity_policy_1.createSemanticDigest)({
         updatedAt: input.candidate.updatedAt,
@@ -43939,16 +43939,16 @@ function buildInactivitySummarySteps(input) {
 
 /***/ }),
 
-/***/ 36432:
+/***/ 73160:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInitialLabelProvisioningPlan = buildInitialLabelProvisioningPlan;
-const progress_labels_1 = __nccwpck_require__(71285);
-const copilot_lifecycle_1 = __nccwpck_require__(4227);
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const progress_labels_1 = __nccwpck_require__(97890);
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 const normalizeLabelName = (name) => name.trim().toLowerCase();
 function configuredLabelDefinitions(labels) {
     const metadata = [
@@ -44032,15 +44032,15 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
 
 /***/ }),
 
-/***/ 28956:
+/***/ 61899:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueCommentPublicationRequest = resolveIssueCommentPublicationRequest;
-const comment_content_policy_1 = __nccwpck_require__(2324);
-const input_keys_1 = __nccwpck_require__(83725);
+const comment_content_policy_1 = __nccwpck_require__(77454);
+const input_keys_1 = __nccwpck_require__(88539);
 function resolveIssueCommentPublicationRequest(input) {
     if (!(0, comment_content_policy_1.hasVisibleCommentContent)(input.message)) {
         return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE} must contain a visible message.`);
@@ -44072,15 +44072,15 @@ function resolveMode(mode, commentId) {
 
 /***/ }),
 
-/***/ 87929:
+/***/ 99190:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.assertLocalSingleActionAllowed = assertLocalSingleActionAllowed;
-const action_types_1 = __nccwpck_require__(8960);
-const application_error_1 = __nccwpck_require__(2965);
+const action_types_1 = __nccwpck_require__(19625);
+const application_error_1 = __nccwpck_require__(75999);
 const GITHUB_WORKFLOW_ONLY_ACTIONS = [
     action_types_1.ACTIONS.CREATE_TAG,
     action_types_1.ACTIONS.CREATE_RELEASE,
@@ -44099,7 +44099,7 @@ function assertLocalSingleActionAllowed(requestedAction) {
 
 /***/ }),
 
-/***/ 32742:
+/***/ 55078:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -44154,7 +44154,7 @@ function buildManagedBranchPresentation(input) {
 
 /***/ }),
 
-/***/ 22459:
+/***/ 56033:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -44164,7 +44164,7 @@ exports.SPANISH_MERGE_QUEUE_MESSAGES = exports.ENGLISH_MERGE_QUEUE_MESSAGES = ex
 exports.renderMergeQueueReadinessFailure = renderMergeQueueReadinessFailure;
 exports.producerStateMessageId = producerStateMessageId;
 exports.boundedMergeQueueDiagnostic = boundedMergeQueueDiagnostic;
-const sensitive_text_1 = __nccwpck_require__(98209);
+const sensitive_text_1 = __nccwpck_require__(47122);
 exports.MERGE_QUEUE_MESSAGE_IDS = Object.freeze([
     'mergeQueue.readiness.failure',
     'mergeQueue.readiness.incompleteEvidence',
@@ -44287,7 +44287,7 @@ function boundedMergeQueueDiagnostic(value) {
 
 /***/ }),
 
-/***/ 39631:
+/***/ 39267:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -44323,7 +44323,7 @@ function mergeSetupOverrides(fileOverrides, flagOverrides) {
 
 /***/ }),
 
-/***/ 71285:
+/***/ 97890:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -44357,7 +44357,7 @@ function progressPercentToColor(percent) {
 
 /***/ }),
 
-/***/ 12590:
+/***/ 45403:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -44374,7 +44374,7 @@ exports.buildPublicationTransitionMarker = buildPublicationTransitionMarker;
 exports.parsePublicationTransitionMarker = parsePublicationTransitionMarker;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
-const github_publication_1 = __nccwpck_require__(75905);
+const github_publication_1 = __nccwpck_require__(35793);
 exports.PUBLICATION_SCHEMA = '1';
 exports.PUBLICATION_MARKER_PREFIX = 'copilot:publication';
 exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
@@ -44505,7 +44505,7 @@ function stableSerialize(value) {
 
 /***/ }),
 
-/***/ 46042:
+/***/ 34223:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -44516,9 +44516,9 @@ exports.publicationLocaleNeedsDynamicCatalog = publicationLocaleNeedsDynamicCata
 exports.resolveStaticPublicationCatalog = resolveStaticPublicationCatalog;
 exports.resolvePublicationCatalog = resolvePublicationCatalog;
 exports.toPublicationCatalog = toPublicationCatalog;
-const message_catalog_1 = __nccwpck_require__(5313);
-const locale_1 = __nccwpck_require__(64552);
-const application_error_message_catalog_1 = __nccwpck_require__(67880);
+const message_catalog_1 = __nccwpck_require__(27097);
+const locale_1 = __nccwpck_require__(15386);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'publication.implementationPlan',
     'publication.planReady',
@@ -44917,7 +44917,7 @@ exports.SPANISH_PUBLICATION_CATALOG = toPublicationCatalog(Object.freeze({
 
 /***/ }),
 
-/***/ 11035:
+/***/ 79719:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -44929,8 +44929,8 @@ exports.buildDuplicateCompactionPublicationPayload = buildDuplicateCompactionPub
 exports.duplicateCompactionPublicationOutcomes = duplicateCompactionPublicationOutcomes;
 exports.buildTransitionPublicationPayload = buildTransitionPublicationPayload;
 exports.transitionPublicationOutcomes = transitionPublicationOutcomes;
-const result_1 = __nccwpck_require__(61444);
-const github_publication_1 = __nccwpck_require__(75905);
+const result_1 = __nccwpck_require__(73817);
+const github_publication_1 = __nccwpck_require__(35793);
 const MAX_REPORTED_COMMENT_IDS = 20;
 const MAX_REPORTED_TRANSITIONS = 20;
 /** Builds bounded evidence for a commit-derived result that was intentionally suppressed. */
@@ -45042,7 +45042,7 @@ function areOrderedUniquePositiveIntegers(values) {
 
 /***/ }),
 
-/***/ 87855:
+/***/ 43268:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -45050,7 +45050,7 @@ function areOrderedUniquePositiveIntegers(values) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_PULL_REQUEST_DESCRIPTION_LENGTH = void 0;
 exports.renderPullRequestDescriptionContent = renderPullRequestDescriptionContent;
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 exports.MAX_PULL_REQUEST_DESCRIPTION_LENGTH = 12000;
 const CONTENT_KEYS = Object.freeze([
     'outputLocale',
@@ -45242,7 +45242,7 @@ function renderList(values) {
 
 /***/ }),
 
-/***/ 83857:
+/***/ 39410:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -45282,7 +45282,7 @@ function createSha256(value) {
 
 /***/ }),
 
-/***/ 47992:
+/***/ 67402:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -45294,9 +45294,9 @@ exports.renderRepositoryAgentArtifacts = renderRepositoryAgentArtifacts;
 exports.renderRepositoryAgentGuide = renderRepositoryAgentGuide;
 exports.renderRepositoryAgentSkill = renderRepositoryAgentSkill;
 exports.renderRepositoryAgentPointerBlock = renderRepositoryAgentPointerBlock;
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const setup_issue_workflow_policy_1 = __nccwpck_require__(47280);
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 exports.REPOSITORY_AGENT_PROFILE_PATH = '.copilot/repository-profile.json';
 exports.REPOSITORY_AGENT_GUIDE_PATH = '.copilot/AGENT_GUIDE.md';
 exports.REPOSITORY_AGENT_SKILL_PATH = '.agents/skills/copilot-repository-workflow/SKILL.md';
@@ -45452,7 +45452,7 @@ function renderRepositoryAgentPointerBlock() {
 
 /***/ }),
 
-/***/ 98248:
+/***/ 55069:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -45461,8 +45461,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.toResolvedMessageCatalogView = toResolvedMessageCatalogView;
 exports.resolveStaticMessageCatalogView = resolveStaticMessageCatalogView;
 exports.resolveMessageCatalogView = resolveMessageCatalogView;
-const message_catalog_1 = __nccwpck_require__(5313);
-const locale_1 = __nccwpck_require__(64552);
+const message_catalog_1 = __nccwpck_require__(27097);
+const locale_1 = __nccwpck_require__(15386);
 function toResolvedMessageCatalogView(resolved) {
     return Object.freeze({
         locale: resolved.resolvedLocale,
@@ -45528,7 +45528,7 @@ async function resolveMessageCatalogView(locale, ids, sourceCatalog, bundledCata
 
 /***/ }),
 
-/***/ 49532:
+/***/ 88350:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -45575,7 +45575,7 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 /***/ }),
 
-/***/ 55150:
+/***/ 81985:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -45587,18 +45587,18 @@ exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
-const github_publication_1 = __nccwpck_require__(75905);
-const github_user_policy_1 = __nccwpck_require__(19596);
-const result_1 = __nccwpck_require__(61444);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const publication_identity_policy_1 = __nccwpck_require__(12590);
-const publication_message_catalog_1 = __nccwpck_require__(46042);
-const copilot_interaction_policy_1 = __nccwpck_require__(8964);
-const status_command_policy_1 = __nccwpck_require__(62186);
-const comment_translation_policy_1 = __nccwpck_require__(22406);
-const application_error_presentation_policy_1 = __nccwpck_require__(47255);
-const git_object_id_1 = __nccwpck_require__(36924);
-const implementation_plan_1 = __nccwpck_require__(52620);
+const github_publication_1 = __nccwpck_require__(35793);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const result_1 = __nccwpck_require__(73817);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const status_command_policy_1 = __nccwpck_require__(3449);
+const comment_translation_policy_1 = __nccwpck_require__(27150);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const git_object_id_1 = __nccwpck_require__(88623);
+const implementation_plan_1 = __nccwpck_require__(77001);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
         if (!result.executed || !result.success)
@@ -46001,15 +46001,15 @@ function safeDigest(value) {
 
 /***/ }),
 
-/***/ 8794:
+/***/ 53296:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApprovalDoctorChecks = buildApprovalDoctorChecks;
-const pull_request_approval_policy_1 = __nccwpck_require__(53553);
-const setup_doctor_message_catalog_1 = __nccwpck_require__(67183);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 /** Stable ordered checks; unknown prerequisites never project native-approval readiness. */
 function buildApprovalDoctorChecks(input) {
     const checks = [];
@@ -46092,14 +46092,14 @@ function check(id, status, summary, action, blockedBy = []) {
 
 /***/ }),
 
-/***/ 6802:
+/***/ 85881:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cloneSetupConfiguration = cloneSetupConfiguration;
-const setup_configuration_defaults_1 = __nccwpck_require__(31713);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 /** Returns a reference-isolated configuration snapshot without serializing it. */
 function cloneSetupConfiguration(configuration) {
     const agents = Object.fromEntries(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map((task) => [
@@ -46146,7 +46146,7 @@ function cloneSetupConfiguration(configuration) {
 
 /***/ }),
 
-/***/ 31713:
+/***/ 23381:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -46158,12 +46158,12 @@ exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfig
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
 exports.normalizeSetupConfigurationLocales = normalizeSetupConfigurationLocales;
-const agent_1 = __nccwpck_require__(95407);
-const issue_inactivity_1 = __nccwpck_require__(7703);
-const deployment_configuration_1 = __nccwpck_require__(5664);
-const locale_1 = __nccwpck_require__(64552);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const pull_request_approval_policy_1 = __nccwpck_require__(53553);
+const agent_1 = __nccwpck_require__(89040);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const locale_1 = __nccwpck_require__(15386);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -46368,7 +46368,7 @@ function normalizeSetupConfigurationLocales(configuration) {
 
 /***/ }),
 
-/***/ 44018:
+/***/ 87770:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -46379,15 +46379,15 @@ exports.buildSetupPlan = buildSetupPlan;
 exports.setupPlanGuardPaths = setupPlanGuardPaths;
 exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
-const pull_request_description_1 = __nccwpck_require__(25623);
-const setup_workflow_catalog_1 = __nccwpck_require__(37008);
-const setup_configuration_defaults_1 = __nccwpck_require__(31713);
-const setup_configuration_storage_policy_1 = __nccwpck_require__(60368);
-const setup_credential_requirement_policy_1 = __nccwpck_require__(61975);
+const pull_request_description_1 = __nccwpck_require__(45315);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const setup_credential_requirement_policy_1 = __nccwpck_require__(43562);
 Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable: true, get: function () { return setup_credential_requirement_policy_1.buildSetupCredentialRequirements; } }));
-const locale_1 = __nccwpck_require__(64552);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const setup_issue_workflow_policy_1 = __nccwpck_require__(47280);
+const locale_1 = __nccwpck_require__(15386);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
         .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
@@ -46664,7 +46664,7 @@ function unique(values) {
 
 /***/ }),
 
-/***/ 93015:
+/***/ 56637:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -46685,16 +46685,16 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 /** Public setup-policy boundary. Each concern is implemented in a focused policy module. */
-__exportStar(__nccwpck_require__(31713), exports);
-__exportStar(__nccwpck_require__(44018), exports);
-__exportStar(__nccwpck_require__(60368), exports);
-__exportStar(__nccwpck_require__(31156), exports);
-__exportStar(__nccwpck_require__(47280), exports);
+__exportStar(__nccwpck_require__(23381), exports);
+__exportStar(__nccwpck_require__(87770), exports);
+__exportStar(__nccwpck_require__(2554), exports);
+__exportStar(__nccwpck_require__(13339), exports);
+__exportStar(__nccwpck_require__(81182), exports);
 
 
 /***/ }),
 
-/***/ 60368:
+/***/ 2554:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -46714,7 +46714,7 @@ exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
 exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
-const setup_configuration_defaults_1 = __nccwpck_require__(31713);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 function resolveSetupResourceScope(policy, name) {
     return policy.overrides[name] ?? policy.defaultScope;
 }
@@ -46925,22 +46925,22 @@ function mergeStoragePolicy(base, override) {
 
 /***/ }),
 
-/***/ 31156:
+/***/ 13339:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateSetupConfiguration = validateSetupConfiguration;
-const setup_configuration_defaults_1 = __nccwpck_require__(31713);
-const agent_configuration_validation_policy_1 = __nccwpck_require__(4345);
-const setup_configuration_storage_policy_1 = __nccwpck_require__(60368);
-const issue_inactivity_1 = __nccwpck_require__(7703);
-const deployment_configuration_1 = __nccwpck_require__(5664);
-const locale_1 = __nccwpck_require__(64552);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const setup_issue_workflow_policy_1 = __nccwpck_require__(47280);
-const pull_request_approval_policy_1 = __nccwpck_require__(53553);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const locale_1 = __nccwpck_require__(15386);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 function validateSetupConfiguration(configuration, options = {}) {
     const errors = [];
     errors.push(...(0, pull_request_approval_policy_1.validatePullRequestApprovalPolicy)(configuration.pullRequestApproval, options.allowIncompleteApproval === true));
@@ -47098,14 +47098,14 @@ function validateLocale(errors, label, value, optional) {
 
 /***/ }),
 
-/***/ 61975:
+/***/ 43562:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSetupCredentialRequirements = buildSetupCredentialRequirements;
-const setup_configuration_defaults_1 = __nccwpck_require__(31713);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 const SECRET_BY_MODEL_PROVIDER = {
     openai: 'OPENAI_API_KEY',
     anthropic: 'ANTHROPIC_API_KEY',
@@ -47213,7 +47213,7 @@ function uniqueDefined(current, next) {
 
 /***/ }),
 
-/***/ 67183:
+/***/ 80226:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47222,10 +47222,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SETUP_DOCTOR_CATALOG_DEFINITIONS = exports.SPANISH_SETUP_DOCTOR_DEFINITION = exports.ENGLISH_SETUP_DOCTOR_DEFINITION = exports.SETUP_DOCTOR_MESSAGE_IDS = void 0;
 exports.resolveStaticSetupDoctorCatalog = resolveStaticSetupDoctorCatalog;
 exports.resolveSetupDoctorCatalog = resolveSetupDoctorCatalog;
-const message_catalog_1 = __nccwpck_require__(5313);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(98248);
-const merge_queue_message_catalog_1 = __nccwpck_require__(22459);
-const approval_doctor_message_catalog_1 = __nccwpck_require__(24591);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
+const approval_doctor_message_catalog_1 = __nccwpck_require__(36904);
 const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
     'doctor.title',
     'doctor.title.partial',
@@ -47551,7 +47551,7 @@ function resolveSetupDoctorCatalog(locale, configuration, resolver) {
 
 /***/ }),
 
-/***/ 81332:
+/***/ 67615:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47562,10 +47562,10 @@ exports.doctorCheck = doctorCheck;
 exports.skippedDoctorCheck = skippedDoctorCheck;
 exports.normalizedDoctorPathId = normalizedDoctorPathId;
 exports.buildLocaleDoctorChecks = buildLocaleDoctorChecks;
-const locale_1 = __nccwpck_require__(64552);
-const message_catalog_1 = __nccwpck_require__(5313);
-const agent_1 = __nccwpck_require__(95407);
-const setup_doctor_message_catalog_1 = __nccwpck_require__(67183);
+const locale_1 = __nccwpck_require__(15386);
+const message_catalog_1 = __nccwpck_require__(27097);
+const agent_1 = __nccwpck_require__(89040);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const EMPTY_TOTALS = {
     pass: 0,
     warn: 0,
@@ -47656,7 +47656,7 @@ function localeDoctorCheck(scope, configured, effective, inheritedWhenEmpty, dyn
 
 /***/ }),
 
-/***/ 36206:
+/***/ 67323:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47664,7 +47664,7 @@ function localeDoctorCheck(scope, configured, effective, inheritedWhenEmpty, dyn
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectedInitialLabels = selectedInitialLabels;
 exports.selectedInitialIssueTypes = selectedInitialIssueTypes;
-const setup_issue_workflow_policy_1 = __nccwpck_require__(47280);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 /** Removes workflow-specific resources that are not part of the effective profile. */
 function selectedInitialLabels(labels, configuration) {
     if (!configuration)
@@ -47723,7 +47723,7 @@ function selectedInitialIssueTypes(issueTypes, configuration) {
 
 /***/ }),
 
-/***/ 47280:
+/***/ 81182:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47733,7 +47733,7 @@ exports.effectiveIssueWorkflowProfile = effectiveIssueWorkflowProfile;
 exports.effectiveIssueWorkflowFeatures = effectiveIssueWorkflowFeatures;
 exports.effectiveIssueWorkflowLabels = effectiveIssueWorkflowLabels;
 exports.effectiveIssueFormLabels = effectiveIssueFormLabels;
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 /** Applies feature switches to the explicit issue workflow selection. */
 function effectiveIssueWorkflowProfile(configuration) {
     const configured = configuration.issueWorkflows?.enabled ?? issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS;
@@ -47786,7 +47786,7 @@ function effectiveIssueFormLabels(configuration) {
 
 /***/ }),
 
-/***/ 55254:
+/***/ 53289:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -47826,7 +47826,7 @@ function buildSetupJourneyView(repository, stage, mutationStarted, outcome, choi
 
 /***/ }),
 
-/***/ 96850:
+/***/ 54718:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -47906,7 +47906,7 @@ function buildSetupPatCreationUrl(input) {
 
 /***/ }),
 
-/***/ 66964:
+/***/ 30748:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47915,7 +47915,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fixedSetupPatIntentQuestionIds = fixedSetupPatIntentQuestionIds;
 exports.setupPatIntentNeedsOwnerKind = setupPatIntentNeedsOwnerKind;
 exports.setupPatIntentOwnerConflict = setupPatIntentOwnerConflict;
-const setup_token_permission_policy_1 = __nccwpck_require__(10947);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 /** Local inputs with explicit precedence are decisions, not questions. */
 function fixedSetupPatIntentQuestionIds(overrides, skipVariables, skipSecrets) {
     const fixed = [];
@@ -47960,7 +47960,7 @@ function setupPatIntentOwnerConflict(configuration, ownerKind) {
 
 /***/ }),
 
-/***/ 48581:
+/***/ 10267:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -47979,7 +47979,7 @@ function summarizeSetupPermissions(requirements) {
 
 /***/ }),
 
-/***/ 65207:
+/***/ 6009:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -47992,9 +47992,9 @@ exports.transitionSetupQuestionnaire = transitionSetupQuestionnaire;
 exports.enterSetupConfirmation = enterSetupConfirmation;
 exports.finishSetupQuestionnaire = finishSetupQuestionnaire;
 exports.setupQuestionnaireStateLabel = setupQuestionnaireStateLabel;
-const setup_configuration_clone_policy_1 = __nccwpck_require__(6802);
-const setup_configuration_defaults_1 = __nccwpck_require__(31713);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
+const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'];
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'];
 const PERMISSION_INTENT_QUESTION_IDS = new Set([
@@ -48492,7 +48492,7 @@ function projectLabel(field) {
 
 /***/ }),
 
-/***/ 41599:
+/***/ 92567:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -48524,7 +48524,7 @@ function sameSetupRemoteFacts(left, right) {
 
 /***/ }),
 
-/***/ 19750:
+/***/ 65640:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -48601,7 +48601,7 @@ function unverifiable(requirement, message) {
 
 /***/ }),
 
-/***/ 10947:
+/***/ 99590:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -48614,10 +48614,10 @@ exports.buildSetupPatIntentUncertainty = buildSetupPatIntentUncertainty;
 exports.requiredSetupPatPermissionDelta = requiredSetupPatPermissionDelta;
 exports.buildWorkflowPatPermissionRequirements = buildWorkflowPatPermissionRequirements;
 exports.normalizePermissionRequirements = normalizePermissionRequirements;
-const setup_configuration_plan_1 = __nccwpck_require__(44018);
-const setup_credential_requirement_policy_1 = __nccwpck_require__(61975);
-const setup_issue_workflow_policy_1 = __nccwpck_require__(47280);
-const setup_configuration_storage_policy_1 = __nccwpck_require__(60368);
+const setup_configuration_plan_1 = __nccwpck_require__(87770);
+const setup_credential_requirement_policy_1 = __nccwpck_require__(43562);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 const requirement = (input) => ({
     id: `${input.role}.${input.scope}.${input.permission.toLowerCase().replace(/[^a-z0-9]+/gu, '-')}`,
     applicability: 'required',
@@ -48847,7 +48847,7 @@ function levelRank(level) {
 
 /***/ }),
 
-/***/ 62186:
+/***/ 3449:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -48856,9 +48856,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
-const result_1 = __nccwpck_require__(61444);
-const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(22443);
-const publication_message_catalog_1 = __nccwpck_require__(46042);
+const result_1 = __nccwpck_require__(73817);
+const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
 function buildCopilotStatusSnapshot(execution) {
     const issueLabels = [...(execution.labels?.currentIssueLabels ?? [])];
@@ -48947,7 +48947,7 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
 
 /***/ }),
 
-/***/ 97549:
+/***/ 43193:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -48976,7 +48976,7 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
 
 /***/ }),
 
-/***/ 73001:
+/***/ 6152:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -49039,7 +49039,7 @@ function setGlobalLoggerDebug(debug, isRemote = false) {
 
 /***/ }),
 
-/***/ 81504:
+/***/ 46445:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -49090,7 +49090,7 @@ function toPullRequestReviewOperationError(error, operation, context) {
 
 /***/ }),
 
-/***/ 55294:
+/***/ 77658:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -49105,13 +49105,13 @@ exports.deploymentSuccess = deploymentSuccess;
 exports.blockedDeploymentResult = blockedDeploymentResult;
 exports.shouldRecordUnexpectedFailure = shouldRecordUnexpectedFailure;
 exports.semanticCleanupError = semanticCleanupError;
-const application_error_1 = __nccwpck_require__(2965);
-const deployment_plan_policy_1 = __nccwpck_require__(86485);
-const deployment_presentation_policy_1 = __nccwpck_require__(85458);
-const deployment_message_catalog_1 = __nccwpck_require__(71375);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const merge_queue_readiness_1 = __nccwpck_require__(36637);
-const result_1 = __nccwpck_require__(61444);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_presentation_policy_1 = __nccwpck_require__(83221);
+const deployment_message_catalog_1 = __nccwpck_require__(79364);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
+const result_1 = __nccwpck_require__(73817);
 exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationRuntime {
     constructor(dependencies, stateBoundary) {
@@ -49395,16 +49395,16 @@ function failureCategory(operation) {
 
 /***/ }),
 
-/***/ 55649:
+/***/ 27827:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SupersededDeploymentInvocationError = exports.DeploymentStateBoundary = void 0;
-const deployment_state_fence_1 = __nccwpck_require__(32481);
-const deployment_lifecycle_policy_1 = __nccwpck_require__(83013);
-const application_error_1 = __nccwpck_require__(2965);
+const deployment_state_fence_1 = __nccwpck_require__(72369);
+const deployment_lifecycle_policy_1 = __nccwpck_require__(54037);
+const application_error_1 = __nccwpck_require__(75999);
 class DeploymentStateBoundary {
     constructor(state, labels) {
         this.state = state;
@@ -49484,14 +49484,14 @@ exports.SupersededDeploymentInvocationError = SupersededDeploymentInvocationErro
 
 /***/ }),
 
-/***/ 21113:
+/***/ 41601:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckProgressUseCase = void 0;
-const check_progress_workflow_1 = __nccwpck_require__(54747);
+const check_progress_workflow_1 = __nccwpck_require__(94343);
 /** Application boundary for assessing and publishing issue progress. */
 class CheckProgressUseCase {
     constructor(issueDescriptionQueryPort, issueLabelsPort, issueProgressPort, branchRepository, pullRequestRepository, aiRepository, publicationSourceQuery) {
@@ -49521,21 +49521,21 @@ exports.CheckProgressUseCase = CheckProgressUseCase;
 
 /***/ }),
 
-/***/ 54747:
+/***/ 94343:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCheckProgressWorkflow = runCheckProgressWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const sync_progress_labels_to_open_pull_requests_1 = __nccwpck_require__(24603);
-const progress_summary_builder_1 = __nccwpck_require__(96279);
-const progress_analysis_workflow_1 = __nccwpck_require__(67608);
-const application_error_1 = __nccwpck_require__(2965);
-const publication_outcome_policy_1 = __nccwpck_require__(11035);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const sync_progress_labels_to_open_pull_requests_1 = __nccwpck_require__(18277);
+const progress_summary_builder_1 = __nccwpck_require__(62721);
+const progress_analysis_workflow_1 = __nccwpck_require__(88729);
+const application_error_1 = __nccwpck_require__(75999);
+const publication_outcome_policy_1 = __nccwpck_require__(79719);
 /** Publishes a completed progress assessment after the analysis workflow succeeds. */
 async function runCheckProgressWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
@@ -49642,14 +49642,14 @@ function logProgressAssessment(progress, summary, reasoning, remaining) {
 
 /***/ }),
 
-/***/ 56690:
+/***/ 84579:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseInactiveIssuesUseCase = void 0;
-const close_inactive_issues_workflow_1 = __nccwpck_require__(12632);
+const close_inactive_issues_workflow_1 = __nccwpck_require__(86288);
 /** Application boundary for the scheduled inactivity-maintenance action. */
 class CloseInactiveIssuesUseCase {
     constructor(issueQueryPort, issueClosurePort, clock, catalogResolver) {
@@ -49673,19 +49673,19 @@ exports.CloseInactiveIssuesUseCase = CloseInactiveIssuesUseCase;
 
 /***/ }),
 
-/***/ 12632:
+/***/ 86288:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCloseInactiveIssuesWorkflow = runCloseInactiveIssuesWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const issue_inactivity_1 = __nccwpck_require__(7703);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
-const inactivity_message_catalog_1 = __nccwpck_require__(78447);
-const inactivity_notification_policy_1 = __nccwpck_require__(62453);
+const result_1 = __nccwpck_require__(73817);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
+const inactivity_message_catalog_1 = __nccwpck_require__(74902);
+const inactivity_notification_policy_1 = __nccwpck_require__(1572);
 const TASK_ID = 'CloseInactiveIssuesUseCase';
 /** Scans waiting issues and closes only candidates that remain inactive. */
 async function runCloseInactiveIssuesWorkflow(param, dependencies) {
@@ -49839,7 +49839,7 @@ function unique(values) {
 
 /***/ }),
 
-/***/ 59528:
+/***/ 76549:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -49848,8 +49848,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateReleaseInput = validateReleaseInput;
 exports.normalizeVersion = normalizeVersion;
 exports.versionForRelease = versionForRelease;
-const input_keys_1 = __nccwpck_require__(83725);
-const application_error_1 = __nccwpck_require__(2965);
+const input_keys_1 = __nccwpck_require__(88539);
+const application_error_1 = __nccwpck_require__(75999);
 const SEMVER_PATTERN = /^\d+(\.\d+){0,2}$/;
 function validateReleaseInput(input) {
     if (!input.version.length)
@@ -49877,16 +49877,16 @@ function versionForRelease(version) {
 
 /***/ }),
 
-/***/ 68781:
+/***/ 25258:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateReleaseUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const create_release_workflow_1 = __nccwpck_require__(96528);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const create_release_workflow_1 = __nccwpck_require__(75138);
 class CreateReleaseUseCase {
     constructor(repositoryReleasePort) {
         this.repositoryReleasePort = repositoryReleasePort;
@@ -49902,18 +49902,18 @@ exports.CreateReleaseUseCase = CreateReleaseUseCase;
 
 /***/ }),
 
-/***/ 96528:
+/***/ 75138:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCreateRelease = runCreateRelease;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const create_release_policy_1 = __nccwpck_require__(59528);
-const deployment_continuation_guard_1 = __nccwpck_require__(47063);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const create_release_policy_1 = __nccwpck_require__(76549);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCreateRelease(param, taskId, repositoryReleasePort) {
     const operation = param.operation;
     const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
@@ -49964,16 +49964,16 @@ function failureResult(taskId, message, code) {
 
 /***/ }),
 
-/***/ 27977:
+/***/ 22120:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateTagUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const create_tag_workflow_1 = __nccwpck_require__(69061);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const create_tag_workflow_1 = __nccwpck_require__(23539);
 class CreateTagUseCase {
     constructor(repositoryReleasePort) {
         this.repositoryReleasePort = repositoryReleasePort;
@@ -49989,17 +49989,17 @@ exports.CreateTagUseCase = CreateTagUseCase;
 
 /***/ }),
 
-/***/ 69061:
+/***/ 23539:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCreateTag = runCreateTag;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const deployment_continuation_guard_1 = __nccwpck_require__(47063);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCreateTag(param, taskId, repositoryTagPort) {
     const validationFailure = validateTagInput(param, taskId);
     if (validationFailure)
@@ -50039,14 +50039,14 @@ function noTagResult(taskId, tagName) {
 
 /***/ }),
 
-/***/ 57402:
+/***/ 28399:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AcceptPromotionHandler = void 0;
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class AcceptPromotionHandler {
     constructor(runtime) {
         this.runtime = runtime;
@@ -50101,17 +50101,17 @@ function matchesPromotion(operation, pullRequest) {
 
 /***/ }),
 
-/***/ 92224:
+/***/ 46361:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConfirmPublicationHandler = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const deployment_plan_policy_1 = __nccwpck_require__(86485);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class ConfirmPublicationHandler {
     constructor(runtime, reconciliation) {
         this.runtime = runtime;
@@ -50202,17 +50202,17 @@ function requireProductionSha(operation) {
 
 /***/ }),
 
-/***/ 58024:
+/***/ 85138:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContinueDeploymentHandler = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const managed_pull_request_1 = __nccwpck_require__(7975);
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class ContinueDeploymentHandler {
     constructor(runtime, acceptPromotion, reconciliation) {
         this.runtime = runtime;
@@ -50288,17 +50288,17 @@ function assertSameRepository(context, pullRequest) {
 
 /***/ }),
 
-/***/ 13502:
+/***/ 43877:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreparePromotionHandler = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const deployment_plan_policy_1 = __nccwpck_require__(86485);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class PreparePromotionHandler {
     constructor(runtime, acceptPromotion) {
         this.runtime = runtime;
@@ -50455,16 +50455,16 @@ function pendingPromotion(operation, pullRequest) {
 
 /***/ }),
 
-/***/ 36195:
+/***/ 3344:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReconciliationHandler = void 0;
-const deployment_plan_policy_1 = __nccwpck_require__(86485);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class ReconciliationHandler {
     constructor(runtime) {
         this.runtime = runtime;
@@ -50604,17 +50604,17 @@ exports.ReconciliationHandler = ReconciliationHandler;
 
 /***/ }),
 
-/***/ 93088:
+/***/ 66571:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RecordFailureHandler = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const result_1 = __nccwpck_require__(61444);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
+const application_error_1 = __nccwpck_require__(75999);
+const result_1 = __nccwpck_require__(73817);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class RecordFailureHandler {
     constructor(runtime) {
         this.runtime = runtime;
@@ -50653,23 +50653,23 @@ function failureCategory(phase) {
 
 /***/ }),
 
-/***/ 67132:
+/***/ 36850:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentOrchestrationUseCase = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const deployment_orchestration_runtime_1 = __nccwpck_require__(55294);
-const deployment_state_boundary_1 = __nccwpck_require__(55649);
-const result_1 = __nccwpck_require__(61444);
-const accept_promotion_handler_1 = __nccwpck_require__(57402);
-const confirm_publication_handler_1 = __nccwpck_require__(92224);
-const continue_deployment_handler_1 = __nccwpck_require__(58024);
-const prepare_promotion_handler_1 = __nccwpck_require__(13502);
-const reconciliation_handler_1 = __nccwpck_require__(36195);
-const record_failure_handler_1 = __nccwpck_require__(93088);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+const deployment_state_boundary_1 = __nccwpck_require__(27827);
+const result_1 = __nccwpck_require__(73817);
+const accept_promotion_handler_1 = __nccwpck_require__(28399);
+const confirm_publication_handler_1 = __nccwpck_require__(46361);
+const continue_deployment_handler_1 = __nccwpck_require__(85138);
+const prepare_promotion_handler_1 = __nccwpck_require__(43877);
+const reconciliation_handler_1 = __nccwpck_require__(3344);
+const record_failure_handler_1 = __nccwpck_require__(66571);
 class DeploymentOrchestrationUseCase {
     constructor(dependencies) {
         this.taskId = deployment_orchestration_runtime_1.DEPLOYMENT_ORCHESTRATION_TASK_ID;
@@ -50726,14 +50726,14 @@ exports.DeploymentOrchestrationUseCase = DeploymentOrchestrationUseCase;
 
 /***/ }),
 
-/***/ 72387:
+/***/ 38575:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findIssueBranch = findIssueBranch;
-const logging_ports_1 = __nccwpck_require__(73001);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function findIssueBranch(param, repository) {
     if (param.pushedBranch)
         return param.pushedBranch;
@@ -50751,14 +50751,14 @@ async function findIssueBranch(param, repository) {
 
 /***/ }),
 
-/***/ 50658:
+/***/ 84837:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InitialSetupUseCase = void 0;
-const initial_setup_workflow_1 = __nccwpck_require__(32599);
+const initial_setup_workflow_1 = __nccwpck_require__(18079);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
     constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
@@ -50794,21 +50794,21 @@ exports.InitialSetupUseCase = InitialSetupUseCase;
 
 /***/ }),
 
-/***/ 32599:
+/***/ 18079:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runInitialSetupWorkflow = runInitialSetupWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const version_policy_1 = __nccwpck_require__(36707);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const setup_resource_provisioning_1 = __nccwpck_require__(64709);
-const application_error_1 = __nccwpck_require__(2965);
-const setup_issue_resource_policy_1 = __nccwpck_require__(36206);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
+const result_1 = __nccwpck_require__(73817);
+const version_policy_1 = __nccwpck_require__(8381);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const setup_resource_provisioning_1 = __nccwpck_require__(94894);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_issue_resource_policy_1 = __nccwpck_require__(67323);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const TASK_ID = 'InitialSetupUseCase';
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 async function runInitialSetupWorkflow(request, dependencies) {
@@ -50994,7 +50994,7 @@ function fromMessages(messages, code) {
 
 /***/ }),
 
-/***/ 724:
+/***/ 28121:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -51084,20 +51084,20 @@ function projectEvidence(source) {
 
 /***/ }),
 
-/***/ 34342:
+/***/ 84542:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ObserveBranchSyncUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const branch_sync_notification_policy_1 = __nccwpck_require__(90741);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
-const branch_sync_message_catalog_1 = __nccwpck_require__(71641);
-const transition_notification_workflow_1 = __nccwpck_require__(93066);
-const publication_outcome_policy_1 = __nccwpck_require__(11035);
+const result_1 = __nccwpck_require__(73817);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
+const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
+const transition_notification_workflow_1 = __nccwpck_require__(1725);
+const publication_outcome_policy_1 = __nccwpck_require__(79719);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
@@ -51218,24 +51218,24 @@ function failure(message, cause, payload) {
 
 /***/ }),
 
-/***/ 67608:
+/***/ 88729:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeProgress = analyzeProgress;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const find_issue_branch_1 = __nccwpck_require__(72387);
-const progress_prerequisite_policy_1 = __nccwpck_require__(96802);
-const progress_response_1 = __nccwpck_require__(68049);
-const application_error_1 = __nccwpck_require__(2965);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const find_issue_branch_1 = __nccwpck_require__(38575);
+const progress_prerequisite_policy_1 = __nccwpck_require__(31001);
+const progress_response_1 = __nccwpck_require__(64264);
+const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 /** Loads progress context and asks the configured agent for an assessment. */
 async function analyzeProgress(param, taskId, dependencies) {
     const issueNumber = param.issueNumber;
@@ -51320,7 +51320,7 @@ function failure(taskId, message, code) {
 
 /***/ }),
 
-/***/ 96802:
+/***/ 31001:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -51346,7 +51346,7 @@ function validateProgressPrerequisites(input) {
 
 /***/ }),
 
-/***/ 68049:
+/***/ 64264:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -51354,8 +51354,8 @@ function validateProgressPrerequisites(input) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROGRESS_RESPONSE_SCHEMA = void 0;
 exports.parseProgressResponse = parseProgressResponse;
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
 exports.PROGRESS_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -51385,7 +51385,7 @@ function parseProgressResponse(response, targetLocale) {
 
 /***/ }),
 
-/***/ 96279:
+/***/ 62721:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -51417,16 +51417,16 @@ function buildProgressSummaryMessage({ summary, progress, remaining, reasoning }
 
 /***/ }),
 
-/***/ 31153:
+/***/ 68891:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublishGithubActionUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const publish_github_action_workflow_1 = __nccwpck_require__(77361);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const publish_github_action_workflow_1 = __nccwpck_require__(63037);
 class PublishGithubActionUseCase {
     constructor(repositoryTagPort, repositoryReleasePort) {
         this.repositoryTagPort = repositoryTagPort;
@@ -51443,18 +51443,18 @@ exports.PublishGithubActionUseCase = PublishGithubActionUseCase;
 
 /***/ }),
 
-/***/ 77361:
+/***/ 63037:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPublishGithubAction = runPublishGithubAction;
-const result_1 = __nccwpck_require__(61444);
-const input_keys_1 = __nccwpck_require__(83725);
-const logging_ports_1 = __nccwpck_require__(73001);
-const deployment_continuation_guard_1 = __nccwpck_require__(47063);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const input_keys_1 = __nccwpck_require__(88539);
+const logging_ports_1 = __nccwpck_require__(6152);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPublishGithubAction(param, taskId, repositoryTagPort, repositoryReleasePort) {
     const validationFailure = validateVersion(param, taskId);
     if (validationFailure)
@@ -51499,16 +51499,16 @@ function failureResult(taskId, sourceTag, targetTag) {
 
 /***/ }),
 
-/***/ 23758:
+/***/ 61313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublishIssueCommentUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const publish_issue_comment_workflow_1 = __nccwpck_require__(95981);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const publish_issue_comment_workflow_1 = __nccwpck_require__(30626);
 /** Application boundary for creating or updating a specific issue comment. */
 class PublishIssueCommentUseCase {
     constructor(issueCommentPort) {
@@ -51525,16 +51525,16 @@ exports.PublishIssueCommentUseCase = PublishIssueCommentUseCase;
 
 /***/ }),
 
-/***/ 95981:
+/***/ 30626:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPublishIssueComment = runPublishIssueComment;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPublishIssueComment(param, taskId, issueCommentPort) {
     if (param.kind === 'invalid') {
         return [new result_1.Result({
@@ -51583,19 +51583,19 @@ function appendCommentContent(previous, addition) {
 
 /***/ }),
 
-/***/ 78348:
+/***/ 65928:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildRecommendationResult = buildRecommendationResult;
-const result_1 = __nccwpck_require__(61444);
-const recommendation_policy_1 = __nccwpck_require__(83857);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
-const implementation_plan_1 = __nccwpck_require__(52620);
+const result_1 = __nccwpck_require__(73817);
+const recommendation_policy_1 = __nccwpck_require__(39410);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const implementation_plan_1 = __nccwpck_require__(77001);
 function buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber) {
     const extracted = extractImplementationPlan(response, param.targetLocale);
     if (!extracted) {
@@ -51682,14 +51682,14 @@ function hasOnlyResponseKeys(payload) {
 
 /***/ }),
 
-/***/ 33526:
+/***/ 73746:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RecommendStepsUseCase = void 0;
-const recommend_steps_workflow_1 = __nccwpck_require__(17415);
+const recommend_steps_workflow_1 = __nccwpck_require__(77522);
 /** Application boundary for generating non-duplicated implementation guidance. */
 class RecommendStepsUseCase {
     constructor(issueDescriptionQueryPort, aiRepository) {
@@ -51709,26 +51709,26 @@ exports.RecommendStepsUseCase = RecommendStepsUseCase;
 
 /***/ }),
 
-/***/ 17415:
+/***/ 77522:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runRecommendStepsWorkflow = runRecommendStepsWorkflow;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const recommendation_policy_1 = __nccwpck_require__(83857);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const task_emoji_1 = __nccwpck_require__(83142);
-const recommend_steps_result_policy_1 = __nccwpck_require__(78348);
-const application_error_1 = __nccwpck_require__(2965);
-const agent_response_schemas_1 = __nccwpck_require__(63523);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
-const implementation_plan_1 = __nccwpck_require__(52620);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const recommendation_policy_1 = __nccwpck_require__(39410);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const task_emoji_1 = __nccwpck_require__(46103);
+const recommend_steps_result_policy_1 = __nccwpck_require__(65928);
+const application_error_1 = __nccwpck_require__(75999);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const implementation_plan_1 = __nccwpck_require__(77001);
 /** Runs the recommendation policy and agent interaction for an issue. */
 async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
@@ -51825,7 +51825,7 @@ function failure(taskId, message, code) {
 
 /***/ }),
 
-/***/ 64709:
+/***/ 94894:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -51835,9 +51835,9 @@ exports.ensureRepositoryVariables = ensureRepositoryVariables;
 exports.ensureRepositorySecrets = ensureRepositorySecrets;
 exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
 exports.groupSetupResources = groupSetupResources;
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
         return { errors: [] };
@@ -51991,15 +51991,15 @@ async function upsertSecretGroups(context, port, groups) {
 
 /***/ }),
 
-/***/ 24603:
+/***/ 18277:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.syncProgressLabelsToOpenPullRequests = syncProgressLabelsToOpenPullRequests;
-const progress_labels_1 = __nccwpck_require__(71285);
-const logging_ports_1 = __nccwpck_require__(73001);
+const progress_labels_1 = __nccwpck_require__(97890);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function syncProgressLabelsToOpenPullRequests(branch, progress, issueRepository, pullRequestRepository) {
     const roundedProgress = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
     const newProgressLabel = `${roundedProgress}%`;
@@ -52018,16 +52018,16 @@ async function syncProgressLabelsToOpenPullRequests(branch, progress, issueRepos
 
 /***/ }),
 
-/***/ 83269:
+/***/ 44880:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SynchronizeAgentActivityUseCase = void 0;
-const agent_activity_label_policy_1 = __nccwpck_require__(24342);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_activity_label_policy_1 = __nccwpck_require__(79966);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Maintains the temporary agent-activity label around a complete route.
  * Cleanup is deliberately best-effort so a label outage never hides the
@@ -52082,16 +52082,16 @@ function sameLabels(left, right) {
 
 /***/ }),
 
-/***/ 70937:
+/***/ 4643:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runBranchSyncCommand = runBranchSyncCommand;
-const result_1 = __nccwpck_require__(61444);
-const branch_sync_command_1 = __nccwpck_require__(7465);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+const application_error_1 = __nccwpck_require__(75999);
 /** Authorizes and runs an explicit or natural-language branch synchronization request. */
 async function runBranchSyncCommand(context, options, args, authorization) {
     const parsed = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(args);
@@ -52127,7 +52127,7 @@ function unauthorized(taskId) {
 
 /***/ }),
 
-/***/ 52921:
+/***/ 82113:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -52138,10 +52138,10 @@ exports.branchSyncConflictEligibilityError = branchSyncConflictEligibilityError;
 exports.completedBranchSyncResult = completedBranchSyncResult;
 exports.unavailableBranchSyncResult = unavailableBranchSyncResult;
 exports.failedBranchSyncResult = failedBranchSyncResult;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const workspace_changes_1 = __nccwpck_require__(51578);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const workspace_changes_1 = __nccwpck_require__(93370);
+const application_error_1 = __nccwpck_require__(75999);
 exports.BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
 const MAX_AGENT_CONFLICT_PATHS = 20;
 function branchSyncConflictEligibilityError(preparation, useAgent, agentConfiguration) {
@@ -52203,18 +52203,18 @@ function failedBranchSyncResult(reason, cause) {
 
 /***/ }),
 
-/***/ 43725:
+/***/ 392:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SyncBranchUseCase = void 0;
-const branch_sync_conflicts_1 = __nccwpck_require__(93843);
-const logging_ports_1 = __nccwpck_require__(73001);
-const verify_command_policy_1 = __nccwpck_require__(32739);
-const verify_command_runner_1 = __nccwpck_require__(71843);
-const branch_sync_execution_policy_1 = __nccwpck_require__(52921);
+const branch_sync_conflicts_1 = __nccwpck_require__(84434);
+const logging_ports_1 = __nccwpck_require__(6152);
+const verify_command_policy_1 = __nccwpck_require__(96031);
+const verify_command_runner_1 = __nccwpck_require__(57742);
+const branch_sync_execution_policy_1 = __nccwpck_require__(82113);
 /** Performs a race-safe parent-to-child merge and invokes the fixer only for eligible conflicts. */
 class SyncBranchUseCase {
     constructor(dependencies, workspace, fixer, authenticatedUser, git) {
@@ -52338,14 +52338,14 @@ exports.SyncBranchUseCase = SyncBranchUseCase;
 
 /***/ }),
 
-/***/ 11677:
+/***/ 55721:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckCliUpdateUseCase = void 0;
-const cli_version_1 = __nccwpck_require__(30717);
+const cli_version_1 = __nccwpck_require__(27089);
 /** Checks for a newer published CLI version without coupling the application to npm. */
 class CheckCliUpdateUseCase {
     constructor(cliUpdateCheckPort) {
@@ -52363,18 +52363,18 @@ exports.CheckCliUpdateUseCase = CheckCliUpdateUseCase;
 
 /***/ }),
 
-/***/ 97791:
+/***/ 42442:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomationAction = runCommentAutomationAction;
-const result_1 = __nccwpck_require__(61444);
-const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(75112);
-const commit_user_request_workflow_1 = __nccwpck_require__(17359);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
+const commit_user_request_workflow_1 = __nccwpck_require__(43393);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /** Runs the selected mutating action and returns any result records it produces. */
 async function runCommentAutomationAction(param, options, route, intentPayload) {
     if (route === "review")
@@ -52451,7 +52451,7 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 
 /***/ }),
 
-/***/ 99496:
+/***/ 63134:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -52459,15 +52459,15 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
-const result_1 = __nccwpck_require__(61444);
-const status_command_policy_1 = __nccwpck_require__(62186);
-const copilot_interaction_policy_1 = __nccwpck_require__(8964);
-const review_command_1 = __nccwpck_require__(22551);
-const commit_user_request_workflow_1 = __nccwpck_require__(17359);
-const workspace_mutation_guard_1 = __nccwpck_require__(12627);
-const branch_sync_comment_command_1 = __nccwpck_require__(70937);
-const application_error_1 = __nccwpck_require__(2965);
-const bugbot_review_operation_context_1 = __nccwpck_require__(50616);
+const result_1 = __nccwpck_require__(73817);
+const status_command_policy_1 = __nccwpck_require__(3449);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const review_command_1 = __nccwpck_require__(1811);
+const commit_user_request_workflow_1 = __nccwpck_require__(43393);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const branch_sync_comment_command_1 = __nccwpck_require__(4643);
+const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
@@ -52629,16 +52629,16 @@ function invalidCommentCommandResult(taskId, reason) {
 
 /***/ }),
 
-/***/ 74745:
+/***/ 46187:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.completeCommentAutomation = completeCommentAutomation;
-const bugbot_fix_intent_payload_1 = __nccwpck_require__(56352);
-const logging_ports_1 = __nccwpck_require__(73001);
-const comment_automation_action_workflow_1 = __nccwpck_require__(97791);
+const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
+const logging_ports_1 = __nccwpck_require__(6152);
+const comment_automation_action_workflow_1 = __nccwpck_require__(42442);
 async function completeCommentAutomation(param, options, decision) {
     logUnauthorizedActionSkip(decision);
     if (decision.route === 'think') {
@@ -52658,7 +52658,7 @@ function logUnauthorizedActionSkip(decision) {
 
 /***/ }),
 
-/***/ 70719:
+/***/ 37055:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -52666,14 +52666,14 @@ function logUnauthorizedActionSkip(decision) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectCommentAutomationContext = projectCommentAutomationContext;
 exports.withCommentLanguageAdaptation = withCommentLanguageAdaptation;
-const status_command_policy_1 = __nccwpck_require__(62186);
-const comment_language_translation_workflow_1 = __nccwpck_require__(78212);
-const think_workflow_1 = __nccwpck_require__(14720);
-const bugbot_review_operation_context_1 = __nccwpck_require__(50616);
-const push_single_action_contexts_1 = __nccwpck_require__(87805);
-const think_request_policy_1 = __nccwpck_require__(98559);
-const think_input_policy_1 = __nccwpck_require__(12636);
-const copilot_command_1 = __nccwpck_require__(87134);
+const status_command_policy_1 = __nccwpck_require__(3449);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
+const think_workflow_1 = __nccwpck_require__(36450);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
+const think_request_policy_1 = __nccwpck_require__(23995);
+const think_input_policy_1 = __nccwpck_require__(59687);
+const copilot_command_1 = __nccwpck_require__(11771);
 function projectCommentAutomationContext(source, language, userComment) {
     const review = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(source);
     return Object.freeze({
@@ -52743,18 +52743,18 @@ function withCommentLanguageAdaptation(context, adaptation) {
 
 /***/ }),
 
-/***/ 55136:
+/***/ 46175:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveCommentAutomationDecision = resolveCommentAutomationDecision;
-const logging_ports_1 = __nccwpck_require__(73001);
-const bugbot_fix_intent_payload_1 = __nccwpck_require__(56352);
-const comment_automation_route_policy_1 = __nccwpck_require__(34038);
-const copilot_comment_request_1 = __nccwpck_require__(81916);
-const copilot_command_1 = __nccwpck_require__(87134);
+const logging_ports_1 = __nccwpck_require__(6152);
+const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
+const comment_automation_route_policy_1 = __nccwpck_require__(47058);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
+const copilot_command_1 = __nccwpck_require__(11771);
 async function resolveCommentAutomationDecision(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
     const intentResults = await options.intentUseCase.invoke(param.bugbot.fixIntent);
@@ -52778,15 +52778,15 @@ function logIntent(intentPayload) {
 
 /***/ }),
 
-/***/ 33657:
+/***/ 10554:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runNaturalLanguageCommentAutomation = runNaturalLanguageCommentAutomation;
-const comment_automation_decision_workflow_1 = __nccwpck_require__(55136);
-const comment_automation_completion_workflow_1 = __nccwpck_require__(74745);
+const comment_automation_decision_workflow_1 = __nccwpck_require__(46175);
+const comment_automation_completion_workflow_1 = __nccwpck_require__(46187);
 /** Runs the natural-language comment pipeline after deterministic commands are excluded. */
 async function runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults) {
     const decision = await (0, comment_automation_decision_workflow_1.resolveCommentAutomationDecision)(param, options, actorAuthorizationPort);
@@ -52800,14 +52800,14 @@ async function runNaturalLanguageCommentAutomation(param, options, actorAuthoriz
 
 /***/ }),
 
-/***/ 34038:
+/***/ 47058:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveCommentAutomationRoute = resolveCommentAutomationRoute;
-const bugbot_fix_intent_payload_1 = __nccwpck_require__(56352);
+const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 function resolveCommentAutomationRoute(payload, allowedToModifyFiles, botMentioned = false, explicitMutationCommand = false) {
     if (!botMentioned && !explicitMutationCommand)
         return 'think';
@@ -52825,24 +52825,24 @@ function resolveCommentAutomationRoute(payload, allowedToModifyFiles, botMention
 
 /***/ }),
 
-/***/ 91490:
+/***/ 9661:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomation = runCommentAutomation;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const copilot_comment_request_1 = __nccwpck_require__(81916);
-const copilot_command_1 = __nccwpck_require__(87134);
-const comment_automation_command_workflow_1 = __nccwpck_require__(99496);
-const comment_automation_natural_language_workflow_1 = __nccwpck_require__(33657);
-const application_error_1 = __nccwpck_require__(2965);
-const branch_sync_command_1 = __nccwpck_require__(7465);
-const branch_sync_comment_command_1 = __nccwpck_require__(70937);
-const comment_automation_context_1 = __nccwpck_require__(70719);
-const comment_language_translation_workflow_1 = __nccwpck_require__(78212);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
+const copilot_command_1 = __nccwpck_require__(11771);
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554);
+const application_error_1 = __nccwpck_require__(75999);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+const branch_sync_comment_command_1 = __nccwpck_require__(4643);
+const comment_automation_context_1 = __nccwpck_require__(37055);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 async function runCommentAutomation(initialParam, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
@@ -52904,19 +52904,19 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
 
 /***/ }),
 
-/***/ 84014:
+/***/ 28001:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommitUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
-const bugbot_review_operation_context_1 = __nccwpck_require__(50616);
-const push_single_action_contexts_1 = __nccwpck_require__(87805);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class CommitUseCase {
     constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase, actorAuthorizationPort) {
         this.notifyNewCommitUseCase = notifyNewCommitUseCase;
@@ -52970,18 +52970,18 @@ exports.CommitUseCase = CommitUseCase;
 
 /***/ }),
 
-/***/ 83966:
+/***/ 71813:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExecutionBranchVersionResolver = void 0;
-const result_1 = __nccwpck_require__(61444);
-const version_resolution_application_policy_1 = __nccwpck_require__(28787);
-const version_resolution_outcome_policy_1 = __nccwpck_require__(23448);
-const version_resolution_result_policy_1 = __nccwpck_require__(86641);
-const version_resolution_policy_1 = __nccwpck_require__(20610);
+const result_1 = __nccwpck_require__(73817);
+const version_resolution_application_policy_1 = __nccwpck_require__(40231);
+const version_resolution_outcome_policy_1 = __nccwpck_require__(43496);
+const version_resolution_result_policy_1 = __nccwpck_require__(11730);
+const version_resolution_policy_1 = __nccwpck_require__(92373);
 class ExecutionBranchVersionResolver {
     constructor(latestTagQueryPort, getReleaseVersion, getReleaseType, getHotfixVersion) {
         this.latestTagQueryPort = latestTagQueryPort;
@@ -53079,7 +53079,7 @@ function unchanged(context) {
 
 /***/ }),
 
-/***/ 66185:
+/***/ 63436:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -53087,8 +53087,8 @@ function unchanged(context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveEventIssueNumber = resolveEventIssueNumber;
 exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
-const positive_integer_policy_1 = __nccwpck_require__(45613);
-const title_utils_1 = __nccwpck_require__(58747);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const title_utils_1 = __nccwpck_require__(46267);
 function resolveEventIssueNumber(context) {
     let issueNumber;
     if (context.isIssue)
@@ -53182,14 +53182,14 @@ function currentSingleAction(context) {
 
 /***/ }),
 
-/***/ 78531:
+/***/ 90972:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveExecutionIssueNumber = resolveExecutionIssueNumber;
-const execution_issue_number_policy_1 = __nccwpck_require__(66185);
+const execution_issue_number_policy_1 = __nccwpck_require__(63436);
 async function resolveExecutionIssueNumber(context, issueRepository) {
     return context.isSingleAction
         ? (0, execution_issue_number_policy_1.resolveSingleActionIssueNumber)(context, issueRepository)
@@ -53199,14 +53199,14 @@ async function resolveExecutionIssueNumber(context, issueRepository) {
 
 /***/ }),
 
-/***/ 51778:
+/***/ 88512:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupExecutionUseCase = void 0;
-const setup_execution_workflow_1 = __nccwpck_require__(70395);
+const setup_execution_workflow_1 = __nccwpck_require__(42285);
 class SetupExecutionUseCase {
     constructor(issueSetupPort, organizationSetupPort, configurationPort, branchVersionResolver) {
         this.issueSetupPort = issueSetupPort;
@@ -53229,19 +53229,19 @@ exports.SetupExecutionUseCase = SetupExecutionUseCase;
 
 /***/ }),
 
-/***/ 70395:
+/***/ 42285:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSetupExecution = runSetupExecution;
-const application_error_1 = __nccwpck_require__(2965);
-const initial_labels_policy_1 = __nccwpck_require__(21435);
-const previous_branch_state_policy_1 = __nccwpck_require__(25491);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const logging_ports_1 = __nccwpck_require__(73001);
-const resolve_execution_issue_number_1 = __nccwpck_require__(78531);
+const application_error_1 = __nccwpck_require__(75999);
+const initial_labels_policy_1 = __nccwpck_require__(50293);
+const previous_branch_state_policy_1 = __nccwpck_require__(43630);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const logging_ports_1 = __nccwpck_require__(6152);
+const resolve_execution_issue_number_1 = __nccwpck_require__(90972);
 async function runSetupExecution(context, dependencies) {
     (0, logging_ports_1.setGlobalLoggerDebug)(context.debug, context.local);
     const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
@@ -53414,18 +53414,18 @@ function positiveIssueNumberOrUndefined(value) {
 
 /***/ }),
 
-/***/ 14502:
+/***/ 72042:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const comment_automation_use_case_1 = __nccwpck_require__(91490);
-const check_issue_comment_language_use_case_1 = __nccwpck_require__(34670);
-const comment_automation_context_1 = __nccwpck_require__(70719);
-const pull_request_workflow_context_1 = __nccwpck_require__(90587);
+const result_1 = __nccwpck_require__(73817);
+const comment_automation_use_case_1 = __nccwpck_require__(9661);
+const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
+const comment_automation_context_1 = __nccwpck_require__(37055);
+const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class IssueCommentUseCase {
     constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation) {
         this.languageUseCase = languageUseCase;
@@ -53490,24 +53490,24 @@ exports.IssueCommentUseCase = IssueCommentUseCase;
 
 /***/ }),
 
-/***/ 43712:
+/***/ 65281:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const application_error_1 = __nccwpck_require__(2965);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const issue_workflow_1 = __nccwpck_require__(95967);
-const check_permissions_workflow_1 = __nccwpck_require__(98658);
-const update_title_workflow_1 = __nccwpck_require__(89641);
-const project_content_link_workflow_1 = __nccwpck_require__(72383);
-const issue_workflow_context_1 = __nccwpck_require__(13765);
-const push_single_action_contexts_1 = __nccwpck_require__(87805);
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const issue_workflow_1 = __nccwpck_require__(661);
+const check_permissions_workflow_1 = __nccwpck_require__(17102);
+const update_title_workflow_1 = __nccwpck_require__(50029);
+const project_content_link_workflow_1 = __nccwpck_require__(89064);
+const issue_workflow_context_1 = __nccwpck_require__(98005);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 class IssueUseCase {
     constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, issueCommentQueryPort, actorAuthorizationPort, preBranchSddGate) {
         this.recommendStepsUseCase = recommendStepsUseCase;
@@ -53649,18 +53649,18 @@ function applyBranchConfigurationPatch(param, patch) {
 
 /***/ }),
 
-/***/ 95967:
+/***/ 661:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runIssueWorkflow = runIssueWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const copilot_interaction_policy_1 = __nccwpck_require__(8964);
-const semantic_result_publication_policy_1 = __nccwpck_require__(55150);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
+const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates issue lifecycle steps in their required sequential order. */
 async function runIssueWorkflow(context, taskId, ports) {
     const results = [];
@@ -53811,7 +53811,7 @@ function issueWorkflowOutcome(results, branchConfigurationPatch, recommendationS
 
 /***/ }),
 
-/***/ 13765:
+/***/ 98005:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -53821,7 +53821,7 @@ exports.branchPreparationOutcome = branchPreparationOutcome;
 exports.projectIssueWorkflowStepContexts = projectIssueWorkflowStepContexts;
 exports.projectAssignmentContext = projectAssignmentContext;
 exports.copyProjects = copyProjects;
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 function branchPreparationOutcome(results, configurationPatch = {}) {
     return Object.freeze({
         results: Object.freeze([...results]),
@@ -53973,7 +53973,7 @@ function selectIssueType(source) {
 
 /***/ }),
 
-/***/ 53803:
+/***/ 99961:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -53981,11 +53981,11 @@ function selectIssueType(source) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResolveMessageCatalogUseCase = void 0;
 exports.buildCatalogResponseSchema = buildCatalogResponseSchema;
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const message_catalog_1 = __nccwpck_require__(5313);
-const locale_1 = __nccwpck_require__(64552);
-const localize_message_catalog_1 = __nccwpck_require__(22907);
-const logging_ports_1 = __nccwpck_require__(73001);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const message_catalog_1 = __nccwpck_require__(27097);
+const locale_1 = __nccwpck_require__(15386);
+const localize_message_catalog_1 = __nccwpck_require__(64005);
+const logging_ports_1 = __nccwpck_require__(6152);
 class ResolveMessageCatalogUseCase {
     constructor(language) {
         this.language = language;
@@ -54119,17 +54119,17 @@ function buildCatalogResponseSchema(source, ids, targetLocale = 'en-US') {
 
 /***/ }),
 
-/***/ 94097:
+/***/ 29415:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
-const comment_automation_use_case_1 = __nccwpck_require__(91490);
-const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(5988);
-const comment_automation_context_1 = __nccwpck_require__(70719);
-const pull_request_workflow_context_1 = __nccwpck_require__(90587);
+const comment_automation_use_case_1 = __nccwpck_require__(9661);
+const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
+const comment_automation_context_1 = __nccwpck_require__(37055);
+const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
     constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
@@ -54181,20 +54181,20 @@ exports.PullRequestReviewCommentUseCase = PullRequestReviewCommentUseCase;
 
 /***/ }),
 
-/***/ 93567:
+/***/ 27259:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const pull_request_workflow_1 = __nccwpck_require__(14671);
-const update_title_workflow_1 = __nccwpck_require__(89641);
-const project_content_link_workflow_1 = __nccwpck_require__(72383);
-const pull_request_workflow_context_1 = __nccwpck_require__(90587);
-const bugbot_review_operation_context_1 = __nccwpck_require__(50616);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const pull_request_workflow_1 = __nccwpck_require__(95238);
+const update_title_workflow_1 = __nccwpck_require__(50029);
+const project_content_link_workflow_1 = __nccwpck_require__(89064);
+const pull_request_workflow_context_1 = __nccwpck_require__(73447);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 class PullRequestUseCase {
     constructor(updatePullRequestDescriptionUseCase, workflowSteps, reviewPotentialProblemsUseCase, actorAuthorizationPort) {
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
@@ -54249,16 +54249,16 @@ function projectPullRequestWorkflowRouteContext(param) {
 
 /***/ }),
 
-/***/ 14671:
+/***/ 95238:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPullRequestWorkflow = runPullRequestWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */
 async function runPullRequestWorkflow(context, taskId, ports) {
     try {
@@ -54337,7 +54337,7 @@ function logPullRequestState(context) {
 
 /***/ }),
 
-/***/ 90587:
+/***/ 73447:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -54345,7 +54345,7 @@ function logPullRequestState(context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectPullRequestWorkflowStepContexts = projectPullRequestWorkflowStepContexts;
 exports.projectPullRequestDescriptionContext = projectPullRequestDescriptionContext;
-const issue_workflow_context_1 = __nccwpck_require__(13765);
+const issue_workflow_context_1 = __nccwpck_require__(98005);
 function projectPullRequestWorkflowStepContexts(source) {
     const projects = (0, issue_workflow_context_1.copyProjects)(source.project.getProjects());
     return Object.freeze({
@@ -54405,7 +54405,7 @@ function projectPullRequestDescriptionContext(source) {
 
 /***/ }),
 
-/***/ 87805:
+/***/ 47841:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -54424,9 +54424,9 @@ exports.projectChangeSizeContext = projectChangeSizeContext;
 exports.projectInitialSetupContext = projectInitialSetupContext;
 exports.projectIssueCommentActionContext = projectIssueCommentActionContext;
 exports.projectAgentActivityContext = projectAgentActivityContext;
-const recommendation_state_1 = __nccwpck_require__(21602);
-const issue_comment_publication_policy_1 = __nccwpck_require__(28956);
-const git_object_id_1 = __nccwpck_require__(36924);
+const recommendation_state_1 = __nccwpck_require__(68514);
+const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
+const git_object_id_1 = __nccwpck_require__(88623);
 function projectDeploymentPublicationContext(source) {
     return Object.freeze({
         requestedOperationId: source.singleAction.operationId,
@@ -54642,7 +54642,7 @@ function deepFreezeCopy(value) {
 
 /***/ }),
 
-/***/ 89463:
+/***/ 29475:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -54650,10 +54650,10 @@ function deepFreezeCopy(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddGateUseCase = void 0;
 const node_crypto_1 = __nccwpck_require__(6005);
-const result_1 = __nccwpck_require__(61444);
-const issue_start_policy_1 = __nccwpck_require__(20953);
-const pre_branch_sdd_1 = __nccwpck_require__(54078);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const application_error_1 = __nccwpck_require__(75999);
 const ANALYSIS_SCHEMA = {
     type: 'object',
     properties: {
@@ -54933,15 +54933,15 @@ function buildDraftPrompt(context, snapshot, plan, answers, currentSdd) {
 
 /***/ }),
 
-/***/ 39967:
+/***/ 60830:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AuditConfiguredSetupPatUseCase = void 0;
-const setup_pat_creation_url_policy_1 = __nccwpck_require__(96850);
-const setup_token_permission_policy_1 = __nccwpck_require__(10947);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 /** Rechecks the final plan without granting permission based on the browser preview. */
 class AuditConfiguredSetupPatUseCase {
     constructor(context, ports) {
@@ -54996,20 +54996,20 @@ exports.AuditConfiguredSetupPatUseCase = AuditConfiguredSetupPatUseCase;
 
 /***/ }),
 
-/***/ 39:
+/***/ 87328:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupDoctorUseCase = void 0;
-const locale_1 = __nccwpck_require__(64552);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const setup_doctor_report_policy_1 = __nccwpck_require__(81332);
-const bounded_concurrency_policy_1 = __nccwpck_require__(50189);
-const setup_doctor_message_catalog_1 = __nccwpck_require__(67183);
-const setup_approval_doctor_policy_1 = __nccwpck_require__(8794);
-const pull_request_approval_policy_1 = __nccwpck_require__(53553);
+const locale_1 = __nccwpck_require__(15386);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const setup_approval_doctor_policy_1 = __nccwpck_require__(53296);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 class SetupDoctorUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -55414,35 +55414,35 @@ function doctorCatalogLocale(configuration) {
 
 /***/ }),
 
-/***/ 24711:
+/***/ 36888:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialsUseCase = exports.SetupQuestionnaireController = exports.SetupWizardUseCase = void 0;
-var setup_wizard_use_case_1 = __nccwpck_require__(27649);
+var setup_wizard_use_case_1 = __nccwpck_require__(43433);
 Object.defineProperty(exports, "SetupWizardUseCase", ({ enumerable: true, get: function () { return setup_wizard_use_case_1.SetupWizardUseCase; } }));
-var setup_questionnaire_controller_1 = __nccwpck_require__(20526);
+var setup_questionnaire_controller_1 = __nccwpck_require__(41644);
 Object.defineProperty(exports, "SetupQuestionnaireController", ({ enumerable: true, get: function () { return setup_questionnaire_controller_1.SetupQuestionnaireController; } }));
-var setup_credentials_use_case_1 = __nccwpck_require__(82634);
+var setup_credentials_use_case_1 = __nccwpck_require__(67438);
 Object.defineProperty(exports, "SetupCredentialsUseCase", ({ enumerable: true, get: function () { return setup_credentials_use_case_1.SetupCredentialsUseCase; } }));
 
 
 /***/ }),
 
-/***/ 14236:
+/***/ 9890:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupMergeQueueReadinessUseCase = void 0;
-const deployment_plan_policy_1 = __nccwpck_require__(86485);
-const merge_queue_readiness_1 = __nccwpck_require__(36637);
-const setup_doctor_report_policy_1 = __nccwpck_require__(81332);
-const setup_doctor_message_catalog_1 = __nccwpck_require__(67183);
-const merge_queue_message_catalog_1 = __nccwpck_require__(22459);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
+const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 class SetupMergeQueueReadinessUseCase {
     constructor(targets, catalogResolver) {
         this.targets = targets;
@@ -55590,21 +55590,21 @@ function uniqueTargets(targets) {
 
 /***/ }),
 
-/***/ 99264:
+/***/ 69277:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrepareSetupPatIntentUseCase = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const setup_interaction_cancelled_error_1 = __nccwpck_require__(93638);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const setup_questionnaire_policy_1 = __nccwpck_require__(65207);
-const setup_pat_intent_policy_1 = __nccwpck_require__(66964);
-const setup_token_permission_policy_1 = __nccwpck_require__(10947);
-const setup_pat_creation_url_policy_1 = __nccwpck_require__(96850);
-const setup_wizard_use_case_1 = __nccwpck_require__(27649);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_pat_intent_policy_1 = __nccwpck_require__(30748);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const setup_wizard_use_case_1 = __nccwpck_require__(43433);
 /** Frontend-neutral preparation; GitHub still issues the PAT in its own UI. */
 class PrepareSetupPatIntentUseCase {
     constructor(ports) {
@@ -55683,15 +55683,15 @@ exports.PrepareSetupPatIntentUseCase = PrepareSetupPatIntentUseCase;
 
 /***/ }),
 
-/***/ 82634:
+/***/ 67438:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialsUseCase = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const setup_configuration_storage_policy_1 = __nccwpck_require__(60368);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 /** Coordinates secret collection and validation without placing secret values in config files. */
 class SetupCredentialsUseCase {
     constructor(prompt, validation, secrets, remoteHealth, tokenPermissions, permissionPresenter) {
@@ -55914,14 +55914,14 @@ function isAcceptedCredentialCheck(requirement, check) {
 
 /***/ }),
 
-/***/ 32060:
+/***/ 8419:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupJourneyUseCase = void 0;
-const setup_journey_policy_1 = __nccwpck_require__(55254);
+const setup_journey_policy_1 = __nccwpck_require__(53289);
 /** Tracks semantic milestones, independently of the CLI's rendering. */
 class SetupJourneyUseCase {
     constructor(repository, presenter) {
@@ -55982,15 +55982,15 @@ exports.SetupJourneyUseCase = SetupJourneyUseCase;
 
 /***/ }),
 
-/***/ 20526:
+/***/ 41644:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupQuestionnaireController = void 0;
-const setup_questionnaire_policy_1 = __nccwpck_require__(65207);
-const application_error_1 = __nccwpck_require__(2965);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const application_error_1 = __nccwpck_require__(75999);
 class SetupQuestionnaireController {
     constructor(terminal, renderer) {
         this.terminal = terminal;
@@ -56031,14 +56031,14 @@ function toEvent(input) {
 
 /***/ }),
 
-/***/ 64888:
+/***/ 11797:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionsUseCase = void 0;
-const setup_token_permission_evidence_policy_1 = __nccwpck_require__(19750);
+const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
 /** Validates PAT identity first, then runs only read-only permission probes. */
 class SetupTokenPermissionsUseCase {
     constructor(credentials, permissions) {
@@ -56095,7 +56095,7 @@ exports.SetupTokenPermissionsUseCase = SetupTokenPermissionsUseCase;
 
 /***/ }),
 
-/***/ 27649:
+/***/ 43433:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -56103,12 +56103,12 @@ exports.SetupTokenPermissionsUseCase = SetupTokenPermissionsUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupWizardUseCase = void 0;
 exports.buildInitialSetupConfiguration = buildInitialSetupConfiguration;
-const application_error_1 = __nccwpck_require__(2965);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const setup_questionnaire_policy_1 = __nccwpck_require__(65207);
-const setup_configuration_clone_policy_1 = __nccwpck_require__(6802);
-const setup_doctor_message_catalog_1 = __nccwpck_require__(67183);
-const pull_request_approval_policy_1 = __nccwpck_require__(53553);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -56315,14 +56315,14 @@ function unavailableRemoteConfiguration() {
 
 /***/ }),
 
-/***/ 36411:
+/***/ 35697:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VerifyGuidedWorkflowPatIdentityUseCase = void 0;
-const application_error_1 = __nccwpck_require__(2965);
+const application_error_1 = __nccwpck_require__(75999);
 /** Binds a guided runtime PAT to the bot account chosen before token entry. */
 class VerifyGuidedWorkflowPatIdentityUseCase {
     constructor(identities) {
@@ -56341,15 +56341,15 @@ exports.VerifyGuidedWorkflowPatIdentityUseCase = VerifyGuidedWorkflowPatIdentity
 
 /***/ }),
 
-/***/ 47936:
+/***/ 23388:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VerifySetupPatBootstrapUseCase = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const setup_pat_creation_url_policy_1 = __nccwpck_require__(96850);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
 /** Initial read-only gate shared by terminal and browser setup presentations. */
 class VerifySetupPatBootstrapUseCase {
     constructor(ports) {
@@ -56382,16 +56382,16 @@ exports.VerifySetupPatBootstrapUseCase = VerifySetupPatBootstrapUseCase;
 
 /***/ }),
 
-/***/ 75598:
+/***/ 5303:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VerifyWebSetupApplyUseCase = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const setup_interaction_cancelled_error_1 = __nccwpck_require__(93638);
-const setup_remote_facts_policy_1 = __nccwpck_require__(41599);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_remote_facts_policy_1 = __nccwpck_require__(92567);
 /** Authorizes one web Apply against the facts the operator actually reviewed. */
 class VerifyWebSetupApplyUseCase {
     constructor(ports) {
@@ -56453,19 +56453,19 @@ exports.VerifyWebSetupApplyUseCase = VerifyWebSetupApplyUseCase;
 
 /***/ }),
 
-/***/ 73840:
+/***/ 73572:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SingleActionUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const single_action_workflow_1 = __nccwpck_require__(86940);
-const think_workflow_1 = __nccwpck_require__(14720);
-const bugbot_review_operation_context_1 = __nccwpck_require__(50616);
-const push_single_action_contexts_1 = __nccwpck_require__(87805);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const single_action_workflow_1 = __nccwpck_require__(6130);
+const think_workflow_1 = __nccwpck_require__(36450);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const push_single_action_contexts_1 = __nccwpck_require__(47841);
 class SingleActionUseCase {
     constructor(publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort, publishIssueCommentUseCase, observeBranchSyncUseCase, deploymentOrchestrationUseCase) {
         this.publishGithubActionUseCase = publishGithubActionUseCase;
@@ -56558,16 +56558,16 @@ function isAgentBackedSingleAction(param) {
 
 /***/ }),
 
-/***/ 86940:
+/***/ 6130:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSingleActionWorkflow = runSingleActionWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function runSingleActionWorkflow(dispatch, taskId, ports) {
     if (dispatch.kind === 'invalid') {
         (0, logging_ports_1.logDebugInfo)(`Single action is not valid: ${dispatch.action}. Skipping.`);
@@ -56621,24 +56621,24 @@ function singleActionFailure(action, taskId, error) {
 
 /***/ }),
 
-/***/ 92650:
+/***/ 4658:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeBugbotRevision = analyzeBugbotRevision;
-const bugbot_reconciliation_policy_1 = __nccwpck_require__(54271);
-const logging_ports_1 = __nccwpck_require__(73001);
-const limit_comments_1 = __nccwpck_require__(9306);
-const finding_1 = __nccwpck_require__(82048);
-const build_bugbot_prompt_1 = __nccwpck_require__(88971);
-const prepare_bugbot_findings_1 = __nccwpck_require__(13325);
-const query_bugbot_findings_1 = __nccwpck_require__(41038);
-const bugbot_resolution_eligibility_policy_1 = __nccwpck_require__(15950);
-const bounded_concurrency_policy_1 = __nccwpck_require__(50189);
-const bugbot_partition_aggregation_1 = __nccwpck_require__(49942);
-const application_error_1 = __nccwpck_require__(2965);
+const bugbot_reconciliation_policy_1 = __nccwpck_require__(78128);
+const logging_ports_1 = __nccwpck_require__(6152);
+const limit_comments_1 = __nccwpck_require__(31643);
+const finding_1 = __nccwpck_require__(31011);
+const build_bugbot_prompt_1 = __nccwpck_require__(52483);
+const prepare_bugbot_findings_1 = __nccwpck_require__(85016);
+const query_bugbot_findings_1 = __nccwpck_require__(13059);
+const bugbot_resolution_eligibility_policy_1 = __nccwpck_require__(89189);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const bugbot_partition_aggregation_1 = __nccwpck_require__(84575);
+const application_error_1 = __nccwpck_require__(75999);
 /** Pure analysis phase: query, validate, normalize, deduplicate and reconcile; never mutates the SCM. */
 async function analyzeBugbotRevision(execution, context, dependencies) {
     dependencies.telemetry.observeContext(context);
@@ -56720,16 +56720,16 @@ function suppressDismissedFindings(execution, context, prepared) {
 
 /***/ }),
 
-/***/ 60017:
+/***/ 20793:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyDetectedFindings = applyDetectedFindings;
-const mark_findings_resolved_use_case_1 = __nccwpck_require__(74985);
-const publish_findings_use_case_1 = __nccwpck_require__(60836);
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
+const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
+const publish_findings_use_case_1 = __nccwpck_require__(88442);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
 async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts, catalog) {
     try {
         await (0, publish_findings_use_case_1.publishFindings)({
@@ -56763,7 +56763,7 @@ async function applyDetectedFindings(operation, context, prepared, publicationPo
 
 /***/ }),
 
-/***/ 35010:
+/***/ 98158:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -56771,8 +56771,8 @@ async function applyDetectedFindings(operation, context, prepared, publicationPo
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runBugbotAutofixCommitAndPush = runBugbotAutofixCommitAndPush;
 exports.runUserRequestCommitAndPush = runUserRequestCommitAndPush;
-const commit_message_policy_1 = __nccwpck_require__(37803);
-const commit_and_push_workflow_1 = __nccwpck_require__(30978);
+const commit_message_policy_1 = __nccwpck_require__(85518);
+const commit_and_push_workflow_1 = __nccwpck_require__(53708);
 async function runBugbotAutofixCommitAndPush(context, options, gitCommitPort) {
     const branch = options?.branchOverride ?? context.branch;
     return (0, commit_and_push_workflow_1.runCommitAndPushWorkflow)(context, {
@@ -56797,17 +56797,17 @@ async function runUserRequestCommitAndPush(context, options, gitCommitPort) {
 
 /***/ }),
 
-/***/ 99776:
+/***/ 79698:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finalizeBugbotAutofix = finalizeBugbotAutofix;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const workspace_mutation_guard_1 = __nccwpck_require__(12627);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 async function finalizeBugbotAutofix(context, idsToFix, workspacePathsBefore, branchCheckedOut, responseText, gitCommitPort) {
     if (!responseText) {
         (0, logging_ports_1.logError)('Bugbot autofix: no response from configured build agent.');
@@ -56838,21 +56838,21 @@ function failure(semanticError) {
 
 /***/ }),
 
-/***/ 30398:
+/***/ 67170:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareBugbotAutofix = prepareBugbotAutofix;
-const result_1 = __nccwpck_require__(61444);
-const finding_1 = __nccwpck_require__(82048);
-const build_bugbot_fix_prompt_1 = __nccwpck_require__(48942);
-const load_bugbot_context_use_case_1 = __nccwpck_require__(56378);
-const bugbot_context_request_1 = __nccwpck_require__(72881);
-const logging_ports_1 = __nccwpck_require__(73001);
-const workspace_mutation_guard_1 = __nccwpck_require__(12627);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const finding_1 = __nccwpck_require__(31011);
+const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
+const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+const logging_ports_1 = __nccwpck_require__(6152);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 async function prepareBugbotAutofix(operation, targetFindingIds, userComment, providedContext, branchOverride, contextPorts, gitCommitPort) {
     const canonicalHint = providedContext?.canonicalPullRequest;
     const targetBranch = branchOverride?.trim() || canonicalHint?.headRef;
@@ -56915,14 +56915,14 @@ function failure(semanticError) {
 
 /***/ }),
 
-/***/ 92886:
+/***/ 45446:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotAutofixUseCase = void 0;
-const bugbot_autofix_workflow_1 = __nccwpck_require__(60366);
+const bugbot_autofix_workflow_1 = __nccwpck_require__(69600);
 /** Application boundary for safe, agent-driven remediation of Bugbot findings. */
 class BugbotAutofixUseCase {
     constructor(aiRepository, contextPorts, gitCommitPort) {
@@ -56944,20 +56944,20 @@ exports.BugbotAutofixUseCase = BugbotAutofixUseCase;
 
 /***/ }),
 
-/***/ 60366:
+/***/ 69600:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runBugbotAutofixWorkflow = runBugbotAutofixWorkflow;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const bugbot_autofix_postflight_1 = __nccwpck_require__(99776);
-const bugbot_autofix_preflight_1 = __nccwpck_require__(30398);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const bugbot_autofix_postflight_1 = __nccwpck_require__(79698);
+const bugbot_autofix_preflight_1 = __nccwpck_require__(67170);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'BugbotAutofixUseCase';
 /** Coordinates preflight, agent execution and postflight workspace safety. */
 async function runBugbotAutofixWorkflow(param, dependencies) {
@@ -57000,14 +57000,14 @@ function newResultFailure(semanticError) {
 
 /***/ }),
 
-/***/ 72881:
+/***/ 98299:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotContextRequest = projectBugbotContextRequest;
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 function projectBugbotContextRequest(context, options) {
     const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.issueNumberOverride ?? context.target.issueNumber);
     const pullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.pullRequestNumberOverride
@@ -57041,7 +57041,7 @@ function projectBugbotContextRequest(context, options) {
 
 /***/ }),
 
-/***/ 7993:
+/***/ 62946:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57049,11 +57049,11 @@ function projectBugbotContextRequest(context, options) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseBugbotFindingComments = parseBugbotFindingComments;
 exports.collectPreviousBugbotFindings = collectPreviousBugbotFindings;
-const build_bugbot_fix_prompt_1 = __nccwpck_require__(48942);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const finding_1 = __nccwpck_require__(82048);
-const github_user_policy_1 = __nccwpck_require__(19596);
-const review_state_1 = __nccwpck_require__(17271);
+const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const finding_1 = __nccwpck_require__(31011);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const review_state_1 = __nccwpck_require__(79200);
 function parseBugbotFindingComments(issueComments, pullRequestCommentsByNumber, trustedAuthorLogin, reviewThreadStatesByPullRequest = new Map()) {
     const existingByFindingId = parseIssueFindingMarkers(issueComments, trustedAuthorLogin);
     const pullRequestFindings = parsePullRequestFindingMarkers(pullRequestCommentsByNumber, trustedAuthorLogin, reviewThreadStatesByPullRequest);
@@ -57174,7 +57174,7 @@ function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFin
 
 /***/ }),
 
-/***/ 56352:
+/***/ 25734:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -57213,7 +57213,7 @@ function canRunDoUserRequest(payload) {
 
 /***/ }),
 
-/***/ 49942:
+/***/ 84575:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57221,7 +57221,7 @@ function canRunDoUserRequest(payload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_AGGREGATE_PARTITION_FINDINGS = void 0;
 exports.aggregateBugbotPartitionResponses = aggregateBugbotPartitionResponses;
-const application_error_1 = __nccwpck_require__(2965);
+const application_error_1 = __nccwpck_require__(75999);
 const MAX_PARTITION_FINDINGS_PER_RESPONSE = 200;
 exports.MAX_AGGREGATE_PARTITION_FINDINGS = 2000;
 const MAX_OWNER_RESOLUTIONS = 500;
@@ -57274,7 +57274,7 @@ function invalidAggregate(message) {
 
 /***/ }),
 
-/***/ 9819:
+/***/ 3346:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57282,8 +57282,8 @@ function invalidAggregate(message) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = exports.MAX_PREVIOUS_FINDINGS = void 0;
 exports.buildPreviousFindingsContext = buildPreviousFindingsContext;
-const untrusted_content_1 = __nccwpck_require__(12334);
-const build_bugbot_fix_prompt_1 = __nccwpck_require__(48942);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 exports.MAX_PREVIOUS_FINDINGS = 100;
 exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = 48000;
 function buildPreviousFindingsContext(previousFindings) {
@@ -57344,7 +57344,7 @@ function timestamp(value) {
 
 /***/ }),
 
-/***/ 36905:
+/***/ 50536:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57354,9 +57354,9 @@ exports.buildReviewDiffBlock = buildReviewDiffBlock;
 exports.buildReviewDiffContext = buildReviewDiffContext;
 exports.buildReviewConversationBlock = buildReviewConversationBlock;
 exports.buildReviewConversationContext = buildReviewConversationContext;
-const github_user_policy_1 = __nccwpck_require__(19596);
-const untrusted_content_1 = __nccwpck_require__(12334);
-const bugbot_diff_partition_policy_1 = __nccwpck_require__(51471);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const bugbot_diff_partition_policy_1 = __nccwpck_require__(31601);
 const MAX_CONVERSATION_LENGTH = 24000;
 const MAX_CONVERSATION_ITEMS = 50;
 const MAX_CONVERSATION_ITEM_LENGTH = 2000;
@@ -57439,7 +57439,7 @@ function isBot(author, botLogin) {
 
 /***/ }),
 
-/***/ 26699:
+/***/ 14307:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -57462,7 +57462,7 @@ async function hasNewerBugbotRevision(context, ports) {
 
 /***/ }),
 
-/***/ 50616:
+/***/ 16660:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57474,7 +57474,7 @@ exports.withBugbotReviewOverrides = withBugbotReviewOverrides;
 exports.projectBugbotFixIntentContext = projectBugbotFixIntentContext;
 exports.projectBugbotAutofixOperationContext = projectBugbotAutofixOperationContext;
 exports.projectBugbotCommitContext = projectBugbotCommitContext;
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 /** Copies only the non-secret facts required to select canonical Bugbot context. */
 function projectBugbotContextSelectionContext(source) {
     const reviewConfiguration = source.ai.getBugbotReviewConfiguration();
@@ -57620,7 +57620,7 @@ function normalizeExpectedHeadSha(eventName, inputs) {
 
 /***/ }),
 
-/***/ 45270:
+/***/ 25011:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57628,7 +57628,7 @@ function normalizeExpectedHeadSha(eventName, inputs) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_BUGBOT_RULES_LENGTH = exports.MAX_BUGBOT_RULE_LENGTH = void 0;
 exports.buildBugbotReviewRuleSet = buildBugbotReviewRuleSet;
-const untrusted_content_1 = __nccwpck_require__(12334);
+const untrusted_content_1 = __nccwpck_require__(67057);
 exports.MAX_BUGBOT_RULE_LENGTH = 30000;
 exports.MAX_BUGBOT_RULES_LENGTH = 100000;
 function buildBugbotReviewRuleSet(organizationRules, repositoryRules) {
@@ -57681,14 +57681,14 @@ function deduplicateRules(rules) {
 
 /***/ }),
 
-/***/ 14285:
+/***/ 46790:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotReviewTelemetry = void 0;
-const bugbot_finding_status_policy_1 = __nccwpck_require__(9298);
+const bugbot_finding_status_policy_1 = __nccwpck_require__(53822);
 const systemClock = {
     now: () => Date.now(),
     isoNow: () => new Date().toISOString(),
@@ -57890,7 +57890,7 @@ function sanitizeMetricName(value) {
 
 /***/ }),
 
-/***/ 41672:
+/***/ 18799:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57901,9 +57901,9 @@ function sanitizeMetricName(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotFixIntentPrompt = buildBugbotFixIntentPrompt;
-const prompts_1 = __nccwpck_require__(71854);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(28636);
+const prompts_1 = __nccwpck_require__(69518);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
 const MAX_TITLE_LENGTH = 200;
 const MAX_FILE_LENGTH = 256;
 function safeForPrompt(s, maxLen) {
@@ -57953,7 +57953,7 @@ function buildParentBlock(parentCommentBody) {
 
 /***/ }),
 
-/***/ 48942:
+/***/ 89819:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57962,10 +57962,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_FINDING_BODY_LENGTH = void 0;
 exports.truncateFindingBody = truncateFindingBody;
 exports.buildBugbotFixPrompt = buildBugbotFixPrompt;
-const prompts_1 = __nccwpck_require__(71854);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(28636);
-const untrusted_content_1 = __nccwpck_require__(12334);
+const prompts_1 = __nccwpck_require__(69518);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
+const untrusted_content_1 = __nccwpck_require__(67057);
 /** Maximum characters for a single finding's full comment body to avoid prompt bloat and token limits. */
 exports.MAX_FINDING_BODY_LENGTH = 12000;
 const TRUNCATION_SUFFIX = "\n\n[... truncated for length ...]";
@@ -58022,7 +58022,7 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
 
 /***/ }),
 
-/***/ 88971:
+/***/ 52483:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -58036,10 +58036,10 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotPrompt = buildBugbotPrompt;
-const prompts_1 = __nccwpck_require__(71854);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const review_configuration_1 = __nccwpck_require__(19249);
-const file_ignore_policy_1 = __nccwpck_require__(56498);
+const prompts_1 = __nccwpck_require__(69518);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const review_configuration_1 = __nccwpck_require__(3994);
+const file_ignore_policy_1 = __nccwpck_require__(20542);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context, assignment) {
@@ -58161,18 +58161,18 @@ function normalizedObjectId(value) {
 
 /***/ }),
 
-/***/ 66117:
+/***/ 49629:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushPreflight = runCommitAndPushPreflight;
-const logging_ports_1 = __nccwpck_require__(73001);
-const git_branch_checkout_1 = __nccwpck_require__(96838);
-const verify_command_policy_1 = __nccwpck_require__(32739);
-const verify_command_runner_1 = __nccwpck_require__(71843);
-const workspace_changes_1 = __nccwpck_require__(51578);
+const logging_ports_1 = __nccwpck_require__(6152);
+const git_branch_checkout_1 = __nccwpck_require__(68549);
+const verify_command_policy_1 = __nccwpck_require__(96031);
+const verify_command_runner_1 = __nccwpck_require__(57742);
+const workspace_changes_1 = __nccwpck_require__(93370);
 async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     if (!options.branch?.trim()) {
         return { status: "failure", error: "No branch to commit to." };
@@ -58209,16 +58209,16 @@ async function runVerification(context, gitCommitPort) {
 
 /***/ }),
 
-/***/ 30978:
+/***/ 53708:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushWorkflow = runCommitAndPushWorkflow;
-const logging_ports_1 = __nccwpck_require__(73001);
-const commit_and_push_preflight_1 = __nccwpck_require__(66117);
-const application_error_1 = __nccwpck_require__(2965);
+const logging_ports_1 = __nccwpck_require__(6152);
+const commit_and_push_preflight_1 = __nccwpck_require__(49629);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCommitAndPushWorkflow(context, options, gitCommitPort) {
     const preflight = await (0, commit_and_push_preflight_1.runCommitAndPushPreflight)(context, options, gitCommitPort);
     if (preflight.status === 'failure') {
@@ -58253,16 +58253,16 @@ async function runCommitAndPushWorkflow(context, options, gitCommitPort) {
 
 /***/ }),
 
-/***/ 75112:
+/***/ 93455:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
-const logging_ports_1 = __nccwpck_require__(73001);
-const bugbot_autofix_commit_1 = __nccwpck_require__(35010);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
+const logging_ports_1 = __nccwpck_require__(6152);
+const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort) {
     const lastAutofix = autofixResults.at(-1);
     if (!lastAutofix?.success) {
@@ -58296,7 +58296,7 @@ async function commitAutofixAndResolveFindings(context, payload, autofixResults,
 
 /***/ }),
 
-/***/ 37803:
+/***/ 85518:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -58350,18 +58350,18 @@ function buildUserRequestCommitMessage(issueNumber) {
 
 /***/ }),
 
-/***/ 17359:
+/***/ 43393:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.commitUserRequestIfSuccessful = commitUserRequestIfSuccessful;
-const logging_ports_1 = __nccwpck_require__(73001);
-const bugbot_autofix_commit_1 = __nccwpck_require__(35010);
-const result_1 = __nccwpck_require__(61444);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const application_error_1 = __nccwpck_require__(2965);
+const logging_ports_1 = __nccwpck_require__(6152);
+const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
+const result_1 = __nccwpck_require__(73817);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_1 = __nccwpck_require__(75999);
 async function commitUserRequestIfSuccessful(context, branchOverride, results, gitCommitPort) {
     if (!results.at(-1)?.success) {
         (0, logging_ports_1.logInfo)('Do user request did not succeed; skipping commit.');
@@ -58394,7 +58394,7 @@ async function commitUserRequestIfSuccessful(context, branchOverride, results, g
 
 /***/ }),
 
-/***/ 71392:
+/***/ 62908:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -58427,7 +58427,7 @@ function deduplicateFindings(findings) {
 
 /***/ }),
 
-/***/ 58778:
+/***/ 14796:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -58436,7 +58436,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectBugbotCommentBody = selectBugbotCommentBody;
 exports.buildUnresolvedFindingSummaries = buildUnresolvedFindingSummaries;
 exports.parseBugbotFixIntentResponse = parseBugbotFixIntentResponse;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 /** Selects the user-authored comment that can trigger intent detection. */
 function selectBugbotCommentBody(sources) {
     if (sources.issue.isIssueComment)
@@ -58481,16 +58481,16 @@ function unique(values) {
 
 /***/ }),
 
-/***/ 50385:
+/***/ 76234:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DetectBugbotFixIntentUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const detect_bugbot_fix_intent_workflow_1 = __nccwpck_require__(59265);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const detect_bugbot_fix_intent_workflow_1 = __nccwpck_require__(88390);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 /** Application boundary for detecting Bugbot fix intent in user comments. */
 class DetectBugbotFixIntentUseCase {
@@ -58512,23 +58512,23 @@ exports.DetectBugbotFixIntentUseCase = DetectBugbotFixIntentUseCase;
 
 /***/ }),
 
-/***/ 59265:
+/***/ 88390:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectBugbotFixIntentWorkflow = runDetectBugbotFixIntentWorkflow;
-const agent_1 = __nccwpck_require__(71889);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const logging_ports_1 = __nccwpck_require__(73001);
-const result_1 = __nccwpck_require__(61444);
-const copilot_command_1 = __nccwpck_require__(87134);
-const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(41672);
-const load_bugbot_context_use_case_1 = __nccwpck_require__(56378);
-const bugbot_context_request_1 = __nccwpck_require__(72881);
-const schema_1 = __nccwpck_require__(98135);
-const detect_bugbot_fix_intent_policy_1 = __nccwpck_require__(58778);
+const agent_1 = __nccwpck_require__(79937);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const logging_ports_1 = __nccwpck_require__(6152);
+const result_1 = __nccwpck_require__(73817);
+const copilot_command_1 = __nccwpck_require__(11771);
+const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(18799);
+const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+const schema_1 = __nccwpck_require__(16808);
+const detect_bugbot_fix_intent_policy_1 = __nccwpck_require__(14796);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 /** Detects whether a comment requests a finding fix, repository change, or read-only review. */
 async function runDetectBugbotFixIntentWorkflow(param, ports) {
@@ -58665,21 +58665,21 @@ async function resolveParentCommentBody(param, contextPorts) {
 
 /***/ }),
 
-/***/ 8677:
+/***/ 37685:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DismissBugbotFindingsUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const load_bugbot_context_use_case_1 = __nccwpck_require__(56378);
-const bugbot_context_request_1 = __nccwpck_require__(72881);
-const mark_findings_resolved_workflow_1 = __nccwpck_require__(29578);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
+const result_1 = __nccwpck_require__(73817);
+const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+const mark_findings_resolved_workflow_1 = __nccwpck_require__(65916);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 /** Dismisses only findings present in the current persisted Bugbot context. */
 class DismissBugbotFindingsUseCase {
     constructor(dependencies) {
@@ -58750,14 +58750,14 @@ async function loadDismissContext(operation, ports) {
 
 /***/ }),
 
-/***/ 9306:
+/***/ 31643:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyCommentLimit = applyCommentLimit;
-const bugbot_constants_1 = __nccwpck_require__(16868);
+const bugbot_constants_1 = __nccwpck_require__(51389);
 /**
  * Applies the max-comments limit: returns the first N findings to publish individually,
  * and overflow count + titles for a single "revisar en local" summary comment.
@@ -58778,7 +58778,7 @@ function applyCommentLimit(findings, maxComments = bugbot_constants_1.BUGBOT_MAX
 
 /***/ }),
 
-/***/ 56378:
+/***/ 4050:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -58786,16 +58786,16 @@ function applyCommentLimit(findings, maxComments = bugbot_constants_1.BUGBOT_MAX
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.preflightBugbotContext = preflightBugbotContext;
 exports.loadBugbotContext = loadBugbotContext;
-const application_error_1 = __nccwpck_require__(2965);
-const bounded_concurrency_policy_1 = __nccwpck_require__(50189);
-const context_1 = __nccwpck_require__(32721);
-const logging_ports_1 = __nccwpck_require__(73001);
-const bugbot_finding_context_1 = __nccwpck_require__(7993);
-const bugbot_previous_findings_context_1 = __nccwpck_require__(9819);
-const bugbot_diff_partition_policy_1 = __nccwpck_require__(51471);
-const bugbot_review_context_1 = __nccwpck_require__(36905);
-const file_ignore_policy_1 = __nccwpck_require__(56498);
-const bugbot_review_rules_1 = __nccwpck_require__(45270);
+const application_error_1 = __nccwpck_require__(75999);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const context_1 = __nccwpck_require__(14712);
+const logging_ports_1 = __nccwpck_require__(6152);
+const bugbot_finding_context_1 = __nccwpck_require__(62946);
+const bugbot_previous_findings_context_1 = __nccwpck_require__(3346);
+const bugbot_diff_partition_policy_1 = __nccwpck_require__(31601);
+const bugbot_review_context_1 = __nccwpck_require__(50536);
+const file_ignore_policy_1 = __nccwpck_require__(20542);
+const bugbot_review_rules_1 = __nccwpck_require__(25011);
 /** Resolves and validates the provider-owned PR identity without loading review context. */
 async function preflightBugbotContext(request, ports) {
     const selection = await selectCanonicalPullRequest(request, ports);
@@ -58963,14 +58963,14 @@ function toPrContext(identity, snapshot) {
 
 /***/ }),
 
-/***/ 50980:
+/***/ 44861:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadBugbotReconciliationSnapshot = loadBugbotReconciliationSnapshot;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
 /**
  * Acquires one coherent final snapshot around two head guards. Surface reads
  * run concurrently, while the second guard rejects data collected across a
@@ -59061,32 +59061,32 @@ function stateOf(result) {
 
 /***/ }),
 
-/***/ 74985:
+/***/ 96963:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = void 0;
-var mark_findings_resolved_workflow_1 = __nccwpck_require__(29578);
+var mark_findings_resolved_workflow_1 = __nccwpck_require__(65916);
 Object.defineProperty(exports, "markFindingsResolved", ({ enumerable: true, get: function () { return mark_findings_resolved_workflow_1.markFindingsResolved; } }));
 
 
 /***/ }),
 
-/***/ 29578:
+/***/ 65916:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const logging_ports_1 = __nccwpck_require__(73001);
-const resolve_issue_finding_1 = __nccwpck_require__(101);
-const resolve_pull_request_finding_1 = __nccwpck_require__(72038);
-const review_state_1 = __nccwpck_require__(17271);
-const application_error_1 = __nccwpck_require__(2965);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const logging_ports_1 = __nccwpck_require__(6152);
+const resolve_issue_finding_1 = __nccwpck_require__(35300);
+const resolve_pull_request_finding_1 = __nccwpck_require__(64567);
+const review_state_1 = __nccwpck_require__(79200);
+const application_error_1 = __nccwpck_require__(75999);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
@@ -59170,7 +59170,7 @@ function addResolutionError(errors, destination) {
 
 /***/ }),
 
-/***/ 33308:
+/***/ 70124:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -59233,14 +59233,14 @@ function resolveFindingPathForPr(findingFile, prFiles) {
 
 /***/ }),
 
-/***/ 13325:
+/***/ 85016:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareBugbotFindings = prepareBugbotFindings;
-const prepare_bugbot_findings_policy_1 = __nccwpck_require__(73654);
+const prepare_bugbot_findings_policy_1 = __nccwpck_require__(3496);
 function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxComments, maxAgentFindings) {
     const normalized = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)(response, maxAgentFindings);
     return normalized === undefined
@@ -59255,7 +59255,7 @@ function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxCo
 
 /***/ }),
 
-/***/ 73654:
+/***/ 3496:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -59264,14 +59264,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MIN_AGENT_FINDING_CONFIDENCE = exports.MAX_AGENT_RESOLVED_FINDINGS = exports.MAX_AGENT_FINDINGS = void 0;
 exports.normalizeBugbotResponse = normalizeBugbotResponse;
 exports.prepareFindings = prepareFindings;
-const deduplicate_findings_1 = __nccwpck_require__(71392);
-const file_ignore_policy_1 = __nccwpck_require__(56498);
-const limit_comments_1 = __nccwpck_require__(9306);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const path_validation_1 = __nccwpck_require__(33308);
-const severity_1 = __nccwpck_require__(2624);
-const finding_identity_1 = __nccwpck_require__(657);
-const sensitive_text_1 = __nccwpck_require__(98209);
+const deduplicate_findings_1 = __nccwpck_require__(62908);
+const file_ignore_policy_1 = __nccwpck_require__(20542);
+const limit_comments_1 = __nccwpck_require__(31643);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const path_validation_1 = __nccwpck_require__(70124);
+const severity_1 = __nccwpck_require__(14626);
+const finding_identity_1 = __nccwpck_require__(91853);
+const sensitive_text_1 = __nccwpck_require__(47122);
 /** Hard cap for model-controlled arrays before any filtering or publication. */
 exports.MAX_AGENT_FINDINGS = 500;
 exports.MAX_AGENT_RESOLVED_FINDINGS = 500;
@@ -59404,7 +59404,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 60836:
+/***/ 88442:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -59415,10 +59415,10 @@ function isRecord(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
-const finding_1 = __nccwpck_require__(82048);
-const publish_issue_finding_comment_1 = __nccwpck_require__(62743);
-const publish_pr_review_comments_1 = __nccwpck_require__(34439);
-const publish_overflow_comment_1 = __nccwpck_require__(2810);
+const finding_1 = __nccwpck_require__(31011);
+const publish_issue_finding_comment_1 = __nccwpck_require__(84950);
+const publish_pr_review_comments_1 = __nccwpck_require__(50352);
+const publish_overflow_comment_1 = __nccwpck_require__(10974);
 async function publishFindings(param) {
     const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports, catalog } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
@@ -59450,15 +59450,15 @@ async function publishFindings(param) {
 
 /***/ }),
 
-/***/ 62743:
+/***/ 84950:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishIssueFindingComment = publishIssueFindingComment;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const logging_ports_1 = __nccwpck_require__(73001);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function publishIssueFindingComment(repository, issueNumber, finding, existing, commitSha, catalog) {
     const body = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { catalog });
     const options = commitSha ? { commitSha } : undefined;
@@ -59474,16 +59474,16 @@ async function publishIssueFindingComment(repository, issueNumber, finding, exis
 
 /***/ }),
 
-/***/ 2810:
+/***/ 10974:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishOverflowComment = publishOverflowComment;
-const logging_ports_1 = __nccwpck_require__(73001);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
+const logging_ports_1 = __nccwpck_require__(6152);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 async function publishOverflowComment(repository, issueNumber, overflowCount, overflowTitles, commitSha, catalog = (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)('en-US')) {
     if (overflowCount <= 0)
         return;
@@ -59503,19 +59503,19 @@ ${catalog.message('bugbot.overflow.body', { count: `**${overflowCount}**` }, ove
 
 /***/ }),
 
-/***/ 34439:
+/***/ 50352:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const path_validation_1 = __nccwpck_require__(33308);
-const logging_ports_1 = __nccwpck_require__(73001);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const bugbot_review_presentation_policy_1 = __nccwpck_require__(77193);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const path_validation_1 = __nccwpck_require__(70124);
+const logging_ports_1 = __nccwpck_require__(6152);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 class PullRequestReviewCommentPublisher {
     constructor(options) {
         this.options = options;
@@ -59669,7 +59669,7 @@ function sanitizeSummaryText(value, maximum) {
 
 /***/ }),
 
-/***/ 41038:
+/***/ 13059:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -59677,11 +59677,11 @@ function sanitizeSummaryText(value, maximum) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 exports.queryBugbotPartitionFindings = queryBugbotPartitionFindings;
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const schema_1 = __nccwpck_require__(98135);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
-const application_error_1 = __nccwpck_require__(2965);
-const logging_ports_1 = __nccwpck_require__(73001);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const schema_1 = __nccwpck_require__(16808);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
+const logging_ports_1 = __nccwpck_require__(6152);
 const MAX_PARTITION_QUERY_ATTEMPTS = 3;
 function bugbotQueryOptions(schema) {
     return (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('bugbot-review', schema);
@@ -59734,19 +59734,19 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
 
 /***/ }),
 
-/***/ 39174:
+/***/ 57515:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
-const review_projection_1 = __nccwpck_require__(23272);
-const bugbot_reconciliation_policy_1 = __nccwpck_require__(54271);
-const bugbot_provider_projection_policy_1 = __nccwpck_require__(95220);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const load_bugbot_reconciliation_snapshot_use_case_1 = __nccwpck_require__(50980);
-const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(861);
+const review_projection_1 = __nccwpck_require__(80859);
+const bugbot_reconciliation_policy_1 = __nccwpck_require__(78128);
+const bugbot_provider_projection_policy_1 = __nccwpck_require__(85821);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const load_bugbot_reconciliation_snapshot_use_case_1 = __nccwpck_require__(44861);
+const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(44491);
 /**
  * Orchestrates final Bugbot reconciliation. Provider acquisition, pure state
  * planning, and presentation mutations are deliberately owned by dedicated
@@ -59814,15 +59814,15 @@ function toSafeOperationMessage(error) {
 
 /***/ }),
 
-/***/ 83711:
+/***/ 17437:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RememberBugbotRuleUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 /** Stores an explicitly approved, repository-versioned Bugbot rule. */
 class RememberBugbotRuleUseCase {
     constructor(rules) {
@@ -59857,14 +59857,14 @@ exports.RememberBugbotRuleUseCase = RememberBugbotRuleUseCase;
 
 /***/ }),
 
-/***/ 101:
+/***/ 35300:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 async function resolveIssueFinding(repository, resolution, catalog) {
     const body = resolution.comment.body;
     const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
@@ -59881,15 +59881,15 @@ async function resolveIssueFinding(repository, resolution, catalog) {
 
 /***/ }),
 
-/***/ 72038:
+/***/ 64567:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolvePullRequestFinding = resolvePullRequestFinding;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 async function resolvePullRequestFinding(repository, resolution, catalog) {
     const comments = await repository.listPullRequestReviewComments(resolution.pullRequestNumber);
     const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
@@ -59918,7 +59918,7 @@ async function resolvePullRequestFinding(repository, resolution, catalog) {
 
 /***/ }),
 
-/***/ 28636:
+/***/ 59828:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -59964,7 +59964,7 @@ function sanitizeUserCommentForPrompt(raw) {
 
 /***/ }),
 
-/***/ 98135:
+/***/ 16808:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -59976,8 +59976,8 @@ function sanitizeUserCommentForPrompt(raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_PARTITION_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
 exports.buildBugbotPartitionResponseSchema = buildBugbotPartitionResponseSchema;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(80639);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
@@ -60114,7 +60114,7 @@ exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
 
 /***/ }),
 
-/***/ 2624:
+/***/ 14626:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -60151,19 +60151,19 @@ function meetsMinSeverity(findingSeverity, minSeverity) {
 
 /***/ }),
 
-/***/ 861:
+/***/ 44491:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.synchronizeBugbotReviewPresentation = synchronizeBugbotReviewPresentation;
-const application_error_1 = __nccwpck_require__(2965);
-const bugbot_review_presentation_policy_1 = __nccwpck_require__(77193);
-const bugbot_review_ownership_policy_1 = __nccwpck_require__(11719);
-const review_projection_1 = __nccwpck_require__(23272);
-const publication_identity_policy_1 = __nccwpck_require__(12590);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
+const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
+const review_projection_1 = __nccwpck_require__(80859);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 const REVIEW_UPDATE_BATCH_SIZE = 20;
 const MAX_REVIEW_UPDATES_PER_RUN = 100;
 const REVIEW_UPDATE_CONCURRENCY = 4;
@@ -60341,7 +60341,7 @@ async function mapWithConcurrency(values, concurrency, operation) {
 
 /***/ }),
 
-/***/ 32739:
+/***/ 96031:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -60383,7 +60383,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_VERIFY_COMMANDS = void 0;
 exports.parseVerifyCommand = parseVerifyCommand;
 exports.limitVerifyCommands = limitVerifyCommands;
-const shellQuote = __importStar(__nccwpck_require__(18342));
+const shellQuote = __importStar(__nccwpck_require__(75430));
 exports.MAX_VERIFY_COMMANDS = 20;
 function parseVerifyCommand(cmd) {
     const trimmed = cmd.trim();
@@ -60409,15 +60409,15 @@ function limitVerifyCommands(commands) {
 
 /***/ }),
 
-/***/ 71843:
+/***/ 57742:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runVerifyCommands = runVerifyCommands;
-const logging_ports_1 = __nccwpck_require__(73001);
-const verify_command_policy_1 = __nccwpck_require__(32739);
+const logging_ports_1 = __nccwpck_require__(6152);
+const verify_command_policy_1 = __nccwpck_require__(96031);
 async function runVerifyCommands(commands, execute) {
     for (const command of commands) {
         const result = await executeVerifyCommand(command, execute);
@@ -60468,7 +60468,7 @@ function isSensitiveArgumentName(argument) {
 
 /***/ }),
 
-/***/ 51578:
+/***/ 93370:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -60547,16 +60547,16 @@ async function hasWorkspaceChanges(gitCommitPort) {
 
 /***/ }),
 
-/***/ 75384:
+/***/ 28356:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckChangesIssueSizeUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const check_changes_issue_size_workflow_1 = __nccwpck_require__(51875);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const check_changes_issue_size_workflow_1 = __nccwpck_require__(43250);
 class CheckChangesIssueSizeUseCase {
     constructor(projectBoardCommandPort, issueRepository, pullRequestRepository, branchChangeSizePort) {
         this.projectBoardCommandPort = projectBoardCommandPort;
@@ -60580,17 +60580,17 @@ exports.CheckChangesIssueSizeUseCase = CheckChangesIssueSizeUseCase;
 
 /***/ }),
 
-/***/ 51875:
+/***/ 43250:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCheckChangesIssueSize = runCheckChangesIssueSize;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const update_change_size_labels_1 = __nccwpck_require__(65146);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const update_change_size_labels_1 = __nccwpck_require__(51200);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCheckChangesIssueSize(param, taskId, dependencies) {
     try {
         const baseBranch = param.baseBranch;
@@ -60649,14 +60649,14 @@ function logSize(size, githubSize, reason, currentLabel) {
 
 /***/ }),
 
-/***/ 65545:
+/***/ 6287:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DetectPotentialProblemsUseCase = void 0;
-const detect_potential_problems_workflow_1 = __nccwpck_require__(40555);
+const detect_potential_problems_workflow_1 = __nccwpck_require__(37033);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
     constructor(aiRepository, scm, telemetryPort, catalogResolver) {
@@ -60680,30 +60680,30 @@ exports.DetectPotentialProblemsUseCase = DetectPotentialProblemsUseCase;
 
 /***/ }),
 
-/***/ 40555:
+/***/ 37033:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectPotentialProblemsWorkflow = runDetectPotentialProblemsWorkflow;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const task_emoji_1 = __nccwpck_require__(83142);
-const logging_ports_1 = __nccwpck_require__(73001);
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const load_bugbot_context_use_case_1 = __nccwpck_require__(56378);
-const bugbot_context_request_1 = __nccwpck_require__(72881);
-const apply_detected_findings_1 = __nccwpck_require__(60017);
-const bugbot_finding_status_policy_1 = __nccwpck_require__(9298);
-const bugbot_review_telemetry_1 = __nccwpck_require__(14285);
-const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(92650);
-const bugbot_review_freshness_1 = __nccwpck_require__(26699);
-const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(39174);
-const application_error_1 = __nccwpck_require__(2965);
-const bugbot_event_ownership_policy_1 = __nccwpck_require__(10580);
-const bugbot_message_catalog_1 = __nccwpck_require__(84479);
-const bugbot_partition_completion_policy_1 = __nccwpck_require__(83782);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const task_emoji_1 = __nccwpck_require__(46103);
+const logging_ports_1 = __nccwpck_require__(6152);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+const apply_detected_findings_1 = __nccwpck_require__(20793);
+const bugbot_finding_status_policy_1 = __nccwpck_require__(53822);
+const bugbot_review_telemetry_1 = __nccwpck_require__(46790);
+const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
+const bugbot_review_freshness_1 = __nccwpck_require__(14307);
+const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
+const application_error_1 = __nccwpck_require__(75999);
+const bugbot_event_ownership_policy_1 = __nccwpck_require__(52771);
+const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_partition_completion_policy_1 = __nccwpck_require__(57555);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
@@ -61035,15 +61035,15 @@ function resolvePublicationCatalog(operation, dependencies, publishesToPullReque
 
 /***/ }),
 
-/***/ 96838:
+/***/ 68549:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkoutBranch = checkoutBranch;
-const application_error_1 = __nccwpck_require__(2965);
-const logging_ports_1 = __nccwpck_require__(73001);
+const application_error_1 = __nccwpck_require__(75999);
+const logging_ports_1 = __nccwpck_require__(6152);
 const STASH_MESSAGE = 'bugbot-autofix-before-checkout';
 async function hasUncommittedChanges(port) {
     let output = '';
@@ -61096,16 +61096,16 @@ async function restoreStashedChanges(port) {
 
 /***/ }),
 
-/***/ 77749:
+/***/ 33276:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotifyNewCommitOnIssueUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const notify_new_commit_on_issue_workflow_1 = __nccwpck_require__(22712);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const notify_new_commit_on_issue_workflow_1 = __nccwpck_require__(46101);
 class NotifyNewCommitOnIssueUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -61121,16 +61121,16 @@ exports.NotifyNewCommitOnIssueUseCase = NotifyNewCommitOnIssueUseCase;
 
 /***/ }),
 
-/***/ 22712:
+/***/ 46101:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runNotifyNewCommitOnIssueWorkflow = runNotifyNewCommitOnIssueWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function runNotifyNewCommitOnIssueWorkflow(param, taskId, issueRepository) {
     const result = [];
     try {
@@ -61158,7 +61158,7 @@ async function runNotifyNewCommitOnIssueWorkflow(param, taskId, issueRepository)
 
 /***/ }),
 
-/***/ 65146:
+/***/ 51200:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -61194,7 +61194,7 @@ async function updateIssueAndRelatedPullRequests(request, ports) {
 
 /***/ }),
 
-/***/ 39633:
+/***/ 19004:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -61206,15 +61206,15 @@ async function updateIssueAndRelatedPullRequests(request, ports) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DoUserRequestUseCase = void 0;
-const agent_1 = __nccwpck_require__(71889);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const result_1 = __nccwpck_require__(61444);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(28636);
-const workspace_mutation_guard_1 = __nccwpck_require__(12627);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_1 = __nccwpck_require__(79937);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const result_1 = __nccwpck_require__(73817);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = "DoUserRequestUseCase";
 class DoUserRequestUseCase {
     constructor(aiRepository, gitCommitPort) {
@@ -61308,7 +61308,7 @@ function failure(error) {
 
 /***/ }),
 
-/***/ 12627:
+/***/ 24243:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -61317,9 +61317,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_AUTOMATED_CHANGED_PATHS = void 0;
 exports.prepareWorkspaceMutation = prepareWorkspaceMutation;
 exports.finalizeWorkspaceMutation = finalizeWorkspaceMutation;
-const application_error_1 = __nccwpck_require__(2965);
-const git_branch_checkout_1 = __nccwpck_require__(96838);
-const workspace_changes_1 = __nccwpck_require__(51578);
+const application_error_1 = __nccwpck_require__(75999);
+const git_branch_checkout_1 = __nccwpck_require__(68549);
+const workspace_changes_1 = __nccwpck_require__(93370);
 exports.MAX_AUTOMATED_CHANGED_PATHS = 100;
 /** Establishes a clean and deterministic repository boundary before an agent may mutate files. */
 async function prepareWorkspaceMutation(gitCommitPort, options) {
@@ -61373,15 +61373,15 @@ async function inspectWorkspace(gitCommitPort, phase) {
 
 /***/ }),
 
-/***/ 3389:
+/***/ 72063:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extractStructuredAnswer = extractStructuredAnswer;
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
-const application_error_1 = __nccwpck_require__(2965);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
 function extractStructuredAnswer(response, targetLocale) {
     if (response == null)
         return '';
@@ -61396,16 +61396,16 @@ function extractStructuredAnswer(response, targetLocale) {
 
 /***/ }),
 
-/***/ 88960:
+/***/ 18846:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPermissionsUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const check_permissions_workflow_1 = __nccwpck_require__(98658);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const check_permissions_workflow_1 = __nccwpck_require__(17102);
 class CheckPermissionsUseCase {
     constructor(organizationMembersPort) {
         this.organizationMembersPort = organizationMembersPort;
@@ -61423,7 +61423,7 @@ exports.CheckPermissionsUseCase = CheckPermissionsUseCase;
 
 /***/ }),
 
-/***/ 98658:
+/***/ 17102:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -61431,9 +61431,9 @@ exports.CheckPermissionsUseCase = CheckPermissionsUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectCheckPermissionsContext = projectCheckPermissionsContext;
 exports.runCheckPermissionsWorkflow = runCheckPermissionsWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 function projectCheckPermissionsContext(source) {
     const issueTarget = source.isIssue;
     return Object.freeze({
@@ -61497,7 +61497,7 @@ function buildInactiveResult(param, taskId) {
 
 /***/ }),
 
-/***/ 78212:
+/***/ 72770:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -61506,16 +61506,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentLanguageTranslationWorkflow = exports.TRANSLATED_COMMENT_MARKER = void 0;
 exports.projectCommentLanguageRequest = projectCommentLanguageRequest;
 exports.getCommentLanguageAdaptationPayload = getCommentLanguageAdaptationPayload;
-const result_1 = __nccwpck_require__(61444);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const agent_response_schemas_1 = __nccwpck_require__(63523);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const comment_translation_policy_1 = __nccwpck_require__(22406);
-const locale_1 = __nccwpck_require__(64552);
-const application_error_1 = __nccwpck_require__(2965);
-var comment_translation_policy_2 = __nccwpck_require__(22406);
+const result_1 = __nccwpck_require__(73817);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const comment_translation_policy_1 = __nccwpck_require__(27150);
+const locale_1 = __nccwpck_require__(15386);
+const application_error_1 = __nccwpck_require__(75999);
+var comment_translation_policy_2 = __nccwpck_require__(27150);
 Object.defineProperty(exports, "TRANSLATED_COMMENT_MARKER", ({ enumerable: true, get: function () { return comment_translation_policy_2.TRANSLATED_COMMENT_MARKER; } }));
 function projectCommentLanguageRequest(source) {
     return Object.freeze({
@@ -61656,7 +61656,7 @@ function languageAdaptationPayload(status, targetLocale, interpretedComment, sou
 
 /***/ }),
 
-/***/ 26147:
+/***/ 56334:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -61700,7 +61700,7 @@ function toCamelCase(input) {
 
 /***/ }),
 
-/***/ 93499:
+/***/ 79544:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -61723,14 +61723,14 @@ async function cleanupDuplicateComment(context, comments, sourceIsCurrent) {
 
 /***/ }),
 
-/***/ 54191:
+/***/ 65440:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCommitPrefix = buildCommitPrefix;
-const commit_prefix_transform_policy_1 = __nccwpck_require__(26147);
+const commit_prefix_transform_policy_1 = __nccwpck_require__(56334);
 function buildCommitPrefix(branchName, transforms, onUnknownTransform) {
     return transforms
         .split(',')
@@ -61741,18 +61741,18 @@ function buildCommitPrefix(branchName, transforms, onUnknownTransform) {
 
 /***/ }),
 
-/***/ 85276:
+/***/ 59946:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetHotfixVersionUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const content_utils_1 = __nccwpck_require__(61146);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const content_utils_1 = __nccwpck_require__(92816);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class GetHotfixVersionUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -61833,18 +61833,18 @@ function isPositiveIssueNumber(value) {
 
 /***/ }),
 
-/***/ 65633:
+/***/ 64410:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetReleaseTypeUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const content_utils_1 = __nccwpck_require__(61146);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const content_utils_1 = __nccwpck_require__(92816);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class GetReleaseTypeUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -61914,18 +61914,18 @@ function isPositiveIssueNumber(value) {
 
 /***/ }),
 
-/***/ 8709:
+/***/ 70587:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetReleaseVersionUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const content_utils_1 = __nccwpck_require__(61146);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const content_utils_1 = __nccwpck_require__(92816);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class GetReleaseVersionUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -61996,7 +61996,7 @@ function isPositiveIssueNumber(value) {
 
 /***/ }),
 
-/***/ 72383:
+/***/ 89064:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -62005,10 +62005,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectIssueContentLinkContext = projectIssueContentLinkContext;
 exports.projectPullRequestContentLinkContext = projectPullRequestContentLinkContext;
 exports.runProjectContentLinkWorkflow = runProjectContentLinkWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 function projectIssueContentLinkContext(source) {
     return projectContext(source, 'issue', source.issue.number, source.project.getProjectColumnIssueCreated());
 }
@@ -62088,23 +62088,23 @@ function capitalize(value) {
 
 /***/ }),
 
-/***/ 81581:
+/***/ 40558:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runThinkAnswerWorkflow = runThinkAnswerWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const agent_response_schemas_1 = __nccwpck_require__(63523);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const agent_answer_policy_1 = __nccwpck_require__(3389);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const application_error_1 = __nccwpck_require__(2965);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
+const result_1 = __nccwpck_require__(73817);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const agent_answer_policy_1 = __nccwpck_require__(72063);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
     const issueDescription = await loadIssueDescription(request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
     const contextBlock = issueDescription
@@ -62180,7 +62180,7 @@ async function queryThinkAnswer(param, prompt, repository, targetLocale) {
 
 /***/ }),
 
-/***/ 12636:
+/***/ 59687:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -62203,7 +62203,7 @@ function extractMentionQuestion(commentBody, tokenUser) {
 
 /***/ }),
 
-/***/ 98559:
+/***/ 23995:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -62211,10 +62211,10 @@ function extractMentionQuestion(commentBody, tokenUser) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveThinkRequest = resolveThinkRequest;
 exports.buildExplicitCommandQuestion = buildExplicitCommandQuestion;
-const copilot_command_1 = __nccwpck_require__(87134);
-const copilot_comment_request_1 = __nccwpck_require__(81916);
-const think_input_policy_1 = __nccwpck_require__(12636);
-const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(28636);
+const copilot_command_1 = __nccwpck_require__(11771);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
+const think_input_policy_1 = __nccwpck_require__(59687);
+const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
 /** Resolves the comment input and destination without performing I/O. */
 function resolveThinkRequest(param) {
     const commentBody = (0, think_input_policy_1.getThinkCommentBody)({
@@ -62277,14 +62277,14 @@ function buildExplicitCommandQuestion(command) {
 
 /***/ }),
 
-/***/ 25099:
+/***/ 89255:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ThinkUseCase = void 0;
-const think_workflow_1 = __nccwpck_require__(14720);
+const think_workflow_1 = __nccwpck_require__(36450);
 class ThinkUseCase {
     constructor(issueDescriptionQueryPort, aiRepository) {
         this.issueDescriptionQueryPort = issueDescriptionQueryPort;
@@ -62303,7 +62303,7 @@ exports.ThinkUseCase = ThinkUseCase;
 
 /***/ }),
 
-/***/ 14720:
+/***/ 36450:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -62311,14 +62311,14 @@ exports.ThinkUseCase = ThinkUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectThinkContext = projectThinkContext;
 exports.runThinkWorkflow = runThinkWorkflow;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const think_request_policy_1 = __nccwpck_require__(98559);
-const think_answer_workflow_1 = __nccwpck_require__(81581);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const application_error_1 = __nccwpck_require__(2965);
-const locale_1 = __nccwpck_require__(64552);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const think_request_policy_1 = __nccwpck_require__(23995);
+const think_answer_workflow_1 = __nccwpck_require__(40558);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const application_error_1 = __nccwpck_require__(75999);
+const locale_1 = __nccwpck_require__(15386);
 function projectThinkContext(source) {
     const request = (0, think_request_policy_1.resolveThinkRequest)(source);
     const tokenUser = source.tokenUser?.trim();
@@ -62402,7 +62402,7 @@ function logSkipReason(reason, tokenUser) {
 
 /***/ }),
 
-/***/ 93066:
+/***/ 1725:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -62411,10 +62411,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_TRANSITION_NOTIFICATION_LINKS = exports.MAX_TRANSITION_NOTIFICATION_CHARACTERS = void 0;
 exports.reconcileTransitionNotification = reconcileTransitionNotification;
 exports.renderTransitionNotification = renderTransitionNotification;
-const github_publication_1 = __nccwpck_require__(75905);
-const github_user_policy_1 = __nccwpck_require__(19596);
-const publication_identity_policy_1 = __nccwpck_require__(12590);
-const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(93499);
+const github_publication_1 = __nccwpck_require__(35793);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
 exports.MAX_TRANSITION_NOTIFICATION_CHARACTERS = 400;
 exports.MAX_TRANSITION_NOTIFICATION_LINKS = 2;
 /** Creates one immutable action notification per exact transition fingerprint. */
@@ -62501,16 +62501,16 @@ function outcome(effect, canonicalCommentId, duplicatesRemoved = 0, duplicatesCo
 
 /***/ }),
 
-/***/ 21376:
+/***/ 20556:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTitleUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const update_title_workflow_1 = __nccwpck_require__(89641);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const update_title_workflow_1 = __nccwpck_require__(50029);
 class UpdateTitleUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -62535,7 +62535,7 @@ exports.UpdateTitleUseCase = UpdateTitleUseCase;
 
 /***/ }),
 
-/***/ 89641:
+/***/ 50029:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -62545,9 +62545,9 @@ exports.projectUpdateTitleContext = projectUpdateTitleContext;
 exports.runIssueTitleUpdate = runIssueTitleUpdate;
 exports.runPullRequestTitleUpdate = runPullRequestTitleUpdate;
 exports.titleUpdateFailure = titleUpdateFailure;
-const result_1 = __nccwpck_require__(61444);
-const application_error_1 = __nccwpck_require__(2965);
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 function projectUpdateTitleContext(source) {
     if (source.isIssue) {
         return Object.freeze({
@@ -62649,14 +62649,14 @@ function skippedResult(taskId) {
 
 /***/ }),
 
-/***/ 41713:
+/***/ 10706:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AnswerIssueHelpUseCase = void 0;
-const answer_issue_help_workflow_1 = __nccwpck_require__(75001);
+const answer_issue_help_workflow_1 = __nccwpck_require__(86428);
 /** Application boundary for the initial response to question/help issues. */
 class AnswerIssueHelpUseCase {
     constructor(aiRepository) {
@@ -62674,25 +62674,25 @@ exports.AnswerIssueHelpUseCase = AnswerIssueHelpUseCase;
 
 /***/ }),
 
-/***/ 75001:
+/***/ 86428:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAnswerIssueHelpWorkflow = runAnswerIssueHelpWorkflow;
-const agent_1 = __nccwpck_require__(71889);
-const result_1 = __nccwpck_require__(61444);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const agent_response_schemas_1 = __nccwpck_require__(63523);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const task_emoji_1 = __nccwpck_require__(83142);
-const agent_answer_policy_1 = __nccwpck_require__(3389);
-const github_comment_publication_policy_1 = __nccwpck_require__(22913);
-const application_error_1 = __nccwpck_require__(2965);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const task_emoji_1 = __nccwpck_require__(46103);
+const agent_answer_policy_1 = __nccwpck_require__(72063);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_1 = __nccwpck_require__(75999);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const TASK_ID = 'AnswerIssueHelpUseCase';
 /** Posts one contextual answer for a newly opened question/help issue. */
 async function runAnswerIssueHelpWorkflow(param, dependencies) {
@@ -62777,14 +62777,14 @@ function skipped() {
 
 /***/ }),
 
-/***/ 18189:
+/***/ 55523:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssignMemberToIssueUseCase = void 0;
-const assign_members_workflow_1 = __nccwpck_require__(78123);
+const assign_members_workflow_1 = __nccwpck_require__(42343);
 /** Application boundary for assigning issue or pull-request members. */
 class AssignMemberToIssueUseCase {
     constructor(issueRepository, projectRepository) {
@@ -62804,18 +62804,18 @@ exports.AssignMemberToIssueUseCase = AssignMemberToIssueUseCase;
 
 /***/ }),
 
-/***/ 78123:
+/***/ 42343:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAssignMembersWorkflow = runAssignMembersWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const assignee_assignment_policy_1 = __nccwpck_require__(2426);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const assignee_assignment_policy_1 = __nccwpck_require__(85918);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'AssignMemberToIssueUseCase';
 /** Assigns the creator and remaining project members according to the pure assignment policy. */
 async function runAssignMembersWorkflow(param, dependencies) {
@@ -62878,14 +62878,14 @@ function assignmentResult(success, step) {
 
 /***/ }),
 
-/***/ 1093:
+/***/ 80174:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssignReviewersToIssueUseCase = void 0;
-const assign_reviewers_workflow_1 = __nccwpck_require__(35521);
+const assign_reviewers_workflow_1 = __nccwpck_require__(97260);
 /** Application boundary for requesting the configured number of reviewers. */
 class AssignReviewersToIssueUseCase {
     constructor(issueRepository, pullRequestRepository, projectRepository) {
@@ -62907,19 +62907,19 @@ exports.AssignReviewersToIssueUseCase = AssignReviewersToIssueUseCase;
 
 /***/ }),
 
-/***/ 35521:
+/***/ 97260:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAssignReviewersWorkflow = runAssignReviewersWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const reviewer_assignment_policy_1 = __nccwpck_require__(49532);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const reviewer_assignment_policy_1 = __nccwpck_require__(88350);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'AssignReviewersToIssueUseCase';
 /** Selects and requests reviewers without coupling the use-case boundary to GitHub. */
 async function runAssignReviewersWorkflow(param, dependencies) {
@@ -62999,7 +62999,7 @@ function failureResult(step) {
 
 /***/ }),
 
-/***/ 50133:
+/***/ 29988:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -63021,16 +63021,16 @@ function selectBranchPreparationStrategy(flags) {
 
 /***/ }),
 
-/***/ 46243:
+/***/ 19511:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPriorityIssueSizeUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const priority_size_check_use_case_1 = __nccwpck_require__(81753);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const priority_size_check_use_case_1 = __nccwpck_require__(98060);
 class CheckPriorityIssueSizeUseCase {
     constructor(projectBoardPriorityPort) {
         this.projectBoardPriorityPort = projectBoardPriorityPort;
@@ -63046,18 +63046,18 @@ exports.CheckPriorityIssueSizeUseCase = CheckPriorityIssueSizeUseCase;
 
 /***/ }),
 
-/***/ 88705:
+/***/ 46753:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseIssueAfterMergingUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class CloseIssueAfterMergingUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -63119,17 +63119,17 @@ exports.CloseIssueAfterMergingUseCase = CloseIssueAfterMergingUseCase;
 
 /***/ }),
 
-/***/ 71594:
+/***/ 86675:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseNotAllowedIssueUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class CloseNotAllowedIssueUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -63180,18 +63180,18 @@ exports.CloseNotAllowedIssueUseCase = CloseNotAllowedIssueUseCase;
 
 /***/ }),
 
-/***/ 2608:
+/***/ 33445:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDeployAddedWorkflow = runDeployAddedWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const content_utils_1 = __nccwpck_require__(61146);
-const logging_ports_1 = __nccwpck_require__(73001);
-const deploy_workflow_policy_1 = __nccwpck_require__(61524);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const content_utils_1 = __nccwpck_require__(92816);
+const logging_ports_1 = __nccwpck_require__(6152);
+const deploy_workflow_policy_1 = __nccwpck_require__(8428);
+const application_error_1 = __nccwpck_require__(75999);
 async function runDeployAddedWorkflow(param, taskId, branchWorkflowPort, moveIssueToInProgressUseCase) {
     const plan = (0, deploy_workflow_policy_1.resolveDeployWorkflowPlan)(param);
     if (!plan)
@@ -63234,16 +63234,16 @@ async function runDeployAddedWorkflow(param, taskId, branchWorkflowPort, moveIss
 
 /***/ }),
 
-/***/ 56723:
+/***/ 27708:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeployAddedUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const deploy_added_workflow_1 = __nccwpck_require__(2608);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const deploy_added_workflow_1 = __nccwpck_require__(33445);
 class DeployAddedUseCase {
     constructor(branchWorkflowPort, moveIssueToInProgressUseCase) {
         this.branchWorkflowPort = branchWorkflowPort;
@@ -63260,14 +63260,14 @@ exports.DeployAddedUseCase = DeployAddedUseCase;
 
 /***/ }),
 
-/***/ 34835:
+/***/ 34100:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkIssueProjectUseCase = void 0;
-const project_content_link_workflow_1 = __nccwpck_require__(72383);
+const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking issues to configured ProjectV2 boards. */
 class LinkIssueProjectUseCase {
     constructor(projectContentPort) {
@@ -63283,17 +63283,17 @@ exports.LinkIssueProjectUseCase = LinkIssueProjectUseCase;
 
 /***/ }),
 
-/***/ 79453:
+/***/ 52309:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MoveIssueToInProgressUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class MoveIssueToInProgressUseCase {
     constructor(projectRepository) {
         this.projectRepository = projectRepository;
@@ -63339,22 +63339,22 @@ exports.MoveIssueToInProgressUseCase = MoveIssueToInProgressUseCase;
 
 /***/ }),
 
-/***/ 35833:
+/***/ 67546:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrepareBranchesUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const branch_preparation_strategy_1 = __nccwpck_require__(50133);
-const prepare_managed_branch_1 = __nccwpck_require__(28983);
-const prepare_hotfix_branch_1 = __nccwpck_require__(88395);
-const prepare_release_branch_1 = __nccwpck_require__(16712);
-const application_error_1 = __nccwpck_require__(2965);
-const issue_workflow_context_1 = __nccwpck_require__(13765);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const branch_preparation_strategy_1 = __nccwpck_require__(29988);
+const prepare_managed_branch_1 = __nccwpck_require__(29928);
+const prepare_hotfix_branch_1 = __nccwpck_require__(96318);
+const prepare_release_branch_1 = __nccwpck_require__(83059);
+const application_error_1 = __nccwpck_require__(75999);
+const issue_workflow_context_1 = __nccwpck_require__(98005);
 class PrepareBranchesUseCase {
     constructor(branchListQueryPort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort, moveIssueToInProgressUseCase) {
         this.branchListQueryPort = branchListQueryPort;
@@ -63432,16 +63432,16 @@ exports.PrepareBranchesUseCase = PrepareBranchesUseCase;
 
 /***/ }),
 
-/***/ 88395:
+/***/ 96318:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareHotfixBranch = prepareHotfixBranch;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const issue_workflow_context_1 = __nccwpck_require__(13765);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const issue_workflow_context_1 = __nccwpck_require__(98005);
 async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, branches, taskId) {
     const { hotfix } = param;
     if (hotfix.baseVersion === undefined ||
@@ -63501,20 +63501,20 @@ async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, b
 
 /***/ }),
 
-/***/ 28983:
+/***/ 29928:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareManagedBranch = prepareManagedBranch;
-const result_1 = __nccwpck_require__(61444);
-const branch_preparation_policy_1 = __nccwpck_require__(59489);
-const managed_branch_result_policy_1 = __nccwpck_require__(32742);
-const logging_ports_1 = __nccwpck_require__(73001);
-const application_error_1 = __nccwpck_require__(2965);
-const execute_script_use_case_1 = __nccwpck_require__(54191);
-const issue_workflow_context_1 = __nccwpck_require__(13765);
+const result_1 = __nccwpck_require__(73817);
+const branch_preparation_policy_1 = __nccwpck_require__(97307);
+const managed_branch_result_policy_1 = __nccwpck_require__(55078);
+const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
+const execute_script_use_case_1 = __nccwpck_require__(65440);
+const issue_workflow_context_1 = __nccwpck_require__(98005);
 async function prepareManagedBranch(param, issueTitle, branches, taskId, dependencies) {
     (0, logging_ports_1.logDebugInfo)(`Branch type: ${param.managementBranch}`);
     const decision = (0, branch_preparation_policy_1.decideManagedBranchPreparation)({
@@ -63598,17 +63598,17 @@ async function buildConfiguredCommitPrefix(param, branchName) {
 
 /***/ }),
 
-/***/ 16712:
+/***/ 83059:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareReleaseBranch = prepareReleaseBranch;
-const result_1 = __nccwpck_require__(61444);
-const execute_script_use_case_1 = __nccwpck_require__(54191);
-const logging_ports_1 = __nccwpck_require__(73001);
-const issue_workflow_context_1 = __nccwpck_require__(13765);
+const result_1 = __nccwpck_require__(73817);
+const execute_script_use_case_1 = __nccwpck_require__(65440);
+const logging_ports_1 = __nccwpck_require__(6152);
+const issue_workflow_context_1 = __nccwpck_require__(98005);
 async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId) {
     const { release } = param;
     if (release.version === undefined || release.branch === undefined) {
@@ -63698,7 +63698,7 @@ function buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl) {
 
 /***/ }),
 
-/***/ 46093:
+/***/ 16530:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -63717,17 +63717,17 @@ function resolveGithubPriorityLabel(priority, labels) {
 
 /***/ }),
 
-/***/ 81753:
+/***/ 98060:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPrioritySizeCheck = runPrioritySizeCheck;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const priority_label_policy_1 = __nccwpck_require__(46093);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const priority_label_policy_1 = __nccwpck_require__(16530);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPrioritySizeCheck(param, taskId, projectRepository) {
     try {
         return await applyPriorityToProjects(param, taskId, projectRepository);
@@ -63773,16 +63773,16 @@ async function applyPriorityToProjects(param, taskId, projectRepository) {
 
 /***/ }),
 
-/***/ 10027:
+/***/ 71836:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReconcileBranchReadinessUseCase = void 0;
-const issue_start_policy_1 = __nccwpck_require__(20953);
-const result_1 = __nccwpck_require__(61444);
-const application_error_1 = __nccwpck_require__(2965);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 /** Projects verified remote facts into the managed `branched` output label. */
 class ReconcileBranchReadinessUseCase {
     constructor(linkedBranch, labels) {
@@ -63856,7 +63856,7 @@ exports.ReconcileBranchReadinessUseCase = ReconcileBranchReadinessUseCase;
 
 /***/ }),
 
-/***/ 11944:
+/***/ 57836:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -63874,18 +63874,18 @@ function selectIssueBranchesToRemove(branches, issueNumber, branchTypes) {
 
 /***/ }),
 
-/***/ 92405:
+/***/ 15608:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RemoveIssueBranchesUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const remove_issue_branches_policy_1 = __nccwpck_require__(11944);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const remove_issue_branches_policy_1 = __nccwpck_require__(57836);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Remove any branch created for this issue
  */
@@ -63949,17 +63949,17 @@ async function removeIssueBranch(param, taskId, branchName, branchLifecyclePort)
 
 /***/ }),
 
-/***/ 26142:
+/***/ 67129:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RemoveNotNeededBranchesUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class RemoveNotNeededBranchesUseCase {
     constructor(branchLifecyclePort, branchNamePort) {
         this.branchLifecyclePort = branchLifecyclePort;
@@ -64043,17 +64043,17 @@ exports.RemoveNotNeededBranchesUseCase = RemoveNotNeededBranchesUseCase;
 
 /***/ }),
 
-/***/ 25514:
+/***/ 38222:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateIssueTypeUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class UpdateIssueTypeUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -64086,7 +64086,7 @@ exports.UpdateIssueTypeUseCase = UpdateIssueTypeUseCase;
 
 /***/ }),
 
-/***/ 34670:
+/***/ 93152:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -64094,7 +64094,7 @@ exports.UpdateIssueTypeUseCase = UpdateIssueTypeUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckIssueCommentLanguageUseCase = void 0;
 exports.projectIssueCommentLanguageRequest = projectIssueCommentLanguageRequest;
-const comment_language_translation_workflow_1 = __nccwpck_require__(78212);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 function projectIssueCommentLanguageRequest(source) {
     return (0, comment_language_translation_workflow_1.projectCommentLanguageRequest)({
         commentBody: source.issue.commentBody,
@@ -64122,16 +64122,16 @@ exports.CheckIssueCommentLanguageUseCase = CheckIssueCommentLanguageUseCase;
 
 /***/ }),
 
-/***/ 61696:
+/***/ 12738:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPriorityPullRequestSizeUseCase = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const priority_size_check_use_case_1 = __nccwpck_require__(81753);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const priority_size_check_use_case_1 = __nccwpck_require__(98060);
 class CheckPriorityPullRequestSizeUseCase {
     constructor(projectBoardPriorityPort) {
         this.projectBoardPriorityPort = projectBoardPriorityPort;
@@ -64147,18 +64147,18 @@ exports.CheckPriorityPullRequestSizeUseCase = CheckPriorityPullRequestSizeUseCas
 
 /***/ }),
 
-/***/ 64280:
+/***/ 38259:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkPullRequestIssueUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const link_pull_request_issue_workflow_1 = __nccwpck_require__(90858);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const link_pull_request_issue_workflow_1 = __nccwpck_require__(19033);
+const application_error_1 = __nccwpck_require__(75999);
 class LinkPullRequestIssueUseCase {
     constructor(pullRequestIssueLinkPort, eventualConsistencyDelayPort) {
         this.pullRequestIssueLinkPort = pullRequestIssueLinkPort;
@@ -64215,7 +64215,7 @@ function describeRecovery(error) {
 
 /***/ }),
 
-/***/ 90858:
+/***/ 19033:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -64223,9 +64223,9 @@ function describeRecovery(error) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestIssueLinkOperationError = void 0;
 exports.runLinkPullRequestIssue = runLinkPullRequestIssue;
-const result_1 = __nccwpck_require__(61444);
-const positive_integer_policy_1 = __nccwpck_require__(45613);
-const deployment_configuration_1 = __nccwpck_require__(5664);
+const result_1 = __nccwpck_require__(73817);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 const LINK_MARKER_PREFIX = '<!-- copilot:pr-issue-link:v1';
 class PullRequestIssueLinkOperationError extends Error {
     constructor(retainedBaseBranch, retainedIssueReference) {
@@ -64399,14 +64399,14 @@ function success(taskId, step) {
 
 /***/ }),
 
-/***/ 42469:
+/***/ 57169:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkPullRequestProjectUseCase = void 0;
-const project_content_link_workflow_1 = __nccwpck_require__(72383);
+const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking pull requests to configured ProjectV2 boards. */
 class LinkPullRequestProjectUseCase {
     constructor(projectContentPort) {
@@ -64422,19 +64422,19 @@ exports.LinkPullRequestProjectUseCase = LinkPullRequestProjectUseCase;
 
 /***/ }),
 
-/***/ 37698:
+/***/ 89085:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SyncSizeAndProgressLabelsFromIssueToPrUseCase = void 0;
-const result_1 = __nccwpck_require__(61444);
-const logging_ports_1 = __nccwpck_require__(73001);
-const task_emoji_1 = __nccwpck_require__(83142);
-const sync_size_and_progress_labels_policy_1 = __nccwpck_require__(32194);
-const application_error_1 = __nccwpck_require__(2965);
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const sync_size_and_progress_labels_policy_1 = __nccwpck_require__(65676);
+const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 /**
  * Copies size and progress labels from the linked issue to the PR.
  * Used when a PR is opened so it gets the same size/progress as the issue (corner case:
@@ -64503,7 +64503,7 @@ exports.SyncSizeAndProgressLabelsFromIssueToPrUseCase = SyncSizeAndProgressLabel
 
 /***/ }),
 
-/***/ 32194:
+/***/ 65676:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -64511,7 +64511,7 @@ exports.SyncSizeAndProgressLabelsFromIssueToPrUseCase = SyncSizeAndProgressLabel
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectSizeAndProgressLabels = selectSizeAndProgressLabels;
 exports.mergeSizeAndProgressLabels = mergeSizeAndProgressLabels;
-const progress_labels_1 = __nccwpck_require__(71285);
+const progress_labels_1 = __nccwpck_require__(97890);
 function selectSizeAndProgressLabels(labels, sizeLabels) {
     return labels.filter((name) => sizeLabels.includes(name) || progress_labels_1.PROGRESS_LABEL_PATTERN.test(name));
 }
@@ -64524,14 +64524,14 @@ function mergeSizeAndProgressLabels(pullRequestLabels, issueLabels, sizeLabels) 
 
 /***/ }),
 
-/***/ 10016:
+/***/ 75089:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdatePullRequestDescriptionUseCase = void 0;
-const update_pull_request_description_workflow_1 = __nccwpck_require__(81828);
+const update_pull_request_description_workflow_1 = __nccwpck_require__(44081);
 /** Application boundary for generating a pull request description from its issue and diff. */
 class UpdatePullRequestDescriptionUseCase {
     constructor(pullRequestDescriptionCommandPort, issueDescriptionQueryPort, organizationMembersPort, aiRepository) {
@@ -64555,25 +64555,25 @@ exports.UpdatePullRequestDescriptionUseCase = UpdatePullRequestDescriptionUseCas
 
 /***/ }),
 
-/***/ 81828:
+/***/ 44081:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runUpdatePullRequestDescriptionWorkflow = runUpdatePullRequestDescriptionWorkflow;
-const result_1 = __nccwpck_require__(61444);
-const agent_task_policy_1 = __nccwpck_require__(2601);
-const prompts_1 = __nccwpck_require__(71854);
-const logging_ports_1 = __nccwpck_require__(73001);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const task_emoji_1 = __nccwpck_require__(83142);
-const pull_request_description_1 = __nccwpck_require__(25623);
-const application_error_1 = __nccwpck_require__(2965);
-const positive_integer_policy_1 = __nccwpck_require__(45613);
-const agent_response_schemas_1 = __nccwpck_require__(63523);
-const agent_output_locale_policy_1 = __nccwpck_require__(2584);
-const pull_request_description_content_policy_1 = __nccwpck_require__(87855);
+const result_1 = __nccwpck_require__(73817);
+const agent_task_policy_1 = __nccwpck_require__(85712);
+const prompts_1 = __nccwpck_require__(69518);
+const logging_ports_1 = __nccwpck_require__(6152);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const task_emoji_1 = __nccwpck_require__(46103);
+const pull_request_description_1 = __nccwpck_require__(45315);
+const application_error_1 = __nccwpck_require__(75999);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const agent_response_schemas_1 = __nccwpck_require__(25603);
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const pull_request_description_content_policy_1 = __nccwpck_require__(43268);
 /** Generates and publishes a PR description from an immutable, capability-scoped request. */
 async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId} (AI PR description).`);
@@ -64690,7 +64690,7 @@ function skipped(taskId, step) {
 
 /***/ }),
 
-/***/ 5988:
+/***/ 21729:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -64698,7 +64698,7 @@ function skipped(taskId, step) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPullRequestCommentLanguageUseCase = void 0;
 exports.projectPullRequestCommentLanguageRequest = projectPullRequestCommentLanguageRequest;
-const comment_language_translation_workflow_1 = __nccwpck_require__(78212);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 function projectPullRequestCommentLanguageRequest(source) {
     return (0, comment_language_translation_workflow_1.projectCommentLanguageRequest)({
         commentBody: source.pullRequest.commentBody,
@@ -64726,7 +64726,7 @@ exports.CheckPullRequestCommentLanguageUseCase = CheckPullRequestCommentLanguage
 
 /***/ }),
 
-/***/ 45773:
+/***/ 45762:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -64747,15 +64747,15 @@ exports.UpgradeCliUseCase = UpgradeCliUseCase;
 
 /***/ }),
 
-/***/ 64317:
+/***/ 38301:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WaitForPreviousWorkflowRunsUseCase = void 0;
-const workflow_queue_policy_1 = __nccwpck_require__(97549);
-const application_error_1 = __nccwpck_require__(2965);
+const workflow_queue_policy_1 = __nccwpck_require__(43193);
+const application_error_1 = __nccwpck_require__(75999);
 const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
 const SYSTEM_RANDOM = { next: () => Math.random() };
 class WaitForPreviousWorkflowRunsUseCase {
@@ -64803,17 +64803,17 @@ function queueTimeoutError() {
 
 /***/ }),
 
-/***/ 81627:
+/***/ 55711:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.program = void 0;
-const cli_program_1 = __nccwpck_require__(5002);
-const application_error_context_1 = __nccwpck_require__(15491);
-const application_error_1 = __nccwpck_require__(2965);
-const application_error_presentation_policy_1 = __nccwpck_require__(47255);
+const cli_program_1 = __nccwpck_require__(40149);
+const application_error_context_1 = __nccwpck_require__(4034);
+const application_error_1 = __nccwpck_require__(75999);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const program = (0, cli_program_1.createCliProgram)();
 exports.program = program;
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
@@ -64827,7 +64827,7 @@ if (typeof process.env.JEST_WORKER_ID === 'undefined') {
 
 /***/ }),
 
-/***/ 58017:
+/***/ 81853:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -64841,7 +64841,7 @@ exports.ERRORS = {
 
 /***/ }),
 
-/***/ 5002:
+/***/ 40149:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -64883,11 +64883,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCliProgram = createCliProgram;
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
-const commander_1 = __nccwpck_require__(37579);
-const cli_update_check_composition_root_1 = __nccwpck_require__(89267);
-const command_registry_1 = __nccwpck_require__(55290);
-const cli_update_check_policy_1 = __nccwpck_require__(19054);
-const cli_update_notification_1 = __nccwpck_require__(1849);
+const commander_1 = __nccwpck_require__(12239);
+const cli_update_check_composition_root_1 = __nccwpck_require__(78998);
+const command_registry_1 = __nccwpck_require__(94415);
+const cli_update_check_policy_1 = __nccwpck_require__(82434);
+const cli_update_notification_1 = __nccwpck_require__(91033);
 function loadPackageVersion() {
     const packagePath = path.join(__dirname, '..', '..', 'package.json');
     const packageJson = JSON.parse((0, node_fs_1.readFileSync)(packagePath, 'utf8'));
@@ -64910,7 +64910,7 @@ function createCliProgram(updateChecker = (0, cli_update_check_composition_root_
 
 /***/ }),
 
-/***/ 19054:
+/***/ 82434:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -64933,7 +64933,7 @@ function shouldCheckForUpdates(commandName) {
 
 /***/ }),
 
-/***/ 1849:
+/***/ 91033:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -64956,7 +64956,7 @@ async function notifyAboutCliUpdate(checker, installedVersion, output = console)
 
 /***/ }),
 
-/***/ 74905:
+/***/ 95212:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -64985,25 +64985,25 @@ function parsePositiveCliInteger(value) {
 
 /***/ }),
 
-/***/ 55290:
+/***/ 94415:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerCliCommands = registerCliCommands;
-const think_1 = __nccwpck_require__(84454);
-const do_1 = __nccwpck_require__(8013);
-const check_progress_1 = __nccwpck_require__(3658);
-const recommend_steps_1 = __nccwpck_require__(71160);
-const detect_potential_problems_1 = __nccwpck_require__(13496);
-const bugbot_eval_1 = __nccwpck_require__(66289);
-const setup_1 = __nccwpck_require__(39505);
-const upgrade_1 = __nccwpck_require__(71056);
-const doctor_1 = __nccwpck_require__(38978);
-const reconcile_1 = __nccwpck_require__(85070);
-const bugbot_analytics_1 = __nccwpck_require__(98197);
-const bugbot_benchmark_1 = __nccwpck_require__(7296);
+const think_1 = __nccwpck_require__(26263);
+const do_1 = __nccwpck_require__(33917);
+const check_progress_1 = __nccwpck_require__(61464);
+const recommend_steps_1 = __nccwpck_require__(91523);
+const detect_potential_problems_1 = __nccwpck_require__(70850);
+const bugbot_eval_1 = __nccwpck_require__(7424);
+const setup_1 = __nccwpck_require__(32139);
+const upgrade_1 = __nccwpck_require__(27087);
+const doctor_1 = __nccwpck_require__(74364);
+const reconcile_1 = __nccwpck_require__(4718);
+const bugbot_analytics_1 = __nccwpck_require__(31554);
+const bugbot_benchmark_1 = __nccwpck_require__(32210);
 function registerCliCommands(program) {
     (0, think_1.registerThinkCommand)(program);
     (0, do_1.registerDoCommand)(program);
@@ -65023,7 +65023,7 @@ function registerCliCommands(program) {
 
 /***/ }),
 
-/***/ 98197:
+/***/ 31554:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65031,7 +65031,7 @@ function registerCliCommands(program) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBugbotAnalyticsCommand = registerBugbotAnalyticsCommand;
 const promises_1 = __nccwpck_require__(93977);
-const bugbot_analytics_1 = __nccwpck_require__(72472);
+const bugbot_analytics_1 = __nccwpck_require__(63550);
 function registerBugbotAnalyticsCommand(program) {
     program.command('bugbot-analytics')
         .description('Aggregate content-free Bugbot telemetry exported by the action')
@@ -65064,7 +65064,7 @@ function renderAnalytics(report) {
 
 /***/ }),
 
-/***/ 7296:
+/***/ 32210:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65073,11 +65073,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBugbotBenchmarkCommand = registerBugbotBenchmarkCommand;
 const promises_1 = __nccwpck_require__(93977);
 const node_path_1 = __nccwpck_require__(49411);
-const agent_authentication_preflight_1 = __nccwpck_require__(98940);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const bugbot_benchmark_1 = __nccwpck_require__(2141);
-const bugbot_benchmark_runner_1 = __nccwpck_require__(38817);
-const do_policy_1 = __nccwpck_require__(99783);
+const agent_authentication_preflight_1 = __nccwpck_require__(67766);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const bugbot_benchmark_1 = __nccwpck_require__(2899);
+const bugbot_benchmark_runner_1 = __nccwpck_require__(19235);
+const do_policy_1 = __nccwpck_require__(78838);
 function registerBugbotBenchmarkCommand(program) {
     program.command('bugbot-benchmark')
         .description('Run the real configured findings agent against a versioned quality corpus')
@@ -65108,7 +65108,7 @@ function registerBugbotBenchmarkCommand(program) {
 
 /***/ }),
 
-/***/ 66289:
+/***/ 7424:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65116,7 +65116,7 @@ function registerBugbotBenchmarkCommand(program) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerBugbotEvalCommand = registerBugbotEvalCommand;
 const node_path_1 = __nccwpck_require__(49411);
-const bugbot_benchmark_1 = __nccwpck_require__(2141);
+const bugbot_benchmark_1 = __nccwpck_require__(2899);
 function registerBugbotEvalCommand(program) {
     program.command('bugbot-eval')
         .description('Score Bugbot predictions against a versioned ground-truth corpus')
@@ -65144,20 +65144,20 @@ function registerBugbotEvalCommand(program) {
 
 /***/ }),
 
-/***/ 3658:
+/***/ 61464:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerCheckProgressCommand = registerCheckProgressCommand;
-const local_action_1 = __nccwpck_require__(70609);
-const product_identity_1 = __nccwpck_require__(44908);
-const logger_1 = __nccwpck_require__(50135);
-const cli_context_1 = __nccwpck_require__(34760);
-const command_input_policy_1 = __nccwpck_require__(74905);
-const issue_command_policy_1 = __nccwpck_require__(24026);
-const application_error_1 = __nccwpck_require__(2965);
+const local_action_1 = __nccwpck_require__(76102);
+const product_identity_1 = __nccwpck_require__(18739);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const command_input_policy_1 = __nccwpck_require__(95212);
+const issue_command_policy_1 = __nccwpck_require__(66915);
+const application_error_1 = __nccwpck_require__(75999);
 function registerCheckProgressCommand(program) {
     program
         .command('check-progress')
@@ -65210,20 +65210,20 @@ function registerCheckProgressCommand(program) {
 
 /***/ }),
 
-/***/ 13496:
+/***/ 70850:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerDetectPotentialProblemsCommand = registerDetectPotentialProblemsCommand;
-const local_action_1 = __nccwpck_require__(70609);
-const product_identity_1 = __nccwpck_require__(44908);
-const logger_1 = __nccwpck_require__(50135);
-const cli_context_1 = __nccwpck_require__(34760);
-const command_input_policy_1 = __nccwpck_require__(74905);
-const detect_potential_problems_policy_1 = __nccwpck_require__(60090);
-const application_error_1 = __nccwpck_require__(2965);
+const local_action_1 = __nccwpck_require__(76102);
+const product_identity_1 = __nccwpck_require__(18739);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const command_input_policy_1 = __nccwpck_require__(95212);
+const detect_potential_problems_policy_1 = __nccwpck_require__(87980);
+const application_error_1 = __nccwpck_require__(75999);
 function registerDetectPotentialProblemsCommand(program) {
     program
         .command('detect-potential-problems')
@@ -65296,7 +65296,7 @@ function registerDetectPotentialProblemsCommand(program) {
 
 /***/ }),
 
-/***/ 60090:
+/***/ 87980:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65304,9 +65304,9 @@ function registerDetectPotentialProblemsCommand(program) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildDetectPotentialProblemsParams = buildDetectPotentialProblemsParams;
 exports.resolveDetectIssueNumber = resolveDetectIssueNumber;
-const action_types_1 = __nccwpck_require__(8960);
-const input_keys_1 = __nccwpck_require__(83725);
-const command_input_policy_1 = __nccwpck_require__(74905);
+const action_types_1 = __nccwpck_require__(19625);
+const input_keys_1 = __nccwpck_require__(88539);
+const command_input_policy_1 = __nccwpck_require__(95212);
 function buildDetectPotentialProblemsParams(options, gitInfo, currentBranch) {
     if ('error' in gitInfo)
         return undefined;
@@ -65337,15 +65337,15 @@ function resolveDetectIssueNumber(value) {
 
 /***/ }),
 
-/***/ 8013:
+/***/ 33917:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerDoCommand = registerDoCommand;
-const product_identity_1 = __nccwpck_require__(44908);
-const do_command_handler_1 = __nccwpck_require__(1672);
+const product_identity_1 = __nccwpck_require__(18739);
+const do_command_handler_1 = __nccwpck_require__(85235);
 function registerDoCommand(program) {
     program
         .command('do')
@@ -65374,16 +65374,16 @@ function registerDoCommand(program) {
 
 /***/ }),
 
-/***/ 10864:
+/***/ 11794:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildDoAgentTasks = buildDoAgentTasks;
-const agent_configuration_builder_1 = __nccwpck_require__(43128);
-const agent_1 = __nccwpck_require__(95407);
-const command_input_policy_1 = __nccwpck_require__(74905);
+const agent_configuration_builder_1 = __nccwpck_require__(81248);
+const agent_1 = __nccwpck_require__(89040);
+const command_input_policy_1 = __nccwpck_require__(95212);
 function buildDoAgentTasks(options) {
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider: read(options.agentProvider, "AGENT_PROVIDER") || agent_1.DEFAULT_AGENT_PROVIDER,
@@ -65427,21 +65427,21 @@ function read(value, environmentName) {
 
 /***/ }),
 
-/***/ 1672:
+/***/ 85235:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDoCommand = runDoCommand;
-const agent_authentication_preflight_1 = __nccwpck_require__(98940);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const application_error_1 = __nccwpck_require__(2965);
-const prompts_1 = __nccwpck_require__(71854);
-const do_policy_1 = __nccwpck_require__(99783);
-const logger_1 = __nccwpck_require__(50135);
-const project_context_instruction_1 = __nccwpck_require__(36158);
-const cli_context_1 = __nccwpck_require__(34760);
+const agent_authentication_preflight_1 = __nccwpck_require__(67766);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const application_error_1 = __nccwpck_require__(75999);
+const prompts_1 = __nccwpck_require__(69518);
+const do_policy_1 = __nccwpck_require__(78838);
+const logger_1 = __nccwpck_require__(91151);
+const project_context_instruction_1 = __nccwpck_require__(63907);
+const cli_context_1 = __nccwpck_require__(21307);
 /** Executes the CLI command after Commander has parsed its options. */
 async function runDoCommand(options) {
     const gitInfo = (0, cli_context_1.getGitInfo)();
@@ -65502,7 +65502,7 @@ async function runDoCommand(options) {
 
 /***/ }),
 
-/***/ 99783:
+/***/ 78838:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65515,8 +65515,8 @@ exports.collectDoAuthenticationNotices = collectDoAuthenticationNotices;
 exports.formatDoJsonResponse = formatDoJsonResponse;
 exports.formatDoTextResponse = formatDoTextResponse;
 exports.formatDoResponse = formatDoResponse;
-const command_input_policy_1 = __nccwpck_require__(74905);
-var do_agent_task_policy_1 = __nccwpck_require__(10864);
+const command_input_policy_1 = __nccwpck_require__(95212);
+var do_agent_task_policy_1 = __nccwpck_require__(11794);
 Object.defineProperty(exports, "buildDoAgentTasks", ({ enumerable: true, get: function () { return do_agent_task_policy_1.buildDoAgentTasks; } }));
 function resolveDoPrompt(value) {
     const prompt = (0, command_input_policy_1.joinCliArguments)(value);
@@ -65564,23 +65564,23 @@ function formatDoResponse(text, sessionId, outputFormat) {
 
 /***/ }),
 
-/***/ 38978:
+/***/ 74364:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerDoctorCommand = registerDoctorCommand;
-const cli_context_1 = __nccwpck_require__(34760);
-const setup_files_1 = __nccwpck_require__(30542);
-const logger_1 = __nccwpck_require__(50135);
-const setup_doctor_composition_root_1 = __nccwpck_require__(90620);
-const setup_config_file_1 = __nccwpck_require__(34608);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const application_error_1 = __nccwpck_require__(2965);
-const setup_doctor_presenter_1 = __nccwpck_require__(38478);
-const setup_terminal_driver_1 = __nccwpck_require__(44475);
-const setup_credential_prompt_adapter_1 = __nccwpck_require__(22529);
+const cli_context_1 = __nccwpck_require__(21307);
+const setup_files_1 = __nccwpck_require__(59126);
+const logger_1 = __nccwpck_require__(91151);
+const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
+const setup_config_file_1 = __nccwpck_require__(11196);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_doctor_presenter_1 = __nccwpck_require__(6296);
+const setup_terminal_driver_1 = __nccwpck_require__(5462);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 function registerDoctorCommand(program) {
     program
         .command('doctor')
@@ -65637,7 +65637,7 @@ function registerDoctorCommand(program) {
 
 /***/ }),
 
-/***/ 24026:
+/***/ 66915:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65646,9 +65646,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseIssueNumber = parseIssueNumber;
 exports.buildCheckProgressParams = buildCheckProgressParams;
 exports.buildRecommendStepsParams = buildRecommendStepsParams;
-const action_types_1 = __nccwpck_require__(8960);
-const input_keys_1 = __nccwpck_require__(83725);
-const command_input_policy_1 = __nccwpck_require__(74905);
+const action_types_1 = __nccwpck_require__(19625);
+const input_keys_1 = __nccwpck_require__(88539);
+const command_input_policy_1 = __nccwpck_require__(95212);
 function sharedOptions(options) {
     return {
         [input_keys_1.INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
@@ -65698,20 +65698,20 @@ function buildRecommendStepsParams(options, gitInfo) {
 
 /***/ }),
 
-/***/ 71160:
+/***/ 91523:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerRecommendStepsCommand = registerRecommendStepsCommand;
-const local_action_1 = __nccwpck_require__(70609);
-const product_identity_1 = __nccwpck_require__(44908);
-const logger_1 = __nccwpck_require__(50135);
-const cli_context_1 = __nccwpck_require__(34760);
-const command_input_policy_1 = __nccwpck_require__(74905);
-const issue_command_policy_1 = __nccwpck_require__(24026);
-const application_error_1 = __nccwpck_require__(2965);
+const local_action_1 = __nccwpck_require__(76102);
+const product_identity_1 = __nccwpck_require__(18739);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const command_input_policy_1 = __nccwpck_require__(95212);
+const issue_command_policy_1 = __nccwpck_require__(66915);
+const application_error_1 = __nccwpck_require__(75999);
 function registerRecommendStepsCommand(program) {
     program
         .command('recommend-steps')
@@ -65751,7 +65751,7 @@ function registerRecommendStepsCommand(program) {
 
 /***/ }),
 
-/***/ 85070:
+/***/ 4718:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -65759,10 +65759,10 @@ function registerRecommendStepsCommand(program) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerReconcileCommand = registerReconcileCommand;
 exports.runReconcileCommand = runReconcileCommand;
-const cli_context_1 = __nccwpck_require__(34760);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const setup_config_file_1 = __nccwpck_require__(34608);
-const setup_workspace_adapter_1 = __nccwpck_require__(23376);
+const cli_context_1 = __nccwpck_require__(21307);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_config_file_1 = __nccwpck_require__(11196);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 /** Reconciles setup-managed workflow files locally; remote GitHub state is never changed. */
 function registerReconcileCommand(program) {
     program
@@ -65831,52 +65831,52 @@ function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.
 
 /***/ }),
 
-/***/ 39505:
+/***/ 32139:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerSetupCommand = registerSetupCommand;
-const local_action_1 = __nccwpck_require__(70609);
-const product_identity_1 = __nccwpck_require__(44908);
-const setup_files_1 = __nccwpck_require__(30542);
-const logger_1 = __nccwpck_require__(50135);
-const cli_context_1 = __nccwpck_require__(34760);
-const setup_policy_1 = __nccwpck_require__(19469);
-const setup_command_options_1 = __nccwpck_require__(50210);
-const setup_1 = __nccwpck_require__(24711);
-const setup_configuration_plan_1 = __nccwpck_require__(44018);
-const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(99264);
-const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(39967);
-const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(47936);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const setup_token_permission_policy_1 = __nccwpck_require__(10947);
-const setup_credentials_composition_root_1 = __nccwpck_require__(45203);
-const setup_doctor_composition_root_1 = __nccwpck_require__(90620);
-const setup_workspace_adapter_1 = __nccwpck_require__(23376);
-const setup_approval_readiness_adapter_1 = __nccwpck_require__(93230);
-const application_error_1 = __nccwpck_require__(2965);
-const setup_terminal_driver_1 = __nccwpck_require__(44475);
-const setup_question_renderer_1 = __nccwpck_require__(91475);
-const setup_plan_presenter_1 = __nccwpck_require__(31793);
-const setup_confirmation_adapter_1 = __nccwpck_require__(41180);
-const setup_credential_prompt_adapter_1 = __nccwpck_require__(22529);
-const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(10147);
-const setup_token_permission_presenter_1 = __nccwpck_require__(96520);
-const setup_token_permissions_composition_root_1 = __nccwpck_require__(43759);
-const setup_pat_creation_url_policy_1 = __nccwpck_require__(96850);
-const setup_github_identity_query_adapter_1 = __nccwpck_require__(57550);
-const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(36411);
-const verify_web_setup_apply_use_case_1 = __nccwpck_require__(75598);
-const setup_journey_use_case_1 = __nccwpck_require__(32060);
-const setup_journey_policy_1 = __nccwpck_require__(55254);
-const setup_journey_presenter_1 = __nccwpck_require__(76935);
-const web_setup_bridge_1 = __nccwpck_require__(15551);
-const setup_apply_snapshot_1 = __nccwpck_require__(55043);
-const setup_session_guard_1 = __nccwpck_require__(47901);
-const web_setup_server_1 = __nccwpck_require__(60458);
-const web_setup_adapters_1 = __nccwpck_require__(3068);
+const local_action_1 = __nccwpck_require__(76102);
+const product_identity_1 = __nccwpck_require__(18739);
+const setup_files_1 = __nccwpck_require__(59126);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const setup_policy_1 = __nccwpck_require__(28732);
+const setup_command_options_1 = __nccwpck_require__(99254);
+const setup_1 = __nccwpck_require__(36888);
+const setup_configuration_plan_1 = __nccwpck_require__(87770);
+const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
+const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(60830);
+const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(23388);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_terminal_driver_1 = __nccwpck_require__(5462);
+const setup_question_renderer_1 = __nccwpck_require__(89481);
+const setup_plan_presenter_1 = __nccwpck_require__(33441);
+const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
+const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
+const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
+const verify_web_setup_apply_use_case_1 = __nccwpck_require__(5303);
+const setup_journey_use_case_1 = __nccwpck_require__(8419);
+const setup_journey_policy_1 = __nccwpck_require__(53289);
+const setup_journey_presenter_1 = __nccwpck_require__(20462);
+const web_setup_bridge_1 = __nccwpck_require__(21518);
+const setup_apply_snapshot_1 = __nccwpck_require__(84136);
+const setup_session_guard_1 = __nccwpck_require__(53104);
+const web_setup_server_1 = __nccwpck_require__(63080);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -66280,16 +66280,16 @@ function registerSetupCommand(program) {
 
 /***/ }),
 
-/***/ 19469:
+/***/ 28732:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSetupParams = buildSetupParams;
-const action_types_1 = __nccwpck_require__(8960);
-const input_keys_1 = __nccwpck_require__(83725);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
+const action_types_1 = __nccwpck_require__(19625);
+const input_keys_1 = __nccwpck_require__(88539);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
 function buildSetupParams(options, gitInfo, token, configuration, credentials, approvedWorkflowFiles = [], remoteConfiguration) {
     return {
         ...(configuration ? (0, setup_configuration_policy_1.buildSetupActionInputs)(configuration) : {}),
@@ -66314,15 +66314,15 @@ function buildSetupParams(options, gitInfo, token, configuration, credentials, a
 
 /***/ }),
 
-/***/ 84454:
+/***/ 26263:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerThinkCommand = registerThinkCommand;
-const product_identity_1 = __nccwpck_require__(44908);
-const think_command_handler_1 = __nccwpck_require__(78484);
+const product_identity_1 = __nccwpck_require__(18739);
+const think_command_handler_1 = __nccwpck_require__(85340);
 function registerThinkCommand(program) {
     program
         .command("think")
@@ -66340,19 +66340,19 @@ function registerThinkCommand(program) {
 
 /***/ }),
 
-/***/ 78484:
+/***/ 85340:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runThinkCommand = runThinkCommand;
-const local_action_1 = __nccwpck_require__(70609);
-const action_types_1 = __nccwpck_require__(8960);
-const input_keys_1 = __nccwpck_require__(83725);
-const logger_1 = __nccwpck_require__(50135);
-const cli_context_1 = __nccwpck_require__(34760);
-const command_input_policy_1 = __nccwpck_require__(74905);
+const local_action_1 = __nccwpck_require__(76102);
+const action_types_1 = __nccwpck_require__(19625);
+const input_keys_1 = __nccwpck_require__(88539);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const command_input_policy_1 = __nccwpck_require__(95212);
 /** Adapts Commander input into the local action contract used by the Think workflow. */
 async function runThinkCommand(options) {
     const gitInfo = (0, cli_context_1.getGitInfo)();
@@ -66401,7 +66401,7 @@ function addIssueContext(params, issueNumber, question) {
 
 /***/ }),
 
-/***/ 71056:
+/***/ 27087:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -66409,8 +66409,8 @@ function addIssueContext(params, issueNumber, question) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runUpgradeCommand = runUpgradeCommand;
 exports.registerUpgradeCommand = registerUpgradeCommand;
-const cli_upgrade_composition_root_1 = __nccwpck_require__(91561);
-const application_error_1 = __nccwpck_require__(2965);
+const cli_upgrade_composition_root_1 = __nccwpck_require__(74142);
+const application_error_1 = __nccwpck_require__(75999);
 async function runUpgradeCommand(runner = (0, cli_upgrade_composition_root_1.createUpgradeCliUseCase)()) {
     console.log('⬆️ Updating the global @vypdev/copilot installation...');
     try {
@@ -66433,7 +66433,7 @@ function registerUpgradeCommand(program) {
 
 /***/ }),
 
-/***/ 55043:
+/***/ 84136:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -66493,7 +66493,7 @@ function setupApplySnapshotMatches(repositoryRoot, selectedFiles, expected) {
 
 /***/ }),
 
-/***/ 50210:
+/***/ 99254:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -66503,10 +66503,10 @@ exports.collectSecret = collectSecret;
 exports.collectApprovalCheck = collectApprovalCheck;
 exports.loadSetupOverrides = loadSetupOverrides;
 exports.collectScope = collectScope;
-const setup_config_file_1 = __nccwpck_require__(34608);
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const merge_setup_overrides_policy_1 = __nccwpck_require__(39631);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
+const setup_config_file_1 = __nccwpck_require__(11196);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const merge_setup_overrides_policy_1 = __nccwpck_require__(39267);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 function collectSecret(value, previous) {
     const separator = value.indexOf('=');
     if (separator <= 0)
@@ -66618,7 +66618,7 @@ function parseVisibility(value, flag) {
 
 /***/ }),
 
-/***/ 34608:
+/***/ 11196:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -66659,10 +66659,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadSetupConfigurationOverrides = loadSetupConfigurationOverrides;
 const node_fs_1 = __nccwpck_require__(87561);
-const yaml = __importStar(__nccwpck_require__(87969));
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const merge_queue_readiness_1 = __nccwpck_require__(36637);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
+const yaml = __importStar(__nccwpck_require__(783));
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const SETUP_OVERRIDE_KEYS = new Set([
     'features',
     'agents',
@@ -66918,14 +66918,14 @@ function containsCredentialMaterial(value, insideStorage = false) {
 
 /***/ }),
 
-/***/ 41180:
+/***/ 5502:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DryRunSetupPlanConfirmation = exports.SetupPlanConfirmationAdapter = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 class SetupPlanConfirmationAdapter {
     constructor(terminal, assumeYes) {
         this.terminal = terminal;
@@ -66963,16 +66963,16 @@ exports.DryRunSetupPlanConfirmation = DryRunSetupPlanConfirmation;
 
 /***/ }),
 
-/***/ 22529:
+/***/ 93232:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
-const setup_token_permission_presenter_1 = __nccwpck_require__(96520);
-const setup_interaction_cancelled_error_1 = __nccwpck_require__(93638);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 /** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
 exports.SetupTerminalCancelledError = setup_interaction_cancelled_error_1.SetupInteractionCancelledError;
 class SetupCredentialPromptAdapter {
@@ -67189,7 +67189,7 @@ exports.SetupCredentialPromptAdapter = SetupCredentialPromptAdapter;
 
 /***/ }),
 
-/***/ 38478:
+/***/ 6296:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67198,8 +67198,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupDoctorPresenter = void 0;
 exports.renderDoctorReport = renderDoctorReport;
 exports.doctorCheckLabel = doctorCheckLabel;
-const setup_doctor_message_catalog_1 = __nccwpck_require__(67183);
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
+const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 class SetupDoctorPresenter {
     constructor(catalog = (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)()) {
         this.catalog = catalog;
@@ -67274,7 +67274,7 @@ function doctorCheckLabel(id, catalog = (0, setup_doctor_message_catalog_1.resol
 
 /***/ }),
 
-/***/ 76935:
+/***/ 20462:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67282,7 +67282,7 @@ function doctorCheckLabel(id, catalog = (0, setup_doctor_message_catalog_1.resol
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupJourneyPresenter = void 0;
 exports.renderSetupJourney = renderSetupJourney;
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 class ConsoleSetupJourneyPresenter {
     present(view) {
         console.log(renderSetupJourney(view));
@@ -67313,7 +67313,7 @@ function renderSetupJourney(view, maximumWidth) {
 
 /***/ }),
 
-/***/ 31793:
+/***/ 33441:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67321,9 +67321,9 @@ function renderSetupJourney(view, maximumWidth) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupPlanPresenter = void 0;
 exports.renderSetupPlan = renderSetupPlan;
-const setup_configuration_policy_1 = __nccwpck_require__(93015);
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
-const pull_request_approval_policy_1 = __nccwpck_require__(53553);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 class ConsoleSetupPlanPresenter {
     present(plan) {
         console.log(renderSetupPlan(plan));
@@ -67385,7 +67385,7 @@ function storageLabel(policy) {
 
 /***/ }),
 
-/***/ 33139:
+/***/ 83434:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67532,15 +67532,15 @@ function stripAnsi(value) {
 
 /***/ }),
 
-/***/ 91475:
+/***/ 89481:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupQuestionRenderer = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
-const setup_questionnaire_policy_1 = __nccwpck_require__(65207);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 class ConsoleSetupQuestionRenderer {
     constructor(phase = 'full', choiceReviewPass = 1) {
         this.phase = phase;
@@ -67607,7 +67607,7 @@ function formatDefault(value) {
 
 /***/ }),
 
-/***/ 47901:
+/***/ 53104:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67701,7 +67701,7 @@ function setupLockError(message, cause) {
 
 /***/ }),
 
-/***/ 44475:
+/***/ 5462:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67904,7 +67904,7 @@ function isAbortError(error) {
 
 /***/ }),
 
-/***/ 96520:
+/***/ 63206:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -67915,8 +67915,8 @@ exports.renderSetupTokenPermissionSummary = renderSetupTokenPermissionSummary;
 exports.renderSetupTokenPermissionRequirements = renderSetupTokenPermissionRequirements;
 exports.renderSetupTokenPermissionReport = renderSetupTokenPermissionReport;
 const node_process_1 = __nccwpck_require__(97742);
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
-const setup_permission_summary_policy_1 = __nccwpck_require__(48581);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_permission_summary_policy_1 = __nccwpck_require__(10267);
 class ConsoleSetupTokenPermissionPresenter {
     constructor(mode = 'full') {
         this.mode = mode;
@@ -68032,15 +68032,15 @@ function capitalize(value) {
 
 /***/ }),
 
-/***/ 10147:
+/***/ 84473:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupWorkflowUpdatePromptAdapter = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(33139);
-const setup_credential_prompt_adapter_1 = __nccwpck_require__(22529);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 class SetupWorkflowUpdatePromptAdapter {
     constructor(terminal) {
         this.terminal = terminal;
@@ -68074,16 +68074,16 @@ exports.SetupWorkflowUpdatePromptAdapter = SetupWorkflowUpdatePromptAdapter;
 
 /***/ }),
 
-/***/ 3068:
+/***/ 60574:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WebSetupCredentialPrompt = exports.WebSetupJourneyPresenter = exports.WebSetupPermissionPresenter = exports.WebSetupWorkflowUpdatePrompt = exports.WebSetupPlanConfirmation = exports.WebSetupPlanPresenter = exports.WebSetupQuestionnaireCollector = void 0;
-const setup_questionnaire_policy_1 = __nccwpck_require__(65207);
-const setup_interaction_cancelled_error_1 = __nccwpck_require__(93638);
-const web_setup_bridge_1 = __nccwpck_require__(15551);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const web_setup_bridge_1 = __nccwpck_require__(21518);
 class WebSetupQuestionnaireCollector {
     constructor(bridge, pass = 1) {
         this.bridge = bridge;
@@ -68269,7 +68269,7 @@ exports.WebSetupCredentialPrompt = WebSetupCredentialPrompt;
 
 /***/ }),
 
-/***/ 15551:
+/***/ 21518:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -68391,7 +68391,7 @@ function toWebSetupPlan(plan) {
 
 /***/ }),
 
-/***/ 60458:
+/***/ 63080:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -68675,7 +68675,7 @@ function openWebSetupBrowser(url) {
 
 /***/ }),
 
-/***/ 34760:
+/***/ 21307:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -68691,8 +68691,8 @@ exports.getGitRepositoryRoot = getGitRepositoryRoot;
 exports.isGitRepositoryRoot = isGitRepositoryRoot;
 const child_process_1 = __nccwpck_require__(32081);
 const node_fs_1 = __nccwpck_require__(87561);
-const cli_errors_1 = __nccwpck_require__(58017);
-const git_object_id_1 = __nccwpck_require__(36924);
+const cli_errors_1 = __nccwpck_require__(81853);
+const git_object_id_1 = __nccwpck_require__(88623);
 function cleanCliArg(value) {
     if (value == null)
         return '';
@@ -68764,7 +68764,7 @@ function isGitRepositoryRoot(cwd) {
 
 /***/ }),
 
-/***/ 8960:
+/***/ 19625:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -68793,29 +68793,29 @@ exports.ACTIONS = {
 
 /***/ }),
 
-/***/ 71889:
+/***/ 79937:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isAgentConfigurationReady = exports.AGENT_EXECUTABLE_BASENAMES = void 0;
-var agent_1 = __nccwpck_require__(95407);
+var agent_1 = __nccwpck_require__(89040);
 Object.defineProperty(exports, "AGENT_EXECUTABLE_BASENAMES", ({ enumerable: true, get: function () { return agent_1.AGENT_EXECUTABLE_BASENAMES; } }));
 Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true, get: function () { return agent_1.isAgentConfigurationReady; } }));
 
 
 /***/ }),
 
-/***/ 1465:
+/***/ 37478:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
-const pull_request_description_1 = __nccwpck_require__(25623);
-const review_configuration_1 = __nccwpck_require__(19249);
+const pull_request_description_1 = __nccwpck_require__(45315);
+const review_configuration_1 = __nccwpck_require__(3994);
 class Ai {
     constructor(_configurationSource, model, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
         findings: { provider: 'codex', modelProvider: 'openai', model },
@@ -68879,7 +68879,7 @@ exports.Ai = Ai;
 
 /***/ }),
 
-/***/ 28206:
+/***/ 97790:
 /***/ (function(__unused_webpack_module, exports) {
 
 "use strict";
@@ -69128,14 +69128,14 @@ function normalizeApplicationErrorRecovery(recovery) {
 
 /***/ }),
 
-/***/ 61472:
+/***/ 71934:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchConfiguration = void 0;
-const model_input_1 = __nccwpck_require__(73130);
+const model_input_1 = __nccwpck_require__(14637);
 class BranchConfiguration {
     constructor(data) {
         const input = (0, model_input_1.asModelInput)(data);
@@ -69154,7 +69154,7 @@ exports.BranchConfiguration = BranchConfiguration;
 
 /***/ }),
 
-/***/ 46731:
+/***/ 39844:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69184,7 +69184,7 @@ function hotfixBranch(tree, version) {
 
 /***/ }),
 
-/***/ 94871:
+/***/ 29506:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69209,7 +69209,7 @@ exports.Branches = Branches;
 
 /***/ }),
 
-/***/ 75607:
+/***/ 57525:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69237,7 +69237,7 @@ exports.Commit = Commit;
 
 /***/ }),
 
-/***/ 98013:
+/***/ 90450:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -69245,11 +69245,11 @@ exports.Commit = Commit;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
 exports.requireCurrentConfigurationPayload = requireCurrentConfigurationPayload;
-const branch_configuration_1 = __nccwpck_require__(61472);
-const recommendation_state_1 = __nccwpck_require__(21602);
-const model_input_1 = __nccwpck_require__(73130);
-const deployment_operation_1 = __nccwpck_require__(17176);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
+const branch_configuration_1 = __nccwpck_require__(71934);
+const recommendation_state_1 = __nccwpck_require__(68514);
+const model_input_1 = __nccwpck_require__(14637);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 /** Version of the durable configuration contract stored in issue/PR content. */
 exports.CONFIG_SCHEMA_VERSION = 3;
 /** Accepts only the currently supported durable configuration contract. */
@@ -69306,7 +69306,7 @@ exports.Config = Config;
 
 /***/ }),
 
-/***/ 24750:
+/***/ 24146:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69324,20 +69324,20 @@ exports.Emoji = Emoji;
 
 /***/ }),
 
-/***/ 99925:
+/***/ 31546:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Execution = void 0;
-const commit_1 = __nccwpck_require__(75607);
-const config_1 = __nccwpck_require__(98013);
-const github_user_policy_1 = __nccwpck_require__(19596);
-const issue_inactivity_1 = __nccwpck_require__(7703);
-const deployment_configuration_1 = __nccwpck_require__(5664);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const commit_1 = __nccwpck_require__(57525);
+const config_1 = __nccwpck_require__(90450);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -69480,7 +69480,7 @@ function issueWorkflowBranch(kind, branches) {
 
 /***/ }),
 
-/***/ 26127:
+/***/ 18537:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69497,14 +69497,14 @@ exports.Hotfix = Hotfix;
 
 /***/ }),
 
-/***/ 21435:
+/***/ 50293:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldSkipInitialLabelsFetch = shouldSkipInitialLabelsFetch;
-const action_types_1 = __nccwpck_require__(8960);
+const action_types_1 = __nccwpck_require__(19625);
 function shouldSkipInitialLabelsFetch(isSingleAction, currentSingleAction) {
     return isSingleAction && currentSingleAction === action_types_1.ACTIONS.INITIAL_SETUP;
 }
@@ -69512,14 +69512,14 @@ function shouldSkipInitialLabelsFetch(isSingleAction, currentSingleAction) {
 
 /***/ }),
 
-/***/ 2224:
+/***/ 46760:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Issue = void 0;
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class Issue {
     get title() {
         return this.inputs?.issue?.title ?? '';
@@ -69587,7 +69587,7 @@ exports.Issue = Issue;
 
 /***/ }),
 
-/***/ 67189:
+/***/ 27357:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69630,15 +69630,15 @@ exports.IssueTypes = IssueTypes;
 
 /***/ }),
 
-/***/ 54505:
+/***/ 79463:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Labels = void 0;
-const copilot_lifecycle_1 = __nccwpck_require__(4227);
-const issue_start_policy_1 = __nccwpck_require__(20953);
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
+const issue_start_policy_1 = __nccwpck_require__(90332);
 class Labels {
     get isMandatoryBranchedLabel() {
         return this.isHotfix || this.isRelease;
@@ -69823,14 +69823,14 @@ exports.Labels = Labels;
 
 /***/ }),
 
-/***/ 31159:
+/***/ 9832:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Locale = void 0;
-const locale_1 = __nccwpck_require__(64552);
+const locale_1 = __nccwpck_require__(15386);
 class Locale {
     constructor(repository = Locale.DEFAULT, issue = '', pullRequest = '') {
         const profile = (0, locale_1.resolveLocaleProfile)(repository, issue, pullRequest);
@@ -69848,7 +69848,7 @@ Locale.DEFAULT = locale_1.DEFAULT_REPOSITORY_LOCALE;
 
 /***/ }),
 
-/***/ 22410:
+/***/ 2016:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69867,7 +69867,7 @@ exports.Milestone = Milestone;
 
 /***/ }),
 
-/***/ 73130:
+/***/ 14637:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -69891,14 +69891,14 @@ function readOptionalString(input, key) {
 
 /***/ }),
 
-/***/ 25491:
+/***/ 43630:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.restorePreviousBranchState = restorePreviousBranchState;
-const previous_branch_state_variants_1 = __nccwpck_require__(39892);
+const previous_branch_state_variants_1 = __nccwpck_require__(23809);
 function restorePreviousBranchState(previous, mode, releaseTree, hotfixTree) {
     if (mode === 'release')
         return previous?.releaseBranch
@@ -69912,7 +69912,7 @@ function restorePreviousBranchState(previous, mode, releaseTree, hotfixTree) {
 
 /***/ }),
 
-/***/ 39892:
+/***/ 23809:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -69921,7 +69921,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.restoreReleaseState = restoreReleaseState;
 exports.restoreHotfixState = restoreHotfixState;
 exports.restoreDefaultState = restoreDefaultState;
-const branch_state_policy_1 = __nccwpck_require__(46731);
+const branch_state_policy_1 = __nccwpck_require__(39844);
 function restoreReleaseState(previous, releaseTree) {
     if (!previous?.releaseBranch)
         return {};
@@ -69957,14 +69957,14 @@ function restoreDefaultState(previous) {
 
 /***/ }),
 
-/***/ 74263:
+/***/ 33428:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProjectDetail = void 0;
-const model_input_1 = __nccwpck_require__(73130);
+const model_input_1 = __nccwpck_require__(14637);
 class ProjectDetail {
     constructor(data) {
         const input = (0, model_input_1.asModelInput)(data);
@@ -69998,7 +69998,7 @@ exports.ProjectDetail = ProjectDetail;
 
 /***/ }),
 
-/***/ 95230:
+/***/ 13231:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70034,15 +70034,15 @@ exports.Projects = Projects;
 
 /***/ }),
 
-/***/ 28347:
+/***/ 55713:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequest = void 0;
-const positive_integer_policy_1 = __nccwpck_require__(45613);
-const github_comment_target_1 = __nccwpck_require__(77025);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const github_comment_target_1 = __nccwpck_require__(21486);
 class PullRequest {
     get action() {
         return this.inputs?.action ?? '';
@@ -70154,7 +70154,7 @@ function uniquePullRequestNumber(pullRequests) {
 
 /***/ }),
 
-/***/ 21602:
+/***/ 68514:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70162,8 +70162,8 @@ function uniquePullRequestNumber(pullRequests) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isRecommendationState = isRecommendationState;
 exports.restoreRecommendationState = restoreRecommendationState;
-const implementation_plan_1 = __nccwpck_require__(52620);
-const locale_1 = __nccwpck_require__(64552);
+const implementation_plan_1 = __nccwpck_require__(77001);
+const locale_1 = __nccwpck_require__(15386);
 function isRecommendationState(value) {
     return restoreRecommendationState(value) !== undefined;
 }
@@ -70207,7 +70207,7 @@ function restoreRecommendationState(value) {
 
 /***/ }),
 
-/***/ 40810:
+/***/ 74715:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70224,7 +70224,7 @@ exports.Release = Release;
 
 /***/ }),
 
-/***/ 61444:
+/***/ 73817:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70254,15 +70254,15 @@ exports.Result = Result;
 
 /***/ }),
 
-/***/ 11457:
+/***/ 45898:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SingleAction = void 0;
-const action_types_1 = __nccwpck_require__(8960);
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const action_types_1 = __nccwpck_require__(19625);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class SingleAction {
     get isPublishGithubAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION;
@@ -70407,7 +70407,7 @@ exports.SingleAction = SingleAction;
 
 /***/ }),
 
-/***/ 7267:
+/***/ 6362:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70426,7 +70426,7 @@ exports.SizeThreshold = SizeThreshold;
 
 /***/ }),
 
-/***/ 97155:
+/***/ 54820:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70448,7 +70448,7 @@ exports.SizeThresholds = SizeThresholds;
 
 /***/ }),
 
-/***/ 47356:
+/***/ 44153:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70465,7 +70465,7 @@ exports.Tokens = Tokens;
 
 /***/ }),
 
-/***/ 36707:
+/***/ 8381:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70514,7 +70514,7 @@ exports.getLatestVersion = getLatestVersion;
 
 /***/ }),
 
-/***/ 28787:
+/***/ 40231:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70522,7 +70522,7 @@ exports.getLatestVersion = getLatestVersion;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyReleaseResolution = applyReleaseResolution;
 exports.applyHotfixResolution = applyHotfixResolution;
-const branch_state_policy_1 = __nccwpck_require__(46731);
+const branch_state_policy_1 = __nccwpck_require__(39844);
 function applyReleaseResolution(releaseTree, version) {
     return {
         version,
@@ -70541,7 +70541,7 @@ function applyHotfixResolution(hotfixTree, baseVersion, version) {
 
 /***/ }),
 
-/***/ 23448:
+/***/ 43496:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70555,7 +70555,7 @@ function shouldAbortReleaseResolution(releaseType) {
 
 /***/ }),
 
-/***/ 20610:
+/***/ 92373:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70563,7 +70563,7 @@ function shouldAbortReleaseResolution(releaseType) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.nextReleaseVersion = nextReleaseVersion;
 exports.nextHotfixVersion = nextHotfixVersion;
-const version_policy_1 = __nccwpck_require__(36707);
+const version_policy_1 = __nccwpck_require__(8381);
 function nextReleaseVersion(latestTag, releaseType) {
     return (0, version_policy_1.incrementVersion)(latestTag ?? version_policy_1.DEFAULT_BASE_VERSION, releaseType);
 }
@@ -70578,7 +70578,7 @@ function nextHotfixVersion(latestTag) {
 
 /***/ }),
 
-/***/ 86641:
+/***/ 11730:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70602,7 +70602,7 @@ function hotfixResolutionFromPayload(payload) {
 
 /***/ }),
 
-/***/ 42046:
+/***/ 49834:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70620,7 +70620,7 @@ exports.Welcome = Welcome;
 
 /***/ }),
 
-/***/ 70513:
+/***/ 45790:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70638,7 +70638,7 @@ exports.Workflows = Workflows;
 
 /***/ }),
 
-/***/ 74888:
+/***/ 34737:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70646,7 +70646,7 @@ exports.Workflows = Workflows;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.authorizationForFileModification = authorizationForFileModification;
 exports.authorizationForMemberOnlyAutomation = authorizationForMemberOnlyAutomation;
-const github_user_policy_1 = __nccwpck_require__(19596);
+const github_user_policy_1 = __nccwpck_require__(84403);
 function authorizationForFileModification(owner, actor, ownerType) {
     return {
         kind: 'repository-collaborator',
@@ -70670,7 +70670,7 @@ function authorizationForMemberOnlyAutomation(owner, actor, ownerType) {
 
 /***/ }),
 
-/***/ 67354:
+/***/ 51371:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70682,8 +70682,8 @@ const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const node_child_process_1 = __nccwpck_require__(17718);
-const agent_credential_policy_1 = __nccwpck_require__(50879);
-const agent_runtime_manifest_1 = __nccwpck_require__(18890);
+const agent_credential_policy_1 = __nccwpck_require__(36529);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
@@ -70802,7 +70802,7 @@ function resolveMissingAuthentication(configuration, variables, modelProvider) {
 
 /***/ }),
 
-/***/ 98940:
+/***/ 67766:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70810,7 +70810,7 @@ function resolveMissingAuthentication(configuration, variables, modelProvider) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveAgentAuthenticationPreflightMode = resolveAgentAuthenticationPreflightMode;
 exports.runAgentAuthenticationPreflight = runAgentAuthenticationPreflight;
-const agent_authentication_1 = __nccwpck_require__(67354);
+const agent_authentication_1 = __nccwpck_require__(51371);
 function resolveAgentAuthenticationPreflightMode(environment = process.env, defaultMode = 'required') {
     const configured = environment.AGENT_AUTH_PREFLIGHT?.trim().toLowerCase();
     if (configured === 'required' || configured === 'warn' || configured === 'disabled')
@@ -70826,16 +70826,16 @@ function runAgentAuthenticationPreflight(configuration, environment = process.en
 
 /***/ }),
 
-/***/ 64596:
+/***/ 68570:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliClient = void 0;
-const agent_cli_execution_1 = __nccwpck_require__(79533);
-const agent_execution_planner_1 = __nccwpck_require__(73447);
-const agent_cli_contracts_1 = __nccwpck_require__(99483);
+const agent_cli_execution_1 = __nccwpck_require__(30248);
+const agent_execution_planner_1 = __nccwpck_require__(11800);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const NOOP_OBSERVER = { observe: () => undefined };
 class AgentCliClient {
     constructor(planner = new agent_execution_planner_1.AgentExecutionPlanner(), observer = NOOP_OBSERVER) {
@@ -70919,7 +70919,7 @@ function observeSafely(observer, observation) {
 
 /***/ }),
 
-/***/ 99483:
+/***/ 48254:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -70939,7 +70939,7 @@ exports.AgentCliError = AgentCliError;
 
 /***/ }),
 
-/***/ 79533:
+/***/ 30248:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -70953,7 +70953,7 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
-const agent_cli_contracts_1 = __nccwpck_require__(99483);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
@@ -71195,7 +71195,7 @@ function signalProcessTree(child, signal) {
 
 /***/ }),
 
-/***/ 79547:
+/***/ 49616:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -71203,8 +71203,8 @@ function signalProcessTree(child, signal) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
-const agent_configuration_validation_policy_1 = __nccwpck_require__(4345);
-const agent_executable_policy_1 = __nccwpck_require__(53773);
+const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const agent_executable_policy_1 = __nccwpck_require__(12570);
 const SUPPORTED_PROVIDERS = new Set(['opencode', 'codex', 'cursor']);
 const MODEL_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/;
 const MODEL_PROVIDER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
@@ -71241,7 +71241,7 @@ function getValidatedAgentConfiguration(configuration, task) {
 
 /***/ }),
 
-/***/ 50879:
+/***/ 36529:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71406,16 +71406,16 @@ function uniqueCredentials(credentials) {
 
 /***/ }),
 
-/***/ 33186:
+/***/ 34908:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.interpretFindingsResponse = interpretFindingsResponse;
-const agent_json_parser_1 = __nccwpck_require__(96865);
-const agent_response_parser_1 = __nccwpck_require__(68938);
-const agent_json_schema_validator_1 = __nccwpck_require__(32995);
+const agent_json_parser_1 = __nccwpck_require__(19951);
+const agent_response_parser_1 = __nccwpck_require__(94745);
+const agent_json_schema_validator_1 = __nccwpck_require__(52663);
 function interpretFindingsResponse(parts, options) {
     const text = typeof parts === 'string' ? parts : (0, agent_response_parser_1.extractTextFromParts)(parts);
     if (!text)
@@ -71435,7 +71435,7 @@ function interpretFindingsResponse(parts, options) {
 
 /***/ }),
 
-/***/ 96865:
+/***/ 19951:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -71444,7 +71444,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extractFirstJsonObject = extractFirstJsonObject;
 exports.parseJsonFromAgentText = parseJsonFromAgentText;
 exports.parseStrictJsonFromAgentText = parseStrictJsonFromAgentText;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 /** Extract the first complete JSON object from prose, respecting quoted strings and escapes. */
 function extractFirstJsonObject(text) {
     const start = text.indexOf('{');
@@ -71550,7 +71550,7 @@ function parseStrictJsonFromAgentText(text) {
 
 /***/ }),
 
-/***/ 32995:
+/***/ 52663:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71652,14 +71652,14 @@ function isObject(value) {
 
 /***/ }),
 
-/***/ 21598:
+/***/ 78804:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentPrompt = buildAgentPrompt;
-const untrusted_content_1 = __nccwpck_require__(12334);
+const untrusted_content_1 = __nccwpck_require__(67057);
 function buildAgentPrompt(prompt, expectJson, schema, schemaName) {
     const responseContract = expectJson && schema
         ? `Respond with a single JSON object that strictly conforms to this schema (name: ${schemaName}). No other text or markdown.\n\nSchema: ${JSON.stringify(schema)}`
@@ -71677,7 +71677,7 @@ function buildAgentPrompt(prompt, expectJson, schema, schemaName) {
 
 /***/ }),
 
-/***/ 68938:
+/***/ 94745:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71705,15 +71705,15 @@ function extractReasoningFromParts(parts) {
 
 /***/ }),
 
-/***/ 52157:
+/***/ 32152:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCapabilityAdapter = void 0;
-const agent_constants_1 = __nccwpck_require__(1192);
-const agent_configuration_policy_1 = __nccwpck_require__(79547);
+const agent_constants_1 = __nccwpck_require__(46927);
+const agent_configuration_policy_1 = __nccwpck_require__(49616);
 class AgentCapabilityAdapter {
     constructor(infrastructure) {
         this.cliAdapter = infrastructure.cli;
@@ -71741,7 +71741,7 @@ exports.AgentCapabilityAdapter = AgentCapabilityAdapter;
 
 /***/ }),
 
-/***/ 1192:
+/***/ 46927:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71754,17 +71754,17 @@ exports.AGENT_REQUEST_TIMEOUT_MS = 900000;
 
 /***/ }),
 
-/***/ 94109:
+/***/ 27725:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FindingsAgentAdapter = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const agent_prompt_policy_1 = __nccwpck_require__(21598);
-const agent_findings_response_policy_1 = __nccwpck_require__(33186);
-const agent_capability_adapter_1 = __nccwpck_require__(52157);
+const logger_1 = __nccwpck_require__(91151);
+const agent_prompt_policy_1 = __nccwpck_require__(78804);
+const agent_findings_response_policy_1 = __nccwpck_require__(34908);
+const agent_capability_adapter_1 = __nccwpck_require__(32152);
 class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
     async query(request) {
         const options = request.options ?? {};
@@ -71792,15 +71792,15 @@ exports.FindingsAgentAdapter = FindingsAgentAdapter;
 
 /***/ }),
 
-/***/ 99972:
+/***/ 62259:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FixerAgentAdapter = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const agent_capability_adapter_1 = __nccwpck_require__(52157);
+const logger_1 = __nccwpck_require__(91151);
+const agent_capability_adapter_1 = __nccwpck_require__(32152);
 class FixerAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
     async fix(request) {
         if (!request.configuration) {
@@ -71820,17 +71820,17 @@ exports.FixerAgentAdapter = FixerAgentAdapter;
 
 /***/ }),
 
-/***/ 76206:
+/***/ 10573:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LanguageAgentAdapter = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const agent_prompt_policy_1 = __nccwpck_require__(21598);
-const agent_findings_response_policy_1 = __nccwpck_require__(33186);
-const agent_capability_adapter_1 = __nccwpck_require__(52157);
+const logger_1 = __nccwpck_require__(91151);
+const agent_prompt_policy_1 = __nccwpck_require__(78804);
+const agent_findings_response_policy_1 = __nccwpck_require__(34908);
+const agent_capability_adapter_1 = __nccwpck_require__(32152);
 /** Infrastructure adapter for the read-only language capability. */
 class LanguageAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
     async query(request) {
@@ -71859,7 +71859,7 @@ exports.LanguageAgentAdapter = LanguageAgentAdapter;
 
 /***/ }),
 
-/***/ 36398:
+/***/ 50227:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71898,7 +71898,7 @@ function createLinkedBranchMutation(graphql, variables) {
 
 /***/ }),
 
-/***/ 309:
+/***/ 53427:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71928,7 +71928,7 @@ function isExpectedLinkedBranchRef(refName, expectedName) {
 
 /***/ }),
 
-/***/ 69983:
+/***/ 79421:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -71970,14 +71970,14 @@ exports.LinkedBranchReadinessRepository = LinkedBranchReadinessRepository;
 
 /***/ }),
 
-/***/ 23822:
+/***/ 78009:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkedBranchRepository = void 0;
-const linked_branch_workflow_1 = __nccwpck_require__(41410);
+const linked_branch_workflow_1 = __nccwpck_require__(87854);
 class LinkedBranchRepository {
     constructor(graphqlClient) {
         this.graphqlClient = graphqlClient;
@@ -71989,7 +71989,7 @@ exports.LinkedBranchRepository = LinkedBranchRepository;
 
 /***/ }),
 
-/***/ 50432:
+/***/ 95424:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -72001,8 +72001,8 @@ exports.unexpectedLinkedBranchResult = unexpectedLinkedBranchResult;
 exports.createdLinkedBranchResult = createdLinkedBranchResult;
 exports.idempotentLinkedBranchResult = idempotentLinkedBranchResult;
 exports.linkedBranchFailureResult = linkedBranchFailureResult;
-const result_1 = __nccwpck_require__(61444);
-const application_error_1 = __nccwpck_require__(2965);
+const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 const RESULT_ID = 'branch_repository';
 function missingLinkedBranchContextResult(branchName, issueNumber, ids) {
     return new result_1.Result({
@@ -72049,19 +72049,19 @@ function linkedBranchFailureResult(error) {
 
 /***/ }),
 
-/***/ 41410:
+/***/ 87854:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCreateLinkedBranch = runCreateLinkedBranch;
-const github_error_policy_1 = __nccwpck_require__(26189);
-const logger_1 = __nccwpck_require__(50135);
-const linked_branch_graphql_1 = __nccwpck_require__(36398);
-const linked_branch_policy_1 = __nccwpck_require__(309);
-const linked_branch_result_policy_1 = __nccwpck_require__(50432);
-const application_error_1 = __nccwpck_require__(2965);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const logger_1 = __nccwpck_require__(91151);
+const linked_branch_graphql_1 = __nccwpck_require__(50227);
+const linked_branch_policy_1 = __nccwpck_require__(53427);
+const linked_branch_result_policy_1 = __nccwpck_require__(95424);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCreateLinkedBranch(client, owner, repo, baseBranchName, newBranchName, issueNumber, oid, token) {
     try {
         (0, logger_1.logDebugInfo)(`Creating linked branch ${newBranchName} from ${oid ?? baseBranchName}`);
@@ -72106,7 +72106,7 @@ async function runCreateLinkedBranch(client, owner, repo, baseBranchName, newBra
 
 /***/ }),
 
-/***/ 88826:
+/***/ 73891:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -72155,16 +72155,16 @@ function classifyChangeSize(metrics, sizeThresholds, labels) {
 
 /***/ }),
 
-/***/ 81122:
+/***/ 95859:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchCompareRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const branch_change_size_policy_1 = __nccwpck_require__(88826);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const branch_change_size_policy_1 = __nccwpck_require__(73891);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Repository for comparing branches and computing size categories.
  * Isolated to allow unit tests with mocked Octokit and pure size logic.
@@ -72250,16 +72250,16 @@ exports.BranchCompareRepository = BranchCompareRepository;
 
 /***/ }),
 
-/***/ 88216:
+/***/ 19504:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchLifecycleRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class BranchLifecycleRepository {
     constructor(branchClient) {
         this.branchClient = branchClient;
@@ -72298,7 +72298,7 @@ exports.BranchLifecycleRepository = BranchLifecycleRepository;
 
 /***/ }),
 
-/***/ 94776:
+/***/ 61887:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -72325,7 +72325,7 @@ exports.BranchNameRepository = BranchNameRepository;
 
 /***/ }),
 
-/***/ 64454:
+/***/ 54874:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -72333,7 +72333,7 @@ exports.BranchNameRepository = BranchNameRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveOpenBranchDependencies = resolveOpenBranchDependencies;
 exports.dependencyFromPullRequest = dependencyFromPullRequest;
-const config_1 = __nccwpck_require__(98013);
+const config_1 = __nccwpck_require__(90450);
 const CONFIGURATION = /<!--\s*copilot-configuration-start\s*\n([\s\S]*?)\n\s*copilot-configuration-end\s*-->/iu;
 function resolveOpenBranchDependencies(issues, pullRequests) {
     const candidates = [];
@@ -72408,14 +72408,14 @@ function uniqueValidDependencies(candidates) {
 
 /***/ }),
 
-/***/ 78769:
+/***/ 9627:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchDependencyRepository = void 0;
-const branch_dependency_policy_1 = __nccwpck_require__(64454);
+const branch_dependency_policy_1 = __nccwpck_require__(54874);
 const OPEN_DEPENDENCIES_QUERY = `
   query BranchSyncDependencies($owner: String!, $repo: String!, $issuesCursor: String, $pullsCursor: String) {
     repository(owner: $owner, name: $repo) {
@@ -72534,7 +72534,7 @@ function withCause(message, cause) {
 
 /***/ }),
 
-/***/ 26781:
+/***/ 77509:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -72559,7 +72559,7 @@ exports.DeploymentContinuationRepository = DeploymentContinuationRepository;
 
 /***/ }),
 
-/***/ 86534:
+/***/ 91985:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -72596,17 +72596,17 @@ exports.DeploymentPresentationRepository = DeploymentPresentationRepository;
 
 /***/ }),
 
-/***/ 59536:
+/***/ 3182:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentStateRepositoryFactory = void 0;
-const deployment_state_fence_1 = __nccwpck_require__(32481);
-const config_1 = __nccwpck_require__(98013);
-const configuration_handler_1 = __nccwpck_require__(51068);
-const configuration_payload_policy_1 = __nccwpck_require__(23509);
+const deployment_state_fence_1 = __nccwpck_require__(72369);
+const config_1 = __nccwpck_require__(90450);
+const configuration_handler_1 = __nccwpck_require__(40188);
+const configuration_payload_policy_1 = __nccwpck_require__(58043);
 class DeploymentStateRepositoryFactory {
     constructor(issues) {
         this.issues = issues;
@@ -72675,14 +72675,14 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 35315:
+/***/ 85886:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubDeploymentGitRepository = void 0;
-const application_error_1 = __nccwpck_require__(2965);
+const application_error_1 = __nccwpck_require__(75999);
 class GithubDeploymentGitRepository {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -72795,14 +72795,14 @@ function isNotFound(error) {
 
 /***/ }),
 
-/***/ 57536:
+/***/ 96483:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubManagedPullRequestRepository = void 0;
-const managed_pull_request_1 = __nccwpck_require__(7975);
+const managed_pull_request_1 = __nccwpck_require__(95914);
 class GithubManagedPullRequestRepository {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -72906,7 +72906,7 @@ function mapPullRequest(value, owner, repository) {
 
 /***/ }),
 
-/***/ 46950:
+/***/ 55527:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -72946,7 +72946,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubTargetMergeCapabilitiesInspector = void 0;
-const yaml = __importStar(__nccwpck_require__(87969));
+const yaml = __importStar(__nccwpck_require__(783));
 class GithubTargetMergeCapabilitiesInspector {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -73526,7 +73526,7 @@ function isNotFound(error) {
 
 /***/ }),
 
-/***/ 72119:
+/***/ 26331:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -73566,11 +73566,11 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCliRepository = void 0;
-const exec = __importStar(__nccwpck_require__(36086));
-const logger_1 = __nccwpck_require__(50135);
-const version_policy_1 = __nccwpck_require__(36707);
-const git_authentication_environment_1 = __nccwpck_require__(1906);
-const application_error_1 = __nccwpck_require__(2965);
+const exec = __importStar(__nccwpck_require__(18538));
+const logger_1 = __nccwpck_require__(91151);
+const version_policy_1 = __nccwpck_require__(8381);
+const git_authentication_environment_1 = __nccwpck_require__(16535);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Repository for Git operations executed via CLI (exec).
  * Isolated to allow unit tests with mocked @actions/exec.
@@ -73669,7 +73669,7 @@ exports.GitCliRepository = GitCliRepository;
 
 /***/ }),
 
-/***/ 85071:
+/***/ 57628:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -73677,8 +73677,8 @@ exports.GitCliRepository = GitCliRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.inspectMissingCredentialHealthWorkflow = inspectMissingCredentialHealthWorkflow;
 exports.inspectCredentialHealthWorkflowAtRef = inspectCredentialHealthWorkflowAtRef;
-const setup_workflow_catalog_1 = __nccwpck_require__(37008);
-const github_error_policy_1 = __nccwpck_require__(26189);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const github_error_policy_1 = __nccwpck_require__(58791);
 /** A workflow API 404 is confirmed absence only after two independent Contents reads. */
 async function inspectMissingCredentialHealthWorkflow(getContent, owner, repository, ref) {
     const state = await inspectCredentialHealthWorkflowAtRef(getContent, owner, repository, ref);
@@ -73716,7 +73716,7 @@ async function inspectCredentialHealthWorkflowAtRef(getContent, owner, repositor
 
 /***/ }),
 
-/***/ 26189:
+/***/ 58791:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -73791,14 +73791,14 @@ function readHeader(headers, expected) {
 
 /***/ }),
 
-/***/ 64064:
+/***/ 2761:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.paginateCursor = paginateCursor;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 /**
  * Iterates cursor-based API pages while enforcing a finite boundary and a
  * valid cursor transition. Consumers can `break` early when they find the
@@ -73829,7 +73829,7 @@ async function* paginateCursor(fetchPage, options = {}) {
 
 /***/ }),
 
-/***/ 24347:
+/***/ 44812:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -73859,15 +73859,15 @@ function requireObject(data, operation) {
 
 /***/ }),
 
-/***/ 97590:
+/***/ 52644:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubPublicationSourceRepository = void 0;
-const application_error_1 = __nccwpck_require__(2965);
-const git_object_id_1 = __nccwpck_require__(36924);
+const application_error_1 = __nccwpck_require__(75999);
+const git_object_id_1 = __nccwpck_require__(88623);
 /** Reads the authoritative branch head without exposing Octokit to application code. */
 class GithubPublicationSourceRepository {
     constructor(clientProvider) {
@@ -73891,14 +73891,14 @@ exports.GithubPublicationSourceRepository = GithubPublicationSourceRepository;
 
 /***/ }),
 
-/***/ 85949:
+/***/ 88593:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotIssueCommentQueryRepository = void 0;
-const application_error_1 = __nccwpck_require__(2965);
+const application_error_1 = __nccwpck_require__(75999);
 /** Reads the newest Bugbot issue/PR conversation comments with a fixed two-page budget. */
 class BugbotIssueCommentQueryRepository {
     constructor(githubClient) {
@@ -73982,7 +73982,7 @@ exports.BugbotIssueCommentQueryRepository = BugbotIssueCommentQueryRepository;
 
 /***/ }),
 
-/***/ 15589:
+/***/ 82726:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74002,7 +74002,7 @@ exports.BugbotIssueRepository = BugbotIssueRepository;
 
 /***/ }),
 
-/***/ 32004:
+/***/ 91153:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74028,15 +74028,15 @@ exports.ExecutionIssueSetupRepository = ExecutionIssueSetupRepository;
 
 /***/ }),
 
-/***/ 7223:
+/***/ 75023:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueAssignmentRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueAssignmentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74075,7 +74075,7 @@ exports.IssueAssignmentRepository = IssueAssignmentRepository;
 
 /***/ }),
 
-/***/ 80674:
+/***/ 23231:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74095,18 +74095,18 @@ exports.IssueClosureRepository = IssueClosureRepository;
 
 /***/ }),
 
-/***/ 43338:
+/***/ 2313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueContentRepository = void 0;
-const comment_content_policy_1 = __nccwpck_require__(2324);
-const logger_1 = __nccwpck_require__(50135);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
-const application_error_1 = __nccwpck_require__(2965);
-const github_error_policy_1 = __nccwpck_require__(26189);
+const comment_content_policy_1 = __nccwpck_require__(77454);
+const logger_1 = __nccwpck_require__(91151);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
+const github_error_policy_1 = __nccwpck_require__(58791);
 class IssueContentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74234,14 +74234,14 @@ exports.IssueContentRepository = IssueContentRepository;
 
 /***/ }),
 
-/***/ 5533:
+/***/ 28868:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueInactivityRepository = void 0;
-const github_pagination_policy_1 = __nccwpck_require__(24347);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 /** Reads the provider's issue activity timestamp and waiting-state labels. */
 class IssueInactivityRepository {
     constructor(githubClient) {
@@ -74295,18 +74295,18 @@ function toSnapshot(issue) {
 
 /***/ }),
 
-/***/ 4532:
+/***/ 59699:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueLabelProvisioningRepository = void 0;
-const initial_label_provisioning_policy_1 = __nccwpck_require__(36432);
-const logger_1 = __nccwpck_require__(50135);
-const github_error_policy_1 = __nccwpck_require__(26189);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
-const application_error_1 = __nccwpck_require__(2965);
+const initial_label_provisioning_policy_1 = __nccwpck_require__(73160);
+const logger_1 = __nccwpck_require__(91151);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueLabelProvisioningRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74372,16 +74372,16 @@ function mapLabelMutationError(name, error) {
 
 /***/ }),
 
-/***/ 27825:
+/***/ 45725:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueLabelRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueLabelRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74423,14 +74423,14 @@ exports.IssueLabelRepository = IssueLabelRepository;
 
 /***/ }),
 
-/***/ 44023:
+/***/ 8346:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueLifecycleRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 class IssueLifecycleRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74455,16 +74455,16 @@ exports.IssueLifecycleRepository = IssueLifecycleRepository;
 
 /***/ }),
 
-/***/ 37674:
+/***/ 11333:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueMetadataRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const milestone_1 = __nccwpck_require__(22410);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const milestone_1 = __nccwpck_require__(2016);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueMetadataRepository {
     constructor(metadataClient, graphqlClient) {
         this.metadataClient = metadataClient;
@@ -74542,7 +74542,7 @@ exports.IssueMetadataRepository = IssueMetadataRepository;
 
 /***/ }),
 
-/***/ 24682:
+/***/ 907:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74562,15 +74562,15 @@ exports.IssueNotificationRepository = IssueNotificationRepository;
 
 /***/ }),
 
-/***/ 58763:
+/***/ 66610:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueProgressLabelRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const progress_labels_1 = __nccwpck_require__(71285);
+const logger_1 = __nccwpck_require__(91151);
+const progress_labels_1 = __nccwpck_require__(97890);
 class IssueProgressLabelRepository {
     constructor(issueLabelRepository) {
         this.issueLabelRepository = issueLabelRepository;
@@ -74592,7 +74592,7 @@ exports.IssueProgressLabelRepository = IssueProgressLabelRepository;
 
 /***/ }),
 
-/***/ 64844:
+/***/ 26674:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74615,16 +74615,16 @@ exports.IssueProgressTrackingRepository = IssueProgressTrackingRepository;
 
 /***/ }),
 
-/***/ 89116:
+/***/ 10121:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTitleRepository = void 0;
-const issue_emoji_policy_1 = __nccwpck_require__(70469);
-const issue_title_policy_1 = __nccwpck_require__(16208);
-const issue_title_update_1 = __nccwpck_require__(60886);
+const issue_emoji_policy_1 = __nccwpck_require__(81201);
+const issue_title_policy_1 = __nccwpck_require__(83179);
+const issue_title_update_1 = __nccwpck_require__(9229);
 class IssueTitleRepository {
     constructor(issueTitleClient, issueMetadataRepository) {
         this.issueTitleClient = issueTitleClient;
@@ -74660,7 +74660,7 @@ exports.IssueTitleRepository = IssueTitleRepository;
 
 /***/ }),
 
-/***/ 60886:
+/***/ 9229:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -74668,8 +74668,8 @@ exports.IssueTitleRepository = IssueTitleRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateIssueTitle = updateIssueTitle;
 exports.withTitleUpdateLogging = withTitleUpdateLogging;
-const logger_1 = __nccwpck_require__(50135);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 async function updateIssueTitle(client, owner, repository, currentTitle, nextTitle, issueNumber, token) {
     if (nextTitle === currentTitle)
         return undefined;
@@ -74690,16 +74690,16 @@ async function withTitleUpdateLogging(update) {
 
 /***/ }),
 
-/***/ 55913:
+/***/ 19118:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTypeAssignmentRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const issue_type_assignment_workflow_1 = __nccwpck_require__(82994);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const issue_type_assignment_workflow_1 = __nccwpck_require__(40102);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueTypeAssignmentRepository {
     constructor(getIssueId, graphqlClient) {
         this.getIssueId = getIssueId;
@@ -74721,7 +74721,7 @@ exports.IssueTypeAssignmentRepository = IssueTypeAssignmentRepository;
 
 /***/ }),
 
-/***/ 82994:
+/***/ 40102:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -74729,8 +74729,8 @@ exports.IssueTypeAssignmentRepository = IssueTypeAssignmentRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTypeCreationSkippedError = void 0;
 exports.assignIssueType = assignIssueType;
-const logger_1 = __nccwpck_require__(50135);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 async function assignIssueType(getIssueId, client, owner, repository, issueNumber, selected, token) {
     (0, logger_1.logDebugInfo)(`Setting issue type for issue ${issueNumber} to ${selected.name}`);
     const issueId = await getIssueId(owner, repository, issueNumber, token);
@@ -74801,7 +74801,7 @@ exports.IssueTypeCreationSkippedError = IssueTypeCreationSkippedError;
 
 /***/ }),
 
-/***/ 39335:
+/***/ 62726:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74826,7 +74826,7 @@ function configuredIssueTypes(issueTypes) {
 
 /***/ }),
 
-/***/ 98235:
+/***/ 89634:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -74834,10 +74834,10 @@ function configuredIssueTypes(issueTypes) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ensureIssueType = ensureIssueType;
 exports.ensureIssueTypes = ensureIssueTypes;
-const logger_1 = __nccwpck_require__(50135);
-const issue_type_configuration_1 = __nccwpck_require__(39335);
-const issue_type_queries_1 = __nccwpck_require__(49841);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const issue_type_configuration_1 = __nccwpck_require__(62726);
+const issue_type_queries_1 = __nccwpck_require__(73192);
+const application_error_1 = __nccwpck_require__(75999);
 async function ensureIssueType(client, owner, name, description, color) {
     try {
         const existingTypes = await (0, issue_type_queries_1.listIssueTypes)(client, owner);
@@ -74885,7 +74885,7 @@ function ensureConfiguredIssueType(client, owner, configured) {
 
 /***/ }),
 
-/***/ 49841:
+/***/ 73192:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -74949,15 +74949,15 @@ async function createIssueType(client, owner, name, description, color) {
 
 /***/ }),
 
-/***/ 87600:
+/***/ 4858:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTypeRepository = void 0;
-const issue_type_queries_1 = __nccwpck_require__(49841);
-const issue_type_ensure_workflow_1 = __nccwpck_require__(98235);
+const issue_type_queries_1 = __nccwpck_require__(73192);
+const issue_type_ensure_workflow_1 = __nccwpck_require__(89634);
 class IssueTypeRepository {
     constructor(graphqlClient) {
         this.graphqlClient = graphqlClient;
@@ -74972,7 +74972,7 @@ exports.IssueTypeRepository = IssueTypeRepository;
 
 /***/ }),
 
-/***/ 70469:
+/***/ 81201:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -75012,7 +75012,7 @@ function firstMatchingEmoji(rules, labels) {
 
 /***/ }),
 
-/***/ 16208:
+/***/ 83179:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -75063,16 +75063,16 @@ function normalizePullRequestSourceTitle(title, issueNumber) {
 
 /***/ }),
 
-/***/ 54771:
+/***/ 96711:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActorAuthorizationRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const actor_modification_policy_1 = __nccwpck_require__(74888);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const actor_modification_policy_1 = __nccwpck_require__(34737);
+const application_error_1 = __nccwpck_require__(75999);
 class ActorAuthorizationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -75143,7 +75143,7 @@ function logUnlessNotFound(error, operation) {
 
 /***/ }),
 
-/***/ 85397:
+/***/ 11454:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -75174,7 +75174,7 @@ exports.AuthenticatedUserRepository = AuthenticatedUserRepository;
 
 /***/ }),
 
-/***/ 59939:
+/***/ 84916:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -75182,7 +75182,7 @@ exports.AuthenticatedUserRepository = AuthenticatedUserRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.listOrganizationTeams = listOrganizationTeams;
 exports.listOrganizationTeamMembers = listOrganizationTeamMembers;
-const github_pagination_policy_1 = __nccwpck_require__(24347);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 async function listOrganizationTeams(client, organization) {
     const teams = [];
     for await (const response of client.paginate.iterator(client.rest.teams.list, {
@@ -75219,17 +75219,17 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 14553:
+/***/ 845:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OrganizationMembersRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const project_members_policy_1 = __nccwpck_require__(52983);
-const organization_members_query_1 = __nccwpck_require__(59939);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const project_members_policy_1 = __nccwpck_require__(41370);
+const organization_members_query_1 = __nccwpck_require__(84916);
+const application_error_1 = __nccwpck_require__(75999);
 class OrganizationMembersRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -75277,14 +75277,14 @@ exports.OrganizationMembersRepository = OrganizationMembersRepository;
 
 /***/ }),
 
-/***/ 76220:
+/***/ 98952:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProjectBoardCommandRepository = void 0;
-const project_board_field_update_1 = __nccwpck_require__(40805);
+const project_board_field_update_1 = __nccwpck_require__(31603);
 /** GitHub GraphQL adapter for ProjectV2 field mutations. */
 class ProjectBoardCommandRepository {
     constructor(projectBoardContentQueryPort, graphqlClient) {
@@ -75307,16 +75307,16 @@ exports.ProjectBoardCommandRepository = ProjectBoardCommandRepository;
 
 /***/ }),
 
-/***/ 10442:
+/***/ 73579:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getProjectBoardDetail = getProjectBoardDetail;
-const logger_1 = __nccwpck_require__(50135);
-const project_detail_1 = __nccwpck_require__(74263);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const project_detail_1 = __nccwpck_require__(33428);
+const application_error_1 = __nccwpck_require__(75999);
 /** Reads a ProjectV2 without leaking GitHub's owner-specific GraphQL shape. */
 async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, owner, token) {
     try {
@@ -75380,7 +75380,7 @@ function validateProjectId(projectId) {
 
 /***/ }),
 
-/***/ 40805:
+/***/ 31603:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -75388,9 +75388,9 @@ function validateProjectId(projectId) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setProjectBoardSingleSelectField = setProjectBoardSingleSelectField;
 exports.setProjectBoardSingleSelectFieldByItemId = setProjectBoardSingleSelectFieldByItemId;
-const project_board_provider_limits_1 = __nccwpck_require__(79506);
-const logger_1 = __nccwpck_require__(50135);
-const github_pagination_adapter_1 = __nccwpck_require__(64064);
+const project_board_provider_limits_1 = __nccwpck_require__(96997);
+const logger_1 = __nccwpck_require__(91151);
+const github_pagination_adapter_1 = __nccwpck_require__(2761);
 const FIELD_QUERY = `
     query($projectId: ID!, $after: String) {
       node(id: $projectId) {
@@ -75530,7 +75530,7 @@ async function findProjectItem(client, project, itemId, fieldName) {
 
 /***/ }),
 
-/***/ 59112:
+/***/ 63552:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -75538,9 +75538,9 @@ async function findProjectItem(client, project, itemId, fieldName) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getProjectItemId = getProjectItemId;
 exports.getProjectItemIdByContentId = getProjectItemIdByContentId;
-const project_board_provider_limits_1 = __nccwpck_require__(79506);
-const logger_1 = __nccwpck_require__(50135);
-const github_pagination_adapter_1 = __nccwpck_require__(64064);
+const project_board_provider_limits_1 = __nccwpck_require__(96997);
+const logger_1 = __nccwpck_require__(91151);
+const github_pagination_adapter_1 = __nccwpck_require__(2761);
 const CONTENT_QUERY = `
     query($owner: String!, $repo: String!, $number: Int!) {
       repository(owner: $owner, name: $repo) {
@@ -75610,14 +75610,14 @@ async function findProjectItemId(client, project, contentId) {
 
 /***/ }),
 
-/***/ 5367:
+/***/ 79285:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProjectBoardLinkRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 class ProjectBoardLinkRepository {
     constructor(projectBoardQueryPort, graphqlClient) {
         this.projectBoardQueryPort = projectBoardQueryPort;
@@ -75644,15 +75644,15 @@ exports.ProjectBoardLinkRepository = ProjectBoardLinkRepository;
 
 /***/ }),
 
-/***/ 17726:
+/***/ 97301:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProjectBoardQueryRepository = void 0;
-const project_board_detail_query_1 = __nccwpck_require__(10442);
-const project_board_item_query_1 = __nccwpck_require__(59112);
+const project_board_detail_query_1 = __nccwpck_require__(73579);
+const project_board_item_query_1 = __nccwpck_require__(63552);
 class ProjectBoardQueryRepository {
     constructor(ownerTypeClient, graphqlClient) {
         this.ownerTypeClient = ownerTypeClient;
@@ -75667,7 +75667,7 @@ exports.ProjectBoardQueryRepository = ProjectBoardQueryRepository;
 
 /***/ }),
 
-/***/ 52983:
+/***/ 41370:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -75706,7 +75706,7 @@ function selectAvailableMembers(members, currentMembers, requested) {
 
 /***/ }),
 
-/***/ 66202:
+/***/ 55165:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -75737,17 +75737,17 @@ exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
 
 /***/ }),
 
-/***/ 65797:
+/***/ 71564:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestChangesRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class PullRequestChangesRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -75917,15 +75917,15 @@ exports.PullRequestChangesRepository = PullRequestChangesRepository;
 
 /***/ }),
 
-/***/ 57177:
+/***/ 24189:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestLifecycleRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class PullRequestLifecycleRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -76109,15 +76109,15 @@ function toBugbotPullRequestIdentity(value) {
 
 /***/ }),
 
-/***/ 48987:
+/***/ 17120:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentCommandRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 class PullRequestReviewCommentCommandRepository {
     constructor(createClient, graphqlClient, queryClient) {
         this.createClient = createClient;
@@ -76233,15 +76233,15 @@ exports.PullRequestReviewCommentCommandRepository = PullRequestReviewCommentComm
 
 /***/ }),
 
-/***/ 31371:
+/***/ 44085:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentQueryRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 function toReviewComment(comment) {
     if (typeof comment.node_id !== "string" || comment.node_id.length === 0) {
         throw new Error("Review comment identity is unavailable.");
@@ -76376,14 +76376,14 @@ exports.PullRequestReviewCommentQueryRepository = PullRequestReviewCommentQueryR
 
 /***/ }),
 
-/***/ 20491:
+/***/ 2307:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findPullRequestReviewThread = findPullRequestReviewThread;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const THREADS_QUERY = `
     query ($owner: String!, $repo: String!, $prNumber: Int!, $threadsAfter: String) {
         repository(owner: $owner, name: $repo) {
@@ -76477,16 +76477,16 @@ function nextConnectionCursor(pageInfo, seenCursors) {
 
 /***/ }),
 
-/***/ 64125:
+/***/ 23314:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewThreadRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const pull_request_review_thread_locator_1 = __nccwpck_require__(20491);
+const logger_1 = __nccwpck_require__(91151);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const pull_request_review_thread_locator_1 = __nccwpck_require__(2307);
 /** GitHub GraphQL adapter for locating and resolving a pull-request review thread. */
 class PullRequestReviewThreadRepository {
     constructor(githubClient) {
@@ -76658,15 +76658,15 @@ exports.PullRequestReviewThreadRepository = PullRequestReviewThreadRepository;
 
 /***/ }),
 
-/***/ 45908:
+/***/ 13779:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewerRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(81504);
-const github_pagination_policy_1 = __nccwpck_require__(24347);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 const COMPLETED_REVIEW_STATES = new Set([
     "APPROVED",
     "CHANGES_REQUESTED",
@@ -76752,15 +76752,15 @@ exports.PullRequestReviewerRepository = PullRequestReviewerRepository;
 
 /***/ }),
 
-/***/ 38818:
+/***/ 96578:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositoryDefaultBranchRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class RepositoryDefaultBranchRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -76783,22 +76783,22 @@ exports.RepositoryDefaultBranchRepository = RepositoryDefaultBranchRepository;
 
 /***/ }),
 
-/***/ 9204:
+/***/ 42075:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositoryReleasePublicationRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const release_content_policy_1 = __nccwpck_require__(87013);
-const release_transition_policy_1 = __nccwpck_require__(85551);
-const release_tag_policy_1 = __nccwpck_require__(61708);
-const repository_release_query_1 = __nccwpck_require__(37052);
-const application_error_1 = __nccwpck_require__(2965);
-const github_error_policy_1 = __nccwpck_require__(26189);
-const repository_tag_query_1 = __nccwpck_require__(71677);
-const deployment_publication_1 = __nccwpck_require__(32982);
+const logger_1 = __nccwpck_require__(91151);
+const release_content_policy_1 = __nccwpck_require__(56818);
+const release_transition_policy_1 = __nccwpck_require__(27673);
+const release_tag_policy_1 = __nccwpck_require__(62748);
+const repository_release_query_1 = __nccwpck_require__(10766);
+const application_error_1 = __nccwpck_require__(75999);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const repository_tag_query_1 = __nccwpck_require__(46772);
+const deployment_publication_1 = __nccwpck_require__(6912);
 class RepositoryReleasePublicationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -76959,7 +76959,7 @@ function verifiedReleaseUrl(release, tag, expectedName, expectedBody, operationI
 
 /***/ }),
 
-/***/ 37052:
+/***/ 10766:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -76981,7 +76981,7 @@ async function listRepositoryReleases(client, owner, repository) {
 
 /***/ }),
 
-/***/ 71677:
+/***/ 46772:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -76989,8 +76989,8 @@ async function listRepositoryReleases(client, owner, repository) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findRepositoryTag = findRepositoryTag;
 exports.getRepositoryTagSha = getRepositoryTagSha;
-const github_error_policy_1 = __nccwpck_require__(26189);
-const release_tag_policy_1 = __nccwpck_require__(61708);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const release_tag_policy_1 = __nccwpck_require__(62748);
 async function findRepositoryTag(client, owner, repository, tag) {
     try {
         const { data } = await client.rest.git.getRef({ owner, repo: repository, ref: (0, release_tag_policy_1.tagReference)(tag) });
@@ -77019,17 +77019,17 @@ async function getRepositoryTagSha(client, owner, repository, tag) {
 
 /***/ }),
 
-/***/ 83842:
+/***/ 58717:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositoryTagRepository = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const release_tag_policy_1 = __nccwpck_require__(61708);
-const repository_tag_query_1 = __nccwpck_require__(71677);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const release_tag_policy_1 = __nccwpck_require__(62748);
+const repository_tag_query_1 = __nccwpck_require__(46772);
+const application_error_1 = __nccwpck_require__(75999);
 class RepositoryTagRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -77129,7 +77129,7 @@ exports.RepositoryTagRepository = RepositoryTagRepository;
 
 /***/ }),
 
-/***/ 87013:
+/***/ 56818:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77153,7 +77153,7 @@ function hasReleaseContent(release) {
 
 /***/ }),
 
-/***/ 61708:
+/***/ 62748:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77175,7 +77175,7 @@ function releaseName(version, title) {
 
 /***/ }),
 
-/***/ 85551:
+/***/ 27673:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77193,7 +77193,7 @@ function releaseIdAsString(id) {
 
 /***/ }),
 
-/***/ 73307:
+/***/ 28493:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -77204,10 +77204,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandRepository = exports.SetupRemoteConfigurationQueryRepository = exports.RepositoryVariablesQueryRepository = exports.RepositorySecretNamesQueryRepository = void 0;
 exports.encryptSecret = encryptSecret;
-const setup_workflow_catalog_1 = __nccwpck_require__(37008);
-const github_error_policy_1 = __nccwpck_require__(26189);
-const credential_health_workflow_visibility_1 = __nccwpck_require__(85071);
-const tweetnacl_1 = __importDefault(__nccwpck_require__(37124));
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
+const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
 class GithubActionsResourceTransport {
     constructor(githubClient) {
@@ -77572,15 +77572,15 @@ function encryptSecret(value, base64PublicKey) {
 
 /***/ }),
 
-/***/ 42351:
+/***/ 40941:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActivePreviousWorkflowRunsRepository = void 0;
-const workflow_status_1 = __nccwpck_require__(37003);
-const workflow_runs_retry_1 = __nccwpck_require__(11946);
+const workflow_status_1 = __nccwpck_require__(1462);
+const workflow_runs_retry_1 = __nccwpck_require__(86434);
 const NO_OP_DELAY_PORT = { wait: async () => undefined };
 const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
 const SYSTEM_RANDOM = { next: () => Math.random() };
@@ -77657,7 +77657,7 @@ function isActivePreviousRun(run, query) {
 
 /***/ }),
 
-/***/ 70051:
+/***/ 29509:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77684,7 +77684,7 @@ exports.WorkflowDispatchRepository = WorkflowDispatchRepository;
 
 /***/ }),
 
-/***/ 11946:
+/***/ 86434:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -77692,7 +77692,7 @@ exports.WorkflowDispatchRepository = WorkflowDispatchRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WorkflowQueueDeadlineError = exports.WORKFLOW_RUNS_RETRY_POLICY = void 0;
 exports.withWorkflowRunsRetry = withWorkflowRunsRetry;
-const workflow_queue_policy_1 = __nccwpck_require__(97549);
+const workflow_queue_policy_1 = __nccwpck_require__(43193);
 exports.WORKFLOW_RUNS_RETRY_POLICY = {
     maximumAttempts: 5,
     rateLimitMaximumAttempts: 5,
@@ -77848,7 +77848,7 @@ function firstNumericValue(...values) {
 
 /***/ }),
 
-/***/ 37003:
+/***/ 1462:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77878,7 +77878,7 @@ exports.WORKFLOW_ACTIVE_STATUSES = [
 
 /***/ }),
 
-/***/ 95407:
+/***/ 89040:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77901,7 +77901,7 @@ function isAgentConfigurationReady(configuration) {
 
 /***/ }),
 
-/***/ 25901:
+/***/ 12253:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77919,7 +77919,7 @@ function workspaceModeForCapability(capability) {
 
 /***/ }),
 
-/***/ 7465:
+/***/ 51114:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -77976,7 +77976,7 @@ function escapeRegExp(value) {
 
 /***/ }),
 
-/***/ 32721:
+/***/ 14712:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -77985,7 +77985,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectCanonicalBugbotPullRequest = selectCanonicalBugbotPullRequest;
 exports.summarizeBugbotCoverage = summarizeBugbotCoverage;
 exports.completeBugbotSourceCoverage = completeBugbotSourceCoverage;
-const git_object_id_1 = __nccwpck_require__(36924);
+const git_object_id_1 = __nccwpck_require__(88623);
 function selectCanonicalBugbotPullRequest(target, candidates, source) {
     if (source === "exact-head" && candidates.length === 0)
         return { kind: "none" };
@@ -78069,7 +78069,7 @@ function matchesConstrainedHead(target, candidate) {
 
 /***/ }),
 
-/***/ 82048:
+/***/ 31011:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78125,7 +78125,7 @@ function identitiesAreCompatible(existing, finding) {
 
 /***/ }),
 
-/***/ 657:
+/***/ 91853:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78200,7 +78200,7 @@ function fnv1a(value) {
 
 /***/ }),
 
-/***/ 22551:
+/***/ 1811:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78251,7 +78251,7 @@ function invalid(reason) {
 
 /***/ }),
 
-/***/ 19249:
+/***/ 3994:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78320,14 +78320,14 @@ function resolveBugbotReviewEffort(configured, complexity) {
 
 /***/ }),
 
-/***/ 23272:
+/***/ 80859:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotReviewProjection = buildBugbotReviewProjection;
-const review_state_1 = __nccwpck_require__(17271);
+const review_state_1 = __nccwpck_require__(79200);
 function buildBugbotReviewProjection(input) {
     const findings = [...input.findings].sort((left, right) => left.id.localeCompare(right.id));
     const counts = (0, review_state_1.countBugbotFindingStates)(findings.map((finding) => finding.state));
@@ -78382,7 +78382,7 @@ function stableDigest(value) {
 
 /***/ }),
 
-/***/ 17271:
+/***/ 79200:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78456,7 +78456,7 @@ function countActionableBugbotFindings(counts) {
 
 /***/ }),
 
-/***/ 30717:
+/***/ 27089:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78524,7 +78524,7 @@ function isNewerCliVersion(installedVersion, publishedVersion) {
 
 /***/ }),
 
-/***/ 2324:
+/***/ 77454:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78547,7 +78547,7 @@ function hasVisibleCommentContent(value) {
 
 /***/ }),
 
-/***/ 87134:
+/***/ 11771:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78628,7 +78628,7 @@ function parseCopilotCommand(raw) {
 
 /***/ }),
 
-/***/ 81916:
+/***/ 86819:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78636,7 +78636,7 @@ function parseCopilotCommand(raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.containsBotMention = containsBotMention;
 exports.isCopilotCommentRequest = isCopilotCommentRequest;
-const copilot_command_1 = __nccwpck_require__(87134);
+const copilot_command_1 = __nccwpck_require__(11771);
 /** Matches GitHub usernames case-insensitively without matching a larger username. */
 function containsBotMention(commentBody, tokenUser) {
     const normalizedUser = tokenUser.trim().replace(/^@/u, '');
@@ -78657,7 +78657,7 @@ function isCopilotCommentRequest(commentBody, botLogin) {
 
 /***/ }),
 
-/***/ 4227:
+/***/ 72418:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -78782,7 +78782,7 @@ function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILO
 
 /***/ }),
 
-/***/ 5664:
+/***/ 22495:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78899,12 +78899,12 @@ function parseDeploymentEnum(value, allowed, fallback) {
         ? { value: normalized, valid: true }
         : { value: fallback, valid: false };
 }
-const merge_queue_readiness_1 = __nccwpck_require__(36637);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
 
 
 /***/ }),
 
-/***/ 17176:
+/***/ 92730:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -78918,8 +78918,8 @@ exports.completeReconciliationTarget = completeReconciliationTarget;
 exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
 exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
 exports.requiredDeploymentFailure = requiredDeploymentFailure;
-const deployment_configuration_1 = __nccwpck_require__(5664);
-const locale_1 = __nccwpck_require__(64552);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const locale_1 = __nccwpck_require__(15386);
 exports.DEPLOYMENT_PHASES = [
     "preparing",
     "promotion_pr_pending",
@@ -79127,7 +79127,7 @@ function hasOnlyKeys(value, allowed) {
 
 /***/ }),
 
-/***/ 32982:
+/***/ 6912:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79160,7 +79160,7 @@ function parseDeploymentPublicationMarker(body) {
 
 /***/ }),
 
-/***/ 32481:
+/***/ 72369:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -79170,7 +79170,7 @@ exports.readDeploymentOperationState = readDeploymentOperationState;
 exports.deploymentStateFence = deploymentStateFence;
 exports.nextDeploymentRevision = nextDeploymentRevision;
 exports.decideDeploymentStateSave = decideDeploymentStateSave;
-const deployment_operation_1 = __nccwpck_require__(17176);
+const deployment_operation_1 = __nccwpck_require__(92730);
 function readDeploymentOperationState(value) {
     if (value === undefined || value === null)
         return { kind: "absent" };
@@ -79252,7 +79252,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 36924:
+/***/ 88623:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79273,7 +79273,7 @@ function canonicalGitObjectId(value) {
 
 /***/ }),
 
-/***/ 77025:
+/***/ 21486:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79291,7 +79291,7 @@ function isPullRequestConversationComment(input) {
 
 /***/ }),
 
-/***/ 75905:
+/***/ 35793:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79328,7 +79328,7 @@ function publicationTargetToken(target) {
 
 /***/ }),
 
-/***/ 19596:
+/***/ 84403:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79344,7 +79344,7 @@ function githubUsersMatch(left, right) {
 
 /***/ }),
 
-/***/ 52620:
+/***/ 77001:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79415,7 +79415,7 @@ function hasOnlyKeys(value, allowed) {
 
 /***/ }),
 
-/***/ 7703:
+/***/ 38572:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79473,7 +79473,7 @@ function normalize(value) {
 
 /***/ }),
 
-/***/ 20953:
+/***/ 90332:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79514,7 +79514,7 @@ function branchIsReady(input) {
 
 /***/ }),
 
-/***/ 62721:
+/***/ 26744:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79699,7 +79699,7 @@ function isAutomaticOrVersion(value) {
 
 /***/ }),
 
-/***/ 84598:
+/***/ 77734:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79774,7 +79774,7 @@ function decideIssueWorkflowRuntime(context) {
 
 /***/ }),
 
-/***/ 64552:
+/***/ 15386:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79878,7 +79878,7 @@ function optionalLocale(value) {
 
 /***/ }),
 
-/***/ 7975:
+/***/ 95914:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -79910,7 +79910,7 @@ function isSafeOperationId(value) {
 
 /***/ }),
 
-/***/ 36637:
+/***/ 12515:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80047,7 +80047,7 @@ function hasUnsafeControlCharacter(value) {
 
 /***/ }),
 
-/***/ 5313:
+/***/ 27097:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -80060,7 +80060,7 @@ exports.validateDynamicCatalogMessages = validateDynamicCatalogMessages;
 exports.renderCatalogMessage = renderCatalogMessage;
 exports.catalogPlaceholders = catalogPlaceholders;
 exports.catalogPluralCategories = catalogPluralCategories;
-const locale_1 = __nccwpck_require__(64552);
+const locale_1 = __nccwpck_require__(15386);
 exports.MESSAGE_CATALOG_VERSION = '3';
 exports.CATALOG_PLURAL_CATEGORIES = Object.freeze([
     'zero',
@@ -80217,7 +80217,7 @@ function placeholdersForTemplate(value) {
 
 /***/ }),
 
-/***/ 45613:
+/***/ 19879:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80247,7 +80247,7 @@ function parsePositiveSafeInteger(value) {
 
 /***/ }),
 
-/***/ 54078:
+/***/ 34730:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80439,7 +80439,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 53553:
+/***/ 98820:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80619,7 +80619,7 @@ function enumArray(value, allowed, label, max, errors) {
 
 /***/ }),
 
-/***/ 25623:
+/***/ 45315:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80678,7 +80678,7 @@ function shouldAutomaticallyUpdatePullRequestDescription(mode) {
 
 /***/ }),
 
-/***/ 98209:
+/***/ 47122:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80701,7 +80701,7 @@ function redactSensitiveText(value) {
 
 /***/ }),
 
-/***/ 12334:
+/***/ 67057:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80812,7 +80812,7 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
-/***/ 56189:
+/***/ 9512:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80834,7 +80834,7 @@ function renderApprovalObserverWorkflow(template, policy) {
 
 /***/ }),
 
-/***/ 37008:
+/***/ 24596:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -80880,7 +80880,7 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
-/***/ 73447:
+/***/ 11800:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -80892,12 +80892,12 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
-const agent_execution_policy_dispatcher_1 = __nccwpck_require__(3341);
-const agent_execution_plan_1 = __nccwpck_require__(25901);
-const agent_cli_contracts_1 = __nccwpck_require__(99483);
-const agent_executable_policy_1 = __nccwpck_require__(53773);
-const agent_authentication_1 = __nccwpck_require__(67354);
-const agent_runtime_manifest_1 = __nccwpck_require__(18890);
+const agent_execution_policy_dispatcher_1 = __nccwpck_require__(25690);
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_executable_policy_1 = __nccwpck_require__(12570);
+const agent_authentication_1 = __nccwpck_require__(51371);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const DEFAULT_SYSTEM = {
     resolveExecutable: resolveExecutablePath,
     readVersion(executable, environment) {
@@ -81086,7 +81086,7 @@ function definedEnvironment(environment) {
 
 /***/ }),
 
-/***/ 18890:
+/***/ 57104:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -81130,7 +81130,7 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
 
 /***/ }),
 
-/***/ 85401:
+/***/ 51520:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -81174,14 +81174,14 @@ exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
 
 /***/ }),
 
-/***/ 51697:
+/***/ 81849:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
-const workspace_changes_1 = __nccwpck_require__(51578);
+const workspace_changes_1 = __nccwpck_require__(93370);
 /** Owns Git's merge state while keeping credentials confined to fetch/push subprocesses. */
 class BranchSyncWorkspaceAdapter {
     constructor(git) {
@@ -81335,7 +81335,7 @@ function invalid(reason) {
 
 /***/ }),
 
-/***/ 83605:
+/***/ 76182:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -81347,7 +81347,7 @@ exports.COPILOT_PACKAGE_NAME = '@vypdev/copilot';
 
 /***/ }),
 
-/***/ 21570:
+/***/ 62007:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -81358,7 +81358,7 @@ exports.resolveUpdateCheckCachePath = resolveUpdateCheckCachePath;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
-const copilot_package_1 = __nccwpck_require__(83605);
+const copilot_package_1 = __nccwpck_require__(76182);
 exports.NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(copilot_package_1.COPILOT_PACKAGE_NAME)}`;
 exports.UPDATE_CHECK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 exports.UPDATE_CHECK_TIMEOUT_MS = 1500;
@@ -81461,7 +81461,7 @@ exports.NpmCliUpdateCheckAdapter = NpmCliUpdateCheckAdapter;
 
 /***/ }),
 
-/***/ 28021:
+/***/ 64975:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -81470,7 +81470,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PnpmCliUpgradeAdapter = void 0;
 exports.resolvePnpmExecutable = resolvePnpmExecutable;
 const node_child_process_1 = __nccwpck_require__(17718);
-const copilot_package_1 = __nccwpck_require__(83605);
+const copilot_package_1 = __nccwpck_require__(76182);
 function resolvePnpmExecutable(platform = process.platform) {
     return platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 }
@@ -81513,15 +81513,15 @@ exports.PnpmCliUpgradeAdapter = PnpmCliUpgradeAdapter;
 
 /***/ }),
 
-/***/ 43758:
+/***/ 233:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createActorAuthorizationRepository = createActorAuthorizationRepository;
-const github_identity_client_factory_1 = __nccwpck_require__(17930);
-const actor_authorization_repository_1 = __nccwpck_require__(54771);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const actor_authorization_repository_1 = __nccwpck_require__(96711);
 function createActorAuthorizationRepository() {
     return new actor_authorization_repository_1.ActorAuthorizationRepository((0, github_identity_client_factory_1.createActorAuthorizationClient)());
 }
@@ -81529,16 +81529,16 @@ function createActorAuthorizationRepository() {
 
 /***/ }),
 
-/***/ 11013:
+/***/ 94253:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSynchronizeAgentActivityUseCase = createSynchronizeAgentActivityUseCase;
-const synchronize_agent_activity_use_case_1 = __nccwpck_require__(83269);
-const issue_labels_composition_root_1 = __nccwpck_require__(94185);
-const lifecycle_capability_port_binding_1 = __nccwpck_require__(28822);
+const synchronize_agent_activity_use_case_1 = __nccwpck_require__(44880);
+const issue_labels_composition_root_1 = __nccwpck_require__(34780);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 function createSynchronizeAgentActivityUseCase(binding) {
     return new synchronize_agent_activity_use_case_1.SynchronizeAgentActivityUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding));
 }
@@ -81546,7 +81546,7 @@ function createSynchronizeAgentActivityUseCase(binding) {
 
 /***/ }),
 
-/***/ 7753:
+/***/ 85079:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -81555,12 +81555,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createFindingsQueryPort = createFindingsQueryPort;
 exports.createFixerQueryPort = createFixerQueryPort;
 exports.createLanguageQueryPort = createLanguageQueryPort;
-const agent_cli_client_1 = __nccwpck_require__(64596);
-const agent_execution_planner_1 = __nccwpck_require__(73447);
-const logger_agent_execution_observer_adapter_1 = __nccwpck_require__(36337);
-const findings_agent_adapter_1 = __nccwpck_require__(94109);
-const fixer_agent_adapter_1 = __nccwpck_require__(99972);
-const language_agent_adapter_1 = __nccwpck_require__(76206);
+const agent_cli_client_1 = __nccwpck_require__(68570);
+const agent_execution_planner_1 = __nccwpck_require__(11800);
+const logger_agent_execution_observer_adapter_1 = __nccwpck_require__(59844);
+const findings_agent_adapter_1 = __nccwpck_require__(27725);
+const fixer_agent_adapter_1 = __nccwpck_require__(62259);
+const language_agent_adapter_1 = __nccwpck_require__(10573);
 function defaultInfrastructure() {
     return {
         cli: new agent_cli_client_1.AgentCliClient(new agent_execution_planner_1.AgentExecutionPlanner(), new logger_agent_execution_observer_adapter_1.LoggerAgentExecutionObserverAdapter()),
@@ -81579,15 +81579,15 @@ function createLanguageQueryPort(infrastructure = defaultInfrastructure()) {
 
 /***/ }),
 
-/***/ 55549:
+/***/ 33885:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createAuthenticatedUserCompositionRoot = createAuthenticatedUserCompositionRoot;
-const github_identity_client_factory_1 = __nccwpck_require__(17930);
-const authenticated_user_repository_1 = __nccwpck_require__(85397);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const authenticated_user_repository_1 = __nccwpck_require__(11454);
 function createAuthenticatedUserCompositionRoot() {
     return new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)());
 }
@@ -81595,29 +81595,29 @@ function createAuthenticatedUserCompositionRoot() {
 
 /***/ }),
 
-/***/ 40733:
+/***/ 67395:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createBugbotCompositionRoot = createBugbotCompositionRoot;
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const github_pull_request_client_factory_1 = __nccwpck_require__(46236);
-const bugbot_issue_repository_1 = __nccwpck_require__(15589);
-const issue_content_repository_1 = __nccwpck_require__(43338);
-const bugbot_issue_comment_query_repository_1 = __nccwpck_require__(85949);
-const bugbot_pull_request_repository_1 = __nccwpck_require__(66202);
-const pull_request_changes_repository_1 = __nccwpck_require__(65797);
-const pull_request_lifecycle_repository_1 = __nccwpck_require__(57177);
-const pull_request_review_comment_command_repository_1 = __nccwpck_require__(48987);
-const pull_request_review_comment_query_repository_1 = __nccwpck_require__(31371);
-const pull_request_review_thread_repository_1 = __nccwpck_require__(64125);
-const workspace_bugbot_rules_repository_1 = __nccwpck_require__(83645);
-const logger_bugbot_telemetry_adapter_1 = __nccwpck_require__(55375);
-const github_bugbot_review_navigation_adapter_1 = __nccwpck_require__(33451);
-const bugbot_scm_port_factory_1 = __nccwpck_require__(29985);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const bugbot_issue_repository_1 = __nccwpck_require__(82726);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const bugbot_issue_comment_query_repository_1 = __nccwpck_require__(88593);
+const bugbot_pull_request_repository_1 = __nccwpck_require__(55165);
+const pull_request_changes_repository_1 = __nccwpck_require__(71564);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const pull_request_review_comment_command_repository_1 = __nccwpck_require__(17120);
+const pull_request_review_comment_query_repository_1 = __nccwpck_require__(44085);
+const pull_request_review_thread_repository_1 = __nccwpck_require__(23314);
+const workspace_bugbot_rules_repository_1 = __nccwpck_require__(50183);
+const logger_bugbot_telemetry_adapter_1 = __nccwpck_require__(34685);
+const github_bugbot_review_navigation_adapter_1 = __nccwpck_require__(19008);
+const bugbot_scm_port_factory_1 = __nccwpck_require__(19937);
 function createBugbotCompositionRoot(binding) {
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const issue = new bugbot_issue_repository_1.BugbotIssueRepository(issueContent);
@@ -81644,7 +81644,7 @@ function createBugbotCompositionRoot(binding) {
 
 /***/ }),
 
-/***/ 29985:
+/***/ 19937:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -81726,28 +81726,28 @@ exports.BugbotScmPortFactory = BugbotScmPortFactory;
 
 /***/ }),
 
-/***/ 25949:
+/***/ 21531:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCheckProgressCompositionRoot = createCheckProgressCompositionRoot;
-const github_branch_client_factory_1 = __nccwpck_require__(32112);
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const github_pull_request_client_factory_1 = __nccwpck_require__(46236);
-const check_progress_use_case_1 = __nccwpck_require__(21113);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const issue_content_repository_1 = __nccwpck_require__(43338);
-const issue_label_repository_1 = __nccwpck_require__(27825);
-const issue_progress_label_repository_1 = __nccwpck_require__(58763);
-const issue_progress_tracking_repository_1 = __nccwpck_require__(64844);
-const branch_lifecycle_repository_1 = __nccwpck_require__(88216);
-const pull_request_lifecycle_repository_1 = __nccwpck_require__(57177);
-const github_publication_source_repository_1 = __nccwpck_require__(97590);
-const shared_capability_port_binding_1 = __nccwpck_require__(20918);
-const lifecycle_capability_port_binding_1 = __nccwpck_require__(28822);
-const push_single_action_capability_port_binding_1 = __nccwpck_require__(54110);
+const github_branch_client_factory_1 = __nccwpck_require__(30144);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const check_progress_use_case_1 = __nccwpck_require__(41601);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_label_repository_1 = __nccwpck_require__(45725);
+const issue_progress_label_repository_1 = __nccwpck_require__(66610);
+const issue_progress_tracking_repository_1 = __nccwpck_require__(26674);
+const branch_lifecycle_repository_1 = __nccwpck_require__(19504);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const github_publication_source_repository_1 = __nccwpck_require__(52644);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createCheckProgressCompositionRoot(binding) {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const content = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -81757,15 +81757,15 @@ function createCheckProgressCompositionRoot(binding) {
 
 /***/ }),
 
-/***/ 89267:
+/***/ 78998:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCliUpdateCheckUseCase = createCliUpdateCheckUseCase;
-const check_cli_update_use_case_1 = __nccwpck_require__(11677);
-const npm_cli_update_check_adapter_1 = __nccwpck_require__(21570);
+const check_cli_update_use_case_1 = __nccwpck_require__(55721);
+const npm_cli_update_check_adapter_1 = __nccwpck_require__(62007);
 function createCliUpdateCheckUseCase() {
     return new check_cli_update_use_case_1.CheckCliUpdateUseCase(new npm_cli_update_check_adapter_1.NpmCliUpdateCheckAdapter());
 }
@@ -81773,15 +81773,15 @@ function createCliUpdateCheckUseCase() {
 
 /***/ }),
 
-/***/ 91561:
+/***/ 74142:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createUpgradeCliUseCase = createUpgradeCliUseCase;
-const upgrade_cli_use_case_1 = __nccwpck_require__(45773);
-const pnpm_cli_upgrade_adapter_1 = __nccwpck_require__(28021);
+const upgrade_cli_use_case_1 = __nccwpck_require__(45762);
+const pnpm_cli_upgrade_adapter_1 = __nccwpck_require__(64975);
 function createUpgradeCliUseCase(cliUpgradePort = new pnpm_cli_upgrade_adapter_1.PnpmCliUpgradeAdapter()) {
     return new upgrade_cli_use_case_1.UpgradeCliUseCase(cliUpgradePort);
 }
@@ -81789,19 +81789,19 @@ function createUpgradeCliUseCase(cliUpgradePort = new pnpm_cli_upgrade_adapter_1
 
 /***/ }),
 
-/***/ 84724:
+/***/ 98313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createExecutionIssueSetupCompositionRoot = createExecutionIssueSetupCompositionRoot;
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const execution_issue_setup_repository_1 = __nccwpck_require__(32004);
-const issue_content_repository_1 = __nccwpck_require__(43338);
-const issue_label_repository_1 = __nccwpck_require__(27825);
-const issue_metadata_repository_1 = __nccwpck_require__(37674);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const execution_issue_setup_repository_1 = __nccwpck_require__(91153);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_label_repository_1 = __nccwpck_require__(45725);
+const issue_metadata_repository_1 = __nccwpck_require__(11333);
 function createExecutionIssueSetupCompositionRoot() {
     return new execution_issue_setup_repository_1.ExecutionIssueSetupRepository(new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)()), new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()), new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()));
 }
@@ -81809,21 +81809,21 @@ function createExecutionIssueSetupCompositionRoot() {
 
 /***/ }),
 
-/***/ 71774:
+/***/ 83965:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSetupExecutionUseCase = createSetupExecutionUseCase;
-const execution_branch_version_resolver_1 = __nccwpck_require__(83966);
-const setup_execution_use_case_1 = __nccwpck_require__(51778);
-const get_hotfix_version_use_case_1 = __nccwpck_require__(85276);
-const get_release_type_use_case_1 = __nccwpck_require__(65633);
-const get_release_version_use_case_1 = __nccwpck_require__(8709);
-const configuration_handler_1 = __nccwpck_require__(51068);
-const authenticated_user_composition_root_1 = __nccwpck_require__(55549);
-const execution_issue_setup_composition_root_1 = __nccwpck_require__(84724);
+const execution_branch_version_resolver_1 = __nccwpck_require__(71813);
+const setup_execution_use_case_1 = __nccwpck_require__(88512);
+const get_hotfix_version_use_case_1 = __nccwpck_require__(59946);
+const get_release_type_use_case_1 = __nccwpck_require__(64410);
+const get_release_version_use_case_1 = __nccwpck_require__(70587);
+const configuration_handler_1 = __nccwpck_require__(40188);
+const authenticated_user_composition_root_1 = __nccwpck_require__(33885);
+const execution_issue_setup_composition_root_1 = __nccwpck_require__(98313);
 function createSetupExecutionUseCase(latestTagQueryPort, credentials) {
     const rawIssueSetupPort = (0, execution_issue_setup_composition_root_1.createExecutionIssueSetupCompositionRoot)();
     const rawOrganizationSetupPort = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
@@ -81855,14 +81855,14 @@ function createSetupExecutionUseCase(latestTagQueryPort, credentials) {
 
 /***/ }),
 
-/***/ 32112:
+/***/ 30144:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createBranchComparisonClient = exports.createBranchClient = void 0;
-const octokit_branch_adapters_1 = __nccwpck_require__(95215);
+const octokit_branch_adapters_1 = __nccwpck_require__(77889);
 const createBranchClient = () => new octokit_branch_adapters_1.OctokitBranchClientAdapter();
 exports.createBranchClient = createBranchClient;
 const createBranchComparisonClient = () => new octokit_branch_adapters_1.OctokitBranchComparisonClientAdapter();
@@ -81871,15 +81871,15 @@ exports.createBranchComparisonClient = createBranchComparisonClient;
 
 /***/ }),
 
-/***/ 17930:
+/***/ 93081:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createRepositoryVariablesClient = exports.createOrganizationMembersClient = exports.createActorAuthorizationClient = exports.createAuthenticatedUserClient = void 0;
-const octokit_identity_adapters_1 = __nccwpck_require__(39787);
-const octokit_repository_variables_adapter_1 = __nccwpck_require__(93883);
+const octokit_identity_adapters_1 = __nccwpck_require__(29996);
+const octokit_repository_variables_adapter_1 = __nccwpck_require__(81329);
 const createAuthenticatedUserClient = () => new octokit_identity_adapters_1.OctokitAuthenticatedUserClientAdapter();
 exports.createAuthenticatedUserClient = createAuthenticatedUserClient;
 const createActorAuthorizationClient = () => new octokit_identity_adapters_1.OctokitActorAuthorizationClientAdapter();
@@ -81892,14 +81892,14 @@ exports.createRepositoryVariablesClient = createRepositoryVariablesClient;
 
 /***/ }),
 
-/***/ 15161:
+/***/ 95883:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createIssueTitleClient = exports.createIssueMetadataClient = exports.createIssueInactivityClient = exports.createIssueLifecycleClient = exports.createIssueLabelsClient = exports.createIssueLabelProvisioningClient = exports.createIssueContentClient = exports.createIssueAssignmentClient = void 0;
-const octokit_issue_adapters_1 = __nccwpck_require__(73387);
+const octokit_issue_adapters_1 = __nccwpck_require__(77179);
 const createIssueAssignmentClient = () => new octokit_issue_adapters_1.OctokitIssueAssignmentClientAdapter();
 exports.createIssueAssignmentClient = createIssueAssignmentClient;
 const createIssueContentClient = () => new octokit_issue_adapters_1.OctokitIssueContentClientAdapter();
@@ -81920,15 +81920,15 @@ exports.createIssueTitleClient = createIssueTitleClient;
 
 /***/ }),
 
-/***/ 63165:
+/***/ 23691:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createOwnerTypeClient = exports.createGraphqlTransportClient = void 0;
-const octokit_project_adapters_1 = __nccwpck_require__(39191);
-const octokit_identity_adapters_1 = __nccwpck_require__(39787);
+const octokit_project_adapters_1 = __nccwpck_require__(68505);
+const octokit_identity_adapters_1 = __nccwpck_require__(29996);
 const createGraphqlTransportClient = () => new octokit_project_adapters_1.OctokitGraphqlTransportClientAdapter();
 exports.createGraphqlTransportClient = createGraphqlTransportClient;
 const createOwnerTypeClient = () => new octokit_identity_adapters_1.OctokitOwnerTypeClientAdapter();
@@ -81937,14 +81937,14 @@ exports.createOwnerTypeClient = createOwnerTypeClient;
 
 /***/ }),
 
-/***/ 46236:
+/***/ 9068:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestReviewCommentClient = exports.createPullRequestReviewerClient = exports.createPullRequestLifecycleClient = exports.createPullRequestChangesClient = void 0;
-const octokit_pull_request_adapters_1 = __nccwpck_require__(38632);
+const octokit_pull_request_adapters_1 = __nccwpck_require__(1397);
 const createPullRequestChangesClient = () => new octokit_pull_request_adapters_1.OctokitPullRequestChangesClientAdapter();
 exports.createPullRequestChangesClient = createPullRequestChangesClient;
 const createPullRequestLifecycleClient = () => new octokit_pull_request_adapters_1.OctokitPullRequestLifecycleClientAdapter();
@@ -81957,28 +81957,28 @@ exports.createPullRequestReviewCommentClient = createPullRequestReviewCommentCli
 
 /***/ }),
 
-/***/ 66236:
+/***/ 76706:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createReleaseClient = void 0;
-const octokit_release_adapters_1 = __nccwpck_require__(51480);
+const octokit_release_adapters_1 = __nccwpck_require__(5334);
 const createReleaseClient = () => new octokit_release_adapters_1.OctokitReleaseClientAdapter();
 exports.createReleaseClient = createReleaseClient;
 
 
 /***/ }),
 
-/***/ 7654:
+/***/ 29839:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createWorkflowDispatchClient = exports.createWorkflowRunsClient = void 0;
-const octokit_workflow_adapters_1 = __nccwpck_require__(36430);
+const octokit_workflow_adapters_1 = __nccwpck_require__(86719);
 const createWorkflowRunsClient = () => new octokit_workflow_adapters_1.OctokitWorkflowRunsClientAdapter();
 exports.createWorkflowRunsClient = createWorkflowRunsClient;
 const createWorkflowDispatchClient = () => new octokit_workflow_adapters_1.OctokitWorkflowDispatchClientAdapter();
@@ -81987,28 +81987,28 @@ exports.createWorkflowDispatchClient = createWorkflowDispatchClient;
 
 /***/ }),
 
-/***/ 84423:
+/***/ 84138:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createInitialSetupCompositionRoot = createInitialSetupCompositionRoot;
-const github_identity_client_factory_1 = __nccwpck_require__(17930);
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const github_release_client_factory_1 = __nccwpck_require__(66236);
-const issue_label_provisioning_repository_1 = __nccwpck_require__(4532);
-const issue_type_repository_1 = __nccwpck_require__(87600);
-const authenticated_user_repository_1 = __nccwpck_require__(85397);
-const repository_default_branch_repository_1 = __nccwpck_require__(38818);
-const repository_tag_repository_1 = __nccwpck_require__(83842);
-const git_cli_repository_1 = __nccwpck_require__(72119);
-const initial_setup_use_case_composition_1 = __nccwpck_require__(97792);
-const setup_workspace_adapter_1 = __nccwpck_require__(23376);
-const repository_variables_repository_1 = __nccwpck_require__(73307);
-const github_identity_client_factory_2 = __nccwpck_require__(17930);
-const push_single_action_capability_port_binding_1 = __nccwpck_require__(54110);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const github_release_client_factory_1 = __nccwpck_require__(76706);
+const issue_label_provisioning_repository_1 = __nccwpck_require__(59699);
+const issue_type_repository_1 = __nccwpck_require__(4858);
+const authenticated_user_repository_1 = __nccwpck_require__(11454);
+const repository_default_branch_repository_1 = __nccwpck_require__(96578);
+const repository_tag_repository_1 = __nccwpck_require__(58717);
+const git_cli_repository_1 = __nccwpck_require__(26331);
+const initial_setup_use_case_composition_1 = __nccwpck_require__(93141);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+const repository_variables_repository_1 = __nccwpck_require__(28493);
+const github_identity_client_factory_2 = __nccwpck_require__(93081);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createInitialSetupCompositionRoot(binding) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
@@ -82018,14 +82018,14 @@ function createInitialSetupCompositionRoot(binding) {
 
 /***/ }),
 
-/***/ 97792:
+/***/ 93141:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.composeInitialSetupUseCase = composeInitialSetupUseCase;
-const initial_setup_use_case_1 = __nccwpck_require__(50658);
+const initial_setup_use_case_1 = __nccwpck_require__(84837);
 function composeInitialSetupUseCase(...dependencies) {
     return new initial_setup_use_case_1.InitialSetupUseCase(...dependencies);
 }
@@ -82033,15 +82033,15 @@ function composeInitialSetupUseCase(...dependencies) {
 
 /***/ }),
 
-/***/ 82808:
+/***/ 62255:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createIssueContentCompositionRoot = createIssueContentCompositionRoot;
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const issue_content_repository_1 = __nccwpck_require__(43338);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const issue_content_repository_1 = __nccwpck_require__(2313);
 function createIssueContentCompositionRoot() {
     return new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
 }
@@ -82049,20 +82049,20 @@ function createIssueContentCompositionRoot() {
 
 /***/ }),
 
-/***/ 36937:
+/***/ 74914:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCloseInactiveIssuesUseCase = createCloseInactiveIssuesUseCase;
-const close_inactive_issues_use_case_1 = __nccwpck_require__(56690);
-const issue_inactivity_repository_1 = __nccwpck_require__(5533);
-const system_issue_inactivity_clock_adapter_1 = __nccwpck_require__(62557);
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const issue_interaction_composition_root_1 = __nccwpck_require__(33777);
-const lifecycle_capability_port_binding_1 = __nccwpck_require__(28822);
-const push_single_action_capability_port_binding_1 = __nccwpck_require__(54110);
+const close_inactive_issues_use_case_1 = __nccwpck_require__(84579);
+const issue_inactivity_repository_1 = __nccwpck_require__(28868);
+const system_issue_inactivity_clock_adapter_1 = __nccwpck_require__(86457);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const issue_interaction_composition_root_1 = __nccwpck_require__(92503);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createCloseInactiveIssuesUseCase(binding, catalogResolver) {
     return new close_inactive_issues_use_case_1.CloseInactiveIssuesUseCase((0, push_single_action_capability_port_binding_1.bindIssueInactivityQuery)(new issue_inactivity_repository_1.IssueInactivityRepository((0, github_issue_client_factory_1.createIssueInactivityClient)()), binding), (0, lifecycle_capability_port_binding_1.bindIssueClosure)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding), new system_issue_inactivity_clock_adapter_1.SystemIssueInactivityClockAdapter(), catalogResolver);
 }
@@ -82070,7 +82070,7 @@ function createCloseInactiveIssuesUseCase(binding, catalogResolver) {
 
 /***/ }),
 
-/***/ 33777:
+/***/ 92503:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82078,11 +82078,11 @@ function createCloseInactiveIssuesUseCase(binding, catalogResolver) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createIssueClosureRepository = createIssueClosureRepository;
 exports.createIssueNotificationRepository = createIssueNotificationRepository;
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const issue_content_repository_1 = __nccwpck_require__(43338);
-const issue_lifecycle_repository_1 = __nccwpck_require__(44023);
-const issue_closure_repository_1 = __nccwpck_require__(80674);
-const issue_notification_repository_1 = __nccwpck_require__(24682);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
+const issue_closure_repository_1 = __nccwpck_require__(23231);
+const issue_notification_repository_1 = __nccwpck_require__(907);
 function createIssueClosureRepository() {
     return new issue_closure_repository_1.IssueClosureRepository(new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)()), new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()));
 }
@@ -82093,15 +82093,15 @@ function createIssueNotificationRepository() {
 
 /***/ }),
 
-/***/ 94185:
+/***/ 34780:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createIssueLabelRepository = createIssueLabelRepository;
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const issue_label_repository_1 = __nccwpck_require__(27825);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const issue_label_repository_1 = __nccwpck_require__(45725);
 function createIssueLabelRepository() {
     return new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
 }
@@ -82109,14 +82109,14 @@ function createIssueLabelRepository() {
 
 /***/ }),
 
-/***/ 91667:
+/***/ 21239:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.composeIssueUseCase = composeIssueUseCase;
-const issue_use_case_1 = __nccwpck_require__(43712);
+const issue_use_case_1 = __nccwpck_require__(65281);
 function composeIssueUseCase(...dependencies) {
     return new issue_use_case_1.IssueUseCase(...dependencies);
 }
@@ -82124,57 +82124,57 @@ function composeIssueUseCase(...dependencies) {
 
 /***/ }),
 
-/***/ 97844:
+/***/ 43022:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createIssueUseCaseCompositionRoot = createIssueUseCaseCompositionRoot;
-const github_branch_client_factory_1 = __nccwpck_require__(32112);
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const github_workflow_client_factory_1 = __nccwpck_require__(7654);
-const recommend_steps_use_case_1 = __nccwpck_require__(33526);
-const check_permissions_use_case_1 = __nccwpck_require__(88960);
-const update_title_use_case_1 = __nccwpck_require__(21376);
-const assign_members_to_issue_use_case_1 = __nccwpck_require__(18189);
-const check_priority_issue_size_use_case_1 = __nccwpck_require__(46243);
-const close_not_allowed_issue_use_case_1 = __nccwpck_require__(71594);
-const label_deploy_added_use_case_1 = __nccwpck_require__(56723);
-const link_issue_project_use_case_1 = __nccwpck_require__(34835);
-const move_issue_to_in_progress_1 = __nccwpck_require__(79453);
-const prepare_branches_use_case_1 = __nccwpck_require__(35833);
-const remove_issue_branches_use_case_1 = __nccwpck_require__(92405);
-const remove_not_needed_branches_use_case_1 = __nccwpck_require__(26142);
-const update_issue_type_use_case_1 = __nccwpck_require__(25514);
-const answer_issue_help_use_case_1 = __nccwpck_require__(41713);
-const branch_lifecycle_repository_1 = __nccwpck_require__(88216);
-const branch_name_repository_1 = __nccwpck_require__(94776);
-const linked_branch_repository_1 = __nccwpck_require__(23822);
-const linked_branch_readiness_repository_1 = __nccwpck_require__(69983);
-const reconcile_branch_readiness_use_case_1 = __nccwpck_require__(10027);
-const pre_branch_sdd_gate_use_case_1 = __nccwpck_require__(89463);
-const pre_branch_sdd_workspace_adapter_1 = __nccwpck_require__(71976);
-const push_single_action_capability_port_binding_1 = __nccwpck_require__(54110);
-const issue_labels_composition_root_1 = __nccwpck_require__(94185);
-const git_cli_repository_1 = __nccwpck_require__(72119);
-const issue_assignment_repository_1 = __nccwpck_require__(7223);
-const issue_closure_repository_1 = __nccwpck_require__(80674);
-const issue_content_repository_1 = __nccwpck_require__(43338);
-const issue_lifecycle_repository_1 = __nccwpck_require__(44023);
-const issue_metadata_repository_1 = __nccwpck_require__(37674);
-const issue_title_repository_1 = __nccwpck_require__(89116);
-const issue_type_assignment_repository_1 = __nccwpck_require__(55913);
-const workflow_dispatch_repository_1 = __nccwpck_require__(70051);
-const timer_branch_propagation_delay_adapter_1 = __nccwpck_require__(20015);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const issue_use_case_composition_1 = __nccwpck_require__(91667);
-const organization_members_composition_root_1 = __nccwpck_require__(17705);
-const project_board_composition_root_1 = __nccwpck_require__(17798);
-const actor_authorization_composition_root_1 = __nccwpck_require__(43758);
-const shared_capability_port_binding_1 = __nccwpck_require__(20918);
-const lifecycle_capability_port_binding_1 = __nccwpck_require__(28822);
+const github_branch_client_factory_1 = __nccwpck_require__(30144);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const github_workflow_client_factory_1 = __nccwpck_require__(29839);
+const recommend_steps_use_case_1 = __nccwpck_require__(73746);
+const check_permissions_use_case_1 = __nccwpck_require__(18846);
+const update_title_use_case_1 = __nccwpck_require__(20556);
+const assign_members_to_issue_use_case_1 = __nccwpck_require__(55523);
+const check_priority_issue_size_use_case_1 = __nccwpck_require__(19511);
+const close_not_allowed_issue_use_case_1 = __nccwpck_require__(86675);
+const label_deploy_added_use_case_1 = __nccwpck_require__(27708);
+const link_issue_project_use_case_1 = __nccwpck_require__(34100);
+const move_issue_to_in_progress_1 = __nccwpck_require__(52309);
+const prepare_branches_use_case_1 = __nccwpck_require__(67546);
+const remove_issue_branches_use_case_1 = __nccwpck_require__(15608);
+const remove_not_needed_branches_use_case_1 = __nccwpck_require__(67129);
+const update_issue_type_use_case_1 = __nccwpck_require__(38222);
+const answer_issue_help_use_case_1 = __nccwpck_require__(10706);
+const branch_lifecycle_repository_1 = __nccwpck_require__(19504);
+const branch_name_repository_1 = __nccwpck_require__(61887);
+const linked_branch_repository_1 = __nccwpck_require__(78009);
+const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
+const reconcile_branch_readiness_use_case_1 = __nccwpck_require__(71836);
+const pre_branch_sdd_gate_use_case_1 = __nccwpck_require__(29475);
+const pre_branch_sdd_workspace_adapter_1 = __nccwpck_require__(35849);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+const issue_labels_composition_root_1 = __nccwpck_require__(34780);
+const git_cli_repository_1 = __nccwpck_require__(26331);
+const issue_assignment_repository_1 = __nccwpck_require__(75023);
+const issue_closure_repository_1 = __nccwpck_require__(23231);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
+const issue_metadata_repository_1 = __nccwpck_require__(11333);
+const issue_title_repository_1 = __nccwpck_require__(10121);
+const issue_type_assignment_repository_1 = __nccwpck_require__(19118);
+const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
+const timer_branch_propagation_delay_adapter_1 = __nccwpck_require__(20846);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const issue_use_case_composition_1 = __nccwpck_require__(21239);
+const organization_members_composition_root_1 = __nccwpck_require__(50603);
+const project_board_composition_root_1 = __nccwpck_require__(37194);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 function createIssueUseCaseCompositionRoot(binding) {
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -82221,7 +82221,7 @@ function createIssueUseCaseCompositionRoot(binding) {
 
 /***/ }),
 
-/***/ 28822:
+/***/ 85785:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82242,7 +82242,7 @@ exports.bindPullRequestIssueLink = bindPullRequestIssueLink;
 exports.bindIssueLabels = bindIssueLabels;
 exports.bindPullRequestHeadSha = bindPullRequestHeadSha;
 exports.bindPullRequestDescription = bindPullRequestDescription;
-const project_detail_1 = __nccwpck_require__(74263);
+const project_detail_1 = __nccwpck_require__(33428);
 function bindActorAuthorization(port, binding) {
     return Object.freeze({
         isActorAllowedToModifyFiles: (actor) => port.isActorAllowedToModifyFiles(binding.owner, binding.repository, actor, binding.token),
@@ -82344,17 +82344,17 @@ function toProjectDetail(project) {
 
 /***/ }),
 
-/***/ 36426:
+/***/ 34760:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createLocalActionCompositionRoot = createLocalActionCompositionRoot;
-const resolve_message_catalog_use_case_1 = __nccwpck_require__(53803);
-const git_cli_repository_1 = __nccwpck_require__(72119);
-const project_board_composition_root_1 = __nccwpck_require__(17798);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
+const git_cli_repository_1 = __nccwpck_require__(26331);
+const project_board_composition_root_1 = __nccwpck_require__(37194);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 /**
  * Owns the concrete dependencies shared by the local action lifecycle.
  * Keeping them in one root preserves the project-board query/command scope and
@@ -82372,7 +82372,7 @@ function createLocalActionCompositionRoot() {
 
 /***/ }),
 
-/***/ 7473:
+/***/ 4706:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82383,71 +82383,71 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
-const commit_use_case_1 = __nccwpck_require__(84014);
-const issue_comment_use_case_1 = __nccwpck_require__(14502);
-const pull_request_review_comment_use_case_1 = __nccwpck_require__(94097);
-const single_action_use_case_1 = __nccwpck_require__(73840);
-const create_release_use_case_1 = __nccwpck_require__(68781);
-const create_tag_use_case_1 = __nccwpck_require__(27977);
-const publish_github_action_use_case_1 = __nccwpck_require__(31153);
-const publish_issue_comment_use_case_1 = __nccwpck_require__(23758);
-const recommend_steps_use_case_1 = __nccwpck_require__(33526);
-const check_changes_issue_size_use_case_1 = __nccwpck_require__(75384);
-const bugbot_autofix_use_case_1 = __nccwpck_require__(92886);
-const detect_bugbot_fix_intent_use_case_1 = __nccwpck_require__(50385);
-const dismiss_bugbot_findings_use_case_1 = __nccwpck_require__(8677);
-const remember_bugbot_rule_use_case_1 = __nccwpck_require__(83711);
-const detect_potential_problems_use_case_1 = __nccwpck_require__(65545);
-const notify_new_commit_on_issue_use_case_1 = __nccwpck_require__(77749);
-const user_request_use_case_1 = __nccwpck_require__(39633);
-const think_use_case_1 = __nccwpck_require__(25099);
-const check_issue_comment_language_use_case_1 = __nccwpck_require__(34670);
-const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(5988);
-const comment_language_translation_workflow_1 = __nccwpck_require__(78212);
-const branch_compare_repository_1 = __nccwpck_require__(81122);
-const repository_release_publication_repository_1 = __nccwpck_require__(9204);
-const repository_tag_repository_1 = __nccwpck_require__(83842);
-const git_commit_adapter_1 = __nccwpck_require__(89443);
-const bound_bugbot_git_mutation_adapter_1 = __nccwpck_require__(85401);
-const actor_authorization_composition_root_1 = __nccwpck_require__(43758);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const authenticated_user_composition_root_1 = __nccwpck_require__(55549);
-const bugbot_composition_root_1 = __nccwpck_require__(40733);
-const check_progress_composition_root_1 = __nccwpck_require__(25949);
-const github_branch_client_factory_1 = __nccwpck_require__(32112);
-const github_pull_request_client_factory_1 = __nccwpck_require__(46236);
-const github_release_client_factory_1 = __nccwpck_require__(66236);
-const initial_setup_composition_root_1 = __nccwpck_require__(84423);
-const issue_content_composition_root_1 = __nccwpck_require__(82808);
-const issue_interaction_composition_root_1 = __nccwpck_require__(33777);
-const issue_labels_composition_root_1 = __nccwpck_require__(94185);
-const issue_use_case_composition_root_1 = __nccwpck_require__(97844);
-const pull_request_use_case_composition_root_1 = __nccwpck_require__(75176);
-const organization_members_composition_root_1 = __nccwpck_require__(17705);
-const update_pull_request_description_use_case_1 = __nccwpck_require__(10016);
-const pull_request_lifecycle_repository_1 = __nccwpck_require__(57177);
-const issue_inactivity_composition_root_1 = __nccwpck_require__(36937);
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const branch_dependency_repository_1 = __nccwpck_require__(78769);
-const branch_sync_workspace_adapter_1 = __nccwpck_require__(51697);
-const observe_branch_sync_use_case_1 = __nccwpck_require__(34342);
-const sync_branch_use_case_1 = __nccwpck_require__(43725);
-const deployment_orchestration_use_case_1 = __nccwpck_require__(67132);
-const github_deployment_git_repository_1 = __nccwpck_require__(35315);
-const github_managed_pull_request_repository_1 = __nccwpck_require__(57536);
-const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(46950);
-const deployment_continuation_repository_1 = __nccwpck_require__(26781);
-const deployment_presentation_repository_1 = __nccwpck_require__(86534);
-const deployment_state_repository_1 = __nccwpck_require__(59536);
-const octokit_deployment_adapter_1 = __nccwpck_require__(15246);
-const workflow_dispatch_repository_1 = __nccwpck_require__(70051);
-const github_workflow_client_factory_1 = __nccwpck_require__(7654);
+const commit_use_case_1 = __nccwpck_require__(28001);
+const issue_comment_use_case_1 = __nccwpck_require__(72042);
+const pull_request_review_comment_use_case_1 = __nccwpck_require__(29415);
+const single_action_use_case_1 = __nccwpck_require__(73572);
+const create_release_use_case_1 = __nccwpck_require__(25258);
+const create_tag_use_case_1 = __nccwpck_require__(22120);
+const publish_github_action_use_case_1 = __nccwpck_require__(68891);
+const publish_issue_comment_use_case_1 = __nccwpck_require__(61313);
+const recommend_steps_use_case_1 = __nccwpck_require__(73746);
+const check_changes_issue_size_use_case_1 = __nccwpck_require__(28356);
+const bugbot_autofix_use_case_1 = __nccwpck_require__(45446);
+const detect_bugbot_fix_intent_use_case_1 = __nccwpck_require__(76234);
+const dismiss_bugbot_findings_use_case_1 = __nccwpck_require__(37685);
+const remember_bugbot_rule_use_case_1 = __nccwpck_require__(17437);
+const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
+const notify_new_commit_on_issue_use_case_1 = __nccwpck_require__(33276);
+const user_request_use_case_1 = __nccwpck_require__(19004);
+const think_use_case_1 = __nccwpck_require__(89255);
+const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
+const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
+const branch_compare_repository_1 = __nccwpck_require__(95859);
+const repository_release_publication_repository_1 = __nccwpck_require__(42075);
+const repository_tag_repository_1 = __nccwpck_require__(58717);
+const git_commit_adapter_1 = __nccwpck_require__(18606);
+const bound_bugbot_git_mutation_adapter_1 = __nccwpck_require__(51520);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const authenticated_user_composition_root_1 = __nccwpck_require__(33885);
+const bugbot_composition_root_1 = __nccwpck_require__(67395);
+const check_progress_composition_root_1 = __nccwpck_require__(21531);
+const github_branch_client_factory_1 = __nccwpck_require__(30144);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const github_release_client_factory_1 = __nccwpck_require__(76706);
+const initial_setup_composition_root_1 = __nccwpck_require__(84138);
+const issue_content_composition_root_1 = __nccwpck_require__(62255);
+const issue_interaction_composition_root_1 = __nccwpck_require__(92503);
+const issue_labels_composition_root_1 = __nccwpck_require__(34780);
+const issue_use_case_composition_root_1 = __nccwpck_require__(43022);
+const pull_request_use_case_composition_root_1 = __nccwpck_require__(70636);
+const organization_members_composition_root_1 = __nccwpck_require__(50603);
+const update_pull_request_description_use_case_1 = __nccwpck_require__(75089);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const issue_inactivity_composition_root_1 = __nccwpck_require__(74914);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const branch_dependency_repository_1 = __nccwpck_require__(9627);
+const branch_sync_workspace_adapter_1 = __nccwpck_require__(81849);
+const observe_branch_sync_use_case_1 = __nccwpck_require__(84542);
+const sync_branch_use_case_1 = __nccwpck_require__(392);
+const deployment_orchestration_use_case_1 = __nccwpck_require__(36850);
+const github_deployment_git_repository_1 = __nccwpck_require__(85886);
+const github_managed_pull_request_repository_1 = __nccwpck_require__(96483);
+const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(55527);
+const deployment_continuation_repository_1 = __nccwpck_require__(77509);
+const deployment_presentation_repository_1 = __nccwpck_require__(91985);
+const deployment_state_repository_1 = __nccwpck_require__(3182);
+const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
+const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
+const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 const node_crypto_1 = __nccwpck_require__(6005);
-const resolve_message_catalog_use_case_1 = __nccwpck_require__(53803);
-const shared_capability_port_binding_1 = __nccwpck_require__(20918);
-const lifecycle_capability_port_binding_1 = __nccwpck_require__(28822);
-const lifecycle_capability_port_binding_2 = __nccwpck_require__(28822);
-const push_single_action_capability_port_binding_1 = __nccwpck_require__(54110);
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const lifecycle_capability_port_binding_2 = __nccwpck_require__(85785);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()));
@@ -82564,15 +82564,15 @@ function bugbotBinding(execution) {
 
 /***/ }),
 
-/***/ 17705:
+/***/ 50603:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createOrganizationMembersCompositionRoot = createOrganizationMembersCompositionRoot;
-const github_identity_client_factory_1 = __nccwpck_require__(17930);
-const organization_members_repository_1 = __nccwpck_require__(14553);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const organization_members_repository_1 = __nccwpck_require__(845);
 function createOrganizationMembersCompositionRoot() {
     return new organization_members_repository_1.OrganizationMembersRepository((0, github_identity_client_factory_1.createOrganizationMembersClient)());
 }
@@ -82580,17 +82580,17 @@ function createOrganizationMembersCompositionRoot() {
 
 /***/ }),
 
-/***/ 17798:
+/***/ 37194:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createProjectBoardCompositionRoot = createProjectBoardCompositionRoot;
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const project_board_command_repository_1 = __nccwpck_require__(76220);
-const project_board_link_repository_1 = __nccwpck_require__(5367);
-const project_board_query_repository_1 = __nccwpck_require__(17726);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const project_board_command_repository_1 = __nccwpck_require__(98952);
+const project_board_link_repository_1 = __nccwpck_require__(79285);
+const project_board_query_repository_1 = __nccwpck_require__(97301);
 function createProjectBoardCompositionRoot() {
     const query = new project_board_query_repository_1.ProjectBoardQueryRepository((0, github_project_client_factory_1.createOwnerTypeClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     return {
@@ -82603,15 +82603,15 @@ function createProjectBoardCompositionRoot() {
 
 /***/ }),
 
-/***/ 39876:
+/***/ 72651:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestReviewerCompositionRoot = createPullRequestReviewerCompositionRoot;
-const pull_request_reviewer_repository_1 = __nccwpck_require__(45908);
-const github_pull_request_client_factory_1 = __nccwpck_require__(46236);
+const pull_request_reviewer_repository_1 = __nccwpck_require__(13779);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 function createPullRequestReviewerCompositionRoot() {
     return new pull_request_reviewer_repository_1.PullRequestReviewerRepository((0, github_pull_request_client_factory_1.createPullRequestReviewerClient)());
 }
@@ -82619,14 +82619,14 @@ function createPullRequestReviewerCompositionRoot() {
 
 /***/ }),
 
-/***/ 23969:
+/***/ 24:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.composePullRequestUseCase = composePullRequestUseCase;
-const pull_request_use_case_1 = __nccwpck_require__(93567);
+const pull_request_use_case_1 = __nccwpck_require__(27259);
 function composePullRequestUseCase(...dependencies) {
     return new pull_request_use_case_1.PullRequestUseCase(...dependencies);
 }
@@ -82634,45 +82634,45 @@ function composePullRequestUseCase(...dependencies) {
 
 /***/ }),
 
-/***/ 75176:
+/***/ 70636:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
-const github_issue_client_factory_1 = __nccwpck_require__(15161);
-const github_project_client_factory_1 = __nccwpck_require__(63165);
-const github_pull_request_client_factory_1 = __nccwpck_require__(46236);
-const update_pull_request_description_use_case_1 = __nccwpck_require__(10016);
-const update_title_use_case_1 = __nccwpck_require__(21376);
-const assign_members_to_issue_use_case_1 = __nccwpck_require__(18189);
-const assign_reviewers_to_issue_use_case_1 = __nccwpck_require__(1093);
-const close_issue_after_merging_use_case_1 = __nccwpck_require__(88705);
-const check_priority_pull_request_size_use_case_1 = __nccwpck_require__(61696);
-const link_pull_request_issue_use_case_1 = __nccwpck_require__(64280);
-const link_pull_request_project_use_case_1 = __nccwpck_require__(42469);
-const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(37698);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const issue_assignment_repository_1 = __nccwpck_require__(7223);
-const issue_closure_repository_1 = __nccwpck_require__(80674);
-const issue_content_repository_1 = __nccwpck_require__(43338);
-const issue_label_repository_1 = __nccwpck_require__(27825);
-const issue_lifecycle_repository_1 = __nccwpck_require__(44023);
-const issue_metadata_repository_1 = __nccwpck_require__(37674);
-const issue_title_repository_1 = __nccwpck_require__(89116);
-const pull_request_lifecycle_repository_1 = __nccwpck_require__(57177);
-const pull_request_use_case_composition_1 = __nccwpck_require__(23969);
-const pull_request_reviewer_composition_root_1 = __nccwpck_require__(39876);
-const organization_members_composition_root_1 = __nccwpck_require__(17705);
-const project_board_composition_root_1 = __nccwpck_require__(17798);
-const timer_delay_adapter_1 = __nccwpck_require__(25288);
-const detect_potential_problems_use_case_1 = __nccwpck_require__(65545);
-const resolve_message_catalog_use_case_1 = __nccwpck_require__(53803);
-const bugbot_composition_root_1 = __nccwpck_require__(40733);
-const actor_authorization_composition_root_1 = __nccwpck_require__(43758);
-const shared_capability_port_binding_1 = __nccwpck_require__(20918);
-const lifecycle_capability_port_binding_1 = __nccwpck_require__(28822);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const update_pull_request_description_use_case_1 = __nccwpck_require__(75089);
+const update_title_use_case_1 = __nccwpck_require__(20556);
+const assign_members_to_issue_use_case_1 = __nccwpck_require__(55523);
+const assign_reviewers_to_issue_use_case_1 = __nccwpck_require__(80174);
+const close_issue_after_merging_use_case_1 = __nccwpck_require__(46753);
+const check_priority_pull_request_size_use_case_1 = __nccwpck_require__(12738);
+const link_pull_request_issue_use_case_1 = __nccwpck_require__(38259);
+const link_pull_request_project_use_case_1 = __nccwpck_require__(57169);
+const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(89085);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const issue_assignment_repository_1 = __nccwpck_require__(75023);
+const issue_closure_repository_1 = __nccwpck_require__(23231);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_label_repository_1 = __nccwpck_require__(45725);
+const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
+const issue_metadata_repository_1 = __nccwpck_require__(11333);
+const issue_title_repository_1 = __nccwpck_require__(10121);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const pull_request_use_case_composition_1 = __nccwpck_require__(24);
+const pull_request_reviewer_composition_root_1 = __nccwpck_require__(72651);
+const organization_members_composition_root_1 = __nccwpck_require__(50603);
+const project_board_composition_root_1 = __nccwpck_require__(37194);
+const timer_delay_adapter_1 = __nccwpck_require__(71942);
+const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
+const bugbot_composition_root_1 = __nccwpck_require__(67395);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 function createPullRequestUseCaseCompositionRoot(binding) {
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -82708,7 +82708,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
 
 /***/ }),
 
-/***/ 54110:
+/***/ 49417:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -82932,7 +82932,7 @@ function bindSetupRemoteConfiguration(port, binding) {
 
 /***/ }),
 
-/***/ 45203:
+/***/ 69084:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82940,13 +82940,13 @@ function bindSetupRemoteConfiguration(port, binding) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSetupCredentialsUseCase = createSetupCredentialsUseCase;
 exports.createSetupRemoteConfigurationReadPort = createSetupRemoteConfigurationReadPort;
-const setup_credentials_use_case_1 = __nccwpck_require__(82634);
-const setup_credential_validation_adapter_1 = __nccwpck_require__(23702);
-const repository_variables_repository_1 = __nccwpck_require__(73307);
-const github_identity_client_factory_1 = __nccwpck_require__(17930);
-const setup_remote_credential_health_adapter_1 = __nccwpck_require__(37570);
-const octokit_credential_health_adapter_1 = __nccwpck_require__(62696);
-const setup_token_permissions_composition_root_1 = __nccwpck_require__(43759);
+const setup_credentials_use_case_1 = __nccwpck_require__(67438);
+const setup_credential_validation_adapter_1 = __nccwpck_require__(47020);
+const repository_variables_repository_1 = __nccwpck_require__(28493);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
+const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
 function createSetupCredentialsUseCase(prompt, permissionPresenter, options = {}) {
     const secretNames = new repository_variables_repository_1.RepositorySecretNamesQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
     return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, options.allowPreApplyHealthWorkflow === false
@@ -82962,7 +82962,7 @@ function createSetupRemoteConfigurationReadPort() {
 
 /***/ }),
 
-/***/ 90620:
+/***/ 56360:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -82970,19 +82970,19 @@ function createSetupRemoteConfigurationReadPort() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSetupMergeQueueReadinessUseCase = createSetupMergeQueueReadinessUseCase;
 exports.createSetupDoctorUseCase = createSetupDoctorUseCase;
-const doctor_use_case_1 = __nccwpck_require__(39);
-const setup_credential_validation_adapter_1 = __nccwpck_require__(23702);
-const repository_variables_repository_1 = __nccwpck_require__(73307);
-const github_identity_client_factory_1 = __nccwpck_require__(17930);
-const setup_workspace_adapter_1 = __nccwpck_require__(23376);
-const setup_remote_credential_health_adapter_1 = __nccwpck_require__(37570);
-const octokit_credential_health_adapter_1 = __nccwpck_require__(62696);
-const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(46950);
-const octokit_deployment_adapter_1 = __nccwpck_require__(15246);
-const merge_queue_readiness_use_case_1 = __nccwpck_require__(14236);
-const resolve_message_catalog_use_case_1 = __nccwpck_require__(53803);
-const agent_capability_composition_root_1 = __nccwpck_require__(7753);
-const setup_approval_readiness_adapter_1 = __nccwpck_require__(93230);
+const doctor_use_case_1 = __nccwpck_require__(87328);
+const setup_credential_validation_adapter_1 = __nccwpck_require__(47020);
+const repository_variables_repository_1 = __nccwpck_require__(28493);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
+const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
+const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(55527);
+const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
+const merge_queue_readiness_use_case_1 = __nccwpck_require__(9890);
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
+const agent_capability_composition_root_1 = __nccwpck_require__(85079);
+const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
 function createSetupMergeQueueReadinessUseCase(catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())) {
     return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()), catalogResolver);
 }
@@ -83003,16 +83003,16 @@ function createSetupDoctorUseCase() {
 
 /***/ }),
 
-/***/ 43759:
+/***/ 64132:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSetupTokenPermissionsUseCase = createSetupTokenPermissionsUseCase;
-const setup_token_permissions_use_case_1 = __nccwpck_require__(64888);
-const setup_credential_validation_adapter_1 = __nccwpck_require__(23702);
-const setup_token_permission_query_adapter_1 = __nccwpck_require__(90378);
+const setup_token_permissions_use_case_1 = __nccwpck_require__(11797);
+const setup_credential_validation_adapter_1 = __nccwpck_require__(47020);
+const setup_token_permission_query_adapter_1 = __nccwpck_require__(67758);
 function createSetupTokenPermissionsUseCase() {
     return new setup_token_permissions_use_case_1.SetupTokenPermissionsUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), new setup_token_permission_query_adapter_1.SetupTokenPermissionQueryAdapter());
 }
@@ -83020,7 +83020,7 @@ function createSetupTokenPermissionsUseCase() {
 
 /***/ }),
 
-/***/ 20918:
+/***/ 47399:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -83034,7 +83034,7 @@ exports.bindIssueCommentQuery = bindIssueCommentQuery;
 exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
 exports.bindIssueTitle = bindIssueTitle;
 exports.bindProjectContent = bindProjectContent;
-const project_detail_1 = __nccwpck_require__(74263);
+const project_detail_1 = __nccwpck_require__(33428);
 function bindPublicationSourceQuery(port, binding) {
     return Object.freeze({
         getBranchHeadSha: (branch) => port.getBranchHeadSha(binding.owner, binding.repository, branch, binding.token),
@@ -83086,20 +83086,20 @@ function toProjectDetail(project) {
 
 /***/ }),
 
-/***/ 57010:
+/***/ 21598:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createWaitForPreviousWorkflowRunsUseCase = createWaitForPreviousWorkflowRunsUseCase;
-const wait_for_previous_workflow_runs_use_case_1 = __nccwpck_require__(64317);
-const active_previous_workflow_runs_repository_1 = __nccwpck_require__(42351);
-const timer_workflow_polling_delay_adapter_1 = __nccwpck_require__(283);
-const logger_workflow_polling_observer_adapter_1 = __nccwpck_require__(46177);
-const system_workflow_queue_clock_adapter_1 = __nccwpck_require__(89437);
-const system_workflow_polling_random_adapter_1 = __nccwpck_require__(86649);
-const github_workflow_client_factory_1 = __nccwpck_require__(7654);
+const wait_for_previous_workflow_runs_use_case_1 = __nccwpck_require__(38301);
+const active_previous_workflow_runs_repository_1 = __nccwpck_require__(40941);
+const timer_workflow_polling_delay_adapter_1 = __nccwpck_require__(10339);
+const logger_workflow_polling_observer_adapter_1 = __nccwpck_require__(52883);
+const system_workflow_queue_clock_adapter_1 = __nccwpck_require__(49664);
+const system_workflow_polling_random_adapter_1 = __nccwpck_require__(32679);
+const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 function createWaitForPreviousWorkflowRunsUseCase(token) {
     const client = (0, github_workflow_client_factory_1.createWorkflowRunsClient)().getClient(token);
     const delayPort = new timer_workflow_polling_delay_adapter_1.TimerWorkflowPollingDelayAdapter();
@@ -83110,7 +83110,7 @@ function createWaitForPreviousWorkflowRunsUseCase(token) {
 
 /***/ }),
 
-/***/ 83645:
+/***/ 50183:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -83257,7 +83257,7 @@ function isWithin(root, target) {
 
 /***/ }),
 
-/***/ 1906:
+/***/ 16535:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -83283,7 +83283,7 @@ function buildGitAuthenticationEnvironment(token, environment = process.env) {
 
 /***/ }),
 
-/***/ 89443:
+/***/ 18606:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -83323,9 +83323,9 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCommitAdapter = void 0;
-const exec = __importStar(__nccwpck_require__(36086));
-const git_authentication_environment_1 = __nccwpck_require__(1906);
-const untrusted_command_environment_1 = __nccwpck_require__(57156);
+const exec = __importStar(__nccwpck_require__(18538));
+const git_authentication_environment_1 = __nccwpck_require__(16535);
+const untrusted_command_environment_1 = __nccwpck_require__(2304);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
         ? exec.exec(program, args, {
@@ -83390,7 +83390,7 @@ exports.GitCommitAdapter = GitCommitAdapter;
 
 /***/ }),
 
-/***/ 33451:
+/***/ 19008:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -83447,14 +83447,14 @@ function normalizeHttpsServerUrl(value) {
 
 /***/ }),
 
-/***/ 95215:
+/***/ 77889:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitBranchComparisonClientAdapter = exports.OctokitBranchClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitBranchClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
@@ -83467,7 +83467,7 @@ exports.OctokitBranchComparisonClientAdapter = OctokitBranchComparisonClientAdap
 
 /***/ }),
 
-/***/ 91649:
+/***/ 54047:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -83507,7 +83507,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getOctokitClient = getOctokitClient;
-const github = __importStar(__nccwpck_require__(87211));
+const github = __importStar(__nccwpck_require__(78227));
 function getOctokitClient(token) {
     return github.getOctokit(token);
 }
@@ -83515,14 +83515,14 @@ function getOctokitClient(token) {
 
 /***/ }),
 
-/***/ 62696:
+/***/ 41760:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitCredentialHealthClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitCredentialHealthClientAdapter {
     getClient(token) {
         return (0, octokit_client_resolver_1.getOctokitClient)(token);
@@ -83533,14 +83533,14 @@ exports.OctokitCredentialHealthClientAdapter = OctokitCredentialHealthClientAdap
 
 /***/ }),
 
-/***/ 15246:
+/***/ 46819:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitDeploymentClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitDeploymentClientAdapter {
     getClient(token) {
         return (0, octokit_client_resolver_1.getOctokitClient)(token);
@@ -83551,14 +83551,14 @@ exports.OctokitDeploymentClientAdapter = OctokitDeploymentClientAdapter;
 
 /***/ }),
 
-/***/ 39787:
+/***/ 29996:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitOwnerTypeClientAdapter = exports.OctokitOrganizationMembersClientAdapter = exports.OctokitActorAuthorizationClientAdapter = exports.OctokitAuthenticatedUserClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitAuthenticatedUserClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
@@ -83579,14 +83579,14 @@ exports.OctokitOwnerTypeClientAdapter = OctokitOwnerTypeClientAdapter;
 
 /***/ }),
 
-/***/ 73387:
+/***/ 77179:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitIssueTitleClientAdapter = exports.OctokitIssueMetadataClientAdapter = exports.OctokitIssueInactivityClientAdapter = exports.OctokitIssueLifecycleClientAdapter = exports.OctokitIssueLabelsClientAdapter = exports.OctokitIssueLabelProvisioningClientAdapter = exports.OctokitIssueContentClientAdapter = exports.OctokitIssueAssignmentClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitIssueAssignmentClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
@@ -83623,14 +83623,14 @@ exports.OctokitIssueTitleClientAdapter = OctokitIssueTitleClientAdapter;
 
 /***/ }),
 
-/***/ 39191:
+/***/ 68505:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitGraphqlTransportClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitGraphqlTransportClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
@@ -83639,14 +83639,14 @@ exports.OctokitGraphqlTransportClientAdapter = OctokitGraphqlTransportClientAdap
 
 /***/ }),
 
-/***/ 38632:
+/***/ 1397:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitPullRequestReviewCommentClientAdapter = exports.OctokitPullRequestReviewerClientAdapter = exports.OctokitPullRequestLifecycleClientAdapter = exports.OctokitPullRequestChangesClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitPullRequestChangesClientAdapter {
     getClient(token) {
         return (0, octokit_client_resolver_1.getOctokitClient)(token);
@@ -83675,14 +83675,14 @@ exports.OctokitPullRequestReviewCommentClientAdapter = OctokitPullRequestReviewC
 
 /***/ }),
 
-/***/ 51480:
+/***/ 5334:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitReleaseClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitReleaseClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
@@ -83691,14 +83691,14 @@ exports.OctokitReleaseClientAdapter = OctokitReleaseClientAdapter;
 
 /***/ }),
 
-/***/ 93883:
+/***/ 81329:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitRepositoryVariablesClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitRepositoryVariablesClientAdapter {
     getClient(token) {
         return (0, octokit_client_resolver_1.getOctokitClient)(token);
@@ -83709,14 +83709,14 @@ exports.OctokitRepositoryVariablesClientAdapter = OctokitRepositoryVariablesClie
 
 /***/ }),
 
-/***/ 36430:
+/***/ 86719:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OctokitWorkflowDispatchClientAdapter = exports.OctokitWorkflowRunsClientAdapter = void 0;
-const octokit_client_resolver_1 = __nccwpck_require__(91649);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitWorkflowRunsClientAdapter {
     getClient(token) {
         return (0, octokit_client_resolver_1.getOctokitClient)(token);
@@ -83733,7 +83733,7 @@ exports.OctokitWorkflowDispatchClientAdapter = OctokitWorkflowDispatchClientAdap
 
 /***/ }),
 
-/***/ 79506:
+/***/ 96997:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -83746,7 +83746,7 @@ exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
 
 /***/ }),
 
-/***/ 56932:
+/***/ 72762:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -83754,7 +83754,7 @@ exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createLoggerAdapter = createLoggerAdapter;
 exports.createLogReportAdapter = createLogReportAdapter;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 /** Adapts the process/GitHub logger to the semantic application port. */
 function createLoggerAdapter() {
     return {
@@ -83779,14 +83779,14 @@ function createLogReportAdapter() {
 
 /***/ }),
 
-/***/ 36337:
+/***/ 59844:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerAgentExecutionObserverAdapter = void 0;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
         if (observation.state === 'completed' || observation.state === 'failed') {
@@ -83801,14 +83801,14 @@ exports.LoggerAgentExecutionObserverAdapter = LoggerAgentExecutionObserverAdapte
 
 /***/ }),
 
-/***/ 55375:
+/***/ 34685:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerBugbotTelemetryAdapter = void 0;
-const logging_ports_1 = __nccwpck_require__(73001);
+const logging_ports_1 = __nccwpck_require__(6152);
 class LoggerBugbotTelemetryAdapter {
     publish(snapshot) {
         (0, logging_ports_1.logInfo)(`[bugbot.telemetry] ${JSON.stringify(snapshot)}`);
@@ -83819,14 +83819,14 @@ exports.LoggerBugbotTelemetryAdapter = LoggerBugbotTelemetryAdapter;
 
 /***/ }),
 
-/***/ 46177:
+/***/ 52883:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerWorkflowPollingObserverAdapter = void 0;
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 class LoggerWorkflowPollingObserverAdapter {
     noActivePreviousRuns() {
         (0, logger_1.logDebugInfo)('✅ No previous runs active. Continuing...');
@@ -83850,7 +83850,7 @@ exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdap
 
 /***/ }),
 
-/***/ 71976:
+/***/ 35849:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -83895,14 +83895,14 @@ const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_util_1 = __nccwpck_require__(47261);
-const pre_branch_sdd_1 = __nccwpck_require__(54078);
-const git_authentication_environment_1 = __nccwpck_require__(1906);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const git_authentication_environment_1 = __nccwpck_require__(16535);
 const runFile = (0, node_util_1.promisify)(node_child_process_1.execFile);
 const SHA = /^[a-f0-9]{40}$/i;
 const BRANCH = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
 // The shared catalog validator is CommonJS so the setup CLI and bundled Action use identical rules.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const validator = __nccwpck_require__(47743);
+const validator = __nccwpck_require__(29617);
 /** Isolates SDD validation in a detached temporary worktree before the linked branch is created. */
 class PreBranchSddWorkspaceAdapter {
     constructor(repositoryRoot = process.cwd(), token = '') {
@@ -84197,7 +84197,7 @@ function writeSpecFile(target, content, exists) {
 
 /***/ }),
 
-/***/ 93230:
+/***/ 78572:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -84237,10 +84237,10 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubSetupApprovalReadinessAdapter = void 0;
-const github = __importStar(__nccwpck_require__(87211));
+const github = __importStar(__nccwpck_require__(78227));
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
-const setup_approval_workflow_1 = __nccwpck_require__(56189);
+const setup_approval_workflow_1 = __nccwpck_require__(9512);
 class GithubSetupApprovalReadinessAdapter {
     async inspect(owner, repository, setupToken, configuration) {
         const octokit = github.getOctokit(setupToken);
@@ -84331,7 +84331,7 @@ function array(value) { return Array.isArray(value) ? value : []; }
 
 /***/ }),
 
-/***/ 23702:
+/***/ 47020:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -84468,7 +84468,7 @@ function safeMessage(error) {
 
 /***/ }),
 
-/***/ 57550:
+/***/ 56098:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -84528,7 +84528,7 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 
 /***/ }),
 
-/***/ 37570:
+/***/ 1489:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -84570,9 +84570,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupRemoteCredentialHealthBootstrapAdapter = exports.SetupRemoteCredentialHealthQueryAdapter = void 0;
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
-const setup_workflow_catalog_1 = __nccwpck_require__(37008);
-const deployment_configuration_1 = __nccwpck_require__(5664);
-const credential_health_workflow_visibility_1 = __nccwpck_require__(85071);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
 const WORKFLOW_ID = setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
 const INPUT_BY_SECRET = {
     PAT: 'check_pat',
@@ -84828,16 +84828,16 @@ function readHealthWorkflow() {
 
 /***/ }),
 
-/***/ 90378:
+/***/ 67758:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionQueryAdapter = void 0;
-const github_error_policy_1 = __nccwpck_require__(26189);
-const bounded_concurrency_policy_1 = __nccwpck_require__(50189);
-const setup_token_permission_evidence_policy_1 = __nccwpck_require__(19750);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
+const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
@@ -85135,16 +85135,16 @@ function repositoryRoot(owner, repository) {
 
 /***/ }),
 
-/***/ 23376:
+/***/ 5729:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupReconcileWorkspaceAdapter = exports.SetupDoctorWorkspaceQueryAdapter = exports.SetupWorkspaceMutationAdapter = void 0;
-const setup_files_1 = __nccwpck_require__(30542);
-const cli_context_1 = __nccwpck_require__(34760);
-const repository_agent_guidance_1 = __nccwpck_require__(45689);
+const setup_files_1 = __nccwpck_require__(59126);
+const cli_context_1 = __nccwpck_require__(21307);
+const repository_agent_guidance_1 = __nccwpck_require__(38445);
 class SetupWorkspaceMutationAdapter {
     prepare(selection) {
         const workspace = process.cwd();
@@ -85203,7 +85203,7 @@ exports.SetupReconcileWorkspaceAdapter = SetupReconcileWorkspaceAdapter;
 
 /***/ }),
 
-/***/ 62557:
+/***/ 86457:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -85220,7 +85220,7 @@ exports.SystemIssueInactivityClockAdapter = SystemIssueInactivityClockAdapter;
 
 /***/ }),
 
-/***/ 86649:
+/***/ 32679:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -85237,7 +85237,7 @@ exports.SystemWorkflowPollingRandomAdapter = SystemWorkflowPollingRandomAdapter;
 
 /***/ }),
 
-/***/ 89437:
+/***/ 49664:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -85254,7 +85254,7 @@ exports.SystemWorkflowQueueClockAdapter = SystemWorkflowQueueClockAdapter;
 
 /***/ }),
 
-/***/ 20015:
+/***/ 20846:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -85274,7 +85274,7 @@ exports.TimerBranchPropagationDelayAdapter = TimerBranchPropagationDelayAdapter;
 
 /***/ }),
 
-/***/ 25288:
+/***/ 71942:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -85291,7 +85291,7 @@ exports.TimerDelayAdapter = TimerDelayAdapter;
 
 /***/ }),
 
-/***/ 283:
+/***/ 10339:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -85308,7 +85308,7 @@ exports.TimerWorkflowPollingDelayAdapter = TimerWorkflowPollingDelayAdapter;
 
 /***/ }),
 
-/***/ 57156:
+/***/ 2304:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85363,15 +85363,15 @@ function prepareUntrustedCommandEnvironment(source = process.env) {
 
 /***/ }),
 
-/***/ 93855:
+/***/ 92540:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContentInterface = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class ContentInterface {
     constructor() {
         this.getContent = (description) => {
@@ -85460,16 +85460,16 @@ exports.ContentInterface = ContentInterface;
 
 /***/ }),
 
-/***/ 58588:
+/***/ 60608:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueContentInterface = void 0;
-const logger_1 = __nccwpck_require__(50135);
-const content_interface_1 = __nccwpck_require__(93855);
-const application_error_1 = __nccwpck_require__(2965);
+const logger_1 = __nccwpck_require__(91151);
+const content_interface_1 = __nccwpck_require__(92540);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueContentInterface extends content_interface_1.ContentInterface {
     constructor(issueDescriptionPort) {
         super();
@@ -85506,18 +85506,18 @@ exports.IssueContentInterface = IssueContentInterface;
 
 /***/ }),
 
-/***/ 51068:
+/***/ 40188:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConfigurationHandler = void 0;
-const config_1 = __nccwpck_require__(98013);
-const logger_1 = __nccwpck_require__(50135);
-const issue_content_interface_1 = __nccwpck_require__(58588);
-const configuration_payload_policy_1 = __nccwpck_require__(23509);
-const application_error_1 = __nccwpck_require__(2965);
+const config_1 = __nccwpck_require__(90450);
+const logger_1 = __nccwpck_require__(91151);
+const issue_content_interface_1 = __nccwpck_require__(60608);
+const configuration_payload_policy_1 = __nccwpck_require__(58043);
+const application_error_1 = __nccwpck_require__(75999);
 class ConfigurationHandler extends issue_content_interface_1.IssueContentInterface {
     constructor() {
         super(...arguments);
@@ -85553,14 +85553,14 @@ exports.ConfigurationHandler = ConfigurationHandler;
 
 /***/ }),
 
-/***/ 23509:
+/***/ 58043:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildConfigurationPayload = buildConfigurationPayload;
-const config_1 = __nccwpck_require__(98013);
+const config_1 = __nccwpck_require__(90450);
 function buildConfigurationPayload(execution, storedRaw) {
     const current = execution.currentConfiguration;
     const stored = parseStoredConfiguration(storedRaw);
@@ -85610,7 +85610,7 @@ function mergeMissingValues(payload, stored) {
 
 /***/ }),
 
-/***/ 91606:
+/***/ 49029:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85621,7 +85621,7 @@ exports.getAnswerIssueHelpPrompt = getAnswerIssueHelpPrompt;
  * Prompt for the initial reply when a user opens a question/help issue.
  * Filled by the prompt provider; use getAnswerIssueHelpPrompt().
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `The user has just opened a question/help issue. Provide a helpful initial response to their question or request below. Be concise and actionable. Write every human-readable sentence in {{targetLocale}} while preserving code identifiers, paths, refs, commands, and URLs verbatim.
 
 Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response.
@@ -85645,14 +85645,14 @@ function getAnswerIssueHelpPrompt(params) {
 
 /***/ }),
 
-/***/ 93843:
+/***/ 84434:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getBranchSyncConflictsPrompt = getBranchSyncConflictsPrompt;
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are resolving a merge that is already in progress in {{owner}}/{{repo}}.
 
 Parent branch: {{parentBranch}}
@@ -85668,7 +85668,7 @@ function getBranchSyncConflictsPrompt(params) {
 
 /***/ }),
 
-/***/ 69433:
+/***/ 56998:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85678,7 +85678,7 @@ exports.getBugbotPrompt = getBugbotPrompt;
 /**
  * Prompt for Bugbot detection (detect potential problems on push).
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
 Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -85734,7 +85734,7 @@ function getBugbotPrompt(params) {
 
 /***/ }),
 
-/***/ 17929:
+/***/ 37925:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85744,8 +85744,8 @@ exports.getBugbotFixPrompt = getBugbotFixPrompt;
 /**
  * Prompt for Bugbot autofix (fix selected findings in workspace).
  */
-const fill_1 = __nccwpck_require__(58865);
-const untrusted_content_1 = __nccwpck_require__(12334);
+const fill_1 = __nccwpck_require__(2559);
+const untrusted_content_1 = __nccwpck_require__(67057);
 const TEMPLATE = `${untrusted_content_1.UNTRUSTED_CONTENT_POLICY}
 
 You are in the repository workspace. Your task is to fix the reported code findings (bugs, vulnerabilities, or quality issues) listed below, and only those. The user has explicitly requested these fixes.
@@ -85784,7 +85784,7 @@ function getBugbotFixPrompt(params) {
 
 /***/ }),
 
-/***/ 56693:
+/***/ 10399:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85794,7 +85794,7 @@ exports.getBugbotFixIntentPrompt = getBugbotFixIntentPrompt;
 /**
  * Prompt for detecting the action requested by a user comment.
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are analyzing a user comment on an issue or pull request to classify the requested Copilot action. The available actions are: fix reported findings, apply a general repository change, run a read-only code review, or answer a question.
 
 {{projectContextInstruction}}
@@ -85819,7 +85819,7 @@ function getBugbotFixIntentPrompt(params) {
 
 /***/ }),
 
-/***/ 39837:
+/***/ 63425:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85827,7 +85827,7 @@ function getBugbotFixIntentPrompt(params) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAdaptCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
 /** Builds the single, schema-constrained request adaptation prompt. */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const ADAPT_TEMPLATE = `
 You adapt user-provided prose to {{locale}} for internal interpretation.
 
@@ -85854,7 +85854,7 @@ function getAdaptCommentLanguagePrompt(params) {
 
 /***/ }),
 
-/***/ 30975:
+/***/ 74623:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85864,7 +85864,7 @@ exports.getCheckProgressPrompt = getCheckProgressPrompt;
 /**
  * Prompt for assessing issue progress from branch diff (CheckProgressUseCase).
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. Assess the progress of issue #{{issueNumber}} using the full diff between the base (parent) branch and the current branch.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, percentages, and JSON keys verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -85899,7 +85899,7 @@ function getCheckProgressPrompt(params) {
 
 /***/ }),
 
-/***/ 41306:
+/***/ 32506:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85909,7 +85909,7 @@ exports.getCliDoPrompt = getCliDoPrompt;
 /**
  * Prompt for CLI "copilot do" command: project context + user prompt.
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `{{projectContextInstruction}}
 
 {{userPrompt}}`;
@@ -85920,7 +85920,7 @@ function getCliDoPrompt(params) {
 
 /***/ }),
 
-/***/ 58865:
+/***/ 2559:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85931,7 +85931,7 @@ exports.fillTemplate = fillTemplate;
  * Replaces {{paramName}} placeholders in a template with values from params.
  * Missing keys are left as {{paramName}}.
  */
-const untrusted_content_1 = __nccwpck_require__(12334);
+const untrusted_content_1 = __nccwpck_require__(67057);
 const UNTRUSTED_TEMPLATE_KEYS = new Set([
     'commentBody',
     'description',
@@ -85973,7 +85973,7 @@ function fillTemplate(template, params) {
 
 /***/ }),
 
-/***/ 71854:
+/***/ 69518:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -85985,40 +85985,40 @@ exports.getPrompt = getPrompt;
  * Prompt provider: one file per prompt, each exports a getter that fills the template with params.
  * Use getPrompt(name, params) for a generic call or import the typed getter (e.g. getAnswerIssueHelpPrompt).
  */
-const answer_issue_help_1 = __nccwpck_require__(91606);
-const think_1 = __nccwpck_require__(18366);
-const update_pull_request_description_1 = __nccwpck_require__(16030);
-const user_request_1 = __nccwpck_require__(50929);
-const recommend_steps_1 = __nccwpck_require__(49700);
-const check_progress_1 = __nccwpck_require__(30975);
-const check_comment_language_1 = __nccwpck_require__(39837);
-const cli_do_1 = __nccwpck_require__(41306);
-const bugbot_1 = __nccwpck_require__(69433);
-const bugbot_fix_1 = __nccwpck_require__(17929);
-const bugbot_fix_intent_1 = __nccwpck_require__(56693);
-var fill_1 = __nccwpck_require__(58865);
+const answer_issue_help_1 = __nccwpck_require__(49029);
+const think_1 = __nccwpck_require__(43146);
+const update_pull_request_description_1 = __nccwpck_require__(10063);
+const user_request_1 = __nccwpck_require__(63103);
+const recommend_steps_1 = __nccwpck_require__(69039);
+const check_progress_1 = __nccwpck_require__(74623);
+const check_comment_language_1 = __nccwpck_require__(63425);
+const cli_do_1 = __nccwpck_require__(32506);
+const bugbot_1 = __nccwpck_require__(56998);
+const bugbot_fix_1 = __nccwpck_require__(37925);
+const bugbot_fix_intent_1 = __nccwpck_require__(10399);
+var fill_1 = __nccwpck_require__(2559);
 Object.defineProperty(exports, "fillTemplate", ({ enumerable: true, get: function () { return fill_1.fillTemplate; } }));
-var answer_issue_help_2 = __nccwpck_require__(91606);
+var answer_issue_help_2 = __nccwpck_require__(49029);
 Object.defineProperty(exports, "getAnswerIssueHelpPrompt", ({ enumerable: true, get: function () { return answer_issue_help_2.getAnswerIssueHelpPrompt; } }));
-var think_2 = __nccwpck_require__(18366);
+var think_2 = __nccwpck_require__(43146);
 Object.defineProperty(exports, "getThinkPrompt", ({ enumerable: true, get: function () { return think_2.getThinkPrompt; } }));
-var update_pull_request_description_2 = __nccwpck_require__(16030);
+var update_pull_request_description_2 = __nccwpck_require__(10063);
 Object.defineProperty(exports, "getUpdatePullRequestDescriptionPrompt", ({ enumerable: true, get: function () { return update_pull_request_description_2.getUpdatePullRequestDescriptionPrompt; } }));
-var user_request_2 = __nccwpck_require__(50929);
+var user_request_2 = __nccwpck_require__(63103);
 Object.defineProperty(exports, "getUserRequestPrompt", ({ enumerable: true, get: function () { return user_request_2.getUserRequestPrompt; } }));
-var recommend_steps_2 = __nccwpck_require__(49700);
+var recommend_steps_2 = __nccwpck_require__(69039);
 Object.defineProperty(exports, "getRecommendStepsPrompt", ({ enumerable: true, get: function () { return recommend_steps_2.getRecommendStepsPrompt; } }));
-var check_progress_2 = __nccwpck_require__(30975);
+var check_progress_2 = __nccwpck_require__(74623);
 Object.defineProperty(exports, "getCheckProgressPrompt", ({ enumerable: true, get: function () { return check_progress_2.getCheckProgressPrompt; } }));
-var check_comment_language_2 = __nccwpck_require__(39837);
+var check_comment_language_2 = __nccwpck_require__(63425);
 Object.defineProperty(exports, "getAdaptCommentLanguagePrompt", ({ enumerable: true, get: function () { return check_comment_language_2.getAdaptCommentLanguagePrompt; } }));
-var cli_do_2 = __nccwpck_require__(41306);
+var cli_do_2 = __nccwpck_require__(32506);
 Object.defineProperty(exports, "getCliDoPrompt", ({ enumerable: true, get: function () { return cli_do_2.getCliDoPrompt; } }));
-var bugbot_2 = __nccwpck_require__(69433);
+var bugbot_2 = __nccwpck_require__(56998);
 Object.defineProperty(exports, "getBugbotPrompt", ({ enumerable: true, get: function () { return bugbot_2.getBugbotPrompt; } }));
-var bugbot_fix_2 = __nccwpck_require__(17929);
+var bugbot_fix_2 = __nccwpck_require__(37925);
 Object.defineProperty(exports, "getBugbotFixPrompt", ({ enumerable: true, get: function () { return bugbot_fix_2.getBugbotFixPrompt; } }));
-var bugbot_fix_intent_2 = __nccwpck_require__(56693);
+var bugbot_fix_intent_2 = __nccwpck_require__(10399);
 Object.defineProperty(exports, "getBugbotFixIntentPrompt", ({ enumerable: true, get: function () { return bugbot_fix_intent_2.getBugbotFixIntentPrompt; } }));
 /** Known prompt names for getPrompt() */
 exports.PROMPT_NAMES = {
@@ -86061,14 +86061,14 @@ function getPrompt(name, params) {
 
 /***/ }),
 
-/***/ 22907:
+/***/ 64005:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getLocalizeMessageCatalogPrompt = getLocalizeMessageCatalogPrompt;
-const message_catalog_1 = __nccwpck_require__(5313);
+const message_catalog_1 = __nccwpck_require__(27097);
 /** Builds a bounded request that translates prose values, never renderer structure. */
 function getLocalizeMessageCatalogPrompt(params) {
     const pluralCategories = (0, message_catalog_1.catalogPluralCategories)(params.targetLocale);
@@ -86087,7 +86087,7 @@ function getLocalizeMessageCatalogPrompt(params) {
 
 /***/ }),
 
-/***/ 49700:
+/***/ 69039:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86097,7 +86097,7 @@ exports.getRecommendStepsPrompt = getRecommendStepsPrompt;
 /**
  * Prompt for recommending implementation steps from an issue (RecommendStepsUseCase).
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `Based on the following issue description, produce a concise implementation plan. Return three to eight logically ordered steps (for example: contract, implementation, tests, and documentation). Each step needs a short action title and zero to two brief supporting details. Add one specific, verifiable acceptance criterion for the whole plan.
 
 Write every human-readable field in {{targetLocale}}. Preserve code identifiers, repository-relative paths, refs, and commands verbatim. Do not write Markdown or headings inside fields; the product owns presentation. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -86136,7 +86136,7 @@ function previousRecommendationInstruction(format) {
 
 /***/ }),
 
-/***/ 18366:
+/***/ 43146:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86146,7 +86146,7 @@ exports.getThinkPrompt = getThinkPrompt;
 /**
  * Prompt for the Think use case (answer to @mention in issue/PR comment).
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are a helpful assistant. Answer the following question concisely in {{targetLocale}}, using the context below when relevant. Format your answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response. Preserve code identifiers, paths, refs, commands, and URLs verbatim.
 
 Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response. Every human-readable sentence in \`answer\` must use the target locale.
@@ -86165,7 +86165,7 @@ function getThinkPrompt(params) {
 
 /***/ }),
 
-/***/ 16030:
+/***/ 10063:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86175,7 +86175,7 @@ exports.getUpdatePullRequestDescriptionPrompt = getUpdatePullRequestDescriptionP
 /**
  * Prompt for generating a concise PR description from an optional issue and the diff.
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. Your task is to write a concise, review-ready pull request description from the branch diff and any linked issue.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -86216,7 +86216,7 @@ function getUpdatePullRequestDescriptionPrompt(params) {
 
 /***/ }),
 
-/***/ 50929:
+/***/ 63103:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86226,7 +86226,7 @@ exports.getUserRequestPrompt = getUserRequestPrompt;
 /**
  * Prompt for the Do user request use case (generic "do this" in repo).
  */
-const fill_1 = __nccwpck_require__(58865);
+const fill_1 = __nccwpck_require__(2559);
 const TEMPLATE = `You are in the repository workspace. The user has asked you to do something. Perform their request by editing files and running commands directly in the workspace. Do not output diffs for someone else to apply.
 
 {{projectContextInstruction}}
@@ -86252,7 +86252,7 @@ function getUserRequestPrompt(params) {
 
 /***/ }),
 
-/***/ 72472:
+/***/ 63550:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -86482,7 +86482,7 @@ function round(value) {
 
 /***/ }),
 
-/***/ 2141:
+/***/ 2899:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86492,7 +86492,7 @@ exports.loadBugbotBenchmark = loadBugbotBenchmark;
 exports.loadBugbotPredictions = loadBugbotPredictions;
 exports.evaluateBugbotBenchmark = evaluateBugbotBenchmark;
 const promises_1 = __nccwpck_require__(93977);
-const bugbot_quality_eval_1 = __nccwpck_require__(70846);
+const bugbot_quality_eval_1 = __nccwpck_require__(15467);
 async function loadBugbotBenchmark(path) {
     const parsed = JSON.parse(await (0, promises_1.readFile)(path, 'utf8'));
     if (!isRecord(parsed) || parsed.schemaVersion !== 1 || !Array.isArray(parsed.cases)) {
@@ -86583,7 +86583,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 38817:
+/***/ 19235:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86591,9 +86591,9 @@ function isRecord(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runBugbotBenchmarkAgent = runBugbotBenchmarkAgent;
 exports.buildBugbotBenchmarkPrompt = buildBugbotBenchmarkPrompt;
-const schema_1 = __nccwpck_require__(98135);
-const untrusted_content_1 = __nccwpck_require__(12334);
-const prepare_bugbot_findings_policy_1 = __nccwpck_require__(73654);
+const schema_1 = __nccwpck_require__(16808);
+const untrusted_content_1 = __nccwpck_require__(67057);
+const prepare_bugbot_findings_policy_1 = __nccwpck_require__(3496);
 const MAX_BENCHMARK_CASES = 200;
 /** Executes the real configured findings agent against every case, sequentially. */
 async function runBugbotBenchmarkAgent(corpus, agent, configuration) {
@@ -86646,7 +86646,7 @@ function extractBenchmarkFindings(response) {
 
 /***/ }),
 
-/***/ 70846:
+/***/ 15467:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86655,7 +86655,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DEFAULT_BUGBOT_QUALITY_THRESHOLDS = void 0;
 exports.evaluateBugbotFindings = evaluateBugbotFindings;
 exports.evaluateBugbotQualityGate = evaluateBugbotQualityGate;
-const finding_identity_1 = __nccwpck_require__(657);
+const finding_identity_1 = __nccwpck_require__(91853);
 exports.DEFAULT_BUGBOT_QUALITY_THRESHOLDS = {
     precision: 0.9,
     recall: 0.85,
@@ -86763,7 +86763,7 @@ function format(value) {
 
 /***/ }),
 
-/***/ 61146:
+/***/ 92816:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -86815,7 +86815,7 @@ exports.injectJsonAsMarkdownBlock = injectJsonAsMarkdownBlock;
 
 /***/ }),
 
-/***/ 50135:
+/***/ 91151:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -86833,7 +86833,7 @@ exports.logError = logError;
 exports.logDebugInfo = logDebugInfo;
 exports.logDebugWarning = logDebugWarning;
 exports.logDebugError = logDebugError;
-const secret_redaction_1 = __nccwpck_require__(93523);
+const secret_redaction_1 = __nccwpck_require__(254);
 let loggerDebug = false;
 let loggerRemote = false;
 let structuredLogging = false;
@@ -86996,7 +86996,7 @@ function logDebugError(message) {
 
 /***/ }),
 
-/***/ 36158:
+/***/ 63907:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -87009,7 +87009,7 @@ exports.PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project context:
 
 /***/ }),
 
-/***/ 45689:
+/***/ 38445:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -87053,9 +87053,9 @@ exports.inspectRepositoryAgentGuidance = inspectRepositoryAgentGuidance;
 const fs = __importStar(__nccwpck_require__(87561));
 const path = __importStar(__nccwpck_require__(49411));
 const node_crypto_1 = __nccwpck_require__(6005);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const repository_agent_guidance_policy_1 = __nccwpck_require__(47992);
-const logger_1 = __nccwpck_require__(50135);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+const logger_1 = __nccwpck_require__(91151);
 const MANAGED_ROLES = Object.freeze({
     [repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH]: 'profile',
     [repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH]: 'guide',
@@ -87474,7 +87474,7 @@ function inspectIssueWorkflowProjection(cwd, configuration) {
 
 /***/ }),
 
-/***/ 93523:
+/***/ 254:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -87503,7 +87503,7 @@ function redactKnownEnvironmentSecrets(value, environment = process.env) {
 
 /***/ }),
 
-/***/ 80501:
+/***/ 90102:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -87546,7 +87546,7 @@ exports.copySetupFile = copySetupFile;
 exports.copySetupDirectory = copySetupDirectory;
 const fs = __importStar(__nccwpck_require__(57147));
 const path = __importStar(__nccwpck_require__(71017));
-const logger_1 = __nccwpck_require__(50135);
+const logger_1 = __nccwpck_require__(91151);
 function copySetupFile(source, destination, displaySource, displayDestination, options = {}) {
     if (!fs.existsSync(source))
         return { copied: 0, skipped: 0 };
@@ -87578,7 +87578,7 @@ function copySetupDirectory(sourceDirectory, destinationDirectory, fileFilter, d
 
 /***/ }),
 
-/***/ 30542:
+/***/ 59126:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -87624,13 +87624,13 @@ exports.getSetupToken = getSetupToken;
 exports.hasValidSetupToken = hasValidSetupToken;
 const fs = __importStar(__nccwpck_require__(57147));
 const path = __importStar(__nccwpck_require__(71017));
-const setup_file_copy_1 = __nccwpck_require__(80501);
-const logger_1 = __nccwpck_require__(50135);
-const setup_workflow_catalog_1 = __nccwpck_require__(37008);
-const issue_workflow_profile_1 = __nccwpck_require__(62721);
-const setup_issue_workflow_policy_1 = __nccwpck_require__(47280);
-const repository_agent_guidance_1 = __nccwpck_require__(45689);
-const setup_approval_workflow_1 = __nccwpck_require__(56189);
+const setup_file_copy_1 = __nccwpck_require__(90102);
+const logger_1 = __nccwpck_require__(91151);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const repository_agent_guidance_1 = __nccwpck_require__(38445);
+const setup_approval_workflow_1 = __nccwpck_require__(9512);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
@@ -87890,7 +87890,7 @@ function hasValidSetupToken(cwd, override) {
 
 /***/ }),
 
-/***/ 83142:
+/***/ 46103:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -87960,14 +87960,14 @@ function getTaskEmoji(taskId) {
 
 /***/ }),
 
-/***/ 58747:
+/***/ 46267:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extractIssueNumberFromPush = exports.extractIssueNumberFromBranch = void 0;
-const positive_integer_policy_1 = __nccwpck_require__(45613);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 const extractIssueNumberFromBranch = (branchName) => {
     const match = branchName?.match(/[a-zA-Z]+\/([0-9]+)-.*/);
     if (match) {
@@ -87988,7 +87988,7 @@ exports.extractIssueNumberFromPush = extractIssueNumberFromPush;
 
 /***/ }),
 
-/***/ 61047:
+/***/ 61788:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -88032,7 +88032,7 @@ exports.getActionInputs = getActionInputs;
 exports.getActionInputsWithDefaults = getActionInputsWithDefaults;
 const fs = __importStar(__nccwpck_require__(57147));
 const path = __importStar(__nccwpck_require__(71017));
-const yaml = __importStar(__nccwpck_require__(87969));
+const yaml = __importStar(__nccwpck_require__(783));
 /**
  * Resolves action.yml from the copilot package root, not cwd.
  * When run as CLI from another repo, cwd is that repo; action.yml lives next to the bundle.
@@ -88388,14 +88388,14 @@ module.exports = require("util");
 
 /***/ }),
 
-/***/ 37579:
+/***/ 12239:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { Argument } = __nccwpck_require__(99938);
-const { Command } = __nccwpck_require__(26777);
-const { CommanderError, InvalidArgumentError } = __nccwpck_require__(95989);
-const { Help } = __nccwpck_require__(16706);
-const { Option } = __nccwpck_require__(47969);
+const { Argument } = __nccwpck_require__(62253);
+const { Command } = __nccwpck_require__(51335);
+const { CommanderError, InvalidArgumentError } = __nccwpck_require__(5022);
+const { Help } = __nccwpck_require__(10320);
+const { Option } = __nccwpck_require__(2430);
 
 exports.program = new Command();
 
@@ -88419,10 +88419,10 @@ exports.InvalidOptionArgumentError = InvalidArgumentError; // Deprecated
 
 /***/ }),
 
-/***/ 99938:
+/***/ 62253:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { InvalidArgumentError } = __nccwpck_require__(95989);
+const { InvalidArgumentError } = __nccwpck_require__(5022);
 
 class Argument {
   /**
@@ -88575,7 +88575,7 @@ exports.humanReadableArgName = humanReadableArgName;
 
 /***/ }),
 
-/***/ 26777:
+/***/ 51335:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 const EventEmitter = (__nccwpck_require__(15673).EventEmitter);
@@ -88584,11 +88584,11 @@ const path = __nccwpck_require__(49411);
 const fs = __nccwpck_require__(87561);
 const process = __nccwpck_require__(97742);
 
-const { Argument, humanReadableArgName } = __nccwpck_require__(99938);
-const { CommanderError } = __nccwpck_require__(95989);
-const { Help } = __nccwpck_require__(16706);
-const { Option, DualOptions } = __nccwpck_require__(47969);
-const { suggestSimilar } = __nccwpck_require__(78149);
+const { Argument, humanReadableArgName } = __nccwpck_require__(62253);
+const { CommanderError } = __nccwpck_require__(5022);
+const { Help } = __nccwpck_require__(10320);
+const { Option, DualOptions } = __nccwpck_require__(2430);
+const { suggestSimilar } = __nccwpck_require__(57754);
 
 class Command extends EventEmitter {
   /**
@@ -91091,7 +91091,7 @@ exports.Command = Command;
 
 /***/ }),
 
-/***/ 95989:
+/***/ 5022:
 /***/ ((__unused_webpack_module, exports) => {
 
 /**
@@ -91137,10 +91137,10 @@ exports.InvalidArgumentError = InvalidArgumentError;
 
 /***/ }),
 
-/***/ 16706:
+/***/ 10320:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { humanReadableArgName } = __nccwpck_require__(99938);
+const { humanReadableArgName } = __nccwpck_require__(62253);
 
 /**
  * TypeScript import types for JSDoc, used by Visual Studio Code IntelliSense and `npm run typescript-checkJS`
@@ -91664,10 +91664,10 @@ exports.Help = Help;
 
 /***/ }),
 
-/***/ 47969:
+/***/ 2430:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
-const { InvalidArgumentError } = __nccwpck_require__(95989);
+const { InvalidArgumentError } = __nccwpck_require__(5022);
 
 class Option {
   /**
@@ -92001,7 +92001,7 @@ exports.DualOptions = DualOptions;
 
 /***/ }),
 
-/***/ 78149:
+/***/ 57754:
 /***/ ((__unused_webpack_module, exports) => {
 
 const maxDistance = 3;
@@ -92109,7 +92109,7 @@ exports.suggestSimilar = suggestSimilar;
 
 /***/ }),
 
-/***/ 47743:
+/***/ 29617:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 /* module decorator */ module = __nccwpck_require__.nmd(module);
@@ -92411,7 +92411,7 @@ module.exports = {
 
 /***/ }),
 
-/***/ 47216:
+/***/ 922:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -92423,7 +92423,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   "Octokit": () => (/* binding */ Octokit)
 });
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/universal-user-agent@7.0.3/node_modules/universal-user-agent/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/universal-user-agent@7.0.3/node_modules/universal-user-agent/index.js
 function getUserAgent() {
   if (typeof navigator === "object" && "userAgent" in navigator) {
     return navigator.userAgent;
@@ -92438,7 +92438,7 @@ function getUserAgent() {
   return "<environment undetectable>";
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/lib/register.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/lib/register.js
 // @ts-check
 
 function register(state, name, method, options) {
@@ -92467,7 +92467,7 @@ function register(state, name, method, options) {
   });
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/lib/add.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/lib/add.js
 // @ts-check
 
 function addHook(state, kind, name, hook) {
@@ -92515,7 +92515,7 @@ function addHook(state, kind, name, hook) {
   });
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/lib/remove.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/lib/remove.js
 // @ts-check
 
 function removeHook(state, name, method) {
@@ -92536,7 +92536,7 @@ function removeHook(state, name, method) {
   state.registry[name].splice(index, 1);
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/before-after-hook@4.0.0/node_modules/before-after-hook/index.js
 // @ts-check
 
 
@@ -92583,7 +92583,7 @@ function Collection() {
 
 /* harmony default export */ const before_after_hook = ({ Singular, Collection });
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+endpoint@11.0.5/node_modules/@octokit/endpoint/dist-bundle/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+endpoint@11.0.5/node_modules/@octokit/endpoint/dist-bundle/index.js
 // pkg/dist-src/defaults.js
 
 
@@ -92929,7 +92929,7 @@ function withDefaults(oldDefaults, newDefaults) {
 var endpoint = withDefaults(null, DEFAULTS);
 
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/content-type@3.0.0/node_modules/content-type/dist/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/content-type@3.0.0/node_modules/content-type/dist/index.js
 /*!
  * content-type
  * Copyright(c) 2015 Douglas Christopher Wilson
@@ -93102,7 +93102,7 @@ function qstring(str) {
     throw new TypeError(`Invalid parameter value: ${str}`);
 }
 //# sourceMappingURL=index.js.map
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/json-with-bigint@3.5.12/node_modules/json-with-bigint/json-with-bigint.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/json-with-bigint@3.5.12/node_modules/json-with-bigint/json-with-bigint.js
 const intRegex = /^-?\d+$/;
 const noiseValue = /^-?\d+n+$/; // Noise - strings that match the custom format before being converted to it
 const originalStringify = JSON.stringify;
@@ -93703,7 +93703,7 @@ const JSONParse = (text, reviver) => {
 
 
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+request-error@7.1.2/node_modules/@octokit/request-error/dist-src/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+request-error@7.1.2/node_modules/@octokit/request-error/dist-src/index.js
 class RequestError extends Error {
   name;
   /**
@@ -93744,7 +93744,7 @@ class RequestError extends Error {
 }
 
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+request@10.0.16/node_modules/@octokit/request/dist-bundle/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+request@10.0.16/node_modules/@octokit/request/dist-bundle/index.js
 // pkg/dist-src/index.js
 
 
@@ -93951,7 +93951,7 @@ var request = dist_bundle_withDefaults(endpoint, defaults_default);
 /* v8 ignore next -- @preserve */
 /* v8 ignore else -- @preserve */
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+graphql@9.0.5/node_modules/@octokit/graphql/dist-bundle/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+graphql@9.0.5/node_modules/@octokit/graphql/dist-bundle/index.js
 // pkg/dist-src/index.js
 
 
@@ -94082,7 +94082,7 @@ function withCustomRequest(customRequest) {
 
 /* v8 ignore if -- @preserve */
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+auth-token@6.0.0/node_modules/@octokit/auth-token/dist-bundle/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+auth-token@6.0.0/node_modules/@octokit/auth-token/dist-bundle/index.js
 // pkg/dist-src/is-jwt.js
 var b64url = "(?:[a-zA-Z0-9_-]+)";
 var sep = "\\.";
@@ -94137,11 +94137,11 @@ var createTokenAuth = function createTokenAuth2(token) {
 };
 
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+core@7.0.8/node_modules/@octokit/core/dist-src/version.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+core@7.0.8/node_modules/@octokit/core/dist-src/version.js
 const version_VERSION = "7.0.8";
 
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+core@7.0.8/node_modules/@octokit/core/dist-src/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+core@7.0.8/node_modules/@octokit/core/dist-src/index.js
 
 
 
@@ -94285,7 +94285,7 @@ class Octokit {
 
 /***/ }),
 
-/***/ 55347:
+/***/ 36738:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -94710,7 +94710,7 @@ paginateRest.VERSION = VERSION;
 
 /***/ }),
 
-/***/ 57496:
+/***/ 50305:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -94723,12 +94723,12 @@ __nccwpck_require__.d(__webpack_exports__, {
   "restEndpointMethods": () => (/* binding */ restEndpointMethods)
 });
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
 const VERSION = "17.0.0";
 
 //# sourceMappingURL=version.js.map
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/generated/endpoints.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/generated/endpoints.js
 const Endpoints = {
   actions: {
     addCustomLabelsToSelfHostedRunnerForOrg: [
@@ -97022,7 +97022,7 @@ var endpoints_default = Endpoints;
 
 //# sourceMappingURL=endpoints.js.map
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/endpoints-to-methods.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/endpoints-to-methods.js
 
 const endpointMethodsMap = /* @__PURE__ */ new Map();
 for (const [scope, endpoints] of Object.entries(endpoints_default)) {
@@ -97148,7 +97148,7 @@ function decorate(octokit, scope, methodName, defaults, decorations) {
 
 //# sourceMappingURL=endpoints-to-methods.js.map
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/@octokit+plugin-rest-endpoint-methods@17.0.0_@octokit+core@7.0.8/node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
 
 
 function restEndpointMethods(octokit) {
@@ -97172,7 +97172,7 @@ legacyRestEndpointMethods.VERSION = VERSION;
 
 /***/ }),
 
-/***/ 32634:
+/***/ 11652:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -97187,7 +97187,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // EXTERNAL MODULE: external "node:process"
 var external_node_process_ = __nccwpck_require__(97742);
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/ansi-regex@6.3.0/node_modules/ansi-regex/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/ansi-regex@6.3.0/node_modules/ansi-regex/index.js
 function ansiRegex({onlyFirst = false} = {}) {
 	// Valid string terminator sequences are BEL, ESC\, and 0x9c
 	const ST = '(?:\\u0007|\\u001B\\u005C|\\u009C)';
@@ -97204,7 +97204,7 @@ function ansiRegex({onlyFirst = false} = {}) {
 	return new RegExp(pattern, onlyFirst ? undefined : 'g');
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/strip-ansi@7.2.0/node_modules/strip-ansi/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/strip-ansi@7.2.0/node_modules/strip-ansi/index.js
 
 
 const regex = ansiRegex();
@@ -97225,7 +97225,7 @@ function stripAnsi(string) {
 	return string.replace(regex, '');
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup-data.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup-data.js
 // Generated by scripts/build.js
 
 const ambiguousMinimalCodePoint = 161;
@@ -97248,7 +97248,7 @@ const wideMinimalCodePoint = 4352;
 const wideMaximumCodePoint = 262141;
 const wideRanges = [4352, 4447, 8986, 8987, 9001, 9002, 9193, 9196, 9200, 9200, 9203, 9203, 9725, 9726, 9748, 9749, 9776, 9783, 9800, 9811, 9855, 9855, 9866, 9871, 9875, 9875, 9889, 9889, 9898, 9899, 9917, 9918, 9924, 9925, 9934, 9934, 9940, 9940, 9962, 9962, 9970, 9971, 9973, 9973, 9978, 9978, 9981, 9981, 9989, 9989, 9994, 9995, 10024, 10024, 10060, 10060, 10062, 10062, 10067, 10069, 10071, 10071, 10133, 10135, 10160, 10160, 10175, 10175, 11035, 11036, 11088, 11088, 11093, 11093, 11904, 11929, 11931, 12019, 12032, 12245, 12272, 12287, 12289, 12350, 12353, 12438, 12441, 12543, 12549, 12591, 12593, 12686, 12688, 12773, 12783, 12830, 12832, 12871, 12880, 42124, 42128, 42182, 43360, 43388, 44032, 55203, 63744, 64255, 65040, 65049, 65072, 65106, 65108, 65126, 65128, 65131, 94176, 94180, 94192, 94198, 94208, 101589, 101631, 101662, 101760, 101874, 110576, 110579, 110581, 110587, 110589, 110590, 110592, 110882, 110898, 110898, 110928, 110930, 110933, 110933, 110948, 110951, 110960, 111355, 119552, 119638, 119648, 119670, 126980, 126980, 127183, 127183, 127374, 127374, 127377, 127386, 127488, 127490, 127504, 127547, 127552, 127560, 127568, 127569, 127584, 127589, 127744, 127776, 127789, 127797, 127799, 127868, 127870, 127891, 127904, 127946, 127951, 127955, 127968, 127984, 127988, 127988, 127992, 128062, 128064, 128064, 128066, 128252, 128255, 128317, 128331, 128334, 128336, 128359, 128378, 128378, 128405, 128406, 128420, 128420, 128507, 128591, 128640, 128709, 128716, 128716, 128720, 128722, 128725, 128728, 128732, 128735, 128747, 128748, 128756, 128764, 128992, 129003, 129008, 129008, 129292, 129338, 129340, 129349, 129351, 129535, 129648, 129660, 129664, 129674, 129678, 129734, 129736, 129736, 129741, 129756, 129759, 129770, 129775, 129784, 131072, 196605, 196608, 262141];
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/utilities.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/utilities.js
 /**
 Binary search on a sorted flat array of [start, end] pairs.
 
@@ -97274,7 +97274,7 @@ const utilities_isInRange = (ranges, codePoint) => {
 	return false;
 };
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/lookup.js
 
 
 
@@ -97394,7 +97394,7 @@ function lookup_getCategory(codePoint) {
 	return 'neutral';
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/get-east-asian-width@1.6.0/node_modules/get-east-asian-width/index.js
 
 
 function validate(codePoint) {
@@ -97426,9 +97426,9 @@ function eastAsianWidth(codePoint, {ambiguousAsWide = false} = {}) {
 // Private exports for https://github.com/sindresorhus/is-fullwidth-code-point
 
 
-// EXTERNAL MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/emoji-regex@10.6.0/node_modules/emoji-regex/index.js
-var emoji_regex = __nccwpck_require__(25863);
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/string-width@7.2.0/node_modules/string-width/index.js
+// EXTERNAL MODULE: ./node_modules/.pnpm/emoji-regex@10.6.0/node_modules/emoji-regex/index.js
+var emoji_regex = __nccwpck_require__(33104);
+;// CONCATENATED MODULE: ./node_modules/.pnpm/string-width@7.2.0/node_modules/string-width/index.js
 
 
 
@@ -97512,9 +97512,9 @@ function stringWidth(string, options = {}) {
 	return width;
 }
 
-// EXTERNAL MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js + 4 modules
-var source = __nccwpck_require__(43920);
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/widest-line@5.0.0/node_modules/widest-line/index.js
+// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js + 4 modules
+var source = __nccwpck_require__(8578);
+;// CONCATENATED MODULE: ./node_modules/.pnpm/widest-line@5.0.0/node_modules/widest-line/index.js
 
 
 function widestLine(string) {
@@ -97527,9 +97527,9 @@ function widestLine(string) {
 	return lineWidth;
 }
 
-// EXTERNAL MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/cli-boxes@3.0.0/node_modules/cli-boxes/index.js
-var cli_boxes = __nccwpck_require__(76291);
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/camelcase@8.0.0/node_modules/camelcase/index.js
+// EXTERNAL MODULE: ./node_modules/.pnpm/cli-boxes@3.0.0/node_modules/cli-boxes/index.js
+var cli_boxes = __nccwpck_require__(77755);
+;// CONCATENATED MODULE: ./node_modules/.pnpm/camelcase@8.0.0/node_modules/camelcase/index.js
 const UPPERCASE = /[\p{Lu}]/u;
 const LOWERCASE = /[\p{Ll}]/u;
 const LEADING_CAPITAL = /^[\p{Lu}](?![\p{Lu}])/gu;
@@ -97641,9 +97641,9 @@ function camelCase(input, options) {
 	return postProcess(input, toUpperCase);
 }
 
-// EXTERNAL MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/ansi-align@3.0.1/node_modules/ansi-align/index.js
-var ansi_align = __nccwpck_require__(6465);
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/ansi-styles@6.2.3/node_modules/ansi-styles/index.js
+// EXTERNAL MODULE: ./node_modules/.pnpm/ansi-align@3.0.1/node_modules/ansi-align/index.js
+var ansi_align = __nccwpck_require__(61570);
+;// CONCATENATED MODULE: ./node_modules/.pnpm/ansi-styles@6.2.3/node_modules/ansi-styles/index.js
 const ANSI_BACKGROUND_OFFSET = 10;
 
 const wrapAnsi16 = (offset = 0) => code => `\u001B[${code + offset}m`;
@@ -97868,7 +97868,7 @@ const ansiStyles = assembleStyles();
 
 /* harmony default export */ const ansi_styles = (ansiStyles);
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/wrap-ansi@9.0.2/node_modules/wrap-ansi/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/wrap-ansi@9.0.2/node_modules/wrap-ansi/index.js
 
 
 
@@ -98092,7 +98092,7 @@ function wrapAnsi(string, columns, options) {
 		.join('\n');
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/boxen@8.0.1/node_modules/boxen/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/boxen@8.0.1/node_modules/boxen/index.js
 
 
 
@@ -98473,7 +98473,7 @@ function boxen(text, options) {
 
 /***/ }),
 
-/***/ 43920:
+/***/ 8578:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -98497,7 +98497,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   "supportsColorStderr": () => (/* binding */ stderrColor)
 });
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/ansi-styles/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/ansi-styles/index.js
 const ANSI_BACKGROUND_OFFSET = 10;
 
 const wrapAnsi16 = (offset = 0) => code => `\u001B[${code + offset}m`;
@@ -98728,7 +98728,7 @@ var external_node_process_ = __nccwpck_require__(97742);
 var external_node_os_ = __nccwpck_require__(70612);
 ;// CONCATENATED MODULE: external "node:tty"
 const external_node_tty_namespaceObject = require("node:tty");
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/supports-color/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/supports-color/index.js
 
 
 
@@ -98920,7 +98920,7 @@ const supportsColor = {
 
 /* harmony default export */ const supports_color = (supportsColor);
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/utilities.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/utilities.js
 // TODO: When targeting Node.js 16, use `String.prototype.replaceAll`.
 function stringReplaceAll(string, substring, replacer) {
 	let index = string.indexOf(substring);
@@ -98955,7 +98955,7 @@ function stringEncaseCRLFWithFirstIndex(string, prefix, postfix, index) {
 	return returnValue;
 }
 
-;// CONCATENATED MODULE: ../../../Users/efrain.espada@feverup.com/Development/copilot/node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js
+;// CONCATENATED MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js
 
 
 
@@ -99168,7 +99168,7 @@ const chalkStderr = createChalk({level: stderrColor ? stderrColor.level : 0});
 
 /***/ }),
 
-/***/ 70106:
+/***/ 57227:
 /***/ ((module) => {
 
 "use strict";
@@ -99269,7 +99269,7 @@ module.exports = JSON.parse('{"revision":"2026-09-24.p1-c.3","providers":{"codex
 /******/ 	// module cache are used so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
-/******/ 	var __webpack_exports__ = __nccwpck_require__(__nccwpck_require__.s = 81627);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(__nccwpck_require__.s = 55711);
 /******/ 	module.exports = __webpack_exports__;
 /******/
 /******/ })()
