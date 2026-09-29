@@ -132,4 +132,39 @@ describe('SetupQuestionnaireController', () => {
     expect(choices[0]).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
     expect(choices[0]).toContain('https://github.com/orgs/owner/projects/5[1m');
   });
+
+  it('lists discovered Projects and supports retry when the terminal has no selector method', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', projectDiscovery: { status: 'observed' as const,
+        candidates: [{ number: 5, title: 'Roadmap', owner: 'owner', url: 'https://github.com/orgs/owner/projects/5' }] },
+      discoveryRetryRemaining: { checks: 0, projects: 1 } };
+    const input = terminal([{ kind: 'value', value: 'retry' }, { kind: 'value', value: '6' }]);
+    const refresh = jest.fn(async () => ({ ...context,
+      projectDiscovery: { status: 'observed' as const,
+        candidates: [{ number: 6, title: 'Planning', owner: 'owner', url: 'https://github.com/orgs/owner/projects/6' }] },
+      discoveryRetryRemaining: { checks: 0, projects: 0 } }));
+    const result = await new SetupQuestionnaireController(input, renderer()).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context, { refresh },
+    );
+    expect(result.terminal).toBe('review');
+    expect(result.draft.projects.ids).toBe('6');
+    expect(input.readText.mock.calls[0][0]).toContain('5 — Roadmap (https://github.com/orgs/owner/projects/5)');
+    expect(input.readText.mock.calls[0][0]).toContain('retry — Retry GitHub Project discovery');
+    expect(input.readText.mock.calls[1][0]).toContain('6 — Planning');
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps selected Project numbers on empty Enter in the text fallback', async () => {
+    const defaults = createDefaultSetupConfiguration();
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner', projectDiscovery: { status: 'observed' as const,
+        candidates: [{ number: 5, title: 'Roadmap', owner: 'owner', url: 'https://github.com/orgs/owner/projects/5' }] } };
+    const input = terminal([{ kind: 'value', value: '' }]);
+    const result = await new SetupQuestionnaireController(input, renderer()).collect(
+      createSetupQuestionnaire({ ...defaults, projects: { ...defaults.projects, ids: '5' } }, context), context,
+    );
+    expect(result.terminal).toBe('review');
+    expect(result.draft.projects.ids).toBe('5');
+    expect(input.readText.mock.calls[0][0]).toContain('Current selection: 5');
+  });
 });

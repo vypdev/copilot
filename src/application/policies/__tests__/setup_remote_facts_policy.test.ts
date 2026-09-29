@@ -2,7 +2,7 @@ import type { SetupRemoteConfiguration } from '../../../domain/setup';
 import { sameSetupRemoteFacts } from '../setup_remote_facts_policy';
 
 const facts: SetupRemoteConfiguration = {
-  ownerType: 'Organization', repositoryId: 5, repositoryVisibility: 'private',
+  ownerType: 'Organization', repositoryId: 5, repositoryVisibility: 'private', defaultBranch: 'main',
   repositorySecrets: ['PAT', 'OPENAI_API_KEY'], repositorySecretsAccess: 'available',
   organizationSecrets: ['EXISTING'],
   repositoryVariables: [{ name: 'MAIN_BRANCH', value: 'main' }, { name: 'AGENT_PROVIDER', value: 'codex' }],
@@ -20,7 +20,7 @@ describe('setup remote fact equivalence', () => {
   });
 
   test.each([
-    ['ownerType', 'User'], ['repositoryId', 6], ['repositoryVisibility', 'public'],
+    ['ownerType', 'User'], ['repositoryId', 6], ['repositoryVisibility', 'public'], ['defaultBranch', 'develop'],
     ['repositorySecrets', []], ['repositorySecretsAccess', 'unknown'], ['organizationSecrets', []],
     ['repositoryVariablesAccess', 'unavailable'], ['organizationVariables', []],
     ['organizationAccess', 'unknown'], ['organizationSecretsAccess', 'unknown'],

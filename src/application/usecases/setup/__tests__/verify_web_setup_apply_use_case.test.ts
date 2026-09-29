@@ -7,7 +7,7 @@ import {
 
 const repository = { owner: 'owner', repository: 'repo', checkoutRoot: '/checkout', branch: 'develop', head: 'a'.repeat(40) };
 const remoteBase: SetupRemoteConfiguration = {
-  ownerType: 'User', repositoryId: 42, repositoryVisibility: 'private',
+  ownerType: 'User', repositoryId: 42, repositoryVisibility: 'private', defaultBranch: 'main',
   repositorySecrets: ['PAT', 'OPENAI_API_KEY'], repositorySecretsAccess: 'available', organizationSecrets: [],
   repositoryVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }, { name: 'MAIN_BRANCH', value: 'main' }],
   repositoryVariablesAccess: 'available', organizationVariables: [],
@@ -108,6 +108,13 @@ describe('VerifyWebSetupApplyUseCase', () => {
     expect(ports.permissionAudit.audit).not.toHaveBeenCalled();
   });
 
+  test('rejects a changed default branch before applying the reviewed plan', async () => {
+    const { ports, useCase } = harness();
+    jest.spyOn(ports.remote, 'inspect').mockResolvedValue({ ...remoteBase, defaultBranch: 'develop' });
+    await expect(useCase.execute(request)).rejects.toThrow('GitHub repository facts changed');
+    expect(ports.permissionAudit.audit).not.toHaveBeenCalled();
+  });
+
   test('ignores response key and resource ordering when GitHub facts are unchanged', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.remote, 'inspect').mockResolvedValue({
@@ -121,6 +128,7 @@ describe('VerifyWebSetupApplyUseCase', () => {
       organizationSecretsAccess: remoteBase.organizationSecretsAccess,
       organizationVariablesAccess: remoteBase.organizationVariablesAccess,
       repositoryVisibility: remoteBase.repositoryVisibility,
+      defaultBranch: remoteBase.defaultBranch,
     });
     expect(await useCase.execute(request)).toBe('approved');
   });

@@ -147,6 +147,13 @@ describe('setup presenters and prompt-specific adapters', () => {
       kind: 'boolean',
       defaultValue: true,
     })).toContain('[Y]');
+    expect(renderer.renderPrompt({
+      stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '',
+    })).toContain('in text mode enter their URL numbers');
+    expect(renderer.renderPrompt({
+      stateId: 'capabilities', id: 'issueWorkflows.enabled', label: 'Issue workflows',
+      kind: 'multi-select', defaultValue: '', choices: ['feature — Feature'],
+    })).toContain('in text mode enter IDs');
     const help = renderer.renderHelp({
       stateId: 'agent-model-defaults', id: 'agents.findings.executable',
       label: 'Validated executable for all tasks', kind: 'text', defaultValue: '',

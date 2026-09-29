@@ -425,6 +425,10 @@ The final web Apply authorization is one application use case with injected
 repository-facts, selected-file snapshot, remote-facts, permission-audit,
 approval, and live-session ports. It must fail closed on missing/drifted facts
 or a session that was cancelled/expired while asynchronous reads were running.
+The compared remote facts include the GitHub default branch, because setup may
+use it as the initial main branch when none was explicitly configured. A
+default-branch change after review invalidates Apply even if other remote
+resources and the local checkout are unchanged.
 It checks repository identity and selected-file digests before remote reads
 and again after the final asynchronous permission audit, immediately before
 returning approval; drift during those awaits cannot inherit earlier proof.
@@ -838,6 +842,11 @@ characters removed before display. The terminal driver applies the same
 sanitization at its output boundary to all choices without altering the
 underlying selected Project number. Provider text never becomes terminal
 markup or a second apparent choice.
+If the terminal cannot render an interactive multi-selector (or its driver
+does not implement one), the text fallback MUST list these sanitized Project
+choices with their actual URL numbers, plus available `manual` and `retry`
+actions. It accepts those IDs directly, preserves the current selection on
+empty Enter, and never implies that a row index is the Project number.
 
 The permission-intent pass asks only whether Projects integration is wanted;
 it must not ask for numbers before the setup PAT exists. The post-PAT pass
@@ -1585,6 +1594,12 @@ all four locales, and terminal-control sanitization for discovered Project
 choices. Focused regressions cover the normalized tuple, rendered input type,
 every new locale label, and raw terminal output. These corrections do not
 change the still-open release acceptance gates above.
+
+A second review follow-up adds the GitHub default branch to the pre-Apply
+remote-facts comparison and keeps discovered Project choices usable in both
+optional-driver and raw-mode-unavailable text fallbacks. Fake-port and
+terminal-driver regressions exercise branch drift, visible Project numbers,
+retry, sanitized output, and unchanged selection semantics.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

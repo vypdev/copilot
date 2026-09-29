@@ -141,6 +141,21 @@ describe('NodeTerminalDriver', () => {
     await expect(pending).resolves.toEqual({ kind: 'value', value: '5' });
   });
 
+  it('shows sanitized choices and retry/manual IDs when raw-mode selection is unavailable', async () => {
+    mockStdin.setRawMode = undefined as unknown as jest.Mock;
+    mockQuestion.mockResolvedValueOnce('retry');
+    const result = await new NodeTerminalDriver().readMultiSelect(
+      'Projects', ['5 — Roadmap\u001b[2J\nFake', 'manual — Enter a URL', 'retry — Search again'], ['5'],
+    );
+    expect(result).toEqual({ kind: 'value', value: 'retry' });
+    const prompt = mockQuestion.mock.calls[0][0] as string;
+    expect(prompt).toContain('5 — Roadmap[2JFake');
+    expect(prompt).toContain('manual — Enter a URL');
+    expect(prompt).toContain('retry — Search again');
+    expect(prompt).toContain('Current selection: 5');
+    expect(prompt).not.toContain('\u001b[2J');
+  });
+
   it('keeps the default All selection on unchanged Enter', async () => {
     const pending = new NodeTerminalDriver().readMultiSelect(
       'Issue workflows', ['All', 'feature — Feature', 'help — Help'], ['feature', 'help'],

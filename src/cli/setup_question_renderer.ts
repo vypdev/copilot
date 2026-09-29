@@ -65,7 +65,7 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
       return [heading, ...lines, `Select 1-${choices.length} ${color(`[${choices.indexOf(String(question.defaultValue)) + 1}]`, 90)}: `].join('\n');
     }
     if (question.kind === 'multi-select') {
-      return [heading, 'Use ↑/↓ and Space to toggle; Enter to confirm. Press ? for help or B for the previous question.'].join('\n');
+      return [heading, 'Choose from the options below. In a selector use ↑/↓ and Space; in text mode enter IDs separated by commas. Enter confirms; ? shows help and B goes back.'].join('\n');
     }
     if (question.kind === 'producer-select') {
       const choices = question.producerCandidates ?? [];
@@ -78,8 +78,8 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
     }
     if (question.kind === 'project-select') {
       return [heading,
-        'Use ↑/↓ and Space to choose Projects; B returns to the previous question. Their numbers come from the GitHub URL, not PVT_ node IDs.',
-        'Select "Manual entry" if a Project is missing. Select "Retry" to query GitHub again without restarting setup.',
+        'Choose Projects from the list below. In a selector use ↑/↓ and Space; in text mode enter their URL numbers separated by commas. B returns to the previous question.',
+        'Project numbers come from GitHub URLs, not PVT_ node IDs. Use manual if a Project is missing, or retry to query GitHub again without restarting setup.',
         'All selected Projects must share each chosen Status value; this setup cannot map different values per Project.'].join('\n');
     }
     if (question.kind === 'scope-overrides' && question.allowedNames?.length) {

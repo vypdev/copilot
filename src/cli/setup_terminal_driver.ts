@@ -104,7 +104,11 @@ export class NodeTerminalDriver implements TerminalDriver {
     if (this.closed) return { kind: 'end-of-input' };
     const input = stdin as typeof stdin & { setRawMode?: (mode: boolean) => void };
     if (!input.setRawMode) {
-      return this.readText(`${prompt}\nEnter comma-separated IDs (or "all"): `);
+      return this.readText([prompt, 'Available IDs:',
+        ...choices.map(choice => `  ${safeTerminalChoiceText(choice)}`),
+        `Current selection: ${safeTerminalChoiceText(selected.join(', ') || 'none')}`,
+        'Enter IDs shown before “—”, separated by commas; use manual or retry when offered, none to clear, or Enter to keep the default: ',
+      ].join('\n'));
     }
     stdout.write(`${prompt}\n`);
     input.setRawMode(true);

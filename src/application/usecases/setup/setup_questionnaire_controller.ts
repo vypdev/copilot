@@ -5,6 +5,7 @@ import type {
   SetupDiscoveryRefreshPort,
 } from '../../ports/setup_terminal_ports';
 import type {
+  SetupQuestion,
   SetupQuestionnaireContext,
   SetupQuestionnaireEvent,
   SetupQuestionnaireState,
@@ -42,18 +43,18 @@ export class SetupQuestionnaireController implements SetupConfigurationCollector
         visibleState = state.stateId;
       }
       if (state.validation) this.renderer.showValidation(state.validation);
-      let input = (state.question.kind === 'multi-select' || state.question.kind === 'project-select') && this.terminal.readMultiSelect
-        ? await this.terminal.readMultiSelect(
-          this.renderer.renderPrompt(state.question, setupQuestionnaireProgress(state, currentContext)),
-          state.question.kind === 'project-select'
-            ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${safeTerminalChoiceText(candidate.title)} (${safeTerminalChoiceText(candidate.url)})`), 'manual — Enter Project number or URL',
-              ...(state.question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
-            : state.question.choices ?? [],
-          state.question.kind === 'project-select' && pendingProjectSelection
-            ? pendingProjectSelection : parseSelectedDefaults(state.question.defaultValue),
-          this.renderer.renderHelp(state.question),
-        )
-        : await this.terminal.readText(this.renderer.renderPrompt(state.question, setupQuestionnaireProgress(state, currentContext)));
+      const question = state.question;
+      const prompt = this.renderer.renderPrompt(question, setupQuestionnaireProgress(state, currentContext));
+      const selectable = question.kind === 'multi-select' || question.kind === 'project-select';
+      const choices = selectable ? choicesForQuestion(question) : [];
+      const selected = question.kind === 'project-select' && pendingProjectSelection
+        ? pendingProjectSelection : parseSelectedDefaults(question.defaultValue);
+      let input = selectable && this.terminal.readMultiSelect
+        ? await this.terminal.readMultiSelect(prompt, choices, selected, this.renderer.renderHelp(question))
+        : await this.terminal.readText(selectable ? textChoicePrompt(prompt, choices, selected) : prompt);
+      if (selectable && input.kind === 'value' && !input.value.trim()) {
+        input = { kind: 'value', value: selected.join(',') || 'none' };
+      }
       if (state.question.kind === 'project-select' && input.kind === 'value' && input.value.split(',').includes('manual')
         && !input.value.split(',').includes('retry')) {
         const manual = await this.terminal.readText('Enter additional Project numbers or GitHub URLs, comma-separated (empty adds none): ');
@@ -92,6 +93,21 @@ export class SetupQuestionnaireController implements SetupConfigurationCollector
     if (state.terminal === 'cancelled') this.renderer.showCancelled();
     return state;
   }
+}
+
+function choicesForQuestion(question: SetupQuestion): readonly string[] {
+  return question.kind === 'project-select'
+    ? [...(question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${safeTerminalChoiceText(candidate.title)} (${safeTerminalChoiceText(candidate.url)})`),
+      'manual — Enter Project number or URL',
+      ...(question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
+    : question.choices ?? [];
+}
+
+function textChoicePrompt(prompt: string, choices: readonly string[], selected: readonly string[]): string {
+  return [prompt, 'Available IDs:', ...choices.map(choice => `  ${safeTerminalChoiceText(choice)}`),
+    `Current selection: ${safeTerminalChoiceText(selected.join(', ') || 'none')}`,
+    'Enter IDs shown before “—”, separated by commas; use manual or retry when offered, none to clear, or Enter to keep the default: ',
+  ].join('\n');
 }
 
 function parseSelectedDefaults(value: string | number | boolean): readonly string[] {

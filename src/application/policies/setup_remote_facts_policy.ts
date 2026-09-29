@@ -6,6 +6,7 @@ export function sameSetupRemoteFacts(left: SetupRemoteConfiguration, right: Setu
     .map(item => JSON.stringify([item.name, item.value])).sort();
   const normalize = (facts: SetupRemoteConfiguration) => ({
     ownerType: facts.ownerType,
+    defaultBranch: facts.defaultBranch,
     repositoryId: facts.repositoryId,
     repositoryVisibility: facts.repositoryVisibility,
     repositorySecrets: [...facts.repositorySecrets].sort(),

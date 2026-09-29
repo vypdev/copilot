@@ -49880,6 +49880,7 @@ function sameSetupRemoteFacts(left, right) {
         .map(item => JSON.stringify([item.name, item.value])).sort();
     const normalize = (facts) => ({
         ownerType: facts.ownerType,
+        defaultBranch: facts.defaultBranch,
         repositoryId: facts.repositoryId,
         repositoryVisibility: facts.repositoryVisibility,
         repositorySecrets: [...facts.repositorySecrets].sort(),
@@ -57456,13 +57457,18 @@ class SetupQuestionnaireController {
             }
             if (state.validation)
                 this.renderer.showValidation(state.validation);
-            let input = (state.question.kind === 'multi-select' || state.question.kind === 'project-select') && this.terminal.readMultiSelect
-                ? await this.terminal.readMultiSelect(this.renderer.renderPrompt(state.question, (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext)), state.question.kind === 'project-select'
-                    ? [...(state.question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(candidate.title)} (${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(candidate.url)})`), 'manual — Enter Project number or URL',
-                        ...(state.question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
-                    : state.question.choices ?? [], state.question.kind === 'project-select' && pendingProjectSelection
-                    ? pendingProjectSelection : parseSelectedDefaults(state.question.defaultValue), this.renderer.renderHelp(state.question))
-                : await this.terminal.readText(this.renderer.renderPrompt(state.question, (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext)));
+            const question = state.question;
+            const prompt = this.renderer.renderPrompt(question, (0, setup_questionnaire_policy_1.setupQuestionnaireProgress)(state, currentContext));
+            const selectable = question.kind === 'multi-select' || question.kind === 'project-select';
+            const choices = selectable ? choicesForQuestion(question) : [];
+            const selected = question.kind === 'project-select' && pendingProjectSelection
+                ? pendingProjectSelection : parseSelectedDefaults(question.defaultValue);
+            let input = selectable && this.terminal.readMultiSelect
+                ? await this.terminal.readMultiSelect(prompt, choices, selected, this.renderer.renderHelp(question))
+                : await this.terminal.readText(selectable ? textChoicePrompt(prompt, choices, selected) : prompt);
+            if (selectable && input.kind === 'value' && !input.value.trim()) {
+                input = { kind: 'value', value: selected.join(',') || 'none' };
+            }
             if (state.question.kind === 'project-select' && input.kind === 'value' && input.value.split(',').includes('manual')
                 && !input.value.split(',').includes('retry')) {
                 const manual = await this.terminal.readText('Enter additional Project numbers or GitHub URLs, comma-separated (empty adds none): ');
@@ -57505,6 +57511,19 @@ class SetupQuestionnaireController {
     }
 }
 exports.SetupQuestionnaireController = SetupQuestionnaireController;
+function choicesForQuestion(question) {
+    return question.kind === 'project-select'
+        ? [...(question.projectCandidates ?? []).map(candidate => `${candidate.number} — ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(candidate.title)} (${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(candidate.url)})`),
+            'manual — Enter Project number or URL',
+            ...(question.discoveryRetryRemaining ? ['retry — Retry GitHub Project discovery'] : [])]
+        : question.choices ?? [];
+}
+function textChoicePrompt(prompt, choices, selected) {
+    return [prompt, 'Available IDs:', ...choices.map(choice => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(choice)}`),
+        `Current selection: ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(selected.join(', ') || 'none')}`,
+        'Enter IDs shown before “—”, separated by commas; use manual or retry when offered, none to clear, or Enter to keep the default: ',
+    ].join('\n');
+}
 function parseSelectedDefaults(value) {
     return typeof value === 'string' ? value.split(',').map(item => item.trim()).filter(Boolean) : [];
 }
@@ -69257,7 +69276,7 @@ class ConsoleSetupQuestionRenderer {
             return [heading, ...lines, `Select 1-${choices.length} ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(String(question.defaultValue)) + 1}]`, 90)}: `].join('\n');
         }
         if (question.kind === 'multi-select') {
-            return [heading, 'Use ↑/↓ and Space to toggle; Enter to confirm. Press ? for help or B for the previous question.'].join('\n');
+            return [heading, 'Choose from the options below. In a selector use ↑/↓ and Space; in text mode enter IDs separated by commas. Enter confirms; ? shows help and B goes back.'].join('\n');
         }
         if (question.kind === 'producer-select') {
             const choices = question.producerCandidates ?? [];
@@ -69269,8 +69288,8 @@ class ConsoleSetupQuestionRenderer {
         }
         if (question.kind === 'project-select') {
             return [heading,
-                'Use ↑/↓ and Space to choose Projects; B returns to the previous question. Their numbers come from the GitHub URL, not PVT_ node IDs.',
-                'Select "Manual entry" if a Project is missing. Select "Retry" to query GitHub again without restarting setup.',
+                'Choose Projects from the list below. In a selector use ↑/↓ and Space; in text mode enter their URL numbers separated by commas. B returns to the previous question.',
+                'Project numbers come from GitHub URLs, not PVT_ node IDs. Use manual if a Project is missing, or retry to query GitHub again without restarting setup.',
                 'All selected Projects must share each chosen Status value; this setup cannot map different values per Project.'].join('\n');
         }
         if (question.kind === 'scope-overrides' && question.allowedNames?.length) {
@@ -69617,7 +69636,11 @@ class NodeTerminalDriver {
             return { kind: 'end-of-input' };
         const input = node_process_1.stdin;
         if (!input.setRawMode) {
-            return this.readText(`${prompt}\nEnter comma-separated IDs (or "all"): `);
+            return this.readText([prompt, 'Available IDs:',
+                ...choices.map(choice => `  ${safeTerminalChoiceText(choice)}`),
+                `Current selection: ${safeTerminalChoiceText(selected.join(', ') || 'none')}`,
+                'Enter IDs shown before “—”, separated by commas; use manual or retry when offered, none to clear, or Enter to keep the default: ',
+            ].join('\n'));
         }
         node_process_1.stdout.write(`${prompt}\n`);
         input.setRawMode(true);
