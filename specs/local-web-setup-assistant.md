@@ -905,7 +905,7 @@ application coordinator and full UI/accessibility acceptance gates.
 
 These facts are **not** release acceptance. The orchestration in
 `src/cli/commands/setup.ts` still needs extraction into the prescribed
-application-level session coordinator; the 102-case budget, full human
+application-level session coordinator; the 103-case budget, full human
 cross-platform/accessibility review, exact per-resource progress/partial
 evidence, and adversarial concurrency/idle/crash suite remain open. The
 catalog stays `proposed` until the definition of done is evidenced. Existing
@@ -924,7 +924,7 @@ empty issue-workflow selection, drift, cancellation, and package isolation.
 Typecheck, lint, Svelte diagnostics, full build, catalog, documentation,
 workflow, npm-package validation, and package smoke checks passed without
 real PATs or setup dogfooding. Human browser/accessibility and cross-platform
-review, the formal 102-case-by-area acceptance mapping, and the complete
+review, the formal 103-case-by-area acceptance mapping, and the complete
 application-level session coordinator remain open release gates. The generated
 bundle synchronization check runs after the source/build commit is staged.
 
@@ -950,7 +950,7 @@ bundle synchronization check runs after the source/build commit is staged.
       application decision engine with enforceable dependency rules.
 - [ ] Local HTTP, controller, PAT, plan revision, and Apply defenses pass the
       adversarial/security budget with no secret in browser storage or logs.
-- [ ] All 102 distinct new web cases by area pass without real PATs or
+- [ ] All 103 distinct new web cases by area pass without real PATs or
       dogfooding; the repository and changed-module coverage thresholds
       already pass for the current implementation slice.
 - [ ] Global npm-pack install serves complete local assets; Action/API bundles
