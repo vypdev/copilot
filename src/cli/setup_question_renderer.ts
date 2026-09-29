@@ -135,7 +135,7 @@ function discoveryNote(question: SetupQuestion): string {
   };
   const project: Record<string, string> = {
     observed: 'Existing organization Projects are listed below. Inspect each GitHub URL before selecting it.',
-    empty: 'The bounded GitHub query returned no accessible Projects; this does not prove none exist. Check organization access or enter a verified number manually.',
+    empty: 'The bounded GitHub query returned no open, accessible Projects; this does not prove none exist. Check organization access or enter a verified number manually.',
     'permission-denied': 'GitHub denied Project discovery. Check organization Projects: read on the setup PAT, or enter numbers manually.',
     unavailable: 'Project discovery failed; this does not mean no Projects exist. Use a verified number or retry.',
     unsupported: 'Fine-grained PATs cannot list personal Projects through this GitHub API. Use the number in an existing Project URL.',
@@ -143,7 +143,7 @@ function discoveryNote(question: SetupQuestion): string {
   const note = question.id === 'projects.ids' ? project[status] : check[status];
   const sample = status === 'observed' || status === 'empty' || status === 'no-recent-runs' || status === 'no-verifiable-checks'
     ? question.id === 'projects.ids'
-      ? '\n  Search scope: at most 30 accessible organization Projects from two pages; up to 100 fields per Project.'
+      ? '\n  Search scope: at most 30 open, accessible organization Projects from two pages; up to 100 fields per Project. Closed Projects are excluded.'
       : '\n  Search scope: up to 20 recent PR workflow runs; at most 15 runs and 100 checks per commit are inspected.'
     : '';
   return note ? `\n  ${note}${sample}${question.discoveryTruncated ? '\n  Only a bounded sample was inspected; use manual entry for missing items.' : ''}${question.discoveryRetryRemaining ? `\n  Type r to retry GitHub discovery (${question.discoveryRetryRemaining} read-only attempts left).` : ''}` : '';

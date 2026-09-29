@@ -869,6 +869,10 @@ organization `Projects: read` for discovery. Setup only reads Projects and
 stores their selected numbers/Status names in repository configuration, so its
 PAT does not need `Projects: write`. The separate runtime bot PAT needs
 `Projects: write` when automation later updates Project items.
+The discovery adapter MUST exclude Projects whose `closed_at` is non-null
+(and any row explicitly marked `state: closed`); the UI and CLI state that
+only open, accessible Projects are suggested. A closed Project must not be
+offered as an active automation target.
 Personal-owner REST listing does not accept a fine-grained PAT, so the UI
 explicitly says discovery is unsupported and offers validated manual entry.
 Network failure, permission denial, no accessible Projects, and a genuinely

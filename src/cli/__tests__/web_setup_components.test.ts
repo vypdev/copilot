@@ -147,7 +147,8 @@ describe('web setup component semantics', () => {
     expect(checkNotice).toContain('20 recent pull-request workflow runs');
     expect(checkNotice).toContain('15 runs');
     const projectNotice = markup('DiscoveryNotice', { kind: 'projects', status: 'observed' }, 'en');
-    expect(projectNotice).toContain('30 accessible organization Projects');
+    expect(projectNotice).toContain('30 open, accessible organization Projects');
+    expect(projectNotice).toContain('Closed Projects are excluded');
     const unsupported = markup('QuestionPrompt', { prompt: { kind: 'question', title: 'Projects', phase: 'full', pass: 1,
       question: { stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '',
         discoveryStatus: 'unsupported', projectCandidates: [], projectOwner: 'owner' } }, controller: true, busy: false }, 'en');

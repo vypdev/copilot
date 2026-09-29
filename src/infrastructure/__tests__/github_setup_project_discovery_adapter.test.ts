@@ -16,7 +16,7 @@ describe('GitHub setup Project discovery', () => {
   test('lists existing organization Projects and reads their Status options without writes', async () => {
     const request = jest.fn().mockImplementation(async (route: string) => route.endsWith('/fields')
       ? { data: [{ name: 'Status', data_type: 'single_select', options: [{ name: { raw: 'Todo' } }, { name: { raw: 'In Progress' } }] }], headers: {} }
-      : { data: [{ number: 5, title: 'Roadmap', state: 'open' }], headers: {} });
+      : { data: [{ number: 5, title: 'Roadmap', state: 'open', closed_at: null }], headers: {} });
     arrange(request);
     expect(await adapter.discover(owner, 'Organization', 'secret')).toEqual({ status: 'observed', candidates: [{
       number: 5, title: 'Roadmap', owner, url: 'https://github.com/orgs/acme/projects/5', statusOptions: ['Todo', 'In Progress'],
@@ -54,8 +54,10 @@ describe('GitHub setup Project discovery', () => {
 
   test('ignores closed, malformed and unsafe Project rows', async () => {
     arrange(jest.fn().mockResolvedValue({ data: [
-      { number: 1, title: 'Closed', state: 'closed' }, { number: 0, title: 'Zero' },
-      { number: 2, title: '<script>' }, { number: 3, title: 'Safe' },
+      { number: 1, title: 'Closed', state: 'closed' },
+      { number: 4, title: 'Closed by date', closed_at: '2026-09-29T10:00:00Z' },
+      { number: 0, title: 'Zero' }, { number: 2, title: '<script>' },
+      { number: 3, title: 'Safe', closed_at: null },
     ], headers: {} }));
     const result = await adapter.discover(owner, 'Organization', 'secret');
     expect(result.candidates.map(candidate => candidate.number)).toEqual([3]);

@@ -46,12 +46,13 @@ Linking issues to **GitHub Project** boards requires a **Personal Access Token (
 
 During guided setup, first choose whether Projects integration is needed. That
 lets the setup PAT request organization **Projects: read**; the assistant can
-then list accessible Projects for selection. If discovery is unavailable, enter
+then list open, accessible Projects for selection; closed Projects are excluded.
+If discovery is unavailable, enter
 the Project URL or number manually and confirm the account and Status options
 in GitHub. The workflow's bot PAT separately needs Projects **read and write**.
 Use **Retry GitHub discovery** (or `r` in the CLI) to query again without
 restarting setup; this is read-only and does not ask for another PAT. A list
-with no entries means no *accessible* Projects were returned by the bounded
+with no entries means no *open, accessible* Projects were returned by the bounded
 query, not that the organization definitely has none. Check the setup PAT's
 organization `Projects: read` grant and the Project owner, then use a verified
 number or URL if the Project still does not appear. Personal-owner Projects

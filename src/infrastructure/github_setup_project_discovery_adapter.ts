@@ -2,7 +2,7 @@ import * as github from '@actions/github';
 import type { SetupProjectDiscoveryPort } from '../application/ports/setup_project_discovery_port';
 import type { SetupDiscoveryResult, SetupProjectCandidate } from '../domain/setup_questionnaire';
 
-interface ProjectRow { number?: number; title?: string; state?: string }
+interface ProjectRow { number?: number; title?: string; state?: string; closed_at?: string | null }
 interface FieldRow { name?: string; data_type?: string; options?: { name?: { raw?: string } | string }[] }
 
 /** Bounded, read-only organization Project inventory; personal fine-grained PATs cannot use GitHub's user REST listing. */
@@ -20,7 +20,7 @@ export class GithubSetupProjectDiscoveryAdapter implements SetupProjectDiscovery
           org: owner, per_page: 50, ...(after ? { after } : {}),
         });
         for (const row of response.data as ProjectRow[]) {
-          if (!Number.isSafeInteger(row.number) || Number(row.number) < 1 || row.state === 'closed'
+          if (!Number.isSafeInteger(row.number) || Number(row.number) < 1 || row.state === 'closed' || row.closed_at != null
             || typeof row.title !== 'string' || !safeDisplayText(row.title)) continue;
           const number = Number(row.number);
           candidates.push({ number, title: row.title!, owner,
