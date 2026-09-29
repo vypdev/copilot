@@ -7,6 +7,7 @@ import type { BoundSetupWorkspacePort } from '../../ports/setup_workspace_ports'
 import { ParamUseCase } from '../base/param_usecase';
 import { runInitialSetupWorkflow } from './initial_setup_workflow';
 import type { InitialSetupContext } from '../push_single_action_contexts';
+import type { SetupOperationEffect } from '../../../domain/setup';
 import type {
     BoundSetupRemoteConfigurationReadPort,
     BoundSetupRepositorySecretsCommandPort,
@@ -28,6 +29,7 @@ export class InitialSetupUseCase implements ParamUseCase<InitialSetupContext, Re
         private readonly setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort,
         private readonly setupRepositorySecretsPort?: BoundSetupRepositorySecretsCommandPort,
         private readonly setupRemoteConfigurationReadPort?: BoundSetupRemoteConfigurationReadPort,
+        private readonly progress?: (effect: SetupOperationEffect) => void,
     ) {}
 
     async invoke(param: InitialSetupContext): Promise<Result[]> {
@@ -42,6 +44,7 @@ export class InitialSetupUseCase implements ParamUseCase<InitialSetupContext, Re
             setupRepositoryVariablesPort: this.setupRepositoryVariablesPort,
             setupRepositorySecretsPort: this.setupRepositorySecretsPort,
             setupRemoteConfigurationReadPort: this.setupRemoteConfigurationReadPort,
+            progress: this.progress,
         });
     }
 }

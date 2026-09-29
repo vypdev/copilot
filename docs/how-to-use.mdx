@@ -68,6 +68,11 @@ already deleted the setup PAT in GitHub, run `copilot doctor --read-only`
 with a valid setup PAT instead. A failed or partial Apply does
 not offer this button: inspect the itemized result and use the CLI command
 after resolving the uncertain resources.
+While Apply runs, the page reports each resource as in progress and then as
+completed, skipped, or needing inspection. If the process stops mid-write,
+the operation may already have reached GitHub; inspect that resource before
+starting a new setup session. A new process always requires a fresh review
+and approval.
 The language selector starts in English and offers Spanish, French, and
 Portuguese. Switching language does not change the repository locale or reset
 your answers. Question headings, explanations, options, permission details,

@@ -103,6 +103,6 @@ export interface WebSetupView {
     readonly stoppedStage: string;
     readonly mutationStarted: boolean;
     readonly diagnosticRef?: string;
-    readonly effects?: readonly { readonly id: string; readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started'; readonly scope?: 'local' | 'repository' | 'organization' | 'mixed' }[];
+    readonly effects?: readonly { readonly id: string; readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started' | 'in-progress'; readonly scope?: 'local' | 'repository' | 'organization' | 'mixed' }[];
   };
 }

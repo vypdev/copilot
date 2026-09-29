@@ -3,10 +3,10 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-09-29 (source/build tests and screenshot review; no live GitHub setup or dogfooding)
+- Last verified: 2026-09-30 (PR #402 merge baseline; follow-up evidence is recorded below, with no live GitHub setup or dogfooding)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
-- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402) carries this implementation alongside the earlier guided PAT work; no test issue or Action is created
+- Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
 - Required review gates: product UX, Clean Architecture, browser/loopback security, credential handling, packaging, cross-platform operation, accessibility, testing, documentation
 - Open decisions blocking readiness: none at the product-contract level; implementation MUST still pass the security and packaged-install review gates below
 
@@ -442,6 +442,20 @@ single-flight and cannot be entered if the approval use case did not return an
 approved result. Deterministic fake-port tests cover every drift category,
 cancel/expiry interleavings, and audit outcomes.
 
+The follow-up extraction MUST introduce a frontend-neutral application session
+coordinator that owns the order and terminal classification of repository
+confirmation, choice collection, operator PAT verification, plan review,
+credential collection, final authorization, Apply, and result recording.
+Its ports express these semantic operations and emit immutable progress facts;
+CLI and web composition supply existing use cases and presentation adapters.
+The coordinator MUST own cancellation checks before every external operation,
+the single-flight Apply transition, and the distinction between a failure
+before any possible write and an ambiguous or confirmed partial write. Moving
+the command body into a different infrastructure file without these decisions
+in application is not an acceptable extraction. The CLI command retains flag
+parsing, dependency composition, exit-code adaptation, and terminal cleanup.
+The browser retains HTTP/capability validation and redacted rendering.
+
 The pre-PAT permission-intent review is likewise an application use case:
 it owns questionnaire transitions, owner-kind conflict checks, provisional
 grant calculation, review passes, and guided-link eligibility. Terminal and
@@ -537,6 +551,18 @@ Both terminal and web routes use the same questionnaire parser for this choice.
   browser uses bounded polling or server events for **read-only** progress;
   reconnecting to the same live process retrieves redacted current state,
   not secret values or an implicit retry.
+- Progress is an ordered, append-only sequence of semantic stage and resource
+  transitions. A resource receipt has a stable ID, scope, and one of
+  `not-started`, `in-progress`, `completed`, `skipped`, or `needs-inspection`.
+  `needs-inspection` covers a request whose remote effect cannot be proven,
+  including process exit during an in-flight write; it MUST never be presented
+  as rollback. A bounded public view may project this ledger but may not
+  infer completion from an attempted call. Cancellation before Apply records
+  no resource writes. Cancellation after mutation begins is rejected and the
+  running operation reports its eventual receipt. Expiry and process exit
+  dispose in-memory authority; after process exit a new invocation begins a
+  fresh review, never a resumed approval. The operator uses existing GitHub
+  and local evidence to inspect ambiguous effects before retrying.
 
 ### 8.3 Executable architecture and packaging constraints
 
@@ -1325,6 +1351,51 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | Security/abuse | 28 | forged links, stale revisions/controller takeover, PAT exclusion, permissions and least-privilege fallback |
 | **Total** | **350** | No double counting |
 
+The acceptance ledger is [`local-web-setup-assistant-acceptance.json`](./local-web-setup-assistant-acceptance.json).
+It MUST contain one row per ID below with an observable assertion, the
+automated test or explicit human evidence, and `pass`/`open` status. Ranges
+partition the 350 cases; a Jest count alone cannot close an ID. A human row
+remains open until a reviewer records browser/OS, viewport or zoom, assistive
+technology where relevant, locale, date, and observed result. Each automated
+row must identify a focused assertion or table case; one test cannot be used
+as evidence for unrelated rows.
+
+| IDs | Cases | Acceptance family |
+|---|---:|---|
+| P001–P012 | 12 | choice normalization and bounded configuration |
+| P013–P022 | 10 | dependent invalidation and revision |
+| P023–P032 | 10 | grant/role derivation and final audit |
+| P033–P042 | 10 | plan and resource projection |
+| P043–P048 | 6 | Project Status compatibility |
+| S001–S010 | 10 | stage order and terminal outcomes |
+| S011–S020 | 10 | edit, replay, revision and controller ownership |
+| S021–S028 | 8 | PAT identity and permission transitions |
+| S029–S038 | 10 | concurrent Apply and stale authorization |
+| S039–S046 | 8 | cancellation, idle expiry and process exit |
+| S047–S054 | 8 | resource progress, partial receipt and retry guidance |
+| A001–A010 | 10 | bounded GitHub discovery |
+| A011–A018 | 8 | resource inventory and scope |
+| A019–A030 | 12 | HTTP status, provider errors and retry |
+| A031–A040 | 10 | checkout and remote drift |
+| C001–C009 | 9 | CLI flags, help and unattended compatibility |
+| C010–C017 | 8 | CLI progress and result wording |
+| C018–C027 | 10 | packaged npm install and asset parity |
+| C028–C037 | 10 | workflow/bundle/architecture isolation |
+| U001–U040 | 40 | four-language semantic copy and options |
+| U041–U054 | 14 | seven terminal views in light and dark |
+| U055–U074 | 20 | prompt, progress, input and focus interaction |
+| U075–U094 | 20 | keyboard, screen reader, 200% zoom and responsive review |
+| U095–U101 | 7 | untrusted text/link rendering |
+| I001–I012 | 12 | CLI/web parity on the same semantic fixtures |
+| I013–I020 | 8 | reconnect and answer replay |
+| I021–I028 | 8 | partial recovery and doctor isolation |
+| I029–I036 | 8 | config and package compatibility |
+| I037–I042 | 6 | macOS, Linux and Windows launch/fallback |
+| X001–X008 | 8 | pairing, Host, Origin and cooldown |
+| X009–X016 | 8 | controller, CSRF, revision and idempotency |
+| X017–X022 | 6 | PAT redaction, lifetime and role separation |
+| X023–X028 | 6 | path, symlink, asset and local-only boundaries |
+
 Within the 101 UI cases, cover at least one render/interaction for each prompt
 presenter, one revision-change form reset, secret clearing before dispatch,
 read-only disabling, all outcome variants, and both theme palettes. Static
@@ -1497,6 +1568,7 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 | Accessible truthful UX (§9) | Svelte presenter + message catalog | scenarios 5–7, 10–11, 13–14 | how-to-use, troubleshooting |
 | Complete question help and links (§9.3–9.5) | application semantic help catalog + English CLI renderer + four-language web presenter | scenarios 17–20; exhaustive ID/link/locale gates | how-to-use, configuration, authentication, agents |
 | First-run completion (§9.6) | pure questionnaire/evidence policies, application session/edit/receipt use cases, read-only provider ports, CLI/web presenters | scenarios 21–28; 76 added risk-derived cases plus human first-use review | how-to-use, authentication, troubleshooting, configuration |
+| Human acceptance review | [`docs/development/setup-assistant-review.mdx`](../docs/development/setup-assistant-review.mdx) | fixture-only seven-state, four-language, accessibility and platform checklist | acceptance ledger `U041–U054`, `U075–U094`, `I037–I042` |
 
 ## 18. Implementation sequence and current evidence
 
@@ -1523,8 +1595,8 @@ answer normalization, allowlisted links, and revision/capability transport.
 This decomposition is an implementation slice, not evidence of the still-open
 application coordinator and full UI/accessibility acceptance gates.
 
-These facts are **not** release acceptance. The orchestration in
-`src/cli/commands/setup.ts` still needs extraction into the prescribed
+These 2026-09-29 facts are **not** release acceptance. The orchestration in
+`src/cli/commands/setup.ts` still needed extraction into the prescribed
       application-level session coordinator; the revised 350-case budget, full human
 cross-platform/accessibility review, exact per-resource progress/partial
 evidence, and adversarial concurrency/idle/crash suite remain open. The
@@ -1620,8 +1692,9 @@ These measurements do **not** close independent linguistic, keyboard/screen-
 reader, 200%-zoom, dark/light, real-browser/cross-platform, or full 350-case
 acceptance review. A disk-persisted resume remains a separately specified
 future capability; this slice supports reconnecting to a live session only.
-The CLI orchestration has not yet been extracted into the prescribed
-frontend-neutral coordinator. Until these gates are evidenced, the catalog
+At the 2026-09-29 baseline, the CLI orchestration had not yet been extracted
+into the prescribed frontend-neutral coordinator. Until the remaining gates
+are evidenced, the catalog
 remains `proposed` and the non-English browser notice remains a translation
 preview, not an unconditional release-quality claim.
 
@@ -1642,6 +1715,41 @@ A final pairing follow-up shares one client-side validity predicate between
 button state and form submission, so Enter cannot consume invalid attempts or
 bypass a busy state. Structural tests cover accepted hex input, incomplete and
 non-hex input, and the busy state. Server-side rate limiting remains authoritative.
+
+The 2026-09-30 follow-up adds `SetupSessionCoordinator` in the application
+layer and has both CLI and web invocation use the same ordered semantic
+phase ports. The command now registers flags and delegates execution;
+separate composition modules handle pre-PAT presentation, web Apply adapters,
+and terminal outcome wording. Fake-port tests cover once-only execution,
+ordered stages, stale/cancelled/expired approval, concurrent calls, and
+partial classification after a possible write. The provisioning workflow
+emits value-free `in-progress` and terminal resource transitions; the browser
+displays them while Apply runs and conservatively changes an interrupted
+in-progress state to `needs-inspection`. The final structured receipt remains
+the result authority. Empty action results no longer count as success.
+
+The 350-row acceptance ledger records distinct assertions and exact test
+names or an explicit human checklist. The ledger validator checks the ID
+partition, uniqueness, evidence paths, exact passing Jest titles from the
+coverage run, and prevents an unevidenced human `pass`. The 2026-09-30 local
+run passed 510 suites and 5,734 tests. Overall coverage was 96.19%
+statements, 91.36% branches, 96.88% functions, and 97.49% lines; all
+configured module budgets passed. The ledger records **310 passed and 40
+open**, with every open row requiring direct human observation. Production
+build, Svelte check, typecheck, lint, workflow, documentation and catalog
+validators passed; an isolated npm tarball passed content and executable/API
+smoke checks. Browser inspection of the pending and partial fixtures caught
+and corrected four-language result copy that falsely said Apply had not
+started despite an uncertain Secret receipt. The four-language regression
+passed, but this limited inspection does not certify the full UI review.
+Linux and Windows CI fixture jobs exercise build, typecheck, local
+server, session guard, snapshot, and coordinator behavior; Linux also checks
+the isolated npm package. These jobs are coverage opportunities, not evidence
+of a real-browser or global-install review until their checks run. Human
+keyboard/screen-reader, 200%-zoom, light/dark, linguistic, and cross-platform
+launch/fallback observations remain explicitly open. The catalog remains
+`proposed`; neither source tests nor an unreviewed CI configuration imply
+release readiness.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

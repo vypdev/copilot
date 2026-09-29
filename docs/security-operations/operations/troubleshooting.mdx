@@ -28,14 +28,21 @@ not imply a setup failure: open the exact `127.0.0.1` URL printed by the CLI.
 Enter the terminal's 16-character pairing code in the page; after a refresh,
 enter it again. Do not share the code. TCP loopback can be reached by other
 local OS users; the code, not the public URL or OS-user identification, grants
-access to this setup session. After five wrong codes, restart setup.
+access to this setup session. After five wrong codes, pairing and takeover
+pause for 30 seconds; wait, then retry the code printed by the launcher.
 If the local bind or bundled assets fail, stop and use `copilot setup` in the
 terminal. A second browser tab is read-only until you select **Take control
 in this tab**; the former tab then cannot submit decisions. A rejected stale
 answer means the page should refresh to the current decision, not replay it.
-If the page closes during Apply, inspect the terminal result and run
-`copilot doctor` before retrying; do not assume that completed local or remote
-writes were rolled back. No local session shutdown revokes a PAT in GitHub.
+If the page closes during Apply, reopen it and pair with the launching
+terminal's code while that process is alive. The per-resource progress view
+shows completed, skipped, in-progress, and uncertain operations. If the
+process exits during a write, treat its result as needing inspection: check
+the local checkout and corresponding GitHub resource names/scopes, then run
+`copilot doctor --read-only` with a valid setup PAT before retrying. The
+previous approval and secrets are not restored by a new process. Completed
+local or remote writes are not rolled back. No local session shutdown revokes
+a PAT in GitHub.
 
 If setup reports a lock belonging to a stopped process, it will not delete
 that lock automatically: another setup could have acquired the same path in

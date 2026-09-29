@@ -81,6 +81,19 @@ describe('web setup component semantics', () => {
     expect(html).toContain('12345678-1234-4123-8123-123456789abc');
   });
 
+  test.each([
+    ['en', 'which changes completed', 'before Apply'],
+    ['es', 'qué cambios se completaron', 'antes de aplicar cambios'],
+    ['fr', 'modifications effectuées', 'avant l’application'],
+    ['pt', 'quais alterações foram concluídas', 'antes de aplicar'],
+  ])('%s partial result with unknown cause does not claim Apply never started', (locale, expected, falseClaim) => {
+    const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
+      detail: { reasonCode: 'unknown', stoppedStage: 'Apply', mutationStarted: true,
+        effects: [{ id: 'secrets', state: 'needs-inspection', scope: 'repository' }] } }, locale);
+    expect(html).toContain(expected);
+    expect(html).not.toContain(falseClaim);
+  });
+
   test('French technical question guidance is complete, not a mixed-language preview', () => {
     const question: SetupQuestion = { stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
       label: 'Trusted checks', kind: 'text', defaultValue: '' };

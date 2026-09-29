@@ -37603,7 +37603,7 @@ const main_run_lifecycle_1 = __nccwpck_require__(916);
 const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
 const application_error_1 = __nccwpck_require__(75999);
 const issue_start_policy_1 = __nccwpck_require__(90332);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -37640,7 +37640,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message)];
     }
     await prepareRuntime?.(execution);
-    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface);
+    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress);
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
@@ -37998,7 +37998,7 @@ async function runLocalAction(additionalParams, options = {}) {
             owner: execution.owner,
             repository: execution.repo,
             token: execution.tokens.token,
-        }));
+        }), undefined, options.onSetupProgress);
         if (options.render !== false) {
             const catalog = await (0, publication_message_catalog_1.resolvePublicationCatalog)(execution.locale.repository, execution.ai.getAgentConfiguration('planner'), composition.catalogResolver);
             (0, local_action_output_1.renderLocalActionResults)(results, catalog);
@@ -52160,7 +52160,7 @@ exports.InitialSetupUseCase = void 0;
 const initial_setup_workflow_1 = __nccwpck_require__(18079);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
-    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
+    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort, progress) {
         this.authenticatedUserPort = authenticatedUserPort;
         this.initialLabelProvisioningPort = initialLabelProvisioningPort;
         this.issueTypeProvisioningPort = issueTypeProvisioningPort;
@@ -52171,6 +52171,7 @@ class InitialSetupUseCase {
         this.setupRepositoryVariablesPort = setupRepositoryVariablesPort;
         this.setupRepositorySecretsPort = setupRepositorySecretsPort;
         this.setupRemoteConfigurationReadPort = setupRemoteConfigurationReadPort;
+        this.progress = progress;
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
@@ -52185,6 +52186,7 @@ class InitialSetupUseCase {
             setupRepositoryVariablesPort: this.setupRepositoryVariablesPort,
             setupRepositorySecretsPort: this.setupRepositorySecretsPort,
             setupRemoteConfigurationReadPort: this.setupRemoteConfigurationReadPort,
+            progress: this.progress,
         });
     }
 }
@@ -52226,8 +52228,13 @@ async function runInitialSetupWorkflow(request, dependencies) {
     const mark = (id, state) => {
         const index = effects.findIndex(effect => effect.id === id);
         effects[index] = { ...effects[index], state };
+        try {
+            dependencies.progress?.(Object.freeze({ ...effects[index] }));
+        }
+        catch { /* Presentation observers cannot abort provisioning. */ }
     };
-    const receipt = () => buildResult(errors, steps, effects);
+    const receipt = () => buildResult(errors, steps, effects.map(effect => effect.state === 'in-progress'
+        ? { ...effect, state: 'needs-inspection' } : effect));
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken()) {
@@ -52285,12 +52292,12 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
-        mark('files', 'needs-inspection');
+        mark('files', 'in-progress');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
-            mark('secrets', 'needs-inspection');
+            mark('secrets', 'in-progress');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step)
@@ -52298,7 +52305,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (secrets.errors.length > 0)
             errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
-        mark('labels', 'needs-inspection');
+        mark('labels', 'in-progress');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
         mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
             ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
@@ -52310,7 +52317,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             appendLabelSummary(steps, errors, labels.progress, 'Progress labels');
         }
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
-        mark('issue-types', 'needs-inspection');
+        mark('issue-types', 'in-progress');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
         mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
@@ -52320,7 +52327,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
         if (setupConfiguration?.manageRepositoryVariables)
-            mark('variables', 'needs-inspection');
+            mark('variables', 'in-progress');
         const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
@@ -52328,7 +52335,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (variables.errors.length > 0)
             errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
         if (setupConfiguration?.createInitialTag !== false)
-            mark('initial-tag', 'needs-inspection');
+            mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
             : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
@@ -57562,6 +57569,106 @@ function parseSelectedDefaults(value) {
 function toEvent(input) {
     return input.kind === 'value' ? { kind: 'answer', value: input.value } : input;
 }
+
+
+/***/ }),
+
+/***/ 70102:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupSessionCoordinator = void 0;
+/** Owns cross-frontend stage order, the write boundary and conservative outcomes. */
+class SetupSessionCoordinator {
+    constructor(ports) {
+        this.ports = ports;
+        this.running = false;
+        this.finished = false;
+        this.mutationStarted = false;
+        this.stage = 'repository';
+        this.effects = new Map();
+    }
+    async execute() {
+        if (this.running || this.finished)
+            throw new Error('Setup session can run only once.');
+        this.running = true;
+        try {
+            const stages = [
+                ['repository', this.ports.repository],
+                ['choices', this.ports.choices],
+                ['setup-pat', this.ports.setupPat],
+                ['plan', this.ports.plan],
+                ['credentials', () => this.ports.credentials(() => this.markPossibleMutation())],
+                ['apply', this.ports.authorizeApply],
+            ];
+            for (const [stage, operation] of stages) {
+                this.stage = stage;
+                this.ports.present(stage, this.mutationStarted);
+                const before = this.liveOutcome();
+                if (before)
+                    return this.finish(before);
+                const decision = await operation();
+                const after = this.liveOutcome();
+                if (after)
+                    return this.finish(after);
+                if (decision !== 'continue')
+                    return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+            }
+            // The authorization operation must finish while the live session is active.
+            // The mutation marker is set before entering the provider boundary: a
+            // rejected/unknown request can already have reached GitHub.
+            this.markPossibleMutation();
+            const receipt = await this.ports.apply(effect => this.record(effect));
+            for (const effect of receipt.effects)
+                this.record(effect);
+            return this.finish(receipt.success && !this.hasUncertainEffect() ? 'complete' : 'partial');
+        }
+        catch (error) {
+            const cancelled = this.ports.isCancellationError(error) || this.ports.liveness() === 'cancelled';
+            return this.finish(this.mutationStarted ? 'partial' : cancelled ? 'cancelled' : 'blocked', error);
+        }
+        finally {
+            this.running = false;
+            this.finished = true;
+        }
+    }
+    liveOutcome() {
+        const state = this.ports.liveness();
+        if (state === 'active')
+            return undefined;
+        return this.mutationStarted ? 'partial' : state === 'cancelled' ? 'cancelled' : 'blocked';
+    }
+    markPossibleMutation() {
+        if (this.mutationStarted)
+            return;
+        this.mutationStarted = true;
+        this.ports.present(this.stage, true);
+    }
+    record(effect) {
+        const previous = this.effects.get(effect.id);
+        if (previous?.state === 'completed' && effect.state !== 'completed')
+            return;
+        this.effects.set(effect.id, Object.freeze({ ...effect }));
+    }
+    hasUncertainEffect() {
+        return [...this.effects.values()].some(effect => effect.state === 'needs-inspection' || effect.state === 'in-progress');
+    }
+    finish(outcome, error) {
+        // An interrupted in-flight write must not be reported as no change.
+        const finalOutcome = this.mutationStarted && (outcome === 'cancelled' || outcome === 'blocked'
+            || (outcome === 'complete' && this.hasUncertainEffect())) ? 'partial' : outcome;
+        for (const [id, effect] of this.effects) {
+            if (effect.state === 'in-progress')
+                this.effects.set(id, Object.freeze({ ...effect, state: 'needs-inspection' }));
+        }
+        this.ports.present(this.stage, this.mutationStarted, finalOutcome);
+        return { outcome: finalOutcome, mutationStarted: this.mutationStarted,
+            effects: [...this.effects.values()], ...(error === undefined ? {} : { error }) };
+    }
+}
+exports.SetupSessionCoordinator = SetupSessionCoordinator;
 
 
 /***/ }),
@@ -67455,48 +67562,9 @@ function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerSetupCommand = registerSetupCommand;
-const local_action_1 = __nccwpck_require__(76102);
 const product_identity_1 = __nccwpck_require__(18739);
-const setup_files_1 = __nccwpck_require__(59126);
-const logger_1 = __nccwpck_require__(91151);
-const cli_context_1 = __nccwpck_require__(21307);
-const setup_policy_1 = __nccwpck_require__(28732);
 const setup_command_options_1 = __nccwpck_require__(99254);
-const setup_1 = __nccwpck_require__(36888);
-const setup_configuration_plan_1 = __nccwpck_require__(87770);
-const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
-const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(60830);
-const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(23388);
-const setup_configuration_policy_1 = __nccwpck_require__(56637);
-const setup_token_permission_policy_1 = __nccwpck_require__(99590);
-const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
-const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
-const setup_workspace_adapter_1 = __nccwpck_require__(5729);
-const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
-const github_setup_approval_check_discovery_adapter_1 = __nccwpck_require__(42294);
-const github_setup_project_discovery_adapter_1 = __nccwpck_require__(29564);
-const application_error_1 = __nccwpck_require__(75999);
-const setup_terminal_driver_1 = __nccwpck_require__(5462);
-const setup_question_renderer_1 = __nccwpck_require__(89481);
-const setup_plan_presenter_1 = __nccwpck_require__(33441);
-const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
-const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
-const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
-const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
-const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
-const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
-const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
-const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
-const verify_web_setup_apply_use_case_1 = __nccwpck_require__(5303);
-const setup_journey_use_case_1 = __nccwpck_require__(8419);
-const setup_journey_policy_1 = __nccwpck_require__(53289);
-const setup_journey_presenter_1 = __nccwpck_require__(20462);
-const web_setup_bridge_1 = __nccwpck_require__(21518);
-const setup_apply_snapshot_1 = __nccwpck_require__(84136);
-const setup_session_guard_1 = __nccwpck_require__(53104);
-const web_setup_server_1 = __nccwpck_require__(63080);
-const web_setup_adapters_1 = __nccwpck_require__(60574);
-const setup_result_receipt_1 = __nccwpck_require__(44132);
+const setup_execution_1 = __nccwpck_require__(51293);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -67528,416 +67596,372 @@ function registerSetupCommand(program) {
         .option('--update-workflows', 'Allow setup-managed workflows already in the repository to be updated', false)
         .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
         .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', setup_command_options_1.collectSecret, {})
-        .action(async (options) => {
-        const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
-        const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
-        let webServer;
-        const credentialPrompt = webBridge ? new web_setup_adapters_1.WebSetupCredentialPrompt(webBridge) : new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
-            ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
-            ...options.secret,
-        }, Boolean(options.confirmUnverifiableWritePermissions));
-        const permissionPresenter = webBridge ? new web_setup_adapters_1.WebSetupPermissionPresenter(webBridge)
-            : new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
-        const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
-        const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
-        const cwd = process.cwd();
-        let setupMutationStarted = false;
-        let setupApplyStarted = false;
-        let releaseSetupGuard;
-        let journey;
-        try {
-            if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
-                || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
-                throw new application_error_1.ApplicationError('configuration.invalid', '--web cannot be combined with --non-interactive, --yes, --token, --workflow-pat, --secret, or --confirm-unverifiable-write-permissions. Use the browser for these decisions or run copilot setup in the terminal.');
-            }
-            (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
-            if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
-                (0, logger_1.logError)('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
-                process.exitCode = 1;
-                return;
-            }
-            (0, logger_1.logInfo)('✅ Git repository detected.');
-            (0, logger_1.logInfo)('🔗 Resolving repository (owner/repo)...');
-            const gitInfo = (0, cli_context_1.getGitInfo)();
-            if ('error' in gitInfo) {
-                (0, logger_1.logError)(gitInfo.error);
-                process.exitCode = 1;
-                return;
-            }
-            (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
-            const checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
-            if (webBridge && !(0, cli_context_1.isGitRepositoryRoot)(cwd)) {
-                throw new application_error_1.ApplicationError('configuration.invalid', `Web setup must start from the repository root (${checkoutRoot}). Change to that directory and rerun before creating PATs. No local setup session started.`);
-            }
-            releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
-            const initialBranch = webBridge ? (0, cli_context_1.getCurrentAttachedBranch)(cwd) : undefined;
-            const initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
-            if (webBridge && (!initialBranch || !initialHead)) {
-                throw new application_error_1.ApplicationError('configuration.invalid', 'An attached Git branch and revision are required for web setup. Check out a branch before creating PATs. No local setup session started.');
-            }
-            if (webBridge) {
-                webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
-                webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
-                webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
-                (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
-                (0, logger_1.logInfo)(`🔑 Browser pairing code: ${webServer.pairingCode}`, false, undefined, true);
-                (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer, then enter the pairing code shown above. The terminal setup remains available with copilot setup.');
-                (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
-            }
-            if (!options.nonInteractive) {
-                journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+        .action(setup_execution_1.executeSetupCommand);
+}
+
+
+/***/ }),
+
+/***/ 51293:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.executeSetupCommand = executeSetupCommand;
+const local_action_1 = __nccwpck_require__(76102);
+const setup_files_1 = __nccwpck_require__(59126);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const setup_policy_1 = __nccwpck_require__(28732);
+const setup_command_options_1 = __nccwpck_require__(99254);
+const setup_1 = __nccwpck_require__(36888);
+const setup_session_coordinator_1 = __nccwpck_require__(70102);
+const setup_configuration_plan_1 = __nccwpck_require__(87770);
+const setup_pat_intent_adapter_1 = __nccwpck_require__(67610);
+const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(60830);
+const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(23388);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const setup_credential_collection_1 = __nccwpck_require__(19469);
+const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
+const github_setup_approval_check_discovery_adapter_1 = __nccwpck_require__(42294);
+const github_setup_project_discovery_adapter_1 = __nccwpck_require__(29564);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_terminal_driver_1 = __nccwpck_require__(5462);
+const setup_question_renderer_1 = __nccwpck_require__(89481);
+const setup_plan_presenter_1 = __nccwpck_require__(33441);
+const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
+const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
+const setup_apply_authorization_1 = __nccwpck_require__(75885);
+const setup_journey_use_case_1 = __nccwpck_require__(8419);
+const setup_journey_policy_1 = __nccwpck_require__(53289);
+const setup_journey_presenter_1 = __nccwpck_require__(20462);
+const web_setup_bridge_1 = __nccwpck_require__(21518);
+const setup_apply_snapshot_1 = __nccwpck_require__(84136);
+const setup_session_guard_1 = __nccwpck_require__(53104);
+const web_setup_server_1 = __nccwpck_require__(63080);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
+const setup_result_receipt_1 = __nccwpck_require__(44132);
+const setup_outcome_adapter_1 = __nccwpck_require__(9961);
+async function executeSetupCommand(options) {
+    const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
+    const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
+    let webServer;
+    const credentialPrompt = webBridge ? new web_setup_adapters_1.WebSetupCredentialPrompt(webBridge) : new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
+        ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
+        ...options.secret,
+    }, Boolean(options.confirmUnverifiableWritePermissions));
+    const permissionPresenter = webBridge ? new web_setup_adapters_1.WebSetupPermissionPresenter(webBridge)
+        : new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
+    const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
+    const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
+    const cwd = process.cwd();
+    let setupMutationStarted = false;
+    let setupApplyStarted = false;
+    let releaseSetupGuard;
+    let journey;
+    let gitInfo;
+    let checkoutRoot = cwd;
+    let initialBranch;
+    let initialHead;
+    let overrides;
+    let presentationMode = 'custom';
+    let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
+    let token;
+    let setupPatAccount;
+    let permissionIntent;
+    let assertedOwnerKind;
+    let auditConfiguredSetupPat;
+    let remoteConfigurationReader;
+    let configuration;
+    let remoteConfiguration;
+    let guardedFiles;
+    let webApplySnapshot;
+    let approvedWorkflowFiles = [];
+    let credentialsCollection;
+    try {
+        const session = new setup_session_coordinator_1.SetupSessionCoordinator({
+            repository: async () => {
+                if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
+                    || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', '--web cannot be combined with --non-interactive, --yes, --token, --workflow-pat, --secret, or --confirm-unverifiable-write-permissions. Use the browser for these decisions or run copilot setup in the terminal.');
+                }
+                (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
+                if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
+                    (0, logger_1.logError)('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
+                    process.exitCode = 1;
+                    return 'blocked';
+                }
+                (0, logger_1.logInfo)('✅ Git repository detected.');
+                (0, logger_1.logInfo)('🔗 Resolving repository (owner/repo)...');
+                const resolvedGitInfo = (0, cli_context_1.getGitInfo)();
+                if ('error' in resolvedGitInfo) {
+                    (0, logger_1.logError)(resolvedGitInfo.error);
+                    process.exitCode = 1;
+                    return 'blocked';
+                }
+                gitInfo = resolvedGitInfo;
+                (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+                checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
+                if (webBridge && !(0, cli_context_1.isGitRepositoryRoot)(cwd)) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', `Web setup must start from the repository root (${checkoutRoot}). Change to that directory and rerun before creating PATs. No local setup session started.`);
+                }
+                releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
+                initialBranch = webBridge ? (0, cli_context_1.getCurrentAttachedBranch)(cwd) : undefined;
+                initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
+                if (webBridge && (!initialBranch || !initialHead)) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', 'An attached Git branch and revision are required for web setup. Check out a branch before creating PATs. No local setup session started.');
+                }
                 if (webBridge) {
-                    const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository', copyId: 'repository.confirm', copyValues: { repository: `${gitInfo.owner}/${gitInfo.repo}`, branch: initialBranch ?? '' },
-                        description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
-                        choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
-                    if (target === undefined)
-                        throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                    if (target !== 'Yes, this is my repository') {
-                        journey.finish('cancelled');
-                        return;
+                    webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
+                    webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
+                    webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
+                    (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
+                    (0, logger_1.logInfo)(`🔑 Browser pairing code: ${webServer.pairingCode}`, false, undefined, true);
+                    (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer, then enter the pairing code shown above. The terminal setup remains available with copilot setup.');
+                    (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
+                }
+                if (!options.nonInteractive) {
+                    journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+                    if (webBridge) {
+                        const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository', copyId: 'repository.confirm', copyValues: { repository: `${gitInfo.owner}/${gitInfo.repo}`, branch: initialBranch ?? '' },
+                            description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
+                            choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
+                        if (target === undefined)
+                            throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                        if (target !== 'Yes, this is my repository')
+                            return 'cancelled';
                     }
                 }
-                journey.advance('choices');
-            }
-            const overrides = (0, setup_command_options_1.loadSetupOverrides)(options);
-            let presentationMode = 'custom';
-            if (!options.nonInteractive && !options.dryRun) {
-                if (webBridge) {
-                    const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
-                        choices: ['Basic guided setup', 'Customize every setting'], defaultValue: 'Basic guided setup' });
-                    if (depth === undefined)
+                return 'continue';
+            },
+            choices: async () => {
+                overrides = (0, setup_command_options_1.loadSetupOverrides)(options);
+                if (!options.nonInteractive && !options.dryRun) {
+                    if (webBridge) {
+                        const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
+                            choices: ['Basic guided setup', 'Customize every setting'], defaultValue: 'Basic guided setup' });
+                        if (depth === undefined)
+                            throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                        presentationMode = depth === 'Basic guided setup' ? 'basic' : 'custom';
+                    }
+                    else if (credentialPrompt instanceof setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter) {
+                        presentationMode = await credentialPrompt.chooseSetupPresentationMode();
+                    }
+                }
+                token = (0, setup_files_1.getSetupToken)(cwd, options.token);
+                if (webBridge && token) {
+                    const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
+                        description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
+                        choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
+                    if (choice === undefined)
                         throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                    presentationMode = depth === 'Basic guided setup' ? 'basic' : 'custom';
+                    if (choice !== 'Use the environment PAT')
+                        token = undefined;
                 }
-                else if (credentialPrompt instanceof setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter) {
-                    presentationMode = await credentialPrompt.chooseSetupPresentationMode();
-                }
-            }
-            let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
-            let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
-            if (webBridge && token) {
-                const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
-                    description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
-                    choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
-                if (choice === undefined)
-                    throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                if (choice !== 'Use the environment PAT')
-                    token = undefined;
-            }
-            if (token || options.nonInteractive)
-                permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-            else
-                permissionPresenter.showRequirements('setup', setupPatPermissions);
-            let setupPatAccount;
-            let permissionIntent;
-            let assertedOwnerKind;
-            if (!token && !options.nonInteractive && !options.dryRun) {
-                if (await credentialPrompt.chooseSetupPatMethod() === 'guided') {
-                    const prepared = await new prepare_setup_pat_intent_use_case_1.PrepareSetupPatIntentUseCase({
-                        collect: (initial, context, pass) => (webBridge
-                            ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge, pass)
-                            : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', pass)))
-                            .collect(initial, context),
-                        chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
-                        review: () => credentialPrompt.reviewSetupPatIntent(),
-                        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass, projectsWanted }) => {
-                            if (ownerConflict)
-                                (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
-                            if (errors.length)
-                                (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${errors.map(item => `  - ${item}`).join('\n')}`);
-                            if (pass > 1)
-                                (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
-                            (0, logger_1.logInfo)('Permission intent:');
-                            (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
-                            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${projectsWanted ? 'yes (choose exact Projects after PAT)' : 'none'}`);
-                            webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${projectsWanted ? 'yes (choose after PAT)' : 'none'}.`, 'info', undefined, 'permission.preview', {
-                                issues: draft.features.issues ? draft.issueWorkflows.enabled.join('|') || 'none' : 'disabled',
-                                approval: draft.pullRequestApproval.mode,
-                                secrets: draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off',
-                                variables: draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off',
-                                projects: projectsWanted ? 'yes' : 'none',
-                            });
-                            permissionPresenter.showRequirements('setup', requirements);
-                            if (uncertain.length)
-                                (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
-                        },
-                        showDetails: requirements => permissionPresenter.showDetailedRequirements('setup', requirements),
-                        onManual: reason => {
-                            if (reason === 'owner-unknown')
-                                (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
-                            if (reason === 'unsupported')
-                                (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
-                            credentialPrompt.useManualSetupPat();
-                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-                        },
-                        advanceToSetupPat: () => { journey?.advance('setup-pat'); },
-                        revisitChoices: () => journey.revisitChoices(),
-                    }).execute({
+                if (token || options.nonInteractive)
+                    permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+                else
+                    permissionPresenter.showRequirements('setup', setupPatPermissions);
+                if (!token && !options.nonInteractive && !options.dryRun) {
+                    const intent = await (0, setup_pat_intent_adapter_1.collectSetupPatIntent)({
                         owner: gitInfo.owner, repository: gitInfo.repo, overrides,
                         skipRepositoryVariables: Boolean(options.skipVariables),
                         skipRepositorySecrets: Boolean(options.skipSecrets),
+                        terminal, bridge: webBridge, journey, credentialPrompt, permissionPresenter,
+                        initialRequirements: setupPatPermissions,
                     });
-                    if (prepared.kind === 'guided') {
-                        credentialPrompt.configureSetupPatGuide(prepared.url);
-                        setupPatPermissions = [...prepared.requirements];
-                        assertedOwnerKind = prepared.ownerKind;
-                        permissionIntent = prepared.permissionIntent;
-                    }
+                    setupPatPermissions = [...intent.requirements];
+                    assertedOwnerKind = intent.assertedOwnerKind;
+                    permissionIntent = intent.permissionIntent;
                 }
-                else {
-                    journey?.advance('setup-pat');
-                    permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+                return 'continue';
+            },
+            setupPat: async () => {
+                if (!token && !options.nonInteractive && !options.dryRun)
+                    token = await credentialPrompt.requestSetupPat();
+                if (!token && !options.dryRun) {
+                    (0, logger_1.logError)('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
+                    (0, logger_1.logInfo)('   You can:');
+                    (0, logger_1.logInfo)('   • Pass it on the command line: copilot setup --token <your_github_token>');
+                    (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
+                    process.exitCode = 1;
+                    return 'blocked';
                 }
-            }
-            if (options.dryRun && !token && !webBridge)
-                journey?.advance('plan');
-            if (!token && !options.dryRun)
-                journey?.advance('setup-pat');
-            if (!token && !options.nonInteractive && !options.dryRun)
-                token = await credentialPrompt.requestSetupPat();
-            if (!token && !options.dryRun) {
-                (0, logger_1.logError)('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
-                (0, logger_1.logInfo)('   You can:');
-                (0, logger_1.logInfo)('   • Pass it on the command line: copilot setup --token <your_github_token>');
-                (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
-                process.exitCode = 1;
-                return;
-            }
-            if (token) {
-                journey?.advance('setup-pat');
-                setupPatAccount = await new verify_setup_pat_bootstrap_use_case_1.VerifySetupPatBootstrapUseCase({
+                if (token) {
+                    setupPatAccount = await new verify_setup_pat_bootstrap_use_case_1.VerifySetupPatBootstrapUseCase({
+                        permissions: tokenPermissions,
+                        presenter: permissionPresenter,
+                        confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
+                        confirmAccount: account => credentialPrompt.confirmGuidedSetupAccount(account),
+                        showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
+                    }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
+                        requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat });
+                }
+                return 'continue';
+            },
+            plan: async () => {
+                (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
+                auditConfiguredSetupPat = new audit_configured_setup_pat_use_case_1.AuditConfiguredSetupPatUseCase({
+                    owner: gitInfo.owner, repository: gitInfo.repo, token,
+                    provisionalRequirements: setupPatPermissions, assertedOwnerKind,
+                    guided: credentialPrompt.usedGuidedSetupPat,
+                }, {
                     permissions: tokenPermissions,
                     presenter: permissionPresenter,
                     confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
-                    confirmAccount: account => credentialPrompt.confirmGuidedSetupAccount(account),
-                    showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
-                }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
-                    requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat });
-                journey?.advance('plan');
-            }
-            (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
-            const auditConfiguredSetupPat = new audit_configured_setup_pat_use_case_1.AuditConfiguredSetupPatUseCase({
-                owner: gitInfo.owner, repository: gitInfo.repo, token,
-                provisionalRequirements: setupPatPermissions, assertedOwnerKind,
-                guided: credentialPrompt.usedGuidedSetupPat,
-            }, {
-                permissions: tokenPermissions,
-                presenter: permissionPresenter,
-                confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
-                showOwnerMismatch: (asserted, actual) => (0, logger_1.logInfo)(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
-                showExcessGrants: grants => (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
-                showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
-            });
-            const remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
-            const wizard = new setup_1.SetupWizardUseCase({
-                ...(terminal || webBridge ? {
-                    collector: webBridge ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge)
-                        : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
-                } : {}),
-                planPresenter: webBridge ? new web_setup_adapters_1.WebSetupPlanPresenter(webBridge) : new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
-                confirmation: options.dryRun
-                    ? new setup_confirmation_adapter_1.DryRunSetupPlanConfirmation()
-                    : webBridge ? new web_setup_adapters_1.WebSetupPlanConfirmation(webBridge)
-                        : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
-                finalPermissionAudit: auditConfiguredSetupPat,
-                remoteConfiguration: remoteConfigurationReader,
-                mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
-                approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
-                approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
-                projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
-            });
-            const result = await wizard.execute({
-                mode: options.nonInteractive ? 'non-interactive' : 'interactive',
-                overrides,
-                ...(permissionIntent ? { permissionIntent } : {}),
-                skipRepositoryVariables: Boolean(options.skipVariables),
-                skipRepositorySecrets: Boolean(options.skipSecrets),
-                previewOnly: Boolean(options.dryRun),
-                presentationMode,
-                developmentBranchObservedLocally: (0, cli_context_1.hasLocalOrTrackedGitBranch)(cwd, overrides.repository?.developmentBranch ?? 'develop'),
-                ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
-            });
-            if (result.status === 'cancelled') {
-                journey?.finish('cancelled');
-                if (result.reason !== 'questionnaire-cancelled') {
-                    (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
-                }
-                if (result.exitCode !== 0)
-                    process.exitCode = result.exitCode;
-                return;
-            }
-            if (result.status === 'blocked') {
-                journey?.finish('blocked');
-                webBridge?.resultReason(result.reason === 'setup-permissions-unavailable' ? 'permissions' : 'storage');
-                (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
-                    ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
-                    : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
-                process.exitCode = result.exitCode;
-                return;
-            }
-            const { configuration, remoteConfiguration } = result;
-            const guardedFiles = webBridge ? (0, setup_configuration_plan_1.setupPlanGuardPaths)(result.plan) : undefined;
-            const webApplySnapshot = guardedFiles ? (0, setup_apply_snapshot_1.captureSetupApplySnapshot)(checkoutRoot, guardedFiles) : undefined;
-            const credentialRequirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration);
-            const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
-            const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
-            const approvedWorkflowFiles = updateWorkflows
-                ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
-                : [];
-            if (options.dryRun) {
-                if (webBridge)
-                    journey?.advance('plan');
-                journey?.finish('dry-run');
-                (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
-                return;
-            }
-            journey?.advance('credentials');
-            const workflowTokenPermissions = (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(configuration, remoteConfiguration);
-            const githubIdentities = new setup_github_identity_query_adapter_1.SetupGithubIdentityQueryAdapter();
-            if (!options.nonInteractive && !options.workflowPat && !options.secret?.PAT) {
-                try {
-                    const workflowPatGuide = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                        role: 'workflow', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 90,
-                        requirements: workflowTokenPermissions,
-                    });
-                    credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token), workflowTokenPermissions);
-                }
-                catch (error) {
-                    if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
-                        throw error;
-                    (0, logger_1.logInfo)('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');
-                    permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
-                }
-            }
-            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter, webBridge ? { allowPreApplyHealthWorkflow: false } : {
-                onTemporaryWorkflowMutationAttempt: () => {
-                    setupMutationStarted = true;
-                    journey?.markMutationStarted();
-                },
-            }).collect({
-                owner: gitInfo.owner,
-                repository: gitInfo.repo,
-                setupToken: token ?? '',
-                requirements: credentialRequirements,
-                manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
-                secretStoragePolicy: configuration.storage.secrets,
-                ref: configuration.repository.mainBranch,
-                remoteConfiguration,
-                workflowTokenPermissions,
-            });
-            const guidedBotIdentity = credentialPrompt.guidedWorkflowBotIdentity;
-            if (guidedBotIdentity && credentials.collection.workflowPat) {
-                const verifiedBot = await new verify_guided_workflow_pat_identity_use_case_1.VerifyGuidedWorkflowPatIdentityUseCase(githubIdentities)
-                    .execute(guidedBotIdentity, credentials.collection.workflowPat.value);
-                (0, logger_1.logInfo)(`✅ Workflow PAT owner verified as @${verifiedBot.login} (GitHub account ID ${verifiedBot.id}).`);
-                if (setupPatAccount?.toLowerCase() === verifiedBot.login.toLowerCase()) {
-                    (0, logger_1.logInfo)('The workflow PAT and setup PAT use the same GitHub account. If this account authors PRs, bot-generated events and guarded self-approval may not behave as intended; use a dedicated bot account where required.');
-                }
-            }
-            if (webBridge) {
-                if (!remoteConfiguration || !guardedFiles || !webApplySnapshot || !initialBranch || !initialHead || !token) {
-                    throw new application_error_1.ApplicationError('configuration.invalid', 'The approved setup evidence is incomplete. No mutation started; restart and review a new plan.');
-                }
-                const authorization = await new verify_web_setup_apply_use_case_1.VerifyWebSetupApplyUseCase({
-                    confirm: async () => {
-                        const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
-                            description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
-                            choices: ['Apply setup', 'Stop without applying'] });
-                        return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
-                    },
-                    readRepositoryFacts: () => {
-                        const current = (0, cli_context_1.getGitInfo)();
-                        return 'error' in current ? undefined : {
-                            owner: current.owner, repository: current.repo, checkoutRoot: (0, cli_context_1.getGitRepositoryRoot)(cwd),
-                            branch: (0, cli_context_1.getCurrentAttachedBranch)(cwd) ?? '', head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
-                        };
-                    },
-                    fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
-                    remote: remoteConfigurationReader,
-                    permissionAudit: auditConfiguredSetupPat,
-                    sessionState: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
-                        : webBridge.snapshot().outcome ? 'ended' : 'active',
-                }).execute({
-                    repository: { owner: gitInfo.owner, repository: gitInfo.repo, checkoutRoot,
-                        branch: initialBranch, head: initialHead },
-                    selectedFiles: guardedFiles, fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
-                    configuration, setupToken: token,
+                    showOwnerMismatch: (asserted, actual) => (0, logger_1.logInfo)(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
+                    showExcessGrants: grants => (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
+                    showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
                 });
-                if (authorization === 'cancelled')
-                    throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                if (authorization === 'declined') {
-                    journey?.finish('cancelled');
-                    return;
+                remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
+                const wizard = new setup_1.SetupWizardUseCase({
+                    ...(terminal || webBridge ? {
+                        collector: webBridge ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge)
+                            : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
+                    } : {}),
+                    planPresenter: webBridge ? new web_setup_adapters_1.WebSetupPlanPresenter(webBridge) : new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
+                    confirmation: options.dryRun
+                        ? new setup_confirmation_adapter_1.DryRunSetupPlanConfirmation()
+                        : webBridge ? new web_setup_adapters_1.WebSetupPlanConfirmation(webBridge)
+                            : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
+                    finalPermissionAudit: auditConfiguredSetupPat,
+                    remoteConfiguration: remoteConfigurationReader,
+                    mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
+                    approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
+                    approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
+                    projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
+                });
+                const result = await wizard.execute({
+                    mode: options.nonInteractive ? 'non-interactive' : 'interactive',
+                    overrides,
+                    ...(permissionIntent ? { permissionIntent } : {}),
+                    skipRepositoryVariables: Boolean(options.skipVariables),
+                    skipRepositorySecrets: Boolean(options.skipSecrets),
+                    previewOnly: Boolean(options.dryRun),
+                    presentationMode,
+                    developmentBranchObservedLocally: (0, cli_context_1.hasLocalOrTrackedGitBranch)(cwd, overrides.repository?.developmentBranch ?? 'develop'),
+                    ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
+                });
+                if (result.status === 'cancelled') {
+                    if (result.reason !== 'questionnaire-cancelled') {
+                        (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
+                    }
+                    if (result.exitCode !== 0)
+                        process.exitCode = result.exitCode;
+                    return 'cancelled';
                 }
-            }
-            (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
-            journey?.advance('apply');
-            const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles, remoteConfiguration);
-            setupMutationStarted = true;
-            journey?.markMutationStarted();
-            setupApplyStarted = true;
-            const actionResults = await (0, local_action_1.runLocalAction)(params);
-            webBridge?.effects((0, setup_result_receipt_1.setupResultEffects)(actionResults));
-            if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
-                const failure = (0, setup_result_receipt_1.setupActionResultFailure)(actionResults);
-                if (failure)
-                    webBridge?.resultReason(failure.reasonCode, failure.diagnosticRef);
-                journey?.finish('partial');
-                (0, logger_1.logInfo)('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
-                process.exitCode = 1;
-            }
-            else {
-                if (webBridge && token) {
-                    const doctorToken = token;
-                    webBridge.configureReadOnlyDoctor(async () => {
-                        const diagnosis = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({ owner: gitInfo.owner,
-                            repository: gitInfo.repo, setupToken: doctorToken, configuration, readOnly: true });
-                        return { healthy: diagnosis.report.healthy, ...diagnosis.report.totals };
+                if (result.status === 'blocked') {
+                    webBridge?.resultReason(result.reason === 'setup-permissions-unavailable' ? 'permissions' : 'storage');
+                    (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
+                        ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
+                        : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
+                    process.exitCode = result.exitCode;
+                    return 'blocked';
+                }
+                configuration = result.configuration;
+                remoteConfiguration = result.remoteConfiguration;
+                guardedFiles = webBridge ? (0, setup_configuration_plan_1.setupPlanGuardPaths)(result.plan) : undefined;
+                webApplySnapshot = guardedFiles ? (0, setup_apply_snapshot_1.captureSetupApplySnapshot)(checkoutRoot, guardedFiles) : undefined;
+                const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
+                const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
+                approvedWorkflowFiles = updateWorkflows
+                    ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
+                    : [];
+                if (options.dryRun) {
+                    (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
+                    return 'dry-run';
+                }
+                return 'continue';
+            },
+            credentials: async (possibleMutation) => {
+                credentialsCollection = await (0, setup_credential_collection_1.collectSetupCredentials)({
+                    owner: gitInfo.owner, repository: gitInfo.repo, setupToken: token ?? '',
+                    setupPatAccount, configuration, remoteConfiguration,
+                    skipSecrets: Boolean(options.skipSecrets), nonInteractive: Boolean(options.nonInteractive),
+                    workflowPat: options.workflowPat, secret: options.secret, bridge: webBridge,
+                    prompt: credentialPrompt, permissionPresenter,
+                    possibleMutation: () => { setupMutationStarted = true; possibleMutation(); },
+                });
+                return 'continue';
+            },
+            authorizeApply: async () => {
+                if (webBridge)
+                    return (0, setup_apply_authorization_1.authorizeWebSetupApply)({
+                        bridge: webBridge, cwd, owner: gitInfo.owner, repository: gitInfo.repo,
+                        checkoutRoot, initialBranch, initialHead, selectedFiles: guardedFiles,
+                        fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
+                        configuration, setupToken: token, remoteReader: remoteConfigurationReader,
+                        permissionAudit: auditConfiguredSetupPat,
                     });
+                return 'continue';
+            },
+            apply: async (report) => {
+                (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
+                const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentialsCollection, approvedWorkflowFiles, remoteConfiguration);
+                setupMutationStarted = true;
+                setupApplyStarted = true;
+                const actionResults = await (0, local_action_1.runLocalAction)(params, {
+                    onSetupProgress: effect => { report(effect); webBridge?.progress(effect); },
+                });
+                webBridge?.effects((0, setup_result_receipt_1.setupResultEffects)(actionResults));
+                if (actionResults.length === 0 || actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
+                    const failure = (0, setup_result_receipt_1.setupActionResultFailure)(actionResults);
+                    if (failure)
+                        webBridge?.resultReason(failure.reasonCode, failure.diagnosticRef);
+                    (0, logger_1.logInfo)('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
+                    process.exitCode = 1;
                 }
-                journey?.finish('complete');
-            }
-        }
-        catch (error) {
-            journey?.finish(setupMutationStarted ? 'partial' : error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled' : 'blocked');
-            const normalizedError = error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? undefined
-                : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.');
-            webBridge?.resultReason(error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled'
-                : (0, setup_result_receipt_1.setupResultReason)(normalizedError.code), normalizedError?.correlationId);
-            if (setupMutationStarted && !setupApplyStarted) {
-                (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
-            }
-            if (credentialPrompt.guidedWorkflowBotIdentity) {
-                (0, logger_1.logInfo)(setupApplyStarted
-                    ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
-                    : 'No bot Secret write started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
-            }
-            if (error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError) {
-                (0, logger_1.logInfo)(setupMutationStarted
-                    ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
-                    : 'Setup cancelled. No changes were applied.');
-                process.exitCode = 130;
-                return;
-            }
-            (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.'));
+                else {
+                    if (webBridge && token) {
+                        const doctorToken = token;
+                        webBridge.configureReadOnlyDoctor(async () => {
+                            const diagnosis = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({ owner: gitInfo.owner,
+                                repository: gitInfo.repo, setupToken: doctorToken, configuration, readOnly: true });
+                            return { healthy: diagnosis.report.healthy, ...diagnosis.report.totals };
+                        });
+                    }
+                }
+                return { success: actionResults.length > 0 && actionResults.every(actionResult => actionResult.success && actionResult.errors.length === 0), effects: [] };
+            },
+            liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
+                : webBridge?.snapshot().outcome ? 'expired' : 'active',
+            present: (stage, mutationStarted, outcome) => {
+                if (!journey)
+                    return;
+                journey.advance(stage);
+                if (mutationStarted)
+                    journey.markMutationStarted();
+                if (outcome)
+                    journey.finish(outcome);
+            },
+            isCancellationError: error => error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError,
+        });
+        const run = await session.execute();
+        setupMutationStarted = run.mutationStarted;
+        if (run.error !== undefined)
+            throw run.error;
+        if (run.outcome === 'blocked' || run.outcome === 'partial')
             process.exitCode = 1;
-        }
-        finally {
-            credentialPrompt.showSetupPatCleanupReminder();
-            terminal?.close();
-            if (webBridge && webServer) {
-                const outcome = webBridge.snapshot().journey?.outcome ?? (process.exitCode ? 'blocked' : 'cancelled');
-                webBridge.finish(outcome, outcome === 'complete'
-                    ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
-                    : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
-                        : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor --read-only before retrying.'
-                            : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
-                (0, logger_1.logInfo)('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
-                await webServer.closed;
-            }
-            releaseSetupGuard?.();
-        }
-    });
+    }
+    catch (error) {
+        process.exitCode = (0, setup_outcome_adapter_1.reportSetupFailure)(error, { journey, bridge: webBridge,
+            mutationStarted: setupMutationStarted, applyStarted: setupApplyStarted,
+            guidedBotIdentity: Boolean(credentialPrompt.guidedWorkflowBotIdentity) });
+    }
+    finally {
+        credentialPrompt.showSetupPatCleanupReminder();
+        terminal?.close();
+        await (0, setup_outcome_adapter_1.finishWebSetupSession)(webBridge, webServer, process.exitCode);
+        releaseSetupGuard?.();
+    }
 }
 
 
@@ -68091,6 +68115,57 @@ function registerUpgradeCommand(program) {
         .command('upgrade')
         .description('Upgrade the global @vypdev/copilot installation to the latest published version')
         .action(() => runUpgradeCommand());
+}
+
+
+/***/ }),
+
+/***/ 75885:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.authorizeWebSetupApply = authorizeWebSetupApply;
+const cli_context_1 = __nccwpck_require__(21307);
+const verify_web_setup_apply_use_case_1 = __nccwpck_require__(5303);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_apply_snapshot_1 = __nccwpck_require__(84136);
+/** Web transport and Git facts for the application-owned final approval. */
+async function authorizeWebSetupApply(input) {
+    const { bridge } = input;
+    if (!input.approvedRemote || !input.selectedFiles || !input.fileSnapshot || !input.initialBranch || !input.initialHead || !input.setupToken) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'The approved setup evidence is incomplete. No mutation started; restart and review a new plan.');
+    }
+    const authorization = await new verify_web_setup_apply_use_case_1.VerifyWebSetupApplyUseCase({
+        confirm: async () => {
+            const answer = await bridge.ask({ kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
+                description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
+                choices: ['Apply setup', 'Stop without applying'] });
+            return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
+        },
+        readRepositoryFacts: () => {
+            const current = (0, cli_context_1.getGitInfo)();
+            return 'error' in current ? undefined : {
+                owner: current.owner, repository: current.repo, checkoutRoot: (0, cli_context_1.getGitRepositoryRoot)(input.cwd),
+                branch: (0, cli_context_1.getCurrentAttachedBranch)(input.cwd) ?? '', head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
+            };
+        },
+        fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
+        remote: input.remoteReader,
+        permissionAudit: input.permissionAudit,
+        sessionState: () => bridge.snapshot().outcome === 'cancelled' ? 'cancelled'
+            : bridge.snapshot().outcome ? 'ended' : 'active',
+    }).execute({
+        repository: { owner: input.owner, repository: input.repository, checkoutRoot: input.checkoutRoot,
+            branch: input.initialBranch, head: input.initialHead },
+        selectedFiles: input.selectedFiles, fileSnapshot: input.fileSnapshot, approvedRemote: input.approvedRemote,
+        configuration: input.configuration, setupToken: input.setupToken,
+    });
+    if (authorization === 'cancelled')
+        throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+    return authorization === 'declined' ? 'cancelled' : 'continue';
 }
 
 
@@ -68651,6 +68726,64 @@ exports.DryRunSetupPlanConfirmation = DryRunSetupPlanConfirmation;
 
 /***/ }),
 
+/***/ 19469:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.collectSetupCredentials = collectSetupCredentials;
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
+const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
+const logger_1 = __nccwpck_require__(91151);
+/** Wires bot-PAT guidance and credential ports for both setup presentations. */
+async function collectSetupCredentials(input) {
+    const requirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(input.configuration);
+    const workflowTokenPermissions = (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(input.configuration, input.remoteConfiguration);
+    const githubIdentities = new setup_github_identity_query_adapter_1.SetupGithubIdentityQueryAdapter();
+    if (!input.nonInteractive && !input.workflowPat && !input.secret?.PAT) {
+        try {
+            const guide = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
+                role: 'workflow', owner: input.owner, repository: input.repository, expiresIn: 90,
+                requirements: workflowTokenPermissions,
+            });
+            input.prompt.configureWorkflowPatGuide(guide, login => githubIdentities.resolve(login, input.setupToken), workflowTokenPermissions);
+        }
+        catch (error) {
+            if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
+                throw error;
+            (0, logger_1.logInfo)('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');
+            input.permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
+        }
+    }
+    const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(input.prompt, input.permissionPresenter, input.bridge ? { allowPreApplyHealthWorkflow: false } : {
+        onTemporaryWorkflowMutationAttempt: input.possibleMutation,
+    }).collect({
+        owner: input.owner, repository: input.repository, setupToken: input.setupToken,
+        requirements, manageSecrets: !input.skipSecrets && input.configuration.manageRepositorySecrets,
+        secretStoragePolicy: input.configuration.storage.secrets,
+        ref: input.configuration.repository.mainBranch, remoteConfiguration: input.remoteConfiguration,
+        workflowTokenPermissions,
+    });
+    const guidedBotIdentity = input.prompt.guidedWorkflowBotIdentity;
+    if (guidedBotIdentity && credentials.collection.workflowPat) {
+        const verifiedBot = await new verify_guided_workflow_pat_identity_use_case_1.VerifyGuidedWorkflowPatIdentityUseCase(githubIdentities)
+            .execute(guidedBotIdentity, credentials.collection.workflowPat.value);
+        (0, logger_1.logInfo)(`✅ Workflow PAT owner verified as @${verifiedBot.login} (GitHub account ID ${verifiedBot.id}).`);
+        if (input.setupPatAccount?.toLowerCase() === verifiedBot.login.toLowerCase()) {
+            (0, logger_1.logInfo)('The workflow PAT and setup PAT use the same GitHub account. If this account authors PRs, bot-generated events and guarded self-approval may not behave as intended; use a dedicated bot account where required.');
+        }
+    }
+    return credentials.collection;
+}
+
+
+/***/ }),
+
 /***/ 93232:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -69015,6 +69148,127 @@ function renderSetupJourney(view, maximumWidth) {
         `Next: ${view.pending.join(' → ') || 'none'}`,
         state,
     ].join('\n'), 'Copilot setup', 36, maximumWidth);
+}
+
+
+/***/ }),
+
+/***/ 9961:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reportSetupFailure = reportSetupFailure;
+exports.finishWebSetupSession = finishWebSetupSession;
+const application_error_1 = __nccwpck_require__(75999);
+const logger_1 = __nccwpck_require__(91151);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_result_receipt_1 = __nccwpck_require__(44132);
+/** Terminal diagnostics are separate from the redacted browser result. */
+function reportSetupFailure(error, context) {
+    const cancelled = error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError;
+    context.journey?.finish(context.mutationStarted ? 'partial' : cancelled ? 'cancelled' : 'blocked');
+    const normalized = cancelled ? undefined : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.');
+    context.bridge?.resultReason(cancelled ? 'cancelled' : (0, setup_result_receipt_1.setupResultReason)(normalized.code), normalized?.correlationId);
+    if (context.mutationStarted && !context.applyStarted) {
+        (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
+    }
+    if (context.guidedBotIdentity) {
+        (0, logger_1.logInfo)(context.applyStarted
+            ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
+            : 'No bot Secret write started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
+    }
+    if (cancelled) {
+        (0, logger_1.logInfo)(context.mutationStarted
+            ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
+            : 'Setup cancelled. No changes were applied.');
+        return 130;
+    }
+    (0, logger_1.logError)(normalized);
+    return 1;
+}
+async function finishWebSetupSession(bridge, server, exitCode) {
+    if (!bridge || !server)
+        return;
+    const outcome = bridge.snapshot().journey?.outcome ?? (exitCode ? 'blocked' : 'cancelled');
+    bridge.finish(outcome, outcome === 'complete'
+        ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
+        : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
+            : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor --read-only before retrying.'
+                : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
+    (0, logger_1.logInfo)('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
+    await server.closed;
+}
+
+
+/***/ }),
+
+/***/ 67610:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.collectSetupPatIntent = collectSetupPatIntent;
+const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
+const setup_questionnaire_controller_1 = __nccwpck_require__(41644);
+const logger_1 = __nccwpck_require__(91151);
+const setup_question_renderer_1 = __nccwpck_require__(89481);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
+/** Presentation wiring for the shared application permission-intent decision. */
+async function collectSetupPatIntent(input) {
+    const { bridge, credentialPrompt, permissionPresenter } = input;
+    if (await credentialPrompt.chooseSetupPatMethod() !== 'guided') {
+        permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+        return { requirements: input.initialRequirements };
+    }
+    const prepared = await new prepare_setup_pat_intent_use_case_1.PrepareSetupPatIntentUseCase({
+        collect: (initial, context, pass) => (bridge
+            ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(bridge, pass)
+            : new setup_questionnaire_controller_1.SetupQuestionnaireController(input.terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', pass)))
+            .collect(initial, context),
+        chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
+        review: () => credentialPrompt.reviewSetupPatIntent(),
+        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass, projectsWanted }) => {
+            if (ownerConflict)
+                (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
+            if (errors.length)
+                (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${errors.map(item => `  - ${item}`).join('\n')}`);
+            if (pass > 1)
+                (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
+            (0, logger_1.logInfo)('Permission intent:');
+            (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
+            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${projectsWanted ? 'yes (choose exact Projects after PAT)' : 'none'}`);
+            bridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${projectsWanted ? 'yes (choose after PAT)' : 'none'}.`, 'info', undefined, 'permission.preview', {
+                issues: draft.features.issues ? draft.issueWorkflows.enabled.join('|') || 'none' : 'disabled',
+                approval: draft.pullRequestApproval.mode,
+                secrets: draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off',
+                variables: draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off',
+                projects: projectsWanted ? 'yes' : 'none',
+            });
+            permissionPresenter.showRequirements('setup', requirements);
+            if (uncertain.length)
+                (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
+        },
+        showDetails: requirements => permissionPresenter.showDetailedRequirements('setup', requirements),
+        onManual: reason => {
+            if (reason === 'owner-unknown')
+                (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
+            if (reason === 'unsupported')
+                (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
+            credentialPrompt.useManualSetupPat();
+            permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+        },
+        advanceToSetupPat: () => { input.journey?.advance('setup-pat'); },
+        revisitChoices: () => input.journey.revisitChoices(),
+    }).execute({ owner: input.owner, repository: input.repository, overrides: input.overrides,
+        skipRepositoryVariables: input.skipRepositoryVariables, skipRepositorySecrets: input.skipRepositorySecrets });
+    if (prepared.kind !== 'guided')
+        return { requirements: input.initialRequirements };
+    credentialPrompt.configureSetupPatGuide(prepared.url);
+    return { requirements: [...prepared.requirements], assertedOwnerKind: prepared.ownerKind,
+        permissionIntent: prepared.permissionIntent };
 }
 
 
@@ -69430,7 +69684,7 @@ function setupResultEffects(results) {
     }));
 }
 const EFFECT_IDS = ['files', 'secrets', 'labels', 'issue-types', 'variables', 'initial-tag'];
-const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started'];
+const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started', 'in-progress'];
 const EFFECT_SCOPES = ['local', 'repository', 'organization', 'mixed'];
 function parseEffect(value) {
     const effect = (0, result_1.getResultPayload)(value);
@@ -70385,12 +70639,24 @@ class WebSetupBridge {
                 mutationStarted: this.view.journey?.mutationStarted === true, effects,
                 ...(this.view.resultDetail?.diagnosticRef ? { diagnosticRef: this.view.resultDetail.diagnosticRef } : {}) } });
     }
+    progress(effect) {
+        if (this.view.outcome)
+            return;
+        const previous = this.view.resultDetail?.effects ?? [];
+        const effects = previous.some(item => item.id === effect.id)
+            ? previous.map(item => item.id === effect.id ? { ...effect } : item)
+            : [...previous, { ...effect }];
+        this.effects(effects);
+    }
     finish(outcome, text) {
         if (this.view.outcome)
             return;
         this.pending?.resolve(undefined);
         this.pending = undefined;
+        const effects = this.view.resultDetail?.effects?.map(effect => effect.state === 'in-progress'
+            ? { ...effect, state: 'needs-inspection' } : effect);
         this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text },
+            ...(this.view.resultDetail && effects ? { resultDetail: { ...this.view.resultDetail, effects } } : {}),
             ...(this.view.resultDetail ? {} : { resultDetail: {
                     reasonCode: outcome === 'cancelled' ? 'cancelled' : outcome === 'blocked' ? 'unknown' : 'unknown',
                     stoppedStage: this.view.journey?.current ?? 'Preparation',
@@ -84207,10 +84473,10 @@ const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_2 = __nccwpck_require__(93081);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
-function createInitialSetupCompositionRoot(binding) {
+function createInitialSetupCompositionRoot(binding, progress) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding));
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
 }
 
 
@@ -84650,7 +84916,7 @@ function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()));
 }
-function createSingleActionUseCaseCompositionRoot(surface, binding) {
+function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgress) {
     const catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const repositoryTagPort = surface === "github-workflow"
@@ -84664,7 +84930,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -84717,7 +84983,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress) {
     let singleAction;
     let issueComment;
     let issue;
@@ -84726,7 +84992,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
     let push;
     return {
         "single-action": async (execution) => {
-            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution), setupProgress));
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {

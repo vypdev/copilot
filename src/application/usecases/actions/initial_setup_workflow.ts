@@ -31,6 +31,7 @@ import {
 } from '../../policies/setup_configuration_policy';
 
 export interface InitialSetupWorkflowDependencies extends SetupResourceProvisioningDependencies {
+    progress?: (effect: SetupOperationEffect) => void;
     authenticatedUserPort: BoundAuthenticatedUserPort;
     initialLabelProvisioningPort: BoundInitialLabelProvisioningPort;
     issueTypeProvisioningPort: BoundIssueTypeProvisioningPort;
@@ -66,8 +67,11 @@ export async function runInitialSetupWorkflow(
     const mark = (id: SetupOperationEffect['id'], state: SetupOperationEffect['state']) => {
         const index = effects.findIndex(effect => effect.id === id);
         effects[index] = { ...effects[index], state };
+        try { dependencies.progress?.(Object.freeze({ ...effects[index] })); }
+        catch { /* Presentation observers cannot abort provisioning. */ }
     };
-    const receipt = () => buildResult(errors, steps, effects);
+    const receipt = () => buildResult(errors, steps, effects.map(effect => effect.state === 'in-progress'
+        ? { ...effect, state: 'needs-inspection' } : effect));
 
     try {
         const setupConfiguration = request.setupConfiguration;
@@ -134,19 +138,19 @@ export async function runInitialSetupWorkflow(
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
-        mark('files', 'needs-inspection');
+        mark('files', 'in-progress');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
 
-        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0) mark('secrets', 'needs-inspection');
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0) mark('secrets', 'in-progress');
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step) steps.push(secrets.step);
         if (secrets.errors.length > 0) errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
 
         logInfo('🏷️  Checking configured and progress labels...');
-        mark('labels', 'needs-inspection');
+        mark('labels', 'in-progress');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
         mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
             ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
@@ -158,7 +162,7 @@ export async function runInitialSetupWorkflow(
         }
 
         logInfo('📋 Checking issue types...');
-        mark('issue-types', 'needs-inspection');
+        mark('issue-types', 'in-progress');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
         mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
@@ -167,13 +171,13 @@ export async function runInitialSetupWorkflow(
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
 
-        if (setupConfiguration?.manageRepositoryVariables) mark('variables', 'needs-inspection');
+        if (setupConfiguration?.manageRepositoryVariables) mark('variables', 'in-progress');
         const variables = await ensureRepositoryVariables(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step) steps.push(variables.step);
         if (variables.errors.length > 0) errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
 
-        if (setupConfiguration?.createInitialTag !== false) mark('initial-tag', 'needs-inspection');
+        if (setupConfiguration?.createInitialTag !== false) mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
             : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');

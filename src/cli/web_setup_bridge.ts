@@ -1,6 +1,6 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SetupJourneyView } from '../application/policies/setup_journey_policy';
-import type { SetupPlan } from '../domain/setup';
+import type { SetupPlan, SetupOperationEffect } from '../domain/setup';
 import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../domain/setup_token_permissions';
 import type { WebSetupPlan, WebSetupPrompt, WebSetupView } from '../application/contracts/web_setup_view';
 import type { WebSetupMessageCopyId } from '../application/contracts/web_setup_view';
@@ -167,11 +167,22 @@ export class WebSetupBridge {
       mutationStarted: this.view.journey?.mutationStarted === true, effects,
       ...(this.view.resultDetail?.diagnosticRef ? { diagnosticRef: this.view.resultDetail.diagnosticRef } : {}) } });
   }
+  progress(effect: SetupOperationEffect): void {
+    if (this.view.outcome) return;
+    const previous = this.view.resultDetail?.effects ?? [];
+    const effects = previous.some(item => item.id === effect.id)
+      ? previous.map(item => item.id === effect.id ? { ...effect } : item)
+      : [...previous, { ...effect }];
+    this.effects(effects);
+  }
   finish(outcome: NonNullable<WebSetupView['outcome']>, text: string): void {
     if (this.view.outcome) return;
     this.pending?.resolve(undefined);
     this.pending = undefined;
+    const effects = this.view.resultDetail?.effects?.map(effect => effect.state === 'in-progress'
+      ? { ...effect, state: 'needs-inspection' as const } : effect);
     this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text },
+      ...(this.view.resultDetail && effects ? { resultDetail: { ...this.view.resultDetail, effects } } : {}),
       ...(this.view.resultDetail ? {} : { resultDetail: {
         reasonCode: outcome === 'cancelled' ? 'cancelled' : outcome === 'blocked' ? 'unknown' : 'unknown',
         stoppedStage: this.view.journey?.current ?? 'Preparation',

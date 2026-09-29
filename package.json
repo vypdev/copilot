@@ -49,7 +49,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
+    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && node scripts/set-cli-executable.cjs",
     "build:web": "vite build --config web/vite.config.mts",
     "check:web": "svelte-check --tsconfig web/tsconfig.json && vite build --config web/vite.config.mts",
     "validate:build": "node scripts/validate-build.cjs",
@@ -57,7 +57,7 @@
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage && node scripts/validate-coverage-budgets.cjs",
+    "test:coverage": "jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json && node scripts/validate-coverage-budgets.cjs && node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json",
     "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts --runInBand",
     "typecheck": "tsc --noEmit",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
@@ -68,6 +68,7 @@
     "validate:workflows": "node scripts/validate-workflow-contract.cjs",
     "generate:specifications": "node scripts/validate-specification-catalog.cjs --write && node scripts/validate-github-communication-test-budget.cjs",
     "validate:specifications": "node scripts/validate-specification-catalog.cjs && node scripts/validate-github-communication-test-budget.cjs",
+    "validate:setup-acceptance": "node scripts/validate-setup-assistant-acceptance.cjs",
     "lint:fix": "eslint src --fix",
     "postinstall": "node scripts/install-git-hooks.cjs"
   },

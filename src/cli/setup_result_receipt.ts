@@ -28,7 +28,7 @@ export function setupResultEffects(results: readonly Result[]): NonNullable<NonN
 }
 
 const EFFECT_IDS = ['files', 'secrets', 'labels', 'issue-types', 'variables', 'initial-tag'] as const;
-const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started'] as const;
+const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started', 'in-progress'] as const;
 const EFFECT_SCOPES = ['local', 'repository', 'organization', 'mixed'] as const;
 
 function parseEffect(value: unknown): { id: typeof EFFECT_IDS[number]; state: typeof EFFECT_STATES[number]; scope: typeof EFFECT_SCOPES[number] } | undefined {

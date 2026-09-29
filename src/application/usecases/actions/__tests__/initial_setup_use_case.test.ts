@@ -294,6 +294,30 @@ describe('InitialSetupUseCase', () => {
     ]));
   });
 
+  it('emits ordered, value-free resource progress before the final receipt', async () => {
+    const progress = jest.fn();
+    const observed = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels },
+      { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag },
+      { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert },
+      undefined, undefined, progress,
+    );
+    const result = await observed.invoke(baseParam());
+    expect(progress.mock.calls.map(([effect]) => `${effect.id}:${effect.state}`)).toEqual([
+      'files:in-progress', 'files:completed', 'secrets:skipped', 'labels:in-progress',
+      'labels:skipped', 'issue-types:in-progress', 'issue-types:skipped',
+      'variables:skipped', 'initial-tag:in-progress', 'initial-tag:skipped',
+    ]);
+    expect(JSON.stringify(progress.mock.calls)).not.toContain('fake-workflow-token');
+    expect(getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects)
+      .toEqual(expect.arrayContaining([{ id: 'files', state: 'completed', scope: 'local' }]));
+  });
+
   it('creates default tag v1.0.0 when no version tags exist', async () => {
     mockGetLatestTag.mockResolvedValue(undefined);
     const param = baseParam();

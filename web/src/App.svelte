@@ -77,7 +77,7 @@
         </div>
         {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>{tr('cancelSetup', $setupLocale)}</button>{/if}
       {:else}
-        <WaitingPanel />
+        <WaitingPanel effects={$session.view?.resultDetail?.effects} />
       {/if}
       <footer>{tr('footerLocal', $setupLocale)} <span aria-hidden="true">·</span> {tr('footerCloud', $setupLocale)} <span aria-hidden="true">·</span> {tr('footerGithub', $setupLocale)}</footer>
     </div>

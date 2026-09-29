@@ -680,6 +680,14 @@ describe('workflow contract validator', () => {
     })).toThrow('runs-on self-hosted, codex');
   });
 
+  it('limits the setup fixture workflow to the reviewed Ubuntu and Windows matrix', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs['setup-platform-smoke'].strategy.matrix.os = ['ubuntu-latest', 'windows-latest', 'macos-latest'];
+    expect(() => assertRunner(file, workflow)).toThrow('reviewed Ubuntu and Windows setup fixture matrix');
+  });
+
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     expect(() => assertMajorActionReferences(file, {

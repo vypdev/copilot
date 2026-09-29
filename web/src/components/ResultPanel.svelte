@@ -3,6 +3,7 @@
   import { tr, stageLabel, type SetupMessageKey } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
   import ActionButton from './ActionButton.svelte';
+  import ResourceProgress from './ResourceProgress.svelte';
   import { focusOnRevision } from '../lib/focusOnRevision';
   export let outcome: NonNullable<WebSetupView['outcome']>;
   export let controller: boolean;
@@ -16,8 +17,6 @@
     cancelled: ['reasonCancelled', 'nextCancelled'], provider: ['reasonProvider', 'nextProvider'],
     'rate-limit': ['reasonRateLimit', 'nextRateLimit'], unknown: ['reasonUnknown', 'nextUnknown'],
   };
-  const effectKeys: Record<string, SetupMessageKey> = { files: 'receiptFiles', secrets: 'receiptSecrets',
-    labels: 'receiptLabels', 'issue-types': 'receiptIssueTypes', variables: 'receiptVariables', 'initial-tag': 'receiptInitialTag' };
   $: heading = outcome === 'complete' ? tr('resultApplied', $setupLocale)
     : outcome === 'dry-run' ? tr('resultNoChanges', $setupLocale)
     : outcome === 'cancelled' || outcome === 'blocked' ? tr('resultStopped', $setupLocale)
@@ -40,9 +39,7 @@
     </div>
   {/if}
   {#if detail?.effects?.length}
-    <section class="result-effects"><h3>{tr('resourceReceipt', $setupLocale)}</h3>
-      <ul>{#each detail.effects as effect}<li><bdi>{effectKeys[effect.id] ? tr(effectKeys[effect.id], $setupLocale) : effect.id}</bdi> — {tr(effect.state === 'completed' ? 'effectCompleted' : effect.state === 'skipped' ? 'effectSkipped' : effect.state === 'not-started' ? 'effectNotStarted' : 'effectInspect', $setupLocale)}{#if effect.scope} · {tr(effect.scope === 'local' ? 'scopeLocal' : effect.scope === 'organization' ? 'scopeOrganization' : effect.scope === 'mixed' ? 'scopeMixed' : 'scopeRepository', $setupLocale)}{/if}</li>{/each}</ul>
-    </section>
+    <ResourceProgress effects={detail.effects} />
   {/if}
   <p>{explanation}</p>
   {#if outcome === 'complete'}<p>{tr('botRenewal', $setupLocale)}</p>{/if}

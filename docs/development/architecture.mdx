@@ -203,6 +203,18 @@ graph tests reject transitive dependencies from these use cases into CLI,
 infrastructure, Action, or browser code, and browser components can import
 only redacted application contracts as types.
 
+`SetupSessionCoordinator` now owns the common repository → choices → setup PAT
+→ plan → credentials → Apply sequence for terminal and browser setup. Its
+semantic phase ports compose the existing use cases; it checks live-session
+state after asynchronous work and classifies a possible write as partial if
+the result is unknown. The initial setup workflow emits value-free resource
+transitions through an optional progress port. The local Action path passes
+those facts to the browser bridge, while the final structured receipt remains
+authoritative for completed, skipped, and uncertain resources. The browser
+never sees provider request bodies or credential values.
+The [fixture-only acceptance review](/development/setup-assistant-review)
+records the human browser, language, accessibility, and platform gates.
+
 Inside `web/src`, `App.svelte` is only the page shell. The session client owns
 same-origin bootstrap, polling and revision-bound commands; it holds no pasted
 PAT in a store. Presenters in `components/` render progress, prompts, context,

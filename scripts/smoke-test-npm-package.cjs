@@ -57,6 +57,11 @@ try {
   if (!fs.existsSync(webIndexPath) || !fs.readFileSync(webIndexPath, 'utf8').includes('/assets/')) {
     throw new Error('Packaged local web setup assets are missing or incomplete.');
   }
+  const webAssets = [...fs.readFileSync(webIndexPath, 'utf8').matchAll(/(?:\.\/)?(assets\/[A-Za-z0-9._-]+\.(?:js|css))/g)]
+    .map(match => match[1]);
+  if (webAssets.length < 2 || webAssets.some(asset => !fs.statSync(path.join(packageRoot, 'build', 'web', asset)).isFile())) {
+    throw new Error('Packaged local web setup asset paths do not resolve from the extracted tarball.');
+  }
   if (version !== packageJson.version) {
     throw new Error(`CLI reported ${version}, expected ${packageJson.version}.`);
   }

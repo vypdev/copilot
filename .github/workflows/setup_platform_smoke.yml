@@ -1,0 +1,39 @@
+name: Setup Platform Smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup-platform-smoke:
+    name: Setup package and local session (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10.12.4
+          standalone: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run typecheck
+      - name: Local setup fixtures only
+        run: pnpm exec jest src/application/usecases/setup/__tests__/setup_session_coordinator.test.ts src/cli/__tests__/web_setup_server.test.ts src/cli/__tests__/setup_session_guard.test.ts src/cli/__tests__/setup_apply_snapshot.test.ts --runInBand --silent
+      - name: Isolated npm package checks
+        if: runner.os == 'Linux'
+        run: pnpm run validate:npm-package && pnpm run smoke:npm-package

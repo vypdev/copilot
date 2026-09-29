@@ -497,6 +497,7 @@ describe('CLI', () => {
       for (const option of setupCommand.options) {
         setupCommand.setOptionValue(option.attributeName(), option.defaultValue);
       }
+      (runLocalAction as jest.Mock).mockResolvedValue([{ id: 'InitialSetupUseCase', success: true, executed: true, errors: [] }]);
     });
 
     describe('local web command handoff', () => {
@@ -774,6 +775,12 @@ describe('CLI', () => {
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('partial completion'));
       });
 
+      it('does not call an empty mutation result complete', async () => {
+        (runLocalAction as jest.Mock).mockResolvedValueOnce([]);
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(process.exitCode).toBe(1);
+      });
+
       it('passes only explicitly approved changed workflows to the mutation boundary', async () => {
         const comparison = jest.spyOn(SetupDoctorWorkspaceQueryAdapter.prototype, 'compareWorkflows')
           .mockReturnValue([
@@ -784,7 +791,8 @@ describe('CLI', () => {
           ? 'Update setup-managed workflows' : answerWebPrompt(prompt));
         try {
           await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
-          expect(runLocalAction).toHaveBeenCalledWith(expect.objectContaining({ setupWorkflowUpdates: ['copilot_issue.yml'] }));
+          expect(runLocalAction).toHaveBeenCalledWith(expect.objectContaining({ setupWorkflowUpdates: ['copilot_issue.yml'] }),
+            expect.objectContaining({ onSetupProgress: expect.any(Function) }));
         } finally { comparison.mockRestore(); }
       });
 

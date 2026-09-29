@@ -208,6 +208,14 @@ function runnerLabels(value) {
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+      const platforms = job.strategy?.matrix?.os;
+      if (jobId !== 'setup-platform-smoke' || job['runs-on'] !== '${{ matrix.os }}'
+        || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest'])) {
+        throw new Error(`${relativeFile} must use only the reviewed Ubuntu and Windows setup fixture matrix.`);
+      }
+      continue;
+    }
     const expected = relativeFile.startsWith('setup/workflows/')
       || relativeFile === '.github/workflows/copilot_pull_request_approval.yml'
       ? ['ubuntu-latest']

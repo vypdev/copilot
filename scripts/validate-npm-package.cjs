@@ -115,6 +115,11 @@ try {
   for (const asset of referencedAssets) {
     if (!packageFiles.has(asset)) error(`npm package is missing referenced web asset ${asset}.`);
   }
+  const packagedWebAssets = [...packageFiles].filter(file => file.startsWith('build/web/assets/'));
+  if (packagedWebAssets.length !== referencedAssets.length
+    || packagedWebAssets.some(asset => !referencedAssets.includes(asset))) {
+    error('npm package web assets must match exactly the JS/CSS files referenced by the web index.');
+  }
   if ([...packageFiles].some(file => file.startsWith('build/web/') && file.endsWith('.map'))) {
     error('npm package must not include web source maps.');
   }

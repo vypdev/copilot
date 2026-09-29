@@ -36,6 +36,24 @@ describe('WebSetupBridge', () => {
       { id: 'files', state: 'completed' }, { id: 'secret', state: 'needs-inspection' },
     ] }));
   });
+  test('publishes live resource states and conservatively closes an interrupted write', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    bridge.setJourney({ repository: 'owner/repo', position: 6, total: 6, current: 'Apply', complete: [], pending: [], mutationStarted: true, choiceReviewPass: 1 });
+    bridge.progress({ id: 'files', state: 'in-progress', scope: 'local' });
+    bridge.progress({ id: 'files', state: 'completed', scope: 'local' });
+    bridge.progress({ id: 'secrets', state: 'in-progress', scope: 'repository' });
+    expect(bridge.snapshot().resultDetail?.effects).toEqual([
+      { id: 'files', state: 'completed', scope: 'local' },
+      { id: 'secrets', state: 'in-progress', scope: 'repository' },
+    ]);
+    bridge.finish('partial', 'Inspect before retry');
+    expect(bridge.snapshot().resultDetail?.effects).toEqual([
+      { id: 'files', state: 'completed', scope: 'local' },
+      { id: 'secrets', state: 'needs-inspection', scope: 'repository' },
+    ]);
+    bridge.progress({ id: 'secrets', state: 'completed', scope: 'repository' });
+    expect(bridge.snapshot().resultDetail?.effects?.[1].state).toBe('needs-inspection');
+  });
   test('back navigation rotates the question revision without resolving or echoing a draft answer', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const commit = jest.fn();

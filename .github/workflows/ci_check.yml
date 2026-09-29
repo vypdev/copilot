@@ -100,5 +100,8 @@ jobs:
       - name: Validate product specification catalog
         run: pnpm run validate:specifications
 
+      - name: Validate setup acceptance ledger
+        run: pnpm run validate:setup-acceptance
+
       - name: Validate Git diff
         run: git diff --check

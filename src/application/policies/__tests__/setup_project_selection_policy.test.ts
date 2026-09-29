@@ -29,17 +29,15 @@ describe('setup Project selection', () => {
     expect(parseSetupProjectSelection('https://github.com/orgs/acme/projects/5')).toHaveProperty('error');
   });
 
-  test('uses only Status options common to all selected Projects', () => {
-    expect(sharedProjectStatusOptions('', [])).toEqual({ state: 'unavailable', options: [] });
-    expect(sharedProjectStatusOptions('2,3', [
-      { number: 2, statusOptions: ['Todo', 'In Progress'] },
-      { number: 3, statusOptions: ['In Progress', 'Done'] },
-    ])).toEqual({ state: 'observed', options: ['In Progress'] });
-    expect(sharedProjectStatusOptions('2,3', [
-      { number: 2, statusOptions: ['Todo'] }, { number: 3, statusOptions: ['Done'] },
-    ])).toEqual({ state: 'incompatible', options: [] });
-    expect(sharedProjectStatusOptions('2,4', [{ number: 2, statusOptions: ['Todo'] }]))
-      .toEqual({ state: 'unavailable', options: [] });
+  test.each([
+    ['no selected Project', '', [], { state: 'unavailable', options: [] }],
+    ['one selected Project was not discovered', '2,4', [{ number: 2, statusOptions: ['Todo'] }], { state: 'unavailable', options: [] }],
+    ['one Status field is unreadable', '2,3', [{ number: 2, statusOptions: ['Todo'] }, { number: 3 }], { state: 'unavailable', options: [] }],
+    ['the Projects have disjoint options', '2,3', [{ number: 2, statusOptions: ['Todo'] }, { number: 3, statusOptions: ['Done'] }], { state: 'incompatible', options: [] }],
+    ['the Projects share one option', '2,3', [{ number: 2, statusOptions: ['Todo', 'In Progress'] }, { number: 3, statusOptions: ['In Progress', 'Done'] }], { state: 'observed', options: ['In Progress'] }],
+    ['the Projects share options in the first field order', '2,3', [{ number: 2, statusOptions: ['Todo', 'Done'] }, { number: 3, statusOptions: ['Done', 'Todo'] }], { state: 'observed', options: ['Todo', 'Done'] }],
+  ] as const)('Status compatibility: %s', (_label, ids, projects, expected) => {
+    expect(sharedProjectStatusOptions(ids, projects)).toEqual(expected);
   });
 
   test('validates configured Status values against discovered Projects without trusting incomplete discovery', () => {

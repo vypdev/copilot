@@ -103,7 +103,7 @@ describe('local web setup architecture', () => {
 
   test('new setup application decisions have no transitive path to CLI, infrastructure, or browser adapters', () => {
     const useCases = ['prepare_setup_pat_intent_use_case', 'verify_setup_pat_bootstrap_use_case',
-      'audit_configured_setup_pat_use_case', 'verify_web_setup_apply_use_case']
+      'audit_configured_setup_pat_use_case', 'verify_web_setup_apply_use_case', 'setup_session_coordinator']
       .map(name => join(root, 'src', 'application', 'usecases', 'setup', `${name}.ts`));
     const visited = new Set<string>();
     const traverse = (path: string): void => {
@@ -120,6 +120,12 @@ describe('local web setup architecture', () => {
     };
     for (const entry of useCases) traverse(entry);
     expect(visited.size).toBeGreaterThan(useCases.length);
+    const command = readFileSync(join(root, 'src', 'cli', 'commands', 'setup.ts'), 'utf8');
+    const execution = readFileSync(join(root, 'src', 'cli', 'commands', 'setup_execution.ts'), 'utf8');
+    expect(command).toContain('.action(executeSetupCommand)');
+    expect(command.split('\n').length).toBeLessThanOrEqual(65);
+    expect(execution).toContain('new SetupSessionCoordinator(');
+    expect(execution).not.toMatch(/journey\?\.finish\('complete'\)|journey\?\.finish\('partial'\)/);
   });
   test('domain and application never import browser, HTTP server, or terminal adapters', () => {
     for (const path of [...sources(join(root, 'src', 'domain')), ...sources(join(root, 'src', 'application'))]) {
