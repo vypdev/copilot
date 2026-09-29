@@ -1,6 +1,6 @@
 import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { captureSetupApplySnapshot, setupApplySnapshotMatches } from '../setup_apply_snapshot';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_policy';
 import { buildSetupPlan, setupPlanGuardPaths } from '../../application/policies/setup_configuration_plan';
@@ -64,5 +64,26 @@ describe('web setup apply snapshot', () => {
     expect(paths).toContain('.github/workflows/hotfix_workflow.yml');
     expect(paths).toContain('.github/ISSUE_TEMPLATE/release.yml');
     expect(paths).toContain('.github/ISSUE_TEMPLATE/config.yml');
+  });
+
+  test.each([
+    '.copilot/setup-manifest.json',
+    '.copilot/repository-profile.json',
+    '.copilot/AGENT_GUIDE.md',
+    '.agents/skills/copilot-repository-workflow/SKILL.md',
+    'AGENTS.md',
+  ])('guards %s against drift even when repository guidance is disabled', name => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repositoryAgentGuidance = { ...configuration.repositoryAgentGuidance, enabled: false };
+    const plan = buildSetupPlan(configuration);
+    expect(plan.selectedFiles).not.toContain(name);
+    const paths = setupPlanGuardPaths(plan);
+    expect(paths).toContain(name);
+    const file = join(root, name);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, 'reviewed');
+    const reviewed = captureSetupApplySnapshot(root, paths);
+    writeFileSync(file, 'changed after approval');
+    expect(setupApplySnapshotMatches(root, paths, reviewed)).toBe(false);
   });
 });

@@ -15,6 +15,13 @@ import { buildSetupCredentialRequirements } from './setup_credential_requirement
 import { resolveLocaleProfile } from '../../domain/locale';
 import { ISSUE_WORKFLOW_CATALOG, ISSUE_WORKFLOW_KINDS, issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowFeatures, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import {
+    REPOSITORY_AGENT_GUIDE_PATH,
+    REPOSITORY_AGENT_MANIFEST_PATH,
+    REPOSITORY_AGENT_POINTER_PATH,
+    REPOSITORY_AGENT_PROFILE_PATH,
+    REPOSITORY_AGENT_SKILL_PATH,
+} from './repository_agent_guidance_policy';
 
 export { buildSetupCredentialRequirements };
 
@@ -80,7 +87,16 @@ export function setupPlanGuardPaths(plan: Readonly<SetupPlan>): string[] {
         ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
             .map(file => `.github/workflows/${file}`),
     ];
-    return [...new Set([...selected, ...retiredCandidates])].sort();
+    // The manifest can authorize retirement even when guidance is disabled and
+    // its artifacts are absent from the presentation plan.
+    const guidanceCandidates = [
+        REPOSITORY_AGENT_MANIFEST_PATH,
+        REPOSITORY_AGENT_PROFILE_PATH,
+        REPOSITORY_AGENT_GUIDE_PATH,
+        REPOSITORY_AGENT_SKILL_PATH,
+        REPOSITORY_AGENT_POINTER_PATH,
+    ];
+    return [...new Set([...selected, ...retiredCandidates, ...guidanceCandidates])].sort();
 }
 
 export function buildSetupRepositoryVariables(configuration: SetupConfiguration): SetupVariable[] {

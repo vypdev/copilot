@@ -77,6 +77,10 @@ inspection and PAT checks; it does not dispatch or temporarily install a
 credential-health workflow. Re-enter an existing bot PAT for its grant audit.
 An optional existing provider Secret that you choose to keep may remain
 `unverifiable`; check runtime health with `copilot doctor` after installation.
+Before Apply, the assistant also checks for changes to managed guidance files
+and their ownership manifest. This includes files that may be retired when
+repository agent guidance is turned off; if they changed after plan approval,
+setup stops before modifying them and asks you to review a fresh plan.
 In the browser questionnaire, an issue-workflow choice defaulted to **All**
 stays selected if you continue unchanged; clearing that selection submits
 **none** explicitly.

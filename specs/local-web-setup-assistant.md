@@ -496,6 +496,11 @@ Both terminal and web routes use the same questionnaire parser for this choice.
   `ISSUE_TEMPLATE/name.yml` MUST be translated to their actual checkout
   destinations under `.github/` for this comparison. Include managed assets
   that a changed selection may retire, not only files displayed as selected.
+  The guard set always includes the repository-agent guidance manifest, profile,
+  guide, skill, and managed `AGENTS.md` pointer destination. Disabling guidance
+  can retire manifest-owned artifacts; a changed manifest or any allowlisted
+  artifact after approval MUST invalidate Apply before reconciliation. These
+  paths are guard evidence even when omitted from the plan's selected files.
 - The shared execution boundary owns idempotency and partial facts. The
   browser uses bounded polling or server events for **read-only** progress;
   reconnecting to the same live process retrieves redacted current state,
@@ -830,7 +835,9 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 8. Given a current approved plan and verified credentials, one click applies
    it once. Duplicate click returns the same operation; stale revision,
    changed checkout file, changed remote identity, or new permission need
-   returns to review with no new mutation.
+   returns to review with no new mutation. This includes a changed guidance
+   manifest or any managed guidance artifact when guidance is disabled and
+   its prior artifacts would be retired.
 9. Given an invalid/stale tab event or second tab, no action occurs until the
     new tab explicitly takes control; the first tab then cannot submit.
     Given a concurrent terminal or web setup in the same checkout, the
