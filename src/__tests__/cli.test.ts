@@ -4,6 +4,7 @@
  */
 
 import { execSync } from 'child_process';
+import { join } from 'node:path';
 import { program } from '../cli';
 import { runLocalAction } from '../actions/local_action';
 import { ACTIONS } from '../data/model/action_types';
@@ -13,6 +14,7 @@ import { WebSetupBridge } from '../cli/web_setup_bridge';
 import { WebSetupQuestionnaireCollector } from '../cli/web_setup_adapters';
 import { startWebSetupServer, openWebSetupBrowser } from '../cli/web_setup_server';
 import { captureSetupApplySnapshot, setupApplySnapshotMatches } from '../cli/setup_apply_snapshot';
+import { acquireSetupSessionGuard } from '../cli/setup_session_guard';
 import { createSetupReviewState } from '../application/policies/setup_questionnaire_policy';
 import type { WebSetupPrompt } from '../application/contracts/web_setup_view';
 import { SetupDoctorWorkspaceQueryAdapter } from '../infrastructure/setup_workspace_adapter';
@@ -572,6 +574,29 @@ describe('CLI', () => {
         expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Check out a branch') }));
       });
 
+      it('rejects web setup from a subdirectory before opening the browser or collecting a PAT', async () => {
+        const root = process.cwd();
+        const nested = join(root, 'src');
+        const cwd = jest.spyOn(process, 'cwd').mockReturnValue(nested);
+        (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
+          command === 'git rev-parse --show-toplevel' ? root
+            : command === 'git config --get remote.origin.url' ? 'https://github.com/test-owner/test-repo.git'
+              : 'true',
+        ));
+        try {
+          await program.parseAsync(['node', 'cli', 'setup', '--web']);
+          expect(startWebSetupServer).not.toHaveBeenCalled();
+          expect(acquireSetupSessionGuard).not.toHaveBeenCalled();
+          expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+          expect(runLocalAction).not.toHaveBeenCalled();
+          expect(process.exitCode).toBe(1);
+          const { logError } = require('../utils/logger');
+          expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+            message: expect.stringContaining(`repository root (${root})`),
+          }));
+        } finally { cwd.mockRestore(); }
+      });
+
       it('reports a blocked browser session if launch fails before the journey starts', async () => {
         (openWebSetupBrowser as jest.Mock).mockImplementationOnce(() => { throw new Error('Browser launch failed'); });
         const finish = jest.spyOn(WebSetupBridge.prototype, 'finish');
@@ -614,6 +639,27 @@ describe('CLI', () => {
           expect.stringContaining('Is that the intended operator account?'),
         ]));
         expect(runLocalAction).toHaveBeenCalledTimes(1);
+      });
+
+      it('warns when the final guided plan no longer needs earlier PAT grants', async () => {
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => {
+          if (prompt.title === 'How will you provide your setup PAT?') return 'Guided GitHub link';
+          if (prompt.title === 'What kind of GitHub account owns this repository?') return 'Personal account';
+          if (prompt.title === 'Review these provisional setup PAT grants') return 'Continue to GitHub';
+          if (prompt.title.includes('Is that the intended operator account?')) return 'Yes, continue';
+          return answerWebPrompt(prompt);
+        });
+        collect.mockImplementationOnce(async initial => createSetupReviewState(initial.draft))
+          .mockImplementationOnce(async initial => createSetupReviewState({
+            ...initial.draft, manageRepositoryVariables: false,
+          }));
+        mockTokenPermissionInspect.mockResolvedValueOnce({
+          role: 'setup', account: 'operator', identityStatus: 'valid', identityMessage: 'verified',
+          ready: true, confirmationRequired: false, checks: [],
+        });
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        const { logInfo } = require('../utils/logger');
+        expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('Your PAT may have excess access'));
       });
 
       it('keeps web dry-run local and never asks for either PAT or Apply', async () => {
@@ -734,6 +780,17 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
+      });
+
+      it('fails closed when the approved file snapshot is unavailable', async () => {
+        (captureSetupApplySnapshot as jest.Mock).mockReturnValueOnce(undefined);
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+        const { logError } = require('../utils/logger');
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+          message: expect.stringContaining('approved setup evidence is incomplete'),
+        }));
       });
 
       it('fails closed when the GitHub remote becomes unresolvable just before Apply', async () => {

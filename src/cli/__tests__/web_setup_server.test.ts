@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { request } from 'node:http';
+import { request, ServerResponse } from 'node:http';
 import { connect, type Socket } from 'node:net';
 import { WebSetupBridge } from '../web_setup_bridge';
 import { startWebSetupServer, type WebSetupServer } from '../web_setup_server';
@@ -61,6 +61,34 @@ describe('local web setup server', () => {
     writeFileSync(join(root, 'assets', 'unlisted.js'), 'alert(1)');
     expect((await fetch(`${server.url}assets/unlisted.js`)).status).toBe(404);
     expect((await fetch(`${server.url}assets/%2e%2e/index.html`)).status).toBe(404);
+  });
+
+  test('ends a response safely if an asset write fails after headers were sent', async () => {
+    const end = jest.spyOn(ServerResponse.prototype, 'end').mockImplementationOnce(() => {
+      throw new Error('simulated asset write failure');
+    });
+    try {
+      const response = await fetch(server.url);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe('');
+      expect((await fetch(server.url)).status).toBe(200);
+    } finally { end.mockRestore(); }
+  });
+
+  test('uses the packaged web asset location when no override is supplied', async () => {
+    const filesystem = require('node:fs/promises') as typeof import('node:fs/promises');
+    const original = filesystem.realpath;
+    const packaged = join(__dirname, '..', '..', 'web');
+    const realpath = jest.spyOn(filesystem, 'realpath').mockImplementation(async path =>
+      String(path) === packaged ? original(root) : original(path));
+    let defaultServer: WebSetupServer | undefined;
+    try {
+      defaultServer = await startWebSetupServer(new WebSetupBridge('owner/repo'));
+      expect((await fetch(defaultServer.url)).status).toBe(200);
+    } finally {
+      if (defaultServer) await defaultServer.close();
+      realpath.mockRestore();
+    }
   });
 
   test('the public loopback URL contains no secret and API access requires terminal pairing', async () => {

@@ -222,6 +222,13 @@ exactly what completed and what remains.
    opening the browser or collecting credentials. Detached HEAD or an unreadable
    branch fails immediately with checkout guidance; no fallback branch name
    may be inferred for this guarded session.
+   Web setup MUST also reject invocation from a repository subdirectory before
+   HTTP or PAT collection. Its current Apply boundary uses process-relative
+   checkout paths; accepting a subdirectory would make the approved drift
+   snapshot inspect a different destination. The error identifies the
+   canonical repository root and tells the operator to change directory and
+   rerun. Canonical path comparison permits a symlink spelling of that same
+   root, but never a nested directory.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
    one-run session key, a separate 16-hex-character pairing code, and first
    controller lease in process memory. Print the pairing code only in the
@@ -740,7 +747,7 @@ still offers the terminal setup and doctor paths.
 
 ## 14. Testing strategy and numeric budget
 
-The floor is **102 distinct cases**, derived from shared-engine parity,
+The floor is **103 distinct cases**, derived from shared-engine parity,
 six-stage transitions, two PAT roles, local HTTP abuse, packaged installs,
 drift, and partial mutation. Each test/parameterized behavior counts once;
 existing CLI tests are retained, not re-counted as new web evidence.
@@ -752,9 +759,9 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | GitHub/workspace/HTTP adapters | 10 | identity, missing/unknown grants, org approval, Secret scope, bounded errors and provider mapping |
 | CLI/packaging/workflow contracts | 10 | flag combinations, browser-open fallback, asset manifest, npm pack/global install, unchanged Action/API bundles |
 | UI/accessibility/localization/content | 18 | pending/action/blocked/partial/complete, plan diff, narrow/zoom/keyboard/focus/no-color, both palettes/system toggle and contrast, English fallback, escaping |
-| Integration/compatibility/recovery | 12 | terminal-web parity, manual/environment/dry-run, drift, partial write, doctor reconciliation |
+| Integration/compatibility/recovery | 13 | terminal-web parity, manual/environment/dry-run, drift, partial write, doctor reconciliation, root-versus-subdirectory launch |
 | Security/abuse | 18 | Host/Origin/CSRF, terminal pairing and attempt cap, session-key enforcement on every other API route, CORS, replay, path traversal, XSS/CSP, secret leaks, no GET mutation, body/time/connection limits, atomic lock publication |
-| **Total** | **102** | No double counting |
+| **Total** | **103** | No double counting |
 
 Within the 18 UI cases, cover at least one render/interaction for each prompt
 presenter, one revision-change form reset, secret clearing before dispatch,
@@ -798,7 +805,9 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
    branch, `copilot setup
    --web` opens a bundled local page showing the exact repository and six
    stages; no source checkout or Vite server is needed. A detached HEAD is
-   rejected before a browser opens or any PAT is requested.
+   rejected before a browser opens or any PAT is requested. Invocation from a
+   subdirectory is likewise rejected with the canonical root path; the
+   approved snapshot and Apply can therefore never use different roots.
 2. Given a failed browser opener, the CLI prints the loopback URL and keeps
    serving; given a failed bind or missing assets, it stops without a false
    partial setup claim and offers terminal fallback.
@@ -865,7 +874,7 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 | Shared setup engine/parity (§4.1, §8) | application coordinator + existing policies | scenarios 3, 5, 15; import/schema checks | architecture |
 | Bounded config/compatibility (§6.2–7) | CLI parser + config policy | scenarios 3–4, 15–16 | configuration |
 | Separate PAT roles/evidence (§4.3, §6) | permission/identity/credential use cases | scenarios 6–7, 11, 13, 16 | authentication, credentials |
-| Revision-bound Apply/recovery (§6.3, §10) | session coordinator + execution boundary | scenarios 8–11 | troubleshooting, provisioning |
+| Revision-bound Apply/recovery (§6.1, §6.3, §10) | CLI root precondition + session coordinator + execution boundary | scenarios 1, 8–11; nested-path launch regression | troubleshooting, provisioning |
 | Browser security/privacy (§4.3, §11) | loopback HTTP/asset adapters + redacted presenter | scenarios 9, 12–13 | authentication, architecture |
 | Accessible truthful UX (§9) | Svelte presenter + message catalog | scenarios 5–7, 10–11, 13–14 | how-to-use, troubleshooting |
 

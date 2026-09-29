@@ -40,7 +40,9 @@ Once installed, the `copilot` command is available globally. Repository-dependen
 
 Prefer a visual walkthrough? Run `copilot setup --web` from the repository
 root on an attached Git branch. A detached HEAD is rejected before credentials
-are requested; check out a branch first. The CLI starts a short-lived page on
+are requested; check out a branch first. Running from a subdirectory is also
+rejected before the browser opens or a PAT is requested; change to the
+repository root printed in the error and rerun. The CLI starts a short-lived page on
 `127.0.0.1` and opens your browser;
 if opening fails, paste the printed local URL into a browser on this computer.
 Enter the 16-character pairing code shown in the terminal before setup state

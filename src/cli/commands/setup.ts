@@ -3,7 +3,7 @@ import { runLocalAction } from '../../actions/local_action';
 import { TITLE } from '../../application/contracts/product_identity';
 import { getSetupToken } from '../../utils/setup_files';
 import { logError, logInfo } from '../../utils/logger';
-import { getCurrentAttachedBranch, getCurrentHeadSha, getGitInfo, getGitRepositoryRoot, isInsideGitRepo } from '../../cli_context';
+import { getCurrentAttachedBranch, getCurrentHeadSha, getGitInfo, getGitRepositoryRoot, isGitRepositoryRoot, isInsideGitRepo } from '../../cli_context';
 import { buildSetupParams } from './setup_policy';
 import { collectApprovalCheck, collectScope, collectSecret, loadSetupOverrides } from '../setup_command_options';
 import { SetupQuestionnaireController, SetupWizardUseCase } from '../../application/usecases/setup';
@@ -115,8 +115,11 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         logInfo(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
-        releaseSetupGuard = acquireSetupSessionGuard(cwd);
         const checkoutRoot = webBridge ? getGitRepositoryRoot(cwd) : cwd;
+        if (webBridge && !isGitRepositoryRoot(cwd)) {
+          throw new ApplicationError('configuration.invalid', `Web setup must start from the repository root (${checkoutRoot}). Change to that directory and rerun before creating PATs. No local setup session started.`);
+        }
+        releaseSetupGuard = acquireSetupSessionGuard(cwd);
         const initialBranch = webBridge ? getCurrentAttachedBranch(cwd) : undefined;
         const initialHead = webBridge ? getCurrentHeadSha() : undefined;
         if (webBridge && (!initialBranch || !initialHead)) {
