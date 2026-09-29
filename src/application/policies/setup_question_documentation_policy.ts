@@ -66,5 +66,5 @@ export function setupQuestionDocumentation(question: Pick<SetupQuestion, 'id' | 
     provisioning: docs.provisioning,
     storage: docs.storage,
   } as const;
-  return byState[question.stateId as keyof typeof byState] ?? docs.provisioning;
+  return byState[question.stateId];
 }

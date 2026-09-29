@@ -176,11 +176,11 @@ export class SetupWizardUseCase {
     const discoveryRefresh = {
       refresh: async (kind: 'checks' | 'projects'): Promise<SetupQuestionnaireContext | undefined> => {
         const target = request.remoteTarget;
-        const remaining = context.discoveryRetryRemaining?.[kind] ?? 0;
+        // This context always owns both retry budgets; the selected adapter was present when its budget was issued.
+        const remaining = context.discoveryRetryRemaining![kind];
         if (!target || remaining <= 0) return undefined;
         if (kind === 'checks') {
-          if (!this.dependencies.approvalCheckDiscovery) return undefined;
-          approvalDiscovery = await this.dependencies.approvalCheckDiscovery.discover(
+          approvalDiscovery = await this.dependencies.approvalCheckDiscovery!.discover(
             target.owner, target.repository, target.token, initial.repository.developmentBranch,
           ).catch(() => ({ status: 'unavailable' as const, candidates: [], truncated: false }));
           context = { ...context, approvalCheckCandidates: approvalDiscovery.candidates,
@@ -188,8 +188,7 @@ export class SetupWizardUseCase {
             approvalCheckDiscoveryTruncated: approvalDiscovery.truncated,
             discoveryRetryRemaining: { ...context.discoveryRetryRemaining!, checks: remaining - 1 } };
         } else {
-          if (!this.dependencies.projectDiscovery) return undefined;
-          projectDiscovery = await this.dependencies.projectDiscovery.discover(
+          projectDiscovery = await this.dependencies.projectDiscovery!.discover(
             target.owner, remoteConfiguration?.ownerType ?? 'Unknown', target.token,
           ).catch(() => ({ status: 'unavailable' as const, candidates: [] }));
           context = { ...context, projectDiscovery,

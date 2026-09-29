@@ -332,6 +332,37 @@ describe('SetupWizardUseCase', () => {
     expect(projectDiscover).toHaveBeenCalledTimes(2);
   });
 
+  it('uses Unknown ownership for Project suggestions when remote repository inspection is unavailable', async () => {
+    const draft = buildInitialSetupConfiguration({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    const discover = jest.fn().mockResolvedValue({ status: 'unavailable', candidates: [] });
+    const collect = jest.fn(async (state, _context, refresh) => {
+      expect((await refresh.refresh('projects'))?.projectDiscovery?.status).toBe('unavailable');
+      return { ...state, terminal: 'cancelled' as const };
+    });
+    await new SetupWizardUseCase(dependencies({ collector: { collect },
+      remoteConfiguration: { inspect: jest.fn().mockRejectedValue(new Error('GitHub unavailable')) },
+      projectDiscovery: { discover } })).execute({ mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+      permissionIntent: { draft, answeredQuestionIds: ['projects.enabled'], projectsWanted: true },
+      remoteTarget: { owner: 'owner', repository: 'repo', token: 'setup-token' } });
+    expect(discover).toHaveBeenCalledTimes(2);
+    expect(discover).toHaveBeenNthCalledWith(1, 'owner', 'Unknown', 'setup-token');
+    expect(discover).toHaveBeenNthCalledWith(2, 'owner', 'Unknown', 'setup-token');
+  });
+
+  it('requires interactive mode for plan edits and tolerates an older review without answer history', async () => {
+    const confirmation = { confirm: jest.fn().mockResolvedValue({ kind: 'revise', group: 'repository' }) };
+    await expect(new SetupWizardUseCase(dependencies({ confirmation })).execute({
+      mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+    })).rejects.toThrow('Plan editing requires interactive setup.');
+    confirmation.confirm.mockResolvedValueOnce({ kind: 'revise', group: 'repository' })
+      .mockResolvedValueOnce({ kind: 'declined' });
+    const collect = jest.fn(async state => createSetupReviewState(state.draft));
+    await new SetupWizardUseCase(dependencies({ collector: { collect }, confirmation })).execute({
+      mode: 'interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+    });
+    expect(collect).toHaveBeenCalledTimes(2);
+  });
+
   it('adds live merge-queue readiness to the setup plan', async () => {
     const check = {
       id: 'github.merge-queue.production',

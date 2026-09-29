@@ -52150,6 +52150,18 @@ async function runInitialSetupWorkflow(request, dependencies) {
             return [receipt()];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
+        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
+        const missingProvisioningPorts = [];
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0 && !dependencies.setupRepositorySecretsPort) {
+            missingProvisioningPorts.push(new application_error_1.ApplicationError('provider.unavailable', setup_resource_provisioning_1.SECRET_PROVISIONING_UNAVAILABLE));
+        }
+        if (setupConfiguration?.manageRepositoryVariables && !dependencies.setupRepositoryVariablesPort) {
+            missingProvisioningPorts.push(new application_error_1.ApplicationError('provider.unavailable', setup_resource_provisioning_1.VARIABLE_PROVISIONING_UNAVAILABLE));
+        }
+        if (missingProvisioningPorts.length > 0) {
+            errors.push(...missingProvisioningPorts);
+            return [receipt()];
+        }
         const remoteConfigurationErrors = [];
         const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, remoteConfigurationErrors);
         errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
@@ -52185,7 +52197,6 @@ async function runInitialSetupWorkflow(request, dependencies) {
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
-        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
             mark('secrets', 'needs-inspection');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
@@ -53179,6 +53190,7 @@ function failure(taskId, message, code) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SECRET_PROVISIONING_UNAVAILABLE = exports.VARIABLE_PROVISIONING_UNAVAILABLE = void 0;
 exports.ensureRepositoryVariables = ensureRepositoryVariables;
 exports.ensureRepositorySecrets = ensureRepositorySecrets;
 exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
@@ -53186,9 +53198,14 @@ exports.groupSetupResources = groupSetupResources;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+exports.VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisioning is unavailable; no Variables were changed.';
+exports.SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
 async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
-    if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
+    if (!setupConfiguration?.manageRepositoryVariables) {
         return { errors: [] };
+    }
+    if (!dependencies.setupRepositoryVariablesPort) {
+        return { errors: [exports.VARIABLE_PROVISIONING_UNAVAILABLE] };
     }
     try {
         const desired = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration);
@@ -53208,7 +53225,7 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
     }
 }
 async function ensureRepositorySecrets(context, dependencies, setupConfiguration, remoteConfiguration) {
-    if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
+    if (!setupConfiguration?.manageRepositorySecrets) {
         return { errors: [] };
     }
     const credentials = context.setupCredentials;
@@ -53221,6 +53238,9 @@ async function ensureRepositorySecrets(context, dependencies, setupConfiguration
     ];
     if (values.length === 0)
         return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+    if (!dependencies.setupRepositorySecretsPort) {
+        return { errors: [exports.SECRET_PROVISIONING_UNAVAILABLE] };
+    }
     try {
         const groups = groupSetupResources(values, 'secret', setupConfiguration, remoteConfiguration);
         const result = await upsertSecretGroups(context, dependencies.setupRepositorySecretsPort, groups);

@@ -182,6 +182,83 @@ describe('InitialSetupUseCase', () => {
     ]);
   });
 
+  it('distinguishes skipped files from newly created labels and issue types in the receipt', async () => {
+    mockSetupPrepare.mockReturnValueOnce({ copied: 0, skipped: 2 });
+    mockEnsureInitialLabels.mockResolvedValueOnce({
+      configured: { created: 1, existing: 4, errors: [] }, progress: { created: 0, existing: 21, errors: [] },
+    });
+    mockEnsureIssueTypes.mockResolvedValueOnce({ success: true, created: 2, existing: 1, errors: [] });
+    const result = await useCase.invoke(baseParam());
+    const effects = getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects;
+    expect(effects).toEqual(expect.arrayContaining([
+      { id: 'files', state: 'skipped', scope: 'local' },
+      { id: 'labels', state: 'completed', scope: 'repository' },
+      { id: 'issue-types', state: 'completed', scope: 'repository' },
+    ]));
+  });
+
+  it('reports provisioned Secrets and keeps a failed Secret write marked for inspection', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    const secretPort = { upsertSecrets: jest.fn().mockResolvedValueOnce({ created: 1, updated: 0, skipped: 0, errors: [] })
+      .mockResolvedValueOnce({ created: 0, updated: 0, skipped: 0, errors: ['Secret write denied'] }) };
+    const withSecrets = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels }, { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag }, { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert }, secretPort,
+    );
+    const param = baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot,
+      setupCredentials: { workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [] } } });
+    const completed = await withSecrets.invoke(param);
+    expect(getResultPayload(getResultPayload(completed[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'secrets', state: 'completed', scope: 'repository' });
+    const failed = await withSecrets.invoke(param);
+    expect(failed[0].success).toBe(false);
+    expect(getResultPayload(getResultPayload(failed[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'secrets', state: 'needs-inspection', scope: 'repository' });
+    expect(secretPort.upsertSecrets).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks a failed Variable write for inspection and retains mixed scope even when setup stops early', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.storage.variables.overrides = { AGENT_PROVIDER: 'organization' };
+    mockSetupHasValidToken.mockReturnValueOnce(false);
+    const stopped = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+    expect(getResultPayload(getResultPayload(stopped[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'variables', state: 'not-started', scope: 'mixed' });
+    setupConfiguration.storage.variables.overrides = {};
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 0, updated: 0, errors: ['Variable write denied'] });
+    const failed = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
+    expect(getResultPayload(getResultPayload(failed[0].payload)?.setupReceipt)?.effects)
+      .toContainEqual({ id: 'variables', state: 'needs-inspection', scope: 'repository' });
+  });
+
+  it('never reports Variables or Secrets completed when their provisioning adapters are absent', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    const noProvisioningPorts = new InitialSetupUseCase(
+      { getUser: mockGetUserFromToken, getUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels }, { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag }, { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+    );
+    const inputs = { setupConfiguration, setupRemoteConfiguration: repositorySnapshot,
+      setupCredentials: { workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [] } };
+    const result = await noProvisioningPorts.invoke(baseParam({ inputs }));
+    expect(result[0].success).toBe(false);
+    expect(mockSetupPrepare).not.toHaveBeenCalled();
+    expect(result[0].errors?.map(error => error.message)).toEqual(expect.arrayContaining([
+      'GitHub Actions Variable provisioning is unavailable; no Variables were changed.',
+      'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.',
+    ]));
+    expect(getResultPayload(getResultPayload(result[0].payload)?.setupReceipt)?.effects).toEqual(expect.arrayContaining([
+      { id: 'variables', state: 'not-started', scope: 'repository' },
+      { id: 'secrets', state: 'not-started', scope: 'repository' },
+    ]));
+  });
+
   it('marks a failed local write as needing inspection and later resources as not started', async () => {
     mockSetupPrepare.mockImplementationOnce(() => { throw new Error('write may have happened'); });
     const results = await useCase.invoke(baseParam());

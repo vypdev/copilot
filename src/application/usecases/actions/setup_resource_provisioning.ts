@@ -35,14 +35,20 @@ export interface SetupRepositoryContext {
 export type SetupResource = { name: string; value: string };
 export type SetupResourceGroup = { target: SetupResourceTarget; resources: SetupResource[] };
 
+export const VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisioning is unavailable; no Variables were changed.';
+export const SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
+
 export async function ensureRepositoryVariables(
     context: SetupRepositoryContext,
     dependencies: SetupResourceProvisioningDependencies,
     setupConfiguration?: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
 ): Promise<{ step?: string; errors: string[] }> {
-    if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
+    if (!setupConfiguration?.manageRepositoryVariables) {
         return { errors: [] };
+    }
+    if (!dependencies.setupRepositoryVariablesPort) {
+        return { errors: [VARIABLE_PROVISIONING_UNAVAILABLE] };
     }
     try {
         const desired = buildSetupRepositoryVariables(setupConfiguration);
@@ -70,7 +76,7 @@ export async function ensureRepositorySecrets(
     setupConfiguration?: SetupConfiguration,
     remoteConfiguration?: SetupRemoteConfiguration,
 ): Promise<{ step?: string; errors: string[] }> {
-    if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
+    if (!setupConfiguration?.manageRepositorySecrets) {
         return { errors: [] };
     }
     const credentials = context.setupCredentials;
@@ -82,6 +88,9 @@ export async function ensureRepositorySecrets(
         ...credentials.apiKeys,
     ];
     if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+    if (!dependencies.setupRepositorySecretsPort) {
+        return { errors: [SECRET_PROVISIONING_UNAVAILABLE] };
+    }
     try {
         const groups = groupSetupResources(values, 'secret', setupConfiguration, remoteConfiguration);
         const result = await upsertSecretGroups(context, dependencies.setupRepositorySecretsPort, groups);

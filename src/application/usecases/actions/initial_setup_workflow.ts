@@ -15,6 +15,8 @@ import type { SetupConfiguration, SetupOperationEffect } from '../../../domain/s
 import type { SetupResourceProvisioningDependencies } from './setup_resource_provisioning';
 import type { InitialSetupContext } from '../push_single_action_contexts';
 import {
+    SECRET_PROVISIONING_UNAVAILABLE,
+    VARIABLE_PROVISIONING_UNAVAILABLE,
     ensureRepositorySecrets,
     ensureRepositoryVariables,
     resolveRemoteConfiguration,
@@ -82,6 +84,19 @@ export async function runInitialSetupWorkflow(
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
 
+        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
+        const missingProvisioningPorts: ApplicationError[] = [];
+        if (setupConfiguration?.manageRepositorySecrets && secretValues > 0 && !dependencies.setupRepositorySecretsPort) {
+            missingProvisioningPorts.push(new ApplicationError('provider.unavailable', SECRET_PROVISIONING_UNAVAILABLE));
+        }
+        if (setupConfiguration?.manageRepositoryVariables && !dependencies.setupRepositoryVariablesPort) {
+            missingProvisioningPorts.push(new ApplicationError('provider.unavailable', VARIABLE_PROVISIONING_UNAVAILABLE));
+        }
+        if (missingProvisioningPorts.length > 0) {
+            errors.push(...missingProvisioningPorts);
+            return [receipt()];
+        }
+
         const remoteConfigurationErrors: string[] = [];
         const remoteConfiguration = await resolveRemoteConfiguration(
             request,
@@ -124,7 +139,6 @@ export async function runInitialSetupWorkflow(
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
 
-        const secretValues = Number(Boolean(request.setupCredentials?.workflowPat)) + (request.setupCredentials?.apiKeys.length ?? 0);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0) mark('secrets', 'needs-inspection');
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('secrets', secrets.errors.length ? 'needs-inspection'

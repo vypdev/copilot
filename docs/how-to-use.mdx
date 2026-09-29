@@ -160,7 +160,10 @@ revealing PATs or provider error payloads. A diagnostic reference lets you
 find more detail in the terminal. A "no setup changes started"
 message does not mean a PAT created separately on GitHub was deleted. If
 the browser reports an unknown cause, inspect the terminal's final error
-before retrying.
+before retrying. If a requested Secrets or Variables writer is unavailable,
+setup stops before changing any setup resource and marks operations **not
+started**. An attempted write that fails is marked **needs inspection**, since
+GitHub may have applied it before reporting the error.
 
 Interactive `copilot setup` offers a guided GitHub link or manual entry for each
 PAT. The first link prepares a short-lived **setup PAT** for the person

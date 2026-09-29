@@ -119,6 +119,22 @@ describe('setup resource provisioning policy', () => {
         expect(result.step).toContain('were not changed');
     });
 
+    it('fails closed when a managed resource has values to write but its provisioning port is absent', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        expect(await ensureRepositoryVariables(context, {}, configuration, repositorySnapshot)).toEqual({
+            errors: ['GitHub Actions Variable provisioning is unavailable; no Variables were changed.'],
+        });
+        expect(await ensureRepositorySecrets({ setupCredentials: {
+            workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [],
+        } }, {}, configuration, repositorySnapshot)).toEqual({
+            errors: ['GitHub Actions Secret provisioning is unavailable; no Secrets were changed.'],
+        });
+        configuration.manageRepositoryVariables = false;
+        configuration.manageRepositorySecrets = false;
+        expect(await ensureRepositoryVariables(context, {}, configuration, repositorySnapshot)).toEqual({ errors: [] });
+        expect(await ensureRepositorySecrets(context, {}, configuration, repositorySnapshot)).toEqual({ errors: [] });
+    });
+
     it('uses the organization variable port when the resolved target is organizational', async () => {
         const upsertScopedVariables = jest.fn().mockResolvedValue({ created: 2, updated: 0, errors: [] });
         const configuration = createDefaultSetupConfiguration();

@@ -45,6 +45,41 @@ describe('setup questionnaire policy', () => {
     expect(transitionSetupQuestionnaire(first, { kind: 'back' }).validation).toContain('first question');
   });
 
+  it('does not invent progress or refresh a question after it disappears from the visible pass', () => {
+    const initial = createSetupQuestionnaire(createDefaultSetupConfiguration());
+    const hidden = { skipQuestionIds: [initial.question!.id] };
+    expect(setupQuestionnaireProgress(initial, hidden)).toBeUndefined();
+    expect(refreshSetupQuestionnaireQuestion(initial, hidden)).toBe(initial);
+    const noQuestion = { ...initial, question: undefined };
+    expect(setupQuestionnaireProgress(noQuestion, {})).toBeUndefined();
+    expect(refreshSetupQuestionnaireQuestion(noQuestion, {})).toBe(noQuestion);
+    const review = createSetupReviewState(initial.draft);
+    expect(setupQuestionnaireProgress(review, {})).toBeUndefined();
+    expect(refreshSetupQuestionnaireQuestion(review, {})).toBe(review);
+    expect(reopenSetupQuestionnaireGroup(initial, 'repository', {})).toBeUndefined();
+  });
+
+  it('treats legacy states without a phase as the full questionnaire during refresh and Back', () => {
+    const first = createSetupQuestionnaire(createDefaultSetupConfiguration());
+    const refreshed = refreshSetupQuestionnaireQuestion({ ...first, phase: undefined }, {});
+    expect(refreshed.question?.id).toBe(first.question?.id);
+    const second = transitionSetupQuestionnaire(first, { kind: 'answer', value: '' });
+    const previous = transitionSetupQuestionnaire({ ...second, phase: undefined }, { kind: 'back' });
+    expect(previous.question?.id).toBe(first.question?.id);
+    const context: SetupQuestionnaireContext = { projectOwner: 'acme', projectDiscovery: { status: 'unsupported', candidates: [] } };
+    const selection = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration(), context), 'projects.ids', context);
+    const selected = transitionSetupQuestionnaire(selection, { kind: 'answer', value: '5' }, context);
+    const attestation = advanceTo(selected, 'projects.statusVerified', context);
+    expect(transitionSetupQuestionnaire({ ...attestation, phase: undefined }, { kind: 'answer', value: 'no' }, context)
+      .question?.id).toBe('projects.ids');
+  });
+
+  it('keeps Basic defaults safe when an optional nested configuration section is absent', () => {
+    const configuration = createDefaultSetupConfiguration();
+    const incomplete = { ...configuration, ai: undefined } as unknown as typeof configuration;
+    expect(setupBasicSkippedQuestionIds(incomplete)).not.toContain('ai.bugbotCommentLimit');
+  });
+
   it('does not restart when answering a question makes that question disappear', () => {
     const initial = createDefaultSetupConfiguration();
     initial.projects.ids = '12';
@@ -282,6 +317,25 @@ describe('setup questionnaire policy', () => {
     expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'Tests|x|CI' }).validation).toContain('Select 1–8');
   });
 
+  it('normalizes observed producer numbers but rejects repeated or out-of-range selections', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const candidate = { name: 'Tests', sourceAppId: 12, workflowName: 'CI', runUrl: 'https://github.com/acme/repo/actions/runs/5',
+      headSha: 'a'.repeat(40), conclusion: 'success' };
+    const context: SetupQuestionnaireContext = { approvalCheckCandidates: [candidate], approvalCheckDiscoveryStatus: 'observed' };
+    const state = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    expect(state.question?.discoveryRetryRemaining).toBe(0);
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '1' }, context).draft.pullRequestApproval.testChecks)
+      .toEqual([{ name: 'Tests', sourceAppId: 12, workflowName: 'CI' }]);
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '1,1' }, context).validation)
+      .toContain('selected more than once');
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '2' }, context).validation)
+      .toContain('Select 1–8 observed checks');
+    const noCandidates = { ...state, question: { ...state.question!, producerCandidates: undefined } };
+    expect(transitionSetupQuestionnaire(noCandidates, { kind: 'answer', value: '1' }, context).validation)
+      .toContain('Select 1–8 observed checks');
+  });
+
   it('asks only Project intent before PAT and selects concrete Projects afterwards', () => {
     const defaults = createDefaultSetupConfiguration();
     const intent = advanceTo(createSetupPermissionIntentQuestionnaire(defaults), 'projects.enabled');
@@ -356,6 +410,24 @@ describe('setup questionnaire policy', () => {
       .toContain('Open every selected Project');
     expect(transitionSetupQuestionnaire(attestation, { kind: 'answer', value: 'yes' }, context).question?.id)
       .toBe('createInitialTag');
+  });
+
+  it('does not redirect an attestation refusal to a Project question hidden in this pass', () => {
+    const context: SetupQuestionnaireContext = { projectOwner: 'acme', projectDiscovery: { status: 'unsupported', candidates: [] } };
+    const selection = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration(), context), 'projects.ids', context);
+    const selected = transitionSetupQuestionnaire(selection, { kind: 'answer', value: '5' }, context);
+    const attestation = advanceTo(selected, 'projects.statusVerified', context);
+    const hidden: SetupQuestionnaireContext = { ...context, skipQuestionIds: ['projects.ids'] };
+    const declined = transitionSetupQuestionnaire(attestation, { kind: 'answer', value: 'no' }, hidden);
+    expect(declined.question?.id).toBe('projects.statusVerified');
+    expect(declined.validation).toContain('Open every selected Project');
+  });
+
+  it('accepts a manual Project number when an older question has no discovery candidate field', () => {
+    const context: SetupQuestionnaireContext = { projectOwner: 'acme' };
+    const state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration(), context), 'projects.ids', context);
+    const legacy = { ...state, question: { ...state.question!, projectCandidates: undefined } };
+    expect(transitionSetupQuestionnaire(legacy, { kind: 'answer', value: '5' }, context).draft.projects.ids).toBe('5');
   });
 
   it('asks for numeric threshold, artifact workflow, and reporter attestation only in numeric mode', () => {

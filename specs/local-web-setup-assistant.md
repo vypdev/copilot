@@ -1133,6 +1133,12 @@ path. No step silently creates a PAT, issue, Action run, or Project item.
    operation is `not-started` after an earlier exception. The CLI-to-browser
    mapper accepts only these exact operation IDs, states and scopes and never
    serializes raw provider errors or arbitrary result identifiers.
+   If Secrets or Variables management is enabled but its provisioning port is
+   missing, the application fails preflight before any setup write and reports
+   an explicit unavailable error. The receipt marks every operation
+   `not-started`, never `completed`, and states that no values were changed.
+   A port that attempted a write and returned an error
+   remains `needs-inspection` because the provider may have applied it.
 7. **Comprehension and accessibility gate.** Every question needs a concrete
    recommendation, source of the expected value, consequence of alternatives,
    validation at the field, and targeted documentation. Generic `enter the

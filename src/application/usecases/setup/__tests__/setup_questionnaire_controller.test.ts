@@ -206,6 +206,44 @@ describe('SetupQuestionnaireController', () => {
     expect(output.showCancelled).toHaveBeenCalledTimes(1);
   });
 
+  it('treats an empty manual Project entry as selecting none', async () => {
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
+      projectOwner: 'owner' };
+    const input = { ...terminal([{ kind: 'value', value: '' }]),
+      readMultiSelect: jest.fn().mockResolvedValue({ kind: 'value', value: 'manual' }) };
+    const result = await new SetupQuestionnaireController(input, renderer()).collect(
+      createSetupQuestionnaire(createDefaultSetupConfiguration(), context), context,
+    );
+    expect(result.terminal).toBe('review');
+    expect(result.draft.projects.ids).toBe('');
+  });
+
+  it('keeps a CI check question open if a read-only discovery retry returns no new context', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id)
+      .filter(id => id !== 'pullRequestApproval.testChecks'),
+      approvalCheckDiscoveryStatus: 'unavailable' as const, discoveryRetryRemaining: { checks: 1, projects: 0 } };
+    const refresh = jest.fn(async () => undefined);
+    const input = terminal([{ kind: 'value', value: 'r' }, { kind: 'cancel' }]);
+    const result = await new SetupQuestionnaireController(input, renderer()).collect(
+      createSetupQuestionnaire(configuration, context), context, { refresh },
+    );
+    expect(result.terminal).toBe('cancelled');
+    expect(refresh).toHaveBeenCalledWith('checks');
+    expect(input.readText).toHaveBeenCalledTimes(2);
+  });
+
+  it('renders defensive empty selector choices without crashing on an older question shape', async () => {
+    const initial = createSetupQuestionnaire(createDefaultSetupConfiguration());
+    const input = { ...terminal([]), readMultiSelect: jest.fn().mockResolvedValue({ kind: 'cancel' }) };
+    const multi = { ...initial, question: { ...initial.question!, kind: 'multi-select' as const, choices: undefined } };
+    expect((await new SetupQuestionnaireController(input, renderer()).collect(multi, {})).terminal).toBe('cancelled');
+    const project = { ...initial, question: { ...initial.question!, kind: 'project-select' as const, projectCandidates: undefined } };
+    expect((await new SetupQuestionnaireController(input, renderer()).collect(project, {})).terminal).toBe('cancelled');
+    expect(input.readMultiSelect).toHaveBeenCalledTimes(2);
+  });
+
   it('explains exhausted discovery retries and lets the operator continue', async () => {
     const context = { skipQuestionIds: setupQuestionContentInventory().map(item => item.id).filter(id => id !== 'projects.ids'),
       projectOwner: 'owner', discoveryRetryRemaining: { checks: 0, projects: 0 } };

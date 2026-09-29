@@ -14,6 +14,7 @@ import { localizedPlanWarning, planWarningCatalogs } from '../../../web/src/i18n
 import { agentRoleName, agentRoleNames } from '../../../web/src/i18n/agentRoleNames';
 import { projectTransitionKey } from '../../../web/src/i18n/projectTransitions';
 import { validationCopy } from '../web_setup_adapters';
+import { translatedQuestionLabel } from '../../application/policies/setup_question_labels_fr_pt';
 
 describe('web setup localization catalog', () => {
   test('English is the default and only the four selected locales are advertised', () => {
@@ -29,6 +30,13 @@ describe('web setup localization catalog', () => {
           .toEqual([...en[key as keyof typeof en].matchAll(/\{([a-zA-Z]\w*)\}/gu)].map(match => match[1]).sort());
       }
     }
+  });
+
+  test('shared question labels route English and Spanish without leaking terminal selector hints', () => {
+    const question = { stateId: 'capabilities' as const, id: 'features.issues', label: 'Issue workflows (Space toggles, Enter confirms)',
+      kind: 'boolean' as const, defaultValue: true };
+    expect(translatedQuestionLabel(question, 'en')).toBe('Issue workflows');
+    expect(translatedQuestionLabel(question, 'es')).not.toContain('Space toggles');
   });
 
   test('unsupported runtime locale falls back to complete English copy', () => {
