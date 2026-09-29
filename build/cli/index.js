@@ -46388,6 +46388,7 @@ Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
         .filter(file => file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
@@ -46449,7 +46450,16 @@ function setupPlanGuardPaths(plan) {
         ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
             .map(file => `.github/workflows/${file}`),
     ];
-    return [...new Set([...selected, ...retiredCandidates])].sort();
+    // The manifest can authorize retirement even when guidance is disabled and
+    // its artifacts are absent from the presentation plan.
+    const guidanceCandidates = [
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH,
+        repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_PATH,
+    ];
+    return [...new Set([...selected, ...retiredCandidates, ...guidanceCandidates])].sort();
 }
 function buildSetupRepositoryVariables(configuration) {
     const variables = [];
