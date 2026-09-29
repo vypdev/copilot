@@ -572,6 +572,18 @@ describe('CLI', () => {
         expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Check out a branch') }));
       });
 
+      it('reports a blocked browser session if launch fails before the journey starts', async () => {
+        (openWebSetupBrowser as jest.Mock).mockImplementationOnce(() => { throw new Error('Browser launch failed'); });
+        const finish = jest.spyOn(WebSetupBridge.prototype, 'finish');
+        try {
+          await program.parseAsync(['node', 'cli', 'setup', '--web']);
+          expect(finish).toHaveBeenCalledWith('blocked', expect.stringContaining('No further setup changes'));
+          expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+          expect(runLocalAction).not.toHaveBeenCalled();
+          expect(process.exitCode).toBe(1);
+        } finally { finish.mockRestore(); }
+      });
+
       it.each([
         [undefined, 130],
         ['decline', undefined],
@@ -668,6 +680,20 @@ describe('CLI', () => {
         expect(process.exitCode).toBe(130);
       });
 
+      it.each(['cancelled', 'expired'] as const)('does not Apply after the browser session is %s', async state => {
+        ask.mockImplementation(async function (this: WebSetupBridge, prompt: WebSetupPrompt) {
+          if (prompt.title === 'Apply this setup now?') {
+            if (state === 'cancelled') this.cancel();
+            else this.finish('blocked', 'The local session expired.');
+            return 'Apply setup';
+          }
+          return answerWebPrompt(prompt);
+        });
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(state === 'cancelled' ? 130 : 1);
+      });
+
       it('reports partial completion when an approved action fails', async () => {
         (runLocalAction as jest.Mock).mockResolvedValueOnce([{ success: false, errors: ['provider failed'] }]);
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
@@ -710,8 +736,51 @@ describe('CLI', () => {
         expect(process.exitCode).toBe(1);
       });
 
+      it('fails closed when the GitHub remote becomes unresolvable just before Apply', async () => {
+        let remoteReads = 0;
+        (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
+          command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+            : command === 'git rev-parse --show-toplevel' ? process.cwd()
+              : command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
+                : command === 'git config --get remote.origin.url' && ++remoteReads > 1
+                  ? 'not-a-github-remote' : 'https://github.com/test-owner/test-repo.git',
+        ));
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(remoteReads).toBeGreaterThan(1);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
+      it('fails closed when the attached branch disappears just before Apply', async () => {
+        let branchReads = 0;
+        (execSync as jest.Mock).mockImplementation((command: string) => {
+          if (command === 'git symbolic-ref --quiet --short HEAD' && ++branchReads > 1) throw new Error('detached HEAD');
+          return Buffer.from(command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+            : command === 'git rev-parse --show-toplevel' ? process.cwd()
+              : command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
+                : 'https://github.com/test-owner/test-repo.git');
+        });
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(branchReads).toBeGreaterThan(1);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
       it('rejects unattended CLI approval flags in web mode', async () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--yes']);
+        expect(startWebSetupServer).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
+      it.each([
+        ['--non-interactive'],
+        ['--token', 'github_pat_operator_test_token'],
+        ['--workflow-pat', 'github_pat_bot_test_token'],
+        ['--secret', 'PAT=github_pat_bot_test_token'],
+        ['--confirm-unverifiable-write-permissions'],
+      ])('rejects incompatible web option %s before opening the browser', async (...flags) => {
+        await program.parseAsync(['node', 'cli', 'setup', '--web', ...flags]);
         expect(startWebSetupServer).not.toHaveBeenCalled();
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);

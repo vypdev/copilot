@@ -43,6 +43,15 @@ describe('semantic web setup adapters', () => {
     expect(JSON.stringify(bridge.snapshot())).not.toContain('github_pat_');
   });
 
+  test('labels a legacy questionnaire without a phase as the full wizard', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const ask = jest.spyOn(bridge, 'ask').mockResolvedValueOnce(undefined);
+    const initial = createSetupPermissionIntentQuestionnaire(buildInitialSetupConfiguration({ mode: 'interactive' }));
+    const result = await new WebSetupQuestionnaireCollector(bridge).collect({ ...initial, phase: undefined }, {});
+    expect(ask).toHaveBeenCalledWith(expect.objectContaining({ phase: 'full', pass: 1 }));
+    expect(result.terminal).toBe('cancelled');
+  });
+
   test('invalid answer stays on the same policy question and exposes validation', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const collector = new WebSetupQuestionnaireCollector(bridge);
@@ -214,6 +223,18 @@ describe('semantic web setup adapters', () => {
     answer(bridge, 'manual_fake_pat');
     expect((await pending)?.value).toBe('manual_fake_pat');
     expect(prompt.guidedWorkflowBotIdentity).toBeUndefined();
+  });
+
+  test('manual bot entry without prepared requirements does not invent a permission table', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const prompt = new WebSetupCredentialPrompt(bridge);
+    prompt.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', async () => ({ login: 'bot', id: 1 }));
+    const pending = prompt.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'runtime' });
+    answer(bridge, 'Manual PAT');
+    await next();
+    expect(bridge.snapshot().permissions).toBeUndefined();
+    answer(bridge, 'manual_fake_pat');
+    expect((await pending)?.value).toBe('manual_fake_pat');
   });
 
   test('API key and existing credential decisions stay in separate secret/choice prompts', async () => {

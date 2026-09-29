@@ -62,6 +62,17 @@ describe('setup command option adapter', () => {
       secrets: { defaultScope: 'organization', organizationVisibility: 'selected', overrides: { PAT: 'repository' } },
     });
   });
+
+  test('keeps unspecified approval mode and resource overrides absent', () => {
+    const result = loadSetupOverrides({
+      prApprovalCheck: ['CI|42|ci.yml'],
+      variablesScope: 'repository', secretsScope: 'repository',
+    });
+    expect(result.pullRequestApproval?.mode).toBeUndefined();
+    expect(result.pullRequestApproval?.testChecks).toEqual([{ name: 'CI', sourceAppId: 42, workflowName: 'ci.yml' }]);
+    expect(result.storage?.variables?.overrides).toEqual({});
+    expect(result.storage?.secrets?.overrides).toEqual({});
+  });
 });
 
 describe('setup override merge policy', () => {

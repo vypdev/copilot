@@ -474,6 +474,19 @@ describe('setup presenters and prompt-specific adapters', () => {
     } finally { log.mockRestore(); }
   });
 
+  it('does not invent workflow PAT requirements when the manual guide has none', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '2' }, { kind: 'value', value: 'manual-bot-token' },
+      ]), {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', async () => ({ login: 'bot', id: 1 }));
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .resolves.toEqual({ name: 'PAT', value: 'manual-bot-token' });
+      expect(log.mock.calls.flat().join('\n')).not.toContain('Workflow PAT permissions required');
+    } finally { log.mockRestore(); }
+  });
+
   it('supports explicit existing-credential choices and propagates interrupted secret input', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime token' };
