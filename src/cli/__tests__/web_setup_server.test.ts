@@ -234,10 +234,12 @@ describe('local web setup server', () => {
 
   test('a second tab explicitly takes over and invalidates the first tab capability', async () => {
     const first = await (await fetch(`${server.url}api/bootstrap`)).json() as { capability: string };
-    const second = await (await fetch(`${server.url}api/bootstrap`)).json() as { controller: boolean; takeoverTicket: string };
+    const second = await (await fetch(`${server.url}api/bootstrap`)).json() as { controller: boolean; capability?: string; takeoverTicket?: string };
     expect(second.controller).toBe(false);
-    expect((await jsonPost(server.url, 'api/takeover', { ticket: 'wrong' })).status).toBe(403);
-    const takeover = await jsonPost(server.url, 'api/takeover', { ticket: second.takeoverTicket });
+    expect(second.capability).toBeUndefined();
+    expect(second.takeoverTicket).toBeUndefined();
+    expect((await jsonPost(server.url, 'api/takeover', { code: 'wrong' })).status).toBe(403);
+    const takeover = await jsonPost(server.url, 'api/takeover', { code: server.pairingCode });
     expect(takeover.status).toBe(200);
     const { capability } = await takeover.json() as { capability: string };
     const pending = bridge.ask({ kind: 'choice', title: 'Proceed?', choices: ['yes', 'no'] });
@@ -245,7 +247,17 @@ describe('local web setup server', () => {
     expect((await jsonPost(server.url, 'api/answer', { revision, value: 'yes' }, { 'X-Setup-Capability': first.capability })).status).toBe(403);
     expect((await jsonPost(server.url, 'api/answer', { revision, value: 'yes' }, { 'X-Setup-Capability': capability })).status).toBe(200);
     expect(await pending).toBe('yes');
-    expect((await jsonPost(server.url, 'api/takeover', { ticket: second.takeoverTicket })).status).toBe(403);
+  });
+
+  test('limits wrong-code takeover attempts without returning a controller capability', async () => {
+    await fetch(`${server.url}api/bootstrap`);
+    await fetch(`${server.url}api/bootstrap`);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const rejected = await jsonPost(server.url, 'api/takeover', { code: 'wrong' });
+      expect(rejected.status).toBe(403);
+      expect(await rejected.json()).not.toHaveProperty('capability');
+    }
+    expect((await jsonPost(server.url, 'api/takeover', { code: server.pairingCode })).status).toBe(429);
   });
 
   test('cancel requires the controller and never claims to cancel in-flight Apply', async () => {
@@ -352,13 +364,13 @@ describe('local web setup server', () => {
     expect((await wrongType('api/close')).status).toBe(415);
   });
 
-  test('mutating requests without a controller capability or a takeover ticket do nothing', async () => {
+  test('mutating requests without a controller capability do nothing', async () => {
     const origin = server.url.slice(0, -1);
     const pending = bridge.ask({ kind: 'secret', title: 'PAT' });
     const revision = bridge.snapshot().promptRevision;
     expect((await jsonPost(server.url, 'api/answer', { revision, value: 'ignored' })).status).toBe(403);
     expect((await jsonPost(server.url, 'api/cancel', {})).status).toBe(403);
-    expect((await jsonPost(server.url, 'api/takeover', { ticket: 42 })).status).toBe(403);
+    expect((await jsonPost(server.url, 'api/takeover', { code: 42 })).status).toBe(403);
     expect((await fetch(`${server.url}api/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision, value: 'ignored' }) })).status).toBe(403);
     expect(origin).toContain('127.0.0.1');
     bridge.cancel();

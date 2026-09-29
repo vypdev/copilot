@@ -41,7 +41,8 @@
         <div class="review-pass" role="status"><span aria-hidden="true">↺</span> Reviewing saved choices — pass {$session.view.journey.choiceReviewPass}. This is the same setup run, not a restart.</div>
       {/if}
       {#if !$session.controller && $session.view}
-        <StatusBanner tone="warning" title="Read-only tab" message="Another tab controls this session. You can review progress here or explicitly take over." actionLabel="Take control in this tab" onAction={session.takeOver} />
+        <StatusBanner tone="warning" title="Read-only tab" message="Another tab controls this session. Enter the pairing code from the launching terminal to take over." />
+        <PairingPanel mode="takeover" busy={$session.busy} onPair={session.takeOver} />
       {/if}
       {#if $session.error}<StatusBanner tone="error" title="Needs attention" message={$session.error} />{/if}
       {#if $session.view?.message}

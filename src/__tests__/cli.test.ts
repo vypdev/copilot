@@ -541,6 +541,20 @@ describe('CLI', () => {
         expect(process.exitCode).toBeUndefined();
       });
 
+      it('prints the pairing code to stdout even without an interactive TTY', async () => {
+        const descriptor = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
+        Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: false });
+        try {
+          await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+          const { logInfo } = require('../utils/logger');
+          expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('0123456789abcdef'), false, undefined, true);
+          expect(startWebSetupServer).toHaveBeenCalledTimes(1);
+        } finally {
+          if (descriptor) Object.defineProperty(process.stdout, 'isTTY', descriptor);
+          else Reflect.deleteProperty(process.stdout, 'isTTY');
+        }
+      });
+
       it('stops before acquiring a PAT when repository confirmation is declined', async () => {
         ask.mockResolvedValueOnce('Stop and choose another checkout');
         await program.parseAsync(['node', 'cli', 'setup', '--web']);

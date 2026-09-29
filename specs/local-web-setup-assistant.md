@@ -216,8 +216,12 @@ exactly what completed and what remains.
    process can replace it between a read and an unlink. Publish a fully
    written lock record atomically; failed writes MUST NOT leave a blocking
    empty lock. Web
-   mode does not require a TTY: the browser is the interactive surface, and
-   a printed local URL is available if automatic opening is unavailable.
+   mode does not require an input TTY: the browser is the interactive surface,
+   but the operator MUST be able to read the launcher's stdout, either directly
+   or in a privately captured task log, to obtain the pairing code and local
+   URL. An invocation whose stdout is discarded cannot be paired; rerun from
+   a readable terminal or captured-output task. Copilot never copies the code
+   into the browser URL or a persistent diagnostic log.
    Web setup MUST verify an attached Git branch and canonical HEAD before
    opening the browser or collecting credentials. Detached HEAD or an unreadable
    branch fails immediately with checkout guidance; no fallback branch name
@@ -231,12 +235,17 @@ exactly what completed and what remains.
    root, but never a nested directory.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
    one-run session key, a separate 16-hex-character pairing code, and first
-   controller lease in process memory. Print the pairing code only in the
-   terminal, without adding it to accumulated diagnostics, then open the
+   controller lease in process memory. Print the pairing code only to the
+   launcher's stdout, without adding it to accumulated diagnostics, then open the
    default browser to the public `http://127.0.0.1:<port>/` URL. The initial
    page asks for the code before any setup state is shown. A same-origin POST
    exchanges it for the session key held only in browser memory; five invalid
-   attempts lock pairing until a new setup run. If opening fails, print the
+   attempts lock pairing until a new setup run. A second paired tab remains
+   read-only until its operator explicitly re-enters that same code for a
+   takeover POST; no takeover ticket is distributed in bootstrap. Failed
+   takeover codes share the bounded attempt counter. A successful takeover
+   rotates the controller capability and invalidates the previous tab.
+   If opening fails, print the
    public URL and instructions; serving continues. Neither code nor key may
    appear in URL, history, cookies, browser storage, or accumulated logs.
    If binding or packaged
@@ -319,7 +328,8 @@ exactly what completed and what remains.
   guided link for that role and provides the existing full permission table
   and manual compatibility path; never auto-select a broader classic PAT.
 - Leaving the page or closing its tab does not prove cancellation or
-  revocation. A second tab starts read-only and may explicitly take over;
+  revocation. A second tab starts read-only and may take over only after its
+  operator explicitly re-enters the pairing code from the launching output;
   takeover rotates the controller lease, invalidates pending responses from
   the old tab, and shows the current server-owned phase. No PAT value is
   rehydrated into either tab. Browser Back revisits a *view*; it cannot undo
@@ -671,11 +681,13 @@ for the temporary setup PAT and to bot-PAT rotation guidance separately.
 1. **Boundary:** the web server is loopback-only, but TCP loopback does not
    identify or isolate the launching OS user: another local user can connect
    to the port. The browser must enter a cryptographically random code shown
-   only in the launching terminal; the server exchanges it for a one-run
+   only in the launcher's readable stdout; the server exchanges it for a one-run
    session key. That key is required for every API read and mutation, including
    bootstrap and takeover. Possession of the pairing code grants local session
-   access, so it must not be shared. A malicious process that can read the
-   terminal, browser extensions with page access, or a compromised browser
+   access including explicit takeover, so it must not be shared. If a task runner
+   captures stdout, that private capture must be protected like the code. A
+   malicious process that can read that output, browser extensions with page
+   access, or a compromised browser
    remain outside this boundary. The product must say so honestly.
 2. **Request defense:** reject `Host` not exactly `127.0.0.1:<bound-port>`,
    proxy/forwarded host headers, unexpected `Origin`/`Referer` on mutations,
@@ -686,11 +698,15 @@ for the temporary setup PAT and to bot-PAT rotation guidance separately.
    and key are not sent in an HTTP URL or stored in a cookie/localStorage/
    sessionStorage; the browser sends the key in a custom header to every
    subsequent API route. In addition,
-   state-changing requests require a separate one-run, cryptographically
-   random controller capability in a custom header plus a revision check;
+   state-changing answer, cancel, and close requests require a separate one-run,
+   cryptographically random controller capability in a custom header; answers
+   additionally require a revision check. Pairing and takeover instead require
+   the pairing code with bounded wrong-code attempts;
    that capability is delivered only by an authenticated same-origin no-store
    bootstrap response, never a URL or browser storage. Reject missing/invalid
-   keys or capabilities and rotate the controller capability on tab takeover.
+   keys or capabilities and rotate the controller capability on code-authorized
+   tab takeover. Bootstrap never discloses a takeover credential to read-only
+   tabs.
    These controls defend cross-site requests and host confusion, but do not
    prove the identity of a local OS user.
    The local server sets no cookies and ignores, never logs, any Cookie header
@@ -839,7 +855,9 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
    manifest or any managed guidance artifact when guidance is disabled and
    its prior artifacts would be retired.
 9. Given an invalid/stale tab event or second tab, no action occurs until the
-    new tab explicitly takes control; the first tab then cannot submit.
+    new tab re-enters the launcher-output pairing code and explicitly takes
+    control; the first tab then cannot submit. Bootstrap to a read-only tab
+    contains no takeover credential, and wrong-code attempts are bounded.
     Given a concurrent terminal or web setup in the same checkout, the
     per-checkout guard blocks its Apply before any mutation.
 10. Given cancel/idle expiry before Apply, the process closes without setup
@@ -867,8 +885,10 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 15. Given no `--web`, existing terminal, unattended, and dry-run contracts
     remain unchanged. Build/package/architecture checks detect missing UI
     assets, policy duplication, and Svelte leaking into Action/API bundles.
-16. Given a desktop browser but no terminal TTY, web mode still permits
-    explicit browser decisions. Given an existing unreadable Secret `PAT`,
+16. Given a desktop browser but no input TTY and privately readable captured
+    stdout, web mode still permits pairing and explicit browser decisions; if
+    stdout was discarded, the operator must relaunch with readable output.
+    Given an existing unreadable Secret `PAT`,
     the UI does not claim to recover its value and follows the current
     re-entry/preservation policy. Given an environment-supplied setup PAT,
     exit never claims to have removed it from the parent shell.

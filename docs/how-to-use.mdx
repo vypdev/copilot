@@ -50,6 +50,10 @@ appears. The URL contains no secret; keep the pairing code private. Loopback
 by itself does not restrict access to your OS account, and anyone on this
 computer with the code could join the session. After a page refresh, enter
 the code again. Neither the code nor the session key is sent to GitHub.
+An input TTY is not required for `--web`, but you must be able to read the
+launcher's stdout (or a privately captured task log) to obtain the code. If
+that output was discarded, stop and relaunch from a readable terminal; there
+is no code-recovery link in the browser. Treat any captured output as private.
 The page shows the same six setup stages, keeps the review pass visibly part
 of the current run, presents permissions and the final plan, and asks for a
 separate final **Apply setup** approval. Use the System/Light/Dark control in
@@ -57,8 +61,10 @@ the top bar to choose a readable palette; the choice lasts only in that tab.
 PAT values are submitted to the local process through masked fields and are
 not restored after refreshing the page. A new setup question starts with its
 own suggested answer; status updates do not erase an answer you are typing.
-A second tab is read-only until you
-explicitly take control there. The terminal remains the default with
+A second tab is read-only until you explicitly re-enter the launcher's pairing
+code there to take control; this invalidates the first tab's control. The
+pairing code authorizes this takeover, so share it only with someone you trust
+to control the setup. The terminal remains the default with
 `copilot setup`.
 
 The web mode still opens GitHub's official form in a separate tab for each

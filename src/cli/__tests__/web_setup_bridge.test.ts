@@ -20,11 +20,10 @@ describe('WebSetupBridge', () => {
     expect(first.controller).toBe(true);
     expect(second.controller).toBe(false);
     expect(second.capability).toBeUndefined();
-    expect(bridge.takeOver('invalid')).toBeUndefined();
-    const replacement = bridge.takeOver(second.takeoverTicket)!;
+    expect(JSON.stringify(second)).not.toContain('takeoverTicket');
+    const replacement = bridge.takeOver();
     expect(bridge.isController(first.capability!)).toBe(false);
     expect(bridge.isController(replacement)).toBe(true);
-    expect(bridge.takeOver(second.takeoverTicket)).toBeUndefined();
   });
 
   test('cancellation resolves a pending decision and forbids future prompts', async () => {

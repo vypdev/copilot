@@ -12,14 +12,12 @@ interface SessionState {
 interface Bootstrap {
   controller: boolean;
   capability?: string;
-  takeoverTicket: string;
 }
 
 export function createSetupSession(initialSessionKey?: string) {
   const state = writable<SessionState>({ paired: Boolean(initialSessionKey), controller: false, busy: false, error: '' });
   let sessionKey = initialSessionKey;
   let capability: string | undefined;
-  let takeoverTicket = '';
   let current: SessionState = { paired: Boolean(initialSessionKey), controller: false, busy: false, error: '' };
   let loading = false;
 
@@ -49,13 +47,11 @@ export function createSetupSession(initialSessionKey?: string) {
       if (!response.ok) throw new Error('Could not join this local session.');
       const bootstrap = await response.json() as Bootstrap;
       capability = bootstrap.capability;
-      takeoverTicket = bootstrap.takeoverTicket;
       set({ controller: bootstrap.controller, error: '' });
       await refresh();
     } catch {
       sessionKey = undefined;
       capability = undefined;
-      takeoverTicket = '';
       set({ view: undefined, paired: false, controller: false, error: 'Could not connect to the local setup session. Check the terminal and pair again.' });
     }
   }
@@ -124,15 +120,19 @@ export function createSetupSession(initialSessionKey?: string) {
     }
   }
 
-  async function takeOver(): Promise<void> {
+  async function takeOver(code: string): Promise<void> {
+    if (current.busy || !current.paired || current.controller) return;
+    set({ busy: true, error: '' });
     try {
-      const result = await post('/api/takeover', { ticket: takeoverTicket }, false);
+      const result = await post('/api/takeover', { code: code.trim().toLowerCase() }, false);
       capability = String(result.capability);
       set({ controller: true, error: '' });
       await refresh();
     } catch (cause) {
       set({ error: cause instanceof Error ? cause.message : 'Takeover failed.' });
-      await connect();
+      await refresh(true);
+    } finally {
+      set({ busy: false });
     }
   }
 

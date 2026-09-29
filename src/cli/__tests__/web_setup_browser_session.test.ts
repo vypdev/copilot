@@ -162,7 +162,7 @@ describe('browser session transport', () => {
     const requests: Array<{ path: string; options?: RequestInit }> = [];
     globalThis.fetch = jest.fn(async (path: string, options?: RequestInit) => {
       requests.push({ path, options });
-      if (path === '/api/bootstrap') return response({ controller: false, takeoverTicket: 'ticket' });
+      if (path === '/api/bootstrap') return response({ controller: false });
       if (path === '/api/state') return response(view);
       if (path === '/api/takeover') return response({ capability: 'new-capability' });
       if (path === '/api/answer') return response({ ok: true });
@@ -175,9 +175,10 @@ describe('browser session transport', () => {
     await session.connect();
     await session.submit(7, 'blocked');
     expect(requests.some(request => request.path === '/api/answer')).toBe(false);
-    await session.takeOver();
+    await session.takeOver(' 0123456789ABCDEF ');
     expect(controller).toBe(true);
     expect(requests.find(request => request.path === '/api/takeover')?.options?.headers).not.toHaveProperty('X-Setup-Capability');
+    expect(JSON.parse(String(requests.find(request => request.path === '/api/takeover')?.options?.body))).toEqual({ code: '0123456789abcdef' });
     await session.submit(7, 'allowed');
     expect(requests.find(request => request.path === '/api/answer')?.options?.headers).toEqual(expect.objectContaining({ 'X-Setup-Capability': 'new-capability' }));
   });
@@ -301,10 +302,10 @@ describe('browser session transport', () => {
     expect(latest).toContain('Cancellation failed.');
   });
 
-  test('an unexpected takeover transport failure rechecks who controls the session', async () => {
+  test('an unexpected takeover transport failure keeps the tab read-only', async () => {
     let bootstrapReads = 0;
     globalThis.fetch = jest.fn(async (path: string) => {
-      if (path === '/api/bootstrap') { bootstrapReads += 1; return response({ controller: false, takeoverTicket: 'ticket' }); }
+      if (path === '/api/bootstrap') { bootstrapReads += 1; return response({ controller: false }); }
       if (path === '/api/state') return response(view);
       if (path === '/api/takeover') throw 'transport unavailable';
       throw new Error('Unexpected route');
@@ -314,8 +315,8 @@ describe('browser session transport', () => {
     let controller = true;
     session.subscribe(state => { controller = state.controller; });
     await session.connect();
-    await session.takeOver();
-    expect(bootstrapReads).toBe(2);
+    await session.takeOver('0123456789abcdef');
+    expect(bootstrapReads).toBe(1);
     expect(controller).toBe(false);
   });
 
@@ -360,24 +361,24 @@ describe('browser session transport', () => {
     await first;
   });
 
-  test('a failed takeover re-reads the current controller instead of retaining authority', async () => {
+  test('a failed takeover retains read-only state and explains the rejected code', async () => {
     const requests: string[] = [];
     globalThis.fetch = jest.fn(async (path: string) => {
       requests.push(path);
-      if (path === '/api/bootstrap') return response({ controller: false, takeoverTicket: 'ticket' });
+      if (path === '/api/bootstrap') return response({ controller: false });
       if (path === '/api/state') return response(view);
-      if (path === '/api/takeover') return response({ error: 'Invalid takeover ticket.' }, 403);
+      if (path === '/api/takeover') return response({ error: 'Incorrect pairing code.' }, 403);
       throw new Error('Unexpected route');
     }) as typeof fetch;
 
     const session = createSetupSession(TEST_SESSION_KEY);
-    let latest: { controller: boolean; busy: boolean } | undefined;
+    let latest: { controller: boolean; busy: boolean; error: string } | undefined;
     session.subscribe(state => { latest = state; });
     await session.connect();
-    await session.takeOver();
+    await session.takeOver('0123456789abcdef');
 
-    expect(requests.filter(path => path === '/api/bootstrap')).toHaveLength(2);
-    expect(latest).toMatchObject({ controller: false, busy: false });
+    expect(requests.filter(path => path === '/api/bootstrap')).toHaveLength(1);
+    expect(latest).toMatchObject({ controller: false, busy: false, error: 'Incorrect pairing code.' });
   });
 
   test('failed bootstrap and state requests are reported without claiming a live session', async () => {

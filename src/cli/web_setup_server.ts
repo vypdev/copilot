@@ -95,10 +95,15 @@ export async function startWebSetupServer(bridge: WebSetupBridge, assets = join(
       if (request.method === 'POST' && request.url === '/api/takeover') {
         if (request.headers['content-type'] !== 'application/json') { respond(response, 415, { error: 'JSON required.' }); return; }
         const body = await readJson(request);
-        const ticket = typeof body.ticket === 'string' ? body.ticket : '';
-        const capability = bridge.takeOver(ticket);
-        if (capability) armIdle();
-        respond(response, capability ? 200 : 403, capability ? { capability } : { error: 'Invalid takeover ticket.' });
+        if (failedPairings >= 5) { respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' }); return; }
+        if (!matchesHexSecret(body.code, pairingCode)) {
+          failedPairings += 1;
+          respond(response, 403, { error: 'Incorrect pairing code. Check the launching output.' });
+          return;
+        }
+        const capability = bridge.takeOver();
+        armIdle();
+        respond(response, 200, { capability });
         return;
       }
       if (request.method === 'POST' && request.url === '/api/answer') {

@@ -68296,7 +68296,6 @@ class WebSetupBridge {
     constructor(repository) {
         this.revision = 0;
         this.subscribers = new Set();
-        this.takeoverTicket = (0, node_crypto_1.randomBytes)(32).toString('hex');
         this.bootstrapped = false;
         this.view = { revision: 0, repository };
     }
@@ -68312,13 +68311,10 @@ class WebSetupBridge {
         // A second tab starts read-only. Its explicit takeover rotates the controller capability.
         const first = !this.bootstrapped;
         this.bootstrapped = true;
-        return { controller: first, ...(first ? { capability: this.controller } : {}), takeoverTicket: this.takeoverTicket };
+        return { controller: first, ...(first ? { capability: this.controller } : {}) };
     }
-    takeOver(ticket) {
-        if (!sameCapability(ticket, this.takeoverTicket))
-            return undefined;
+    takeOver() {
         this.controller = (0, node_crypto_1.randomBytes)(32).toString('hex');
-        this.takeoverTicket = (0, node_crypto_1.randomBytes)(32).toString('hex');
         this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.' } });
         return this.controller;
     }
@@ -68511,11 +68507,18 @@ async function startWebSetupServer(bridge, assets = (0, node_path_1.join)(__dirn
                     return;
                 }
                 const body = await readJson(request);
-                const ticket = typeof body.ticket === 'string' ? body.ticket : '';
-                const capability = bridge.takeOver(ticket);
-                if (capability)
-                    armIdle();
-                respond(response, capability ? 200 : 403, capability ? { capability } : { error: 'Invalid takeover ticket.' });
+                if (failedPairings >= 5) {
+                    respond(response, 429, { error: 'Too many pairing attempts. Restart setup.' });
+                    return;
+                }
+                if (!matchesHexSecret(body.code, pairingCode)) {
+                    failedPairings += 1;
+                    respond(response, 403, { error: 'Incorrect pairing code. Check the launching output.' });
+                    return;
+                }
+                const capability = bridge.takeOver();
+                armIdle();
+                respond(response, 200, { capability });
                 return;
             }
             if (request.method === 'POST' && request.url === '/api/answer') {

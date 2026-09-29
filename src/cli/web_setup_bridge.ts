@@ -12,7 +12,6 @@ export class WebSetupBridge {
   private subscribers = new Set<(view: WebSetupView) => void>();
   private controller?: string;
   private lastAnsweredRevision?: number;
-  private takeoverTicket = randomBytes(32).toString('hex');
 
   constructor(repository: string) {
     this.view = { revision: 0, repository };
@@ -26,20 +25,18 @@ export class WebSetupBridge {
     return () => this.subscribers.delete(listener);
   }
 
-  bootstrap(): { controller: boolean; capability?: string; takeoverTicket: string } {
+  bootstrap(): { controller: boolean; capability?: string } {
     if (!this.controller) this.controller = randomBytes(32).toString('hex');
     // A second tab starts read-only. Its explicit takeover rotates the controller capability.
     const first = !this.bootstrapped;
     this.bootstrapped = true;
-    return { controller: first, ...(first ? { capability: this.controller } : {}), takeoverTicket: this.takeoverTicket };
+    return { controller: first, ...(first ? { capability: this.controller } : {}) };
   }
 
   private bootstrapped = false;
 
-  takeOver(ticket: string): string | undefined {
-    if (!sameCapability(ticket, this.takeoverTicket)) return undefined;
+  takeOver(): string {
     this.controller = randomBytes(32).toString('hex');
-    this.takeoverTicket = randomBytes(32).toString('hex');
     this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.' } });
     return this.controller;
   }
