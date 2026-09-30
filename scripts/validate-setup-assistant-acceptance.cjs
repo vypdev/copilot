@@ -1,5 +1,6 @@
 const { readFileSync, existsSync } = require('node:fs');
 const { join, resolve } = require('node:path');
+const { relativeJestSuitePath } = require('./setup-acceptance-path.cjs');
 
 const root = resolve(__dirname, '..');
 const ledger = JSON.parse(readFileSync(join(root, 'specs/local-web-setup-assistant-acceptance.json'), 'utf8'));
@@ -7,7 +8,7 @@ const jestResultPath = process.argv[2];
 const jestResults = jestResultPath ? JSON.parse(readFileSync(resolve(jestResultPath), 'utf8')) : undefined;
 const executedTests = new Map();
 for (const suite of jestResults?.testResults ?? []) {
-  const file = suite.name.startsWith(`${root}/`) ? suite.name.slice(root.length + 1) : suite.name;
+  const file = relativeJestSuitePath(root, suite.name);
   for (const test of suite.assertionResults ?? []) executedTests.set(`${file}::${test.fullName}`, test.status);
 }
 const counts = { P: 48, S: 54, A: 40, C: 37, U: 101, I: 42, X: 28 };
