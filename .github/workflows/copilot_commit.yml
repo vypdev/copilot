@@ -7,6 +7,10 @@ on:
       - '!master'
       - '!develop'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   copilot-commits:
     if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}

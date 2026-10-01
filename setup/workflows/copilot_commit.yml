@@ -31,6 +31,7 @@ jobs:
           node-version: '24.x'
 
       - name: Fetch push review range
+        shell: bash
         if: github.event.after != '0000000000000000000000000000000000000000'
         env:
           BEFORE_SHA: ${{ github.event.before }}

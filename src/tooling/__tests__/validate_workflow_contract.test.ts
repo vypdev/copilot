@@ -7,6 +7,7 @@ interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
+  assertPortableRunShell(file: string, workflow: Record<string, unknown>): void;
   assertMajorActionReferences(file: string, workflow: Record<string, unknown>): void;
   assertCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
@@ -32,6 +33,7 @@ const {
   assertQueueWorkflow,
   assertDirectEventTriggers,
   assertRunner,
+  assertPortableRunShell,
   assertMajorActionReferences,
   assertCopilotActionInputs,
   assertNoJobLevelSecrets,
@@ -310,6 +312,29 @@ describe('workflow contract validator', () => {
     );
 
     expect(() => validateWorkflow(file, workflow)).toThrow('must materialize and verify the exact GitHub before/after review range');
+  });
+
+  it.each([
+    ['.github/workflows', 'copilot_commit.yml', 'copilot-commits'],
+    ['.github/workflows', 'ci_check.yml', 'ci-check'],
+    ['.github/workflows', 'release_workflow.yml', 'prepare-compiled-files'],
+    ['setup/workflows', 'copilot_commit.yml', 'copilot-commits'],
+    ['setup/workflows', 'copilot_pull_request.yml', 'copilot-pull-requests'],
+  ])('requires portable Bash for run steps in %s/%s', (directory, fileName, jobId) => {
+    const file = path.join(process.cwd(), directory, fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => assertPortableRunShell(file, workflow)).not.toThrow();
+    delete workflow.defaults;
+    delete workflow.jobs[jobId].defaults;
+    for (const step of workflow.jobs[jobId].steps) delete step.shell;
+    expect(() => assertPortableRunShell(file, workflow)).toThrow('must select shell: bash');
+  });
+
+  it('rejects a platform-specific shell override on a Codex runner', () => {
+    const file = path.join(process.cwd(), '.github/workflows/copilot_commit.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['copilot-commits'].steps.find((step: { run?: string }) => step.run).shell = 'pwsh';
+    expect(() => assertPortableRunShell(file, workflow)).toThrow('must select shell: bash');
   });
 
   it.each(['.github/workflows', 'setup/workflows'])('requires a full checkout for push review ranges in %s', (directory) => {
@@ -680,12 +705,12 @@ describe('workflow contract validator', () => {
     })).toThrow('runs-on self-hosted, codex');
   });
 
-  it('limits the setup fixture workflow to the reviewed Ubuntu and Windows matrix', () => {
+  it('requires the Ubuntu, Windows and macOS setup fixture matrix', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
-    workflow.jobs['setup-platform-smoke'].strategy.matrix.os = ['ubuntu-latest', 'windows-latest', 'macos-latest'];
-    expect(() => assertRunner(file, workflow)).toThrow('reviewed Ubuntu and Windows setup fixture matrix');
+    workflow.jobs['setup-platform-smoke'].strategy.matrix.os = ['ubuntu-latest', 'windows-latest'];
+    expect(() => assertRunner(file, workflow)).toThrow('Ubuntu, Windows and macOS setup fixture matrix');
   });
 
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {

@@ -4,15 +4,14 @@ const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { runNpmPack } = require('./npm-pack-command.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-npm-smoke-'));
 
 try {
-  const output = execFileSync(
-    'npm',
+  const output = runNpmPack(
     [
-      'pack',
       '--json',
       '--ignore-scripts',
       '--pack-destination',
@@ -91,7 +90,7 @@ try {
   const consumerRoot = path.join(temporaryDirectory, 'consumer');
   const packageScope = path.join(consumerRoot, 'node_modules', '@vypdev');
   fs.mkdirSync(packageScope, { recursive: true });
-  fs.symlinkSync(packageRoot, path.join(packageScope, 'copilot'), 'dir');
+  fs.symlinkSync(packageRoot, path.join(packageScope, 'copilot'), process.platform === 'win32' ? 'junction' : 'dir');
   fs.writeFileSync(path.join(consumerRoot, 'index.ts'), [
     "import { BugbotReviewService, type BugbotReviewConfiguration, type BugbotScmGateway } from '@vypdev/copilot/bugbot';",
     "const configuration: Partial<BugbotReviewConfiguration> = { effort: 'smart' };",

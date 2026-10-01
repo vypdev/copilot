@@ -5,6 +5,10 @@ on:
   pull_request:
     types: [opened, reopened, closed, synchronize]
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}

@@ -1,4 +1,8 @@
 name: Copilot - Pull Request Merge Queue
+
+defaults:
+  run:
+    shell: bash
 run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:

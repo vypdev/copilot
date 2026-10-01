@@ -1748,8 +1748,8 @@ smoke checks. Browser inspection of the pending and partial fixtures caught
 and corrected four-language result copy that falsely said Apply had not
 started despite an uncertain Secret receipt. The four-language regression
 passed, but this limited inspection does not certify the full UI review.
-Linux and Windows CI fixture jobs exercise build, typecheck, local
-server, session guard, snapshot, and coordinator behavior; Linux also checks
+The prior Linux and Windows CI fixture jobs exercised build, typecheck, local
+server, session guard, snapshot, and coordinator behavior; Linux also checked
 the isolated npm package. These jobs are coverage opportunities, not evidence
 of a real-browser or global-install review until their checks run. Human
 keyboard/screen-reader, 200%-zoom, light/dark, linguistic, and cross-platform
@@ -1769,6 +1769,23 @@ not close the human visual/accessibility or live-provider gates. The local
 coverage run passed 511 suites / 5,752 tests, with 96.19% statements, 91.37%
 branches, 96.88% functions, and 97.49% lines overall. The acceptance ledger
 remains 310/350 passed and 40 human-review rows open.
+
+The same PR exposed a runner-routing risk: `codex` now selects self-hosted
+Windows as well as macOS and will also select Ubuntu. A push-review `run`
+step inherited PowerShell on Windows and was stopped by the host's signed
+script policy before the Action ran. Every installed `codex` workflow with a
+`run` step MUST select Bash explicitly, including CI, review, merge-queue and
+release preparation; distributed push/PR templates MUST retain Bash for their
+POSIX review-range scripts. Workflow validation MUST reject a new `run` step
+that silently inherits a platform-dependent shell. The isolated setup fixture
+workflow MUST run build, typecheck, session fixtures and npm-pack smoke on
+Ubuntu, Windows and macOS. The npm validation scripts MUST invoke npm without
+depending on Windows `.cmd` direct-execution behavior or privileged symlink
+creation. A green fixture job proves only its tested path; Action execution,
+child-process cancellation, and release
+preparation on each self-hosted platform remain open until direct runner
+evidence exists. No live setup or credential-bearing test dispatch is allowed
+to close those gates.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

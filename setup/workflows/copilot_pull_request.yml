@@ -30,6 +30,7 @@ jobs:
           node-version: '24.x'
 
       - name: Fetch incremental review range
+        shell: bash
         if: github.event.action == 'synchronize'
         env:
           BEFORE_SHA: ${{ github.event.before }}

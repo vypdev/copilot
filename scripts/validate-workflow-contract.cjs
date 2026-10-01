@@ -211,8 +211,8 @@ function assertRunner(file, workflow) {
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
       const platforms = job.strategy?.matrix?.os;
       if (jobId !== 'setup-platform-smoke' || job['runs-on'] !== '${{ matrix.os }}'
-        || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest'])) {
-        throw new Error(`${relativeFile} must use only the reviewed Ubuntu and Windows setup fixture matrix.`);
+        || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
+        throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
       }
       continue;
     }
@@ -1001,6 +1001,25 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
   }
 }
 
+function assertPortableRunShell(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const isCodexRunner = relativeFile.startsWith('.github/workflows/')
+      && runnerLabels(job['runs-on']).includes('codex');
+    const isDistributedReviewRange = relativeFile === 'setup/workflows/copilot_commit.yml'
+      || relativeFile === 'setup/workflows/copilot_pull_request.yml';
+    const isSetupPlatformSmoke = relativeFile === '.github/workflows/setup_platform_smoke.yml';
+    if (!isCodexRunner && !isDistributedReviewRange && !isSetupPlatformSmoke) continue;
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      if (typeof step?.run !== 'string') continue;
+      const shell = step.shell ?? job.defaults?.run?.shell ?? workflow.defaults?.run?.shell;
+      if (shell !== 'bash') {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must select shell: bash for portable run execution.`);
+      }
+    }
+  }
+}
+
 function assertSequentialMutationWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!QUEUE_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) return;
@@ -1025,6 +1044,7 @@ function validateWorkflow(file, workflow) {
   assertApprovalObserverWorkflow(file, workflow);
   assertPullRequestMergeQueueWorkflow(file, workflow);
   assertRunner(file, workflow);
+  assertPortableRunShell(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
   assertRepositoryLocaleInputs(file, workflow);
@@ -1097,6 +1117,7 @@ module.exports = {
   assertQueueWorkflow,
   assertIncrementalRangeFetch,
   assertRunner,
+  assertPortableRunShell,
   assertSequentialMutationWorkflow,
   assertDeploymentContinuationWorkflow,
   assertMergeQueueWorkflowSupport,

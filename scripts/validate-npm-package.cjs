@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { runNpmPack } = require('./npm-pack-command.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const packagePath = path.join(repositoryRoot, 'package.json');
@@ -87,10 +87,8 @@ if (fs.existsSync(cliPath)) {
 
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-npm-pack-'));
 try {
-  const output = execFileSync(
-    'npm',
+  const output = runNpmPack(
     [
-      'pack',
       '--dry-run',
       '--json',
       '--ignore-scripts',
