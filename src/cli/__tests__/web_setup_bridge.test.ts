@@ -240,4 +240,17 @@ describe('WebSetupBridge', () => {
     bridge.report({ role: 'setup', identityStatus: 'valid', identityMessage: 'checked', checks: [], ready: true, confirmationRequired: false });
     expect(bridge.snapshot().permissions).toMatchObject({ role: 'setup', report: { ready: true }, requirements: [] });
   });
+
+  test('blocked PAT result retains its redacted permission report after the prompt closes', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    bridge.report({ role: 'setup', identityStatus: 'valid', identityMessage: 'checked',
+      ready: false, confirmationRequired: false, checks: [{ id: 'setup.organization.projects',
+        role: 'setup', scope: 'organization', permission: 'Projects', level: 'read',
+        applicability: 'required', reason: 'Inspect selected Projects.', probe: 'projects',
+        status: 'unverifiable', message: 'No safe read evidence.' }] });
+    bridge.resultReason('permissions');
+    bridge.finish('blocked', 'No further setup changes will be applied.');
+    expect(bridge.snapshot().permissions?.report?.checks[0]).toMatchObject({ permission: 'Projects', status: 'unverifiable' });
+    expect(JSON.stringify(bridge.snapshot())).not.toContain('secret-token');
+  });
 });

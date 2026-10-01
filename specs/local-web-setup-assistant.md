@@ -3,7 +3,7 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-09-30 (PR #402 merge baseline; follow-up evidence is recorded below, with no live GitHub setup or dogfooding)
+- Last verified: 2026-10-02 (PR #402 merge baseline and fixture-only follow-up evidence are recorded below; the operator incident is external evidence, not agent dogfooding)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
@@ -1554,6 +1554,11 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
     every high-risk question identifies source, recommendation and consequence,
     errors identify the exact field and correction, and progress/result
     changes are announced without relying on color or a terminal window.
+29. Given setup stops at the PAT audit, the browser result retains the last
+    redacted permission report and shows each required missing or unverifiable
+    grant with its scope and access level in the selected locale. If identity
+    itself failed, the result says so separately. A completed or unrelated
+    blocked result must not attribute an earlier PAT report as its cause.
 
 ## 17. Requirements traceability
 
@@ -1568,6 +1573,7 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 | Accessible truthful UX (§9) | Svelte presenter + message catalog | scenarios 5–7, 10–11, 13–14 | how-to-use, troubleshooting |
 | Complete question help and links (§9.3–9.5) | application semantic help catalog + English CLI renderer + four-language web presenter | scenarios 17–20; exhaustive ID/link/locale gates | how-to-use, configuration, authentication, agents |
 | First-run completion (§9.6) | pure questionnaire/evidence policies, application session/edit/receipt use cases, read-only provider ports, CLI/web presenters | scenarios 21–28; 76 added risk-derived cases plus human first-use review | how-to-use, authentication, troubleshooting, configuration |
+| Actionable PAT failure result (§9, §10) | redacted web permission report and result presenter | scenario 29; four-locale semantic fixture, unrelated-result exclusion, missing-report fallback | authentication, troubleshooting |
 | Human acceptance review | [`docs/development/setup-assistant-review.mdx`](../docs/development/setup-assistant-review.mdx) | fixture-only seven-state, four-language, accessibility and platform checklist | acceptance ledger `U041–U054`, `U075–U094`, `I037–I042` |
 
 ## 18. Implementation sequence and current evidence
@@ -1750,6 +1756,19 @@ keyboard/screen-reader, 200%-zoom, light/dark, linguistic, and cross-platform
 launch/fallback observations remain explicitly open. The catalog remains
 `proposed`; neither source tests nor an unreviewed CI configuration imply
 release readiness.
+
+The 2026-10-02 operator report exposed a blocked PAT result that hid the
+permission report while instructing the operator to check it. The terminal
+showed only the aggregate rejection, so the diagnostic reference alone could
+not identify the grant. This follow-up requires the blocked browser result to
+retain and display safe, localized permission evidence; it must never display
+the PAT or pairing code. The incident also selected organization Projects,
+which exposed a missing read-only probe described in the permission SDD.
+Fixture tests add this regression to the existing acceptance budget; they do
+not close the human visual/accessibility or live-provider gates. The local
+coverage run passed 511 suites / 5,752 tests, with 96.19% statements, 91.37%
+branches, 96.88% functions, and 97.49% lines overall. The acceptance ledger
+remains 310/350 passed and 40 human-review rows open.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

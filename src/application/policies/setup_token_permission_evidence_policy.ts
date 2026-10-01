@@ -47,6 +47,12 @@ export function isOperationallyAvailableSetupRead(
     requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
     evidence: SetupTokenPublicReadEvidence | undefined,
 ): boolean {
+    if (requirement.level === 'read'
+        && requirement.scope === 'organization'
+        && requirement.permission === 'Projects'
+        && requirement.probe === 'projects') {
+        return evidence === 'public-organization-projects';
+    }
     return requirement.level === 'read'
         && requirement.scope === 'repository'
         && evidence === 'public-repository'
@@ -75,7 +81,8 @@ function isMatchingEvidence(
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository');
+            || value.publicReadEvidence === 'public-repository'
+            || value.publicReadEvidence === 'public-organization-projects');
 }
 
 function isPermissionStatus(value: unknown): value is SetupTokenPermissionStatus {

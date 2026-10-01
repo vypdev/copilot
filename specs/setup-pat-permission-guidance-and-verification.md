@@ -3,7 +3,7 @@
 - Status: Implemented — permission UX, deterministic provider mapping, scope-sensitive gating, coverage, and documentation gates complete
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-24
+- Last verified: 2026-10-02
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then report evidence-based permission checks without exposing or mutating credentials
 - Related issues/PRs: none recorded
@@ -957,6 +957,15 @@ at widths 40/80/120 and `NO_COLOR`.
     before permission probes or provisioning. A guided owner assertion cannot
     bypass this; once GitHub verifies `User` or `Organization`, the requirements
     are recomputed for that actual type.
+52. Given organization Projects were selected before PAT entry, the bootstrap
+    audit performs a bounded GET of the organization's Projects V2 list. A
+    successful list containing an explicitly non-public Project verifies the
+    permission-bound read. A successful public-only or empty list is usable
+    only for the currently visible Projects and remains `Unverifiable` as PAT
+    grant evidence; later selected Project access must be checked separately.
+    Denial, malformed data, timeout, and provider failure never become a pass.
+    The audit performs no test mutation and does not require a live Project in
+    test fixtures.
 
 ## 17. Requirements traceability
 
@@ -973,6 +982,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | absent-snapshot fail-closed provisioning | resource grouping and initial setup workflow | missing port, failed inspection, no-upsert tests | troubleshooting/provisioning |
 | all-provisioning fail-closed boundary | initial setup workflow + storage policy | no local file copy or label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
 | public-read and Members evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository provenance; protected active self-membership success; public-list, malformed, pending, denied, Issue-Types and write fixtures | authentication/troubleshooting |
+| organization Projects read evidence | permission query adapter + evidence policy + bootstrap use case | scenario 52; private/public/empty/malformed/denied local GET fixtures | authentication/troubleshooting |
 | safe bootstrap 404 | credential health bootstrap adapter | exact path/visibility proof, create-only SHA ownership, conditional cleanup and no-mutation ambiguous/race fixtures | authentication |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |

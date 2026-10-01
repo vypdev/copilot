@@ -66,6 +66,13 @@ directory. The lock contains no PAT or other credential.
   </Accordion>
 
   <Accordion title="PAT permission table shows Missing or Unverifiable" icon="key">
+    In the web assistant, a PAT-related blocked result lists the required
+    grants that could not be confirmed, including scope, access level, and
+    status. It does not display the PAT. The terminal's aggregate error alone
+    may not name the grant; use the browser result before closing the local
+    session. If GitHub identity itself was rejected, fix account, repository
+    selection, token expiry, or organization approval before reviewing grants.
+
     **`❌ Missing`:** GitHub rejected a safe read-only capability probe after
     setup confirmed the token identity and repository selection. Grant the named
     repository or organization permission to the correct resource owner, ensure
@@ -96,6 +103,10 @@ directory. The lock contains no PAT or other credential.
     workflow files remain `Unverifiable` unless repository metadata proves the
     repository is private. Public organization member and issue-type responses
     are likewise inconclusive as PAT evidence or full-membership readiness.
+    An organization Projects list with only public Projects, or no Projects,
+    can support discovery while the `Projects: read` grant remains
+    `Unverifiable`; a non-public Project proves that read access. A denied or
+    malformed list still blocks and must be corrected or retried.
     Members read is verified only by a valid active self-membership response
     from the permission-bound endpoint; Issue Types, ambiguous responses, and
     writes remain blocking.

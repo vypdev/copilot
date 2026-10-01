@@ -241,6 +241,32 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0]).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
     });
 
+    it('accepts bounded public organization Projects discovery without claiming the PAT grant', async () => {
+        const projects: SetupTokenPermissionRequirement = {
+            ...required, id: 'setup.organization.projects', scope: 'organization',
+            permission: 'Projects', probe: 'projects',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
+            ...projects, status: 'unverifiable', operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-projects', message: 'public Projects list usable',
+        }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [projects] });
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
+    });
+
+    it('rejects organization Projects usability on an unrelated permission', async () => {
+        const other = { ...required, id: 'setup.organization.secrets', scope: 'organization' as const,
+            permission: 'Secrets', probe: 'secrets' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
+            ...other, status: 'unverifiable', operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-projects', message: 'forged public marker',
+        }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [other] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+    });
+
     it('does not trust an operational flag without public-read provenance', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const report = await new SetupTokenPermissionsUseCase(validation, {

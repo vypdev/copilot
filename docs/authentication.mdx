@@ -54,6 +54,10 @@ For Projects, this early choice is only **whether you want the integration**.
 Listing private organization Projects requires authorization, so the assistant
 cannot reliably ask you to select Project numbers before the setup PAT exists.
 If you opt in, the guided setup PAT requests organization **Projects: read**.
+The read-only check lists at most one accessible organization Project. A
+non-public Project confirms the read grant. If the result contains only public
+Projects or is empty, discovery can continue but the PAT grant remains
+`Unverifiable`; access to each selected Project is checked again later.
 After you enter that PAT, the assistant lists the accessible Projects and lets
 you choose their numeric Project numbers and, when available, their Status
 options. You can enter a Project URL or number manually if discovery is
@@ -108,7 +112,7 @@ these states:
 |---|---|---|
 | `✅ Verified` | A safe authentication-bound GitHub operation proved the requested read capability. | Continue. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
-| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless the exact successful public-repository read has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
+| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless an exact successful public-repository read or organization Projects list has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
@@ -130,6 +134,9 @@ access, so setup requires explicit acknowledgement for those rows. Public
 organization Issue Types reads remain `Unverifiable` as PAT evidence.
 After valid token identity, a successful public repository read can be used
 for that exact operation while its PAT permission row stays `Unverifiable`.
+An organization Projects list containing only public Projects, or no Projects,
+is similarly usable for discovery without proving the PAT grant. A malformed
+or denied Projects response is not usable.
 The public organization members list can omit concealed members, so it cannot
 establish Members-read capability. Copilot instead checks the authenticated
 user's active organization membership through GitHub's permission-bound
@@ -271,8 +278,8 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     Read the required-permissions table before creating the token, then review
     the permission-check table after entry. A `❌ Missing` required row must be
     corrected before setup can continue. An ambiguous required
-    `? Unverifiable` read blocks; only a successful public-repository read can
-    remain unverified as PAT evidence but operationally usable. A required
+    `? Unverifiable` read blocks unless a successful public-repository read or
+    organization Projects list has separate operational evidence. A required
     write row means to compare the PAT settings with the
     requested access level and explicitly acknowledge it; it is never a pass.
   </Step>

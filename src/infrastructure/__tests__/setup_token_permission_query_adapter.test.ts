@@ -1,5 +1,7 @@
 import { SetupTokenPermissionQueryAdapter } from '../setup_token_permission_query_adapter';
 import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_permissions';
+import { SetupTokenPermissionsUseCase } from '../../application/usecases/setup/setup_token_permissions_use_case';
+import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
 
 const requirement = (
     level: 'read' | 'write' = 'read',
@@ -9,7 +11,8 @@ const requirement = (
     id: `setup.${scope}.${probe}`,
     role: 'setup',
     scope,
-    permission: probe === 'members' ? 'Members' : probe === 'issue-types' ? 'Issue Types' : probe,
+    permission: probe === 'members' ? 'Members' : probe === 'issue-types' ? 'Issue Types'
+        : probe === 'projects' && scope === 'organization' ? 'Projects' : probe,
     level, applicability: 'required', reason: 'test', probe,
 });
 
@@ -41,6 +44,25 @@ const ambiguousForbiddenResponses: ReadonlyArray<{
 ];
 
 describe('SetupTokenPermissionQueryAdapter', () => {
+    it('allows bootstrap to continue when organization Projects discovery is empty but usable', async () => {
+        const requirements = buildSetupPatPermissionRequirements()
+            .filter(item => item.permission === 'Metadata' || item.permission === 'Contents' || item.permission === 'Projects')
+            .map(item => ({ ...item, applicability: 'required' as const }));
+        const fetcher = jest.fn(async (url: string) => url.endsWith('/projectsV2?per_page=1')
+            ? response(true, 200, { payload: [] })
+            : response(true, 200, { payload: { private: true, default_branch: 'main' } }));
+        const audit = new SetupTokenPermissionsUseCase({
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+        }, new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }));
+        const report = await audit.inspect({ role: 'setup', owner: 'owner', repository: 'repo',
+            token: 'secret-token', requirements });
+        expect(report.ready).toBe(true);
+        expect(report.checks.find(check => check.permission === 'Projects')).toMatchObject({
+            status: 'unverifiable', operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-projects',
+        });
+        expect(fetcher.mock.calls.map(call => call[0])).toContain('https://api.github.com/orgs/owner/projectsV2?per_page=1');
+    });
     it('can be constructed with the production defaults', () => {
         expect(new SetupTokenPermissionQueryAdapter()).toBeInstanceOf(SetupTokenPermissionQueryAdapter);
     });
@@ -403,7 +425,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     it('does not make a request when GitHub has no safe read-only probe', async () => {
         const fetcher = jest.fn();
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
-            'owner', 'repo', 'secret', [requirement('write', 'projects', 'organization')],
+            'owner', 'repo', 'secret', [requirement('write', 'workflows', 'organization')],
         );
         expect(fetcher).not.toHaveBeenCalled();
         expect(check).toMatchObject({ status: 'unverifiable' });
@@ -446,7 +468,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         ]));
     });
 
-    it('maps every supported organization probe and leaves Projects unsupported', async () => {
+    it('maps every supported organization probe including read-only Projects discovery', async () => {
         const fetcher = jest.fn().mockResolvedValue(response(true, 200));
         const probes: SetupTokenPermissionRequirement['probe'][] = ['secrets', 'variables', 'members', 'issue-types', 'projects'];
 
@@ -457,14 +479,50 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             probes.map(probe => requirement('read', probe, 'organization')),
         );
 
-        expect(fetcher).toHaveBeenCalledTimes(4);
+        expect(fetcher).toHaveBeenCalledTimes(5);
         expect(fetcher.mock.calls.map(call => call[0])).toEqual(expect.arrayContaining([
             'https://api.github.com/orgs/owner/actions/secrets?per_page=1',
             'https://api.github.com/orgs/owner/actions/variables?per_page=1',
             'https://api.github.com/user/memberships/orgs/owner',
             'https://api.github.com/orgs/owner/issue-types?per_page=1',
+            'https://api.github.com/orgs/owner/projectsV2?per_page=1',
         ]));
         expect(checks.at(-1)).toMatchObject({ probe: 'projects', status: 'unverifiable' });
+    });
+
+    it('verifies organization Projects read only from a non-public result', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: [{ number: 3, public: false }] }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check).toMatchObject({ status: 'verified' });
+        expect(fetcher).toHaveBeenCalledWith('https://api.github.com/orgs/owner/projectsV2?per_page=1',
+            expect.objectContaining({ method: 'GET', headers: expect.objectContaining({ 'X-GitHub-Api-Version': '2026-03-10' }) }));
+        expect(JSON.stringify(check)).not.toContain('secret-token');
+    });
+
+    it.each([
+        { label: 'empty', payload: [] },
+        { label: 'public-only', payload: [{ number: 2, public: true }] },
+    ])('keeps $label Projects access usable without claiming a PAT grant', async ({ payload }) => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(response(true, 200, { payload })),
+        }).inspect('owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')]);
+        expect(check).toMatchObject({ status: 'unverifiable', operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-projects' });
+    });
+
+    it.each([
+        ['malformed', response(true, 200, { payload: [{ number: 1 }] })],
+        ['non-list', response(true, 200, { payload: { public: false } })],
+        ['denied', response(false, 403, { message: 'Resource not accessible by personal access token' })],
+        ['missing', response(false, 404)],
+    ])('does not accept %s organization Projects evidence', async (_case, providerResponse) => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(providerResponse),
+        }).inspect('owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')]);
+        expect(check.operationallyAvailable).toBeUndefined();
+        expect(check.status).not.toBe('verified');
     });
 
     it('leaves an unsupported repository probe unverifiable without a request', async () => {

@@ -16,8 +16,8 @@ debt or convert unknown historic intent into a design decision.
 | `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 57 paths · 2026-09-24 |
 | `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 84 paths · 2026-09-16 |
 | `architecture-quality-hardening` | Implemented | Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order | [Architecture quality and scalability hardening](./architecture-quality-and-scalability-hardening.md) + 1 companion | 72 paths · 2026-09-16 |
-| `setup-and-doctor` | Implemented | Plan, validate, provision, and audit a repository installation without exposing credentials | [Setup, configuration, credentials, and doctor](./setup-configuration-credentials-and-doctor.md) + 2 companion | 94 paths · 2026-09-30 |
-| `local-web-setup-assistant` | Proposed | Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes | [Local web setup assistant](./local-web-setup-assistant.md) | 141 paths · 2026-09-30 |
+| `setup-and-doctor` | Implemented | Plan, validate, provision, and audit a repository installation without exposing credentials | [Setup, configuration, credentials, and doctor](./setup-configuration-credentials-and-doctor.md) + 2 companion | 94 paths · 2026-10-02 |
+| `local-web-setup-assistant` | Proposed | Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes | [Local web setup assistant](./local-web-setup-assistant.md) | 141 paths · 2026-10-02 |
 | `guided-bot-pat-onboarding` | Proposed | Guide creation of the persistent workflow PAT using GitHub's official form, verify bot identity and grants, and install the approved Actions Secret | [Guided bot PAT onboarding](./guided-bot-pat-onboarding.md) | 25 paths · 2026-09-25 |
 | `temporary-setup-operator-authorization` | Proposed | Guide creation of the one-run operator PAT through GitHub's official form, verify final setup access, and report user-owned deletion accurately | [Assisted setup PAT creation](./temporary-setup-operator-authorization.md) | 28 paths · 2026-09-25 |
 | `issue-start-and-sdd-readiness` | Implemented | Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work | [Uniform issue start and pre-branch SDD readiness](./issue-start-and-branch-readiness.md) + 1 companion | 51 paths · 2026-09-17 |
@@ -103,7 +103,7 @@ debt or convert unknown historic intent into a design decision.
 ### `setup-and-doctor` — Setup, configuration, credentials, and doctor
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-30
+- Last verified: 2026-10-02
 - Specifications: [`specs/setup-configuration-credentials-and-doctor.md`](./setup-configuration-credentials-and-doctor.md) · [`specs/setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md) · [`specs/setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md)
 - Workflows: [`setup/workflows/agent-cli-provisioning.yml`](../setup/workflows/agent-cli-provisioning.yml) · [`setup/workflows/copilot_credential_health.yml`](../setup/workflows/copilot_credential_health.yml)
 - Entrypoints: [`src/cli/commands/setup.ts`](../src/cli/commands/setup.ts) · [`src/cli/commands/doctor.ts`](../src/cli/commands/doctor.ts)
@@ -114,7 +114,7 @@ debt or convert unknown historic intent into a design decision.
 ### `local-web-setup-assistant` — Local web setup assistant
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-30
+- Last verified: 2026-10-02
 - Specifications: [`specs/local-web-setup-assistant.md`](./local-web-setup-assistant.md)
 - Workflows: [`.github/workflows/ci_check.yml`](../.github/workflows/ci_check.yml) · [`.github/workflows/setup_platform_smoke.yml`](../.github/workflows/setup_platform_smoke.yml)
 - Entrypoints: [`src/cli/commands/setup.ts`](../src/cli/commands/setup.ts) · [`package.json`](../package.json) · [`web/src/main.ts`](../web/src/main.ts)

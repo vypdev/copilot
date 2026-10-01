@@ -70,6 +70,46 @@ describe('web setup component semantics', () => {
     expect(html).toContain('No se iniciaron cambios');
   });
 
+  test.each([
+    ['en', 'PAT permission evidence', 'Projects', 'Unverifiable'],
+    ['es', 'Comprobación de permisos del PAT', 'Proyectos', 'No verificable'],
+    ['fr', 'Vérification des droits du PAT', 'Projets', 'Non vérifiable'],
+    ['pt', 'Verificação das permissões do PAT', 'Projetos', 'Não verificável'],
+  ])('%s blocked PAT result preserves the exact failed grant without a credential', (locale, title, name, status) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.organization.projects', role: 'setup',
+          permission: 'Projects', scope: 'organization', level: 'read', applicability: 'required',
+          reason: 'Inspect Projects', probe: 'projects', status: 'unverifiable',
+          message: 'private diagnostic secret-token' }] } }, locale);
+    expect(html).toContain(title);
+    expect(html).toContain(name);
+    expect(html).toContain(status);
+    if (locale !== 'en') expect(html).toContain('GitHub · Projects');
+    expect(html).not.toContain('private diagnostic');
+    expect(html).not.toContain('secret-token');
+  });
+
+  test('invalid identity is not presented as missing individual permissions', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'invalid', identityMessage: 'rejected',
+        ready: false, confirmationRequired: false, checks: [{ permission: 'Projects',
+          scope: 'organization', level: 'read', applicability: 'required', status: 'missing' }] } });
+    expect(html).toContain('Rejected');
+    expect(html).not.toContain('Projects');
+  });
+
+  test('unrelated blocked outcome does not attribute stale permission evidence to its cause', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'storage', stoppedStage: 'Plan', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', checks: [{ permission: 'Projects',
+        scope: 'organization', level: 'read', applicability: 'required', status: 'unverifiable' }] } });
+    expect(html).not.toContain('PAT permission evidence');
+    expect(html).not.toContain('Projects');
+  });
+
   test('partial result shows structured cause, safe effects, and diagnostic reference', () => {
     const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
       detail: { reasonCode: 'provider', stoppedStage: 'Apply', mutationStarted: true,

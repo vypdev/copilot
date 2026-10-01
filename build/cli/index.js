@@ -49953,6 +49953,12 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
 }
 /** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
 function isOperationallyAvailableSetupRead(requirement, evidence) {
+    if (requirement.level === 'read'
+        && requirement.scope === 'organization'
+        && requirement.permission === 'Projects'
+        && requirement.probe === 'projects') {
+        return evidence === 'public-organization-projects';
+    }
     return requirement.level === 'read'
         && requirement.scope === 'repository'
         && evidence === 'public-repository'
@@ -49976,7 +49982,8 @@ function isMatchingEvidence(requirement, value) {
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository');
+            || value.publicReadEvidence === 'public-repository'
+            || value.publicReadEvidence === 'public-organization-projects');
 }
 function isPermissionStatus(value) {
     return value === 'verified' || value === 'missing' || value === 'unverifiable';
@@ -58091,7 +58098,7 @@ class VerifySetupPatBootstrapUseCase {
                     role: 'setup', owner: request.owner, repository: request.repository,
                     expiresIn: 1, requirements: request.requirements,
                 }));
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.');
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Review the permission report, correct or explicitly confirm the required grants, and retry.');
         }
         if (!await this.ports.confirmAccount(report.account)) {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
@@ -87592,7 +87599,7 @@ class SetupTokenPermissionQueryAdapter {
         try {
             const request = (url) => this.fetcher(url, {
                 method: 'GET',
-                headers: permissionProbeHeaders(token),
+                headers: permissionProbeHeaders(token, requirement),
                 signal: controller.signal,
             });
             const target = await resolveProbeTarget(owner, repository, requirement, request);
@@ -87609,11 +87616,12 @@ class SetupTokenPermissionQueryAdapter {
     }
 }
 exports.SetupTokenPermissionQueryAdapter = SetupTokenPermissionQueryAdapter;
-function permissionProbeHeaders(token) {
+function permissionProbeHeaders(token, requirement) {
     return {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
+        'X-GitHub-Api-Version': requirement.scope === 'organization' && requirement.probe === 'projects'
+            ? '2026-03-10' : '2022-11-28',
     };
 }
 async function resolveProbeTarget(owner, repository, requirement, request) {
@@ -87631,6 +87639,9 @@ async function resolveProbeTarget(owner, repository, requirement, request) {
     }
     if (requirement.scope === 'organization' && requirement.probe === 'members') {
         return { status: 'ready', url, readEvidence: 'organization-membership' };
+    }
+    if (requirement.scope === 'organization' && requirement.probe === 'projects') {
+        return { status: 'ready', url, readEvidence: 'organization-projects' };
     }
     if (requiresRepositoryVisibilityProof(requirement)) {
         const metadataResponse = await request(repositoryRoot(owner, repository));
@@ -87732,6 +87743,9 @@ function containsAsciiControl(value) {
 }
 async function mapProbeResponse(requirement, response, readEvidence, owner) {
     if (response.ok) {
+        if (readEvidence === 'organization-projects' && requirement.level === 'read') {
+            return inspectOrganizationProjectsRead(requirement, response);
+        }
         if (readEvidence === 'organization-membership') {
             return response.status === 200 && await isActiveOrganizationMembership(response, owner)
                 ? outcome(requirement, 'verified', 'GitHub confirmed active organization membership through a permission-bound Members-read probe.')
@@ -87777,6 +87791,29 @@ async function mapProbeResponse(requirement, response, readEvidence, owner) {
         return outcome(requirement, 'unverifiable', 'GitHub returned not found, which can mean absent data or hidden permission state.');
     }
     return outcome(requirement, 'unverifiable', `GitHub could not verify this permission safely (HTTP ${response.status}).`);
+}
+async function inspectOrganizationProjectsRead(requirement, response) {
+    try {
+        const payload = await response.json();
+        if (!Array.isArray(payload)) {
+            return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
+        }
+        if (payload.some(project => typeof project !== 'object' || project === null
+            || Array.isArray(project) || typeof project.public !== 'boolean')) {
+            return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
+        }
+        if (payload.some(project => project.public === false)) {
+            return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
+        }
+        return {
+            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; listing is available, but the PAT grant is not proven.'),
+            operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-projects',
+        };
+    }
+    catch {
+        return outcome(requirement, 'unverifiable', 'GitHub organization Projects response could not be inspected safely.');
+    }
 }
 async function isActiveOrganizationMembership(response, owner) {
     try {
@@ -87843,6 +87880,8 @@ function probeUrl(owner, repository, requirement) {
             return `https://api.github.com/user/memberships/orgs/${encodedOwner}`;
         if (requirement.probe === 'issue-types')
             return `${organizationRoot}/issue-types?per_page=1`;
+        if (requirement.probe === 'projects')
+            return `${organizationRoot}/projectsV2?per_page=1`;
         return undefined;
     }
     if (requirement.probe === 'metadata')
