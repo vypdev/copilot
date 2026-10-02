@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/;
 
@@ -10,8 +10,9 @@ function systemTool(name: string): string {
     return join(systemRoot, 'System32', name);
 }
 
-function runIcacls(args: string[]): void {
+function runIcacls(args: string[], cwd?: string): void {
     execFileSync(systemTool('icacls.exe'), args, {
+        cwd,
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 15_000,
         windowsHide: true,
@@ -30,20 +31,23 @@ function currentUserSid(): string {
     return sid;
 }
 
-function savedDacl(path: string): string {
+function withSavedAcl<T>(path: string, use: (snapshot: string, lines: string[]) => T): T {
     const directory = mkdtempSync(join(tmpdir(), 'copilot-acl-inspect-'));
     const snapshot = join(directory, 'acl.txt');
     try {
-        runIcacls([path, '/save', snapshot]);
+        runIcacls([basename(path), '/save', snapshot], dirname(path));
         const data = readFileSync(snapshot);
         const contents = data.includes(0) ? data.toString('utf16le') : data.toString('utf8');
         const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
-        const dacl = lines[1]?.trim();
-        if (!dacl) throw new Error('Could not read the Windows runtime ACL.');
-        return dacl;
+        if (!lines[0] || !lines[1]) throw new Error('Could not read the Windows runtime ACL.');
+        return use(snapshot, lines);
     } finally {
         rmSync(directory, { recursive: true, force: true });
     }
+}
+
+function savedDacl(path: string): string {
+    return withSavedAcl(path, (_snapshot, lines) => lines[1].trim());
 }
 
 function assertOwnerOnlyDacl(sddl: string, sid: string, directory: boolean): void {
@@ -84,8 +88,12 @@ function assertOwnerOnlyDacl(sddl: string, sid: string, directory: boolean): voi
 export function makeWindowsRuntimePathPrivate(path: string, directory: boolean): void {
     if (process.platform !== 'win32') return;
     const sid = currentUserSid();
-    runIcacls([path, '/inheritance:r']);
-    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
+    runIcacls([path, '/setowner', `*${sid}`]);
+    withSavedAcl(path, (snapshot, lines) => {
+        lines[1] = `D:P(A;${directory ? 'OICI' : ''};FA;;;${sid})`;
+        writeFileSync(snapshot, `\uFEFF${lines.join('\r\n')}`, 'utf16le');
+        runIcacls([dirname(path), '/restore', snapshot]);
+    });
     verifyWindowsRuntimePathPrivate(path, directory);
 }
 

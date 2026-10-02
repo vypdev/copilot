@@ -78682,8 +78682,9 @@ function systemTool(name) {
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
     return (0, node_path_1.join)(systemRoot, 'System32', name);
 }
-function runIcacls(args) {
+function runIcacls(args, cwd) {
     (0, node_child_process_1.execFileSync)(systemTool('icacls.exe'), args, {
+        cwd,
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 15000,
         windowsHide: true,
@@ -78701,22 +78702,24 @@ function currentUserSid() {
         throw new Error('Could not identify the Windows runtime owner.');
     return sid;
 }
-function savedDacl(path) {
+function withSavedAcl(path, use) {
     const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-acl-inspect-'));
     const snapshot = (0, node_path_1.join)(directory, 'acl.txt');
     try {
-        runIcacls([path, '/save', snapshot]);
+        runIcacls([(0, node_path_1.basename)(path), '/save', snapshot], (0, node_path_1.dirname)(path));
         const data = (0, node_fs_1.readFileSync)(snapshot);
         const contents = data.includes(0) ? data.toString('utf16le') : data.toString('utf8');
         const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
-        const dacl = lines[1]?.trim();
-        if (!dacl)
+        if (!lines[0] || !lines[1])
             throw new Error('Could not read the Windows runtime ACL.');
-        return dacl;
+        return use(snapshot, lines);
     }
     finally {
         (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
     }
+}
+function savedDacl(path) {
+    return withSavedAcl(path, (_snapshot, lines) => lines[1].trim());
 }
 function assertOwnerOnlyDacl(sddl, sid, directory) {
     const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
@@ -78756,8 +78759,12 @@ function makeWindowsRuntimePathPrivate(path, directory) {
     if (process.platform !== 'win32')
         return;
     const sid = currentUserSid();
-    runIcacls([path, '/inheritance:r']);
-    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
+    runIcacls([path, '/setowner', `*${sid}`]);
+    withSavedAcl(path, (snapshot, lines) => {
+        lines[1] = `D:P(A;${directory ? 'OICI' : ''};FA;;;${sid})`;
+        (0, node_fs_1.writeFileSync)(snapshot, `\uFEFF${lines.join('\r\n')}`, 'utf16le');
+        runIcacls([(0, node_path_1.dirname)(path), '/restore', snapshot]);
+    });
     verifyWindowsRuntimePathPrivate(path, directory);
 }
 function verifyWindowsRuntimePathPrivate(path, directory) {
