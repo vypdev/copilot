@@ -65,7 +65,6 @@ describe('AgentCliProvisioner', () => {
                 ? resolveAgentExecutablePath('node', process.env, 'win32')
                 : process.execPath;
             const npmCli = join(dirname(jobNode), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-            let packageBin: string | undefined;
             if (process.platform === 'win32') {
                 const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
                 mkdirSync(join(packageRoot, 'bin'), { recursive: true });
@@ -73,13 +72,14 @@ describe('AgentCliProvisioner', () => {
                     name: '@openai/codex', bin: { codex: 'bin/codex.js' },
                 }));
                 writeFileSync(join(packageRoot, 'bin', 'codex.js'), '');
-                packageBin = realpathSync(join(packageRoot, 'bin', 'codex.js'));
             }
             (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
                 if (command === 'npm') return Buffer.alloc(0);
                 if (process.platform === 'win32' && command === jobNode) {
                     if (args[0] === npmCli) return Buffer.alloc(0);
-                    if (args[0] === packageBin && args[1] === '--version') return 'codex-cli 0.156.1\n';
+                    if (args[1] === '--version' && args[0].toLowerCase().endsWith('codex.js')) {
+                        return 'codex-cli 0.156.1\n';
+                    }
                 }
                 if (command === realpathSync(executable) && args[0] === '--version') return 'codex-cli 0.156.1\n';
                 throw new Error(`Unexpected command: ${command}`);
@@ -99,7 +99,7 @@ describe('AgentCliProvisioner', () => {
                 );
                 expect(execFileSync).toHaveBeenCalledWith(
                     process.execPath,
-                    [packageBin, '--version'],
+                    [expect.stringMatching(/codex\.js$/i), '--version'],
                     expect.objectContaining({ encoding: 'utf8', timeout: 15_000 }),
                 );
             } else {
