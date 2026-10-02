@@ -83517,17 +83517,25 @@ function readAgentExecutableVersion(selected, provider, environment) {
 }
 function installAgentNpmPackage(packageName, version) {
     const invocation = resolveNpmInstallInvocation(packageName, version);
-    if (process.platform === 'win32' && !(0, node_fs_1.existsSync)(invocation.prefixArgs[0])) {
-        throw new Error('The runner Node installation has no npm CLI script.');
-    }
     (0, node_child_process_1.execFileSync)(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
 }
-function resolveNpmInstallInvocation(packageName, version, platform = process.platform, nodeExecutable = process.execPath) {
+function resolveNpmInstallInvocation(packageName, version, platform = process.platform, environment = process.env) {
     const args = ['install', '--global', `${packageName}@${version}`];
     if (platform === 'win32') {
+        // JavaScript Actions run under the runner's embedded Node, which has no npm.
+        // setup-node adds the npm-bearing installation to the job PATH.
+        const nodeExecutable = resolveAgentExecutablePath('node', environment, platform);
+        const npmCli = (0, node_path_1.join)((0, node_path_1.dirname)(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+        try {
+            if (!(0, node_fs_1.statSync)(npmCli).isFile())
+                throw new Error('not a file');
+        }
+        catch {
+            throw new Error('The job Node installation has no npm CLI script.');
+        }
         return {
             executable: nodeExecutable,
-            prefixArgs: [(0, node_path_1.join)((0, node_path_1.dirname)(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...args],
+            prefixArgs: [npmCli, ...args],
         };
     }
     return { executable: 'npm', prefixArgs: args };
