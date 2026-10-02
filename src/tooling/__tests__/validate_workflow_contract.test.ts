@@ -764,6 +764,16 @@ describe('workflow contract validator', () => {
     expect(steps[checks[0]].run).toContain('git ls-files --eol');
   });
 
+  it.each([
+    ['ci_check.yml', 'ci-check', 'Validate Git diff'],
+    ['setup_platform_smoke.yml', 'setup-windows-codex-smoke', 'Full Windows documentation and contract validators'],
+  ])('treats CRLF as a line ending in the %s diff check', (fileName, jobId, stepName) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
+    expect(step?.run).toContain('git -c core.whitespace=cr-at-eol diff --check');
+  });
+
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     expect(() => assertMajorActionReferences(file, {

@@ -1957,6 +1957,13 @@ self-hosted Windows setup job MUST also execute the documentation, workflow,
 specification, and acceptance validators after its full coverage suite. Its
 workflow contract test MUST reject removal of that step. A passing macOS CI
 run alone cannot close the Windows validator gate.
+The [first deterministic Windows validator run](https://github.com/vypdev/copilot/actions/runs/37005913771)
+passed documentation, workflow, specification, and acceptance validation after
+full coverage. Its final `git diff --check` flagged CRLF in regenerated Windows
+bundles as trailing whitespace. CI and the dedicated Windows job MUST use
+Git's `cr-at-eol` whitespace setting for this check; actual trailing spaces
+before the line ending MUST still fail. Repeat the Windows job after this
+change before closing the platform gate.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

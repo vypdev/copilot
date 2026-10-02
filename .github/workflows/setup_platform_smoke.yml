@@ -88,4 +88,4 @@ jobs:
           pnpm run validate:workflows
           pnpm run validate:specifications
           pnpm run validate:setup-acceptance
-          git diff --check
+          git -c core.whitespace=cr-at-eol diff --check
