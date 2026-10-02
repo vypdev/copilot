@@ -964,6 +964,11 @@ at widths 40/80/120 and `NO_COLOR`.
     only for the currently visible Projects and remains `Unverifiable` as PAT
     grant evidence; later selected Project access must be checked separately.
     Denial, malformed data, timeout, and provider failure never become a pass.
+    A `public-organization-projects` provenance marker matches only the exact
+    organization-scoped, read-level `Projects` requirement with the `projects`
+    probe and an `Unverifiable` status. The evidence reconciler MUST discard a
+    marker attached to another permission or a claimed verified result before
+    readiness is calculated, even if all other row fields match.
     The audit performs no test mutation and does not require a live Project in
     test fixtures.
 

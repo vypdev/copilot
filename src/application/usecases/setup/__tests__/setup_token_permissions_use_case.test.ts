@@ -256,16 +256,37 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0].operationallyAvailable).toBeUndefined();
     });
 
-    it('rejects organization Projects usability on an unrelated permission', async () => {
-        const other = { ...required, id: 'setup.organization.secrets', scope: 'organization' as const,
-            permission: 'Secrets', probe: 'secrets' as const };
+    it.each(['verified', 'unverifiable'] as const)(
+        'rejects a %s organization Projects marker on an unrelated permission', async status => {
+            const other = { ...required, id: 'setup.organization.secrets', scope: 'organization' as const,
+                permission: 'Secrets', probe: 'secrets' as const };
+            const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+            const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
+                ...other, status, operationallyAvailable: true,
+                publicReadEvidence: 'public-organization-projects', message: 'forged public marker',
+            }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [other] });
+            expect(report.ready).toBe(false);
+            expect(report.checks[0]).toMatchObject({
+                status: 'unverifiable', message: 'No safe permission evidence was returned for this requirement.',
+            });
+            expect(report.checks[0].operationallyAvailable).toBeUndefined();
+        });
+
+    it('rejects a verified result that carries only public organization Projects evidence', async () => {
+        const projects: SetupTokenPermissionRequirement = {
+            ...required, id: 'setup.organization.projects', scope: 'organization',
+            permission: 'Projects', probe: 'projects',
+        };
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
-            ...other, status: 'unverifiable', operationallyAvailable: true,
-            publicReadEvidence: 'public-organization-projects', message: 'forged public marker',
-        }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [other] });
-        expect(report.ready).toBe(false);
-        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+            ...projects, status: 'verified', publicReadEvidence: 'public-organization-projects',
+            message: 'forged verified Projects read',
+        }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [projects] });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({
+            status: 'unverifiable', message: 'No safe permission evidence was returned for this requirement.',
+        });
+        expect(report.checks[0].publicReadEvidence).toBeUndefined();
     });
 
     it('does not trust an operational flag without public-read provenance', async () => {

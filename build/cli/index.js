@@ -49976,8 +49976,8 @@ function isMatchingEvidence(requirement, value) {
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository'
-            || value.publicReadEvidence === 'public-organization-projects');
+            || (value.status === 'unverifiable' && (isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence)
+                || isAttestableProjectsRead(requirement, value.publicReadEvidence))));
 }
 function isPermissionStatus(value) {
     return value === 'verified' || value === 'missing' || value === 'unverifiable';

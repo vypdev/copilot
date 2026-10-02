@@ -90,8 +90,10 @@ function isMatchingEvidence(
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository'
-            || value.publicReadEvidence === 'public-organization-projects');
+            || (value.status === 'unverifiable' && (
+                isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)
+                || isAttestableProjectsRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)
+            )));
 }
 
 function isPermissionStatus(value: unknown): value is SetupTokenPermissionStatus {
