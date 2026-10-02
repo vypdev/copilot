@@ -65,6 +65,17 @@ function savedDacl(path: string): string {
     }
 }
 
+function installedExecutableDescriptor(path: string): string {
+    // icacls /save intentionally omits the owner; inspect the full descriptor
+    // through a read-only query with an encoded, literal path instead.
+    const command = "$ErrorActionPreference='Stop'; (Get-Acl -LiteralPath '"
+        + path.replace(/'/gu, "''") + "').Sddl";
+    return execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+            encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+        }).replace(/^\uFEFF/u, '').trim();
+}
+
 function assertOwnerOnlyDacl(sddl: string, identity: WindowsUserIdentity, directory: boolean): void {
     const isCurrentUser = (principal: string): boolean => matchesWindowsRuntimePrincipal(principal, identity);
     const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
@@ -112,5 +123,5 @@ export function verifyWindowsRuntimePathPrivate(path: string, directory: boolean
 export function verifyWindowsAgentExecutableAcl(path: string): void {
     if (process.platform !== 'win32') return;
     const identity = currentUserIdentity();
-    assertWindowsExecutableDacl(savedDacl(path), identity.sid, identity.localAdministrator);
+    assertWindowsExecutableDacl(installedExecutableDescriptor(path), identity.sid, identity.localAdministrator);
 }

@@ -310,6 +310,10 @@ alone may be shared. Unknown ACE rights or unreadable ACLs fail closed. The
 preflight must not rewrite an operator-owned executable. Fixtures cover a
 normal Git for Windows/npm or Node ACL, a broad writable grant, inherited
 write, and malformed ACL evidence on hosted and service Windows runners.
+The installed-file preflight must read the full descriptor, including owner;
+`icacls /save` exports a DACL only and cannot establish ownership. A bounded
+read-only Windows ACL query is required, while generated runtime artifacts
+retain their separate owner-only `icacls` policy.
 
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is

@@ -26,6 +26,7 @@ describe('installed Windows executable ACL policy', () => {
     it.each([
         `O:S-1-5-21-9-9-9-1001D:AI(A;;FR;;;BU)`,
         `O:${user}D:AI(A;;UNKNOWN;;;BU)`,
+        'D:AI(A;;FR;;;BU)',
         `O:${user}D:AI(A;;0x100000000;;;BU)`,
         `O:${user}D:AI(X;;FR;;;BU)`,
         `O:${user}D:AI(A;;FR;;;BU)garbage`,

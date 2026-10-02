@@ -258,6 +258,9 @@ The executable, its interpreter and package-owned entrypoint require a
 read-only ACL preflight: trusted ownership and no untrusted write/delete/ACL
 control ACE. Existing installed files are never modified. An unreadable or
 unrecognized ACL fails before a provider process starts.
+The installed-file check reads a full Windows security descriptor; the
+managed-artifact `icacls /save` snapshot contains only the DACL and is not
+owner evidence for an installed executable.
 The [2026-10-02 isolated platform matrix](https://github.com/vypdev/copilot/actions/runs/36955416020)
 passed the fake Windows runtime cases and package smoke on hosted Windows,
 Ubuntu and macOS. It does not establish self-hosted runner behavior or a live

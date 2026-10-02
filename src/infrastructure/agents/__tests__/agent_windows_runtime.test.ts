@@ -90,7 +90,7 @@ describe('isolated Windows agent runtime', () => {
 
     windowsIt('rejects an installed executable writable by Everyone without changing its ACL', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-executable-acl-'));
-        const executable = join(directory, 'agent.cmd');
+        const executable = join(directory, "agent's fixture.cmd");
         try {
             writeFileSync(executable, '@echo off\r\n');
             expect(() => verifyWindowsAgentExecutableAcl(executable)).not.toThrow();
