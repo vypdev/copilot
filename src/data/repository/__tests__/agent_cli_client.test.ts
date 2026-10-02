@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentExecutionObserverPort } from '../../../application/ports/agent_execution_observation_ports';
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { AgentCliClient } from '../agent_cli_client';
 import { AgentCliError } from '../agent_cli_contracts';
-import { createAgentProcessLifecycle, decodeAgentCliOutput } from '../agent_cli_execution';
+import { createAgentProcessLifecycle, decodeAgentCliOutput, verifyWindowsLauncherTrust } from '../agent_cli_execution';
 import { makeWindowsRuntimePathPrivate } from '../../../infrastructure/agents/windows_runtime_acl';
 
 // Multi-case fixtures run native ACL tools for every plan on Windows. This Jest
@@ -41,6 +41,42 @@ function client(executionPlan: AgentExecutionPlan, observer?: AgentExecutionObse
 }
 
 describe('AgentCliClient admitted process execution', () => {
+    it('rechecks a canonical Windows interpreter and package entrypoint before spawn', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-launcher-trust-'));
+        const executable = join(directory, 'node.exe');
+        const alias = join(directory, 'alias.exe');
+        const launcher = join(directory, 'codex.js');
+        writeFileSync(executable, 'fixture');
+        writeFileSync(launcher, 'fixture');
+        const validate = jest.fn();
+        try {
+            verifyWindowsLauncherTrust(realpathSync(executable), launcher, validate);
+            expect(validate.mock.calls).toEqual([[realpathSync(executable)], [launcher]]);
+            if (process.platform !== 'win32') {
+                symlinkSync(executable, alias);
+                expect(() => verifyWindowsLauncherTrust(alias, launcher, validate)).toThrow('interpreter changed');
+            }
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it.skip : it)('rejects a runtime directory owned by a different user', async () => {
+        const executionPlan = plan('process.stdout.write("unexpected")');
+        if (typeof process.getuid !== 'function') return;
+        const current = process.getuid();
+        const spy = jest.spyOn(process, 'getuid').mockReturnValue(current + 1);
+        try {
+            await expect(client(executionPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 5_000,
+            })).rejects.toMatchObject({ category: 'configuration' });
+        } finally {
+            spy.mockRestore();
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     it('passes final-argv prompts literally without shell evaluation', async () => {
         const executionPlan = plan('process.stdout.write(process.argv[1])');
         await expect(client(executionPlan).execute({
@@ -137,7 +173,7 @@ describe('AgentCliClient admitted process execution', () => {
             .rejects.toMatchObject({ category: 'process', retryable: true });
         expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
             state: 'failed', phase: 'run', failureCategory: 'process',
-            semanticCode: 'agent.failed', retryable: true,
+            semanticCode: 'agent.failed', retryable: true, exitCode: 75,
         }));
 
         const throwingObserver = { observe: () => { throw new Error('telemetry unavailable'); } };
@@ -222,7 +258,7 @@ describe('AgentCliClient admitted process execution', () => {
             prompt: 'p', timeoutMs: 5_000,
         };
         await expect(client(plan('process.stderr.write("secret diagnostic"); process.exit(2)')).execute(request))
-            .rejects.toMatchObject({ category: 'process', retryable: false, message: expect.not.stringContaining('secret diagnostic') });
+            .rejects.toMatchObject({ category: 'process', retryable: false, exitCode: 2, message: expect.not.stringContaining('secret diagnostic') });
         await expect(client(plan('process.exit(75)')).execute(request))
             .rejects.toMatchObject({ category: 'process', retryable: true });
     }, MULTI_CASE_TEST_TIMEOUT_MS);
@@ -293,6 +329,47 @@ describe('AgentCliClient admitted process execution', () => {
         } finally {
             rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
             jest.useRealTimers();
+        }
+    });
+
+    it('handles a signal-only child exit and a process termination race without stderr', () => {
+        jest.useFakeTimers();
+        const executionPlan = plan('unused');
+        const child = { exitCode: null, pid: undefined, kill: jest.fn(() => { throw new Error('already exited'); }) } as never;
+        const reject = jest.fn();
+        try {
+            const aborted = createAgentProcessLifecycle(child, executionPlan, undefined, jest.fn(), reject);
+            aborted.abort();
+            expect((child as { kill: jest.Mock }).kill).toHaveBeenCalledTimes(2);
+            aborted.onClose(null);
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ category: 'cancelled' }));
+
+            const signalOnly = createAgentProcessLifecycle(child, executionPlan, undefined, jest.fn(), reject);
+            signalOnly.onClose(null);
+            expect(reject).toHaveBeenLastCalledWith(expect.objectContaining({
+                category: 'process', exitCode: undefined, retryable: false,
+            }));
+        } finally {
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+            jest.useRealTimers();
+        }
+    });
+
+    it('maps an unexpected decoder failure to a bounded output error', () => {
+        const executionPlan = plan('unused');
+        const malformedPlan = Object.defineProperty({ ...executionPlan }, 'outputProtocol', {
+            get: () => { throw new Error('unsafe decoder detail'); },
+        }) as AgentExecutionPlan;
+        const reject = jest.fn();
+        try {
+            const lifecycle = createAgentProcessLifecycle({ exitCode: 0 } as never, malformedPlan,
+                undefined, jest.fn(), reject);
+            lifecycle.onClose(0);
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({
+                category: 'output', message: expect.not.stringContaining('unsafe decoder detail'),
+            }));
+        } finally {
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
         }
     });
 

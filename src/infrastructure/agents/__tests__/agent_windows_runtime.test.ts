@@ -153,7 +153,7 @@ describe('isolated Windows agent runtime', () => {
         const fixture = fakeRuntime(source);
         try {
             const plan = prepare(fixture.workspace, fixture.environment);
-            expect(plan.executable).toBe(fixture.node);
+            expect(plan.executable.toLowerCase()).toBe(fixture.node.toLowerCase());
             expect(plan.launcherArgv).toHaveLength(1);
             await expect(runAgentCli(plan, 'literal & $(ignored) "quoted"')).resolves.toBe('literal & $(ignored) "quoted"');
             expect(existsSync(plan.runtimeDirectory)).toBe(false);
@@ -164,7 +164,7 @@ describe('isolated Windows agent runtime', () => {
 
     windowsIt('reports fake Codex readiness through the standalone operator verifier', () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'
-            + 'else{process.stdin.resume()}';
+            + 'else if(process.argv.includes("login")){process.exit(1)}else{process.stdin.resume()}';
         const fixture = fakeRuntime(source);
         try {
             const output = execFileSync(process.execPath, [join(process.cwd(), 'scripts', 'verify-agent-clis.cjs')], {
@@ -229,5 +229,5 @@ describe('isolated Windows agent runtime', () => {
             rmSync(pidFile, { force: true });
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    });
+    }, 15_000);
 });

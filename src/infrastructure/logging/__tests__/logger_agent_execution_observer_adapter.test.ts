@@ -36,9 +36,27 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         });
 
         expect(logInfo).toHaveBeenCalledWith(
-            'Agent execution failed.',
+            'Agent execution failed (preflight/configuration).',
             false,
             { agentExecution: expect.not.objectContaining({ prompt: expect.anything(), environment: expect.anything() }) },
         );
+    });
+
+    it('reports only the sanitized version identity and numeric exit code', () => {
+        const observer = new LoggerAgentExecutionObserverAdapter();
+        observer.observe({
+            state: 'admitted', phase: 'preflight', provider: 'codex', capability: 'findings',
+            durationMilliseconds: 5, manifestRevision: 'fixture', version: 'codex-cli 9.0',
+            workspaceMode: 'read-only', outputContract: 'text', artifactHashes: [],
+        });
+        observer.observe({
+            state: 'failed', phase: 'run', provider: 'codex', capability: 'findings',
+            durationMilliseconds: 10, failureCategory: 'process', semanticCode: 'agent.failed',
+            retryable: false, exitCode: 2,
+        });
+        expect(logDebugInfo).toHaveBeenCalledWith('Agent execution admitted (codex codex-cli 9.0).', false,
+            { agentExecution: expect.objectContaining({ version: 'codex-cli 9.0' }) });
+        expect(logInfo).toHaveBeenCalledWith('Agent execution failed (run/process, exit 2).', false,
+            { agentExecution: expect.not.objectContaining({ prompt: expect.anything(), environment: expect.anything() }) });
     });
 });

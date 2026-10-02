@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
 import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
+import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -132,7 +133,7 @@ export function createAgentProcessLifecycle(
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
+            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined));
             return;
         }
         try {
@@ -212,10 +213,13 @@ function verifyAdmittedPlan(plan: AgentExecutionPlan, runtimeDirectory: string):
         throw new Error('Windows command wrappers cannot execute an admitted agent plan.');
     }
     if (plan.launcherArgv?.length) {
-        if (plan.launcherArgv.length !== 1 || plan.executable !== process.execPath
+        if (plan.launcherArgv.length !== 1
+            || (process.platform !== 'win32' && plan.executable !== process.execPath)
+            || !isAbsolute(plan.executable)
             || !isAbsolute(plan.launcherArgv[0]) || !plan.launcherSha256) {
             throw new Error('Managed agent launcher is invalid.');
         }
+        if (process.platform === 'win32') verifyWindowsLauncherTrust(plan.executable, plan.launcherArgv[0]);
         const launcher = realpathSync(plan.launcherArgv[0]);
         if (launcher !== plan.launcherArgv[0]
             || !statSync(launcher).isFile()
@@ -242,6 +246,19 @@ function verifyAdmittedPlan(plan: AgentExecutionPlan, runtimeDirectory: string):
         const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
         if (actual !== artifact.sha256) throw new Error('Managed artifact hash changed.');
     }
+}
+
+/** Recheck a separate Windows interpreter and package entrypoint immediately before spawn. */
+export function verifyWindowsLauncherTrust(
+    executable: string,
+    launcher: string,
+    validate: (path: string) => void = validateAgentExecutableFile,
+): void {
+    if (realpathSync(executable) !== executable) {
+        throw new Error('Managed agent interpreter changed after preflight.');
+    }
+    validate(executable);
+    validate(launcher);
 }
 
 function cleanupRuntimeDirectory(runtimeDirectory: string): void {

@@ -286,6 +286,10 @@ failure. Content-free Bugbot telemetry is optional. Setup/doctor and the
 credential-health workflow surface readiness per credential. Inactive roles
 produce no provisioning noise. Model/provider changes are operational changes
 that require smoke evidence.
+For an admitted CLI, the debug log MUST include the normalized first-line version identity.
+On process failure it MUST expose the bounded numeric exit code and failure
+category, never raw stderr, prompts, environment values, or credentials. A
+provider availability label alone is insufficient to diagnose a CLI failure.
 
 ## 13. Compatibility, migration, rollout, and rollback
 

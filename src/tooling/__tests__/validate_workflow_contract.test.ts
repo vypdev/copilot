@@ -829,7 +829,6 @@ describe('workflow contract validator', () => {
   });
 
   it.each([
-    ['ci_check.yml', 'ci-check', 'Validate Git diff'],
     ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full Windows documentation and contract validators'],
     ['setup_platform_smoke.yml', 'setup-windows-codex-smoke', 'Full Windows documentation and contract validators'],
   ])('treats CRLF as a line ending in the %s diff check', (fileName, jobId, stepName) => {
@@ -837,6 +836,16 @@ describe('workflow contract validator', () => {
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
     expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'");
+  });
+
+  it('checks committed PR, merge-queue, and push changes against their event base', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['ci-check'].steps.find((item: { name?: string }) => item.name === 'Validate Git diff');
+    expect(step?.run).toContain('pull_request) base="$PR_BASE_SHA"');
+    expect(step?.run).toContain('merge_group) base="$MERGE_BASE_SHA"');
+    expect(step?.run).toContain('push) base="$PUSH_BEFORE_SHA"');
+    expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check \"$base\" HEAD -- . ':(exclude)build/**'");
   });
 
   it('retains whitespace errors while accepting CRLF line endings', () => {
@@ -855,9 +864,16 @@ describe('workflow contract validator', () => {
       for (const changed of ['trailing space \n', 'blank line with spaces\n  \n', 'space before tab\n \tindent\n']) {
         writeFileSync(path.join(directory, 'fixture.txt'), changed);
         expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', '--', '.').status).not.toBe(0);
+        expect(git('add', 'fixture.txt').status).toBe(0);
+        expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+          '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'changed').status).toBe(0);
+        expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).not.toBe(0);
       }
       writeFileSync(path.join(directory, 'fixture.txt'), 'clean\r\n');
-      expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', '--', '.').status).toBe(0);
+      expect(git('add', 'fixture.txt').status).toBe(0);
+      expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+        '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'clean-crlf').status).toBe(0);
+      expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).toBe(0);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

@@ -19,6 +19,7 @@ export class AgentCliError extends Error {
         message: string,
         readonly category: 'configuration' | 'timeout' | 'cancelled' | 'process' | 'output',
         readonly retryable = false,
+        readonly exitCode?: number,
     ) {
         super(message);
         this.name = 'AgentCliError';

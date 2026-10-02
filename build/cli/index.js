@@ -73365,6 +73365,7 @@ function failureObservation(request, error, phase, startedAt) {
         failureCategory: category,
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
+        exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
     };
 }
 function semanticCodeForFailure(category) {
@@ -73398,10 +73399,11 @@ function observeSafely(observer, observation) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliError = void 0;
 class AgentCliError extends Error {
-    constructor(message, category, retryable = false) {
+    constructor(message, category, retryable = false, exitCode) {
         super(message);
         this.category = category;
         this.retryable = retryable;
+        this.exitCode = exitCode;
         this.name = 'AgentCliError';
     }
 }
@@ -73419,6 +73421,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAgentCli = runAgentCli;
 exports.createAgentProcessLifecycle = createAgentProcessLifecycle;
 exports.decodeAgentCliOutput = decodeAgentCliOutput;
+exports.verifyWindowsLauncherTrust = verifyWindowsLauncherTrust;
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
@@ -73426,6 +73429,7 @@ const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const agent_executable_file_1 = __nccwpck_require__(87997);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
@@ -73552,7 +73556,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
+            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined));
             return;
         }
         try {
@@ -73633,10 +73637,14 @@ function verifyAdmittedPlan(plan, runtimeDirectory) {
         throw new Error('Windows command wrappers cannot execute an admitted agent plan.');
     }
     if (plan.launcherArgv?.length) {
-        if (plan.launcherArgv.length !== 1 || plan.executable !== process.execPath
+        if (plan.launcherArgv.length !== 1
+            || (process.platform !== 'win32' && plan.executable !== process.execPath)
+            || !(0, node_path_1.isAbsolute)(plan.executable)
             || !(0, node_path_1.isAbsolute)(plan.launcherArgv[0]) || !plan.launcherSha256) {
             throw new Error('Managed agent launcher is invalid.');
         }
+        if (process.platform === 'win32')
+            verifyWindowsLauncherTrust(plan.executable, plan.launcherArgv[0]);
         const launcher = (0, node_fs_1.realpathSync)(plan.launcherArgv[0]);
         if (launcher !== plan.launcherArgv[0]
             || !(0, node_fs_1.statSync)(launcher).isFile()
@@ -73665,6 +73673,14 @@ function verifyAdmittedPlan(plan, runtimeDirectory) {
         if (actual !== artifact.sha256)
             throw new Error('Managed artifact hash changed.');
     }
+}
+/** Recheck a separate Windows interpreter and package entrypoint immediately before spawn. */
+function verifyWindowsLauncherTrust(executable, launcher, validate = agent_executable_file_1.validateAgentExecutableFile) {
+    if ((0, node_fs_1.realpathSync)(executable) !== executable) {
+        throw new Error('Managed agent interpreter changed after preflight.');
+    }
+    validate(executable);
+    validate(launcher);
 }
 function cleanupRuntimeDirectory(runtimeDirectory) {
     (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
@@ -86786,8 +86802,17 @@ exports.LoggerAgentExecutionObserverAdapter = void 0;
 const logger_1 = __nccwpck_require__(91151);
 class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
-        if (observation.state === 'completed' || observation.state === 'failed') {
-            (0, logger_1.logInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
+        if (observation.state === 'failed') {
+            const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${exit}).`, false, { agentExecution: observation });
+            return;
+        }
+        if (observation.state === 'completed') {
+            (0, logger_1.logInfo)('Agent execution completed.', false, { agentExecution: observation });
+            return;
+        }
+        if (observation.state === 'admitted') {
+            (0, logger_1.logDebugInfo)(`Agent execution admitted (${observation.provider} ${observation.version}).`, false, { agentExecution: observation });
             return;
         }
         (0, logger_1.logDebugInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });

@@ -116,4 +116,19 @@ jobs:
         run: pnpm run validate:setup-acceptance
 
       - name: Validate Git diff
-        run: git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request) base="$PR_BASE_SHA" ;;
+            merge_group) base="$MERGE_BASE_SHA" ;;
+            push) base="$PUSH_BEFORE_SHA" ;;
+            workflow_dispatch) base="$(git rev-parse HEAD^)" ;;
+            *) echo "Unsupported diff-check event" >&2; exit 1 ;;
+          esac
+          [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "Missing diff-check base commit" >&2; exit 1; }
+          git -c core.whitespace=cr-at-eol diff --check "$base" HEAD -- . ':(exclude)build/**'

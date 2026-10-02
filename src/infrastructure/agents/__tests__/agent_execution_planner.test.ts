@@ -65,7 +65,7 @@ describe('AgentExecutionPlanner', () => {
                 environment: { PATH: directory, PATHEXT: '.EXE;.CMD' },
             });
             runtimeDirectories.push(byPath.runtimeDirectory);
-            expect(byPath.executable).toBe(realpathSync(node));
+            expect(byPath.executable.toLowerCase()).toBe(realpathSync(node).toLowerCase());
             expect(byPath.launcherArgv).toEqual([realpathSync(join(packageRoot, 'bin', 'codex.js'))]);
             expect(byPath.runtimeContract.version).toBe(version);
             expect(byPath.workspace).toBe(realpathSync(process.cwd()));

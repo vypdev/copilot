@@ -48,6 +48,7 @@ export type AgentExecutionObservation =
         readonly failureCategory: AgentExecutionFailureCategory;
         readonly semanticCode: AgentExecutionSemanticCode;
         readonly retryable: boolean;
+        readonly exitCode?: number;
     });
 
 /** Receives bounded execution facts only; prompts, output, argv, paths, and environment are excluded by type. */
