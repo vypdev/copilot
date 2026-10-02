@@ -282,6 +282,13 @@ describe('AgentCliClient admitted process execution', () => {
         await expect(client(plan('unused', { executable: null as never })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: process.platform === 'win32' ? 'configuration' : 'process' });
+
+        const malformed = plan('unused', { argv: ['\u0000'] });
+        await expect(client(malformed).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'secret', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'process' });
+        expect(existsSync(malformed.runtimeDirectory)).toBe(false);
     }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     (process.platform === 'win32' ? it : it.skip)('rejects a Windows command wrapper before spawn', async () => {

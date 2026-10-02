@@ -377,6 +377,9 @@ bounded. Windows coverage MUST exercise rejection of `.cmd` execution plans
 and an interpreter path that is no longer canonical after preflight. The full
 Windows agent execution module must meet its 95% line/statement and 90%
 branch/function budgets; a passing isolated subset alone is insufficient.
+A malformed spawn argument that causes a synchronous process-start exception
+MUST become a bounded process failure and remove the private runtime directory;
+the Windows full-coverage suite MUST exercise that recovery branch.
 Runner owners must verify native provider executables and their ACLs. The
 GitHub-hosted fixture is historical evidence of an unsafe ambient Node and
 does not establish service-runner safety. A new isolated installer/agent
