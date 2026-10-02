@@ -233,9 +233,15 @@ function assertRunner(file, workflow) {
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
           throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
         }
-      } else if (JSON.stringify(runnerLabels(job['runs-on']))
-        !== JSON.stringify(['self-hosted', 'codex', 'Windows'])) {
-        throw new Error(`${relativeFile} must target the self-hosted Windows codex runner.`);
+      } else {
+        if (JSON.stringify(runnerLabels(job['runs-on']))
+          !== JSON.stringify(['self-hosted', 'codex', 'Windows'])) {
+          throw new Error(`${relativeFile} must target the self-hosted Windows codex runner.`);
+        }
+        const coverageStep = (job.steps ?? []).find(step => step?.name === 'Full Windows coverage and acceptance budgets');
+        if (coverageStep?.run !== 'pnpm run test:coverage') {
+          throw new Error(`${relativeFile} must retain full Windows coverage and acceptance budgets.`);
+        }
       }
       assertIsolatedPnpm(relativeFile, jobId, job);
       continue;

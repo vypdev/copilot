@@ -719,6 +719,10 @@ describe('workflow contract validator', () => {
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
     workflow.jobs['setup-windows-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
     expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows codex runner');
+    workflow.jobs['setup-windows-codex-smoke']['runs-on'] = ['self-hosted', 'codex', 'Windows'];
+    workflow.jobs['setup-windows-codex-smoke'].steps = workflow.jobs['setup-windows-codex-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full Windows coverage and acceptance budgets');
+    expect(() => assertRunner(file, workflow)).toThrow('full Windows coverage and acceptance budgets');
     delete workflow.jobs['setup-windows-codex-smoke'];
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted platform and self-hosted Windows fixture jobs');
   });

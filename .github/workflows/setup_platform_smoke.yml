@@ -74,3 +74,5 @@ jobs:
         run: pnpm exec jest src/infrastructure/agents/__tests__/agent_executable_file.test.ts src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts src/infrastructure/agents/__tests__/agent_execution_planner.test.ts src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts --runInBand --silent
       - name: Isolated npm package checks
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
+      - name: Full Windows coverage and acceptance budgets
+        run: pnpm run test:coverage

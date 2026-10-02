@@ -1923,6 +1923,14 @@ Both the planner and the new module MUST independently meet the same 95%
 lines/statements and 90% branches/functions budget in full Windows CI. A
 passing platform fixture alone does not close this coverage gate.
 
+The generic `CI Check` may be assigned to macOS even while Windows runners are
+available. The self-hosted Windows setup platform job MUST therefore also run
+the full existing `test:coverage` command, including acceptance and agent
+coverage budgets, after its short isolated fixtures. Its workflow contract
+test MUST reject removal of that step. This makes Windows coverage evidence
+repeatable without a live agent or PAT and leaves PR-triggered checks and
+review state as separate gates.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
