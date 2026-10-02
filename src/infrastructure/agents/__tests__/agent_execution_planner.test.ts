@@ -8,6 +8,7 @@ import { getAgentRuntimeManifestEntry } from '../agent_runtime_manifest';
 import { verifyWindowsRuntimePathPrivate } from '../windows_runtime_acl';
 
 const unixIt = process.platform === 'win32' ? it.skip : it;
+const windowsIt = process.platform === 'win32' ? it : it.skip;
 
 function system(provider: AgentProvider, workspace = process.cwd()): AgentExecutionPlanningSystem {
     return {
@@ -18,6 +19,49 @@ function system(provider: AgentProvider, workspace = process.cwd()): AgentExecut
 }
 
 describe('AgentExecutionPlanner', () => {
+    windowsIt('preflights a reviewed local npm shim through PATH and an absolute selection', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-windows-system-'));
+        const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
+        const shim = join(directory, 'codex.cmd');
+        const runtimeDirectories: string[] = [];
+        mkdirSync(join(packageRoot, 'bin'), { recursive: true });
+        writeFileSync(shim, '@echo off\r\n');
+        writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
+            name: '@openai/codex', bin: { codex: 'bin/codex.js' },
+        }));
+        const version = getAgentRuntimeManifestEntry('codex').reviewedVersion;
+        writeFileSync(join(packageRoot, 'bin', 'codex.js'), `process.stdout.write(${JSON.stringify(`${version}\n`)})`);
+        const planner = new AgentExecutionPlanner();
+        try {
+            const byPath = planner.prepare({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
+                environment: { PATH: directory, PATHEXT: '.cmd' },
+            });
+            runtimeDirectories.push(byPath.runtimeDirectory);
+            expect(byPath.executable).toBe(process.execPath);
+            expect(byPath.launcherArgv).toEqual([realpathSync(join(packageRoot, 'bin', 'codex.js'))]);
+            expect(byPath.runtimeContract.version).toBe(version);
+            expect(byPath.workspace).toBe(realpathSync(process.cwd()));
+
+            const absolute = planner.prepare({
+                configuration: { provider: 'codex', model: 'model', executable: shim }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
+                environment: { PATH: '', PATHEXT: '.cmd' },
+            });
+            runtimeDirectories.push(absolute.runtimeDirectory);
+            expect(absolute.launcherArgv).toEqual(byPath.launcherArgv);
+            expect(() => planner.prepare({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
+                environment: { PATH: '', PATHEXT: '.cmd' },
+            })).toThrow('not found on PATH');
+        } finally {
+            for (const runtimeDirectory of runtimeDirectories) rmSync(runtimeDirectory, { recursive: true, force: true });
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
     unixIt('uses the default system for canonical workspace, PATH, executable, and runtime identity preflight', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-default-system-'));
         const executable = join(directory, 'codex');

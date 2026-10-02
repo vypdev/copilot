@@ -1889,6 +1889,16 @@ The catalog validator and its test MUST apply the same Windows-only CRLF to LF
 normalization before comparing, preserving exact content comparison on Unix.
 The complete CI workflow must pass on a new HEAD before this gate closes.
 
+On the [next full Windows CI run](https://github.com/vypdev/copilot/actions/runs/36978641396),
+all 513 suites and 5,783 tests passed, but the independent agent-execution
+coverage budget failed for `agent_execution_planner.ts` (93.90% lines, 94.32%
+statements, 84.78% branches versus 95/95/90). The existing default-system
+preflight fixtures run only on Unix. Add a Windows-only reviewed `.cmd` and
+local Node fixture that exercises real planner PATH resolution, direct shim
+invocation, version reading, canonical workspace, absolute selection and
+missing PATH rejection. The 95/95/90 budget MUST remain in force, and a new
+Windows coverage run MUST prove it passes without a real agent or credentials.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
