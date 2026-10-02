@@ -78735,7 +78735,6 @@ function savedDacl(path) {
     return withSavedAcl(path, (_snapshot, lines) => lines[1].trim());
 }
 function assertOwnerOnlyDacl(sddl, identity, directory) {
-    const { sid } = identity;
     const isCurrentUser = (principal) => matchesWindowsRuntimePrincipal(principal, identity);
     const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
     const dacl = /D:.*?(?=S:|$)/.exec(sddl)?.[0] ?? '';
@@ -78754,26 +78753,7 @@ function assertOwnerOnlyDacl(sddl, identity, directory) {
         || !aces.some(appliesToPath)
         || (directory && !aces.some(inheritsToChildren))
         || (!directory && !aces.every(fields => fields[1] === ''))) {
-        throw new Error(`Unsafe managed runtime ACL (${JSON.stringify({
-            ownerPresent: owner !== undefined,
-            ownerMatches: owner !== undefined && isCurrentUser(owner),
-            flags,
-            aceCount: aces.length,
-            noUnparsedEntries,
-            aces: aces.map(fields => ({
-                fields: fields.length,
-                type: fields[0],
-                inheritance: fields[1],
-                rights: fields[2],
-                principalMatches: isCurrentUser(fields[5]),
-                principalKind: fields[5]?.startsWith('S-') ? 'sid' : fields[5],
-                principalSuffix: fields[5]?.split('-').at(-1),
-                principalLength: fields[5]?.length,
-            })),
-            ownerSidSuffix: sid.split('-').at(-1),
-            ownerSidLength: sid.length,
-            localAdministrator: identity.localAdministrator,
-        })}).`);
+        throw new Error('Unsafe managed runtime ACL.');
     }
 }
 function makeWindowsRuntimePathPrivate(path, directory) {

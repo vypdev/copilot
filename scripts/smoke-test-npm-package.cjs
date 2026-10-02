@@ -23,13 +23,13 @@ try {
   );
   const metadata = JSON.parse(output);
   const packageFile = metadata[0]?.filename;
-  if (typeof packageFile !== 'string') {
+  if (typeof packageFile !== 'string' || path.basename(packageFile) !== packageFile) {
     throw new Error('npm pack did not return a package filename.');
   }
 
   const extractedDirectory = path.join(temporaryDirectory, 'package');
   fs.mkdirSync(extractedDirectory);
-  execFileSync('tar', ['-xzf', path.join(temporaryDirectory, packageFile), '-C', extractedDirectory]);
+  execFileSync('tar', ['-C', 'package', '-xzf', packageFile], { cwd: temporaryDirectory });
 
   const packageRoot = path.join(extractedDirectory, 'package');
   const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
