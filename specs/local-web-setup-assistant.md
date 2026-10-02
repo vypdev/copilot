@@ -785,7 +785,7 @@ and explain why they matter. In particular:
 | Provider reasoning | Do not offer a misleading toggle while the current string-only CLI adapter cannot return separate reasoning parts | If a future adapter supports it, disclose actual text/retention behavior; never promise concision or metadata-only output without a bounded contract. |
 | Bugbot dry-run | `Publish Bugbot findings` (recommended) versus persistent `Analyze without publishing` | Not the same as `copilot setup --dry-run`; suppresses review publication/SCM effects and is incompatible with approval evidence. |
 | Organization Bugbot rules | Optional multiline rule editor, one rule per line | These rules take precedence over repository rules; their storage scope is shown separately. Never call a repository Variable an organization-wide policy. |
-| Agent CLI provisioning | `Automatic` (recommended) / `Use installed only` / advanced `Reinstall reviewed version` | Explain runner ownership, pinned Codex/OpenCode installs, Cursor's manual prerequisite, and explicit-path exemption. |
+| Agent CLI provisioning | No setup choice | Reuse an available selected CLI; install the missing default from its official standalone source without an exact version pin. Explicit executable paths are never replaced. Agent workflows use no setup-node, npm, or pnpm installation step. |
 
 Examples in the card must be clearly illustrative, not a real detected value.
 The reviewer can always see the current stored value, source (default/config/

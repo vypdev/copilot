@@ -1,11 +1,11 @@
-import { chmodSync, chownSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, chownSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentProvider } from '../../../domain/agent';
 import { AgentCliError } from '../../../data/repository/agent_cli_contracts';
 import { AgentExecutionPlanner, type AgentExecutionPlanningSystem } from '../agent_execution_planner';
 import { getAgentRuntimeManifestEntry } from '../agent_runtime_manifest';
-import { verifyWindowsRuntimePathPrivate } from '../windows_runtime_acl';
+import { makeWindowsRuntimePathPrivate, verifyWindowsRuntimePathPrivate } from '../windows_runtime_acl';
 
 const unixIt = process.platform === 'win32' ? it.skip : it;
 const windowsIt = process.platform === 'win32' ? it : it.skip;
@@ -22,11 +22,17 @@ function system(provider: AgentProvider, workspace = process.cwd()): AgentExecut
 
 describe('AgentExecutionPlanner', () => {
     beforeAll(() => {
-        if (process.platform === 'win32') return;
         systemFixtureDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-system-executable-'));
-        systemExecutable = join(systemFixtureDirectory, 'agent');
-        writeFileSync(systemExecutable, '#!/bin/sh\nexit 0\n');
-        chmodSync(systemExecutable, 0o700);
+        if (process.platform === 'win32') {
+            systemExecutable = join(systemFixtureDirectory, 'node.exe');
+            copyFileSync(process.execPath, systemExecutable);
+            makeWindowsRuntimePathPrivate(systemFixtureDirectory, true);
+            makeWindowsRuntimePathPrivate(systemExecutable, false);
+        } else {
+            systemExecutable = join(systemFixtureDirectory, 'agent');
+            writeFileSync(systemExecutable, '#!/bin/sh\nexit 0\n');
+            chmodSync(systemExecutable, 0o700);
+        }
     });
 
     afterAll(() => {
@@ -37,23 +43,29 @@ describe('AgentExecutionPlanner', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-windows-system-'));
         const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
         const shim = join(directory, 'codex.cmd');
+        const node = join(directory, 'node.exe');
         const runtimeDirectories: string[] = [];
         mkdirSync(join(packageRoot, 'bin'), { recursive: true });
         writeFileSync(shim, '@echo off\r\n');
+        copyFileSync(process.execPath, node);
+        makeWindowsRuntimePathPrivate(directory, true);
+        makeWindowsRuntimePathPrivate(node, false);
         writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
             name: '@openai/codex', bin: { codex: 'bin/codex.js' },
         }));
         const version = getAgentRuntimeManifestEntry('codex').reviewedVersion;
         writeFileSync(join(packageRoot, 'bin', 'codex.js'), `process.stdout.write(${JSON.stringify(`${version}\n`)})`);
+        makeWindowsRuntimePathPrivate(shim, false);
+        makeWindowsRuntimePathPrivate(join(packageRoot, 'bin', 'codex.js'), false);
         const planner = new AgentExecutionPlanner();
         try {
             const byPath = planner.prepare({
                 configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
                 prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
-                environment: { PATH: directory, PATHEXT: '.cmd' },
+                environment: { PATH: directory, PATHEXT: '.EXE;.CMD' },
             });
             runtimeDirectories.push(byPath.runtimeDirectory);
-            expect(byPath.executable).toBe(process.execPath);
+            expect(byPath.executable).toBe(realpathSync(node));
             expect(byPath.launcherArgv).toEqual([realpathSync(join(packageRoot, 'bin', 'codex.js'))]);
             expect(byPath.runtimeContract.version).toBe(version);
             expect(byPath.workspace).toBe(realpathSync(process.cwd()));
@@ -61,7 +73,7 @@ describe('AgentExecutionPlanner', () => {
             const absolute = planner.prepare({
                 configuration: { provider: 'codex', model: 'model', executable: shim }, capability: 'findings',
                 prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
-                environment: { PATH: '', PATHEXT: '.cmd' },
+                environment: { PATH: directory, PATHEXT: '.EXE;.CMD' },
             });
             runtimeDirectories.push(absolute.runtimeDirectory);
             expect(absolute.launcherArgv).toEqual(byPath.launcherArgv);

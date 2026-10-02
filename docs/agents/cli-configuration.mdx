@@ -119,18 +119,7 @@ Never place tokens in `with`, command arguments, prompts, repository files, or l
 
 ## Provisioning
 
-The Action records the selected CLI's non-empty runtime identity and, by
-default, reuses any available operator-owned executable without replacing it.
-When the default Codex or OpenCode executable is absent, `auto` installs the
-exact pinned package and verifies that new installation. Explicit executable
-paths are never installed or replaced. Cursor must be preinstalled because no
-reviewed automatic installer exists. The only provisioning control is:
-
-```text
-AGENT_PROVISIONING=auto|always|disabled
-```
-
-The Action does not copy local OAuth files into CI and does not install an unselected provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).
+The Action uses an available selected CLI without requiring an exact version. If the default command is absent, it installs that provider's official standalone CLI in a private job directory and verifies a non-empty version. An explicit executable is never installed or replaced. There is no provisioning-mode setting in the generated agent workflows. The Action does not copy local OAuth files into CI or install an unselected provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).
 
 ## Failure policy
 
@@ -143,6 +132,6 @@ The run fails before the agent starts when any of the following is invalid:
 - required CLI executable;
 - required credential reference;
 - non-empty runtime identity;
-- exact post-install identity for a package installed by Copilot.
+- missing or empty post-install runtime identity.
 
 This behavior is intentional: a run must never silently use another provider, another model, a repository-local default, or an unverified credential.

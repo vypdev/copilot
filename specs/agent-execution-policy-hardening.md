@@ -357,27 +357,26 @@ role is `configuration.unsupported`; it never degrades to a less safe mode.
 
 ### 6.7 Runtime manifest and preflight
 
-`src/infrastructure/agents/agent-runtime-manifest.json` starts with reviewed
-known-good identities and reproducible installation recipes:
+`src/infrastructure/agents/agent-runtime-manifest.json` records historical
+known-good smoke identities and the selected providers' official standalone
+sources:
 
-| Provider | Reviewed identity / pinned installation | Required smoke |
+| Provider | Reviewed smoke identity / missing CLI source | Required smoke |
 |---|---|---|
-| Codex | `codex-cli 0.156.1` / `@openai/codex@0.156.1` | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema and configured model |
-| OpenCode | `1.18.3` / `opencode-ai@1.18.3` | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
-| Cursor | `2026.09.10-fd3934a` / no automatic installer | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
+| Codex | `codex-cli 0.156.1` / official OpenAI standalone installer | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema and configured model |
+| OpenCode | `1.18.3` / official installer or Windows release archive | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
+| Cursor | `2026.09.10-fd3934a` / official installer or Windows archive | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
 
-An available operator-owned executable is never replaced and any non-empty
-reported version is recorded in the admitted plan. The fixed provider argv is
-still fail-closed: an incompatible runtime exits terminally and no fallback is
-attempted. In `auto`, only a missing default Codex or OpenCode executable is
-installed; `always` forces that same pinned installation. An explicit executable
-is operator-owned in every mode. A Copilot-installed package must report the
-reviewed identity exactly after installation. Cursor must be preinstalled
-because no reviewed automatic installer exists. Installation upgrades require
-one PR that updates the exact package recipe, provider fixture snapshots,
-official-source links, automated contract/smoke tests, target-runner
-provisioning, and reviewed human smoke. Provisioning never selects a floating
-or unreviewed package version.
+An available selected executable is never replaced and any non-empty reported
+version is recorded in the admitted plan. The fixed provider argv is still
+fail-closed: an incompatible runtime exits terminally and no fallback is
+attempted. A missing default executable is installed from that provider's
+official source in a private job directory. An explicit executable is never
+installed or replaced. The new installation must report a non-empty version;
+there is no exact version pin or provisioning-mode override. Source changes
+require a reviewed PR with fixture, contract, and target-runner evidence.
+Installer processes receive no model or GitHub credentials. The agent workflows
+do not use `actions/setup-node`, npm, or pnpm to install agents.
 
 ### 6.8 State machine
 
@@ -397,7 +396,7 @@ Existing provider/model/effort and per-role override precedence remains.
 `agent-command` is invalid and has no replacement that accepts arguments;
 `agent-executable` may select only the validated binary described above. The
 recommended default remains Codex. OpenCode and Cursor are explicit alternatives
-and require a compatible operator-owned runtime or a supported pinned installation.
+and reuse a compatible installed runtime or use the selected official installer.
 
 Sandbox, write role, network, approvals, environment, config directory,
 permissions, plugins/MCP/subagents, session persistence, process limits, output
@@ -543,7 +542,7 @@ verification. Attach sanitized evidence to the upgrade/implementation PR.
 Update all `docs/agents/*` runtime, command, input, model, execution, failure, and
 provider pages; setup/provisioning/doctor docs; security operations; architecture;
 and the release change notice. Provider pages link current official CLI/security
-references, state reviewed identity and pinned installation recipe, managed authority, unsupported
+references, state reviewed smoke identity and official installation source, managed authority, unsupported
 recovery, and upgrade process. Examples are generated/tested from golden plans.
 
 ## 16. Acceptance scenarios
@@ -567,7 +566,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
    its owned temp directory.
 9. Ambient/project/user config cannot broaden effective authority in smoke fixtures.
 10. Target-runner provisioning and execution preflight agree on runtime ownership,
-    pinned installation, and reported identity;
+    official installation source, and reported identity;
     doctor agrees with the structured provider/model/credential configuration.
 11. Negative fixtures prove removed command shapes are invalid and no parser,
     alias, deprecated field, or compatibility adapter ships.

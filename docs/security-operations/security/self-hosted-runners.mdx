@@ -30,13 +30,9 @@ The `codex` label can route a job to macOS, Windows or Linux. Install Git and
 Bash on every runner; Windows needs Git for Windows with its Bash available to
 the Actions runner service. Installed workflows select `shell: bash` for
 `run` steps so Windows does not create PowerShell scripts subject to local
-execution policy. Keep Node.js 24 and pnpm provisioning available to jobs that
-build the Action.
+execution policy. The distributed agent workflows do not require Node, npm, or pnpm installed separately; development and packaging jobs use their own toolchain.
 
-The JavaScript Action runs under the runner's embedded Node, which does not
-provide npm. Windows agent provisioning resolves the separate Node installation
-placed on the job PATH by `actions/setup-node` and invokes its npm CLI script
-directly. The platform fixture verifies that pairing without an agent request.
+The JavaScript Action runs under the runner's embedded Node. Missing agent CLIs use official standalone installers and release archives in private job directories. Existing npm `.cmd` shims on Windows still need a separately trusted Node executable; native installed CLIs do not.
 Verify each operating system with an actual runner job before
 claiming Action-wide compatibility; the platform matrix exercises isolated
 setup and agent fixture paths. In particular, inspect timeout and cancellation of

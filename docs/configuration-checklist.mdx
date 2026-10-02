@@ -36,9 +36,9 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 ## Operations
 
-- [ ] The selected CLI is preinstalled and verified, or its Copilot-owned installation package is pinned.
-- [ ] Node.js 24 is set up before any workflow step that may install a pinned Codex or OpenCode package.
-- [ ] Cursor is preinstalled when selected; no automatic Cursor installer is configured.
+- [ ] The selected CLI is available or its official standalone installer can reach the provider source.
+- [ ] The Action can verify the selected CLI version and command surface without npm or pnpm.
+- [ ] Cursor uses its available CLI or the official installer when the default command is missing.
 - [ ] Provisioning and help checks pass.
 - [ ] Smoke tests are recorded without printing credentials.
 - [ ] Rollback refs and previous CLI versions are known.

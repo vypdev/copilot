@@ -60,7 +60,7 @@ for (const value of [
 ]) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }
-for (const value of ['model_reasoning_effort', '--variant', 'AGENT_PROVISIONING']) {
+for (const value of ['model_reasoning_effort', '--variant', 'official standalone']) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }
 

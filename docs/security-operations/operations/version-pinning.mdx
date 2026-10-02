@@ -5,14 +5,13 @@ description: Pin Copilot-owned agent CLI installations while preserving operator
 
 # Version pinning
 
-Every runtime must have a deliberate ownership and installation policy. A
-missing executable is not an invitation to install the latest package implicitly.
+The published Copilot package may be pinned for reproducible local tooling. The GitHub Action's selected agent CLI follows a simpler policy: use an available CLI, or install the current official standalone release if its default command is missing. There is no exact agent CLI version requirement.
 
-| Runtime | Reviewed baseline | Installation boundary | Verification |
-| --- | --- | --- | --- |
-| Codex | `codex-cli 0.156.1` | Runner `npm` global install | Exact after Copilot install; otherwise identity + smoke |
-| OpenCode | `1.18.3` | Runner `npm` global install | Exact after Copilot install; otherwise identity + smoke |
-| Cursor | `2026.09.10-fd3934a` | Controlled runner image | Non-empty runtime identity and safe smoke |
+| Runtime | Historical smoke baseline | Missing default command |
+| --- | --- | --- |
+| Codex | `codex-cli 0.156.1` | Official OpenAI standalone installer |
+| OpenCode | `1.18.3` | Official standalone installer or Windows release archive |
+| Cursor | `2026.09.10-fd3934a` | Official installer or Windows release archive |
 
 The Copilot CLI is distributed as `@vypdev/copilot` and exposes the `copilot` executable. Pin it for reproducible local tooling:
 
@@ -24,12 +23,10 @@ copilot --version
 
 ## Rules
 
-1. Pin every Copilot-owned package installation in the reviewed source-controlled runtime manifest.
-2. Provision only the selected runtime.
-3. Verify a Copilot-installed package exactly before invoking the agent.
-4. Reuse an available operator-owned runtime without silently replacing or downgrading it.
-5. For Cursor, require a preinstalled compatible build; automatic installation is unsupported.
-6. Treat missing or empty runtime identity and post-install mismatches as terminal failures.
-7. Record the effective version and manifest revision in sanitized logs without credentials.
+1. Reuse an available selected CLI without replacing it or matching a fixed version.
+2. Install only a missing default command from the selected provider's official source, in a private job directory.
+3. Require a non-empty version and the normal guarded executable, command, and credential checks.
+4. Never replace an explicitly selected executable or fall back to another provider.
+5. Record only sanitized identity and failure category; keep credentials out of installer processes.
 
 See [Provisioning](/security-operations/operations/provisioning) and [Upgrade and rollback](/security-operations/operations/upgrade-rollback) for the lifecycle procedure.

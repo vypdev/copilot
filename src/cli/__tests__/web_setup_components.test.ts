@@ -265,12 +265,12 @@ describe('web setup component semantics', () => {
 
   test('choice recommendations translate their display label without changing the option value', () => {
     const html = markup('QuestionPrompt', { prompt: {
-      kind: 'question', title: 'Provisioning', phase: 'full', pass: 1,
-      question: { stateId: 'provisioning', id: 'ai.provisioningMode', label: 'Provisioning mode',
-        kind: 'choice', defaultValue: 'always', choices: ['auto', 'always', 'disabled'] },
+      kind: 'question', title: 'Bugbot', phase: 'full', pass: 1,
+      question: { stateId: 'bugbot', id: 'ai.bugbotEffort', label: 'Bugbot effort',
+        kind: 'choice', defaultValue: 'smart', choices: ['smart', 'low', 'default', 'high'] },
     }, controller: true, busy: false }, 'es');
-    expect(html).toContain('Respuesta sugerida: Reinstalar siempre');
-    expect(html).toContain('value="always"');
+    expect(html).toContain('Respuesta sugerida: Adaptativa');
+    expect(html).toContain('value="smart"');
   });
 
   test('read-only result cannot show its close control', () => {

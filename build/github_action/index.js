@@ -40064,18 +40064,9 @@ const agent_cli_provisioner_1 = __nccwpck_require__(3115);
 const agent_authentication_preflight_1 = __nccwpck_require__(67766);
 const logger_1 = __nccwpck_require__(91151);
 const application_error_1 = __nccwpck_require__(75999);
-/** Validates and, when requested by the runtime, provisions the selected agent CLIs. */
+/** Reuses selected agent CLIs, installing missing default CLIs from official sources. */
 function prepareGithubAgentRuntime(agentTasks, activeTasks) {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
-    for (const [task, configuration] of configurations) {
-        const preflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
-        if (preflight.check.status === 'missing' && preflight.shouldFail) {
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`);
-        }
-        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
-            (0, logger_1.logInfo)(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
-        }
-    }
     if (process.env.GITHUB_ACTIONS === 'true') {
         const provisioner = new agent_cli_provisioner_1.AgentCliProvisioner();
         for (const configuration of uniqueAgentConfigurations(configurations)) {
@@ -40083,8 +40074,17 @@ function prepareGithubAgentRuntime(agentTasks, activeTasks) {
                 provisioner.provision(configuration);
             }
             catch (cause) {
-                throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime is unavailable and could not satisfy the selected provisioning mode.`, { cause });
+                throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime is unavailable or its official installation failed.`, { cause });
             }
+        }
+    }
+    for (const [task, configuration] of configurations) {
+        const preflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
+        if (preflight.check.status === 'missing' && preflight.shouldFail) {
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`);
+        }
+        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
+            (0, logger_1.logInfo)(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
         }
     }
     (0, logger_1.logDebugInfo)(configurations.length === 0
@@ -49191,7 +49191,6 @@ function buildSetupRepositoryVariables(configuration) {
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_EXECUTABLE', base.executable);
-    add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
@@ -49367,9 +49366,6 @@ function buildSetupWarnings(configuration) {
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
-    if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
-    }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
@@ -49377,7 +49373,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
@@ -67408,7 +67404,7 @@ const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
             const selected = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
-            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex');
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex', environment);
             (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
@@ -67955,9 +67951,12 @@ function signalProcessTree(child, signal) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliProvisioner = void 0;
 exports.agentExecutableExists = agentExecutableExists;
+const node_path_1 = __nccwpck_require__(49411);
+const node_fs_1 = __nccwpck_require__(87561);
+const agent_1 = __nccwpck_require__(79937);
 const agent_executable_invocation_1 = __nccwpck_require__(16608);
+const agent_official_installer_1 = __nccwpck_require__(28520);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
-const agent_cli_provisioning_policy_1 = __nccwpck_require__(11959);
 function agentExecutableExists(executable, environment) {
     try {
         (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
@@ -67967,100 +67966,59 @@ function agentExecutableExists(executable, environment) {
         return false;
     }
 }
-function installPackageGlobally(packageName, version) {
-    (0, agent_executable_invocation_1.installAgentNpmPackage)(packageName, version);
-}
 const DEFAULT_SYSTEM = {
     executableExists: agentExecutableExists,
-    readVersion(executable, provider, environment) {
-        return (0, agent_executable_invocation_1.readAgentExecutableVersion)(executable, provider, environment);
-    },
-    installPackage: installPackageGlobally,
+    readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
+    installOfficial: agent_official_installer_1.installOfficialAgentCli,
 };
+/** Prepare only active provider CLIs; installation never modifies an operator executable. */
 class AgentCliProvisioner {
     constructor(system = DEFAULT_SYSTEM) {
         this.system = system;
-        this.provisionedExecutables = new Set();
+        this.preparedExecutables = new Set();
     }
     provision(target, environment = process.env) {
         const provider = typeof target === 'string' ? target : target.provider;
         const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim() || undefined;
-        const executable = typeof target === 'string'
-            ? agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider]
-            : selectedExecutable || agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider];
-        const mode = (0, agent_cli_provisioning_policy_1.resolveAgentProvisioningMode)(environment.AGENT_PROVISIONING);
-        if (this.provisionedExecutables.has(executable))
+        const executable = selectedExecutable || agent_1.AGENT_EXECUTABLE_BASENAMES[provider];
+        const key = `${provider}:${executable}`;
+        if (this.preparedExecutables.has(key))
             return;
-        const executableAvailable = this.system.executableExists(executable, environment);
-        if (selectedExecutable !== undefined) {
-            if (!executableAvailable) {
-                throw new Error(`The explicitly selected ${provider} executable "${executable}" is not available; explicit executables are never installed or replaced.`);
-            }
-            this.provisionedExecutables.add(executable);
+        if (this.system.executableExists(executable, environment)) {
+            this.preparedExecutables.add(key);
             return;
         }
-        if (executableAvailable && mode !== 'always') {
-            this.provisionedExecutables.add(executable);
-            return;
+        if (selectedExecutable) {
+            throw new Error(`The explicitly selected ${provider} executable is unavailable; operator executables are never installed or replaced.`);
         }
-        if (mode === 'disabled') {
-            throw (0, agent_cli_provisioning_policy_1.provisioningDisabledError)(provider, executable);
-        }
-        this.installProvider(provider);
-        this.assertInstalled(executable, provider, environment);
-        this.assertInstalledVersion(executable, provider, environment);
-        this.provisionedExecutables.add(executable);
-    }
-    installProvider(provider) {
-        const installation = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
-        if (!installation) {
-            throw new Error(`The ${provider} CLI must be preinstalled because Copilot has no reviewed automatic installer for it.`);
-        }
-        this.system.installPackage(installation.package, installation.version);
-    }
-    assertInstalled(executable, provider, environment) {
-        if (!this.system.executableExists(executable, environment)) {
-            throw new Error(`The ${provider} CLI was provisioned but executable "${executable}" is not available on PATH.`);
-        }
-    }
-    assertInstalledVersion(executable, provider, environment) {
+        const installed = this.system.installOfficial(provider);
+        const previousPath = environment.PATH;
+        environment.PATH = `${installed.directory}${node_path_1.delimiter}${environment.PATH || environment.Path || ''}`;
         try {
-            (0, agent_runtime_manifest_1.assertInstalledAgentRuntimeVersion)(provider, this.system.readVersion(executable, provider, environment));
+            if (!this.system.executableExists(executable, environment)) {
+                throw new Error(`The official ${provider} installer did not expose its executable.`);
+            }
+            const actual = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+            const sameExecutable = process.platform === 'win32'
+                ? actual.toLowerCase() === installed.executable.toLowerCase()
+                : actual === installed.executable;
+            if (!sameExecutable) {
+                throw new Error(`The official ${provider} installer resolved to another executable.`);
+            }
+            (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(actual, provider, environment));
+            this.preparedExecutables.add(key);
         }
         catch (error) {
-            throw Object.assign(new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`), { cause: error });
+            if (previousPath === undefined)
+                delete environment.PATH;
+            else
+                environment.PATH = previousPath;
+            (0, node_fs_1.rmSync)(installed.root, { recursive: true, force: true });
+            throw error;
         }
     }
 }
 exports.AgentCliProvisioner = AgentCliProvisioner;
-
-
-/***/ }),
-
-/***/ 11959:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEFAULT_AGENT_EXECUTABLES = void 0;
-exports.resolveAgentProvisioningMode = resolveAgentProvisioningMode;
-exports.shouldSkipProvisioning = shouldSkipProvisioning;
-exports.provisioningDisabledError = provisioningDisabledError;
-const agent_1 = __nccwpck_require__(79937);
-exports.DEFAULT_AGENT_EXECUTABLES = agent_1.AGENT_EXECUTABLE_BASENAMES;
-function resolveAgentProvisioningMode(value) {
-    const mode = value?.trim().toLowerCase() || 'auto';
-    if (mode === 'auto' || mode === 'always' || mode === 'disabled')
-        return mode;
-    throw new Error('AGENT_PROVISIONING must be one of: auto, always, disabled.');
-}
-function shouldSkipProvisioning(mode, executable, alreadyProvisioned, executableAvailable) {
-    return alreadyProvisioned.has(executable) || (mode !== 'always' && executableAvailable);
-}
-function provisioningDisabledError(provider, executable) {
-    return new Error(`Agent provisioning is disabled and the ${provider} CLI executable "${executable}" is not available.`);
-}
 
 
 /***/ }),
@@ -78377,8 +78335,6 @@ exports.resolveAgentExecutablePath = resolveAgentExecutablePath;
 exports.resolveAgentExecutableInvocation = resolveAgentExecutableInvocation;
 exports.validateResolvedAgentInvocation = validateResolvedAgentInvocation;
 exports.readAgentExecutableVersion = readAgentExecutableVersion;
-exports.installAgentNpmPackage = installAgentNpmPackage;
-exports.resolveNpmInstallInvocation = resolveNpmInstallInvocation;
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
@@ -78405,7 +78361,7 @@ function resolveAgentExecutablePath(selected, environment, platform = process.pl
     throw new Error(`Agent executable "${selected}" was not found on PATH.`);
 }
 /** Resolve npm's Windows command shim without ever passing agent argv to cmd.exe. */
-function resolveAgentExecutableInvocation(selected, provider, platform = process.platform) {
+function resolveAgentExecutableInvocation(selected, provider, platform = process.platform, environment = process.env) {
     if (platform === 'win32' && !/\.(exe|cmd)$/iu.test(selected)) {
         throw new Error('Windows agent executable must be a native executable or a reviewed npm command shim.');
     }
@@ -78413,13 +78369,13 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
         return { executable: selected, prefixArgs: [] };
     }
     const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider);
-    const installation = manifest.installation;
-    if (!installation || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
+    const legacyPackage = manifest.legacyNpmPackage;
+    if (!legacyPackage || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
         throw new Error('Windows agent command shim does not match a reviewed npm runtime.');
     }
-    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...installation.package.split('/')));
+    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...legacyPackage.split('/')));
     const packageJson = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(packageRoot, 'package.json'), 'utf8'));
-    if (packageJson.name !== installation.package) {
+    if (packageJson.name !== legacyPackage) {
         throw new Error('Windows agent command shim resolves to an unexpected package.');
     }
     const bin = typeof packageJson.bin === 'string'
@@ -78438,15 +78394,15 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
     if (!(0, node_fs_1.statSync)(target).isFile())
         throw new Error('Windows agent package bin is not a file.');
     switch ((0, node_path_1.extname)(target).toLowerCase()) {
-        case '.js': return { executable: process.execPath, prefixArgs: [target] };
+        case '.js': return { executable: resolveAgentExecutablePath('node', environment, platform), prefixArgs: [target] };
         case '.exe': return { executable: target, prefixArgs: [] };
         default: throw new Error('Windows agent package bin is not a supported direct executable.');
     }
 }
 /** Verify every file that may execute before a version or login probe starts. */
-function validateResolvedAgentInvocation(selected, provider) {
+function validateResolvedAgentInvocation(selected, provider, environment = process.env) {
     (0, agent_executable_file_1.validateAgentExecutableFile)(selected);
-    const invocation = resolveAgentExecutableInvocation(selected, provider);
+    const invocation = resolveAgentExecutableInvocation(selected, provider, process.platform, environment);
     if (invocation.executable !== selected)
         (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
     for (const prefixArg of invocation.prefixArgs)
@@ -78455,42 +78411,21 @@ function validateResolvedAgentInvocation(selected, provider) {
 }
 function readAgentExecutableVersion(selected, provider, environment) {
     const path = resolveAgentExecutablePath(selected, environment);
-    const invocation = validateResolvedAgentInvocation(path, provider);
+    const invocation = validateResolvedAgentInvocation(path, provider, environment);
+    const probeEnvironment = {};
+    for (const key of [
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'HOME', 'USERPROFILE',
+        'LOCALAPPDATA', 'APPDATA', 'XDG_CONFIG_HOME', 'TMP', 'TEMP', 'TMPDIR', 'LANG', 'LC_ALL',
+    ]) {
+        if (environment[key])
+            probeEnvironment[key] = environment[key];
+    }
     return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
-        env: environment,
+        env: probeEnvironment,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
         timeout: 15000,
     });
-}
-function installAgentNpmPackage(packageName, version) {
-    const invocation = resolveNpmInstallInvocation(packageName, version);
-    if (process.platform === 'win32') {
-        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
-        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.prefixArgs[0]);
-    }
-    (0, node_child_process_1.execFileSync)(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
-}
-function resolveNpmInstallInvocation(packageName, version, platform = process.platform, environment = process.env) {
-    const args = ['install', '--global', `${packageName}@${version}`];
-    if (platform === 'win32') {
-        // JavaScript Actions run under the runner's embedded Node, which has no npm.
-        // setup-node adds the npm-bearing installation to the job PATH.
-        const nodeExecutable = resolveAgentExecutablePath('node', environment, platform);
-        const npmCli = (0, node_path_1.join)((0, node_path_1.dirname)(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-        try {
-            if (!(0, node_fs_1.statSync)(npmCli).isFile())
-                throw new Error('not a file');
-        }
-        catch {
-            throw new Error('The job Node installation has no npm CLI script.');
-        }
-        return {
-            executable: nodeExecutable,
-            prefixArgs: [npmCli, ...args],
-        };
-    }
-    return { executable: 'npm', prefixArgs: args };
 }
 
 
@@ -78559,7 +78494,7 @@ class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider);
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider, sourceEnvironment);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
             const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
@@ -78670,6 +78605,213 @@ function definedEnvironment(environment) {
 
 /***/ }),
 
+/***/ 28520:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.installerEnvironment = installerEnvironment;
+exports.parseCursorWindowsInstaller = parseCursorWindowsInstaller;
+exports.selectOpenCodeWindowsAsset = selectOpenCodeWindowsAsset;
+exports.installOfficialAgentCli = installOfficialAgentCli;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const MAX_SCRIPT_BYTES = 1048576;
+const MAX_METADATA_BYTES = 2097152;
+/** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
+function installerEnvironment(root, source) {
+    const allowed = [
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'COMSPEC',
+        'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
+    ];
+    const environment = {};
+    for (const name of allowed) {
+        if (source[name])
+            environment[name] = source[name];
+    }
+    environment.HOME = root;
+    environment.USERPROFILE = root;
+    environment.LOCALAPPDATA = (0, node_path_1.join)(root, 'local');
+    environment.XDG_CONFIG_HOME = (0, node_path_1.join)(root, '.config');
+    environment.CODEX_HOME = (0, node_path_1.join)(root, '.codex');
+    environment.CODEX_INSTALL_DIR = (0, node_path_1.join)(root, 'bin');
+    environment.CODEX_NON_INTERACTIVE = '1';
+    environment.NO_COLOR = '1';
+    return environment;
+}
+function download(url, destination, environment) {
+    if (!url.startsWith('https://'))
+        throw new Error('Official agent source must use HTTPS.');
+    const curl = process.platform === 'win32'
+        ? (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'curl.exe')
+        : 'curl';
+    (0, node_child_process_1.execFileSync)(curl, [
+        '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
+        '--proto', '=https', '--proto-redir', '=https', '--output', destination, url,
+    ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 130000 });
+}
+function downloadScript(url, destination, environment) {
+    download(url, destination, environment);
+    const contents = (0, node_fs_1.readFileSync)(destination);
+    if (contents.length === 0 || contents.length > MAX_SCRIPT_BYTES) {
+        throw new Error('Official agent installer size is invalid.');
+    }
+    return contents.toString('utf8');
+}
+function runScript(provider, root, environment) {
+    const source = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
+    const windows = process.platform === 'win32';
+    const url = windows ? source.windowsScript : source.unixScript;
+    if (!url)
+        throw new Error(`No official ${provider} installer supports this platform.`);
+    const script = (0, node_path_1.join)(root, windows ? 'install.ps1' : 'install.sh');
+    downloadScript(url, script, environment);
+    if (windows) {
+        const powershell = (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+        (0, node_child_process_1.execFileSync)(powershell, [
+            '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
+        ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+        return (0, node_path_1.join)(root, 'bin', 'codex.exe');
+    }
+    const shell = provider === 'codex' ? 'sh' : 'bash';
+    const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
+    (0, node_child_process_1.execFileSync)(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+    return provider === 'codex'
+        ? (0, node_path_1.join)(root, 'bin', 'codex')
+        : provider === 'opencode'
+            ? (0, node_path_1.join)(root, '.opencode', 'bin', 'opencode')
+            : (0, node_path_1.join)(root, '.local', 'bin', 'agent');
+}
+function extractWindowsArchive(archive, destination, environment) {
+    (0, node_fs_1.mkdirSync)(destination, { recursive: true });
+    const quote = (value) => value.replace(/'/gu, "''");
+    const command = `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${quote(archive)}' -DestinationPath '${quote(destination)}' -Force`;
+    const powershell = (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    (0, node_child_process_1.execFileSync)(powershell, [
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
+        Buffer.from(command, 'utf16le').toString('base64'),
+    ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 120000 });
+}
+function parseCursorWindowsInstaller(script, arch) {
+    const url = /^\$downloadUrl = '(https:\/\/downloads\.cursor\.com\/lab\/([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[a-f0-9]+)\/)'/mu.exec(script);
+    const version = /^\$version = '([^']+)'/mu.exec(script)?.[1];
+    if (!url || version !== url[2])
+        throw new Error('Official Cursor release metadata changed unexpectedly.');
+    return `${url[1]}windows/${arch}/agent-cli-package.zip`;
+}
+function installWindowsCursor(root, environment) {
+    const source = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)('cursor').installation.windowsScript;
+    if (!source)
+        throw new Error('Official Cursor Windows installer source is absent.');
+    const script = downloadScript(source, (0, node_path_1.join)(root, 'cursor-install.ps1'), environment);
+    const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'x64' ? 'x64' : undefined;
+    if (!arch)
+        throw new Error('Unsupported Cursor Windows architecture.');
+    const archive = (0, node_path_1.join)(root, 'cursor.zip');
+    download(parseCursorWindowsInstaller(script, arch), archive, environment);
+    const extracted = (0, node_path_1.join)(root, 'extracted');
+    extractWindowsArchive(archive, extracted, environment);
+    const packageRoot = (0, node_path_1.join)(extracted, 'dist-package');
+    if (!(0, node_fs_1.statSync)((0, node_path_1.join)(packageRoot, 'cursor-agent.exe')).isFile()) {
+        throw new Error('Official Cursor archive lacks its native executable.');
+    }
+    const bin = (0, node_path_1.join)(root, 'bin');
+    (0, node_fs_1.cpSync)(packageRoot, bin, { recursive: true });
+    (0, node_fs_1.copyFileSync)((0, node_path_1.join)(bin, 'cursor-agent.exe'), (0, node_path_1.join)(bin, 'agent.exe'));
+    (0, node_fs_1.rmSync)(archive, { force: true });
+    (0, node_fs_1.rmSync)(extracted, { recursive: true, force: true });
+    return (0, node_path_1.join)(bin, 'agent.exe');
+}
+function findFile(directory, fileName) {
+    for (const entry of (0, node_fs_1.readdirSync)(directory, { withFileTypes: true })) {
+        const path = (0, node_path_1.join)(directory, entry.name);
+        if (entry.isFile() && entry.name.toLowerCase() === fileName)
+            return path;
+        if (entry.isDirectory()) {
+            const found = findFile(path, fileName);
+            if (found)
+                return found;
+        }
+    }
+    return undefined;
+}
+function selectOpenCodeWindowsAsset(metadata, arch) {
+    const tag = metadata.tag_name;
+    if (!tag || !/^v\d+\.\d+\.\d+$/u.test(tag))
+        throw new Error('Official OpenCode release tag is invalid.');
+    const asset = metadata.assets?.find(candidate => candidate.name === `opencode-windows-${arch}-baseline.zip`)
+        || metadata.assets?.find(candidate => candidate.name === `opencode-windows-${arch}.zip`);
+    const expectedUrl = `https://github.com/anomalyco/opencode/releases/download/${tag}/${asset?.name}`;
+    if (!asset?.name || asset.browser_download_url !== expectedUrl) {
+        throw new Error('Official OpenCode release asset is unavailable.');
+    }
+    return { url: expectedUrl, digest: asset.digest };
+}
+function installWindowsOpenCode(root, environment) {
+    const api = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)('opencode').installation.windowsReleaseApi;
+    if (!api)
+        throw new Error('Official OpenCode Windows release source is absent.');
+    const metadataFile = (0, node_path_1.join)(root, 'opencode-release.json');
+    download(api, metadataFile, environment);
+    const metadataBytes = (0, node_fs_1.readFileSync)(metadataFile);
+    if (metadataBytes.length === 0 || metadataBytes.length > MAX_METADATA_BYTES) {
+        throw new Error('Official OpenCode release metadata size is invalid.');
+    }
+    const metadata = JSON.parse(metadataBytes.toString('utf8'));
+    const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'x64' ? 'x64' : undefined;
+    if (!arch)
+        throw new Error('Unsupported OpenCode Windows architecture.');
+    const asset = selectOpenCodeWindowsAsset(metadata, arch);
+    const archive = (0, node_path_1.join)(root, 'opencode.zip');
+    download(asset.url, archive, environment);
+    if (asset.digest) {
+        const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(archive)).digest('hex');
+        if (asset.digest !== `sha256:${actual}`)
+            throw new Error('Official OpenCode archive digest mismatch.');
+    }
+    const extracted = (0, node_path_1.join)(root, 'extracted');
+    extractWindowsArchive(archive, extracted, environment);
+    const source = findFile(extracted, 'opencode.exe');
+    if (!source)
+        throw new Error('Official OpenCode archive lacks its native executable.');
+    const bin = (0, node_path_1.join)(root, 'bin');
+    (0, node_fs_1.cpSync)((0, node_path_1.dirname)(source), bin, { recursive: true });
+    (0, node_fs_1.rmSync)(archive, { force: true });
+    (0, node_fs_1.rmSync)(extracted, { recursive: true, force: true });
+    return (0, node_path_1.join)(bin, 'opencode.exe');
+}
+function installOfficialAgentCli(provider) {
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), 'copilot-agent-install-'));
+    try {
+        (0, node_fs_1.chmodSync)(root, 0o700);
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
+        const environment = installerEnvironment(root, process.env);
+        const path = process.platform === 'win32' && provider === 'cursor'
+            ? installWindowsCursor(root, environment)
+            : process.platform === 'win32' && provider === 'opencode'
+                ? installWindowsOpenCode(root, environment)
+                : runScript(provider, root, environment);
+        const executable = (0, node_fs_1.realpathSync)(path);
+        if (!(0, node_fs_1.statSync)(executable).isFile())
+            throw new Error('Official agent installer did not create a file.');
+        process.once('exit', () => (0, node_fs_1.rmSync)(root, { recursive: true, force: true }));
+        return { executable, directory: (0, node_path_1.dirname)(path), root };
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        throw error;
+    }
+}
+
+
+/***/ }),
+
 /***/ 57104:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -78683,7 +78825,6 @@ exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
 exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
-exports.assertInstalledAgentRuntimeVersion = assertInstalledAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
 function getAgentRuntimeManifest() {
@@ -78699,15 +78840,6 @@ function readAgentRuntimeVersion(provider, output) {
     const actual = normalizeAgentRuntimeVersion(output);
     if (!actual)
         throw new Error(`${provider} CLI returned empty version output.`);
-    return actual;
-}
-/** Exact matching applies only to a package installed by Copilot itself. */
-function assertInstalledAgentRuntimeVersion(provider, output) {
-    const actual = readAgentRuntimeVersion(provider, output);
-    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
-    if (actual !== expected) {
-        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
-    }
     return actual;
 }
 
@@ -91557,7 +91689,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-24.p1-c.3","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","installation":{"package":"@openai/codex","version":"0.156.1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-10-02.standalone.1","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
 
 /***/ })
 

@@ -23,7 +23,6 @@ const DEPLOYMENT_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_i
 const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}';
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
-const SETUP_NODE_ACTION = 'actions/setup-node@v7';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
@@ -373,14 +372,12 @@ function assertAgentInstallationPrerequisites(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const steps = job.steps ?? [];
-    const targetIndex = manifestFile === 'agent-cli-provisioning.yml'
-      ? steps.findIndex(step => step?.name === 'Verify selected CLI binary and headless contract')
-      : steps.findIndex(isCopilotAction);
-    if (targetIndex < 0) continue;
-    const setupIndex = steps.findIndex(step => step?.uses === SETUP_NODE_ACTION
-      && step?.with?.['node-version'] === '24.x');
-    if (setupIndex < 0 || setupIndex >= targetIndex) {
-      throw new Error(`${relativeFile} job ${jobId} must set up Node.js 24 before pinned agent installation can run.`);
+    for (const step of steps) {
+      if (/^(?:actions\/setup-node|pnpm\/action-setup)@/u.test(String(step?.uses ?? ''))
+        || /\b(?:npm|pnpm|npx)\s+(?:install|add|ci|i)\b/u.test(String(step?.run ?? ''))
+        || Object.hasOwn(step?.env ?? {}, 'AGENT_PROVISIONING')) {
+        throw new Error(`${relativeFile} job ${jobId} must use standalone official agent installation without Node/package-manager setup.`);
+      }
     }
   }
 }

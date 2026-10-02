@@ -1,21 +1,15 @@
+import { delimiter } from 'node:path';
+import { rmSync } from 'node:fs';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
+import { AGENT_EXECUTABLE_BASENAMES } from '../model/agent';
 import {
-    installAgentNpmPackage,
     readAgentExecutableVersion,
     resolveAgentExecutablePath,
 } from '../../infrastructure/agents/agent_executable_invocation';
-import {
-    assertInstalledAgentRuntimeVersion,
-    getAgentRuntimeManifestEntry,
-} from '../../infrastructure/agents/agent_runtime_manifest';
-import {
-    DEFAULT_AGENT_EXECUTABLES,
-    provisioningDisabledError,
-    resolveAgentProvisioningMode,
-} from './agent_cli_provisioning_policy';
+import { installOfficialAgentCli, type OfficialAgentInstallation } from '../../infrastructure/agents/agent_official_installer';
+import { readAgentRuntimeVersion } from '../../infrastructure/agents/agent_runtime_manifest';
 
 export type AgentCliProvisioningEnvironment = NodeJS.ProcessEnv;
-
 export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'executable'>;
 
 export function agentExecutableExists(executable: string, environment: NodeJS.ProcessEnv): boolean {
@@ -30,79 +24,57 @@ export function agentExecutableExists(executable: string, environment: NodeJS.Pr
 export interface AgentCliProvisioningSystem {
     executableExists(executable: string, environment: AgentCliProvisioningEnvironment): boolean;
     readVersion(executable: string, provider: AgentProvider, environment: AgentCliProvisioningEnvironment): string;
-    installPackage(packageName: string, version: string): void;
-}
-
-function installPackageGlobally(packageName: string, version: string): void {
-    installAgentNpmPackage(packageName, version);
+    installOfficial(provider: AgentProvider): OfficialAgentInstallation;
 }
 
 const DEFAULT_SYSTEM: AgentCliProvisioningSystem = {
     executableExists: agentExecutableExists,
-    readVersion(executable, provider, environment) {
-        return readAgentExecutableVersion(executable, provider, environment);
-    },
-    installPackage: installPackageGlobally,
+    readVersion: readAgentExecutableVersion,
+    installOfficial: installOfficialAgentCli,
 };
 
+/** Prepare only active provider CLIs; installation never modifies an operator executable. */
 export class AgentCliProvisioner {
-    private readonly provisionedExecutables = new Set<string>();
+    private readonly preparedExecutables = new Set<string>();
 
     constructor(private readonly system: AgentCliProvisioningSystem = DEFAULT_SYSTEM) {}
 
     provision(target: AgentCliProvisioningTarget, environment: AgentCliProvisioningEnvironment = process.env): void {
         const provider = typeof target === 'string' ? target : target.provider;
         const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim() || undefined;
-        const executable = typeof target === 'string'
-            ? DEFAULT_AGENT_EXECUTABLES[provider]
-            : selectedExecutable || DEFAULT_AGENT_EXECUTABLES[provider];
-        const mode = resolveAgentProvisioningMode(environment.AGENT_PROVISIONING);
+        const executable = selectedExecutable || AGENT_EXECUTABLE_BASENAMES[provider];
+        const key = `${provider}:${executable}`;
+        if (this.preparedExecutables.has(key)) return;
 
-        if (this.provisionedExecutables.has(executable)) return;
-        const executableAvailable = this.system.executableExists(executable, environment);
-        if (selectedExecutable !== undefined) {
-            if (!executableAvailable) {
-                throw new Error(`The explicitly selected ${provider} executable "${executable}" is not available; explicit executables are never installed or replaced.`);
-            }
-            this.provisionedExecutables.add(executable);
+        if (this.system.executableExists(executable, environment)) {
+            this.preparedExecutables.add(key);
             return;
         }
-        if (executableAvailable && mode !== 'always') {
-            this.provisionedExecutables.add(executable);
-            return;
-        }
-        if (mode === 'disabled') {
-            throw provisioningDisabledError(provider, executable);
+        if (selectedExecutable) {
+            throw new Error(`The explicitly selected ${provider} executable is unavailable; operator executables are never installed or replaced.`);
         }
 
-        this.installProvider(provider);
-        this.assertInstalled(executable, provider, environment);
-        this.assertInstalledVersion(executable, provider, environment);
-        this.provisionedExecutables.add(executable);
-    }
-
-    private installProvider(provider: AgentProvider): void {
-        const installation = getAgentRuntimeManifestEntry(provider).installation;
-        if (!installation) {
-            throw new Error(`The ${provider} CLI must be preinstalled because Copilot has no reviewed automatic installer for it.`);
-        }
-        this.system.installPackage(installation.package, installation.version);
-    }
-
-    private assertInstalled(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
-        if (!this.system.executableExists(executable, environment)) {
-            throw new Error(`The ${provider} CLI was provisioned but executable "${executable}" is not available on PATH.`);
-        }
-    }
-
-    private assertInstalledVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
+        const installed = this.system.installOfficial(provider);
+        const previousPath = environment.PATH;
+        environment.PATH = `${installed.directory}${delimiter}${environment.PATH || environment.Path || ''}`;
         try {
-            assertInstalledAgentRuntimeVersion(provider, this.system.readVersion(executable, provider, environment));
+            if (!this.system.executableExists(executable, environment)) {
+                throw new Error(`The official ${provider} installer did not expose its executable.`);
+            }
+            const actual = resolveAgentExecutablePath(executable, environment);
+            const sameExecutable = process.platform === 'win32'
+                ? actual.toLowerCase() === installed.executable.toLowerCase()
+                : actual === installed.executable;
+            if (!sameExecutable) {
+                throw new Error(`The official ${provider} installer resolved to another executable.`);
+            }
+            readAgentRuntimeVersion(provider, this.system.readVersion(actual, provider, environment));
+            this.preparedExecutables.add(key);
         } catch (error) {
-            throw Object.assign(
-                new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`),
-                { cause: error },
-            );
+            if (previousPath === undefined) delete environment.PATH;
+            else environment.PATH = previousPath;
+            rmSync(installed.root, { recursive: true, force: true });
+            throw error;
         }
     }
 }

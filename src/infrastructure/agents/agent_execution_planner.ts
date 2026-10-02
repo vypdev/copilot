@@ -88,7 +88,7 @@ export class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            const invocation = validateResolvedAgentInvocation(executable, request.configuration.provider);
+            const invocation = validateResolvedAgentInvocation(executable, request.configuration.provider, sourceEnvironment);
             const safeEnvironment = buildAgentCliEnvironment(
                 request.configuration.provider,
                 sourceEnvironment,

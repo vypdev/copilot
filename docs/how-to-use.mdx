@@ -559,7 +559,7 @@ package.
 
 The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
 reported identities, and non-interactive help commands without making a paid model request. Runtime
-installation itself validates the pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
+installation checks the selected CLI from its official source without pinning an exact version. The `copilot_credential_health.yml` workflow is
 read-only with respect to repository configuration: it executes provider-specific
 health checks and reports only whether each requested credential is usable. GitHub
 does not expose Secret values through its API, so `copilot doctor` dispatches this

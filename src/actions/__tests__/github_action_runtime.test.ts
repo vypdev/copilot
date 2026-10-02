@@ -87,7 +87,7 @@ describe('prepareGithubAgentRuntime', () => {
         expect(() => prepareGithubAgentRuntime(tasks, ['planner'])).toThrow(
             expect.objectContaining({
                 code: 'configuration.unsupported',
-                message: 'The opencode runtime is unavailable and could not satisfy the selected provisioning mode.',
+                message: 'The opencode runtime is unavailable or its official installation failed.',
             }),
         );
         try {

@@ -1,12 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkAgentAuthentication } from '../../../data/repository/agent_authentication';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
-import { resolveAgentExecutablePath } from '../agent_executable_invocation';
 import {
     makeWindowsRuntimePathPrivate,
     matchesWindowsRuntimePrincipal,
@@ -21,6 +20,7 @@ function fakeRuntime(source: string) {
     const root = mkdtempSync(join(tmpdir(), 'copilot agent windows '));
     const binRoot = join(root, 'npm bin');
     const packageRoot = join(binRoot, 'node_modules', '@openai', 'codex');
+    const node = join(binRoot, 'node.exe');
     const workspace = join(root, 'workspace');
     mkdirSync(join(packageRoot, 'bin'), { recursive: true });
     mkdirSync(workspace);
@@ -29,16 +29,22 @@ function fakeRuntime(source: string) {
         name: '@openai/codex', version: '0.156.1', bin: { codex: 'bin/codex.js' },
     }));
     writeFileSync(join(packageRoot, 'bin', 'codex.js'), source);
+    copyFileSync(process.execPath, node);
+    makeWindowsRuntimePathPrivate(root, true);
+    makeWindowsRuntimePathPrivate(binRoot, true);
+    for (const path of [node, join(binRoot, 'codex.cmd'), join(packageRoot, 'bin', 'codex.js')]) {
+        makeWindowsRuntimePathPrivate(path, false);
+    }
     execFileSync('git', ['init', '-q', workspace], { stdio: 'ignore' });
     const environment = {
         PATH: binRoot,
-        PATHEXT: '.CMD;.EXE',
+        PATHEXT: '.EXE;.CMD',
         SystemRoot: process.env.SystemRoot,
         WINDIR: process.env.WINDIR,
         TEMP: process.env.TEMP,
         TMP: process.env.TMP,
     };
-    return { root, workspace, environment };
+    return { root, workspace, environment, node };
 }
 
 function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 5_000) {
@@ -50,14 +56,6 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 }
 
 describe('isolated Windows agent runtime', () => {
-    windowsIt('preflights the Action Node executable with an owner-aware ACL', () => {
-        verifyWindowsAgentExecutableAcl(process.execPath);
-    });
-
-    windowsIt('preflights the setup-node job executable with an owner-aware ACL', () => {
-        verifyWindowsAgentExecutableAcl(resolveAgentExecutablePath('node', process.env, 'win32'));
-    });
-
     it('accepts the SDDL local administrator alias only for the verified local administrator', () => {
         const sid = 'S-1-5-21-100-200-300-500';
         expect(isLocalWindowsAdministrator(sid, 'RUNNER', 'runner')).toBe(true);
@@ -155,7 +153,7 @@ describe('isolated Windows agent runtime', () => {
         const fixture = fakeRuntime(source);
         try {
             const plan = prepare(fixture.workspace, fixture.environment);
-            expect(plan.executable).toBe(process.execPath);
+            expect(plan.executable).toBe(fixture.node);
             expect(plan.launcherArgv).toHaveLength(1);
             await expect(runAgentCli(plan, 'literal & $(ignored) "quoted"')).resolves.toBe('literal & $(ignored) "quoted"');
             expect(existsSync(plan.runtimeDirectory)).toBe(false);

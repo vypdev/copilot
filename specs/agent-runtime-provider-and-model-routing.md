@@ -1,8 +1,8 @@
 # Agent Runtime, Provider, Model, and Role Routing
 
-- Status: Implemented
+- Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-09-24
+- Last updated: 2026-10-02
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -20,13 +20,13 @@ executable selection.
 Common values may be overridden per planner, findings, reviewer, fixer, or tester.
 The recommended common default is Codex with `openai/gpt-6-luna`; explicit
 repository Variables and role inputs retain precedence over that fallback.
-Only roles reachable from the current event are provisioned and authenticated.
+Only roles reachable from the current event are checked and authenticated.
 Invalid configuration or runtime failure is terminal for that capability; no
 silent provider/model/executable fallback is attempted.
 
 ```text
 event/command -> active roles -> common + role override -> validate allowlists
-              -> provision/auth preflight -> provider adapter -> local schema
+              -> installed-CLI/auth preflight -> provider adapter -> local schema
               -> semantic result
 ```
 
@@ -42,16 +42,18 @@ agents running for read-only tasks.
 ### 2.2 Current behavior
 
 1. `agent-*` supplies the common tuple; role-specific fields inherit only when blank.
-2. The manifest records a reviewed runtime identity for Codex, OpenCode, and
-   Cursor, plus reproducible package installation only where supported.
+2. The manifest records a reviewed runtime identity and an official standalone
+   installation source for Codex, OpenCode, and Cursor.
 3. Provider/model formats, executable selection, non-empty runtime identity,
    fixed provider command shape, and configured allowlists are validated.
 4. Event/command policy calculates active roles before runtime preparation.
 5. `ai-members-only` may prevent all requested agent runtime preparation for an unauthorized actor.
-6. Provisioning mode (`auto`, `always`, `disabled`) reuses any available
-   operator-owned runtime. Missing default Codex/OpenCode runtimes use only the
-   pinned manifest installation; explicit executables are never replaced and
-   Cursor has no automatic installer.
+6. Runtime preparation reuses an operator-owned executable for each active
+   provider. If the default executable is missing, the Action installs only
+   that provider through its official standalone source in a private job
+   directory, then verifies the resulting executable and nonempty version. It
+   never uses npm or pnpm for agent installation and never requires an exact
+   runtime version.
 7. An exhaustive dispatcher selects one independent provider policy, and a
    preflight planner produces the complete admitted execution plan.
 8. A generic process adapter consumes only admitted plans; OpenCode JSON events
@@ -60,13 +62,13 @@ agents running for read-only tasks.
 ### 2.3 Evidence and contract classification
 
 - Observed behavior: agent domain, configuration/activation policies, execution
-  planner, reviewed-runtime and pinned-install manifest, CLI provisioner/process adapter, setup workflows,
+  planner, reviewed-runtime manifest, CLI installer/process adapter, setup workflows,
   architecture/security tests, and agent docs.
 - Intentional contract: complete tuple, no implicit fallback, active-role-only
   preparation, semantic ports, local schema validation, and credential isolation.
 - Known debt and limitations: an operator-owned provider CLI may change its
   command surface externally; incompatible flags fail terminally at execution.
-  Installation-manifest upgrades require reviewed fixtures and controlled live
+  Installer source changes require reviewed fixtures and controlled live
   smoke evidence; credential checks remain environment-specific; cost estimates
   are not product guarantees. On Windows, npm-generated `.cmd` shims cannot be
   passed directly to Node's no-shell process APIs; PR #403 observed
@@ -138,9 +140,11 @@ No legacy behavior is supported; the hardened runtime is the only contract.
 
 1. Determine active roles from event/command/single action.
 2. Merge common tuple with complete role overrides and validate.
-3. Enforce model-provider/model allowlists and provisioning policy.
-4. Reuse an operator runtime, or install and exactly verify the pinned package
-   only when the supported default executable is missing/forced.
+3. Enforce model-provider/model allowlists and installation policy.
+4. Reuse an operator-installed CLI, or install the missing default executable
+   from the selected provider's official standalone source in a private job
+   directory. Never replace an explicit or available operator executable;
+   never require an exact runtime version.
 5. Verify CLI identity and credential/login readiness.
 6. Invoke the generic process adapter with the admitted role plan.
 7. Bound/parse/validate output and return semantic result.
@@ -166,9 +170,9 @@ isolated fake-CLI fixture MUST prove a writable candidate is never started.
 
 - Different active roles in one workflow may use different runtimes/models.
 - Existing Codex login may satisfy an explicit credential alternative.
-- `auto` provisions only missing active default runtimes; `always` reinstalls
-  default Codex/OpenCode from the pinned package. An explicit executable is
-  operator-owned in every mode.
+- Default and explicit executables are operator-owned when present. Only a
+  missing default executable triggers the selected provider's official
+  installer; any failed or unverifiable installation fails closed.
 - Optional effort maps to Codex reasoning, OpenCode variant, or provider-neutral context for Cursor.
 
 ### 6.3 State model
@@ -177,15 +181,15 @@ isolated fake-CLI fixture MUST prove a writable candidate is never started.
 |---|---|---|---|
 | inactive | role unreachable | terminal | none |
 | resolving | inheritance/tuple building | invalid/authorized | fix config |
-| authorized | actor/model policy passed | provisioning/ready | none |
-| provisioning | CLI installation/check | ready/failed | pin/runner fix |
+| authorized | actor/model policy passed | checking runtime/ready | none |
+| checking runtime | available CLI or official install | ready/failed | runner/install fix |
 | authenticating | credential/login preflight | ready/failed | configure credential |
 | executing | provider process running | validating/failed | inspect bounded error |
 | validating | output local contract | complete/failed | provider/prompt fix |
 | complete | semantic result returned | terminal | none |
 
-No provider fallback transition exists. Retry repeats readiness checks and MUST
-not treat a partial installer as authenticated success.
+No provider fallback transition exists. Retry repeats readiness checks and
+must not treat a partial installation as authenticated success.
 
 ## 7. User-facing configuration
 
@@ -197,12 +201,12 @@ not treat a partial installer as authenticated success.
 | `agent-effort` | empty | validated provider-supported value | repository/run |
 | `agent-executable` | reviewed basename | exact basename or absolute path to it | repository/run |
 | `<role>-*` | inherit common tuple | same bounds | repository/run |
-| `AGENT_PROVISIONING` | `auto` | auto/always/disabled | runner/repository |
 | allowlists | setup-derived exact values | comma-separated exact providers/models | workflow environment |
 
 Model values MUST not repeat provider prefixes. A meaningful alternative is
 OpenCode with an explicitly qualified allowed provider/model. Cursor requires
-the documented credential and a preinstalled runtime. No-fallback, local schema,
+its documented credential.
+No-fallback, local schema,
 active-role-only, credential isolation, and permission modes are not configurable.
 The same default MUST appear in the action input, setup plan, generated
 workflow fallbacks, and default allowlist (`openai/gpt-6-luna`). A configured
@@ -258,7 +262,7 @@ stable categories before public presentation.
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
 |---|---|---|---|---|---|
 | invalid tuple/allowlist | no process | config | yes | correct exact value | none |
-| provisioning | CLI unavailable/partial | install logs only | yes | provide runtime/fix pinned install | remove temp install per adapter |
+| provisioning | CLI unavailable/partial | sanitized failure category | yes | inspect official source or provide a compatible CLI | remove private install directory |
 | auth preflight | no query | credential name only | yes | login/add secret | none |
 | process timeout/exit | capability fails | bounded diagnostics | yes | inspect provider/quota | terminate child |
 | schema/size invalid | no trusted result | raw output not published | yes | fix prompt/provider | discard output |
@@ -287,27 +291,21 @@ that require smoke evidence.
 
 ### Windows Action runtime acceptance (issue #404)
 
-Windows support MUST use a direct Node or native executable for provider
-version checks and admitted execution. A `.cmd`/`.bat` wrapper MUST NOT be
-executed through a shell with agent arguments or prompts. For a reviewed npm
-runtime, resolve its package-owned bin target from a valid package manifest,
-keep it inside that package, and admit only a Node script or native executable.
-Malformed, missing, or externally redirected bins fail before an agent starts.
-Installation MUST call the runner's npm CLI through Node on Windows with the
-manifest-pinned package/version, not depend on shell lookup of `npm.cmd`.
-Explicit operator executables retain ownership and are never replaced.
-
-For a JavaScript Action, `process.execPath` names the Actions runner's embedded
-Node runtime, while `actions/setup-node` places the npm-bearing Node
-installation on the job PATH. The embedded runtime is not an npm installation.
-Windows provisioning MUST resolve the Node executable provided to the job,
-locate npm's CLI script beside that exact executable, and invoke the script
-directly with the manifest pin. A missing CLI script fails before installation;
-the code MUST NOT fall back to a shell, `npm.cmd`, or an unrelated ambient npm.
-Fixtures MUST distinguish the embedded Action runtime from a separate Node
-installation, cover a path containing spaces, and exercise the missing-script
-failure. A manual service-runner fixture MUST verify that the selected Node and
-its npm CLI script actually exist without using an agent credential or setup.
+Windows support MUST use a native executable for provider version checks and
+admitted execution. A `.cmd`/`.bat` wrapper MUST NOT receive agent arguments
+or prompts. The Action MUST NOT use npm, pnpm, `npx`, or `actions/setup-node`
+to install agent CLIs on any platform. Its six distributed agent workflows
+run the JavaScript Action under the GitHub Actions runner's embedded Node;
+development CI and packaging workflows keep their separate Node/pnpm setup.
+When the selected default CLI is absent, Codex uses OpenAI's official
+standalone installer, OpenCode uses its official standalone installer or
+release binary, and Cursor uses its official installer or release package.
+Windows Cursor installation MUST avoid the official script's user-wide PATH
+mutation and deletion of an existing installation by using its official
+archive in a private job directory. Installer child processes receive no
+GitHub or model credentials. Explicit and present operator CLIs are never
+replaced. Installation checks require a nonempty version and the admitted
+headless command surface, without enforcing an exact version.
 
 The Windows runtime MUST use a private, owner-only ACL for generated artifacts;
 POSIX mode bits are insufficient evidence on Windows. Cancellation and timeout
@@ -318,9 +316,8 @@ performed, execution fails closed. Windows CLI and Action support remain an open
 acceptance gate until isolated Windows CI fixtures pass and a real runner review
 confirms the job without a credential-bearing test dispatch.
 
-Selected executables, their package-owned JavaScript entrypoints, and the Node
-interpreter also require a read-only Windows ACL preflight before version checks
-or execution. The file owner must be the runner user or a trusted platform
+Selected native executables require a read-only Windows ACL preflight before
+version checks or execution. The file owner must be the runner user or a trusted platform
 principal. No untrusted principal may hold write, delete, ownership, or DACL
 mutation rights, whether an ACE is explicit or inherited. Read/execute access
 alone may be shared. Unknown ACE rights or unreadable ACLs fail closed. The
@@ -339,37 +336,38 @@ retain their separate owner-only `icacls` policy.
 
 The 2026-10-02 hosted Windows fixture found an effective
 `Authenticated Users: 0x1301bf` (modify) grant on both the Action-embedded Node
-and setup-node's job Node. The policy correctly rejects both; choosing the
-other ambient Node is not a fix. The hosted fixture at PR #403 head `f0ab865f`
-still fails the owner-aware ACL preflight. A self-hosted Windows fixture also
-failed the same preflight at an earlier head, although its exact rejected ACE
-still needs review. The runner owner reports that the self-hosted Node ACL has
-since been corrected and requests restoring the shared `self-hosted, codex`
-pool. The installed workflows therefore use exactly those two labels while
-the runtime preflight continues to fail closed on any unsafe runner. This is a
-routing trial, **not evidence that Windows agent execution passed**. A normal
-PR or commit run assigned to Windows MUST complete the isolated runtime path,
-and a manually authorized service fixture MUST verify private artifacts,
-descendant cancellation, and cleanup before that platform gate closes.
-Runner owners must verify trusted Node, npm CLI, Codex shim, and package-bin
-ACLs. The GitHub-hosted image remains red and cannot establish service-runner
-safety; its own gate remains open until a separately reviewed trusted toolchain
-or passing direct fixture evidence exists. Do not infer Windows agent support
-from Git Bash, npm availability, or Mac Action success.
+and setup-node's job Node. The owner-aware ACL preflight correctly rejected
+them. The revised Action does not invoke either ambient Node to install a
+missing native agent CLI; an existing npm `.cmd` shim still needs a separately
+trusted Node executable. The runner owner reports that the self-hosted Node ACL
+has since been corrected and requests the shared `self-hosted, codex` pool.
+The installed workflows use those two labels. A normal PR or commit run
+assigned to Windows MUST complete the isolated runtime path, and a manually
+authorized service fixture MUST verify private artifacts, descendant
+cancellation, and cleanup before that platform gate closes.
+Runner owners must verify native provider executables and their ACLs. The
+GitHub-hosted fixture is historical evidence of an unsafe ambient Node and
+does not establish service-runner safety. A new isolated installer/agent
+fixture must pass on Windows; do not infer Windows agent support from Git
+Bash, an installer exit code, or Mac Action success.
 
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
 rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
 setup/workflows, credentials, docs, tests, and controlled smoke evidence.
-Rollback restores the prior tuple/installation pin; provider-created external effects are
+Previously generated `AGENT_PROVISIONING` Variables are ignored by the Action;
+the setup assistant no longer asks for this obsolete mode or generates the
+Variable. Existing configuration files may still contain the legacy field for
+read compatibility, but it does not select an installation policy.
+Rollback restores the prior tuple/installer source; provider-created external effects are
 handled under that provider's policy. For this default-only migration, rollback
 restores both repository Variables (`AGENT_MODEL=gpt-5.6-luna` and
 `AGENT_ALLOWED_MODELS=openai/gpt-5.6-luna`) and the source/workflow defaults;
 changing only one side would fail allowlist preflight. A controlled Codex smoke
 run MUST verify the target model with the runner credential before declaring the
 new effective default healthy.
-The reviewed Codex installation pin and generated provisioning workflow MUST
-advance together when the default model requires newer CLI model metadata. The
+The installer source and generated provisioning workflow MUST advance together
+when the provider changes its installation contract. The
 `0.153.4` CLI rejects `gpt-6-luna`; the reviewed `0.156.1` CLI passes a local
 authenticated `codex exec` smoke. Repository Actions must still prove the same
 tuple with their own credential. An installed operator-owned CLI is never silently
@@ -382,14 +380,14 @@ replaced; its version and model smoke remain an explicit operator responsibility
 | Activation/config/runtime support | 30 | event roles, inheritance, formats, allowlists |
 | Provision/auth/execution state | 24 | modes, retries, timeout, partial install |
 | Provider plans/error mapping | 24 | argv/stdin/env/effort/output per provider |
-| Workflow/setup contracts | 21 | secrets, pinned installations synchronized with manifest, Node prerequisite, active inputs, shared model fallback and exact allowlist across action/setup/workflows |
+| Workflow/setup contracts | 21 | secrets, official installer sources, absence of setup-node/npm/pnpm in agent workflows, active inputs, shared model fallback and exact allowlist across action/setup/workflows |
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
 | **Total** | **130** | no double counting |
 
-The Windows extension adds at least 18 distinct fixture cases: 6 for pinned
-installation and `.cmd` resolution, 4 for malformed/path-escaped bins and
-operator-owned executables, 4 for ACL/artifact rejection, and 4 for execution,
+The Windows extension adds at least 18 distinct fixture cases: 6 for official
+installer selection and executable resolution, 4 for missing/redirected sources
+and operator-owned executables, 4 for ACL/artifact rejection, and 4 for execution,
 descendant cancellation, timeout, and cleanup. This is an extension to the
 130-case baseline, with no reused case counted twice. CI MUST run these cases on
 Windows and retain macOS/Ubuntu coverage. A live agent run is a separate human
@@ -422,7 +420,7 @@ errors and credential masking.
 8. Runtime failure does not invoke a second provider/model.
 9. Adding a provider cannot pass without an exhaustive plan policy, security, workflow, docs, and smoke evidence.
 10. A non-empty operator-owned runtime version is recorded and executed without
-    replacement; exact version matching applies only after Copilot installs a package.
+    replacement; a missing default CLI uses the official standalone source.
 11. With no explicit model override, action/setup/generated workflows choose
     `gpt-6-luna` and the exact allowlist includes `openai/gpt-6-luna`; a
     configured model outside that allowlist fails before execution.
@@ -431,12 +429,12 @@ errors and credential masking.
     effective model. Updating both repository Variables and running a controlled
     smoke test establishes the new effective default without changing effort.
 13. The manifest, generated provisioning workflow, and operator documentation
-    pin Codex `0.156.1`; a version-sync contract test fails if they diverge. The
-    old `0.153.4` binary cannot be presented as a Luna-compatible default.
-14. On Windows, `always` installs the exact pinned Codex package through Node,
-    verifies the CLI version, and executes a fake package bin with literal
-    arguments without invoking a command shell.
-15. A malformed or escaped npm bin, weak runtime ACL, or failed process-tree
+    identify official Codex, Cursor, and OpenCode sources. No exact runtime
+    version is required; a CLI that rejects the selected model fails normally.
+14. On Windows, a missing default CLI installs from the official source into a
+    private job directory, verifies a nonempty version, and executes a fake
+    native binary with literal arguments without invoking a command shell.
+15. A malformed or redirected installer source, weak runtime ACL, or failed process-tree
     termination blocks execution or reports failure without trusted output or
     leaked prompt/credentials. The fixture leaves no managed artifacts.
 
@@ -447,11 +445,11 @@ errors and credential masking.
 | active roles | activation policy | activation tests | execution contract |
 | tuple/allowlist | config policies | builder/policy tests | model selection |
 | Luna default and migration | domain default, setup projection, action and workflow fallbacks | default/override/allowlist contract tests and controlled runner smoke | input reference, model selection, upgrade/recovery |
-| Luna-compatible Codex pin | runtime manifest and generated provisioning workflow | exact-version and version-sync tests; same-version local and Action smoke | CLI provisioning, version pinning, recovery |
+| Official standalone installer | runtime manifest and generated provisioning workflow | source/selection tests and isolated cross-platform fixtures; controlled Action smoke remains open | CLI provisioning and recovery |
 | provisioning/auth | provisioner/preflight adapters | ownership/install/infra tests | provisioning/credentials |
 | semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
-| Windows runtime | npm/bin resolver, planner, process and ACL adapters | [2026-10-02 isolated matrix](https://github.com/vypdev/copilot/actions/runs/36955416020): hosted Windows passed 20 fake package, ACL, descendant cancellation and cleanup cases; macOS/Ubuntu and npm-pack smoke passed; self-hosted runner and live agent review remain open | provisioning and failure policy |
+| Windows runtime | official archive/installer adapter, planner, process and ACL adapters | isolated fake installer, native executable, ACL, descendant cancellation and cleanup matrix; self-hosted runner and live agent review remain open | provisioning and failure policy |
 
 ## 18. Maintenance sequence
 
@@ -469,7 +467,7 @@ errors and credential masking.
 - [ ] All five UI states and setup/action/CLI surfaces are accessible and redacted.
 - [ ] Provider smoke evidence and rollback instructions exist.
 - [ ] Documentation and catalog reflect current defaults, allowlists, reviewed
-  runtime identities, and pinned installation recipes.
+  runtime identities, and official installation sources without exact version pins.
 
 ## 20. References and decisions
 

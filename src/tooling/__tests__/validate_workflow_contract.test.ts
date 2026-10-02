@@ -982,7 +982,7 @@ describe('workflow contract validator', () => {
     );
   });
 
-  it('requires Node.js 24 before every workflow path that may install a pinned agent CLI', () => {
+  it('keeps every agent workflow free of Node/package-manager installation steps', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of [
         'copilot_commit.yml',
@@ -999,10 +999,8 @@ describe('workflow contract validator', () => {
 
     const file = path.join(process.cwd(), 'setup/workflows/copilot_issue_comment.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    workflow.jobs['copilot-issues'].steps = workflow.jobs['copilot-issues'].steps.filter(
-      (step: { uses?: string }) => step.uses !== 'actions/setup-node@v7',
-    );
-    expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('must set up Node.js 24');
+    workflow.jobs['copilot-issues'].steps.splice(1, 0, { uses: 'actions/setup-node@v7' });
+    expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('standalone official agent installation');
   });
 
   it('rejects Secrets exposed to every step in a job', () => {

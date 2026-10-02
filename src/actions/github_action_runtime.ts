@@ -4,12 +4,27 @@ import { runAgentAuthenticationPreflight } from '../data/repository/agent_authen
 import { logInfo, logDebugInfo } from '../utils/logger';
 import { ApplicationError } from '../application/errors/application_error';
 
-/** Validates and, when requested by the runtime, provisions the selected agent CLIs. */
+/** Reuses selected agent CLIs, installing missing default CLIs from official sources. */
 export function prepareGithubAgentRuntime(
     agentTasks: AgentTaskConfiguration,
     activeTasks?: readonly AgentTask[],
 ): void {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
+    if (process.env.GITHUB_ACTIONS === 'true') {
+        const provisioner = new AgentCliProvisioner();
+        for (const configuration of uniqueAgentConfigurations(configurations)) {
+            try {
+                provisioner.provision(configuration);
+            } catch (cause) {
+                throw new ApplicationError(
+                    'configuration.unsupported',
+                    `The ${configuration.provider} runtime is unavailable or its official installation failed.`,
+                    { cause },
+                );
+            }
+        }
+    }
+
     for (const [task, configuration] of configurations) {
         const preflight = runAgentAuthenticationPreflight(configuration);
         if (preflight.check.status === 'missing' && preflight.shouldFail) {
@@ -20,21 +35,6 @@ export function prepareGithubAgentRuntime(
         }
         if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
             logInfo(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
-        }
-    }
-
-    if (process.env.GITHUB_ACTIONS === 'true') {
-        const provisioner = new AgentCliProvisioner();
-        for (const configuration of uniqueAgentConfigurations(configurations)) {
-            try {
-                provisioner.provision(configuration);
-            } catch (cause) {
-                throw new ApplicationError(
-                    'configuration.unsupported',
-                    `The ${configuration.provider} runtime is unavailable and could not satisfy the selected provisioning mode.`,
-                    { cause },
-                );
-            }
         }
     }
 

@@ -49,7 +49,7 @@ function resolveCommand(check) {
   if (!relation || relation === '..' || relation.startsWith(`..${sep}`) || isAbsolute(relation) || !statSync(target).isFile()) {
     throw new Error('Npm agent bin escaped its package.');
   }
-  if (extname(target).toLowerCase() === '.js') return { path, executable: process.execPath, prefix: [target] };
+  if (extname(target).toLowerCase() === '.js') return { path, executable: resolveOnPath('node'), prefix: [target] };
   if (extname(target).toLowerCase() === '.exe') return { path, executable: target, prefix: [] };
   throw new Error('Unsupported npm agent bin.');
 }

@@ -46476,7 +46476,6 @@ function buildSetupRepositoryVariables(configuration) {
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_EXECUTABLE', base.executable);
-    add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
@@ -46652,9 +46651,6 @@ function buildSetupWarnings(configuration) {
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
-    if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
-    }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
@@ -46662,7 +46658,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
@@ -48207,7 +48203,6 @@ const special = {
     'ai.includeReasoning': { summary: 'Demandez des explications supplémentaires si la réponse du fournisseur les contient.', when: 'Réservé aux diagnostics avancés ; le parcours CLI actuel ne fournit pas de parties de raisonnement séparées.', example: 'Laissez désactivé pour une configuration normale.', effect: 'Cela peut ajouter du texte du fournisseur, sans garantir des métadonnées brèves.', verify: 'Inspectez une réponse structurée contrôlée ; ne supposez pas que l’option a produit plus de texte.' },
     'ai.bugbotDryRun': { summary: 'Gardez Bugbot en mode analyse seule pour ses futures exécutions.', when: 'Utile pour une évaluation ; incompatible avec les preuves nécessaires à l’approbation.', example: 'Choisissez Non pour publier les revues normales.', effect: 'Bugbot analyse sans publier de résultat ni modifier le dépôt. Ce n’est pas setup --dry-run.', verify: 'Inspectez le résultat du workflow Bugbot : le mode analyse seule ne publie ni revue ni vérification.' },
     'ai.bugbotOrganizationRules': { summary: 'Définissez des consignes générales pour Bugbot, une règle par ligne.', when: 'Utile si l’équipe partage des critères de revue dans le dépôt configuré.', example: 'Signaler les changements qui contournent l’isolation des clients.', effect: 'Ces règles précèdent celles du dépôt ; le périmètre de la Variable détermine le stockage.', verify: 'Inspectez la Variable configurée et activez le traçage des sources de règles.' },
-    'ai.provisioningMode': { summary: 'Décidez comment l’Action trouve ou installe l’agent CLI.', when: 'Ce choix s’applique sur le runner au démarrage d’une tâche IA activée.', example: 'Auto réutilise un CLI installé ou installe une version fixée de Codex/OpenCode.', effect: 'Always réinstalle les versions examinées ; Disabled exige un CLI préinstallé. Cursor doit être préinstallé.', verify: 'Inspectez l’étape de préparation et la version du binaire rapportée par le runner.' },
     'pullRequestApproval.testChecks': { summary: 'Choisissez les jobs CI que le bot peut considérer comme preuve de tests indépendante.', when: 'Obligatoire pour les modes Recommend et Guarded.', example: 'Sélectionnez le job Tests exact, son ID d’App GitHub et son workflow dans une exécution récente.', effect: 'Seules les identités exactes listées satisfont la condition d’approbation.', verify: 'Ouvrez l’exécution liée et vérifiez le job, l’App et le résultat pour le commit courant.' },
     'pullRequestApproval.producerAttested': { summary: 'Confirmez avoir inspecté le producteur CI exact et son étape obligatoire de couverture.', when: 'Obligatoire avant que le mode Guarded puisse approuver.', example: 'Vérifiez que le job Tests échoue si le seuil de couverture n’est pas atteint.', effect: 'Votre confirmation est enregistrée ; Copilot ne la déduit pas d’une vérification verte.', verify: 'Inspectez le fichier du workflow et une exécution réelle avant de répondre Oui.' },
     'pullRequestApproval.coverage.mode': { summary: 'Choisissez comment prouver la couverture exigée du code modifié.', when: 'Ce choix s’applique lorsque l’approbation de PR est activée.', example: 'Check : le CI impose le seuil. Numeric : un workflow fiable publie des décomptes limités.', effect: 'Check fait confiance au garde CI ; Numeric lit copilot-diff-coverage-v1 et compare un seuil.', verify: 'Inspectez respectivement la condition d’échec du CI ou l’artefact du rapporteur.' },
@@ -48294,10 +48289,6 @@ const special = {
     'ai.bugbotOrganizationRules': {
         en: { summary: 'Set broad Bugbot review instructions, one rule per line.', when: 'Use when your team needs review criteria shared across its configured repository.', example: 'Flag changes that bypass tenant isolation.', effect: 'These rules run before repository rules; the selected Variable scope determines storage, not the title.', verify: 'Inspect the configured Variable and enable rule-source tracing for a review.' },
         es: { summary: 'Define criterios generales de revisión para Bugbot, una regla por línea.', when: 'Úsalo si el equipo necesita criterios comunes en el repositorio configurado.', example: 'Señala cambios que omitan el aislamiento entre clientes.', effect: 'Se aplican antes que las reglas del repositorio; el ámbito de la Variable determina dónde se guardan.', verify: 'Revisa la Variable configurada y activa el rastreo de fuentes de reglas.' },
-    },
-    'ai.provisioningMode': {
-        en: { summary: 'Decide how the Action finds or installs the selected agent CLI.', when: 'Applies on the runner when an enabled AI task starts.', example: 'Auto reuses an installed CLI or installs pinned Codex/OpenCode when missing.', effect: 'Always reinstalls reviewed defaults; Disabled requires a preinstalled CLI. Cursor must be preinstalled.', verify: 'Inspect the runner provisioning step and its reported binary version.' },
-        es: { summary: 'Decide cómo encuentra o instala la Action el agente CLI.', when: 'Se aplica en el runner cuando empieza una tarea de IA.', example: 'Auto reutiliza el CLI existente o instala una versión fijada de Codex/OpenCode si falta.', effect: 'Always reinstala versiones fijadas; Disabled exige instalación previa. Cursor debe estar preinstalado en el runner.', verify: 'Revisa el paso de preparación y la versión del binario en el runner.' },
     },
     'pullRequestApproval.testChecks': {
         en: { summary: 'Choose CI jobs the approval bot may trust as independent test evidence.', when: 'Required for recommend or guarded approval.', example: 'Select the exact Tests job, its GitHub App ID, and parent workflow from a recent run.', effect: 'Only the listed exact producer identities can satisfy the approval gate.', verify: 'Open the linked workflow run and confirm the job, App, and current-head result.' },
@@ -48435,7 +48426,6 @@ const special = {
     'ai.includeReasoning': { summary: 'Peça explicações adicionais se a resposta do fornecedor as disponibilizar.', when: 'Só para diagnóstico avançado; o percurso CLI atual não fornece partes de raciocínio separadas.', example: 'Mantenha desativado numa configuração normal.', effect: 'Pode acrescentar texto do fornecedor, sem garantir metadados breves.', verify: 'Inspecione uma resposta estruturada controlada; não presuma que a opção produziu texto adicional.' },
     'ai.bugbotDryRun': { summary: 'Mantenha o Bugbot em modo apenas de análise nas próximas execuções.', when: 'Útil numa avaliação; incompatível com provas de aprovação.', example: 'Escolha Não para publicar revisões normais.', effect: 'O Bugbot analisa sem publicar resultados nem alterar o repositório. Não é setup --dry-run.', verify: 'Inspecione o resultado do fluxo Bugbot: a simulação não publica revisão nem verificação.' },
     'ai.bugbotOrganizationRules': { summary: 'Defina instruções gerais para o Bugbot, uma regra por linha.', when: 'Use se a equipa precisar de critérios de revisão partilhados no repositório configurado.', example: 'Assinalar alterações que contornem o isolamento entre clientes.', effect: 'Estas regras precedem as do repositório; o âmbito da Variable determina o armazenamento.', verify: 'Inspecione a Variable configurada e ative o rastreio das fontes das regras.' },
-    'ai.provisioningMode': { summary: 'Decida como a Action encontra ou instala o agente CLI.', when: 'Aplica-se no runner quando começa uma tarefa de IA ativa.', example: 'Auto reutiliza um CLI instalado ou instala uma versão fixa de Codex/OpenCode.', effect: 'Always reinstala as versões revistas; Disabled exige um CLI pré-instalado. Cursor tem de estar pré-instalado.', verify: 'Inspecione a etapa de preparação e a versão do binário comunicada pelo runner.' },
     'pullRequestApproval.testChecks': { summary: 'Escolha os jobs CI que o bot pode aceitar como prova independente de testes.', when: 'Obrigatório para os modos Recommend e Guarded.', example: 'Selecione o job Tests exato, o ID da App GitHub e o workflow de uma execução recente.', effect: 'Só as identidades exatas listadas satisfazem a condição de aprovação.', verify: 'Abra a execução associada e confirme job, App e resultado do commit atual.' },
     'pullRequestApproval.producerAttested': { summary: 'Confirme que inspecionou o produtor CI exato e a sua etapa obrigatória de cobertura.', when: 'Obrigatório antes de o modo Guarded poder aprovar.', example: 'Confirme que o job Tests falha se o limite de cobertura não for atingido.', effect: 'A sua confirmação fica registada; o Copilot não a deduz de uma verificação verde.', verify: 'Inspecione o ficheiro do workflow e uma execução real antes de escolher Sim.' },
     'pullRequestApproval.coverage.mode': { summary: 'Escolha como comprovar a cobertura exigida do código alterado.', when: 'Aplica-se quando a aprovação de PR está ativa.', example: 'Check: o CI exige o limite. Numeric: um workflow fiável publica contagens limitadas.', effect: 'Check confia numa condição CI; Numeric lê copilot-diff-coverage-v1 e compara o limite.', verify: 'Inspecione, respetivamente, a condição de falha CI ou o artefacto do relatório.' },
@@ -48552,7 +48542,6 @@ exports.questionLabelsFr = {
     'ai.bugbotTelemetry': 'Enregistrer des métriques Bugbot sans contenu ?',
     'ai.bugbotFailOnUnresolved': 'Faire échouer la vérification si des résultats restent ouverts ?',
     'ai.bugbotOrganizationRules': 'Règles Bugbot communes, une par ligne',
-    'ai.provisioningMode': 'Comment préparer l’agent CLI sur le runner',
     'pullRequestApproval.mode': 'Que peut faire le bot pour approuver les pull requests ?',
     'pullRequestApproval.testChecks': 'Quelles vérifications CI sont fiables pour approuver ?',
     'pullRequestApproval.producerAttested': 'Avez-vous vérifié le job, l’App et l’étape obligatoire de couverture ?',
@@ -48647,7 +48636,6 @@ exports.questionLabelsPt = {
     'ai.bugbotTelemetry': 'Registar métricas do Bugbot sem conteúdo?',
     'ai.bugbotFailOnUnresolved': 'Fazer falhar a verificação se houver resultados por resolver?',
     'ai.bugbotOrganizationRules': 'Regras Bugbot partilhadas, uma por linha',
-    'ai.provisioningMode': 'Como preparar o agente CLI no runner',
     'pullRequestApproval.mode': 'O que pode o bot fazer na aprovação de pull requests?',
     'pullRequestApproval.testChecks': 'Que verificações CI são fiáveis para aprovar?',
     'pullRequestApproval.producerAttested': 'Verificou o job, a App e a etapa obrigatória de cobertura?',
@@ -49097,7 +49085,6 @@ exports.spanishQuestionLabels = {
     'ai.bugbotTelemetry': '¿Registrar métricas de Bugbot sin contenido?',
     'ai.bugbotFailOnUnresolved': '¿Bloquear el check si quedan hallazgos sin resolver?',
     'ai.bugbotOrganizationRules': 'Reglas generales de Bugbot, una por línea',
-    'ai.provisioningMode': 'Cómo preparar el agente CLI en el runner',
     'pullRequestApproval.mode': '¿Qué puede hacer el bot con las aprobaciones de PR?',
     'pullRequestApproval.testChecks': '¿Qué checks de CI son fiables para aprobar PRs?',
     'pullRequestApproval.producerAttested': '¿Has comprobado el job, la App y el paso obligatorio de cobertura?',
@@ -49514,7 +49501,6 @@ function bugbotQuestions() {
         { stateId: 'bugbot', id: 'ai.bugbotTelemetry', label: 'Emit content-free Bugbot telemetry?', kind: 'boolean' },
         { stateId: 'bugbot', id: 'ai.bugbotFailOnUnresolved', label: 'Fail the workflow check while findings remain unresolved?', kind: 'boolean' },
         { stateId: 'bugbot', id: 'ai.bugbotOrganizationRules', label: 'Organization Bugbot rules (newline-separated)', kind: 'text' },
-        { stateId: 'bugbot', id: 'ai.provisioningMode', label: 'Agent CLI provisioning mode', kind: 'choice', choices: ['auto', 'always', 'disabled'] },
     ];
 }
 function approvalQuestions() {
@@ -73171,7 +73157,7 @@ const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
             const selected = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
-            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex');
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex', environment);
             (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
@@ -83466,8 +83452,6 @@ exports.resolveAgentExecutablePath = resolveAgentExecutablePath;
 exports.resolveAgentExecutableInvocation = resolveAgentExecutableInvocation;
 exports.validateResolvedAgentInvocation = validateResolvedAgentInvocation;
 exports.readAgentExecutableVersion = readAgentExecutableVersion;
-exports.installAgentNpmPackage = installAgentNpmPackage;
-exports.resolveNpmInstallInvocation = resolveNpmInstallInvocation;
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
@@ -83494,7 +83478,7 @@ function resolveAgentExecutablePath(selected, environment, platform = process.pl
     throw new Error(`Agent executable "${selected}" was not found on PATH.`);
 }
 /** Resolve npm's Windows command shim without ever passing agent argv to cmd.exe. */
-function resolveAgentExecutableInvocation(selected, provider, platform = process.platform) {
+function resolveAgentExecutableInvocation(selected, provider, platform = process.platform, environment = process.env) {
     if (platform === 'win32' && !/\.(exe|cmd)$/iu.test(selected)) {
         throw new Error('Windows agent executable must be a native executable or a reviewed npm command shim.');
     }
@@ -83502,13 +83486,13 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
         return { executable: selected, prefixArgs: [] };
     }
     const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider);
-    const installation = manifest.installation;
-    if (!installation || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
+    const legacyPackage = manifest.legacyNpmPackage;
+    if (!legacyPackage || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
         throw new Error('Windows agent command shim does not match a reviewed npm runtime.');
     }
-    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...installation.package.split('/')));
+    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...legacyPackage.split('/')));
     const packageJson = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(packageRoot, 'package.json'), 'utf8'));
-    if (packageJson.name !== installation.package) {
+    if (packageJson.name !== legacyPackage) {
         throw new Error('Windows agent command shim resolves to an unexpected package.');
     }
     const bin = typeof packageJson.bin === 'string'
@@ -83527,15 +83511,15 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
     if (!(0, node_fs_1.statSync)(target).isFile())
         throw new Error('Windows agent package bin is not a file.');
     switch ((0, node_path_1.extname)(target).toLowerCase()) {
-        case '.js': return { executable: process.execPath, prefixArgs: [target] };
+        case '.js': return { executable: resolveAgentExecutablePath('node', environment, platform), prefixArgs: [target] };
         case '.exe': return { executable: target, prefixArgs: [] };
         default: throw new Error('Windows agent package bin is not a supported direct executable.');
     }
 }
 /** Verify every file that may execute before a version or login probe starts. */
-function validateResolvedAgentInvocation(selected, provider) {
+function validateResolvedAgentInvocation(selected, provider, environment = process.env) {
     (0, agent_executable_file_1.validateAgentExecutableFile)(selected);
-    const invocation = resolveAgentExecutableInvocation(selected, provider);
+    const invocation = resolveAgentExecutableInvocation(selected, provider, process.platform, environment);
     if (invocation.executable !== selected)
         (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
     for (const prefixArg of invocation.prefixArgs)
@@ -83544,42 +83528,21 @@ function validateResolvedAgentInvocation(selected, provider) {
 }
 function readAgentExecutableVersion(selected, provider, environment) {
     const path = resolveAgentExecutablePath(selected, environment);
-    const invocation = validateResolvedAgentInvocation(path, provider);
+    const invocation = validateResolvedAgentInvocation(path, provider, environment);
+    const probeEnvironment = {};
+    for (const key of [
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'HOME', 'USERPROFILE',
+        'LOCALAPPDATA', 'APPDATA', 'XDG_CONFIG_HOME', 'TMP', 'TEMP', 'TMPDIR', 'LANG', 'LC_ALL',
+    ]) {
+        if (environment[key])
+            probeEnvironment[key] = environment[key];
+    }
     return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
-        env: environment,
+        env: probeEnvironment,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
         timeout: 15000,
     });
-}
-function installAgentNpmPackage(packageName, version) {
-    const invocation = resolveNpmInstallInvocation(packageName, version);
-    if (process.platform === 'win32') {
-        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
-        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.prefixArgs[0]);
-    }
-    (0, node_child_process_1.execFileSync)(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
-}
-function resolveNpmInstallInvocation(packageName, version, platform = process.platform, environment = process.env) {
-    const args = ['install', '--global', `${packageName}@${version}`];
-    if (platform === 'win32') {
-        // JavaScript Actions run under the runner's embedded Node, which has no npm.
-        // setup-node adds the npm-bearing installation to the job PATH.
-        const nodeExecutable = resolveAgentExecutablePath('node', environment, platform);
-        const npmCli = (0, node_path_1.join)((0, node_path_1.dirname)(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-        try {
-            if (!(0, node_fs_1.statSync)(npmCli).isFile())
-                throw new Error('not a file');
-        }
-        catch {
-            throw new Error('The job Node installation has no npm CLI script.');
-        }
-        return {
-            executable: nodeExecutable,
-            prefixArgs: [npmCli, ...args],
-        };
-    }
-    return { executable: 'npm', prefixArgs: args };
 }
 
 
@@ -83648,7 +83611,7 @@ class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider);
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider, sourceEnvironment);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
             const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
@@ -83772,7 +83735,6 @@ exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
 exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
-exports.assertInstalledAgentRuntimeVersion = assertInstalledAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
 function getAgentRuntimeManifest() {
@@ -83788,15 +83750,6 @@ function readAgentRuntimeVersion(provider, output) {
     const actual = normalizeAgentRuntimeVersion(output);
     if (!actual)
         throw new Error(`${provider} CLI returned empty version output.`);
-    return actual;
-}
-/** Exact matching applies only to a package installed by Copilot itself. */
-function assertInstalledAgentRuntimeVersion(provider, output) {
-    const actual = readAgentRuntimeVersion(provider, output);
-    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
-    if (actual !== expected) {
-        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
-    }
     return actual;
 }
 
@@ -102388,7 +102341,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-24.p1-c.3","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","installation":{"package":"@openai/codex","version":"0.156.1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-10-02.standalone.1","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
 
 /***/ })
 

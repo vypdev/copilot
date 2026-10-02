@@ -31,7 +31,7 @@ const DEFAULT_AUTHENTICATION_SYSTEM: AgentAuthenticationSystem = {
     hasOperationalCodexLogin(executable, environment) {
         try {
             const selected = resolveAgentExecutablePath(executable, environment);
-            const invocation = validateResolvedAgentInvocation(selected, 'codex');
+            const invocation = validateResolvedAgentInvocation(selected, 'codex', environment);
             execFileSync(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
