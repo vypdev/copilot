@@ -505,7 +505,10 @@ flowchart LR
     installation and again after the full test suite. On Windows, it MUST show
     the checkout line-ending attributes for the hash-owned files. A failure at
     checkout and a mutation during tests require different recovery actions;
-    neither may be treated as a passing guidance gate.
+    neither may be treated as a passing guidance gate. The dedicated self-hosted
+    Windows setup fixture job MUST run the same checkout check before its build
+    and full coverage suite, so the Windows evidence does not depend on generic
+    CI runner assignment.
 
 ## 9. UI/UX and content contract
 

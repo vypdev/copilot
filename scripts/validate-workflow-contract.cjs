@@ -242,6 +242,11 @@ function assertRunner(file, workflow) {
         if (coverageStep?.run !== 'pnpm run test:coverage') {
           throw new Error(`${relativeFile} must retain full Windows coverage and acceptance budgets.`);
         }
+        const guidanceStep = (job.steps ?? []).find(step => step?.name === 'Validate generated guidance checkout on codex Windows');
+        if (!guidanceStep?.run?.includes('pnpm run validate:agent-docs')
+          || !guidanceStep.run.includes('git ls-files --eol')) {
+          throw new Error(`${relativeFile} must verify generated guidance at Windows checkout.`);
+        }
       }
       assertIsolatedPnpm(relativeFile, jobId, job);
       continue;

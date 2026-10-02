@@ -66,6 +66,10 @@ jobs:
           node-version: '24.x'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Validate generated guidance checkout on codex Windows
+        run: |
+          git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
+          pnpm run validate:agent-docs
       - run: pnpm run build
       - run: pnpm run typecheck
       - name: Local setup fixtures only
