@@ -22,7 +22,7 @@ export interface OfficialAgentInstallation {
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     const allowed = [
-        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'COMSPEC',
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'OS', 'COMSPEC',
         'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
     ] as const;
     const environment: NodeJS.ProcessEnv = {};

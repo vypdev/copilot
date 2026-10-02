@@ -15,11 +15,12 @@ beforeEach(() => execute.mockReset());
 describe('official agent installer boundaries', () => {
     it('passes only toolchain variables into installers, never Action or model credentials', () => {
         const environment = installerEnvironment('/private/agent-job', {
-            PATH: '/usr/bin', SystemRoot: 'C:\\Windows', GITHUB_TOKEN: 'secret',
+            PATH: '/usr/bin', SystemRoot: 'C:\\Windows', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
             CODEX_API_KEY: 'secret', OPENAI_API_KEY: 'secret', CURSOR_API_KEY: 'secret',
             NPM_TOKEN: 'secret', HOME: '/operator/home', CODEX_HOME: '/operator/codex',
         });
         expect(environment.PATH).toBe('/usr/bin');
+        expect(environment.OS).toBe('Windows_NT');
         expect(environment.HOME).toBe('/private/agent-job');
         expect(environment.CODEX_HOME).toBe(join('/private/agent-job', '.codex'));
         for (const name of ['GITHUB_TOKEN', 'CODEX_API_KEY', 'OPENAI_API_KEY', 'CURSOR_API_KEY', 'NPM_TOKEN']) {
@@ -102,6 +103,7 @@ describe('official agent installer boundaries', () => {
                     writeFileSync(destination, content);
                 } else if (file.toLowerCase().endsWith('powershell.exe')) {
                     if (args.includes('-File')) {
+                        expect(options.env.OS).toBe('Windows_NT');
                         mkdirSync(options.env.CODEX_INSTALL_DIR!, { recursive: true });
                         writeFileSync(join(options.env.CODEX_INSTALL_DIR!, 'codex.exe'), 'native fixture');
                     } else if (provider === 'cursor') {

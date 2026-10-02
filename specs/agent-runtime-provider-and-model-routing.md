@@ -323,6 +323,13 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+The Windows Codex installer checks the standard `OS=Windows_NT` service
+environment value before release work. The private installer environment MUST
+preserve that platform fact while still excluding all credentials. The PR #403
+run on `windows-intel-runner-3` failed during provisioning because the
+isolation allowlist removed `OS`; a Windows fixture MUST assert that the value
+reaches the official installer subprocess, and a fresh Action run MUST prove
+the repair on a service runner before counting Windows agent execution.
 
 The Windows runtime MUST use a private, owner-only ACL for generated artifacts;
 POSIX mode bits are insufficient evidence on Windows. Cancellation and timeout

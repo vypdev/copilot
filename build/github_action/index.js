@@ -78712,7 +78712,7 @@ const MAX_METADATA_BYTES = 2097152;
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 function installerEnvironment(root, source) {
     const allowed = [
-        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'COMSPEC',
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'OS', 'COMSPEC',
         'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
     ];
     const environment = {};
