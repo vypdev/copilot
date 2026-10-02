@@ -1,67 +1,75 @@
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const SET_PRIVATE_ACL = `
-$ErrorActionPreference = 'Stop'
-$path = $env:COPILOT_PRIVATE_PATH
-$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-$acl = Get-Acl -LiteralPath $path
-$acl.SetAccessRuleProtection($true, $false)
-foreach ($rule in @($acl.Access)) { [void]$acl.RemoveAccessRuleSpecific($rule) }
-$inheritance = [System.Security.AccessControl.InheritanceFlags]::None
-if ($env:COPILOT_PRIVATE_DIRECTORY -eq '1') {
-  $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-}
-$rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
-  $me,
-  [System.Security.AccessControl.FileSystemRights]::FullControl,
-  $inheritance,
-  [System.Security.AccessControl.PropagationFlags]::None,
-  [System.Security.AccessControl.AccessControlType]::Allow
-)
-$acl.AddAccessRule($rule)
-Set-Acl -LiteralPath $path -AclObject $acl
-`;
+const SID_PATTERN = /S-\d+(?:-\d+)+/;
 
-const VERIFY_PRIVATE_ACL = `
-$ErrorActionPreference = 'Stop'
-$path = $env:COPILOT_PRIVATE_PATH
-$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-$acl = Get-Acl -LiteralPath $path
-$owner = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
-$rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
-if (-not $acl.AreAccessRulesProtected -or $owner -ne $me -or $rules.Count -ne 1) { throw 'Unsafe managed runtime ACL' }
-$rule = $rules[0]
-if ($rule.IdentityReference.Value -ne $me -or
-    $rule.AccessControlType -ne [System.Security.AccessControl.AccessControlType]::Allow -or
-    ($rule.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne [System.Security.AccessControl.FileSystemRights]::FullControl) {
-  throw 'Unsafe managed runtime ACL'
-}
-`;
-
-function runAclScript(script: string, path: string, directory: boolean): void {
-    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-    const powershell = join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-    execFileSync(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
-        env: {
-            SystemRoot: systemRoot,
-            PATH: process.env.PATH,
-            COPILOT_PRIVATE_PATH: path,
-            COPILOT_PRIVATE_DIRECTORY: directory ? '1' : '0',
-        },
+function runIcacls(args: string[]): void {
+    execFileSync('icacls.exe', args, {
         stdio: ['ignore', 'pipe', 'pipe'],
-        encoding: 'utf8',
-        maxBuffer: 256 * 1024,
-        timeout: 30_000,
+        timeout: 15_000,
         windowsHide: true,
     });
 }
 
+function currentUserSid(): string {
+    const identity = execFileSync('whoami.exe', ['/user', '/fo', 'csv', '/nh'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 15_000,
+        windowsHide: true,
+    });
+    const sid = identity.match(SID_PATTERN)?.[0];
+    if (!sid) throw new Error('Could not identify the Windows runtime owner.');
+    return sid;
+}
+
+function savedDacl(path: string): string {
+    const directory = mkdtempSync(join(tmpdir(), 'copilot-acl-inspect-'));
+    const snapshot = join(directory, 'acl.txt');
+    try {
+        runIcacls([path, '/save', snapshot]);
+        const data = readFileSync(snapshot);
+        const contents = data.includes(0) ? data.toString('utf16le') : data.toString('utf8');
+        const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
+        const dacl = lines[1]?.trim();
+        if (!dacl) throw new Error('Could not read the Windows runtime ACL.');
+        return dacl;
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
+}
+
+function assertOwnerOnlyDacl(dacl: string, sid: string, directory: boolean): void {
+    const firstAce = dacl.indexOf('(');
+    const flags = firstAce < 0 ? '' : dacl.slice(0, firstAce);
+    const entries = firstAce < 0 ? '' : dacl.slice(firstAce);
+    const ace = /^\(([^()]*)\)$/.exec(entries)?.[1];
+    const fields = ace?.split(';');
+    const inheritance = fields?.[1] ?? '';
+    const rights = fields?.[2] ?? '';
+    if (!flags.startsWith('D:') || !flags.slice(2).includes('P') || !fields || fields.length !== 6
+        || fields[0] !== 'A' || fields[3] !== '' || fields[4] !== ''
+        || fields[5] !== sid || rights !== 'FA'
+        || (directory && (!inheritance.includes('OI') || !inheritance.includes('CI')))
+        || (!directory && inheritance !== '')) {
+        throw new Error('Unsafe managed runtime ACL.');
+    }
+}
+
 export function makeWindowsRuntimePathPrivate(path: string, directory: boolean): void {
-    if (process.platform === 'win32') runAclScript(SET_PRIVATE_ACL, path, directory);
+    if (process.platform !== 'win32') return;
+    const sid = currentUserSid();
+    runIcacls([path, '/inheritance:r']);
+    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
+    verifyWindowsRuntimePathPrivate(path, directory);
 }
 
 export function verifyWindowsRuntimePathPrivate(path: string, directory: boolean): void {
-    if (process.platform === 'win32') runAclScript(VERIFY_PRIVATE_ACL, path, directory);
+    if (process.platform !== 'win32') return;
+    const sid = currentUserSid();
+    // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
+    runIcacls([path, '/setowner', `*${sid}`]);
+    assertOwnerOnlyDacl(savedDacl(path), sid, directory);
 }

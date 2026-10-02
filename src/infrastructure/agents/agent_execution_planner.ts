@@ -13,7 +13,7 @@ import {
     writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildProviderExecutionPolicy } from '../../application/policies/agent_execution/agent_execution_policy_dispatcher';
 import type { AgentArtifactTemplate } from '../../application/policies/agent_execution/provider_execution_policy';
 import type { AgentCapability, AgentConfiguration, AgentProvider } from '../../domain/agent';
@@ -60,16 +60,16 @@ const DEFAULT_SYSTEM: AgentExecutionPlanningSystem = {
     readVersion: readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = realpathSync(cwd);
-        const root = realpathSync(execFileSync('git', ['rev-parse', '--show-toplevel'], {
+        const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15_000,
-        }).trim());
-        if (relative(requested, root) !== '') {
+        }).trim();
+        if (prefix !== '') {
             throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
         }
-        return root;
+        return requested;
     },
 };
 
