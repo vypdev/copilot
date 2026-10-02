@@ -261,6 +261,11 @@ unrecognized ACL fails before a provider process starts.
 The installed-file check reads a full Windows security descriptor; the
 managed-artifact `icacls /save` snapshot contains only the DACL and is not
 owner evidence for an installed executable.
+The hosted Windows fixture exposed `AU:0x1301bf` on both Action and job Node;
+the installed-file trust gate correctly rejects them. Repository credentialed
+Action jobs route to macOS while Windows tooling ACLs are repaired and tested.
+The Windows agent gate remains open even if setup web/CLI and Bash fixtures
+pass; no runtime finding is waived or counted as a pass.
 The [2026-10-02 isolated platform matrix](https://github.com/vypdev/copilot/actions/runs/36955416020)
 passed the fake Windows runtime cases and package smoke on hosted Windows,
 Ubuntu and macOS. It does not establish self-hosted runner behavior or a live

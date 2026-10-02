@@ -8,7 +8,7 @@ jobs:
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request Comment
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     timeout-minutes: 120
     permissions:
       contents: read

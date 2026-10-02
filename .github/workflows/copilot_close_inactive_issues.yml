@@ -17,7 +17,7 @@ permissions:
 jobs:
   copilot-inactive-issues:
     name: Copilot - Close Inactive Issues
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     timeout-minutes: 120
     permissions:
       contents: read

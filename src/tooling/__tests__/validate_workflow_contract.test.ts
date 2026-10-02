@@ -701,7 +701,10 @@ describe('workflow contract validator', () => {
   it('rejects a queue job with the wrong runner', () => {
     expect(() => assertRunner(queueFile, {
       jobs: { 'copilot-issues': { 'runs-on': 'ubuntu-latest' } },
-    })).toThrow('runs-on self-hosted, codex');
+    })).toThrow('runs-on self-hosted, codex, macOS');
+    expect(() => assertRunner(queueFile, {
+      jobs: { 'copilot-issues': { 'runs-on': ['self-hosted', 'codex'] } },
+    })).toThrow('runs-on self-hosted, codex, macOS');
   });
 
   it('requires the Ubuntu, Windows and macOS setup fixture matrix', () => {

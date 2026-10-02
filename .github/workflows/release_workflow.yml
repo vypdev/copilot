@@ -41,7 +41,7 @@ concurrency:
 jobs:
   validate:
     name: Validate deployment command
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     timeout-minutes: 5
     permissions: {}
     steps:
@@ -80,7 +80,7 @@ jobs:
   prepare-version-files:
     name: Prepare files for release
     if: ${{ inputs.mode == 'prepare' }}
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     needs: validate
     timeout-minutes: 15
     permissions:
@@ -121,7 +121,7 @@ jobs:
   prepare-compiled-files:
     name: Build and validate prepared release
     if: ${{ inputs.mode == 'prepare' }}
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     needs: prepare-version-files
     timeout-minutes: 30
     permissions:
@@ -160,7 +160,7 @@ jobs:
   promote:
     name: Open production promotion
     if: ${{ inputs.mode == 'prepare' }}
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     needs: prepare-compiled-files
     timeout-minutes: 10
     permissions:
@@ -207,7 +207,7 @@ jobs:
   tag:
     name: Create or verify production tag
     if: ${{ inputs.mode == 'publish' }}
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     needs: validate
     timeout-minutes: 10
     permissions:
@@ -309,7 +309,7 @@ jobs:
   finalize-release:
     name: Finalize published release
     if: ${{ inputs.mode == 'publish' }}
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     timeout-minutes: 15
     needs: publish-npm
     permissions:
@@ -351,7 +351,7 @@ jobs:
 
   report-failure:
     name: Report orchestration failure
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, codex, macOS]
     timeout-minutes: 5
     needs: [validate, prepare-version-files, prepare-compiled-files, promote, tag, publish-npm, finalize-release]
     if: ${{ failure() && needs.validate.result == 'success' }}

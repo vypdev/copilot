@@ -315,6 +315,21 @@ The installed-file preflight must read the full descriptor, including owner;
 read-only Windows ACL query is required, while generated runtime artifacts
 retain their separate owner-only `icacls` policy.
 
+The 2026-10-02 hosted Windows fixture found an effective
+`Authenticated Users: 0x1301bf` (modify) grant on both the Action-embedded Node
+and setup-node's job Node. The policy correctly rejects both; choosing the
+other ambient Node is not a fix. A self-hosted Windows fixture also failed
+the same executable preflight, although its exact rejected ACE still needs
+review. Until the installed toolchain has trusted ownership and no broad
+mutation grant, Windows agent execution is **open and blocked**. Credentialed
+repository Action jobs MUST route to the verified macOS self-hosted runners;
+the Windows fixture jobs remain visible and red as evidence. Do not infer
+Windows agent support from Git Bash, npm availability, or Mac Action success.
+Runner owners must harden the Node, npm CLI, Codex shim and package entrypoint
+ACLs, then rerun the isolated hosted/service fixtures before re-enabling
+Windows. The GitHub-hosted image cannot be declared safe without its own
+fixture evidence or a separately reviewed trusted toolchain.
+
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
 rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
