@@ -522,6 +522,12 @@ doctor, reconcile, and retirement paths MUST apply the canonical text rule
 consistently. A fresh Windows run MUST prove the early validation and full
 suite pass before this platform gate closes.
 
+The [next Windows run](https://github.com/vypdev/copilot/actions/runs/37001792859)
+passed manifest hashing and exposed a path-separator false positive in the
+validator's allowlist for the setup plan. The allowlist MUST compare
+repository-relative paths with normalized separators while preserving the
+prohibition on internal Action code ingesting collaborator guidance.
+
 ## 9. UI/UX and content contract
 
 ### 9.1 Information hierarchy

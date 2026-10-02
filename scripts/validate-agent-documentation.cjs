@@ -157,7 +157,7 @@ const internalGuidanceImports = fs.readdirSync(path.join(root, 'src'), { recursi
   .filter(file => file.endsWith('.ts')
     && !file.includes('__tests__')
     && !file.includes('repository_agent_guidance')
-    && file !== 'application/policies/setup_configuration_plan.ts')
+    && file.replaceAll('\\', '/') !== 'application/policies/setup_configuration_plan.ts')
   .filter(file => {
     const content = fs.readFileSync(path.join(root, 'src', file), 'utf8');
     return content.includes('.copilot/AGENT_GUIDE.md') || content.includes('copilot-repository-workflow');
