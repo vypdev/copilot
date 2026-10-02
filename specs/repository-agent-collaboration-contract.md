@@ -501,6 +501,11 @@ flowchart LR
    frontmatter on Windows and Unix checkouts, and reject missing or malformed
    frontmatter. Generated collaborator artifact hashes remain byte-exact; line
    ending tolerance in the MDX check MUST NOT weaken manifest verification.
+10. CI MUST verify the generated guidance contract immediately after dependency
+    installation and again after the full test suite. On Windows, it MUST show
+    the checkout line-ending attributes for the hash-owned files. A failure at
+    checkout and a mutation during tests require different recovery actions;
+    neither may be treated as a passing guidance gate.
 
 ## 9. UI/UX and content contract
 

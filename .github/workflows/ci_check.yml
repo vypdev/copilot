@@ -51,6 +51,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate generated guidance checkout
+        run: |
+          git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
+          pnpm run validate:agent-docs
+
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level=high
 

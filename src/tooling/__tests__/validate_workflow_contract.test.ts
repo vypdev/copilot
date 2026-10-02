@@ -741,6 +741,21 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('must isolate pnpm/action-setup');
   });
 
+  it('checks generated guidance before and after CI tests', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const steps = workflow.jobs['ci-check'].steps;
+    const install = steps.findIndex((step: { name?: string }) => step.name === 'Install dependencies');
+    const coverage = steps.findIndex((step: { name?: string }) => step.name === 'Run tests with coverage');
+    const checks = steps.flatMap((step: { run?: string }, index: number) =>
+      step.run?.includes('pnpm run validate:agent-docs') ? [index] : []);
+    expect(checks).toHaveLength(2);
+    expect(install).toBeLessThan(checks[0]);
+    expect(checks[0]).toBeLessThan(coverage);
+    expect(coverage).toBeLessThan(checks[1]);
+    expect(steps[checks[0]].run).toContain('git ls-files --eol');
+  });
+
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     expect(() => assertMajorActionReferences(file, {
