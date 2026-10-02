@@ -78671,6 +78671,8 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.matchesWindowsRuntimePrincipal = matchesWindowsRuntimePrincipal;
+exports.isLocalWindowsAdministrator = isLocalWindowsAdministrator;
 exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
 exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
 const node_child_process_1 = __nccwpck_require__(17718);
@@ -78690,7 +78692,13 @@ function runIcacls(args, cwd) {
         windowsHide: true,
     });
 }
-function currentUserSid() {
+function matchesWindowsRuntimePrincipal(principal, identity) {
+    return principal === identity.sid || (principal === 'LA' && identity.localAdministrator);
+}
+function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
+    return sid.endsWith('-500') && accountDomain?.toLowerCase() === computerName.toLowerCase();
+}
+function currentUserIdentity() {
     const identity = (0, node_child_process_1.execFileSync)(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -78700,7 +78708,12 @@ function currentUserSid() {
     const sid = identity.match(SID_PATTERN)?.[0];
     if (!sid)
         throw new Error('Could not identify the Windows runtime owner.');
-    return sid;
+    const account = /^\uFEFF?"([^"\r\n]+)"\s*,/.exec(identity)?.[1];
+    const accountDomain = account?.split('\\')[0];
+    return {
+        sid,
+        localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, (0, node_os_1.hostname)()),
+    };
 }
 function withSavedAcl(path, use) {
     const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-acl-inspect-'));
@@ -78721,7 +78734,9 @@ function withSavedAcl(path, use) {
 function savedDacl(path) {
     return withSavedAcl(path, (_snapshot, lines) => lines[1].trim());
 }
-function assertOwnerOnlyDacl(sddl, sid, directory) {
+function assertOwnerOnlyDacl(sddl, identity, directory) {
+    const { sid } = identity;
+    const isCurrentUser = (principal) => matchesWindowsRuntimePrincipal(principal, identity);
     const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
     const dacl = /D:.*?(?=S:|$)/.exec(sddl)?.[0] ?? '';
     const firstAce = dacl.indexOf('(');
@@ -78731,17 +78746,17 @@ function assertOwnerOnlyDacl(sddl, sid, directory) {
     const noUnparsedEntries = entries.replace(/\([^()]*\)/g, '') === '';
     const validOwnerAce = (fields) => fields.length === 6
         && fields[0] === 'A' && fields[2] === 'FA'
-        && fields[3] === '' && fields[4] === '' && fields[5] === sid;
+        && fields[3] === '' && fields[4] === '' && isCurrentUser(fields[5]);
     const appliesToPath = (fields) => !fields[1].includes('IO');
     const inheritsToChildren = (fields) => fields[1].includes('OI') && fields[1].includes('CI');
-    if ((owner !== undefined && owner !== sid) || !flags.startsWith('D:') || !flags.slice(2).includes('P')
+    if ((owner !== undefined && !isCurrentUser(owner)) || !flags.startsWith('D:') || !flags.slice(2).includes('P')
         || !noUnparsedEntries || aces.length === 0 || !aces.every(validOwnerAce)
         || !aces.some(appliesToPath)
         || (directory && !aces.some(inheritsToChildren))
         || (!directory && !aces.every(fields => fields[1] === ''))) {
         throw new Error(`Unsafe managed runtime ACL (${JSON.stringify({
             ownerPresent: owner !== undefined,
-            ownerMatches: owner === sid,
+            ownerMatches: owner !== undefined && isCurrentUser(owner),
             flags,
             aceCount: aces.length,
             noUnparsedEntries,
@@ -78750,20 +78765,21 @@ function assertOwnerOnlyDacl(sddl, sid, directory) {
                 type: fields[0],
                 inheritance: fields[1],
                 rights: fields[2],
-                principalMatches: fields[5] === sid,
+                principalMatches: isCurrentUser(fields[5]),
                 principalKind: fields[5]?.startsWith('S-') ? 'sid' : fields[5],
                 principalSuffix: fields[5]?.split('-').at(-1),
                 principalLength: fields[5]?.length,
             })),
             ownerSidSuffix: sid.split('-').at(-1),
             ownerSidLength: sid.length,
+            localAdministrator: identity.localAdministrator,
         })}).`);
     }
 }
 function makeWindowsRuntimePathPrivate(path, directory) {
     if (process.platform !== 'win32')
         return;
-    const sid = currentUserSid();
+    const { sid } = currentUserIdentity();
     runIcacls([path, '/setowner', `*${sid}`]);
     withSavedAcl(path, (snapshot, lines) => {
         lines[1] = `D:P(A;${directory ? 'OICI' : ''};FA;;;${sid})`;
@@ -78775,10 +78791,11 @@ function makeWindowsRuntimePathPrivate(path, directory) {
 function verifyWindowsRuntimePathPrivate(path, directory) {
     if (process.platform !== 'win32')
         return;
-    const sid = currentUserSid();
+    const identity = currentUserIdentity();
+    const { sid } = identity;
     // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
     runIcacls([path, '/setowner', `*${sid}`]);
-    assertOwnerOnlyDacl(savedDacl(path), sid, directory);
+    assertOwnerOnlyDacl(savedDacl(path), identity, directory);
 }
 
 

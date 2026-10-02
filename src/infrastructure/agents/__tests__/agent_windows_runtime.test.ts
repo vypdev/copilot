@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
-import { makeWindowsRuntimePathPrivate, verifyWindowsRuntimePathPrivate } from '../windows_runtime_acl';
+import {
+    makeWindowsRuntimePathPrivate,
+    matchesWindowsRuntimePrincipal,
+    isLocalWindowsAdministrator,
+    verifyWindowsRuntimePathPrivate,
+} from '../windows_runtime_acl';
 
 const windowsIt = process.platform === 'win32' ? it : it.skip;
 
@@ -41,6 +46,18 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 }
 
 describe('isolated Windows agent runtime', () => {
+    it('accepts the SDDL local administrator alias only for the verified local administrator', () => {
+        const sid = 'S-1-5-21-100-200-300-500';
+        expect(isLocalWindowsAdministrator(sid, 'RUNNER', 'runner')).toBe(true);
+        expect(isLocalWindowsAdministrator(sid, 'DOMAIN', 'runner')).toBe(false);
+        expect(isLocalWindowsAdministrator('S-1-5-21-100-200-300-1001', 'runner', 'runner')).toBe(false);
+        expect(matchesWindowsRuntimePrincipal(sid, { sid, localAdministrator: false })).toBe(true);
+        expect(matchesWindowsRuntimePrincipal('LA', { sid, localAdministrator: true })).toBe(true);
+        expect(matchesWindowsRuntimePrincipal('LA', { sid, localAdministrator: false })).toBe(false);
+        expect(matchesWindowsRuntimePrincipal('BA', { sid, localAdministrator: true })).toBe(false);
+        expect(matchesWindowsRuntimePrincipal('WD', { sid, localAdministrator: true })).toBe(false);
+    });
+
     windowsIt('rejects a managed directory ACL broadened to Everyone', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-acl-'));
         try {
