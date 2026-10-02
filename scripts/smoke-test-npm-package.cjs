@@ -5,10 +5,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { runNpmPack } = require('./npm-pack-command.cjs');
+const { smokePackagedWebSession } = require('./smoke-packaged-web-session.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-npm-smoke-'));
 
+async function main() {
 try {
   const output = runNpmPack(
     [
@@ -113,7 +115,14 @@ try {
     path.join(consumerRoot, 'index.ts'),
   ], { cwd: consumerRoot, encoding: 'utf8' });
 
-  console.log(`npm package smoke test: PASS (@vypdev/copilot@${version}, CLI + typed Bugbot API).`);
+  await smokePackagedWebSession(cliPath, temporaryDirectory);
+  console.log(`npm package smoke test: PASS (@vypdev/copilot@${version}, CLI + typed Bugbot API + isolated local web session).`);
 } finally {
   fs.rmSync(temporaryDirectory, { recursive: true, force: true });
 }
+}
+
+void main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

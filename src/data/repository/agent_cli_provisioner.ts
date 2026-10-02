@@ -8,6 +8,7 @@ import {
 } from '../../infrastructure/agents/agent_executable_invocation';
 import { installOfficialAgentCli, type OfficialAgentInstallation } from '../../infrastructure/agents/agent_official_installer';
 import { readAgentRuntimeVersion } from '../../infrastructure/agents/agent_runtime_manifest';
+import { compareOfficialAgentVersion, readOfficialLatestAgentVersion } from '../../infrastructure/agents/agent_official_version';
 
 export type AgentCliProvisioningEnvironment = NodeJS.ProcessEnv;
 export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'executable'>;
@@ -24,12 +25,14 @@ export function agentExecutableExists(executable: string, environment: NodeJS.Pr
 export interface AgentCliProvisioningSystem {
     executableExists(executable: string, environment: AgentCliProvisioningEnvironment): boolean;
     readVersion(executable: string, provider: AgentProvider, environment: AgentCliProvisioningEnvironment): string;
+    readLatestVersion(provider: AgentProvider): string;
     installOfficial(provider: AgentProvider): OfficialAgentInstallation;
 }
 
 const DEFAULT_SYSTEM: AgentCliProvisioningSystem = {
     executableExists: agentExecutableExists,
     readVersion: readAgentExecutableVersion,
+    readLatestVersion: readOfficialLatestAgentVersion,
     installOfficial: installOfficialAgentCli,
 };
 
@@ -47,13 +50,42 @@ export class AgentCliProvisioner {
         if (this.preparedExecutables.has(key)) return;
 
         if (this.system.executableExists(executable, environment)) {
-            this.preparedExecutables.add(key);
+            if (selectedExecutable) {
+                this.preparedExecutables.add(key);
+                return;
+            }
+            let installedVersion: string;
+            let latestVersion: string;
+            try {
+                installedVersion = readAgentRuntimeVersion(provider, this.system.readVersion(executable, provider, environment));
+                latestVersion = this.system.readLatestVersion(provider);
+            } catch {
+                // Update lookup is advisory when an existing executable is available.
+                this.preparedExecutables.add(key);
+                return;
+            }
+            if (compareOfficialAgentVersion(provider, installedVersion, latestVersion) !== 'older') {
+                this.preparedExecutables.add(key);
+                return;
+            }
+            this.installPrivate(provider, executable, environment, key, installedVersion, latestVersion);
             return;
         }
         if (selectedExecutable) {
             throw new Error(`The explicitly selected ${provider} executable is unavailable; operator executables are never installed or replaced.`);
         }
 
+        this.installPrivate(provider, executable, environment, key);
+    }
+
+    private installPrivate(
+        provider: AgentProvider,
+        executable: string,
+        environment: AgentCliProvisioningEnvironment,
+        key: string,
+        previousVersion?: string,
+        latestVersion?: string,
+    ): void {
         const installed = this.system.installOfficial(provider);
         const previousPath = environment.PATH;
         environment.PATH = `${installed.directory}${delimiter}${environment.PATH || environment.Path || ''}`;
@@ -68,7 +100,13 @@ export class AgentCliProvisioner {
             if (!sameExecutable) {
                 throw new Error(`The official ${provider} installer resolved to another executable.`);
             }
-            readAgentRuntimeVersion(provider, this.system.readVersion(actual, provider, environment));
+            const version = readAgentRuntimeVersion(provider, this.system.readVersion(actual, provider, environment));
+            if (previousVersion && latestVersion && (
+                compareOfficialAgentVersion(provider, previousVersion, version) !== 'older'
+                || compareOfficialAgentVersion(provider, version, latestVersion) === 'older'
+            )) {
+                throw new Error(`The official ${provider} installer did not provide the newer release.`);
+            }
             this.preparedExecutables.add(key);
         } catch (error) {
             if (previousPath === undefined) delete environment.PATH;

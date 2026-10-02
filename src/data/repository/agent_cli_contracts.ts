@@ -1,4 +1,5 @@
 import type { AgentCapability, AgentConfiguration } from '../model/agent';
+import type { AgentExecutionExitDiagnostic } from '../../application/ports/agent_execution_observation_ports';
 
 export interface AgentCliRequest {
     configuration: AgentConfiguration;
@@ -20,6 +21,7 @@ export class AgentCliError extends Error {
         readonly category: 'configuration' | 'timeout' | 'cancelled' | 'process' | 'output',
         readonly retryable = false,
         readonly exitCode?: number,
+        readonly exitDiagnostic?: AgentExecutionExitDiagnostic,
     ) {
         super(message);
         this.name = 'AgentCliError';

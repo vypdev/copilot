@@ -5,6 +5,7 @@ import { basename, dirname, isAbsolute, join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
+import { classifyAgentCliExitDiagnostic } from './agent_cli_exit_diagnostic';
 import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
 import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
 
@@ -72,6 +73,7 @@ export function createAgentProcessLifecycle(
 ) {
     const stdoutChunks: Buffer[] = [];
     let stderrBytes = 0;
+    const stderrChunks: Buffer[] = [];
     let outputBytes = 0;
     let settled = false;
     let terminationError: Error | undefined;
@@ -122,7 +124,11 @@ export function createAgentProcessLifecycle(
             beginTermination(new AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
+        if (stderrBytes < MAX_STDERR_BYTES) {
+            const retained = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+            stderrChunks.push(retained);
+            stderrBytes += retained.byteLength;
+        }
     };
     const onStdinError = () => beginTermination(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new AgentCliError('Unable to start agent CLI.', 'process'));
@@ -133,7 +139,10 @@ export function createAgentProcessLifecycle(
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined));
+            const exitDiagnostic = stderrBytes > 0
+                ? classifyAgentCliExitDiagnostic(Buffer.concat(stderrChunks).toString('utf8'))
+                : undefined;
+            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
         }
         try {

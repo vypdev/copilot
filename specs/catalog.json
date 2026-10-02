@@ -761,7 +761,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-02",
+      "lastVerified": "2026-10-03",
       "specs": [
         "specs/local-web-setup-assistant.md"
       ],
@@ -855,6 +855,7 @@
         "src/infrastructure/composition/setup_credentials_composition_root.ts",
         "scripts/validate-npm-package.cjs",
         "scripts/smoke-test-npm-package.cjs",
+        "scripts/smoke-packaged-web-session.cjs",
         "scripts/validate-setup-assistant-acceptance.cjs",
         "scripts/serve-web-setup-review.cjs",
         "scripts/validate-workflow-contract.cjs",
@@ -1446,7 +1447,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-02",
+      "lastVerified": "2026-10-03",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1476,6 +1477,7 @@
         "src/application/policies/agent_execution/strict_output_schema_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/progress_response.ts",
+        "src/application/ports/agent_execution_observation_ports.ts",
         "src/infrastructure/agents/agent_execution_planner.ts",
         "src/infrastructure/agents/agent_executable_file.ts",
         "src/infrastructure/agents/agent_executable_invocation.ts",
@@ -1484,8 +1486,10 @@
         "src/infrastructure/agents/windows_executable_trust.cjs",
         "src/infrastructure/agents/agent_runtime_manifest.ts",
         "src/infrastructure/agents/agent_official_installer.ts",
+        "src/infrastructure/agents/agent_official_version.ts",
         "src/infrastructure/agents/agent-runtime-manifest.json",
         "src/data/repository/agent_cli_provisioner.ts",
+        "src/data/repository/agent_cli_exit_diagnostic.ts",
         "src/data/repository/agent_cli_execution.ts",
         "src/data/repository/agent_credential_policy.ts",
         "scripts/verify-agent-clis.cjs",
@@ -1499,6 +1503,7 @@
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
         "src/data/repository/__tests__/agent_cli_client.test.ts",
+        "src/data/repository/__tests__/agent_cli_exit_diagnostic.test.ts",
         "src/data/repository/__tests__/agent_cli_provisioner.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
         "src/application/policies/__tests__/agent_response_schemas.test.ts",
@@ -1511,6 +1516,7 @@
         "src/infrastructure/agents/__tests__/windows_executable_acl_policy.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_installer.test.ts",
+        "src/infrastructure/agents/__tests__/agent_official_version.test.ts",
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
@@ -1530,6 +1536,7 @@
         "docs/security-operations/operations/cli-provisioning.mdx",
         "docs/security-operations/operations/provisioning.mdx",
         "docs/security-operations/operations/version-pinning.mdx",
+        "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/upgrade-rollback.mdx"
       ]
     },

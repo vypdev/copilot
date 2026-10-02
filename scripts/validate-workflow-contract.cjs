@@ -216,30 +216,36 @@ function assertIsolatedPnpm(relativeFile, jobId, job) {
   }
 }
 
-function assertWindowsCoverageAndValidators(relativeFile, job, hosted) {
+function assertPlatformCoverageAndValidators(relativeFile, job) {
   const steps = job.steps ?? [];
-  const coverageStep = steps.find(step => step?.name === 'Full Windows coverage and acceptance budgets');
-  if (coverageStep?.run !== 'pnpm run test:coverage'
-    || (hosted && coverageStep.if !== "runner.os == 'Windows'")) {
-    throw new Error(`${relativeFile} must retain full Windows coverage and acceptance budgets.`);
+  const coverageStep = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
+  if (coverageStep?.run !== 'pnpm run test:coverage' || coverageStep.if !== undefined) {
+    throw new Error(`${relativeFile} must retain full platform coverage and acceptance budgets.`);
   }
-  const validationStep = steps.find(step => step?.name === 'Full Windows documentation and contract validators');
+  const validationStep = steps.find(step => step?.name === 'Full platform documentation and contract validators');
   const requiredValidations = [
     'validate:agent-docs', 'validate:docs-page', 'validate:documentation',
     'validate:workflows', 'validate:specifications', 'validate:setup-acceptance',
   ];
   if (!validationStep?.run || requiredValidations.some(command => !validationStep.run.includes(`pnpm run ${command}`))
     || steps.indexOf(validationStep) <= steps.indexOf(coverageStep)
-    || (hosted && validationStep.if !== "runner.os == 'Windows'")) {
-    throw new Error(`${relativeFile} must retain full Windows documentation and contract validators after coverage.`);
+    || validationStep.if !== undefined) {
+    throw new Error(`${relativeFile} must retain full platform documentation and contract validators after coverage.`);
+  }
+  if (!steps.some(step => step?.run === 'pnpm run validate:npm-package && pnpm run smoke:npm-package')
+    || !steps.some(step => step?.name === 'Local setup fixtures only')
+    || !steps.some(step => step?.name === 'Isolated agent runtime fixtures')
+    || !steps.some(step => step?.run === 'pnpm run build')
+    || !steps.some(step => step?.run === 'pnpm run typecheck')) {
+    throw new Error(`${relativeFile} must retain build, typecheck, setup, agent and packaged npm fixtures on every platform.`);
   }
 }
 
-function assertWindowsJobNpm(relativeFile, job, hosted) {
+function assertWindowsJobNpm(relativeFile, job) {
   const steps = job.steps ?? [];
   const npmCheck = steps.find(step => step?.name === 'Verify Windows job Node npm CLI');
   if (npmCheck?.run !== 'node scripts/verify-windows-job-npm.cjs'
-    || (hosted && npmCheck.if !== "runner.os == 'Windows'")
+    || npmCheck.if !== "runner.os == 'Windows'"
     || steps.indexOf(npmCheck) >= steps.findIndex(step => step?.run === 'pnpm install --frozen-lockfile')) {
     throw new Error(`${relativeFile} must verify the Windows job Node npm CLI before installation.`);
   }
@@ -256,8 +262,8 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
-    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-windows-codex-smoke'])) {
-      throw new Error(`${relativeFile} must retain hosted platform and self-hosted Windows fixture jobs.`);
+    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])) {
+      throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs.`);
     }
   }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
@@ -268,8 +274,8 @@ function assertRunner(file, workflow) {
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
           throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
         }
-        assertWindowsCoverageAndValidators(relativeFile, job, true);
-        assertWindowsJobNpm(relativeFile, job, true);
+        assertPlatformCoverageAndValidators(relativeFile, job);
+        assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
         const codecov = (job.steps ?? []).find(step => step?.name === 'Upload Windows coverage to Codecov');
         if (codecov?.uses !== 'codecov/codecov-action@v6'
@@ -278,24 +284,42 @@ function assertRunner(file, workflow) {
           || codecov.with?.fail_ci_if_error !== true
           || codecov.with?.flags !== 'windows'
           || codecov.with?.token !== '${{ secrets.CODECOV_TOKEN }}'
-          || (job.steps ?? []).indexOf(codecov) <= (job.steps ?? []).findIndex(step => step?.name === 'Full Windows coverage and acceptance budgets')) {
+          || (job.steps ?? []).indexOf(codecov) <= (job.steps ?? []).findIndex(step => step?.name === 'Full platform coverage and acceptance budgets')) {
           throw new Error(`${relativeFile} must upload hosted Windows coverage for same-repository revisions.`);
         }
       } else {
-        if (JSON.stringify(runnerLabels(job['runs-on']))
-          !== JSON.stringify(['self-hosted', 'codex', 'Windows'])) {
-          throw new Error(`${relativeFile} must target the self-hosted Windows codex runner.`);
+        const expectedMatrix = [
+          { platform: 'Windows', labels: ['self-hosted', 'codex', 'Windows'] },
+          { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
+          { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
+        ];
+        if (job['runs-on'] !== '${{ matrix.labels }}'
+          || job.name !== 'Setup package and local session (self-hosted ${{ matrix.platform }} codex)'
+          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(expectedMatrix)
+          || job.strategy?.['fail-fast'] !== false) {
+          throw new Error(`${relativeFile} must target self-hosted Windows, macOS and Ubuntu codex runners.`);
         }
         if (job.if !== "github.event_name == 'workflow_dispatch'") {
-          throw new Error(`${relativeFile} must reserve the self-hosted Windows codex runner for manual dispatch.`);
+          throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch.`);
         }
-        assertWindowsCoverageAndValidators(relativeFile, job, false);
-        assertWindowsJobNpm(relativeFile, job, false);
+        const steps = job.steps ?? [];
+        if (!steps.some(step => step?.name === 'Verify Ubuntu distribution'
+          && step.if === "runner.os == 'Linux'" && step.run === '. /etc/os-release && test "$ID" = ubuntu')
+          || !steps.some(step => step?.name === 'Git Bash in runner service PATH'
+            && step.if === "runner.os == 'Windows'")) {
+          throw new Error(`${relativeFile} must verify Ubuntu and Windows Bash on self-hosted runners.`);
+        }
+        const pnpmSetup = steps.find(step => typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@'));
+        if (pnpmSetup?.with?.dest !== ISOLATED_PNPM_DEST) {
+          throw new Error(`${relativeFile} must isolate self-hosted pnpm installation by job.`);
+        }
+        assertPlatformCoverageAndValidators(relativeFile, job);
+        assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
-        const guidanceStep = (job.steps ?? []).find(step => step?.name === 'Validate generated guidance checkout on codex Windows');
+        const guidanceStep = steps.find(step => step?.name === 'Validate generated guidance checkout on codex runner');
         if (!guidanceStep?.run?.includes('pnpm run validate:agent-docs')
           || !guidanceStep.run.includes('git ls-files --eol')) {
-          throw new Error(`${relativeFile} must verify generated guidance at Windows checkout.`);
+          throw new Error(`${relativeFile} must verify generated guidance at self-hosted checkout.`);
         }
       }
       assertIsolatedPnpm(relativeFile, jobId, job);

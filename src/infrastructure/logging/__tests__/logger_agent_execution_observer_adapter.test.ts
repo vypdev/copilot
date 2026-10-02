@@ -59,4 +59,18 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         expect(logInfo).toHaveBeenCalledWith('Agent execution failed (run/process, exit 2).', false,
             { agentExecution: expect.not.objectContaining({ prompt: expect.anything(), environment: expect.anything() }) });
     });
+
+    it('logs only the fixed diagnostic code after a failed CLI process', () => {
+        const observer = new LoggerAgentExecutionObserverAdapter();
+        observer.observe({
+            state: 'failed', phase: 'run', provider: 'codex', capability: 'findings',
+            durationMilliseconds: 10, failureCategory: 'process', semanticCode: 'agent.failed',
+            retryable: false, exitCode: 1, exitDiagnostic: 'reported-model-unavailable',
+        });
+        expect(logInfo).toHaveBeenCalledWith(
+            'Agent execution failed (run/process, exit 1, reported-model-unavailable).',
+            false,
+            { agentExecution: expect.objectContaining({ exitDiagnostic: 'reported-model-unavailable' }) },
+        );
+    });
 });

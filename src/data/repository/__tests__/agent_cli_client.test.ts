@@ -269,10 +269,46 @@ describe('AgentCliClient admitted process execution', () => {
             prompt: 'p', timeoutMs: 5_000,
         };
         await expect(client(plan('process.stderr.write("secret diagnostic"); process.exit(2)')).execute(request))
-            .rejects.toMatchObject({ category: 'process', retryable: false, exitCode: 2, message: expect.not.stringContaining('secret diagnostic') });
+            .rejects.toMatchObject({ category: 'process', retryable: false, exitCode: 2,
+                exitDiagnostic: 'unclassified', message: expect.not.stringContaining('secret diagnostic') });
         await expect(client(plan('process.exit(75)')).execute(request))
             .rejects.toMatchObject({ category: 'process', retryable: true });
     }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it('reports a bounded provider diagnostic without exposing stderr in errors or observations', async () => {
+        const observe = jest.fn();
+        const secret = 'fixture-private-key';
+        const script = `process.stderr.write('model gpt-6-luna is not available; token=${secret}'); process.exit(1)`;
+        const request = {
+            configuration: { provider: 'codex' as const, model: 'gpt-6-luna' }, capability: 'findings' as const,
+            prompt: 'private prompt', timeoutMs: 5_000,
+        };
+        await expect(client(plan(script), { observe }).execute(request)).rejects.toMatchObject({
+            category: 'process', exitCode: 1, exitDiagnostic: 'reported-model-unavailable',
+            message: expect.not.stringContaining(secret),
+        });
+        expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
+            state: 'failed', exitDiagnostic: 'reported-model-unavailable', exitCode: 1,
+        }));
+        expect(JSON.stringify(observe.mock.calls)).not.toMatch(/fixture-private-key|private prompt|gpt-6-luna/);
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it('bounds stderr classification to the first 8 KiB', () => {
+        jest.useFakeTimers();
+        const executionPlan = plan('unused');
+        try {
+            const reject = jest.fn();
+            const lifecycle = createAgentProcessLifecycle({ exitCode: 1 } as never, executionPlan,
+                undefined, jest.fn(), reject);
+            lifecycle.appendStderr(Buffer.from('x'.repeat(8 * 1024)));
+            lifecycle.appendStderr(Buffer.from('model gpt-6-luna is not available'));
+            lifecycle.onClose(1);
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ exitDiagnostic: 'unclassified' }));
+        } finally {
+            jest.useRealTimers();
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
 
     it('rejects process start failures without exposing raw configuration', async () => {
         await expect(client(plan('unused', { executable: process.platform === 'win32'

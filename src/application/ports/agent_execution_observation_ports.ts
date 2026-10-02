@@ -15,6 +15,15 @@ export type AgentExecutionSemanticCode =
     | 'timeout'
     | 'workflow.cancelled';
 
+/** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+export type AgentExecutionExitDiagnostic =
+    | 'reported-authentication'
+    | 'reported-model-unavailable'
+    | 'reported-unsupported-option'
+    | 'reported-unsupported-configuration'
+    | 'reported-transport-or-rate-limit'
+    | 'unclassified';
+
 interface AgentExecutionIdentityObservation {
     readonly provider: AgentProvider;
     readonly capability: AgentCapability;
@@ -49,6 +58,7 @@ export type AgentExecutionObservation =
         readonly semanticCode: AgentExecutionSemanticCode;
         readonly retryable: boolean;
         readonly exitCode?: number;
+        readonly exitDiagnostic?: AgentExecutionExitDiagnostic;
     });
 
 /** Receives bounded execution facts only; prompts, output, argv, paths, and environment are excluded by type. */

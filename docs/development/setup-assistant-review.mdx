@@ -47,9 +47,12 @@ On macOS, Linux and Windows, inspect packaged `--web` launch and browser-open
 fallback (`I037–I042`) in an isolated fixture repository with fake ports and
 no network credentials. Record the package version, OS, Node version,
 browser, launcher output, URL, pairing behavior and whether fallback
-instructions are usable. The CI fixture jobs check build and local server
-behavior, but they do not replace these desktop observations. Do not use this
-project or a live GitHub repository as a setup target.
+instructions are usable. `pnpm run smoke:npm-package` exercises the extracted
+CLI against a disposable Git fixture with a simulated browser-open failure,
+loopback page and asset requests, pairing, cancellation, and a clean-checkout
+assertion. The CI fixture jobs run it on each available platform. It does not
+replace desktop observations. Do not use this project or a live GitHub
+repository as a setup target.
 
 Controlled GitHub account switching, 2FA on GitHub, wrong-account handling,
 and PAT deletion require a separate authorized human review with test accounts

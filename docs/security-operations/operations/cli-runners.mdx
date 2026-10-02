@@ -37,7 +37,7 @@ For OpenCode, Copilot validates and passes `openai/gpt-6-luna` explicitly. Repos
 
 ## Provisioning contract
 
-The Action uses the selected CLI when present. If the default command is missing, it installs only that provider's official standalone CLI into a private job directory. An explicit executable is never replaced. A non-empty version, trusted file, supported headless command, and credential reference are required. No exact version is pinned, and no npm, pnpm, or `actions/setup-node` step is required in the distributed agent workflows. Do not put secrets in action inputs, YAML literals, command arguments, prompts, or logs. Do not copy local OAuth files into GitHub-hosted CI.
+The Action checks an installed default CLI against the provider's current official release and uses a confirmed newer release in a private job directory. If the check is unavailable, it reuses the installed CLI. If the default command is missing, it installs only that provider's official standalone CLI privately. An explicit executable is never replaced. A non-empty version, trusted file, supported headless command, and credential reference are required. No exact version is pinned, and no npm, pnpm, or `actions/setup-node` step is required in the distributed agent workflows. Do not put secrets in action inputs, YAML literals, command arguments, prompts, or logs. Do not copy local OAuth files into GitHub-hosted CI.
 
 ## Verification command
 

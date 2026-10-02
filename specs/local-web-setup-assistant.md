@@ -1377,6 +1377,13 @@ path before extracting into a separate temporary directory, then inspect the
 extracted CLI, web assets, and API. This keeps archive lookup independent of
 `tar -C` interpretation across platforms; the existing package smoke is the
 acceptance test.
+It MUST also start the extracted `setup --web` CLI in a disposable Git fixture
+with an inert example remote and no credentials. A test-only browser
+opener MUST fail harmlessly. The smoke MUST fetch the packaged page and asset,
+reject an unpaired state request, pair with the ephemeral fixture code, read
+the fixture repository state, cancel and close the session, then verify that
+the fixture checkout is unchanged. Passing this automated path supports but
+does not close the six human packaged-launch and fallback observations.
 
 | IDs | Cases | Acceptance family |
 |---|---:|---|
@@ -1971,6 +1978,31 @@ that exercise Action admission MUST provide fake agent credentials explicitly
 so hosted CI and platform jobs never depend on credentials or local CLI login
 left on a persistent runner.
 
+The next platform expansion MUST keep automatic PR jobs on disposable
+GitHub-hosted Ubuntu, Windows and macOS runners. An explicitly dispatched,
+credential-free fixture matrix MUST additionally cover the `self-hosted,
+codex` service runners on Windows, macOS and Ubuntu. Its Linux job MUST verify
+Ubuntu from `/etc/os-release` before counting a result. Each self-hosted job
+MUST use a job-private pnpm directory, build and typecheck, run the isolated
+session and fake-agent fixtures, verify the npm tarball and packaged local
+session, run the full coverage and acceptance budgets, and run the same
+documentation/workflow/specification validators. Tests MUST reject removal of
+an OS, full suite, package check, checkout-history requirement, manual-only
+gate, or private pnpm destination. A workflow-dispatch run MUST record the
+runner name, OS and per-job result; a queued or skipped runner is explicitly
+unverified. No fixture may create a PAT, mutate GitHub setup state, or invoke a
+real agent. Human browser, assistive-technology and real-provider review remain
+separate gates even after all six platform jobs pass.
+
+The 40 open human rows in the 350-case ledger cover seven result states in
+light/dark, four-language keyboard/screen-reader/zoom/responsive review, and
+three-platform packaged launch/fallback observation. These MUST retain named
+reviewer, date, platform, browser, assistive technology and observed result;
+automated assertions or screenshots may support but cannot silently close a
+human row. X023 and X026 remain open until the self-hosted Windows service
+account can create file symlinks and runs their exact assertions. Hosted
+Windows passing those tests cannot be substituted for that service evidence.
+
 The [first deterministic Windows coverage run](https://github.com/vypdev/copilot/actions/runs/36982636134)
 passed all 514 suites and the agent-execution budget at its unchanged
 thresholds. `test:coverage` then rejected X023 because the service account
@@ -2078,8 +2110,10 @@ and a manual service-runner suite MUST both pass after the change.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
 - [ ] Automatic PR quality jobs run on hosted runners; the self-hosted Windows
-      fixture is manual only. Hosted Windows full coverage and validators pass,
-      and the combined Codecov report is reviewed for the exact PR head.
+      macOS, Ubuntu and Windows fixture matrix is manual only. All six platform
+      jobs pass their full fixture, package, coverage and validator contracts;
+      a skipped or queued service job remains open. The combined Codecov report
+      is reviewed for the exact PR head.
 - [ ] No readiness-blocking decision remains unresolved; no test GitHub issue,
       credential-bearing setup Action run, or test PAT is created while
       validating this implementation.

@@ -1,11 +1,11 @@
 ---
 title: Installation version pinning
-description: Pin Copilot-owned agent CLI installations while preserving operator-owned runtimes.
+description: Keep agent CLI versions current per job while preserving operator-owned runtimes.
 ---
 
 # Version pinning
 
-The published Copilot package may be pinned for reproducible local tooling. The GitHub Action's selected agent CLI follows a simpler policy: use an available CLI, or install the current official standalone release if its default command is missing. There is no exact agent CLI version requirement.
+The published Copilot package may be pinned for reproducible local tooling. The GitHub Action's selected agent CLI has no exact version requirement: it checks an installed default command against the current official stable release and uses a newer release privately for that job when available. An unavailable or unparseable update check leaves the installed CLI selected. A missing default command is installed from the official standalone source.
 
 | Runtime | Historical smoke baseline | Missing default command |
 | --- | --- | --- |
@@ -23,8 +23,8 @@ copilot --version
 
 ## Rules
 
-1. Reuse an available selected CLI without replacing it or matching a fixed version.
-2. Install only a missing default command from the selected provider's official source, in a private job directory.
+1. Reuse an explicitly selected CLI; check a default command against the official current release without matching a fixed version.
+2. Install a missing default command or a confirmed newer official release in a private job directory. Never modify the runner installation.
 3. Require a non-empty version and the normal guarded executable, command, and credential checks.
 4. Never replace an explicitly selected executable or fall back to another provider.
 5. Record only sanitized identity and failure category; keep credentials out of installer processes.

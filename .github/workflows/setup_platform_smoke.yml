@@ -49,8 +49,7 @@ jobs:
         run: pnpm exec jest src/infrastructure/agents/__tests__/agent_executable_file.test.ts src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts src/infrastructure/agents/__tests__/agent_execution_planner.test.ts src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts src/infrastructure/agents/__tests__/agent_official_installer.test.ts --runInBand --silent
       - name: Isolated npm package checks
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
-      - name: Full Windows coverage and acceptance budgets
-        if: runner.os == 'Windows'
+      - name: Full platform coverage and acceptance budgets
         run: pnpm run test:coverage
       - name: Upload Windows coverage to Codecov
         if: ${{ runner.os == 'Windows' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -61,8 +60,7 @@ jobs:
           fail_ci_if_error: true
           flags: windows
           token: ${{ secrets.CODECOV_TOKEN }}
-      - name: Full Windows documentation and contract validators
-        if: runner.os == 'Windows'
+      - name: Full platform documentation and contract validators
         run: |
           pnpm run validate:agent-docs
           pnpm run validate:docs-page
@@ -72,13 +70,29 @@ jobs:
           pnpm run validate:setup-acceptance
           git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'
 
-  setup-windows-codex-smoke:
+  setup-self-hosted-codex-smoke:
     if: github.event_name == 'workflow_dispatch'
-    name: Setup package and local session (self-hosted Windows codex)
-    runs-on: [self-hosted, codex, Windows]
+    name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
+    runs-on: ${{ matrix.labels }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows
+            labels: [self-hosted, codex, Windows]
+          - platform: macOS
+            labels: [self-hosted, codex, macOS]
+          - platform: Ubuntu
+            labels: [self-hosted, codex, Linux]
     steps:
+      - name: Identify service runner
+        run: echo "Runner $RUNNER_NAME on $RUNNER_OS"
+      - name: Verify Ubuntu distribution
+        if: runner.os == 'Linux'
+        run: . /etc/os-release && test "$ID" = ubuntu
       - name: Git Bash in runner service PATH
+        if: runner.os == 'Windows'
         run: where.exe bash && bash --version
       - uses: actions/checkout@v5
         with:
@@ -94,13 +108,16 @@ jobs:
           node-version: '24.x'
           cache: pnpm
       - name: Verify Windows job Node npm CLI
+        if: runner.os == 'Windows'
         run: node scripts/verify-windows-job-npm.cjs
       - run: pnpm install --frozen-lockfile
-      - name: Validate generated guidance checkout on codex Windows
+      - name: Validate generated guidance checkout on codex runner
         run: |
           git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
           pnpm run validate:agent-docs
       - run: pnpm run build
+      - if: runner.os != 'Windows'
+        run: pnpm run validate:build
       - run: pnpm run typecheck
       - name: Local setup fixtures only
         run: pnpm exec jest src/application/usecases/setup/__tests__/setup_session_coordinator.test.ts src/cli/__tests__/web_setup_server.test.ts src/cli/__tests__/setup_session_guard.test.ts src/cli/__tests__/setup_apply_snapshot.test.ts src/tooling/__tests__/setup_acceptance_path.test.ts --runInBand --silent
@@ -108,9 +125,9 @@ jobs:
         run: pnpm exec jest src/infrastructure/agents/__tests__/agent_executable_file.test.ts src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts src/infrastructure/agents/__tests__/agent_execution_planner.test.ts src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts src/infrastructure/agents/__tests__/agent_official_installer.test.ts --runInBand --silent
       - name: Isolated npm package checks
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
-      - name: Full Windows coverage and acceptance budgets
+      - name: Full platform coverage and acceptance budgets
         run: pnpm run test:coverage
-      - name: Full Windows documentation and contract validators
+      - name: Full platform documentation and contract validators
         run: |
           pnpm run validate:agent-docs
           pnpm run validate:docs-page

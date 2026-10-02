@@ -67613,6 +67613,7 @@ function failureObservation(request, error, phase, startedAt) {
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
         exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
+        exitDiagnostic: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitDiagnostic : undefined,
     };
 }
 function semanticCodeForFailure(category) {
@@ -67646,11 +67647,12 @@ function observeSafely(observer, observation) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliError = void 0;
 class AgentCliError extends Error {
-    constructor(message, category, retryable = false, exitCode) {
+    constructor(message, category, retryable = false, exitCode, exitDiagnostic) {
         super(message);
         this.category = category;
         this.retryable = retryable;
         this.exitCode = exitCode;
+        this.exitDiagnostic = exitDiagnostic;
         this.name = 'AgentCliError';
     }
 }
@@ -67675,6 +67677,7 @@ const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_cli_exit_diagnostic_1 = __nccwpck_require__(86654);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
 const MAX_STDERR_BYTES = 8 * 1024;
@@ -67732,6 +67735,7 @@ function runAgentCli(plan, prompt, signal) {
 function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
     const stdoutChunks = [];
     let stderrBytes = 0;
+    const stderrChunks = [];
     let outputBytes = 0;
     let settled = false;
     let terminationError;
@@ -67792,7 +67796,11 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
+        if (stderrBytes < MAX_STDERR_BYTES) {
+            const retained = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+            stderrChunks.push(retained);
+            stderrBytes += retained.byteLength;
+        }
     };
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
@@ -67803,7 +67811,10 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined));
+            const exitDiagnostic = stderrBytes > 0
+                ? (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'))
+                : undefined;
+            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
         }
         try {
@@ -67959,6 +67970,36 @@ function signalProcessTree(child, signal) {
 
 /***/ }),
 
+/***/ 86654:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
+function classifyAgentCliExitDiagnostic(stderr) {
+    if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
+        return 'reported-authentication';
+    }
+    if (/\b(?:unknown model|unsupported model|model[^\r\n]{0,100}(?:not found|not available|unsupported|does not exist|invalid))\b/iu.test(stderr)) {
+        return 'reported-model-unavailable';
+    }
+    if (/\b(?:unexpected argument|unknown option|unrecognized option|unsupported option|invalid option)\b/iu.test(stderr)) {
+        return 'reported-unsupported-option';
+    }
+    if (/\b(?:unknown (?:config(?:uration)? )?(?:field|key)|unrecognized config(?:uration)?|unsupported config(?:uration)?|error parsing configuration)\b/iu.test(stderr)) {
+        return 'reported-unsupported-configuration';
+    }
+    if (/\b(?:connection (?:refused|failed|reset)|network error|timed out|rate limit|too many requests|http 429|503 service unavailable)\b/iu.test(stderr)) {
+        return 'reported-transport-or-rate-limit';
+    }
+    return 'unclassified';
+}
+
+
+/***/ }),
+
 /***/ 3115:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -67973,6 +68014,7 @@ const agent_1 = __nccwpck_require__(79937);
 const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const agent_official_installer_1 = __nccwpck_require__(28520);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_official_version_1 = __nccwpck_require__(99619);
 function agentExecutableExists(executable, environment) {
     try {
         (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
@@ -67985,6 +68027,7 @@ function agentExecutableExists(executable, environment) {
 const DEFAULT_SYSTEM = {
     executableExists: agentExecutableExists,
     readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
+    readLatestVersion: agent_official_version_1.readOfficialLatestAgentVersion,
     installOfficial: agent_official_installer_1.installOfficialAgentCli,
 };
 /** Prepare only active provider CLIs; installation never modifies an operator executable. */
@@ -68001,12 +68044,34 @@ class AgentCliProvisioner {
         if (this.preparedExecutables.has(key))
             return;
         if (this.system.executableExists(executable, environment)) {
-            this.preparedExecutables.add(key);
+            if (selectedExecutable) {
+                this.preparedExecutables.add(key);
+                return;
+            }
+            let installedVersion;
+            let latestVersion;
+            try {
+                installedVersion = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(executable, provider, environment));
+                latestVersion = this.system.readLatestVersion(provider);
+            }
+            catch {
+                // Update lookup is advisory when an existing executable is available.
+                this.preparedExecutables.add(key);
+                return;
+            }
+            if ((0, agent_official_version_1.compareOfficialAgentVersion)(provider, installedVersion, latestVersion) !== 'older') {
+                this.preparedExecutables.add(key);
+                return;
+            }
+            this.installPrivate(provider, executable, environment, key, installedVersion, latestVersion);
             return;
         }
         if (selectedExecutable) {
             throw new Error(`The explicitly selected ${provider} executable is unavailable; operator executables are never installed or replaced.`);
         }
+        this.installPrivate(provider, executable, environment, key);
+    }
+    installPrivate(provider, executable, environment, key, previousVersion, latestVersion) {
         const installed = this.system.installOfficial(provider);
         const previousPath = environment.PATH;
         environment.PATH = `${installed.directory}${node_path_1.delimiter}${environment.PATH || environment.Path || ''}`;
@@ -68021,7 +68086,11 @@ class AgentCliProvisioner {
             if (!sameExecutable) {
                 throw new Error(`The official ${provider} installer resolved to another executable.`);
             }
-            (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(actual, provider, environment));
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(actual, provider, environment));
+            if (previousVersion && latestVersion && ((0, agent_official_version_1.compareOfficialAgentVersion)(provider, previousVersion, version) !== 'older'
+                || (0, agent_official_version_1.compareOfficialAgentVersion)(provider, version, latestVersion) === 'older')) {
+                throw new Error(`The official ${provider} installer did not provide the newer release.`);
+            }
             this.preparedExecutables.add(key);
         }
         catch (error) {
@@ -78828,6 +78897,102 @@ function installOfficialAgentCli(provider) {
 
 /***/ }),
 
+/***/ 99619:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseOfficialLatestAgentVersion = parseOfficialLatestAgentVersion;
+exports.readOfficialLatestAgentVersion = readOfficialLatestAgentVersion;
+exports.compareOfficialAgentVersion = compareOfficialAgentVersion;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const MAX_METADATA_BYTES = 1024 * 1024;
+const CODEX_RELEASE_CHANNEL = 'https://releases.openai.com/codex/channels/latest';
+function readOfficialText(url) {
+    if (!url.startsWith('https://'))
+        throw new Error('Official version source must use HTTPS.');
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+    const curl = process.platform === 'win32' ? (0, node_path_1.join)(systemRoot, 'System32', 'curl.exe') : 'curl';
+    const environment = {};
+    for (const name of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR']) {
+        if (process.env[name])
+            environment[name] = process.env[name];
+    }
+    return (0, node_child_process_1.execFileSync)(curl, [
+        '--fail', '--location', '--silent', '--show-error', '--max-time', '15',
+        '--proto', '=https', '--proto-redir', '=https', url,
+    ], {
+        env: environment, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 20000, maxBuffer: MAX_METADATA_BYTES,
+    });
+}
+function parseOfficialLatestAgentVersion(provider, metadata) {
+    if (!metadata || Buffer.byteLength(metadata, 'utf8') > MAX_METADATA_BYTES) {
+        throw new Error('Official version metadata has an invalid size.');
+    }
+    if (provider === 'cursor') {
+        const source = process.platform === 'win32'
+            ? /^\$version = '([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[a-f0-9]+)'/mu.exec(metadata)?.[1]
+            : /DOWNLOAD_URL="https:\/\/downloads\.cursor\.com\/lab\/([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[a-f0-9]+)\//u.exec(metadata)?.[1];
+        if (!source)
+            throw new Error('Official Cursor version metadata is invalid.');
+        return source;
+    }
+    const parsed = JSON.parse(metadata);
+    const tag = parsed.tag_name;
+    const pattern = provider === 'codex' ? /^rust-v(\d+\.\d+\.\d+)$/u : /^v(\d+\.\d+\.\d+)$/u;
+    const version = typeof tag === 'string' ? pattern.exec(tag)?.[1] : undefined;
+    if (!version)
+        throw new Error(`Official ${provider} release metadata is invalid.`);
+    return version;
+}
+function readOfficialLatestAgentVersion(provider) {
+    const installation = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
+    const url = provider === 'codex' ? CODEX_RELEASE_CHANNEL
+        : provider === 'opencode' ? installation.windowsReleaseApi
+            : process.platform === 'win32' ? installation.windowsScript : installation.unixScript;
+    if (!url)
+        throw new Error(`Official ${provider} version source is unavailable.`);
+    return parseOfficialLatestAgentVersion(provider, readOfficialText(url));
+}
+function compareOfficialAgentVersion(provider, installedOutput, latestVersion) {
+    const installed = installedOutput.trim();
+    if (provider === 'cursor') {
+        const current = /^([0-9]{4}\.[0-9]{2}\.[0-9]{2})-([a-f0-9]+)$/u.exec(installed);
+        const latest = /^([0-9]{4}\.[0-9]{2}\.[0-9]{2})-([a-f0-9]+)$/u.exec(latestVersion);
+        if (!current || !latest)
+            return 'unknown';
+        if (installed === latestVersion)
+            return 'current-or-newer';
+        if (current[1] === latest[1])
+            return 'unknown';
+        return current[1] < latest[1] ? 'older' : 'current-or-newer';
+    }
+    const current = provider === 'codex'
+        ? /^codex-cli (\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/u.exec(installed)
+        : /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/u.exec(installed);
+    const latest = (provider === 'codex'
+        ? /^(?:codex-cli )?(\d+)\.(\d+)\.(\d+)$/u
+        : /^(\d+)\.(\d+)\.(\d+)$/u).exec(latestVersion);
+    if (!current || !latest)
+        return 'unknown';
+    for (let index = 1; index <= 3; index += 1) {
+        const left = Number(current[index]);
+        const right = Number(latest[index]);
+        if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right))
+            return 'unknown';
+        if (left !== right)
+            return left < right ? 'older' : 'current-or-newer';
+    }
+    return current[4] ? 'older' : 'current-or-newer';
+}
+
+
+/***/ }),
+
 /***/ 57104:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -81417,7 +81582,8 @@ class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
         if (observation.state === 'failed') {
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
-            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${exit}).`, false, { agentExecution: observation });
+            const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${exit}${diagnostic}).`, false, { agentExecution: observation });
             return;
         }
         if (observation.state === 'completed') {

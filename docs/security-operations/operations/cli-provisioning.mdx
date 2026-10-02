@@ -1,11 +1,11 @@
 ---
 title: Agent CLI provisioning
-description: Reuse an available agent CLI or install the selected CLI from its official standalone source.
+description: Reuse a selected agent CLI or privately use a newer official release when available.
 ---
 
 # Agent CLI provisioning
 
-The Action runs one selected external CLI. If its default executable is already available, the Action uses it without replacing it or requiring an exact version. If it is absent, the Action installs only that provider's official CLI into a private directory for this job. A custom `agent-executable` must already exist; the Action never replaces it. Every selected CLI must report a non-empty version and pass the guarded executable and command checks before an agent task runs.
+The Action runs one selected external CLI. If its default executable is already available, the Action checks its version against the provider's current official release. When a newer stable release is confirmed, it installs that release into a private directory and uses it for this job. If the release cannot be checked, it uses the installed CLI. If the default command is absent, it installs only that provider's official CLI privately. A custom `agent-executable` must already exist and is always used as selected. No runner installation or persistent PATH is modified. Every selected CLI must report a non-empty version and pass the guarded executable and command checks before an agent task runs.
 
 | Runtime | Default command | Official source when missing |
 | --- | --- | --- |
@@ -17,7 +17,9 @@ The six distributed agent workflows do not run `actions/setup-node`, pnpm, or np
 
 On Windows, a native provider executable runs directly. The Cursor PowerShell installer normally changes the user PATH and replaces a user installation; the Action instead reads its official download address and extracts the official archive inside the private job directory. OpenCode likewise uses its official release archive. Existing npm `.cmd` wrappers remain supported only when their package entrypoint and a separate trusted Node executable pass the read-only ACL checks. Agent arguments and prompts never go through `cmd.exe`.
 
-No exact CLI version is pinned by the Action. The reviewed identities in the manifest are historical smoke baselines, not installation requirements. Presence and `--version` do not prove the selected model or account works; operators must verify those separately with an authorized smoke run. A missing credential, unsafe executable, unsupported command surface, or failed installation stops the selected task without switching providers.
+No exact CLI version is pinned by the Action. The reviewed identities in the manifest are historical smoke baselines, not installation requirements. The update check uses the [Codex stable release channel](https://releases.openai.com/codex/channels/latest), [OpenCode releases](https://github.com/anomalyco/opencode/releases/latest), or the [Cursor platform installer](https://cursor.com/install). A version that cannot be compared is kept as installed; a failed confirmed update blocks the task before execution. The Action never retries an already-started agent task with a different CLI. Provider self-update commands are not used because they can change the runner's persistent installation or invoke its original package manager.
+
+Presence and `--version` do not prove the selected model or account works; operators must verify those separately with an authorized smoke run. A missing credential, unsafe executable, unsupported command surface, or failed installation stops the selected task without switching providers. Process exit diagnostics expose only fixed categories such as reported model or authentication failure; raw provider stderr remains suppressed because it may contain secrets.
 
 Older setups may retain an `AGENT_PROVISIONING` repository Variable. The current Action ignores it; it can be removed during normal configuration cleanup. The setup assistant no longer offers that choice.
 

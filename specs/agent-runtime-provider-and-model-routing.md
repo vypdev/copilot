@@ -407,6 +407,38 @@ when the provider changes its installation contract. The
 authenticated `codex exec` smoke. Repository Actions must still prove the same
 tuple with their own credential. An installed operator-owned CLI is never silently
 replaced; its version and model smoke remain an explicit operator responsibility.
+The PR #403 run on `apple-intel-runner-1` admitted an installed `0.149.1` CLI
+and then recorded repeated process exit 1 before Bugbot completed a partition.
+The older-version/model incompatibility is plausible from the `0.153.4`
+observation, but the current log discards the CLI diagnostic and does not prove
+the cause. Runtime failure observations MUST classify only bounded, recognized
+stderr patterns into a closed diagnostic code (unsupported option/configuration,
+model unavailable, authentication, transport/rate-limit, or unclassified).
+They MUST never emit raw stderr, prompts, credentials, paths, argv, output, or
+arbitrary provider text. The code is diagnostic only: it MUST NOT select a
+fallback model, replace an installed CLI, or turn a failed review green.
+Fixture tests MUST prove recognized codes, unknown text, truncation and secret
+non-disclosure. A fresh PR check must provide the actual classified code before
+the `0.149.1` failure is attributed to a specific cause.
+
+For a default provider command that is already present, the Action MAY use a
+newer current official stable release when its bounded, credential-free
+metadata check proves that release is newer than the installed version. Codex
+uses its official stable release channel, OpenCode uses its official GitHub
+latest-release metadata, and Cursor uses
+the version embedded in its official platform installer script. An update is
+installed into a private job directory and placed first on that job's PATH;
+the runner's executable, user files and persistent PATH MUST NOT be changed.
+An explicitly selected executable is always used as selected. Unavailable,
+malformed or incomparable update metadata leaves the existing CLI in use;
+it never selects an arbitrary version or a second provider. Installer failure
+after a proven update MUST fail before agent execution. An agent task that has
+already started MUST NOT be automatically repeated with a different CLI. The
+official installer result MUST pass the same version and executable checks and
+be newer than the existing CLI before it is admitted. Fixture tests cover
+older/equal/newer/unparseable versions, metadata outage, explicit executable,
+private PATH overlay and cleanup. This is update detection, not exact version
+pinning.
 
 ## 14. Testing strategy and numeric budget
 

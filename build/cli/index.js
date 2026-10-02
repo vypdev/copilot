@@ -73366,6 +73366,7 @@ function failureObservation(request, error, phase, startedAt) {
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
         exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
+        exitDiagnostic: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitDiagnostic : undefined,
     };
 }
 function semanticCodeForFailure(category) {
@@ -73399,11 +73400,12 @@ function observeSafely(observer, observation) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliError = void 0;
 class AgentCliError extends Error {
-    constructor(message, category, retryable = false, exitCode) {
+    constructor(message, category, retryable = false, exitCode, exitDiagnostic) {
         super(message);
         this.category = category;
         this.retryable = retryable;
         this.exitCode = exitCode;
+        this.exitDiagnostic = exitDiagnostic;
         this.name = 'AgentCliError';
     }
 }
@@ -73428,6 +73430,7 @@ const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_cli_exit_diagnostic_1 = __nccwpck_require__(86654);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
 const MAX_STDERR_BYTES = 8 * 1024;
@@ -73485,6 +73488,7 @@ function runAgentCli(plan, prompt, signal) {
 function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
     const stdoutChunks = [];
     let stderrBytes = 0;
+    const stderrChunks = [];
     let outputBytes = 0;
     let settled = false;
     let terminationError;
@@ -73545,7 +73549,11 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
+        if (stderrBytes < MAX_STDERR_BYTES) {
+            const retained = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+            stderrChunks.push(retained);
+            stderrBytes += retained.byteLength;
+        }
     };
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
@@ -73556,7 +73564,10 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined));
+            const exitDiagnostic = stderrBytes > 0
+                ? (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'))
+                : undefined;
+            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
         }
         try {
@@ -73707,6 +73718,36 @@ function signalProcessTree(child, signal) {
         }
         catch { /* Already exited. */ }
     }
+}
+
+
+/***/ }),
+
+/***/ 86654:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
+function classifyAgentCliExitDiagnostic(stderr) {
+    if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
+        return 'reported-authentication';
+    }
+    if (/\b(?:unknown model|unsupported model|model[^\r\n]{0,100}(?:not found|not available|unsupported|does not exist|invalid))\b/iu.test(stderr)) {
+        return 'reported-model-unavailable';
+    }
+    if (/\b(?:unexpected argument|unknown option|unrecognized option|unsupported option|invalid option)\b/iu.test(stderr)) {
+        return 'reported-unsupported-option';
+    }
+    if (/\b(?:unknown (?:config(?:uration)? )?(?:field|key)|unrecognized config(?:uration)?|unsupported config(?:uration)?|error parsing configuration)\b/iu.test(stderr)) {
+        return 'reported-unsupported-configuration';
+    }
+    if (/\b(?:connection (?:refused|failed|reset)|network error|timed out|rate limit|too many requests|http 429|503 service unavailable)\b/iu.test(stderr)) {
+        return 'reported-transport-or-rate-limit';
+    }
+    return 'unclassified';
 }
 
 
@@ -86804,7 +86845,8 @@ class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
         if (observation.state === 'failed') {
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
-            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${exit}).`, false, { agentExecution: observation });
+            const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${exit}${diagnostic}).`, false, { agentExecution: observation });
             return;
         }
         if (observation.state === 'completed') {

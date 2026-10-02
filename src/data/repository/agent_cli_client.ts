@@ -80,6 +80,7 @@ function failureObservation(
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof AgentCliError && error.retryable,
         exitCode: error instanceof AgentCliError ? error.exitCode : undefined,
+        exitDiagnostic: error instanceof AgentCliError ? error.exitDiagnostic : undefined,
     };
 }
 
