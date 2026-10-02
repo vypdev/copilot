@@ -160,7 +160,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    });
+    }, 15_000);
 
     windowsIt('reports fake Codex readiness through the standalone operator verifier', () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'

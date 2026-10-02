@@ -18,7 +18,7 @@ function fakeInstallation(provider: AgentProvider) {
 function system(installation: ReturnType<typeof fakeInstallation>, version = 'provider-cli future-version') {
     return {
         executableExists: jest.fn(agentExecutableExists),
-        readVersion: jest.fn(() => version),
+        readVersion: jest.fn((_executable: string, _provider: AgentProvider, _environment: NodeJS.ProcessEnv) => version),
         installOfficial: jest.fn(() => installation),
     } satisfies AgentCliProvisioningSystem;
 }
@@ -56,7 +56,9 @@ describe('AgentCliProvisioner', () => {
             provisioner.provision('opencode', environment);
             expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
             expect(adapter.installOfficial).toHaveBeenCalledWith('opencode');
-            expect(adapter.readVersion).toHaveBeenCalledWith(installation.executable, 'opencode', environment);
+            expect(adapter.readVersion).toHaveBeenCalledTimes(1);
+            expect(adapter.readVersion.mock.calls[0][0].toLowerCase()).toBe(installation.executable.toLowerCase());
+            expect(adapter.readVersion.mock.calls[0].slice(1)).toEqual(['opencode', environment]);
             expect(environment.PATH).toContain(installation.directory);
         } finally {
             rmSync(installation.root, { recursive: true, force: true });

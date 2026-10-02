@@ -368,6 +368,12 @@ The installed workflows use those two labels. A normal PR or commit run
 assigned to Windows MUST complete the isolated runtime path, and a manually
 authorized service fixture MUST verify private artifacts, descendant
 cancellation, and cleanup before that platform gate closes.
+The full hosted Windows coverage suite MUST use a private ACL-validated Node
+copy when a fixture exercises an npm package launcher; the ambient job Node
+can legitimately fail the product's trust policy. Assertions comparing Windows
+resolved executable paths MUST ignore case only, and fixture Jest deadlines
+MUST account for native ACL setup while keeping the admitted child timeout
+bounded. A passing isolated subset alone is insufficient for this gate.
 Runner owners must verify native provider executables and their ACLs. The
 GitHub-hosted fixture is historical evidence of an unsafe ambient Node and
 does not establish service-runner safety. A new isolated installer/agent

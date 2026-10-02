@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentExecutionObserverPort } from '../../../application/ports/agent_execution_observation_ports';
@@ -91,9 +91,16 @@ describe('AgentCliClient admitted process execution', () => {
         const launcher = join(packageDirectory, 'codex.js');
         const source = 'process.stdout.write(process.argv[3])';
         writeFileSync(launcher, source);
+        const executable = process.platform === 'win32' ? join(packageDirectory, 'node.exe') : process.execPath;
+        if (process.platform === 'win32') {
+            copyFileSync(process.execPath, executable);
+            makeWindowsRuntimePathPrivate(executable, false);
+            makeWindowsRuntimePathPrivate(launcher, false);
+        }
         const canonicalLauncher = realpathSync(launcher);
         try {
             const executionPlan = plan('unused', {
+                executable: process.platform === 'win32' ? realpathSync(executable) : process.execPath,
                 launcherArgv: [canonicalLauncher],
                 launcherSha256: createHash('sha256').update(source).digest('hex'),
                 argv: ['exec'],
@@ -104,6 +111,7 @@ describe('AgentCliClient admitted process execution', () => {
             })).resolves.toBe('literal & $(ignored) "quoted"');
 
             const changedPlan = plan('unused', {
+                executable: process.platform === 'win32' ? realpathSync(executable) : process.execPath,
                 launcherArgv: [canonicalLauncher],
                 launcherSha256: createHash('sha256').update(source).digest('hex'),
             });
