@@ -54,8 +54,17 @@ function resolveCommand(check) {
   throw new Error('Unsupported npm agent bin.');
 }
 
-function assertCommandTrust(command) {
-  for (const path of new Set([command.path, command.executable, ...command.prefix])) {
+function assertCommandTrust(command, reportTarget = () => undefined) {
+  const targets = [
+    ['selected', command.path],
+    ['interpreter', command.executable],
+    ...command.prefix.map((path) => ['launcher', path]),
+  ];
+  const checked = new Set();
+  for (const [role, path] of targets) {
+    if (checked.has(path)) continue;
+    checked.add(path);
+    reportTarget(role);
     const stats = statSync(path);
     if (!stats.isFile()) throw new Error('Agent executable must be a regular file.');
     accessSync(path, constants.X_OK);
@@ -68,8 +77,7 @@ function assertCommandTrust(command) {
 }
 
 function invokeCommand(command, args, options, reportPhase = () => undefined) {
-  reportPhase('trust');
-  assertCommandTrust(command);
+  assertCommandTrust(command, (role) => reportPhase(`trust-${role}`));
   reportPhase('execute');
   return execFileSync(command.executable, [...command.prefix, ...args], options);
 }
@@ -150,6 +158,18 @@ function credentialNames(check) {
   return providerVariable ? [providerVariable, 'OPENCODE_API_KEY'] : [];
 }
 
+function safeFailureCode(error) {
+  if (Number.isInteger(error?.status) && error.status >= 0 && error.status <= 255) return error.status;
+  if (['EACCES', 'ENOENT', 'EPERM', 'ETIMEDOUT'].includes(error?.code)) return error.code.toLowerCase();
+  const message = typeof error?.message === 'string' ? error.message : '';
+  if (message.startsWith('Agent executable is writable by another principal')) return 'acl-writable';
+  if (message.startsWith('Unsafe executable ACL owner or DACL')) return 'acl-owner';
+  if (message.startsWith('Unrecognized executable ACL')) return 'acl-format';
+  if (message.startsWith('Could not identify the Windows runtime owner')) return 'identity';
+  if (message.startsWith('Agent executable owner or permissions are unsafe')) return 'unsafe-permissions';
+  return 'unavailable';
+}
+
 const selectedProvider = (process.env.AGENT_PROVIDER || 'codex').toLowerCase();
 const verifyAll = process.env.VERIFY_ALL_AGENT_CLIS === 'true';
 const checks = verifyAll ? Object.values(checksByProvider) : [checksByProvider[selectedProvider]];
@@ -183,8 +203,7 @@ for (const check of checks) {
     if (credentialState === 'credential-reference-missing' && authIsRequired()) failed = true;
   } catch (error) {
     failed = true;
-    const code = Number.isInteger(error?.status) && error.status >= 0 && error.status <= 255
-      ? error.status : 'unavailable';
+    const code = safeFailureCode(error);
     console.log(`${check.name}: NOT_READY (${phase}/${code}); install the official CLI and configure credentials by environment reference`);
   }
 }

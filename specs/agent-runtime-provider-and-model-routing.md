@@ -173,6 +173,9 @@ stdout on failure so `NOT_READY` is distinguishable from a test harness timeout.
 The verifier's `NOT_READY` result MUST distinguish executable resolution,
 file trust, and headless help/version execution using fixed phase labels and
 bounded status codes, without exposing paths, raw stderr, arguments, or secrets.
+For a file-trust failure, the phase MUST identify whether the selected shim,
+resolved interpreter, or package launcher failed the check, again without
+printing its path or ACL contents.
 The timeout fixture's Jest budget MUST include native ACL setup and teardown;
 the admitted child still uses its own short execution deadline.
 
