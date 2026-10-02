@@ -269,6 +269,13 @@ fixture MUST begin with an explicit Everyone grant and prove it is removed.
 This is a runtime prerequisite for the self-hosted fixture gate; real agent
 execution remains a separate open review.
 
+The [2026-10-02 self-hosted Windows fixture](https://github.com/vypdev/copilot/actions/runs/36972025378)
+passed 20/20 fake-agent tests on `windows-intel-runner-2`, including removal
+of an explicit Everyone grant, literal prompt arguments, timeout, descendant
+cancellation, and cleanup. This is direct service-runner fixture evidence,
+not a real agent request. The workflow remained red on unrelated canonical
+Unix bundle drift until the generated files are committed and rerun.
+
 ### 6.4 Codex policy
 
 Managed argv includes `exec`, `--strict-config`, `--ignore-user-config`,

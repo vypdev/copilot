@@ -1828,6 +1828,17 @@ suite. Such skips leave file-symlink protection on that runner unverified and
 must remain visible in CI and reviewer evidence. Hosted Windows still runs
 those cases where its runner permits symlinks.
 
+The [self-hosted fixture attempt on `windows-intel-runner-2`](https://github.com/vypdev/copilot/actions/runs/36972025378)
+passed Git Bash, build, typecheck, 69 local-session tests, 20 fake-agent
+runtime tests, and isolated npm package checks. Three file-symlink tests were
+reported as skipped because the service account lacks symlink creation rights;
+the directory-junction escape test passed. This verifies those tested paths
+on that runner, without proving real agent execution or file-symlink defense
+on the service host. The overall workflow was red because the canonical Unix
+bundles changed with the ACL implementation but were omitted from the commit;
+the generated artifacts must be committed and the full matrix rerun before
+counting its four-job check as green.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup

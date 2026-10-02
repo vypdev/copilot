@@ -83788,7 +83788,7 @@ function currentUserIdentity() {
         localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, (0, node_os_1.hostname)()),
     };
 }
-function withSavedAcl(path, use) {
+function savedDacl(path) {
     const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-acl-inspect-'));
     const snapshot = (0, node_path_1.join)(directory, 'acl.txt');
     try {
@@ -83798,14 +83798,11 @@ function withSavedAcl(path, use) {
         const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
         if (!lines[0] || !lines[1])
             throw new Error('Could not read the Windows runtime ACL.');
-        return use(snapshot, lines);
+        return lines[1].trim();
     }
     finally {
         (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
     }
-}
-function savedDacl(path) {
-    return withSavedAcl(path, (_snapshot, lines) => lines[1].trim());
 }
 function assertOwnerOnlyDacl(sddl, identity, directory) {
     const isCurrentUser = (principal) => matchesWindowsRuntimePrincipal(principal, identity);
@@ -83834,11 +83831,11 @@ function makeWindowsRuntimePathPrivate(path, directory) {
         return;
     const { sid } = currentUserIdentity();
     runIcacls([path, '/setowner', `*${sid}`]);
-    withSavedAcl(path, (snapshot, lines) => {
-        lines[1] = `D:P(A;${directory ? 'OICI' : ''};FA;;;${sid})`;
-        (0, node_fs_1.writeFileSync)(snapshot, `\uFEFF${lines.join('\r\n')}`, 'utf16le');
-        runIcacls([(0, node_path_1.dirname)(path), '/restore', snapshot]);
-    });
+    // The owner can replace its DACL without the restore privilege required by
+    // icacls /restore on an unprivileged Windows runner service account.
+    runIcacls([path, '/reset']);
+    runIcacls([path, '/inheritance:r']);
+    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
     verifyWindowsRuntimePathPrivate(path, directory);
 }
 function verifyWindowsRuntimePathPrivate(path, directory) {
