@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
+import { resolveAgentExecutablePath } from '../agent_executable_invocation';
 import {
     makeWindowsRuntimePathPrivate,
     matchesWindowsRuntimePrincipal,
@@ -50,6 +51,10 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 describe('isolated Windows agent runtime', () => {
     windowsIt('preflights the Action Node executable with an owner-aware ACL', () => {
         verifyWindowsAgentExecutableAcl(process.execPath);
+    });
+
+    windowsIt('preflights the setup-node job executable with an owner-aware ACL', () => {
+        verifyWindowsAgentExecutableAcl(resolveAgentExecutablePath('node', process.env, 'win32'));
     });
 
     it('accepts the SDDL local administrator alias only for the verified local administrator', () => {
