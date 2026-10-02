@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentExecutionObserverPort } from '../../../application/ports/agent_execution_observation_ports';
@@ -7,18 +8,24 @@ import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { AgentCliClient } from '../agent_cli_client';
 import { AgentCliError } from '../agent_cli_contracts';
 import { createAgentProcessLifecycle, decodeAgentCliOutput } from '../agent_cli_execution';
+import { makeWindowsRuntimePathPrivate } from '../../../infrastructure/agents/windows_runtime_acl';
 
 function plan(script: string, overrides: Partial<AgentExecutionPlan> = {}): AgentExecutionPlan {
     const runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
+    makeWindowsRuntimePathPrivate(runtimeDirectory, true);
     const artifactPath = join(runtimeDirectory, 'gitconfig');
     writeFileSync(artifactPath, '', { mode: 0o600 });
+    makeWindowsRuntimePathPrivate(artifactPath, false);
     return {
         provider: 'codex', capability: 'findings', executable: process.execPath,
         argv: ['-e', script], promptMode: 'final-argv', outputProtocol: 'plain-text', workspace: process.cwd(),
         workspaceMode: 'read-only', childNetwork: 'deny', approval: 'never',
         sessionPersistence: false, output: 'text', timeoutMs: 5_000,
         maxPromptBytes: 512 * 1024, maxOutputBytes: 4 * 1024 * 1024,
-        environment: { PATH: process.env.PATH || '' }, runtimeDirectory,
+        environment: {
+            PATH: process.env.PATH || '',
+            ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot || 'C:\\Windows' } : {}),
+        }, runtimeDirectory,
         artifacts: [{ path: artifactPath, sha256: createHash('sha256').update('').digest('hex'), purpose: 'git-config' }],
         runtimeContract: { provider: 'codex', version: 'codex-cli 0.156.1', manifestRevision: 'test' },
         ...overrides,
@@ -36,6 +43,52 @@ describe('AgentCliClient admitted process execution', () => {
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
             prompt: '$(touch should-not-run); literal', timeoutMs: 5_000,
         })).resolves.toBe('$(touch should-not-run); literal');
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+    });
+
+    it('executes a verified Node package launcher and rejects a changed launcher', async () => {
+        const packageDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-package-'));
+        const launcher = join(packageDirectory, 'codex.js');
+        const source = 'process.stdout.write(process.argv[3])';
+        writeFileSync(launcher, source);
+        const canonicalLauncher = realpathSync(launcher);
+        try {
+            const executionPlan = plan('unused', {
+                launcherArgv: [canonicalLauncher],
+                launcherSha256: createHash('sha256').update(source).digest('hex'),
+                argv: ['exec'],
+            });
+            await expect(client(executionPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'literal & $(ignored) "quoted"', timeoutMs: 5_000,
+            })).resolves.toBe('literal & $(ignored) "quoted"');
+
+            const changedPlan = plan('unused', {
+                launcherArgv: [canonicalLauncher],
+                launcherSha256: createHash('sha256').update(source).digest('hex'),
+            });
+            writeFileSync(launcher, 'process.stdout.write("tampered")');
+            await expect(client(changedPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'secret', timeoutMs: 5_000,
+            })).rejects.toMatchObject({ category: 'configuration' });
+            expect(existsSync(changedPlan.runtimeDirectory)).toBe(false);
+        } finally {
+            rmSync(packageDirectory, { recursive: true, force: true });
+        }
+    });
+
+    it.each([
+        { name: 'extra launcher arguments', launcherArgv: ['/fixture/a.js', '/fixture/b.js'], launcherSha256: 'hash' },
+        { name: 'relative launcher', launcherArgv: ['a.js'], launcherSha256: 'hash' },
+        { name: 'missing launcher hash', launcherArgv: ['/fixture/a.js'] },
+        { name: 'hash without a launcher', launcherSha256: 'hash' },
+    ])('rejects $name before a process starts', async (override) => {
+        const executionPlan = plan('process.stdout.write("unexpected")', override);
+        await expect(client(executionPlan).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'secret', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'configuration' });
         expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
     });
 
@@ -171,12 +224,13 @@ describe('AgentCliClient admitted process execution', () => {
     });
 
     it('rejects process start failures without exposing raw configuration', async () => {
-        await expect(client(plan('unused', { executable: '/missing/copilot-agent' })).execute({
+        await expect(client(plan('unused', { executable: process.platform === 'win32'
+            ? 'C:\\missing\\copilot-agent.exe' : '/missing/copilot-agent' })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'process' });
         await expect(client(plan('unused', { executable: null as never })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
-        })).rejects.toMatchObject({ category: 'process' });
+        })).rejects.toMatchObject({ category: process.platform === 'win32' ? 'configuration' : 'process' });
     });
 
     it('rejects a prompt beyond the admitted byte limit before spawn', async () => {
@@ -218,12 +272,20 @@ describe('AgentCliClient admitted process execution', () => {
             resolved.appendStdout(Buffer.from('READY'));
             resolved.onClose(0);
             resolved.onClose(0);
+            resolved.abort();
             expect(resolve).toHaveBeenCalledTimes(1);
+
+            const exitedChild = { exitCode: 0, pid: undefined, kill: jest.fn() } as never;
+            const exited = createAgentProcessLifecycle(exitedChild, executionPlan, undefined, resolve, reject);
+            exited.abort();
+            jest.advanceTimersByTime(5_000);
+            expect((exitedChild as { kill: jest.Mock }).kill).toHaveBeenCalledTimes(1);
+            exited.onClose(0);
 
             const stdinFailure = createAgentProcessLifecycle(child, executionPlan, undefined, resolve, reject);
             stdinFailure.onStdinError();
             stdinFailure.onClose(null);
-            expect(reject).toHaveBeenCalledTimes(2);
+            expect(reject).toHaveBeenCalledTimes(3);
         } finally {
             rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
             jest.useRealTimers();
@@ -265,6 +327,23 @@ describe('AgentCliClient admitted process execution', () => {
         }
     });
 
+    it('rejects a runtime path that has the managed name but is a file', async () => {
+        const file = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
+        rmSync(file, { recursive: true, force: true });
+        writeFileSync(file, 'fixture');
+        const admittedPlan = plan('process.stdout.write("unexpected")');
+        try {
+            await expect(client({ ...admittedPlan, runtimeDirectory: file }).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'p', timeoutMs: 5_000,
+            })).rejects.toMatchObject({ category: 'configuration' });
+            expect(existsSync(file)).toBe(true);
+        } finally {
+            rmSync(file, { force: true });
+            rmSync(admittedPlan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     it('rejects escaped, non-file, and permission-broadened artifacts', async () => {
         const outsideDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-outside-artifact-'));
         const outsidePath = join(outsideDirectory, 'artifact');
@@ -286,7 +365,11 @@ describe('AgentCliClient admitted process execution', () => {
             })).rejects.toMatchObject({ category: 'configuration' });
 
             const permissionPlan = plan('process.stdout.write("unexpected")');
-            chmodSync(permissionPlan.artifacts[0].path, 0o644);
+            if (process.platform === 'win32') {
+                execFileSync('icacls.exe', [permissionPlan.artifacts[0].path, '/grant', '*S-1-1-0:R'], { stdio: 'ignore' });
+            } else {
+                chmodSync(permissionPlan.artifacts[0].path, 0o644);
+            }
             await expect(client(permissionPlan).execute({
                 configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
             })).rejects.toMatchObject({ category: 'configuration' });

@@ -5,6 +5,9 @@ import type { AgentProvider } from '../../../domain/agent';
 import { AgentCliError } from '../../../data/repository/agent_cli_contracts';
 import { AgentExecutionPlanner, type AgentExecutionPlanningSystem } from '../agent_execution_planner';
 import { getAgentRuntimeManifestEntry } from '../agent_runtime_manifest';
+import { verifyWindowsRuntimePathPrivate } from '../windows_runtime_acl';
+
+const unixIt = process.platform === 'win32' ? it.skip : it;
 
 function system(provider: AgentProvider, workspace = process.cwd()): AgentExecutionPlanningSystem {
     return {
@@ -15,7 +18,7 @@ function system(provider: AgentProvider, workspace = process.cwd()): AgentExecut
 }
 
 describe('AgentExecutionPlanner', () => {
-    it('uses the default system for canonical workspace, PATH, executable, and runtime identity preflight', () => {
+    unixIt('uses the default system for canonical workspace, PATH, executable, and runtime identity preflight', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-default-system-'));
         const executable = join(directory, 'codex');
         writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.156.1\\n"\n');
@@ -34,7 +37,7 @@ describe('AgentExecutionPlanner', () => {
         }
     });
 
-    it('supports an exact absolute executable and rejects missing PATH candidates', () => {
+    unixIt('supports an exact absolute executable and rejects missing PATH candidates', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-absolute-system-'));
         const executable = join(directory, 'codex');
         writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.156.1\\n"\n');
@@ -78,7 +81,11 @@ describe('AgentExecutionPlanner', () => {
             expect(plan.environment.GIT_TERMINAL_PROMPT).toBe('0');
             expect(plan.artifacts.length).toBeGreaterThan(0);
             for (const artifact of plan.artifacts) {
-                expect(statSync(artifact.path).mode & 0o077).toBe(0);
+                if (process.platform === 'win32') {
+                    expect(() => verifyWindowsRuntimePathPrivate(artifact.path, false)).not.toThrow();
+                } else {
+                    expect(statSync(artifact.path).mode & 0o077).toBe(0);
+                }
                 expect(readFileSync(artifact.path)).toBeDefined();
             }
         } finally {
@@ -153,10 +160,13 @@ describe('AgentExecutionPlanner', () => {
         }
     });
 
-    it.each([
+    const invalidExecutables: Array<readonly [string, (path: string) => void]> = [
         ['directory', (path: string) => mkdirSync(path)],
-        ['writable file', (path: string) => { writeFileSync(path, '#!/bin/sh\n'); chmodSync(path, 0o777); }],
-    ] as const)('rejects an executable resolved to a %s', (_name, createCandidate) => {
+        ...(process.platform === 'win32' ? [] : [
+            ['writable file', (path: string) => { writeFileSync(path, '#!/bin/sh\n'); chmodSync(path, 0o777); }],
+        ] as Array<readonly [string, (path: string) => void]>),
+    ];
+    it.each(invalidExecutables)('rejects an executable resolved to a %s', (_name, createCandidate) => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-invalid-executable-'));
         const executable = join(directory, 'codex');
         createCandidate(executable);

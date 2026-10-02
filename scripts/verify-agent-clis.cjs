@@ -1,15 +1,51 @@
 #!/usr/bin/env node
 /* Verify provider CLIs without printing credentials or executing agent work. */
 const { execFileSync } = require('node:child_process');
-const { existsSync, readFileSync } = require('node:fs');
+const { existsSync, readFileSync, realpathSync, statSync } = require('node:fs');
 const { homedir } = require('node:os');
-const { join } = require('node:path');
+const { basename, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } = require('node:path');
 
 const checksByProvider = {
-  opencode: { name: 'opencode', command: 'opencode', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
-  codex: { name: 'codex', command: 'codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY'], localSession: true },
+  opencode: { name: 'opencode', command: 'opencode', package: 'opencode-ai', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
+  codex: { name: 'codex', command: 'codex', package: '@openai/codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY'], localSession: true },
   cursor: { name: 'cursor', command: 'agent', args: ['--help'], credential: ['CURSOR_API_KEY'] },
 };
+
+function resolveCommand(check) {
+  if (process.platform !== 'win32') {
+    const path = execFileSync('which', [check.command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return { path, executable: path, prefix: [] };
+  }
+  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+  const where = join(systemRoot, 'System32', 'where.exe');
+  const path = execFileSync(where, [check.command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    .split(/\r?\n/u).map(line => line.trim()).filter(Boolean)[0];
+  if (!path) throw new Error('Agent executable not found.');
+  if (/\.bat$/iu.test(path)) throw new Error('Batch agent wrappers are unsupported.');
+  if (!/\.cmd$/iu.test(path)) return { path, executable: path, prefix: [] };
+  if (!check.package || basename(path).toLowerCase() !== `${check.command}.cmd`) {
+    throw new Error('Unrecognized npm agent shim.');
+  }
+  const packageRoot = realpathSync(join(dirname(path), 'node_modules', ...check.package.split('/')));
+  const metadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  if (metadata.name !== check.package) throw new Error('Mismatched npm agent package.');
+  const bin = typeof metadata.bin === 'string' ? metadata.bin : metadata.bin?.[check.command];
+  if (typeof bin !== 'string' || !bin || isAbsolute(bin) || win32.isAbsolute(bin)) {
+    throw new Error('Unsafe npm agent bin.');
+  }
+  const target = realpathSync(resolve(packageRoot, bin));
+  const relation = relative(packageRoot, target);
+  if (!relation || relation === '..' || relation.startsWith(`..${sep}`) || isAbsolute(relation) || !statSync(target).isFile()) {
+    throw new Error('Npm agent bin escaped its package.');
+  }
+  if (extname(target).toLowerCase() === '.js') return { path, executable: process.execPath, prefix: [target] };
+  if (extname(target).toLowerCase() === '.exe') return { path, executable: target, prefix: [] };
+  throw new Error('Unsupported npm agent bin.');
+}
+
+function invokeCommand(command, args, options) {
+  return execFileSync(command.executable, [...command.prefix, ...args], options);
+}
 
 function hasLocalCodexSession() {
   const authPath = join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'auth.json');
@@ -46,7 +82,7 @@ function hasLocalSession(check) {
   if (check.name === 'codex') {
     if (hasLocalCodexSession()) return true;
     try {
-      execFileSync(check.command, ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
+      invokeCommand(resolveCommand(check), ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
       return true;
     } catch {
       return false;
@@ -98,9 +134,9 @@ if (!checks[0]) {
 let failed = false;
 for (const check of checks) {
   try {
-    const output = execFileSync('which', [check.command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    execFileSync(check.command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
-    const version = execFileSync(check.command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 })
+    const command = resolveCommand(check);
+    invokeCommand(command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
+    const version = invokeCommand(command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 })
       .trim()
       .replace(/\s+/g, ' ')
       .slice(0, 200);
@@ -112,7 +148,7 @@ for (const check of checks) {
         : credentialNamesForCheck.some((name) => Boolean(process.env[name]))
         ? 'credential-reference-present'
         : 'credential-reference-missing';
-    console.log(`${check.name}: available (${output}); version: ${version || 'unknown'}; headless-help: pass; ${credentialState}`);
+    console.log(`${check.name}: available (${command.path}); version: ${version || 'unknown'}; headless-help: pass; ${credentialState}`);
     if (credentialState === 'credential-reference-missing' && authIsRequired()) failed = true;
   } catch (error) {
     failed = true;

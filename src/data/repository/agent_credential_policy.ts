@@ -141,6 +141,12 @@ const SAFE_AGENT_RUNTIME_VARIABLES = [
     'XDG_CACHE_HOME',
     'OPENCODE_DATA_DIR',
     'OPENCODE_AUTH_FILE',
+    'SystemRoot',
+    'WINDIR',
+    'USERPROFILE',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'PATHEXT',
 ] as const;
 
 export function selectSafeAgentRuntimeEnvironment(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

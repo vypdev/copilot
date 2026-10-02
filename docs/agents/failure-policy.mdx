@@ -21,8 +21,11 @@ The Action fails closed. It MUST stop rather than silently selecting another run
 | Executable owner/permissions invalid | Preflight | Stop before agent request |
 | Workspace is not the canonical repository root | Preflight | Stop before agent request |
 | Managed artifact hash changes | Preflight | Stop before agent request |
+| Windows npm shim or bin cannot be resolved safely | Preflight | Stop before agent request; do not invoke a command shell |
+| Managed Windows ACL is not owner-only | Preflight | Stop before agent request; do not trust process output |
 | Ambient provider configuration exists | Preflight | Stop before agent request |
 | CLI timeout | Execution | Stop; do not switch provider |
+| Windows process-tree termination fails | Execution | Fail the capability; inspect runner descendants and cleanup before retry |
 | Non-zero CLI exit | Execution | Stop; preserve sanitized diagnostics only |
 | Invalid agent response | Parsing | Stop; do not publish unsafe findings |
 | Missing or mismatched `outputLocale` | Parsing | Stop before product publication or state mutation; retain existing state |

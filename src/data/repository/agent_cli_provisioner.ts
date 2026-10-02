@@ -1,7 +1,9 @@
-import { execFileSync } from 'node:child_process';
-import { accessSync, constants } from 'node:fs';
-import { delimiter, isAbsolute, join } from 'node:path';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
+import {
+    installAgentNpmPackage,
+    readAgentExecutableVersion,
+    resolveAgentExecutablePath,
+} from '../../infrastructure/agents/agent_executable_invocation';
 import {
     assertInstalledAgentRuntimeVersion,
     getAgentRuntimeManifestEntry,
@@ -17,50 +19,28 @@ export type AgentCliProvisioningEnvironment = NodeJS.ProcessEnv;
 export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'executable'>;
 
 export function agentExecutableExists(executable: string, environment: NodeJS.ProcessEnv): boolean {
-    if (isAbsolute(executable) || executable.includes('/')) {
-        try {
-            accessSync(executable, constants.X_OK);
-            return true;
-        } catch {
-            return false;
-        }
+    try {
+        resolveAgentExecutablePath(executable, environment);
+        return true;
+    } catch {
+        return false;
     }
-
-    const pathEntries = (environment.PATH || '').split(delimiter).filter(Boolean);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    return pathEntries.some((directory) => extensions.some((extension) => {
-        try {
-            accessSync(join(directory, `${executable}${extension}`), constants.X_OK);
-            return true;
-        } catch {
-            return false;
-        }
-    }));
 }
 
 export interface AgentCliProvisioningSystem {
     executableExists(executable: string, environment: AgentCliProvisioningEnvironment): boolean;
-    readVersion(executable: string, environment: AgentCliProvisioningEnvironment): string;
+    readVersion(executable: string, provider: AgentProvider, environment: AgentCliProvisioningEnvironment): string;
     installPackage(packageName: string, version: string): void;
 }
 
 function installPackageGlobally(packageName: string, version: string): void {
-    // npm uses the runner's system Node directly and avoids the Intel macOS
-    // SEA binary issue that can affect Corepack-managed pnpm installations.
-    execFileSync('npm', ['install', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+    installAgentNpmPackage(packageName, version);
 }
 
 const DEFAULT_SYSTEM: AgentCliProvisioningSystem = {
     executableExists: agentExecutableExists,
-    readVersion(executable, environment) {
-        return execFileSync(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15_000,
-        });
+    readVersion(executable, provider, environment) {
+        return readAgentExecutableVersion(executable, provider, environment);
     },
     installPackage: installPackageGlobally,
 };
@@ -117,7 +97,7 @@ export class AgentCliProvisioner {
 
     private assertInstalledVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
         try {
-            assertInstalledAgentRuntimeVersion(provider, this.system.readVersion(executable, environment));
+            assertInstalledAgentRuntimeVersion(provider, this.system.readVersion(executable, provider, environment));
         } catch (error) {
             throw Object.assign(
                 new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`),

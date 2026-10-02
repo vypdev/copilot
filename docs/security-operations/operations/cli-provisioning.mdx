@@ -46,6 +46,17 @@ npm install --global "@openai/codex@0.156.1"
 npm install --global "opencode-ai@1.18.3"
 ```
 
+On Windows, Copilot calls the system Node binary with its adjacent
+`node_modules/npm/bin/npm-cli.js` to install the same pinned package. An npm
+`.cmd` shim is resolved through the installed package's declared `bin` entry
+and launched directly as a Node script or native executable. The Action does
+not pass agent arguments or prompts through `cmd.exe`. Missing, mismatched, or
+escaped package bins stop before agent execution. Temporary runtime files use
+an owner-only Windows ACL; cancellation uses Windows process-tree termination.
+The isolated Windows fixture matrix must pass before these paths count as
+verified. A real Codex Action run and human security review remain separate
+open gates for issue [#404](https://github.com/vypdev/copilot/issues/404).
+
 Cursor automatic installation is unsupported because there is no reviewed,
 reproducible package recipe. Preinstall a compatible Cursor Agent on the
 controlled runner; do not substitute an unofficial npm package.
@@ -94,6 +105,9 @@ node scripts/verify-agent-clis.cjs
 ```
 
 The verifier never prints secret values. It checks executable availability, headless help, and sanitized credential state. A real smoke test may incur provider usage and must be explicitly authorized with an appropriate cost limit.
+On Windows, the verifier uses the same package-owned bin rule for npm `.cmd`
+shims and launches the resolved script or executable directly. A help/version
+check is read-only and does not establish that a model request will succeed.
 For the `gpt-6-luna` default, verify the *actual runner binary* reports
 `codex-cli 0.156.1` (or a separately approved compatible version) and run a
 minimal model request using the same credential as the Action. Codex CLI

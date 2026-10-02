@@ -67401,10 +67401,13 @@ const node_path_1 = __nccwpck_require__(49411);
 const node_child_process_1 = __nccwpck_require__(17718);
 const agent_credential_policy_1 = __nccwpck_require__(36529);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
-            (0, node_child_process_1.execFileSync)(executable, ['login', 'status'], {
+            const selected = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+            const invocation = (0, agent_executable_invocation_1.resolveAgentExecutableInvocation)(selected, 'codex');
+            (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
                 timeout: 15000,
@@ -67671,6 +67674,7 @@ const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
@@ -67688,16 +67692,14 @@ function runAgentCli(plan, prompt, signal) {
             reject(error instanceof agent_cli_contracts_1.AgentCliError ? error : new agent_cli_contracts_1.AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
-        let cleaned = false;
-        const cleanup = () => {
-            if (cleaned)
-                return;
-            cleaned = true;
-            cleanupRuntimeDirectory(runtimeDirectory);
-        };
+        const cleanup = () => cleanupRuntimeDirectory(runtimeDirectory);
         const child = (() => {
             try {
-                return (0, node_child_process_1.spawn)(plan.executable, plan.promptMode === 'final-argv' ? [...plan.argv, prompt] : plan.argv, {
+                return (0, node_child_process_1.spawn)(plan.executable, [
+                    ...(plan.launcherArgv || []),
+                    ...plan.argv,
+                    ...(plan.promptMode === 'final-argv' ? [prompt] : []),
+                ], {
                     cwd: plan.workspace,
                     env: plan.environment,
                     stdio: ['pipe', 'pipe', 'pipe'],
@@ -67866,15 +67868,34 @@ function verifyOwnedRuntimeDirectory(requestedPath) {
         || (0, node_path_1.dirname)(runtimeDirectory) !== expectedParent
         || !/^copilot-agent-runtime-[A-Za-z0-9_-]{6}$/u.test(name)
         || !stats.isDirectory()
-        || (stats.mode & 0o077) !== 0) {
+        || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
         throw new Error('Managed runtime directory is not an owned private execution directory.');
     }
     if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
         throw new Error('Managed runtime directory has an unexpected owner.');
     }
+    (0, windows_runtime_acl_1.verifyWindowsRuntimePathPrivate)(runtimeDirectory, true);
     return runtimeDirectory;
 }
 function verifyAdmittedPlan(plan, runtimeDirectory) {
+    if (process.platform === 'win32' && !/\.exe$/iu.test(plan.executable)) {
+        throw new Error('Windows command wrappers cannot execute an admitted agent plan.');
+    }
+    if (plan.launcherArgv?.length) {
+        if (plan.launcherArgv.length !== 1 || plan.executable !== process.execPath
+            || !(0, node_path_1.isAbsolute)(plan.launcherArgv[0]) || !plan.launcherSha256) {
+            throw new Error('Managed agent launcher is invalid.');
+        }
+        const launcher = (0, node_fs_1.realpathSync)(plan.launcherArgv[0]);
+        if (launcher !== plan.launcherArgv[0]
+            || !(0, node_fs_1.statSync)(launcher).isFile()
+            || (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(launcher)).digest('hex') !== plan.launcherSha256) {
+            throw new Error('Managed agent launcher changed after preflight.');
+        }
+    }
+    else if (plan.launcherSha256) {
+        throw new Error('Managed agent launcher hash has no launcher.');
+    }
     for (const artifact of plan.artifacts) {
         const path = (0, node_fs_1.realpathSync)(artifact.path);
         const relation = (0, node_path_1.relative)(runtimeDirectory, path);
@@ -67885,8 +67906,10 @@ function verifyAdmittedPlan(plan, runtimeDirectory) {
             throw new Error('Managed artifact escaped its runtime directory.');
         }
         const stats = (0, node_fs_1.statSync)(path);
-        if (!stats.isFile() || (stats.mode & 0o077) !== 0)
+        if (!stats.isFile() || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
             throw new Error('Managed artifact permissions changed.');
+        }
+        (0, windows_runtime_acl_1.verifyWindowsRuntimePathPrivate)(path, false);
         const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(path)).digest('hex');
         if (actual !== artifact.sha256)
             throw new Error('Managed artifact hash changed.');
@@ -67897,7 +67920,13 @@ function cleanupRuntimeDirectory(runtimeDirectory) {
 }
 function signalProcessTree(child, signal) {
     try {
-        if (process.platform !== 'win32' && child.pid) {
+        if (process.platform === 'win32' && child.pid) {
+            const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+            (0, node_child_process_1.execFileSync)((0, node_path_1.join)(systemRoot, 'System32', 'taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+                stdio: 'ignore', timeout: 5000, windowsHide: true,
+            });
+        }
+        else if (child.pid) {
             process.kill(-child.pid, signal);
         }
         else {
@@ -67906,6 +67935,10 @@ function signalProcessTree(child, signal) {
     }
     catch {
         // The process may have exited between the lifecycle check and signal.
+        try {
+            child.kill(signal);
+        }
+        catch { /* Already exited. */ }
     }
 }
 
@@ -67920,49 +67953,25 @@ function signalProcessTree(child, signal) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliProvisioner = void 0;
 exports.agentExecutableExists = agentExecutableExists;
-const node_child_process_1 = __nccwpck_require__(17718);
-const node_fs_1 = __nccwpck_require__(87561);
-const node_path_1 = __nccwpck_require__(49411);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const agent_cli_provisioning_policy_1 = __nccwpck_require__(11959);
 function agentExecutableExists(executable, environment) {
-    if ((0, node_path_1.isAbsolute)(executable) || executable.includes('/')) {
-        try {
-            (0, node_fs_1.accessSync)(executable, node_fs_1.constants.X_OK);
-            return true;
-        }
-        catch {
-            return false;
-        }
+    try {
+        (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+        return true;
     }
-    const pathEntries = (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    return pathEntries.some((directory) => extensions.some((extension) => {
-        try {
-            (0, node_fs_1.accessSync)((0, node_path_1.join)(directory, `${executable}${extension}`), node_fs_1.constants.X_OK);
-            return true;
-        }
-        catch {
-            return false;
-        }
-    }));
+    catch {
+        return false;
+    }
 }
 function installPackageGlobally(packageName, version) {
-    // npm uses the runner's system Node directly and avoids the Intel macOS
-    // SEA binary issue that can affect Corepack-managed pnpm installations.
-    (0, node_child_process_1.execFileSync)('npm', ['install', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+    (0, agent_executable_invocation_1.installAgentNpmPackage)(packageName, version);
 }
 const DEFAULT_SYSTEM = {
     executableExists: agentExecutableExists,
-    readVersion(executable, environment) {
-        return (0, node_child_process_1.execFileSync)(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15000,
-        });
+    readVersion(executable, provider, environment) {
+        return (0, agent_executable_invocation_1.readAgentExecutableVersion)(executable, provider, environment);
     },
     installPackage: installPackageGlobally,
 };
@@ -68014,7 +68023,7 @@ class AgentCliProvisioner {
     }
     assertInstalledVersion(executable, provider, environment) {
         try {
-            (0, agent_runtime_manifest_1.assertInstalledAgentRuntimeVersion)(provider, this.system.readVersion(executable, environment));
+            (0, agent_runtime_manifest_1.assertInstalledAgentRuntimeVersion)(provider, this.system.readVersion(executable, provider, environment));
         }
         catch (error) {
             throw Object.assign(new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`), { cause: error });
@@ -68246,6 +68255,12 @@ const SAFE_AGENT_RUNTIME_VARIABLES = [
     'XDG_CACHE_HOME',
     'OPENCODE_DATA_DIR',
     'OPENCODE_AUTH_FILE',
+    'SystemRoot',
+    'WINDIR',
+    'USERPROFILE',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'PATHEXT',
 ];
 function selectSafeAgentRuntimeEnvironment(environment) {
     return Object.fromEntries(SAFE_AGENT_RUNTIME_VARIABLES.flatMap((variable) => (environment[variable] === undefined ? [] : [[variable, environment[variable]]])));
@@ -78302,6 +78317,111 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
+/***/ 16608:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveAgentExecutablePath = resolveAgentExecutablePath;
+exports.resolveAgentExecutableInvocation = resolveAgentExecutableInvocation;
+exports.readAgentExecutableVersion = readAgentExecutableVersion;
+exports.installAgentNpmPackage = installAgentNpmPackage;
+exports.resolveNpmInstallInvocation = resolveNpmInstallInvocation;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+function resolveAgentExecutablePath(selected, environment, platform = process.platform) {
+    if ((0, node_path_1.isAbsolute)(selected))
+        return (0, node_fs_1.realpathSync)(selected);
+    const extensions = platform === 'win32'
+        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+        : [''];
+    for (const directory of (environment.PATH || environment.Path || '').split(node_path_1.delimiter).filter(Boolean)) {
+        for (const extension of extensions) {
+            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
+            try {
+                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
+                return (0, node_fs_1.realpathSync)(candidate);
+            }
+            catch {
+                // Continue through the trusted PATH candidates.
+            }
+        }
+    }
+    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+}
+/** Resolve npm's Windows command shim without ever passing agent argv to cmd.exe. */
+function resolveAgentExecutableInvocation(selected, provider, platform = process.platform) {
+    if (platform === 'win32' && !/\.(exe|cmd)$/iu.test(selected)) {
+        throw new Error('Windows agent executable must be a native executable or a reviewed npm command shim.');
+    }
+    if (platform !== 'win32' || !/\.cmd$/iu.test(selected)) {
+        return { executable: selected, prefixArgs: [] };
+    }
+    const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider);
+    const installation = manifest.installation;
+    if (!installation || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
+        throw new Error('Windows agent command shim does not match a reviewed npm runtime.');
+    }
+    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...installation.package.split('/')));
+    const packageJson = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(packageRoot, 'package.json'), 'utf8'));
+    if (packageJson.name !== installation.package) {
+        throw new Error('Windows agent command shim resolves to an unexpected package.');
+    }
+    const bin = typeof packageJson.bin === 'string'
+        ? packageJson.bin
+        : packageJson.bin && typeof packageJson.bin === 'object'
+            ? packageJson.bin[manifest.executable]
+            : undefined;
+    if (typeof bin !== 'string' || !bin || (0, node_path_1.isAbsolute)(bin) || node_path_1.win32.isAbsolute(bin)) {
+        throw new Error('Windows agent package has no safe executable bin.');
+    }
+    const target = (0, node_fs_1.realpathSync)((0, node_path_1.resolve)(packageRoot, bin));
+    const relation = (0, node_path_1.relative)(packageRoot, target);
+    if (!relation || relation === '..' || relation.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(relation)) {
+        throw new Error('Windows agent package bin escaped its package directory.');
+    }
+    if (!(0, node_fs_1.statSync)(target).isFile())
+        throw new Error('Windows agent package bin is not a file.');
+    switch ((0, node_path_1.extname)(target).toLowerCase()) {
+        case '.js': return { executable: process.execPath, prefixArgs: [target] };
+        case '.exe': return { executable: target, prefixArgs: [] };
+        default: throw new Error('Windows agent package bin is not a supported direct executable.');
+    }
+}
+function readAgentExecutableVersion(selected, provider, environment) {
+    const path = resolveAgentExecutablePath(selected, environment);
+    const invocation = resolveAgentExecutableInvocation(path, provider);
+    return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
+        env: environment,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 15000,
+    });
+}
+function installAgentNpmPackage(packageName, version) {
+    const invocation = resolveNpmInstallInvocation(packageName, version);
+    if (process.platform === 'win32' && !(0, node_fs_1.existsSync)(invocation.prefixArgs[0])) {
+        throw new Error('The runner Node installation has no npm CLI script.');
+    }
+    (0, node_child_process_1.execFileSync)(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
+}
+function resolveNpmInstallInvocation(packageName, version, platform = process.platform, nodeExecutable = process.execPath) {
+    const args = ['install', '--global', `${packageName}@${version}`];
+    if (platform === 'win32') {
+        return {
+            executable: nodeExecutable,
+            prefixArgs: [(0, node_path_1.join)((0, node_path_1.dirname)(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...args],
+        };
+    }
+    return { executable: 'npm', prefixArgs: args };
+}
+
+
+/***/ }),
+
 /***/ 11800:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -78320,16 +78440,18 @@ const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_executable_policy_1 = __nccwpck_require__(12570);
 const agent_authentication_1 = __nccwpck_require__(51371);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const DEFAULT_SYSTEM = {
-    resolveExecutable: resolveExecutablePath,
-    readVersion(executable, environment) {
-        return (0, node_child_process_1.execFileSync)(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15000,
-        });
+    resolveExecutable(executable, environment) {
+        try {
+            return (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${executable}" was not found on PATH.`, 'configuration');
+        }
     },
+    readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = (0, node_fs_1.realpathSync)(cwd);
         const root = (0, node_fs_1.realpathSync)((0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
@@ -78363,9 +78485,14 @@ class AgentExecutionPlanner {
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
             validateExecutableFile(executable);
+            const invocation = (0, agent_executable_invocation_1.resolveAgentExecutableInvocation)(executable, request.configuration.provider);
+            validateExecutableFile(invocation.executable);
+            for (const argument of invocation.prefixArgs)
+                validateExecutableFile(argument);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
-            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(runtimeDirectory, true);
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
                 configuration: request.configuration,
@@ -78388,7 +78515,11 @@ class AgentExecutionPlanner {
             return {
                 provider: request.configuration.provider,
                 capability: request.capability,
-                executable,
+                executable: invocation.executable,
+                launcherArgv: invocation.prefixArgs,
+                ...(invocation.prefixArgs.length > 0 ? {
+                    launcherSha256: (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(invocation.prefixArgs[0])).digest('hex'),
+                } : {}),
                 argv: providerPolicy.argv,
                 promptMode: providerPolicy.promptMode,
                 outputProtocol: providerPolicy.outputProtocol,
@@ -78438,26 +78569,6 @@ function assertBoundedLimit(name, value, maximum) {
         throw new agent_cli_contracts_1.AgentCliError(`Agent CLI ${name} must be a finite positive number no greater than ${maximum}.`, 'configuration');
     }
 }
-function resolveExecutablePath(selected, environment) {
-    if ((0, node_path_1.isAbsolute)(selected))
-        return (0, node_fs_1.realpathSync)(selected);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    for (const directory of (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean)) {
-        for (const extension of extensions) {
-            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
-            try {
-                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
-                return (0, node_fs_1.realpathSync)(candidate);
-            }
-            catch {
-                // Continue through the trusted PATH candidates.
-            }
-        }
-    }
-    throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
-}
 function validateExecutableFile(path) {
     let stats;
     try {
@@ -78469,7 +78580,7 @@ function validateExecutableFile(path) {
     }
     if (!stats.isFile())
         throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if ((stats.mode & 0o022) !== 0) {
+    if (process.platform !== 'win32' && (stats.mode & 0o022) !== 0) {
         throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
     }
     if (typeof process.getuid === 'function') {
@@ -78483,6 +78594,7 @@ function materializeArtifacts(templates) {
     return templates.map((template) => {
         (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(template.path), { recursive: true, mode: 0o700 });
         (0, node_fs_1.writeFileSync)(template.path, template.contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(template.path, false);
         return {
             path: template.path,
             sha256: (0, node_crypto_1.createHash)('sha256').update(template.contents).digest('hex'),
@@ -78547,6 +78659,79 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
         throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
     }
     return actual;
+}
+
+
+/***/ }),
+
+/***/ 55362:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
+exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_path_1 = __nccwpck_require__(49411);
+const SET_PRIVATE_ACL = `
+$ErrorActionPreference = 'Stop'
+$path = $env:COPILOT_PRIVATE_PATH
+$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$acl = Get-Acl -LiteralPath $path
+$acl.SetAccessRuleProtection($true, $false)
+foreach ($rule in @($acl.Access)) { [void]$acl.RemoveAccessRuleSpecific($rule) }
+$inheritance = [System.Security.AccessControl.InheritanceFlags]::None
+if ($env:COPILOT_PRIVATE_DIRECTORY -eq '1') {
+  $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+}
+$rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+  $me,
+  [System.Security.AccessControl.FileSystemRights]::FullControl,
+  $inheritance,
+  [System.Security.AccessControl.PropagationFlags]::None,
+  [System.Security.AccessControl.AccessControlType]::Allow
+)
+$acl.AddAccessRule($rule)
+Set-Acl -LiteralPath $path -AclObject $acl
+`;
+const VERIFY_PRIVATE_ACL = `
+$ErrorActionPreference = 'Stop'
+$path = $env:COPILOT_PRIVATE_PATH
+$me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$acl = Get-Acl -LiteralPath $path
+$owner = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+$rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
+if (-not $acl.AreAccessRulesProtected -or $owner -ne $me -or $rules.Count -ne 1) { throw 'Unsafe managed runtime ACL' }
+$rule = $rules[0]
+if ($rule.IdentityReference.Value -ne $me -or
+    $rule.AccessControlType -ne [System.Security.AccessControl.AccessControlType]::Allow -or
+    ($rule.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne [System.Security.AccessControl.FileSystemRights]::FullControl) {
+  throw 'Unsafe managed runtime ACL'
+}
+`;
+function runAclScript(script, path, directory) {
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+    const powershell = (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    (0, node_child_process_1.execFileSync)(powershell, ['-NoProfile', '-NonInteractive', '-Command', script], {
+        env: {
+            SystemRoot: systemRoot,
+            PATH: process.env.PATH,
+            COPILOT_PRIVATE_PATH: path,
+            COPILOT_PRIVATE_DIRECTORY: directory ? '1' : '0',
+        },
+        stdio: 'ignore',
+        timeout: 15000,
+        windowsHide: true,
+    });
+}
+function makeWindowsRuntimePathPrivate(path, directory) {
+    if (process.platform === 'win32')
+        runAclScript(SET_PRIVATE_ACL, path, directory);
+}
+function verifyWindowsRuntimePathPrivate(path, directory) {
+    if (process.platform === 'win32')
+        runAclScript(VERIFY_PRIVATE_ACL, path, directory);
 }
 
 

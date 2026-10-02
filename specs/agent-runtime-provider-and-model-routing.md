@@ -68,7 +68,11 @@ agents running for read-only tasks.
   command surface externally; incompatible flags fail terminally at execution.
   Installation-manifest upgrades require reviewed fixtures and controlled live
   smoke evidence; credential checks remain environment-specific; cost estimates
-  are not product guarantees.
+  are not product guarantees. On Windows, npm-generated `.cmd` shims cannot be
+  passed directly to Node's no-shell process APIs; PR #403 observed
+  `configuration.unsupported` during Codex provisioning after Git Bash passed.
+  The underlying exception was not exposed, so the shim explanation remains a
+  hypothesis until isolated Windows tests and runner evidence confirm it.
 - Unknown rationale: the prior `gpt-5.6-luna` default was operational
   configuration, not a permanent architecture decision.
 - Implemented hardening: provider-specific execution policies and an exhaustive
@@ -264,6 +268,27 @@ that require smoke evidence.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
+### Windows Action runtime acceptance (issue #404)
+
+Windows support MUST use a direct Node or native executable for provider
+version checks and admitted execution. A `.cmd`/`.bat` wrapper MUST NOT be
+executed through a shell with agent arguments or prompts. For a reviewed npm
+runtime, resolve its package-owned bin target from a valid package manifest,
+keep it inside that package, and admit only a Node script or native executable.
+Malformed, missing, or externally redirected bins fail before an agent starts.
+Installation MUST call the runner's npm CLI through Node on Windows with the
+manifest-pinned package/version, not depend on shell lookup of `npm.cmd`.
+Explicit operator executables retain ownership and are never replaced.
+
+The Windows runtime MUST use a private, owner-only ACL for generated artifacts;
+POSIX mode bits are insufficient evidence on Windows. Cancellation and timeout
+MUST terminate the agent process tree before generated artifacts are removed.
+The process still receives the bounded environment and argv, with no inherited
+GitHub token or raw diagnostic output. If an ACL or process-tree check cannot be
+performed, execution fails closed. Windows CLI and Action support remain an open
+acceptance gate until isolated Windows CI fixtures pass and a real runner review
+confirms the job without a credential-bearing test dispatch.
+
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
 rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
@@ -293,6 +318,14 @@ replaced; its version and model smoke remain an explicit operator responsibility
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 19 | role→provider, injection, credentials, new provider, configured-variable precedence and model smoke |
 | **Total** | **130** | no double counting |
+
+The Windows extension adds at least 18 distinct fixture cases: 6 for pinned
+installation and `.cmd` resolution, 4 for malformed/path-escaped bins and
+operator-owned executables, 4 for ACL/artifact rejection, and 4 for execution,
+descendant cancellation, timeout, and cleanup. This is an extension to the
+130-case baseline, with no reused case counted twice. CI MUST run these cases on
+Windows and retain macOS/Ubuntu coverage. A live agent run is a separate human
+gate and is not part of automated acceptance.
 
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
@@ -332,6 +365,12 @@ errors and credential masking.
 13. The manifest, generated provisioning workflow, and operator documentation
     pin Codex `0.156.1`; a version-sync contract test fails if they diverge. The
     old `0.153.4` binary cannot be presented as a Luna-compatible default.
+14. On Windows, `always` installs the exact pinned Codex package through Node,
+    verifies the CLI version, and executes a fake package bin with literal
+    arguments without invoking a command shell.
+15. A malformed or escaped npm bin, weak runtime ACL, or failed process-tree
+    termination blocks execution or reports failure without trusted output or
+    leaked prompt/credentials. The fixture leaves no managed artifacts.
 
 ## 17. Requirements traceability
 
@@ -344,6 +383,7 @@ errors and credential masking.
 | provisioning/auth | provisioner/preflight adapters | ownership/install/infra tests | provisioning/credentials |
 | semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
+| Windows runtime | npm/bin resolver, planner, process and ACL adapters | Windows CI fake package, ACL, descendant cancellation and cleanup fixtures; human runner gate open | provisioning and failure policy |
 
 ## 18. Maintenance sequence
 

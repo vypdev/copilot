@@ -1442,13 +1442,14 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-24",
+      "lastVerified": "2026-10-02",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
+        ".github/workflows/setup_platform_smoke.yml",
         ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_issue.yml",
         ".github/workflows/copilot_pull_request.yml",
@@ -1472,10 +1473,14 @@
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/progress_response.ts",
         "src/infrastructure/agents/agent_execution_planner.ts",
+        "src/infrastructure/agents/agent_executable_invocation.ts",
+        "src/infrastructure/agents/windows_runtime_acl.ts",
         "src/infrastructure/agents/agent_runtime_manifest.ts",
         "src/infrastructure/agents/agent-runtime-manifest.json",
         "src/data/repository/agent_cli_provisioner.ts",
         "src/data/repository/agent_cli_execution.ts",
+        "src/data/repository/agent_credential_policy.ts",
+        "scripts/verify-agent-clis.cjs",
         "scripts/validate-workflow-contract.cjs"
       ],
       "tests": [
@@ -1490,6 +1495,8 @@
         "src/application/policies/__tests__/strict_output_schema_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/infrastructure/agents/__tests__/agent_execution_planner.test.ts",
+        "src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts",
+        "src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],

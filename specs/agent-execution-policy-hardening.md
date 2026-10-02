@@ -231,6 +231,10 @@ The process adapter starts with an empty environment and adds only trusted
 `PATH`, locale, controlled temp/config path, provider's one required credential,
 and explicitly provisioned CA variables. Proxy variables are denied by default
 and require an organization-managed runner policy outside repository input.
+On Windows, the bounded runtime environment also admits only the platform paths
+needed for Node and provider configuration (`SystemRoot`, `WINDIR`,
+`USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, and `PATHEXT`). These values are read
+from the trusted runner process, not from repository content.
 It strips `GITHUB_TOKEN`, `GH_TOKEN`, `GIT_ASKPASS`, `SSH_AUTH_SOCK`, Git author/
 committer variables, cloud credentials, and every unrelated `*KEY|*SECRET|*TOKEN`.
 It sets `GIT_TERMINAL_PROMPT=0`, `GIT_CONFIG_GLOBAL` to a managed empty file, and
@@ -240,6 +244,16 @@ The child process uses `shell: false`, a new process group, bounded stdout/stder
 abort/timeout TERM then bounded KILL, and exact cleanup of only its ephemeral
 directory. Agent-selected verification is not trusted: Copilot runs configured
 verification commands later through its existing validated trusted runner.
+
+On Windows, the equivalent contract requires direct process launch without
+`.cmd`/`.bat` shell interpretation, owner-only ACLs on the ephemeral directory
+and artifacts, and bounded termination of descendants before cleanup. POSIX
+mode bits and `child.kill()` alone do not prove these properties on Windows.
+The process adapter MUST reject an unverified Windows runtime, preserve literal
+argv/prompt bytes, suppress raw stderr, and record cancellation/timeout as a
+failed capability with no trusted result. Isolated Windows fixtures MUST prove
+ACL rejection, argv safety, descendant termination, and cleanup; a real runner
+review remains open until observed (issue #404).
 
 ### 6.4 Codex policy
 

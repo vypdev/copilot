@@ -6,16 +6,17 @@ import {
     existsSync,
     mkdirSync,
     mkdtempSync,
+    readFileSync,
     realpathSync,
     rmSync,
     statSync,
     writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, isAbsolute, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildProviderExecutionPolicy } from '../../application/policies/agent_execution/agent_execution_policy_dispatcher';
 import type { AgentArtifactTemplate } from '../../application/policies/agent_execution/provider_execution_policy';
-import type { AgentCapability, AgentConfiguration } from '../../domain/agent';
+import type { AgentCapability, AgentConfiguration, AgentProvider } from '../../domain/agent';
 import {
     AGENT_EXECUTION_TIMEOUT_MAX_MS,
     AGENT_OUTPUT_MAX_BYTES,
@@ -27,6 +28,8 @@ import { AgentCliError } from '../../data/repository/agent_cli_contracts';
 import { validateAgentExecutableSelection } from '../../application/policies/agent_executable_policy';
 import { buildAgentCliEnvironment } from '../../data/repository/agent_authentication';
 import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
+import { readAgentExecutableVersion, resolveAgentExecutableInvocation, resolveAgentExecutablePath } from './agent_executable_invocation';
+import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -42,20 +45,19 @@ export interface AgentExecutionPlanningRequest {
 
 export interface AgentExecutionPlanningSystem {
     resolveExecutable(executable: string, environment: NodeJS.ProcessEnv): string;
-    readVersion(executable: string, environment: NodeJS.ProcessEnv): string;
+    readVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): string;
     resolveWorkspace(cwd: string): string;
 }
 
 const DEFAULT_SYSTEM: AgentExecutionPlanningSystem = {
-    resolveExecutable: resolveExecutablePath,
-    readVersion(executable, environment) {
-        return execFileSync(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15_000,
-        });
+    resolveExecutable(executable, environment) {
+        try {
+            return resolveAgentExecutablePath(executable, environment);
+        } catch {
+            throw new AgentCliError(`Agent executable "${executable}" was not found on PATH.`, 'configuration');
+        }
     },
+    readVersion: readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = realpathSync(cwd);
         const root = realpathSync(execFileSync('git', ['rev-parse', '--show-toplevel'], {
@@ -88,6 +90,9 @@ export class AgentExecutionPlanner {
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
             validateExecutableFile(executable);
+            const invocation = resolveAgentExecutableInvocation(executable, request.configuration.provider);
+            validateExecutableFile(invocation.executable);
+            for (const argument of invocation.prefixArgs) validateExecutableFile(argument);
             const safeEnvironment = buildAgentCliEnvironment(
                 request.configuration.provider,
                 sourceEnvironment,
@@ -95,9 +100,10 @@ export class AgentExecutionPlanner {
             );
             const version = readAgentRuntimeVersion(
                 request.configuration.provider,
-                this.system.readVersion(executable, safeEnvironment),
+                this.system.readVersion(executable, request.configuration.provider, safeEnvironment),
             );
             runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
+            makeWindowsRuntimePathPrivate(runtimeDirectory, true);
             const gitConfigPath = join(runtimeDirectory, 'gitconfig');
             const providerPolicy = buildProviderExecutionPolicy({
                 configuration: request.configuration,
@@ -120,7 +126,11 @@ export class AgentExecutionPlanner {
             return {
                 provider: request.configuration.provider,
                 capability: request.capability,
-                executable,
+                executable: invocation.executable,
+                launcherArgv: invocation.prefixArgs,
+                ...(invocation.prefixArgs.length > 0 ? {
+                    launcherSha256: createHash('sha256').update(readFileSync(invocation.prefixArgs[0])).digest('hex'),
+                } : {}),
                 argv: providerPolicy.argv,
                 promptMode: providerPolicy.promptMode,
                 outputProtocol: providerPolicy.outputProtocol,
@@ -172,25 +182,6 @@ function assertBoundedLimit(name: string, value: number, maximum: number): void 
     }
 }
 
-function resolveExecutablePath(selected: string, environment: NodeJS.ProcessEnv): string {
-    if (isAbsolute(selected)) return realpathSync(selected);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    for (const directory of (environment.PATH || '').split(delimiter).filter(Boolean)) {
-        for (const extension of extensions) {
-            const candidate = join(directory, `${selected}${extension}`);
-            try {
-                accessSync(candidate, constants.X_OK);
-                return realpathSync(candidate);
-            } catch {
-                // Continue through the trusted PATH candidates.
-            }
-        }
-    }
-    throw new AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
-}
-
 function validateExecutableFile(path: string): void {
     let stats;
     try {
@@ -200,7 +191,7 @@ function validateExecutableFile(path: string): void {
         throw new AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
     }
     if (!stats.isFile()) throw new AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if ((stats.mode & 0o022) !== 0) {
+    if (process.platform !== 'win32' && (stats.mode & 0o022) !== 0) {
         throw new AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
     }
     if (typeof process.getuid === 'function') {
@@ -215,6 +206,7 @@ function materializeArtifacts(templates: readonly AgentArtifactTemplate[]): Agen
     return templates.map((template) => {
         mkdirSync(dirname(template.path), { recursive: true, mode: 0o700 });
         writeFileSync(template.path, template.contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        makeWindowsRuntimePathPrivate(template.path, false);
         return {
             path: template.path,
             sha256: createHash('sha256').update(template.contents).digest('hex'),

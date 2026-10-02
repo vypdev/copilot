@@ -1,5 +1,5 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import {
@@ -29,7 +29,7 @@ describe('AgentCliProvisioner', () => {
 
     it('resolves bare executables through PATH and rejects missing path selections', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-path-test-'));
-        const executable = join(directory, 'codex');
+        const executable = join(directory, process.platform === 'win32' ? 'codex.cmd' : 'codex');
         try {
             writeFileSync(executable, '#!/bin/sh\nexit 0\n');
             chmodSync(executable, 0o755);
@@ -44,7 +44,7 @@ describe('AgentCliProvisioner', () => {
 
     it('accepts a preinstalled Codex CLI without replacing an operator-owned runtime', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-test-'));
-        const executable = join(directory, 'codex');
+        const executable = join(directory, process.platform === 'win32' ? 'codex.cmd' : 'codex');
         try {
             writeFileSync(executable, '#!/bin/sh\necho "codex-cli 0.156.1"\n');
             chmodSync(executable, 0o755);
@@ -56,13 +56,27 @@ describe('AgentCliProvisioner', () => {
 
     it('uses system npm and version commands for a forced pinned installation', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-default-system-'));
-        const executable = join(directory, 'codex');
+        const executable = join(directory, process.platform === 'win32' ? 'codex.cmd' : 'codex');
         try {
             writeFileSync(executable, '#!/bin/sh\nexit 0\n');
             chmodSync(executable, 0o755);
+            let packageBin: string | undefined;
+            if (process.platform === 'win32') {
+                const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
+                mkdirSync(join(packageRoot, 'bin'), { recursive: true });
+                writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
+                    name: '@openai/codex', bin: { codex: 'bin/codex.js' },
+                }));
+                writeFileSync(join(packageRoot, 'bin', 'codex.js'), '');
+                packageBin = realpathSync(join(packageRoot, 'bin', 'codex.js'));
+            }
             (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
                 if (command === 'npm') return Buffer.alloc(0);
-                if (command === 'codex' && args[0] === '--version') return 'codex-cli 0.156.1\n';
+                if (process.platform === 'win32' && command === process.execPath) {
+                    if (args[0] === join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')) return Buffer.alloc(0);
+                    if (args[0] === packageBin && args[1] === '--version') return 'codex-cli 0.156.1\n';
+                }
+                if (command === realpathSync(executable) && args[0] === '--version') return 'codex-cli 0.156.1\n';
                 throw new Error(`Unexpected command: ${command}`);
             });
 
@@ -71,16 +85,27 @@ describe('AgentCliProvisioner', () => {
                 AGENT_PROVISIONING: 'always',
             });
 
-            expect(execFileSync).toHaveBeenCalledWith(
-                'npm',
-                ['install', '--global', '@openai/codex@0.156.1'],
-                { stdio: 'inherit' },
-            );
-            expect(execFileSync).toHaveBeenCalledWith(
-                'codex',
-                ['--version'],
-                expect.objectContaining({ encoding: 'utf8', timeout: 15_000 }),
-            );
+            if (process.platform === 'win32') {
+                expect(execFileSync).toHaveBeenCalledWith(
+                    process.execPath,
+                    [join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+                        'install', '--global', '@openai/codex@0.156.1'],
+                    { stdio: 'inherit' },
+                );
+                expect(execFileSync).toHaveBeenCalledWith(
+                    process.execPath,
+                    [packageBin, '--version'],
+                    expect.objectContaining({ encoding: 'utf8', timeout: 15_000 }),
+                );
+            } else {
+                expect(execFileSync).toHaveBeenCalledWith(
+                    'npm', ['install', '--global', '@openai/codex@0.156.1'], { stdio: 'inherit' },
+                );
+                expect(execFileSync).toHaveBeenCalledWith(
+                    realpathSync(executable), ['--version'],
+                    expect.objectContaining({ encoding: 'utf8', timeout: 15_000 }),
+                );
+            }
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }
