@@ -125,12 +125,14 @@ describe('setup_files', () => {
     expect(fs.readFileSync(manifestPath, 'utf8')).toBe(manifestBefore);
   });
 
-  it('keeps this repository dogfood artifacts byte-identical to the default renderer', () => {
+  it('keeps this repository agent artifacts equivalent to the default renderer', () => {
     const repositoryRoot = path.resolve(__dirname, '../../..');
     const configuration = createDefaultSetupConfiguration();
 
     for (const artifact of renderRepositoryAgentArtifacts(configuration)) {
-      expect(fs.readFileSync(path.join(repositoryRoot, artifact.path), 'utf8')).toBe(artifact.content);
+      const checkedOut = fs.readFileSync(path.join(repositoryRoot, artifact.path), 'utf8');
+      expect(process.platform === 'win32' ? checkedOut.replace(/\r\n/g, '\n') : checkedOut)
+        .toBe(artifact.content);
     }
   });
 

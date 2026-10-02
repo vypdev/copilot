@@ -1873,6 +1873,14 @@ tests MUST reject a shared destination. A new concurrent platform run MUST
 reach and pass its fixture steps; this earlier failure is not product test
 evidence.
 
+The next [full Windows CI run](https://github.com/vypdev/copilot/actions/runs/36976403499)
+passed 512 of 513 suites; the remaining repository-agent artifact comparison
+displayed the same content on every line but failed raw string equality on
+Windows. The fixture MUST compare the renderer to checkout text after
+normalizing CRLF to LF on Windows only, while keeping byte equality on Unix.
+Any non-line-ending drift MUST still fail. A subsequent Windows CI run MUST
+pass before counting coverage or this compatibility repair as verified.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
