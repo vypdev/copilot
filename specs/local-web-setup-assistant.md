@@ -1881,6 +1881,14 @@ normalizing CRLF to LF on Windows only, while keeping byte equality on Unix.
 Any non-line-ending drift MUST still fail. A subsequent Windows CI run MUST
 pass before counting coverage or this compatibility repair as verified.
 
+That [subsequent Windows CI run](https://github.com/vypdev/copilot/actions/runs/36977406692)
+passed 512 of 513 suites. Its sole remaining failure was the analogous raw
+string comparison of generated `specs/CATALOG.md` against catalog metadata;
+the displayed lines matched while Windows checkout line endings differed.
+The catalog validator and its test MUST apply the same Windows-only CRLF to LF
+normalization before comparing, preserving exact content comparison on Unix.
+The complete CI workflow must pass on a new HEAD before this gate closes.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
