@@ -340,17 +340,22 @@ retain their separate owner-only `icacls` policy.
 The 2026-10-02 hosted Windows fixture found an effective
 `Authenticated Users: 0x1301bf` (modify) grant on both the Action-embedded Node
 and setup-node's job Node. The policy correctly rejects both; choosing the
-other ambient Node is not a fix. A self-hosted Windows fixture also failed
-the same executable preflight, although its exact rejected ACE still needs
-review. Until the installed toolchain has trusted ownership and no broad
-mutation grant, Windows agent execution is **open and blocked**. Credentialed
-repository Action jobs MUST route to the verified macOS self-hosted runners;
-the Windows fixture jobs remain visible and red as evidence. Do not infer
-Windows agent support from Git Bash, npm availability, or Mac Action success.
-Runner owners must harden the Node, npm CLI, Codex shim and package entrypoint
-ACLs, then rerun the isolated hosted/service fixtures before re-enabling
-Windows. The GitHub-hosted image cannot be declared safe without its own
-fixture evidence or a separately reviewed trusted toolchain.
+other ambient Node is not a fix. The hosted fixture at PR #403 head `f0ab865f`
+still fails the owner-aware ACL preflight. A self-hosted Windows fixture also
+failed the same preflight at an earlier head, although its exact rejected ACE
+still needs review. The runner owner reports that the self-hosted Node ACL has
+since been corrected and requests restoring the shared `self-hosted, codex`
+pool. The installed workflows therefore use exactly those two labels while
+the runtime preflight continues to fail closed on any unsafe runner. This is a
+routing trial, **not evidence that Windows agent execution passed**. A normal
+PR or commit run assigned to Windows MUST complete the isolated runtime path,
+and a manually authorized service fixture MUST verify private artifacts,
+descendant cancellation, and cleanup before that platform gate closes.
+Runner owners must verify trusted Node, npm CLI, Codex shim, and package-bin
+ACLs. The GitHub-hosted image remains red and cannot establish service-runner
+safety; its own gate remains open until a separately reviewed trusted toolchain
+or passing direct fixture evidence exists. Do not infer Windows agent support
+from Git Bash, npm availability, or Mac Action success.
 
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is

@@ -309,7 +309,7 @@ function assertRunner(file, workflow) {
       ? ['ubuntu-latest']
       : /^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm'
         ? ['ubuntu-latest']
-        : ['self-hosted', 'codex', 'macOS'];
+        : ['self-hosted', 'codex'];
     const labels = runnerLabels(job['runs-on']);
     if (JSON.stringify(labels) !== JSON.stringify(expected)) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);

@@ -8,7 +8,7 @@ jobs:
   resolve-operation:
     name: Resolve managed deployment ownership
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.body || '', '<!-- copilot-deployment ') }}
-    runs-on: [self-hosted, codex, macOS]
+    runs-on: [self-hosted, codex]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -62,7 +62,7 @@ jobs:
     name: Advance durable deployment operation
     needs: resolve-operation
     if: ${{ needs.resolve-operation.result == 'success' }}
-    runs-on: [self-hosted, codex, macOS]
+    runs-on: [self-hosted, codex]
     timeout-minutes: 15
     concurrency:
       group: copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}

@@ -13,7 +13,7 @@ jobs:
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
-    runs-on: [self-hosted, codex, macOS]
+    runs-on: [self-hosted, codex]
     timeout-minutes: 120
     concurrency:
       group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis

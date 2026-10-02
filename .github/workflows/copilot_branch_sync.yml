@@ -8,7 +8,7 @@ on:
 jobs:
   branch-sync:
     name: Copilot - Branch Sync
-    runs-on: [self-hosted, codex, macOS]
+    runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
       contents: read
