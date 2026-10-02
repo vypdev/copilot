@@ -1818,6 +1818,16 @@ an external model provider remain unverified when no provider is available;
 dependency-boundary tests and a successful graph update are separate evidence,
 not a substitute for the missing metric report.
 
+The first self-hosted Windows fixture attempt reached `windows-intel-runner-1`
+and passed Git Bash, dependency installation, build, and typecheck, then
+failed while creating test symlinks with `EPERM`. The fixture suite MUST use a
+Windows directory junction for the checkout-escape case. File-symlink cases
+MAY be reported as skipped only after an isolated capability probe confirms
+that this service account cannot create them; any other probe error fails the
+suite. Such skips leave file-symlink protection on that runner unverified and
+must remain visible in CI and reviewer evidence. Hosted Windows still runs
+those cases where its runner permits symlinks.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
