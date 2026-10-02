@@ -1772,7 +1772,10 @@ was 310/350 passed with 40 human-review rows open before the Windows service
 file-symlink capability gap was observed. X026 is now also open, yielding
 309/350 passed and 41 open cases: 40 human-review rows and one host-specific
 security fixture. Hosted platforms passing X026 cannot close its service-runner
-gate by inference.
+gate by inference. A later full service-runner run also skipped X023, which
+checks an asset replaced by an escaping file symlink. The current ledger is
+308/350 passed and 42 open: the same 40 human rows and both file-symlink
+security cases.
 
 The same PR exposed a runner-routing risk: `codex` now selects self-hosted
 Windows as well as macOS and will also select Ubuntu. A push-review `run`
@@ -1930,6 +1933,14 @@ coverage budgets, after its short isolated fixtures. Its workflow contract
 test MUST reject removal of that step. This makes Windows coverage evidence
 repeatable without a live agent or PAT and leaves PR-triggered checks and
 review state as separate gates.
+
+The [first deterministic Windows coverage run](https://github.com/vypdev/copilot/actions/runs/36982636134)
+passed all 514 suites and the agent-execution budget at its unchanged
+thresholds. `test:coverage` then rejected X023 because the service account
+skipped its file-symlink assertion. X023 MUST be marked open with this explicit
+reason, as X026 already is. The Windows workflow MUST complete with the two
+cases open, while a reviewer with actual symlink capability must rerun both
+before either can be marked passed on the service platform.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
