@@ -5,8 +5,13 @@ import { join } from 'node:path';
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/;
 
+function systemTool(name: string): string {
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+    return join(systemRoot, 'System32', name);
+}
+
 function runIcacls(args: string[]): void {
-    execFileSync('icacls.exe', args, {
+    execFileSync(systemTool('icacls.exe'), args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 15_000,
         windowsHide: true,
@@ -14,7 +19,7 @@ function runIcacls(args: string[]): void {
 }
 
 function currentUserSid(): string {
-    const identity = execFileSync('whoami.exe', ['/user', '/fo', 'csv', '/nh'], {
+    const identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 15_000,
@@ -41,7 +46,9 @@ function savedDacl(path: string): string {
     }
 }
 
-function assertOwnerOnlyDacl(dacl: string, sid: string, directory: boolean): void {
+function assertOwnerOnlyDacl(sddl: string, sid: string, directory: boolean): void {
+    const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
+    const dacl = /D:.*?(?=S:|$)/.exec(sddl)?.[0] ?? '';
     const firstAce = dacl.indexOf('(');
     const flags = firstAce < 0 ? '' : dacl.slice(0, firstAce);
     const entries = firstAce < 0 ? '' : dacl.slice(firstAce);
@@ -49,7 +56,7 @@ function assertOwnerOnlyDacl(dacl: string, sid: string, directory: boolean): voi
     const fields = ace?.split(';');
     const inheritance = fields?.[1] ?? '';
     const rights = fields?.[2] ?? '';
-    if (!flags.startsWith('D:') || !flags.slice(2).includes('P') || !fields || fields.length !== 6
+    if (owner !== sid || !flags.startsWith('D:') || !flags.slice(2).includes('P') || !fields || fields.length !== 6
         || fields[0] !== 'A' || fields[3] !== '' || fields[4] !== ''
         || fields[5] !== sid || rights !== 'FA'
         || (directory && (!inheritance.includes('OI') || !inheritance.includes('CI')))
