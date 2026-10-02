@@ -1787,6 +1787,16 @@ preparation on each self-hosted platform remain open until direct runner
 evidence exists. No live setup or credential-bearing test dispatch is allowed
 to close those gates.
 
+The first three-platform fixture run passed macOS and Ubuntu. Windows built the
+package but failed the exact checked-in bundle comparison: the Windows `ncc`
+CLI/Action output and generated HTML differ from the Unix-built checked-in
+artifacts. This comparison is a canonical Unix build drift gate, not a Windows
+runtime compatibility assertion. CI and the fixture matrix MUST run the build
+on Windows, skip only that byte-for-byte comparison there, and continue to
+typecheck, isolated session tests and npm package validation/smoke. A passing
+Windows fixture after this change is required before counting those paths as
+verified; it does not prove all Action jobs or Windows cancellation behavior.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup

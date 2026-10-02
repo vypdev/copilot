@@ -56,7 +56,9 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      # Checked-in ncc bundles are generated on Unix; Windows output differs.
       - name: Validate generated bundles
+        if: runner.os != 'Windows'
         run: pnpm run validate:build
 
       - name: Validate npm package contents
