@@ -10,6 +10,10 @@ import { AgentCliError } from '../agent_cli_contracts';
 import { createAgentProcessLifecycle, decodeAgentCliOutput } from '../agent_cli_execution';
 import { makeWindowsRuntimePathPrivate } from '../../../infrastructure/agents/windows_runtime_acl';
 
+// Multi-case fixtures run native ACL tools for every plan on Windows. This Jest
+// budget includes that setup; each admitted child keeps its own 5-second limit.
+const MULTI_CASE_TEST_TIMEOUT_MS = process.platform === 'win32' ? 30_000 : 20_000;
+
 function plan(script: string, overrides: Partial<AgentExecutionPlan> = {}): AgentExecutionPlan {
     const runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
     makeWindowsRuntimePathPrivate(runtimeDirectory, true);
@@ -76,7 +80,7 @@ describe('AgentCliClient admitted process execution', () => {
         } finally {
             rmSync(packageDirectory, { recursive: true, force: true });
         }
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it.each([
         { name: 'extra launcher arguments', launcherArgv: ['/fixture/a.js', '/fixture/b.js'], launcherSha256: 'hash' },
@@ -138,7 +142,7 @@ describe('AgentCliClient admitted process execution', () => {
 
         const throwingObserver = { observe: () => { throw new Error('telemetry unavailable'); } };
         await expect(client(plan('process.stdout.write("READY")'), throwingObserver).execute(request)).resolves.toBe('READY');
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('supports the admitted stdin prompt protocol', async () => {
         const executionPlan = plan('process.stdin.pipe(process.stdout)', { promptMode: 'stdin' });
@@ -170,7 +174,7 @@ describe('AgentCliClient admitted process execution', () => {
             configuration: { provider: 'opencode', model: 'model' }, capability: 'findings',
             prompt: 'p', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'output' });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects invalid JSON event values and unsupported admitted protocols', () => {
         for (const value of ['null', '[]', '"text"']) {
@@ -195,7 +199,7 @@ describe('AgentCliClient admitted process execution', () => {
         });
         controller.abort();
         await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects nonzero, empty, and oversized process output', async () => {
         await expect(client(plan('process.exit(2)')).execute({
@@ -210,7 +214,7 @@ describe('AgentCliClient admitted process execution', () => {
         await expect(client(plan('process.stdout.write("large")', { maxOutputBytes: 4 })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'output' });
-    }, 20_000);
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('suppresses stderr and marks only the designated provider exit as retryable', async () => {
         const request = {
@@ -221,7 +225,7 @@ describe('AgentCliClient admitted process execution', () => {
             .rejects.toMatchObject({ category: 'process', retryable: false, message: expect.not.stringContaining('secret diagnostic') });
         await expect(client(plan('process.exit(75)')).execute(request))
             .rejects.toMatchObject({ category: 'process', retryable: true });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects process start failures without exposing raw configuration', async () => {
         await expect(client(plan('unused', { executable: process.platform === 'win32'
@@ -231,7 +235,7 @@ describe('AgentCliClient admitted process execution', () => {
         await expect(client(plan('unused', { executable: null as never })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: process.platform === 'win32' ? 'configuration' : 'process' });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects a prompt beyond the admitted byte limit before spawn', async () => {
         await expect(client(plan('process.stdout.write("unexpected")', { maxPromptBytes: 1 })).execute({
@@ -376,5 +380,5 @@ describe('AgentCliClient admitted process execution', () => {
         } finally {
             rmSync(outsideDirectory, { recursive: true, force: true });
         }
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 });
