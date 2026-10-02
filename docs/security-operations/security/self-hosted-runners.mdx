@@ -16,6 +16,16 @@ A self-hosted runner that can access agent credentials MUST be dedicated or isol
 
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
 
+The generic CI, RepoWise and setup platform checks for public pull requests
+run on GitHub-hosted Ubuntu, macOS and Windows runners. The setup fixture job
+that targets the persistent Windows
+`codex` runner runs only through a manual workflow dispatch. Keep that job out
+of automatic pull request execution, including fork pull requests. The hosted
+Windows job runs the full coverage suite and uploads its report to Codecov for
+same-repository revisions; a manual run on the service runner verifies its
+installed environment separately. A green hosted run does not establish the
+service runner's local symlink or process behavior.
+
 The `codex` label can route a job to macOS, Windows or Linux. Install Git and
 Bash on every runner; Windows needs Git for Windows with its Bash available to
 the Actions runner service. Installed workflows select `shell: bash` for

@@ -20,7 +20,7 @@ defaults:
 jobs:
   ci-check:
     name: CI Check
-    runs-on: [self-hosted, codex]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read

@@ -316,7 +316,6 @@ describe('workflow contract validator', () => {
 
   it.each([
     ['.github/workflows', 'copilot_commit.yml', 'copilot-commits'],
-    ['.github/workflows', 'ci_check.yml', 'ci-check'],
     ['.github/workflows', 'release_workflow.yml', 'prepare-compiled-files'],
     ['setup/workflows', 'copilot_commit.yml', 'copilot-commits'],
     ['setup/workflows', 'copilot_pull_request.yml', 'copilot-pull-requests'],
@@ -720,6 +719,9 @@ describe('workflow contract validator', () => {
     workflow.jobs['setup-windows-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
     expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows codex runner');
     workflow.jobs['setup-windows-codex-smoke']['runs-on'] = ['self-hosted', 'codex', 'Windows'];
+    delete workflow.jobs['setup-windows-codex-smoke'].if;
+    expect(() => assertRunner(file, workflow)).toThrow('manual dispatch');
+    workflow.jobs['setup-windows-codex-smoke'].if = "github.event_name == 'workflow_dispatch'";
     workflow.jobs['setup-windows-codex-smoke'].steps = workflow.jobs['setup-windows-codex-smoke'].steps
       .filter((step: { name?: string }) => step.name !== 'Full Windows coverage and acceptance budgets');
     expect(() => assertRunner(file, workflow)).toThrow('full Windows coverage and acceptance budgets');
@@ -735,8 +737,43 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted platform and self-hosted Windows fixture jobs');
   });
 
+  it('requires full hosted Windows coverage, validators and a same-repository Codecov upload', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
+    workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full Windows coverage and acceptance budgets');
+    expect(() => assertRunner(file, workflow)).toThrow('full Windows coverage and acceptance budgets');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full Windows documentation and contract validators');
+    expect(() => assertRunner(file, workflow)).toThrow('full Windows documentation and contract validators');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Upload Windows coverage to Codecov');
+    expect(() => assertRunner(file, workflow)).toThrow('upload hosted Windows coverage');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    const upload = workflow.jobs['setup-platform-smoke'].steps.find((step: { name?: string }) =>
+      step.name === 'Upload Windows coverage to Codecov');
+    upload.if = "runner.os == 'Windows'";
+    expect(() => assertRunner(file, workflow)).toThrow('upload hosted Windows coverage');
+  });
+
   it.each([
     ['ci_check.yml', 'ci-check'],
+    ['repowise.yml', 'code-health'],
+  ])('keeps public PR quality code off persistent runners in %s', (fileName, jobId) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs[jobId]['runs-on'] = ['self-hosted', 'codex'];
+    expect(() => assertRunner(file, workflow)).toThrow('runs-on ubuntu-latest');
+  });
+
+  it.each([
     ['setup_platform_smoke.yml', 'setup-windows-codex-smoke'],
     ['release_workflow.yml', 'prepare-version-files'],
     ['hotfix_workflow.yml', 'prepare-version-files'],
@@ -766,6 +803,7 @@ describe('workflow contract validator', () => {
 
   it.each([
     ['ci_check.yml', 'ci-check', 'Validate Git diff'],
+    ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full Windows documentation and contract validators'],
     ['setup_platform_smoke.yml', 'setup-windows-codex-smoke', 'Full Windows documentation and contract validators'],
   ])('treats CRLF as a line ending in the %s diff check', (fileName, jobId, stepName) => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);

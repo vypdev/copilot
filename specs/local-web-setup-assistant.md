@@ -1815,12 +1815,13 @@ review on each target platform, actual self-hosted `codex` runner behavior,
 and the human UX/security gates in §19 remain open.
 
 The platform fixture workflow MUST additionally target a self-hosted runner
-labelled `codex` and `Windows` without invoking a real setup or agent request.
-That job MUST prove dependency installation, build, typecheck, local session
-fixtures, fake-agent runtime fixtures, and packaged npm validation/smoke on
-the actual service runner. A green hosted Windows job cannot substitute for
-this evidence. A green self-hosted fixture still does not close a real Action
-execution or reboot-persistence review gate. Architecture metrics that require
+labelled `codex` and `Windows` through an authorized manual dispatch only,
+without invoking a real setup or agent request. That job MUST prove dependency
+installation, build, typecheck, local session fixtures, fake-agent runtime
+fixtures, and packaged npm validation/smoke on the actual service runner.
+A green hosted Windows job cannot substitute for this service-specific evidence.
+A green self-hosted fixture still does not close a real Action execution or
+reboot-persistence review gate. Architecture metrics that require
 an external model provider remain unverified when no provider is available;
 dependency-boundary tests and a successful graph update are separate evidence,
 not a substitute for the missing metric report.
@@ -1926,13 +1927,14 @@ Both the planner and the new module MUST independently meet the same 95%
 lines/statements and 90% branches/functions budget in full Windows CI. A
 passing platform fixture alone does not close this coverage gate.
 
-The generic `CI Check` may be assigned to macOS even while Windows runners are
-available. The self-hosted Windows setup platform job MUST therefore also run
-the full existing `test:coverage` command, including acceptance and agent
-coverage budgets, after its short isolated fixtures. Its workflow contract
-test MUST reject removal of that step. This makes Windows coverage evidence
-repeatable without a live agent or PAT and leaves PR-triggered checks and
-review state as separate gates.
+The generic `CI Check` could previously be assigned to macOS even while Windows
+runners were available. The hosted Windows setup platform job MUST run the full
+existing `test:coverage` command, including acceptance and agent coverage
+budgets, after its short isolated fixtures. The manually dispatched self-hosted
+Windows job MUST retain the same suite for service-specific evidence. Workflow
+contract tests MUST reject removal of either full suite. This makes Windows
+coverage evidence repeatable without a live agent or PAT and leaves review
+state as a separate gate.
 
 The [first deterministic Windows coverage run](https://github.com/vypdev/copilot/actions/runs/36982636134)
 passed all 514 suites and the agent-execution budget at its unchanged
@@ -1952,10 +1954,10 @@ documentation validator's read boundary. Keep the same route, snippet,
 template, and required-copy assertions, and test that normalization preserves
 ordinary content drift. A fresh full Windows CI run MUST pass the complete
 documentation contract before the platform gate is considered verified.
-Because generic CI runner assignment is nondeterministic, the dedicated
-self-hosted Windows setup job MUST also execute the documentation, workflow,
-specification, and acceptance validators after its full coverage suite. Its
-workflow contract test MUST reject removal of that step. A passing macOS CI
+The hosted Windows setup job MUST also execute the documentation, workflow,
+specification, and acceptance validators after its full coverage suite; the
+manually dispatched service-runner job MUST retain them as well. Workflow
+contract tests MUST reject removal of either validator step. A passing Unix CI
 run alone cannot close the Windows validator gate.
 The [first deterministic Windows validator run](https://github.com/vypdev/copilot/actions/runs/37005913771)
 passed documentation, workflow, specification, and acceptance validation after
@@ -1971,6 +1973,34 @@ across platforms; Unix `validate:build` and all-platform npm package checks
 cover those artifacts. The diff whitespace gate MUST exclude only `build/`,
 while retaining `cr-at-eol` and checking source, workflows, specs, and docs.
 A fixture MUST show that a trailing space in source is still rejected.
+
+The [PR #403 Bugbot review on 67b81ab](https://github.com/vypdev/copilot/actions/runs/37013601183)
+reported that the automatic `pull_request` setup job executed PR-controlled
+build and test code on a persistent self-hosted Windows runner. This repository
+is public. The existing generic CI and RepoWise jobs also use persistent
+self-hosted runners on PR events. GitHub's [secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use)
+warns that a public fork PR can compromise such a runner despite a read-only
+workflow token. The next workflow change MUST route automatic PR CI and
+RepoWise checks to GitHub-hosted runners; the service-specific Windows job
+MUST run only under maintainer-controlled `workflow_dispatch`. Hosted Windows
+MUST execute the full coverage and contract suite before the manual job is
+removed from automatic PR checks. Contract mutation tests MUST reject a
+self-hosted automatic PR job in those three quality workflows, missing hosted Windows full coverage, or loss of
+the manual service-runner evidence path. No live setup, PAT, or agent request
+is needed for these checks.
+
+The [Codecov report for 67b81ab](https://app.codecov.io/gh/vypdev/copilot/pull/403)
+shows 83.64% patch coverage and 105 missing changed lines, including Windows
+ACL code that the Unix CI upload cannot exercise. The hosted Windows full
+suite MUST upload its coverage report for the same exact commit; Codecov
+[merges reports from separate jobs](https://docs.codecov.com/docs/merging-reports).
+The PR's processed combined report, not a successful upload step alone, is
+the patch-coverage evidence. Any remaining missing lines or stale base report
+MUST remain explicit reviewer work. The previous Windows run also exposed
+three Jest five-second test-budget failures while preparing multiple native
+ACL fixtures; the multi-case Jest budget may be extended separately from each
+child process's five-second functional timeout. A fresh hosted Windows suite
+and a manual service-runner suite MUST both pass after the change.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
@@ -2008,6 +2038,9 @@ A fixture MUST show that a trailing space in source is still rejected.
       recovery, and PAT cleanup/renewal guidance are linked and validated.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
+- [ ] Automatic PR quality jobs run on hosted runners; the self-hosted Windows
+      fixture is manual only. Hosted Windows full coverage and validators pass,
+      and the combined Codecov report is reviewed for the exact PR head.
 - [ ] No readiness-blocking decision remains unresolved; no test GitHub issue,
       credential-bearing setup Action run, or test PAT is created while
       validating this implementation.

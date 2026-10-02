@@ -217,6 +217,25 @@ function assertIsolatedPnpm(relativeFile, jobId, job) {
   }
 }
 
+function assertWindowsCoverageAndValidators(relativeFile, job, hosted) {
+  const steps = job.steps ?? [];
+  const coverageStep = steps.find(step => step?.name === 'Full Windows coverage and acceptance budgets');
+  if (coverageStep?.run !== 'pnpm run test:coverage'
+    || (hosted && coverageStep.if !== "runner.os == 'Windows'")) {
+    throw new Error(`${relativeFile} must retain full Windows coverage and acceptance budgets.`);
+  }
+  const validationStep = steps.find(step => step?.name === 'Full Windows documentation and contract validators');
+  const requiredValidations = [
+    'validate:agent-docs', 'validate:docs-page', 'validate:documentation',
+    'validate:workflows', 'validate:specifications', 'validate:setup-acceptance',
+  ];
+  if (!validationStep?.run || requiredValidations.some(command => !validationStep.run.includes(`pnpm run ${command}`))
+    || steps.indexOf(validationStep) <= steps.indexOf(coverageStep)
+    || (hosted && validationStep.if !== "runner.os == 'Windows'")) {
+    throw new Error(`${relativeFile} must retain full Windows documentation and contract validators after coverage.`);
+  }
+}
+
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
@@ -233,28 +252,30 @@ function assertRunner(file, workflow) {
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
           throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
         }
+        assertWindowsCoverageAndValidators(relativeFile, job, true);
+        const codecov = (job.steps ?? []).find(step => step?.name === 'Upload Windows coverage to Codecov');
+        if (codecov?.uses !== 'codecov/codecov-action@v6'
+          || codecov.if !== "${{ runner.os == 'Windows' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}"
+          || codecov.with?.files !== './coverage/lcov.info'
+          || codecov.with?.fail_ci_if_error !== true
+          || codecov.with?.flags !== 'windows'
+          || codecov.with?.token !== '${{ secrets.CODECOV_TOKEN }}'
+          || (job.steps ?? []).indexOf(codecov) <= (job.steps ?? []).findIndex(step => step?.name === 'Full Windows coverage and acceptance budgets')) {
+          throw new Error(`${relativeFile} must upload hosted Windows coverage for same-repository revisions.`);
+        }
       } else {
         if (JSON.stringify(runnerLabels(job['runs-on']))
           !== JSON.stringify(['self-hosted', 'codex', 'Windows'])) {
           throw new Error(`${relativeFile} must target the self-hosted Windows codex runner.`);
         }
-        const coverageStep = (job.steps ?? []).find(step => step?.name === 'Full Windows coverage and acceptance budgets');
-        if (coverageStep?.run !== 'pnpm run test:coverage') {
-          throw new Error(`${relativeFile} must retain full Windows coverage and acceptance budgets.`);
+        if (job.if !== "github.event_name == 'workflow_dispatch'") {
+          throw new Error(`${relativeFile} must reserve the self-hosted Windows codex runner for manual dispatch.`);
         }
+        assertWindowsCoverageAndValidators(relativeFile, job, false);
         const guidanceStep = (job.steps ?? []).find(step => step?.name === 'Validate generated guidance checkout on codex Windows');
         if (!guidanceStep?.run?.includes('pnpm run validate:agent-docs')
           || !guidanceStep.run.includes('git ls-files --eol')) {
           throw new Error(`${relativeFile} must verify generated guidance at Windows checkout.`);
-        }
-        const validationStep = (job.steps ?? []).find(step => step?.name === 'Full Windows documentation and contract validators');
-        const requiredValidations = [
-          'validate:agent-docs', 'validate:docs-page', 'validate:documentation',
-          'validate:workflows', 'validate:specifications', 'validate:setup-acceptance',
-        ];
-        if (!validationStep?.run || requiredValidations.some(command => !validationStep.run.includes(`pnpm run ${command}`))
-          || (job.steps ?? []).indexOf(validationStep) <= (job.steps ?? []).indexOf(coverageStep)) {
-          throw new Error(`${relativeFile} must retain full Windows documentation and contract validators after coverage.`);
         }
       }
       assertIsolatedPnpm(relativeFile, jobId, job);
@@ -262,14 +283,14 @@ function assertRunner(file, workflow) {
     }
     const expected = relativeFile.startsWith('setup/workflows/')
       || relativeFile === '.github/workflows/copilot_pull_request_approval.yml'
+      || relativeFile === '.github/workflows/ci_check.yml'
+      || relativeFile === '.github/workflows/repowise.yml'
       ? ['ubuntu-latest']
       : /^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm'
         ? ['ubuntu-latest']
-        : relativeFile === '.github/workflows/repowise.yml'
-          ? ['self-hosted', 'coolify']
-          : ['self-hosted', 'codex'];
+        : ['self-hosted', 'codex'];
     const labels = runnerLabels(job['runs-on']);
-    if (expected.length === 1 ? labels[0] !== expected[0] : expected.some(label => !labels.includes(label))) {
+    if (JSON.stringify(labels) !== JSON.stringify(expected)) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);

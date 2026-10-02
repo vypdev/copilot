@@ -19,7 +19,7 @@ permissions:
 jobs:
   code-health:
     name: RepoWise code health
-    runs-on: [self-hosted, coolify]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -41,7 +41,7 @@ jobs:
             fi
           done
           if [[ -z "$python_bin" ]]; then
-            echo "::error::RepoWise requires Python 3.11 or newer on the self-hosted runner."
+            echo "::error::RepoWise requires Python 3.11 or newer on the runner."
             exit 1
           fi
           "$python_bin" -c 'import sys; print(f"Using Python {sys.version.split()[0]}")'
