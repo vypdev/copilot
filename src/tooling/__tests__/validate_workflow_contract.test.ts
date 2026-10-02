@@ -713,6 +713,16 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('Ubuntu, Windows and macOS setup fixture matrix');
   });
 
+  it('requires isolated fixtures on a self-hosted Windows codex runner', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs['setup-windows-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
+    expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows codex runner');
+    delete workflow.jobs['setup-windows-codex-smoke'];
+    expect(() => assertRunner(file, workflow)).toThrow('must retain hosted platform and self-hosted Windows fixture jobs');
+  });
+
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     expect(() => assertMajorActionReferences(file, {

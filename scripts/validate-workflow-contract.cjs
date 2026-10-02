@@ -207,12 +207,23 @@ function runnerLabels(value) {
 
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
+  if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+    const jobIds = Object.keys(workflow.jobs ?? {}).sort();
+    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-windows-codex-smoke'])) {
+      throw new Error(`${relativeFile} must retain hosted platform and self-hosted Windows fixture jobs.`);
+    }
+  }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
-      const platforms = job.strategy?.matrix?.os;
-      if (jobId !== 'setup-platform-smoke' || job['runs-on'] !== '${{ matrix.os }}'
-        || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
-        throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
+      if (jobId === 'setup-platform-smoke') {
+        const platforms = job.strategy?.matrix?.os;
+        if (job['runs-on'] !== '${{ matrix.os }}'
+          || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
+          throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
+        }
+      } else if (JSON.stringify(runnerLabels(job['runs-on']))
+        !== JSON.stringify(['self-hosted', 'codex', 'Windows'])) {
+        throw new Error(`${relativeFile} must target the self-hosted Windows codex runner.`);
       }
       continue;
     }

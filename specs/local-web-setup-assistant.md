@@ -1807,6 +1807,17 @@ automatable fixture path only. A global installation and browser/terminal
 review on each target platform, actual self-hosted `codex` runner behavior,
 and the human UX/security gates in §19 remain open.
 
+The platform fixture workflow MUST additionally target a self-hosted runner
+labelled `codex` and `Windows` without invoking a real setup or agent request.
+That job MUST prove dependency installation, build, typecheck, local session
+fixtures, fake-agent runtime fixtures, and packaged npm validation/smoke on
+the actual service runner. A green hosted Windows job cannot substitute for
+this evidence. A green self-hosted fixture still does not close a real Action
+execution or reboot-persistence review gate. Architecture metrics that require
+an external model provider remain unverified when no provider is available;
+dependency-boundary tests and a successful graph update are separate evidence,
+not a substitute for the missing metric report.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
