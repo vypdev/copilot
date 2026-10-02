@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join, sep } from 'node:path';
 import type { AgentExecutionObserverPort } from '../../../application/ports/agent_execution_observation_ports';
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { AgentCliClient } from '../agent_cli_client';
@@ -55,6 +55,9 @@ describe('AgentCliClient admitted process execution', () => {
             if (process.platform !== 'win32') {
                 symlinkSync(executable, alias);
                 expect(() => verifyWindowsLauncherTrust(alias, launcher, validate)).toThrow('interpreter changed');
+            } else {
+                const changed = `${directory}${sep}..${sep}${basename(directory)}${sep}node.exe`;
+                expect(() => verifyWindowsLauncherTrust(changed, launcher, validate)).toThrow('interpreter changed');
             }
         } finally {
             rmSync(directory, { recursive: true, force: true });
@@ -280,6 +283,15 @@ describe('AgentCliClient admitted process execution', () => {
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: process.platform === 'win32' ? 'configuration' : 'process' });
     }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    (process.platform === 'win32' ? it : it.skip)('rejects a Windows command wrapper before spawn', async () => {
+        const executionPlan = plan('unused', { executable: join(tmpdir(), 'agent.cmd') });
+        await expect(client(executionPlan).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'fixture', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'configuration' });
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+    });
 
     it('rejects a prompt beyond the admitted byte limit before spawn', async () => {
         await expect(client(plan('process.stdout.write("unexpected")', { maxPromptBytes: 1 })).execute({

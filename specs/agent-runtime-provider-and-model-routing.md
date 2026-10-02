@@ -373,7 +373,10 @@ copy when a fixture exercises an npm package launcher; the ambient job Node
 can legitimately fail the product's trust policy. Assertions comparing Windows
 resolved executable paths MUST ignore case only, and fixture Jest deadlines
 MUST account for native ACL setup while keeping the admitted child timeout
-bounded. A passing isolated subset alone is insufficient for this gate.
+bounded. Windows coverage MUST exercise rejection of `.cmd` execution plans
+and an interpreter path that is no longer canonical after preflight. The full
+Windows agent execution module must meet its 95% line/statement and 90%
+branch/function budgets; a passing isolated subset alone is insufficient.
 Runner owners must verify native provider executables and their ACLs. The
 GitHub-hosted fixture is historical evidence of an unsafe ambient Node and
 does not establish service-runner safety. A new isolated installer/agent
