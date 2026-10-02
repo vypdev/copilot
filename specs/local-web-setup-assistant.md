@@ -1837,6 +1837,13 @@ automatable fixture path only. A global installation and browser/terminal
 review on each target platform, actual self-hosted `codex` runner behavior,
 and the human UX/security gates in §19 remain open.
 
+The later [hosted Windows run on `9eefc89a`](https://github.com/vypdev/copilot/actions/runs/37068310921)
+passed the isolated agent runtime after its ACL repair, then failed the npm
+package smoke because GNU tar interpreted a native `C:\...` archive path as a
+remote tar source. The smoke MUST pass the packed archive through stdin while
+retaining its extracted CLI, web asset, and typed API assertions. Repeat the
+full hosted Windows job before treating this compatibility path as verified.
+
 The platform fixture workflow MUST additionally target a self-hosted runner
 labelled `codex` and `Windows` through an authorized manual dispatch only,
 without invoking a real setup or agent request. That job MUST prove dependency
