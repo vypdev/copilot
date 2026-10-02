@@ -4,11 +4,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
 const { publicPatDocumentationSources, findUnsafePatShellExamples } = require('./documentation_pat_exception_policy.cjs');
+const { normalizeDocumentationPath, normalizeDocumentationText } = require('./documentation_checkout_text.cjs');
+
+function readText(file) {
+  return normalizeDocumentationText(fs.readFileSync(file, 'utf8'));
+}
 
 const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
-const navigation = JSON.parse(fs.readFileSync(path.join(root, 'docs.json'), 'utf8'));
-const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
+const navigation = JSON.parse(readText(path.join(root, 'docs.json')));
+const action = yaml.load(readText(path.join(root, 'action.yml')));
 const COPILOT_ACTION_REFERENCE = 'v3';
 const DISTRIBUTED_COPILOT_ACTION = `vypdev/copilot@${COPILOT_ACTION_REFERENCE}`;
 const CHECKOUT_ACTION = 'actions/checkout@v5';
@@ -17,10 +22,10 @@ const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
 const errors = [];
 const docsFiles = fs.readdirSync(docsRoot, { recursive: true })
   .filter(file => file.endsWith('.mdx'))
-  .map(file => String(file));
-const docsContent = docsFiles.map(file => fs.readFileSync(path.join(docsRoot, file), 'utf8'));
+  .map(normalizeDocumentationPath);
+const docsContent = docsFiles.map(file => readText(path.join(docsRoot, file)));
 const docsByFile = new Map(docsFiles.map((file, index) => [file, docsContent[index]]));
-const readmeContent = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+const readmeContent = readText(path.join(root, 'README.md'));
 const allDocumentation = [
   readmeContent,
   ...docsContent,
@@ -34,7 +39,7 @@ const internalDocumentationFiles = [
     .map(file => path.join(root, '.cursor', 'rules', file)),
 ];
 const internalDocumentation = internalDocumentationFiles
-  .map(file => fs.readFileSync(file, 'utf8'))
+  .map(readText)
   .join('\n');
 
 const routes = new Set();
@@ -180,10 +185,10 @@ if (missingWorkflowInventory.length) {
   errors.push(`how-to-use.mdx: setup workflow inventory is missing: ${missingWorkflowInventory.join(', ')}`);
 }
 
-const actionTypesSource = fs.readFileSync(path.join(root, 'src', 'data', 'model', 'action_types.ts'), 'utf8');
+const actionTypesSource = readText(path.join(root, 'src', 'data', 'model', 'action_types.ts'));
 const actionValues = [...actionTypesSource.matchAll(/:\s*'([^']+)'/g)].map(match => match[1]);
 const availableActions = docsByFile.get('single-actions/available-actions.mdx') ?? '';
-const internalUseCaseFlows = fs.readFileSync(path.join(root, '_agent', 'docs', 'usecase-flows.md'), 'utf8');
+const internalUseCaseFlows = readText(path.join(root, '_agent', 'docs', 'usecase-flows.md'));
 const missingActions = actionValues.filter(value => !availableActions.includes(`\`${value}\``));
 if (missingActions.length) {
   errors.push(`single-actions/available-actions.mdx: single-action catalog is missing: ${missingActions.join(', ')}`);
@@ -229,7 +234,7 @@ const issueTemplatePairs = [
 ];
 for (const [documentationFile, templateFile] of issueTemplatePairs) {
   const documented = documentedIssueTemplate(documentationFile);
-  const actual = yaml.load(fs.readFileSync(path.join(root, 'setup', 'ISSUE_TEMPLATE', templateFile), 'utf8'));
+  const actual = yaml.load(readText(path.join(root, 'setup', 'ISSUE_TEMPLATE', templateFile)));
   if (!documented) {
     errors.push(`${documentationFile}: missing complete embedded issue template`);
   } else if (JSON.stringify(documented) !== JSON.stringify(actual)) {
@@ -331,10 +336,10 @@ for (const variable of [
 }
 
 const publicContractText = [
-  fs.readFileSync(path.join(root, 'action.yml'), 'utf8'),
+  readText(path.join(root, 'action.yml')),
   allDocumentation,
-  ...setupWorkflowFiles.map(file => fs.readFileSync(path.join(root, 'setup', 'workflows', file), 'utf8')),
-  fs.readFileSync(path.join(root, 'setup', 'pull_request_template.md'), 'utf8'),
+  ...setupWorkflowFiles.map(file => readText(path.join(root, 'setup', 'workflows', file))),
+  readText(path.join(root, 'setup', 'pull_request_template.md')),
 ].join('\n');
 const maintainedContractText = `${publicContractText}\n${internalDocumentation}`;
 const retiredContracts = [
@@ -372,7 +377,7 @@ const obsoleteDocumentation = [
   ['authentication.mdx', 'or its availability cannot be established safely, because setup may need to install', 'unsafe ambiguous bootstrap grant'],
   ['authentication.mdx', 'Contents/Workflows read', 'unsupported setup Workflows read grant'],
 ];
-const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+const readme = readText(path.join(root, 'README.md'));
 for (const [file, phrase, contract] of obsoleteDocumentation) {
   const source = file === 'README.md' ? readme : (docsByFile.get(file) ?? '');
   if (source.toLowerCase().includes(phrase.toLowerCase())) errors.push(`${file}: contains ${contract}: ${phrase}`);

@@ -857,6 +857,7 @@
         "scripts/validate-setup-assistant-acceptance.cjs",
         "scripts/serve-web-setup-review.cjs",
         "scripts/validate-workflow-contract.cjs",
+        "scripts/documentation_checkout_text.cjs",
         "scripts/set-cli-executable.cjs",
         "scripts/render-web-setup-component.cjs"
       ],
@@ -888,6 +889,7 @@
         "src/application/usecases/actions/__tests__/initial_setup_use_case.test.ts",
         "src/actions/__tests__/local_action.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/tooling/__tests__/documentation_checkout_text.test.ts",
         "src/application/policies/__tests__/setup_remote_facts_policy.test.ts",
         "src/application/usecases/setup/__tests__/verify_setup_pat_bootstrap_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts",

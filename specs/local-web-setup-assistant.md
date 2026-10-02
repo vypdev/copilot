@@ -1942,6 +1942,17 @@ reason, as X026 already is. The Windows workflow MUST complete with the two
 cases open, while a reviewer with actual symlink capability must rerun both
 before either can be marked passed on the service platform.
 
+The [full Windows CI on the canonical-guidance fix](https://github.com/vypdev/copilot/actions/runs/37003674978)
+passed 515 suites, the coverage budgets, package checks, and generated-guidance
+validation, then failed the independent documentation contract. Windows
+`readdirSync` paths use backslashes, and its checkout MDX uses CRLF; the
+validator interpreted registered routes and required document excerpts as
+missing. Canonicalize only relative path separators and CRLF text at the
+documentation validator's read boundary. Keep the same route, snippet,
+template, and required-copy assertions, and test that normalization preserves
+ordinary content drift. A fresh full Windows CI run MUST pass the complete
+documentation contract before the platform gate is considered verified.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
