@@ -771,7 +771,7 @@ describe('workflow contract validator', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
-    expect(step?.run).toContain('git -c core.whitespace=cr-at-eol diff --check');
+    expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'");
   });
 
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
