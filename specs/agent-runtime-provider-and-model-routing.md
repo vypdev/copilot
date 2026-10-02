@@ -280,6 +280,18 @@ Installation MUST call the runner's npm CLI through Node on Windows with the
 manifest-pinned package/version, not depend on shell lookup of `npm.cmd`.
 Explicit operator executables retain ownership and are never replaced.
 
+For a JavaScript Action, `process.execPath` names the Actions runner's embedded
+Node runtime, while `actions/setup-node` places the npm-bearing Node
+installation on the job PATH. The embedded runtime is not an npm installation.
+Windows provisioning MUST resolve the Node executable provided to the job,
+locate npm's CLI script beside that exact executable, and invoke the script
+directly with the manifest pin. A missing CLI script fails before installation;
+the code MUST NOT fall back to a shell, `npm.cmd`, or an unrelated ambient npm.
+Fixtures MUST distinguish the embedded Action runtime from a separate Node
+installation, cover a path containing spaces, and exercise the missing-script
+failure. A manual service-runner fixture MUST verify that the selected Node and
+its npm CLI script actually exist without using an agent credential or setup.
+
 The Windows runtime MUST use a private, owner-only ACL for generated artifacts;
 POSIX mode bits are insufficient evidence on Windows. Cancellation and timeout
 MUST terminate the agent process tree before generated artifacts are removed.

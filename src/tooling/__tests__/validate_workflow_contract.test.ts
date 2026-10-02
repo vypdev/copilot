@@ -762,6 +762,28 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('upload hosted Windows coverage');
   });
 
+  it.each(['setup-platform-smoke', 'setup-windows-codex-smoke'])(
+    'requires the real Windows job Node npm preflight in %s', (jobId) => {
+      const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      workflow.jobs[jobId].steps = workflow.jobs[jobId].steps.filter(
+        (step: { name?: string }) => step.name !== 'Verify Windows job Node npm CLI',
+      );
+      expect(() => assertRunner(file, workflow)).toThrow('verify the Windows job Node npm CLI');
+    },
+  );
+
+  it.each(['setup-platform-smoke', 'setup-windows-codex-smoke'])(
+    'keeps full history for acceptance budget tests in %s', (jobId) => {
+      const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      const checkout = workflow.jobs[jobId].steps.find((step: { uses?: string }) =>
+        step.uses === 'actions/checkout@v5');
+      checkout.with['fetch-depth'] = 1;
+      expect(() => assertRunner(file, workflow)).toThrow('fetch full platform-test history');
+    },
+  );
+
   it.each([
     ['ci_check.yml', 'ci-check'],
     ['repowise.yml', 'code-health'],

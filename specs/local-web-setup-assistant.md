@@ -1935,6 +1935,11 @@ Windows job MUST retain the same suite for service-specific evidence. Workflow
 contract tests MUST reject removal of either full suite. This makes Windows
 coverage evidence repeatable without a live agent or PAT and leaves review
 state as a separate gate.
+The platform workflow MUST fetch full Git history because the shared
+communication test-budget validator reads an older baseline commit. Tests
+that exercise Action admission MUST provide fake agent credentials explicitly
+so hosted CI and platform jobs never depend on credentials or local CLI login
+left on a persistent runner.
 
 The [first deterministic Windows coverage run](https://github.com/vypdev/copilot/actions/runs/36982636134)
 passed all 514 suites and the agent-execution budget at its unchanged

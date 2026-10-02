@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { resolveAgentExecutableInvocation, resolveAgentExecutablePath, resolveNpmInstallInvocation } from '../agent_executable_invocation';
 
 function fixture() {
@@ -19,13 +19,42 @@ function fixture() {
 }
 
 describe('Windows npm agent executable resolution', () => {
-    it('uses the runner Node npm CLI with the exact pinned package and no command shell', () => {
-        const invocation = resolveNpmInstallInvocation('@openai/codex', '0.156.1', 'win32', join('C:', 'node', 'node.exe'));
-        expect(invocation.executable).toBe(join('C:', 'node', 'node.exe'));
-        expect(invocation.prefixArgs).toEqual([
-            join('C:', 'node', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-            'install', '--global', '@openai/codex@0.156.1',
-        ]);
+    it('uses the job Node npm CLI with the exact pin, even when the Action Node is elsewhere', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot job node with spaces '));
+        const node = join(root, 'node.exe');
+        const npmCli = join(root, 'node_modules', 'npm', 'bin', 'npm-cli.js');
+        try {
+            mkdirSync(join(root, 'node_modules', 'npm', 'bin'), { recursive: true });
+            writeFileSync(node, 'fixture');
+            chmodSync(node, 0o755);
+            writeFileSync(npmCli, 'fixture');
+
+            const invocation = resolveNpmInstallInvocation('@openai/codex', '0.156.1', 'win32', {
+                PATH: root, PATHEXT: '.exe',
+            });
+            expect(invocation.executable).toBe(realpathSync(node));
+            expect(invocation.executable).not.toBe(process.execPath);
+            expect(invocation.prefixArgs).toEqual([
+                join(dirname(realpathSync(node)), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+                'install', '--global', '@openai/codex@0.156.1',
+            ]);
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
+    });
+
+    it('fails before installation when job Node lacks npm, even if an npm shim exists', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot job node without npm '));
+        try {
+            writeFileSync(join(root, 'node.exe'), 'fixture');
+            chmodSync(join(root, 'node.exe'), 0o755);
+            writeFileSync(join(root, 'npm.cmd'), '@echo off\r\n');
+            expect(() => resolveNpmInstallInvocation('@openai/codex', '0.156.1', 'win32', {
+                PATH: root, PATHEXT: '.exe;.cmd',
+            })).toThrow('job Node installation has no npm CLI script');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
     });
 
     it('retains direct npm invocation on Unix', () => {

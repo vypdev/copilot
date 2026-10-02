@@ -1486,6 +1486,7 @@
         "src/data/repository/agent_cli_execution.ts",
         "src/data/repository/agent_credential_policy.ts",
         "scripts/verify-agent-clis.cjs",
+        "scripts/verify-windows-job-npm.cjs",
         "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-workflow-contract.cjs"
       ],

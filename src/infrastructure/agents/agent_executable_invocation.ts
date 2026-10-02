@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { accessSync, constants, existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { accessSync, constants, readFileSync, realpathSync, statSync } from 'node:fs';
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
@@ -96,9 +96,6 @@ export function readAgentExecutableVersion(
 
 export function installAgentNpmPackage(packageName: string, version: string): void {
     const invocation = resolveNpmInstallInvocation(packageName, version);
-    if (process.platform === 'win32' && !existsSync(invocation.prefixArgs[0])) {
-        throw new Error('The runner Node installation has no npm CLI script.');
-    }
     execFileSync(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
 }
 
@@ -106,13 +103,22 @@ export function resolveNpmInstallInvocation(
     packageName: string,
     version: string,
     platform: NodeJS.Platform = process.platform,
-    nodeExecutable: string = process.execPath,
+    environment: NodeJS.ProcessEnv = process.env,
 ): AgentExecutableInvocation {
     const args = ['install', '--global', `${packageName}@${version}`];
     if (platform === 'win32') {
+        // JavaScript Actions run under the runner's embedded Node, which has no npm.
+        // setup-node adds the npm-bearing installation to the job PATH.
+        const nodeExecutable = resolveAgentExecutablePath('node', environment, platform);
+        const npmCli = join(dirname(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+        try {
+            if (!statSync(npmCli).isFile()) throw new Error('not a file');
+        } catch {
+            throw new Error('The job Node installation has no npm CLI script.');
+        }
         return {
             executable: nodeExecutable,
-            prefixArgs: [join(dirname(nodeExecutable), 'node_modules', 'npm', 'bin', 'npm-cli.js'), ...args],
+            prefixArgs: [npmCli, ...args],
         };
     }
     return { executable: 'npm', prefixArgs: args };

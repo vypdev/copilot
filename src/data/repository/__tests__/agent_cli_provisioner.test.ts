@@ -2,6 +2,7 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync 
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { resolveAgentExecutablePath } from '../../../infrastructure/agents/agent_executable_invocation';
 import {
     AgentCliProvisioner,
     agentExecutableExists,
@@ -60,6 +61,10 @@ describe('AgentCliProvisioner', () => {
         try {
             writeFileSync(executable, '#!/bin/sh\nexit 0\n');
             chmodSync(executable, 0o755);
+            const jobNode = process.platform === 'win32'
+                ? resolveAgentExecutablePath('node', process.env, 'win32')
+                : process.execPath;
+            const npmCli = join(dirname(jobNode), 'node_modules', 'npm', 'bin', 'npm-cli.js');
             let packageBin: string | undefined;
             if (process.platform === 'win32') {
                 const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
@@ -72,8 +77,8 @@ describe('AgentCliProvisioner', () => {
             }
             (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
                 if (command === 'npm') return Buffer.alloc(0);
-                if (process.platform === 'win32' && command === process.execPath) {
-                    if (args[0] === join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')) return Buffer.alloc(0);
+                if (process.platform === 'win32' && command === jobNode) {
+                    if (args[0] === npmCli) return Buffer.alloc(0);
                     if (args[0] === packageBin && args[1] === '--version') return 'codex-cli 0.156.1\n';
                 }
                 if (command === realpathSync(executable) && args[0] === '--version') return 'codex-cli 0.156.1\n';
@@ -87,8 +92,8 @@ describe('AgentCliProvisioner', () => {
 
             if (process.platform === 'win32') {
                 expect(execFileSync).toHaveBeenCalledWith(
-                    process.execPath,
-                    [join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+                    jobNode,
+                    [npmCli,
                         'install', '--global', '@openai/codex@0.156.1'],
                     { stdio: 'inherit' },
                 );

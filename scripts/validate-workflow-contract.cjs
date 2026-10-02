@@ -236,6 +236,23 @@ function assertWindowsCoverageAndValidators(relativeFile, job, hosted) {
   }
 }
 
+function assertWindowsJobNpm(relativeFile, job, hosted) {
+  const steps = job.steps ?? [];
+  const npmCheck = steps.find(step => step?.name === 'Verify Windows job Node npm CLI');
+  if (npmCheck?.run !== 'node scripts/verify-windows-job-npm.cjs'
+    || (hosted && npmCheck.if !== "runner.os == 'Windows'")
+    || steps.indexOf(npmCheck) >= steps.findIndex(step => step?.run === 'pnpm install --frozen-lockfile')) {
+    throw new Error(`${relativeFile} must verify the Windows job Node npm CLI before installation.`);
+  }
+}
+
+function assertPlatformHistoryCheckout(relativeFile, job) {
+  const checkout = (job.steps ?? []).find(step => step?.uses === 'actions/checkout@v5');
+  if (checkout?.with?.['fetch-depth'] !== 0 || checkout.with?.['persist-credentials'] !== false) {
+    throw new Error(`${relativeFile} must fetch full platform-test history without persisted checkout credentials.`);
+  }
+}
+
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
@@ -253,6 +270,8 @@ function assertRunner(file, workflow) {
           throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
         }
         assertWindowsCoverageAndValidators(relativeFile, job, true);
+        assertWindowsJobNpm(relativeFile, job, true);
+        assertPlatformHistoryCheckout(relativeFile, job);
         const codecov = (job.steps ?? []).find(step => step?.name === 'Upload Windows coverage to Codecov');
         if (codecov?.uses !== 'codecov/codecov-action@v6'
           || codecov.if !== "${{ runner.os == 'Windows' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}"
@@ -272,6 +291,8 @@ function assertRunner(file, workflow) {
           throw new Error(`${relativeFile} must reserve the self-hosted Windows codex runner for manual dispatch.`);
         }
         assertWindowsCoverageAndValidators(relativeFile, job, false);
+        assertWindowsJobNpm(relativeFile, job, false);
+        assertPlatformHistoryCheckout(relativeFile, job);
         const guidanceStep = (job.steps ?? []).find(step => step?.name === 'Validate generated guidance checkout on codex Windows');
         if (!guidanceStep?.run?.includes('pnpm run validate:agent-docs')
           || !guidanceStep.run.includes('git ls-files --eol')) {

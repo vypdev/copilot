@@ -31,9 +31,15 @@ Bash on every runner; Windows needs Git for Windows with its Bash available to
 the Actions runner service. Installed workflows select `shell: bash` for
 `run` steps so Windows does not create PowerShell scripts subject to local
 execution policy. Keep Node.js 24 and pnpm provisioning available to jobs that
-build the Action. Verify each operating system with an actual runner job before
-claiming Action-wide compatibility; the setup fixture matrix exercises only
-its isolated setup paths. In particular, inspect timeout and cancellation of
+build the Action.
+
+The JavaScript Action runs under the runner's embedded Node, which does not
+provide npm. Windows agent provisioning resolves the separate Node installation
+placed on the job PATH by `actions/setup-node` and invokes its npm CLI script
+directly. The platform fixture verifies that pairing without an agent request.
+Verify each operating system with an actual runner job before
+claiming Action-wide compatibility; the platform matrix exercises isolated
+setup and agent fixture paths. In particular, inspect timeout and cancellation of
 agent child processes on Windows separately from POSIX process-group behavior.
 
 The Action passes agent children an allowlisted runtime environment plus only the credential selected for that provider; unrelated GitHub, cloud, database, and PAT variables are not inherited. Codex review capabilities are forced to `--sandbox read-only --ignore-user-config --ignore-rules`; fixer capabilities use `workspace-write`, with network and extra writable roots disabled. Cursor receives a per-invocation configuration/home with sandboxing and default-deny network policy. OpenCode receives a pure, inline default-deny permission profile with shell, task, skill, web, and external-directory tools disabled. Dangerous bypass flags are rejected for every runtime. These controls complement rather than replace runner/container isolation.
