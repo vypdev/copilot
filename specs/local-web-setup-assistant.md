@@ -2030,15 +2030,17 @@ The [first deterministic Windows validator run](https://github.com/vypdev/copilo
 passed documentation, workflow, specification, and acceptance validation after
 full coverage. Its final `git diff --check` flagged CRLF in regenerated Windows
 bundles as trailing whitespace. CI and the dedicated Windows job MUST use
-Git's `cr-at-eol` whitespace setting for this check; actual trailing spaces
-before the line ending MUST still fail. Repeat the Windows job after this
+Git's `cr-at-eol` whitespace setting alongside explicit `blank-at-eol`,
+`blank-at-eof` and `space-before-tab` checks; actual trailing spaces before
+the line ending MUST still fail. Repeat the Windows job after this
 change before closing the platform gate.
 The [next Windows validator run](https://github.com/vypdev/copilot/actions/runs/37007422803)
 passed every validator except the diff check, which reported one whitespace
 line in regenerated `build/web/index.html`. `build/` is generated and differs
 across platforms; Unix `validate:build` and all-platform npm package checks
 cover those artifacts. The diff whitespace gate MUST exclude only `build/`,
-while retaining `cr-at-eol` and checking source, workflows, specs, and docs.
+while retaining all four whitespace rules and checking source, workflows,
+specs, and docs.
 A fixture MUST show that a trailing space in source is still rejected. The CI
 gate MUST compare committed changes from the event base to HEAD; an unmodified
 checkout diff does not verify the PR or push contents. A push event with an

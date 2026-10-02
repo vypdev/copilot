@@ -24,6 +24,7 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
 const PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state';
@@ -323,6 +324,10 @@ function assertRunner(file, workflow) {
         }
       }
       assertIsolatedPnpm(relativeFile, jobId, job);
+      const validationStep = (job.steps ?? []).find(step => step?.name === 'Full platform documentation and contract validators');
+      if (!validationStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check -- . ':(exclude)build/**'`)) {
+        throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
+      }
       continue;
     }
     const expected = relativeFile.startsWith('setup/workflows/')
@@ -338,6 +343,12 @@ function assertRunner(file, workflow) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
+    if (relativeFile === '.github/workflows/ci_check.yml') {
+      const diffStep = (job.steps ?? []).find(step => step?.name === 'Validate Git diff');
+      if (!diffStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`)) {
+        throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
+      }
+    }
   }
 }
 

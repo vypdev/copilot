@@ -68,7 +68,7 @@ jobs:
           pnpm run validate:workflows
           pnpm run validate:specifications
           pnpm run validate:setup-acceptance
-          git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check -- . ':(exclude)build/**'
 
   setup-self-hosted-codex-smoke:
     if: github.event_name == 'workflow_dispatch'
@@ -135,4 +135,4 @@ jobs:
           pnpm run validate:workflows
           pnpm run validate:specifications
           pnpm run validate:setup-acceptance
-          git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check -- . ':(exclude)build/**'

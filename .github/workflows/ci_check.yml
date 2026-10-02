@@ -134,4 +134,4 @@ jobs:
             base="$(git hash-object -t tree --stdin </dev/null)"
           fi
           [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "Missing diff-check base commit" >&2; exit 1; }
-          git -c core.whitespace=cr-at-eol diff --check "$base" HEAD -- . ':(exclude)build/**'
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check "$base" HEAD -- . ':(exclude)build/**'

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import * as yaml from 'js-yaml';
 import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
 
+const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
+
 interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
@@ -843,7 +845,7 @@ describe('workflow contract validator', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
-    expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'");
+    expect(step?.run).toContain(`git -c ${CRLF_WHITESPACE} diff --check -- . ':(exclude)build/**'`);
   });
 
   it('checks committed PR, merge-queue, and push changes against their event base', () => {
@@ -855,7 +857,19 @@ describe('workflow contract validator', () => {
     expect(step?.run).toContain('push) base="$PUSH_BEFORE_SHA"');
     expect(step?.run).toContain('"$base" =~ ^0{40}$');
     expect(step?.run).toContain('base="$(git hash-object -t tree --stdin </dev/null)"');
-    expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check \"$base\" HEAD -- . ':(exclude)build/**'");
+    expect(step?.run).toContain(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`);
+  });
+
+  it.each([
+    ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full platform documentation and contract validators'],
+    ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke', 'Full platform documentation and contract validators'],
+    ['ci_check.yml', 'ci-check', 'Validate Git diff'],
+  ])('rejects weakened whitespace rules in %s %s', (fileName, jobId, stepName) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
+    step.run = step.run.replace('blank-at-eol,', '');
+    expect(() => assertRunner(file, workflow)).toThrow('default whitespace checks');
   });
 
   it('retains whitespace errors while accepting CRLF line endings', () => {
@@ -873,19 +887,19 @@ describe('workflow contract validator', () => {
 
       for (const changed of ['trailing space \n', 'blank line with spaces\n  \n', 'space before tab\n \tindent\n']) {
         writeFileSync(path.join(directory, 'fixture.txt'), changed);
-        expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', '--', '.').status).not.toBe(0);
+        expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', '--', '.').status).not.toBe(0);
         expect(git('add', 'fixture.txt').status).toBe(0);
         expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
           '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'changed').status).toBe(0);
-        expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).not.toBe(0);
+        expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).not.toBe(0);
         const emptyTree = git('hash-object', '-t', 'tree', '--stdin').stdout.trim();
-        expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', emptyTree, 'HEAD', '--', '.').status).not.toBe(0);
+        expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', emptyTree, 'HEAD', '--', '.').status).not.toBe(0);
       }
       writeFileSync(path.join(directory, 'fixture.txt'), 'clean\r\n');
       expect(git('add', 'fixture.txt').status).toBe(0);
       expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
         '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'clean-crlf').status).toBe(0);
-      expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).toBe(0);
+      expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).toBe(0);
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
