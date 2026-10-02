@@ -845,13 +845,15 @@ describe('workflow contract validator', () => {
     expect(step?.run).toContain('pull_request) base="$PR_BASE_SHA"');
     expect(step?.run).toContain('merge_group) base="$MERGE_BASE_SHA"');
     expect(step?.run).toContain('push) base="$PUSH_BEFORE_SHA"');
+    expect(step?.run).toContain('"$base" =~ ^0{40}$');
+    expect(step?.run).toContain('base="$(git hash-object -t tree --stdin </dev/null)"');
     expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check \"$base\" HEAD -- . ':(exclude)build/**'");
   });
 
   it('retains whitespace errors while accepting CRLF line endings', () => {
     const directory = mkdtempSync(path.join(tmpdir(), 'copilot-git-whitespace-'));
     const git = (...args: string[]) => spawnSync('git', args, {
-      cwd: directory, encoding: 'utf8',
+      cwd: directory, encoding: 'utf8', input: '',
     });
     try {
       expect(git('init', '-q').status).toBe(0);
@@ -868,6 +870,8 @@ describe('workflow contract validator', () => {
         expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
           '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'changed').status).toBe(0);
         expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).not.toBe(0);
+        const emptyTree = git('hash-object', '-t', 'tree', '--stdin').stdout.trim();
+        expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', emptyTree, 'HEAD', '--', '.').status).not.toBe(0);
       }
       writeFileSync(path.join(directory, 'fixture.txt'), 'clean\r\n');
       expect(git('add', 'fixture.txt').status).toBe(0);

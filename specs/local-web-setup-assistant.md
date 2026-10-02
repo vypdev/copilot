@@ -2002,7 +2002,9 @@ cover those artifacts. The diff whitespace gate MUST exclude only `build/`,
 while retaining `cr-at-eol` and checking source, workflows, specs, and docs.
 A fixture MUST show that a trailing space in source is still rejected. The CI
 gate MUST compare committed changes from the event base to HEAD; an unmodified
-checkout diff does not verify the PR or push contents.
+checkout diff does not verify the PR or push contents. A push event with an
+all-zero `before` SHA (new ref) MUST compare HEAD with Git's empty tree so
+that the first committed contents are checked too.
 
 The [PR #403 Bugbot review on 67b81ab](https://github.com/vypdev/copilot/actions/runs/37013601183)
 reported that the automatic `pull_request` setup job executed PR-controlled

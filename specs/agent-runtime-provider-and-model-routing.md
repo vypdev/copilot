@@ -165,6 +165,9 @@ and package bin before any help, version, or login command. It MUST reuse the
 runtime's executable trust implementation rather than keep a weaker copy, and
 PATH lookup MUST not execute an unvalidated `which` or shell wrapper. An
 isolated fake-CLI fixture MUST prove a writable candidate is never started.
+The Windows verifier fixture MUST answer both headless `exec --help` and
+`--version` promptly, and report an optional missing login separately; a
+fixture that hangs on help is not evidence of CLI readiness.
 
 ### 6.2 Alternative paths
 

@@ -164,7 +164,8 @@ describe('isolated Windows agent runtime', () => {
 
     windowsIt('reports fake Codex readiness through the standalone operator verifier', () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'
-            + 'else if(process.argv.includes("login")){process.exit(1)}else{process.stdin.resume()}';
+            + 'else if(process.argv.includes("--help")){process.stdout.write("usage: codex exec")}'
+            + 'else if(process.argv.includes("login")){process.exit(1)}else{process.exit(2)}';
         const fixture = fakeRuntime(source);
         try {
             const output = execFileSync(process.execPath, [join(process.cwd(), 'scripts', 'verify-agent-clis.cjs')], {

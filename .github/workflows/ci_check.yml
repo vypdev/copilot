@@ -130,5 +130,8 @@ jobs:
             workflow_dispatch) base="$(git rev-parse HEAD^)" ;;
             *) echo "Unsupported diff-check event" >&2; exit 1 ;;
           esac
+          if [[ "$EVENT_NAME" == push && "$base" =~ ^0{40}$ ]]; then
+            base="$(git hash-object -t tree --stdin </dev/null)"
+          fi
           [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "Missing diff-check base commit" >&2; exit 1; }
           git -c core.whitespace=cr-at-eol diff --check "$base" HEAD -- . ':(exclude)build/**'
