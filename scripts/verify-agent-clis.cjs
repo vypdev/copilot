@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /* Verify provider CLIs without printing credentials or executing agent work. */
 const { execFileSync } = require('node:child_process');
-const { existsSync, readFileSync, realpathSync, statSync } = require('node:fs');
+const { accessSync, constants, existsSync, readFileSync, realpathSync, statSync } = require('node:fs');
 const { homedir } = require('node:os');
-const { basename, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } = require('node:path');
+const { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } = require('node:path');
+const { verifyWindowsAgentExecutableAcl } = require('../src/infrastructure/agents/windows_executable_trust.cjs');
 
 const checksByProvider = {
   opencode: { name: 'opencode', command: 'opencode', package: 'opencode-ai', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
@@ -11,16 +12,26 @@ const checksByProvider = {
   cursor: { name: 'cursor', command: 'agent', args: ['--help'], credential: ['CURSOR_API_KEY'] },
 };
 
-function resolveCommand(check) {
-  if (process.platform !== 'win32') {
-    const path = execFileSync('which', [check.command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    return { path, executable: path, prefix: [] };
+function resolveOnPath(command) {
+  const extensions = process.platform === 'win32'
+    ? (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';') : [''];
+  for (const directory of (process.env.PATH || process.env.Path || '').split(delimiter).filter(Boolean)) {
+    for (const extension of extensions) {
+      const candidate = join(directory, `${command}${extension}`);
+      try {
+        accessSync(candidate, constants.X_OK);
+        return realpathSync(candidate);
+      } catch {
+        // Continue through configured PATH candidates without running a lookup command.
+      }
+    }
   }
-  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-  const where = join(systemRoot, 'System32', 'where.exe');
-  const path = execFileSync(where, [check.command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
-    .split(/\r?\n/u).map(line => line.trim()).filter(Boolean)[0];
-  if (!path) throw new Error('Agent executable not found.');
+  throw new Error('Agent executable not found.');
+}
+
+function resolveCommand(check) {
+  const path = resolveOnPath(check.command);
+  if (process.platform !== 'win32') return { path, executable: path, prefix: [] };
   if (/\.bat$/iu.test(path)) throw new Error('Batch agent wrappers are unsupported.');
   if (!/\.cmd$/iu.test(path)) return { path, executable: path, prefix: [] };
   if (!check.package || basename(path).toLowerCase() !== `${check.command}.cmd`) {
@@ -43,7 +54,21 @@ function resolveCommand(check) {
   throw new Error('Unsupported npm agent bin.');
 }
 
+function assertCommandTrust(command) {
+  for (const path of new Set([command.path, command.executable, ...command.prefix])) {
+    const stats = statSync(path);
+    if (!stats.isFile()) throw new Error('Agent executable must be a regular file.');
+    accessSync(path, constants.X_OK);
+    if (process.platform === 'win32') verifyWindowsAgentExecutableAcl(path);
+    else if ((stats.mode & 0o022) !== 0
+      || (typeof process.getuid === 'function' && stats.uid !== process.getuid() && stats.uid !== 0)) {
+      throw new Error('Agent executable owner or permissions are unsafe.');
+    }
+  }
+}
+
 function invokeCommand(command, args, options) {
+  assertCommandTrust(command);
   return execFileSync(command.executable, [...command.prefix, ...args], options);
 }
 
@@ -78,11 +103,11 @@ function hasLocalOpenCodeSession() {
   }
 }
 
-function hasLocalSession(check) {
+function hasLocalSession(check, command) {
   if (check.name === 'codex') {
     if (hasLocalCodexSession()) return true;
     try {
-      invokeCommand(resolveCommand(check), ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
+      invokeCommand(command, ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
       return true;
     } catch {
       return false;
@@ -143,7 +168,7 @@ for (const check of checks) {
     const credentialNamesForCheck = credentialNames(check);
     const credentialState = credentialNamesForCheck.length === 0
       ? 'credential-resolution-deferred-to-cli'
-      : check.localSession && hasLocalSession(check)
+      : check.localSession && hasLocalSession(check, command)
       ? 'local-session-present'
         : credentialNamesForCheck.some((name) => Boolean(process.env[name]))
         ? 'credential-reference-present'

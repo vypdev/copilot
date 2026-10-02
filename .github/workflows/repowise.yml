@@ -79,7 +79,7 @@ jobs:
           advisory_scan() {
             local name="$1"
             shift
-            if timeout --kill-after=10s 90s "$@" > "$report_dir/$name.json"; then
+            if (ulimit -v 2097152; timeout --kill-after=10s 90s "$@") > "$report_dir/$name.json"; then
               printf '%s: complete\n' "$name" >> "$report_dir/advisory-status.txt"
             else
               local status="$?"

@@ -63,7 +63,7 @@ From the repository root:
 node scripts/verify-agent-clis.cjs
 ```
 
-The verifier reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
+The verifier checks the selected launcher, interpreter, and package entry point before invoking help, version, or login status. It rejects files with unsafe ownership or write access, including Windows ACLs that grant modification to another principal. It reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
 
 ## Provider notes
 

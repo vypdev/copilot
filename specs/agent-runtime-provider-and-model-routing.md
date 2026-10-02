@@ -155,6 +155,12 @@ focused fixture MUST prove a writable launcher cannot run during this probe.
 The admitted execution plan separately records and rechecks its launcher hash
 when that plan is later executed; the synchronous login probe has no stored
 execution plan to recheck.
+The repository's standalone `verify-agent-clis.cjs` diagnostic MUST apply the
+same installed-file owner/ACL policy to the selected shim, direct interpreter,
+and package bin before any help, version, or login command. It MUST reuse the
+runtime's executable trust implementation rather than keep a weaker copy, and
+PATH lookup MUST not execute an unvalidated `which` or shell wrapper. An
+isolated fake-CLI fixture MUST prove a writable candidate is never started.
 
 ### 6.2 Alternative paths
 

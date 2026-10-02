@@ -78714,76 +78714,14 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
 
 /***/ }),
 
-/***/ 44324:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.assertWindowsExecutableDacl = assertWindowsExecutableDacl;
-/** Read-only trust policy for installed executables; managed artifacts use a stricter owner-only policy. */
-function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
-    const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
-    const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
-    if (localAdministrator)
-        trusted.add('LA');
-    const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
-    if (!owner || !trusted.has(owner) || !section)
-        throw new Error('Unsafe executable ACL owner or DACL.');
-    const firstAce = section.indexOf('(');
-    if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
-        throw new Error('Unrecognized executable ACL.');
-    }
-    const entries = section.slice(firstAce);
-    const aces = [...entries.matchAll(/\(([^()]*)\)/gu)].map(match => match[1].split(';'));
-    if (aces.length === 0 || entries.replace(/\([^()]*\)/gu, '') !== '') {
-        throw new Error('Unrecognized executable ACL entries.');
-    }
-    for (const fields of aces) {
-        if (fields.length !== 6 || !['A', 'D'].includes(fields[0]) || fields[3] || fields[4]
-            || !/^(?:(?:OI|CI|NP|IO|ID))*$/u.test(fields[1])) {
-            throw new Error('Unrecognized executable ACL entry.');
-        }
-        if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5]))
-            continue;
-        if (grantsMutation(fields[2])) {
-            // The public boundary wraps this detail in a fixed message. The
-            // isolated runner fixture retains the ACE for diagnosing host ACLs.
-            throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
-        }
-    }
-}
-function grantsMutation(rights) {
-    if (/^0x[0-9a-f]+$/iu.test(rights)) {
-        const mask = Number.parseInt(rights.slice(2), 16);
-        if (!Number.isSafeInteger(mask) || mask > 4294967295) {
-            throw new Error('Unrecognized executable ACL rights.');
-        }
-        const genericWrite = 1073741824;
-        const genericAll = 268435456;
-        const fileMutation = 852310;
-        return (mask & (genericWrite | genericAll | fileMutation)) !== 0;
-    }
-    const tokens = rights.match(/.{2}/gu) ?? [];
-    if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
-        throw new Error('Unrecognized executable ACL rights.');
-    }
-    return tokens.some(token => MUTATING_RIGHTS.has(token));
-}
-const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'WD', 'WO']);
-const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
-
-
-/***/ }),
-
 /***/ 55362:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isLocalWindowsAdministrator = void 0;
 exports.matchesWindowsRuntimePrincipal = matchesWindowsRuntimePrincipal;
-exports.isLocalWindowsAdministrator = isLocalWindowsAdministrator;
 exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
 exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
 exports.verifyWindowsAgentExecutableAcl = verifyWindowsAgentExecutableAcl;
@@ -78791,14 +78729,11 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
-const windows_executable_acl_policy_1 = __nccwpck_require__(44324);
-const SID_PATTERN = /S-\d+(?:-\d+)+/;
-function systemTool(name) {
-    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-    return (0, node_path_1.join)(systemRoot, 'System32', name);
-}
+const windows_executable_trust_cjs_1 = __nccwpck_require__(37631);
+var windows_executable_trust_cjs_2 = __nccwpck_require__(37631);
+Object.defineProperty(exports, "isLocalWindowsAdministrator", ({ enumerable: true, get: function () { return windows_executable_trust_cjs_2.isLocalWindowsAdministrator; } }));
 function runIcacls(args, cwd) {
-    (0, node_child_process_1.execFileSync)(systemTool('icacls.exe'), args, {
+    (0, node_child_process_1.execFileSync)((0, windows_executable_trust_cjs_1.systemTool)('icacls.exe'), args, {
         cwd,
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 15000,
@@ -78807,26 +78742,6 @@ function runIcacls(args, cwd) {
 }
 function matchesWindowsRuntimePrincipal(principal, identity) {
     return principal === identity.sid || (principal === 'LA' && identity.localAdministrator);
-}
-function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
-    return sid.endsWith('-500') && accountDomain?.toLowerCase() === computerName.toLowerCase();
-}
-function currentUserIdentity() {
-    const identity = (0, node_child_process_1.execFileSync)(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 15000,
-        windowsHide: true,
-    });
-    const sid = identity.match(SID_PATTERN)?.[0];
-    if (!sid)
-        throw new Error('Could not identify the Windows runtime owner.');
-    const account = /^\uFEFF?"([^"\r\n]+)"\s*,/.exec(identity)?.[1];
-    const accountDomain = account?.split('\\')[0];
-    return {
-        sid,
-        localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, (0, node_os_1.hostname)()),
-    };
 }
 function savedDacl(path) {
     const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-acl-inspect-'));
@@ -78843,15 +78758,6 @@ function savedDacl(path) {
     finally {
         (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
     }
-}
-function installedExecutableDescriptor(path) {
-    // icacls /save intentionally omits the owner; inspect the full descriptor
-    // through a read-only query with an encoded, literal path instead.
-    const command = "$ErrorActionPreference='Stop'; (Get-Acl -LiteralPath '"
-        + path.replace(/'/gu, "''") + "').Sddl";
-    return (0, node_child_process_1.execFileSync)(systemTool((0, node_path_1.join)('WindowsPowerShell', 'v1.0', 'powershell.exe')), ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
-        encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000, windowsHide: true,
-    }).replace(/^\uFEFF/u, '').trim();
 }
 function assertOwnerOnlyDacl(sddl, identity, directory) {
     const isCurrentUser = (principal) => matchesWindowsRuntimePrincipal(principal, identity);
@@ -78878,7 +78784,7 @@ function assertOwnerOnlyDacl(sddl, identity, directory) {
 function makeWindowsRuntimePathPrivate(path, directory) {
     if (process.platform !== 'win32')
         return;
-    const { sid } = currentUserIdentity();
+    const { sid } = (0, windows_executable_trust_cjs_1.currentWindowsUserIdentity)();
     runIcacls([path, '/setowner', `*${sid}`]);
     // The owner can replace its DACL without the restore privilege required by
     // icacls /restore on an unprivileged Windows runner service account.
@@ -78890,7 +78796,7 @@ function makeWindowsRuntimePathPrivate(path, directory) {
 function verifyWindowsRuntimePathPrivate(path, directory) {
     if (process.platform !== 'win32')
         return;
-    const identity = currentUserIdentity();
+    const identity = (0, windows_executable_trust_cjs_1.currentWindowsUserIdentity)();
     const { sid } = identity;
     // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
     runIcacls([path, '/setowner', `*${sid}`]);
@@ -78899,8 +78805,7 @@ function verifyWindowsRuntimePathPrivate(path, directory) {
 function verifyWindowsAgentExecutableAcl(path) {
     if (process.platform !== 'win32')
         return;
-    const identity = currentUserIdentity();
-    (0, windows_executable_acl_policy_1.assertWindowsExecutableDacl)(installedExecutableDescriptor(path), identity.sid, identity.localAdministrator);
+    (0, windows_executable_trust_cjs_1.verifyWindowsAgentExecutableAcl)(path);
 }
 
 
@@ -84469,6 +84374,110 @@ module.exports = require("tls");
 
 "use strict";
 module.exports = require("util");
+
+/***/ }),
+
+/***/ 37631:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { execFileSync } = __nccwpck_require__(17718);
+const { Buffer } = __nccwpck_require__(72254);
+const { hostname } = __nccwpck_require__(70612);
+const { join } = __nccwpck_require__(49411);
+
+const SID_PATTERN = /S-\d+(?:-\d+)+/u;
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'WD', 'WO']);
+const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
+
+function systemTool(name) {
+  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+  return join(systemRoot, 'System32', name);
+}
+
+function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
+  return sid.endsWith('-500') && accountDomain?.toLowerCase() === computerName.toLowerCase();
+}
+
+function currentWindowsUserIdentity() {
+  const identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
+    encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+  });
+  const sid = identity.match(SID_PATTERN)?.[0];
+  if (!sid) throw new Error('Could not identify the Windows runtime owner.');
+  const account = /^\uFEFF?"([^"\r\n]+)"\s*,/u.exec(identity)?.[1];
+  const accountDomain = account?.split('\\')[0];
+  return { sid, localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, hostname()) };
+}
+
+function installedExecutableDescriptor(path) {
+  // icacls /save omits the owner; a read-only full descriptor is required.
+  const command = "$ErrorActionPreference='Stop'; (Get-Acl -LiteralPath '"
+    + path.replace(/'/gu, "''") + "').Sddl";
+  return execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
+    ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+    }).replace(/^\uFEFF/u, '').trim();
+}
+
+function grantsMutation(rights) {
+  if (/^0x[0-9a-f]+$/iu.test(rights)) {
+    const mask = Number.parseInt(rights.slice(2), 16);
+    if (!Number.isSafeInteger(mask) || mask > 0xFFFF_FFFF) {
+      throw new Error('Unrecognized executable ACL rights.');
+    }
+    const genericWrite = 0x4000_0000;
+    const genericAll = 0x1000_0000;
+    const fileMutation = 0x000D_0156;
+    return (mask & (genericWrite | genericAll | fileMutation)) !== 0;
+  }
+  const tokens = rights.match(/.{2}/gu) ?? [];
+  if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
+    throw new Error('Unrecognized executable ACL rights.');
+  }
+  return tokens.some(token => MUTATING_RIGHTS.has(token));
+}
+
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
+  const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
+  const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
+  if (localAdministrator) trusted.add('LA');
+  const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
+  if (!owner || !trusted.has(owner) || !section) throw new Error('Unsafe executable ACL owner or DACL.');
+  const firstAce = section.indexOf('(');
+  if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
+    throw new Error('Unrecognized executable ACL.');
+  }
+  const entries = section.slice(firstAce);
+  const aces = [...entries.matchAll(/\(([^()]*)\)/gu)].map(match => match[1].split(';'));
+  if (aces.length === 0 || entries.replace(/\([^()]*\)/gu, '') !== '') {
+    throw new Error('Unrecognized executable ACL entries.');
+  }
+  for (const fields of aces) {
+    if (fields.length !== 6 || !['A', 'D'].includes(fields[0]) || fields[3] || fields[4]
+      || !/^(?:(?:OI|CI|NP|IO|ID))*$/u.test(fields[1])) {
+      throw new Error('Unrecognized executable ACL entry.');
+    }
+    if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5])) continue;
+    if (grantsMutation(fields[2])) {
+      // The public boundary wraps this detail; isolated diagnostics keep the ACE.
+      throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
+    }
+  }
+}
+
+function verifyWindowsAgentExecutableAcl(path) {
+  const identity = currentWindowsUserIdentity();
+  assertWindowsExecutableDacl(installedExecutableDescriptor(path), identity.sid, identity.localAdministrator);
+}
+
+module.exports = {
+  assertWindowsExecutableDacl,
+  currentWindowsUserIdentity,
+  isLocalWindowsAdministrator,
+  systemTool,
+  verifyWindowsAgentExecutableAcl,
+};
+
 
 /***/ }),
 

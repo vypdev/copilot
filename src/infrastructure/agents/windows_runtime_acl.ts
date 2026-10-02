@@ -1,15 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { hostname, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { assertWindowsExecutableDacl } from './windows_executable_acl_policy';
-
-const SID_PATTERN = /S-\d+(?:-\d+)+/;
-
-function systemTool(name: string): string {
-    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-    return join(systemRoot, 'System32', name);
-}
+import { currentWindowsUserIdentity, systemTool, verifyWindowsAgentExecutableAcl as verifyInstalledExecutable,
+    type WindowsUserIdentity } from './windows_executable_trust.cjs';
+export { isLocalWindowsAdministrator } from './windows_executable_trust.cjs';
 
 function runIcacls(args: string[], cwd?: string): void {
     execFileSync(systemTool('icacls.exe'), args, {
@@ -20,34 +15,8 @@ function runIcacls(args: string[], cwd?: string): void {
     });
 }
 
-interface WindowsUserIdentity {
-    readonly sid: string;
-    readonly localAdministrator: boolean;
-}
-
 export function matchesWindowsRuntimePrincipal(principal: string, identity: WindowsUserIdentity): boolean {
     return principal === identity.sid || (principal === 'LA' && identity.localAdministrator);
-}
-
-export function isLocalWindowsAdministrator(sid: string, accountDomain: string | undefined, computerName: string): boolean {
-    return sid.endsWith('-500') && accountDomain?.toLowerCase() === computerName.toLowerCase();
-}
-
-function currentUserIdentity(): WindowsUserIdentity {
-    const identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 15_000,
-        windowsHide: true,
-    });
-    const sid = identity.match(SID_PATTERN)?.[0];
-    if (!sid) throw new Error('Could not identify the Windows runtime owner.');
-    const account = /^\uFEFF?"([^"\r\n]+)"\s*,/.exec(identity)?.[1];
-    const accountDomain = account?.split('\\')[0];
-    return {
-        sid,
-        localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, hostname()),
-    };
 }
 
 function savedDacl(path: string): string {
@@ -63,17 +32,6 @@ function savedDacl(path: string): string {
     } finally {
         rmSync(directory, { recursive: true, force: true });
     }
-}
-
-function installedExecutableDescriptor(path: string): string {
-    // icacls /save intentionally omits the owner; inspect the full descriptor
-    // through a read-only query with an encoded, literal path instead.
-    const command = "$ErrorActionPreference='Stop'; (Get-Acl -LiteralPath '"
-        + path.replace(/'/gu, "''") + "').Sddl";
-    return execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
-        ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
-            encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
-        }).replace(/^\uFEFF/u, '').trim();
 }
 
 function assertOwnerOnlyDacl(sddl: string, identity: WindowsUserIdentity, directory: boolean): void {
@@ -101,7 +59,7 @@ function assertOwnerOnlyDacl(sddl: string, identity: WindowsUserIdentity, direct
 
 export function makeWindowsRuntimePathPrivate(path: string, directory: boolean): void {
     if (process.platform !== 'win32') return;
-    const { sid } = currentUserIdentity();
+    const { sid } = currentWindowsUserIdentity();
     runIcacls([path, '/setowner', `*${sid}`]);
     // The owner can replace its DACL without the restore privilege required by
     // icacls /restore on an unprivileged Windows runner service account.
@@ -113,7 +71,7 @@ export function makeWindowsRuntimePathPrivate(path: string, directory: boolean):
 
 export function verifyWindowsRuntimePathPrivate(path: string, directory: boolean): void {
     if (process.platform !== 'win32') return;
-    const identity = currentUserIdentity();
+    const identity = currentWindowsUserIdentity();
     const { sid } = identity;
     // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
     runIcacls([path, '/setowner', `*${sid}`]);
@@ -122,6 +80,5 @@ export function verifyWindowsRuntimePathPrivate(path: string, directory: boolean
 
 export function verifyWindowsAgentExecutableAcl(path: string): void {
     if (process.platform !== 'win32') return;
-    const identity = currentUserIdentity();
-    assertWindowsExecutableDacl(installedExecutableDescriptor(path), identity.sid, identity.localAdministrator);
+    verifyInstalledExecutable(path);
 }

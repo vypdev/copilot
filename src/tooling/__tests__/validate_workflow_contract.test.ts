@@ -1,5 +1,7 @@
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import * as yaml from 'js-yaml';
 import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
 
@@ -835,6 +837,43 @@ describe('workflow contract validator', () => {
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
     expect(step?.run).toContain("git -c core.whitespace=cr-at-eol diff --check -- . ':(exclude)build/**'");
+  });
+
+  it('retains whitespace errors while accepting CRLF line endings', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'copilot-git-whitespace-'));
+    const git = (...args: string[]) => spawnSync('git', args, {
+      cwd: directory, encoding: 'utf8',
+    });
+    try {
+      expect(git('init', '-q').status).toBe(0);
+      expect(git('config', 'core.autocrlf', 'false').status).toBe(0);
+      writeFileSync(path.join(directory, 'fixture.txt'), 'clean\n');
+      expect(git('add', 'fixture.txt').status).toBe(0);
+      expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+        'commit', '-qm', 'baseline').status).toBe(0);
+
+      for (const changed of ['trailing space \n', 'blank line with spaces\n  \n', 'space before tab\n \tindent\n']) {
+        writeFileSync(path.join(directory, 'fixture.txt'), changed);
+        expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', '--', '.').status).not.toBe(0);
+      }
+      writeFileSync(path.join(directory, 'fixture.txt'), 'clean\r\n');
+      expect(git('-c', 'core.whitespace=cr-at-eol', 'diff', '--check', '--', '.').status).toBe(0);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('bounds RepoWise advisory scans and preserves required health artifacts', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const steps = workflow.jobs['code-health'].steps;
+    const reports = steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
+    const upload = steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
+    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format md');
+    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format json');
+    expect(reports.run).toContain('ulimit -v 2097152; timeout --kill-after=10s 90s');
+    expect(reports.run).toContain('incomplete (exit %s)');
+    expect(upload.if).toBe('${{ always() }}');
   });
 
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
