@@ -48,6 +48,10 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 }
 
 describe('isolated Windows agent runtime', () => {
+    windowsIt('preflights the Action Node executable with an owner-aware ACL', () => {
+        verifyWindowsAgentExecutableAcl(process.execPath);
+    });
+
     it('accepts the SDDL local administrator alias only for the verified local administrator', () => {
         const sid = 'S-1-5-21-100-200-300-500';
         expect(isLocalWindowsAdministrator(sid, 'RUNNER', 'runner')).toBe(true);

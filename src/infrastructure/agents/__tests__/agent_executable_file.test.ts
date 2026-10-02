@@ -2,6 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assertAgentExecutableMetadata, validateAgentExecutableFile } from '../agent_executable_file';
+import * as windowsRuntimeAcl from '../windows_runtime_acl';
 
 const regularFile = { isFile: true, mode: 0o700, ownerUid: 123 };
 
@@ -40,6 +41,27 @@ describe('agent executable file trust', () => {
             expect(() => validateAgentExecutableFile(join(directory, 'missing')))
                 .toThrow('accessible executable file');
         } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    it('requires a readable safe Windows ACL and reports its failure without leaking details', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-windows-acl-'));
+        const executable = join(directory, 'agent.exe');
+        writeFileSync(executable, 'fixture');
+        if (process.platform !== 'win32') chmodSync(executable, 0o700);
+        const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+        const acl = jest.spyOn(windowsRuntimeAcl, 'verifyWindowsAgentExecutableAcl').mockImplementation();
+        Object.defineProperty(process, 'platform', { ...platform, value: 'win32' });
+        try {
+            expect(() => validateAgentExecutableFile(executable)).not.toThrow();
+            expect(acl).toHaveBeenCalledWith(executable);
+            acl.mockImplementation(() => { throw new Error('private fixture ACL details'); });
+            expect(() => validateAgentExecutableFile(executable))
+                .toThrow('Agent executable has an unsafe or unreadable Windows ACL.');
+        } finally {
+            Object.defineProperty(process, 'platform', platform);
+            acl.mockRestore();
             rmSync(directory, { recursive: true, force: true });
         }
     });
