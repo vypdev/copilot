@@ -102,6 +102,15 @@ longer exhibit these behaviors.
 - A local YAML contract spike mapped those contexts uniquely to
   `.github/workflows/ci_check.yml` and `.github/workflows/repowise.yml`; both
   explicitly declare `merge_group: checks_requested`.
+- `RepoWise code health` is a required check. Its index and Markdown/JSON
+  health reports MUST complete before the job passes. Dead-code and history
+  security scans are advisory: bound each subprocess, report timeout/failure
+  in the Job Summary and artifacts, and retain the completed health reports.
+  An incomplete advisory scan MUST never be represented as a completed scan.
+  Two PR #403 runs on 2026-10-02 ended during the dead-code subprocess after
+  health output, with GitHub reporting cancellation but no verified cause;
+  a fresh exact-head run must prove the bounded producer reaches artifact
+  upload and reports any incomplete advisory scan honestly.
 - Copilot's own required PR context is produced for merge groups by the
   dedicated `copilot_pull_request_merge_queue.yml` workflow. Keeping that
   lightweight producer separate avoids a skipped duplicate check on every

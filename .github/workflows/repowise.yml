@@ -76,14 +76,29 @@ jobs:
             --no-onboarding --no-distill-hook --no-workspace . > "$report_dir/index.log"
           "$repowise_bin" health --no-workspace --refactoring-targets --format md . | tee "$report_dir/health.md"
           "$repowise_bin" health --no-workspace --refactoring-targets --format json . > "$report_dir/health.json"
-          "$repowise_bin" dead-code --safe-only --no-workspace --format json . > "$report_dir/dead-code.json" || true
-          "$repowise_bin" security scan --history --path . --format json > "$report_dir/security.json" || true
+          advisory_scan() {
+            local name="$1"
+            shift
+            if timeout --kill-after=10s 90s "$@" > "$report_dir/$name.json"; then
+              printf '%s: complete\n' "$name" >> "$report_dir/advisory-status.txt"
+            else
+              local status="$?"
+              rm -f "$report_dir/$name.json"
+              printf '%s: incomplete (exit %s)\n' "$name" "$status" >> "$report_dir/advisory-status.txt"
+              echo "::warning::RepoWise $name advisory scan incomplete (exit $status); completed health reports remain available."
+            fi
+          }
+          advisory_scan dead-code "$repowise_bin" dead-code --safe-only --no-workspace --format json .
+          advisory_scan security "$repowise_bin" security scan --history --path . --format json
           {
             echo '## RepoWise code health'
             echo
             echo 'Advisory reports are retained as workflow artifacts for this commit.'
             echo
             sed -n '1,100p' "$report_dir/health.md"
+            echo
+            echo '### Advisory scan status'
+            cat "$report_dir/advisory-status.txt"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload RepoWise reports
         if: ${{ always() }}
