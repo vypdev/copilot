@@ -350,6 +350,12 @@ The installed-file preflight must read the full descriptor, including owner;
 `icacls /save` exports a DACL only and cannot establish ownership. A bounded
 read-only Windows ACL query is required, while generated runtime artifacts
 retain their separate owner-only `icacls` policy.
+The standalone readiness verifier's restricted environment can stall the
+PowerShell `Get-Acl` cmdlet before help execution. Its installed-file trust
+query MUST read the same full SDDL owner and DACL through the direct .NET file
+access-control API in Windows PowerShell, without changing ACLs or broadening
+the admitted owner/rights policy. A hosted Windows fake-CLI fixture MUST pass
+through help, version, and optional login with that restricted environment.
 
 The 2026-10-02 hosted Windows fixture found an effective
 `Authenticated Users: 0x1301bf` (modify) grant on both the Action-embedded Node

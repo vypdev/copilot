@@ -84568,8 +84568,9 @@ function currentWindowsUserIdentity() {
 
 function installedExecutableDescriptor(path) {
   // icacls /save omits the owner; a read-only full descriptor is required.
-  const command = "$ErrorActionPreference='Stop'; (Get-Acl -LiteralPath '"
-    + path.replace(/'/gu, "''") + "').Sddl";
+  const command = "$ErrorActionPreference='Stop'; [System.IO.File]::GetAccessControl('"
+    + path.replace(/'/gu, "''")
+    + "').GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::All)";
   return execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
     ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
       encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
