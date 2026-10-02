@@ -71218,7 +71218,7 @@ function getGitRepositoryRoot(cwd) {
 }
 function isGitRepositoryRoot(cwd) {
     try {
-        return getGitRepositoryRoot(cwd) === (0, node_fs_1.realpathSync)(cwd);
+        return (0, child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], { cwd, encoding: 'utf8', stdio: 'pipe' }).trim() === '';
     }
     catch {
         return false;
@@ -84084,10 +84084,11 @@ exports.NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(copi
 exports.UPDATE_CHECK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 exports.UPDATE_CHECK_TIMEOUT_MS = 1500;
 function resolveUpdateCheckCachePath(platform = process.platform, environment = process.env, homeDirectory = (0, node_os_1.homedir)()) {
+    const paths = platform === 'win32' ? node_path_1.win32 : node_path_1.posix;
     const cacheRoot = platform === 'win32'
-        ? environment.LOCALAPPDATA || (0, node_path_1.join)(homeDirectory, 'AppData', 'Local')
-        : environment.XDG_CACHE_HOME || (0, node_path_1.join)(homeDirectory, '.cache');
-    return (0, node_path_1.join)(cacheRoot, 'copilot', 'update-check.json');
+        ? environment.LOCALAPPDATA || paths.join(homeDirectory, 'AppData', 'Local')
+        : environment.XDG_CACHE_HOME || paths.join(homeDirectory, '.cache');
+    return paths.join(cacheRoot, 'copilot', 'update-check.json');
 }
 class FileCliUpdateCheckCache {
     constructor(filePath = resolveUpdateCheckCachePath()) {
@@ -86887,6 +86888,7 @@ exports.PreBranchSddWorkspaceAdapter = void 0;
 const fs = __importStar(__nccwpck_require__(87561));
 const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
+const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_util_1 = __nccwpck_require__(47261);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
@@ -87177,6 +87179,23 @@ function pathExists(target) {
     }
 }
 function writeSpecFile(target, content, exists) {
+    if (process.platform === 'win32') {
+        // Windows rejects O_NOFOLLOW. Replace the directory entry instead of
+        // opening the destination, so a file symlink is never followed for writes.
+        const temporary = path.join(path.dirname(target), `.copilot-sdd-${(0, node_crypto_1.randomUUID)()}.tmp`);
+        fs.writeFileSync(temporary, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+        try {
+            if (exists)
+                assertRegularSpecFile(target);
+            else if (pathExists(target))
+                throw new Error('The new SDD path is already occupied.');
+            fs.renameSync(temporary, target);
+        }
+        finally {
+            fs.rmSync(temporary, { force: true });
+        }
+        return;
+    }
     const flags = fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW
         | (exists ? fs.constants.O_TRUNC : fs.constants.O_CREAT | fs.constants.O_EXCL);
     const descriptor = fs.openSync(target, flags, 0o644);

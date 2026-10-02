@@ -1768,7 +1768,11 @@ Fixture tests add this regression to the existing acceptance budget; they do
 not close the human visual/accessibility or live-provider gates. The local
 coverage run passed 511 suites / 5,752 tests, with 96.19% statements, 91.37%
 branches, 96.88% functions, and 97.49% lines overall. The acceptance ledger
-remains 310/350 passed and 40 human-review rows open.
+was 310/350 passed with 40 human-review rows open before the Windows service
+file-symlink capability gap was observed. X026 is now also open, yielding
+309/350 passed and 41 open cases: 40 human-review rows and one host-specific
+security fixture. Hosted platforms passing X026 cannot close its service-runner
+gate by inference.
 
 The same PR exposed a runner-routing risk: `codex` now selects self-hosted
 Windows as well as macOS and will also select Ubuntu. A push-review `run`
@@ -1838,6 +1842,25 @@ on the service host. The overall workflow was red because the canonical Unix
 bundles changed with the ACL implementation but were omitted from the commit;
 the generated artifacts must be committed and the full matrix rerun before
 counting its four-job check as green.
+
+The subsequent [four-job fixture matrix](https://github.com/vypdev/copilot/actions/runs/36972606620)
+passed on hosted Ubuntu, macOS, Windows, and `windows-intel-runner-3` after
+the canonical bundles were committed. A full manually dispatched
+[`CI Check` on `windows-intel-runner-1`](https://github.com/vypdev/copilot/actions/runs/36973236784)
+then exposed additional Windows incompatibilities in the broader repository
+test suite: path spelling and separators, generated catalog comparison,
+unprivileged symlink creation, and a slow process fixture. Its full-suite,
+coverage, Codecov, and architecture gates remain open until a passing Windows
+run verifies the repairs. The short green matrix is evidence for only its
+listed fixture paths.
+
+Three local pre-commit attempts exhausted a 4 GiB Jest worker in
+`cli.test.ts`. Isolation showed the test's Git mock did not answer the new
+`rev-parse --show-prefix` query; repeated setup flows then accumulated work.
+The mock now supplies explicit root and child-prefix responses, and the
+isolated 117-case CLI suite passes. A full-suite run still MUST pass before
+counting this repair; increasing the heap or ignoring that suite is not
+acceptance evidence.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

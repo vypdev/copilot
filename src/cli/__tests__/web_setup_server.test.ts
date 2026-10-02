@@ -5,26 +5,9 @@ import { request, ServerResponse } from 'node:http';
 import { connect, type Socket } from 'node:net';
 import { WebSetupBridge } from '../web_setup_bridge';
 import { startWebSetupServer, type WebSetupServer } from '../web_setup_server';
+import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 
-function canCreateFileSymlinks(): boolean {
-  if (process.platform !== 'win32') return true;
-  const probe = mkdtempSync(join(tmpdir(), 'copilot-file-symlink-probe-'));
-  try {
-    const target = join(probe, 'target');
-    writeFileSync(target, 'fixture');
-    try {
-      symlinkSync(target, join(probe, 'link'), 'file');
-      return true;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EPERM') return false;
-      throw error;
-    }
-  } finally {
-    rmSync(probe, { recursive: true, force: true });
-  }
-}
-
-const fileSymlinkTest = canCreateFileSymlinks() ? test : test.skip;
+const fileSymlinkTest = canCreateFileSymlink() ? test : test.skip;
 
 const sessionKeys = new Map<string, string>();
 const registerSession = async (session: WebSetupServer): Promise<void> => {

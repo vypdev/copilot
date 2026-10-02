@@ -210,7 +210,7 @@ describe('AgentCliClient admitted process execution', () => {
         await expect(client(plan('process.stdout.write("large")', { maxOutputBytes: 4 })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'output' });
-    });
+    }, 20_000);
 
     it('suppresses stderr and marks only the designated provider exit as retryable', async () => {
         const request = {

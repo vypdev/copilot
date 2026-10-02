@@ -78,7 +78,7 @@ export function getGitRepositoryRoot(cwd: string): string {
 
 export function isGitRepositoryRoot(cwd: string): boolean {
   try {
-    return getGitRepositoryRoot(cwd) === realpathSync(cwd);
+    return execSync('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
   } catch {
     return false;
   }

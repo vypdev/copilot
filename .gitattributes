@@ -1,2 +1,8 @@
 # Vite bundles are generated, minified artifacts; inspect their Svelte sources instead.
 build/web/assets/*.js -diff -whitespace
+
+# Generated text must keep its canonical LF bytes on Windows checkouts.
+specs/CATALOG.md text eol=lf
+.copilot/repository-profile.json text eol=lf
+.copilot/AGENT_GUIDE.md text eol=lf
+.agents/skills/copilot-repository-workflow/SKILL.md text eol=lf

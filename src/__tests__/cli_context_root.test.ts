@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getGitRepositoryRoot, isGitRepositoryRoot } from '../cli_context';
@@ -11,7 +11,7 @@ describe('canonical checkout root for setup plans', () => {
       execFileSync('git', ['init', '-q', checkout]);
       const child = join(checkout, 'nested');
       mkdirSync(child);
-      expect(getGitRepositoryRoot(child)).toBe(realpathSync(checkout));
+      expect(getGitRepositoryRoot(child)).toBe(getGitRepositoryRoot(checkout));
       expect(isGitRepositoryRoot(child)).toBe(false);
       expect(isGitRepositoryRoot(checkout)).toBe(true);
     } finally {

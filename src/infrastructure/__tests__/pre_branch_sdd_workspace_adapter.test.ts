@@ -4,8 +4,10 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
 import type { SddPlan } from '../../domain/pre_branch_sdd';
+import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 
 jest.setTimeout(30_000);
+const fileSymlinkIt = canCreateFileSymlink() ? it : it.skip;
 
 const plan: SddPlan = {
   action: 'update', path: 'specs/payments.md', capabilityId: 'payments',
@@ -176,7 +178,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(await workspace.recoverPublished('feature/42-change', prepared)).toBeUndefined();
   });
 
-  it('rejects a symlinked generated catalog before writing metadata', async () => {
+  fileSymlinkIt('rejects a symlinked generated catalog before writing metadata', async () => {
     const external = path.join(temp, 'outside-catalog.md');
     fs.copyFileSync(path.join(repo, 'specs/CATALOG.md'), external);
     fs.rmSync(path.join(repo, 'specs/CATALOG.md'));
@@ -191,7 +193,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(fs.readFileSync(external, 'utf8')).toBe('# Catalog\n');
   });
 
-  it('rejects a symlinked owning SDD before writing to its target', async () => {
+  fileSymlinkIt('rejects a symlinked owning SDD before writing to its target', async () => {
     const external = path.join(temp, 'outside.md');
     fs.writeFileSync(external, '# Protected external file\n');
     fs.rmSync(path.join(repo, 'specs/payments.md'));

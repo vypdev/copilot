@@ -30,7 +30,12 @@ for (const item of ledger.cases) {
     const key = `${item.evidence.file}::${item.evidence.test}`;
     if (evidenceKeys.has(key)) errors.push(`${item.id}: duplicate test evidence`);
     evidenceKeys.add(key);
-    if (jestResults && executedTests.get(key) !== 'passed') errors.push(`${item.id}: named Jest assertion did not pass in ${jestResultPath}`);
+    if (item.status === 'pass' && jestResults && executedTests.get(key) !== 'passed') {
+      errors.push(`${item.id}: named Jest assertion did not pass in ${jestResultPath}`);
+    }
+    if (item.status === 'open' && (typeof item.evidence.reason !== 'string' || item.evidence.reason.length < 20)) {
+      errors.push(`${item.id}: open Jest evidence needs a concrete blocking reason`);
+    }
   } else if (item.evidence?.kind === 'command') {
     if (typeof item.evidence.command !== 'string' || !/^pnpm run (?:build|validate:npm-package|smoke:npm-package)$/u.test(item.evidence.command)) {
       errors.push(`${item.id}: invalid package validation command`);

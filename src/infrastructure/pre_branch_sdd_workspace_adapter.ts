@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type {
@@ -291,6 +292,20 @@ function pathExists(target: string): boolean {
 }
 
 function writeSpecFile(target: string, content: string, exists: boolean): void {
+  if (process.platform === 'win32') {
+    // Windows rejects O_NOFOLLOW. Replace the directory entry instead of
+    // opening the destination, so a file symlink is never followed for writes.
+    const temporary = path.join(path.dirname(target), `.copilot-sdd-${randomUUID()}.tmp`);
+    fs.writeFileSync(temporary, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    try {
+      if (exists) assertRegularSpecFile(target);
+      else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
+      fs.renameSync(temporary, target);
+    } finally {
+      fs.rmSync(temporary, { force: true });
+    }
+    return;
+  }
   const flags = fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW
     | (exists ? fs.constants.O_TRUNC : fs.constants.O_CREAT | fs.constants.O_EXCL);
   const descriptor = fs.openSync(target, flags, 0o644);

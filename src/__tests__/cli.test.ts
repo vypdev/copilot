@@ -143,7 +143,8 @@ describe('CLI', () => {
     process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
     (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
-      command === 'git rev-parse HEAD'
+      command === 'git rev-parse --show-prefix' ? ''
+        : command === 'git rev-parse HEAD'
         ? 'a'.repeat(40)
         : 'https://github.com/test-owner/test-repo.git',
     ));
@@ -518,7 +519,8 @@ describe('CLI', () => {
       beforeEach(() => {
         (setupApplySnapshotMatches as jest.Mock).mockReturnValue(true);
         (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
-          command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : command === 'git rev-parse --abbrev-ref HEAD' || command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : 'https://github.com/test-owner/test-repo.git',
@@ -585,7 +587,8 @@ describe('CLI', () => {
       it('rejects detached HEAD before opening the browser or collecting a PAT', async () => {
         (execSync as jest.Mock).mockImplementation((command: string) => {
           if (command === 'git symbolic-ref --quiet --short HEAD') throw new Error('detached HEAD');
-          return Buffer.from(command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          return Buffer.from(command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : 'https://github.com/test-owner/test-repo.git');
         });
@@ -829,7 +832,8 @@ describe('CLI', () => {
       it('fails closed when the GitHub remote becomes unresolvable just before Apply', async () => {
         let remoteReads = 0;
         (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
-          command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : command === 'git config --get remote.origin.url' && ++remoteReads > 1
@@ -845,7 +849,8 @@ describe('CLI', () => {
         let branchReads = 0;
         (execSync as jest.Mock).mockImplementation((command: string) => {
           if (command === 'git symbolic-ref --quiet --short HEAD' && ++branchReads > 1) throw new Error('detached HEAD');
-          return Buffer.from(command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          return Buffer.from(command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : 'https://github.com/test-owner/test-repo.git');
