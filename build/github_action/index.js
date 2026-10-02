@@ -78744,8 +78744,11 @@ function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
         }
         if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5]))
             continue;
-        if (grantsMutation(fields[2]))
-            throw new Error('Agent executable is writable by another principal.');
+        if (grantsMutation(fields[2])) {
+            // The public boundary wraps this detail in a fixed message. The
+            // isolated runner fixture retains the ACE for diagnosing host ACLs.
+            throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
+        }
     }
 }
 function grantsMutation(rights) {
