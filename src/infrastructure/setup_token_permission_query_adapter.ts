@@ -311,8 +311,7 @@ async function inspectOrganizationProjectsRead(
             return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
         }
         return {
-            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; listing is available, but the PAT grant is not proven.'),
-            operationallyAvailable: true,
+            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; confirm the Projects: read grant before continuing.'),
             publicReadEvidence: 'public-organization-projects',
         };
     } catch {

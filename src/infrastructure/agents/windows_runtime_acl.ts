@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { assertWindowsExecutableDacl } from './windows_executable_acl_policy';
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/;
 
@@ -106,4 +107,10 @@ export function verifyWindowsRuntimePathPrivate(path: string, directory: boolean
     // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
     runIcacls([path, '/setowner', `*${sid}`]);
     assertOwnerOnlyDacl(savedDacl(path), identity, directory);
+}
+
+export function verifyWindowsAgentExecutableAcl(path: string): void {
+    if (process.platform !== 'win32') return;
+    const identity = currentUserIdentity();
+    assertWindowsExecutableDacl(savedDacl(path), identity.sid, identity.localAdministrator);
 }

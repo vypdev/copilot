@@ -1480,6 +1480,7 @@
         "src/infrastructure/agents/agent_executable_file.ts",
         "src/infrastructure/agents/agent_executable_invocation.ts",
         "src/infrastructure/agents/windows_runtime_acl.ts",
+        "src/infrastructure/agents/windows_executable_acl_policy.ts",
         "src/infrastructure/agents/agent_runtime_manifest.ts",
         "src/infrastructure/agents/agent-runtime-manifest.json",
         "src/data/repository/agent_cli_provisioner.ts",
@@ -1505,6 +1506,7 @@
         "src/infrastructure/agents/__tests__/agent_executable_file.test.ts",
         "src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts",
         "src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts",
+        "src/infrastructure/agents/__tests__/windows_executable_acl_policy.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],

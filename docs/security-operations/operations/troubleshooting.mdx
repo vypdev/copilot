@@ -104,8 +104,9 @@ directory. The lock contains no PAT or other credential.
     repository is private. Public organization member and issue-type responses
     are likewise inconclusive as PAT evidence or full-membership readiness.
     An organization Projects list with only public Projects, or no Projects,
-    can support discovery while the `Projects: read` grant remains
-    `Unverifiable`; a non-public Project proves that read access. A denied or
+    can support discovery only after you explicitly confirm the `Projects: read`
+    grant in GitHub; it remains `Unverifiable`. A non-public Project proves that
+    read access. A denied or
     malformed list still blocks and must be corrected or retried.
     Members read is verified only by a valid active self-membership response
     from the permission-bound endpoint; Issue Types, ambiguous responses, and

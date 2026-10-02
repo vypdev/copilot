@@ -1,5 +1,6 @@
 import { accessSync, constants, statSync } from 'node:fs';
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
+import { verifyWindowsAgentExecutableAcl } from './windows_runtime_acl';
 
 export interface AgentExecutableMetadata {
     readonly isFile: boolean;
@@ -34,4 +35,11 @@ export function validateAgentExecutableFile(path: string): void {
         mode: stats.mode,
         ownerUid: stats.uid,
     }, process.platform, process.getuid?.());
+    if (process.platform === 'win32') {
+        try {
+            verifyWindowsAgentExecutableAcl(path);
+        } catch {
+            throw new AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+        }
+    }
 }

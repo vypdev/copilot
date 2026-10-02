@@ -38,6 +38,10 @@ export function reconcileSetupTokenPermissionEvidence(
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
                 ? { operationallyAvailable: true as const, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
+            ...(candidate.status === 'unverifiable'
+                && isAttestableProjectsRead(requirement, candidate.publicReadEvidence)
+                ? { publicReadEvidence: candidate.publicReadEvidence }
+                : {}),
         };
     });
 }
@@ -47,17 +51,22 @@ export function isOperationallyAvailableSetupRead(
     requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
     evidence: SetupTokenPublicReadEvidence | undefined,
 ): boolean {
-    if (requirement.level === 'read'
-        && requirement.scope === 'organization'
-        && requirement.permission === 'Projects'
-        && requirement.probe === 'projects') {
-        return evidence === 'public-organization-projects';
-    }
     return requirement.level === 'read'
         && requirement.scope === 'repository'
         && evidence === 'public-repository'
         && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
         && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+}
+
+export function isAttestableProjectsRead(
+    requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
+    evidence: SetupTokenPublicReadEvidence | undefined,
+): boolean {
+    return requirement.level === 'read'
+        && requirement.scope === 'organization'
+        && requirement.permission === 'Projects'
+        && requirement.probe === 'projects'
+        && evidence === 'public-organization-projects';
 }
 
 const PUBLIC_REPOSITORY_READ_PROBES = new Set<SetupTokenPermissionRequirement['probe']>([

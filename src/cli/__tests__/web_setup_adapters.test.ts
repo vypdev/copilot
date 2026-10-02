@@ -208,6 +208,25 @@ describe('semantic web setup adapters', () => {
     expect(bridge.snapshot().permissions?.report?.checks[0].status).toBe('unverifiable');
   });
 
+  test('public-only Projects read requires an explicit acknowledgement', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const prompt = new WebSetupCredentialPrompt(bridge);
+    const report: SetupTokenPermissionReport = {
+      role: 'setup', identityStatus: 'valid', identityMessage: 'checked', ready: false, confirmationRequired: true,
+      checks: [{ id: 'setup.organization.projects', role: 'setup', scope: 'organization',
+        permission: 'Projects', level: 'read', applicability: 'required', reason: 'Inspect Projects',
+        probe: 'projects', status: 'unverifiable', publicReadEvidence: 'public-organization-projects',
+        message: 'Public Projects do not prove this grant' }],
+    };
+    const declined = prompt.confirmUnverifiableTokenPermissions(report);
+    expect(bridge.snapshot().prompt?.copyId).toBe('setupPat.confirmUnverifiedAccess');
+    answer(bridge, 'No, stop');
+    expect(await declined).toBe(false);
+    const confirmed = prompt.confirmUnverifiableTokenPermissions(report);
+    answer(bridge, 'Yes, I checked them');
+    expect(await confirmed).toBe(true);
+  });
+
   test('workflow update decision is explicit and never inferred from a changed file', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const prompt = new WebSetupWorkflowUpdatePrompt(bridge);

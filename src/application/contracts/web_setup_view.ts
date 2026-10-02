@@ -24,7 +24,7 @@ export type SetupQuestionPresentation = Readonly<Record<'en' | 'es' | 'fr' | 'pt
 export type WebSetupPromptCopyId =
   | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
   | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setupPat.entry'
-  | 'setupPat.confirmAccount' | 'setupPat.confirmWrites' | 'botPat.method' | 'botPat.login'
+  | 'setupPat.confirmAccount' | 'setupPat.confirmUnverifiedAccess' | 'botPat.method' | 'botPat.login'
   | 'botPat.entry.guided' | 'botPat.entry.manual' | 'credential.apiKey'
   | 'credential.existing' | 'apply.confirm';
 

@@ -11,7 +11,7 @@ describe('agent executable file trust', () => {
             .toThrow('regular file');
     });
 
-    it('uses Windows ACL checks elsewhere and does not interpret Unix mode bits', () => {
+    it('does not interpret Unix mode bits as Windows ACLs', () => {
         expect(() => assertAgentExecutableMetadata({ ...regularFile, mode: 0o777 }, 'win32'))
             .not.toThrow();
     });

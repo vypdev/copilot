@@ -3,6 +3,7 @@ import { accessSync, constants, readFileSync, realpathSync, statSync } from 'nod
 import { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
+import { validateAgentExecutableFile } from './agent_executable_file';
 
 export interface AgentExecutableInvocation {
     readonly executable: string;
@@ -86,6 +87,9 @@ export function readAgentExecutableVersion(
 ): string {
     const path = resolveAgentExecutablePath(selected, environment);
     const invocation = resolveAgentExecutableInvocation(path, provider);
+    validateAgentExecutableFile(path);
+    validateAgentExecutableFile(invocation.executable);
+    for (const prefixArg of invocation.prefixArgs) validateAgentExecutableFile(prefixArg);
     return execFileSync(invocation.executable, [...invocation.prefixArgs, '--version'], {
         env: environment,
         encoding: 'utf8',
@@ -96,6 +100,10 @@ export function readAgentExecutableVersion(
 
 export function installAgentNpmPackage(packageName: string, version: string): void {
     const invocation = resolveNpmInstallInvocation(packageName, version);
+    if (process.platform === 'win32') {
+        validateAgentExecutableFile(invocation.executable);
+        validateAgentExecutableFile(invocation.prefixArgs[0]);
+    }
     execFileSync(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
 }
 

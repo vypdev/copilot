@@ -49924,6 +49924,7 @@ function safeTerminalChoiceText(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileSetupTokenPermissionEvidence = reconcileSetupTokenPermissionEvidence;
 exports.isOperationallyAvailableSetupRead = isOperationallyAvailableSetupRead;
+exports.isAttestableProjectsRead = isAttestableProjectsRead;
 const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
 const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access cannot be verified with a safe read-only permission probe.';
 /**
@@ -49950,22 +49951,27 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
                 ? { operationallyAvailable: true, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
+            ...(candidate.status === 'unverifiable'
+                && isAttestableProjectsRead(requirement, candidate.publicReadEvidence)
+                ? { publicReadEvidence: candidate.publicReadEvidence }
+                : {}),
         };
     });
 }
 /** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
 function isOperationallyAvailableSetupRead(requirement, evidence) {
-    if (requirement.level === 'read'
-        && requirement.scope === 'organization'
-        && requirement.permission === 'Projects'
-        && requirement.probe === 'projects') {
-        return evidence === 'public-organization-projects';
-    }
     return requirement.level === 'read'
         && requirement.scope === 'repository'
         && evidence === 'public-repository'
         && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
         && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+}
+function isAttestableProjectsRead(requirement, evidence) {
+    return requirement.level === 'read'
+        && requirement.scope === 'organization'
+        && requirement.permission === 'Projects'
+        && requirement.probe === 'projects'
+        && evidence === 'public-organization-projects';
 }
 const PUBLIC_REPOSITORY_READ_PROBES = new Set([
     'metadata', 'contents', 'administration', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
@@ -57727,8 +57733,10 @@ class SetupTokenPermissionsUseCase {
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
         const ready = readsUsable && requiredWrites.length === 0;
-        const confirmationRequired = readsUsable
-            && requiredWrites.length > 0
+        const readsConfirmable = requiredReads.every(check => readUsable(check)
+            || (check.status === 'unverifiable' && (0, setup_token_permission_evidence_policy_1.isAttestableProjectsRead)(check, check.publicReadEvidence)));
+        const unverifiedAccess = requiredReads.some(check => !readUsable(check)) || requiredWrites.length > 0;
+        const confirmationRequired = readsConfirmable && unverifiedAccess
             && requiredWrites.every(check => check.status === 'unverifiable');
         return {
             role: request.role,
@@ -68902,12 +68910,17 @@ class SetupCredentialPromptAdapter {
     async confirmUnverifiableTokenPermissions(report) {
         const permissions = report.checks
             .filter(check => check.applicability === 'required'
-            && check.level === 'write'
-            && check.status === 'unverifiable')
+            && check.status === 'unverifiable'
+            && (check.level === 'write' || (check.scope === 'organization'
+                && check.permission === 'Projects' && check.level === 'read'
+                && check.publicReadEvidence === 'public-organization-projects')))
             .map(check => `${check.permission} ${check.level} (${check.scope})`);
         if (!report.confirmationRequired || permissions.length === 0)
             return false;
-        if (this.confirmUnverifiableWritePermissions) {
+        const needsProjectReadAttestation = report.checks.some(check => check.applicability === 'required'
+            && check.permission === 'Projects' && check.level === 'read'
+            && check.publicReadEvidence === 'public-organization-projects');
+        if (this.confirmUnverifiableWritePermissions && !needsProjectReadAttestation) {
             console.log((0, setup_prompt_rendering_1.renderBox)(`Explicit acknowledgement received for: ${permissions.join(', ')}. These permissions remain Unverifiable; no test mutation was performed.`, 'Write permission acknowledgement', 33));
             return true;
         }
@@ -68915,7 +68928,7 @@ class SetupCredentialPromptAdapter {
             return false;
         while (true) {
             const result = await this.terminal.readText([
-                'GitHub cannot safely prove these write permissions without a mutation:',
+                'GitHub could not prove these required PAT grants. Check them in GitHub:',
                 ...permissions.map(permission => `  - ${permission}`),
                 `Confirm that the PAT was configured exactly as shown above? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `,
             ].join('\n'));
@@ -70103,10 +70116,10 @@ function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
-        : unverifiableRequiredReads.length > 0
-            ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
-            : report.confirmationRequired
-                ? 'Confirmation required: inspect the PAT settings for every Unverifiable write row. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
+        : report.confirmationRequired
+            ? 'Confirmation required: inspect every Unverifiable required PAT grant in GitHub, including Projects read when shown. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
+            : unverifiableRequiredReads.length > 0
+                ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
                 : unverifiable.length > 0
                     ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
                     : 'All safely verifiable required permissions are available.';
@@ -70370,10 +70383,13 @@ class WebSetupCredentialPrompt {
             this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens', 'setupPat.cleanup');
     }
     async confirmUnverifiableTokenPermissions(report) {
-        const writes = report.checks.filter(item => item.applicability === 'required' && item.level === 'write' && item.status === 'unverifiable');
-        if (!report.confirmationRequired || writes.length === 0)
+        const access = report.checks.filter(item => item.applicability === 'required'
+            && item.status === 'unverifiable'
+            && (item.level === 'write' || (item.scope === 'organization' && item.permission === 'Projects'
+                && item.level === 'read' && item.publicReadEvidence === 'public-organization-projects')));
+        if (!report.confirmationRequired || access.length === 0)
             return false;
-        return await this.choice('GitHub cannot safely prove these write grants without a mutation. Confirm they are configured exactly as shown.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmWrites') === 'Yes, I checked them';
+        return await this.choice('GitHub could not prove every required PAT grant. Check the displayed grants in GitHub, then explicitly confirm them.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
     }
     configureWorkflowPatGuide(url, resolveIdentity, requirements) {
         this.workflowGuide = url;
@@ -83402,6 +83418,7 @@ exports.assertAgentExecutableMetadata = assertAgentExecutableMetadata;
 exports.validateAgentExecutableFile = validateAgentExecutableFile;
 const node_fs_1 = __nccwpck_require__(87561);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
 function assertAgentExecutableMetadata(metadata, platform, currentUid) {
     if (!metadata.isFile)
         throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
@@ -83426,6 +83443,14 @@ function validateAgentExecutableFile(path) {
         mode: stats.mode,
         ownerUid: stats.uid,
     }, process.platform, process.getuid?.());
+    if (process.platform === 'win32') {
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(path);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+        }
+    }
 }
 
 
@@ -83446,6 +83471,7 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_file_1 = __nccwpck_require__(87997);
 function resolveAgentExecutablePath(selected, environment, platform = process.platform) {
     if ((0, node_path_1.isAbsolute)(selected))
         return (0, node_fs_1.realpathSync)(selected);
@@ -83508,6 +83534,10 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
 function readAgentExecutableVersion(selected, provider, environment) {
     const path = resolveAgentExecutablePath(selected, environment);
     const invocation = resolveAgentExecutableInvocation(path, provider);
+    (0, agent_executable_file_1.validateAgentExecutableFile)(path);
+    (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+    for (const prefixArg of invocation.prefixArgs)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(prefixArg);
     return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
         env: environment,
         encoding: 'utf8',
@@ -83517,6 +83547,10 @@ function readAgentExecutableVersion(selected, provider, environment) {
 }
 function installAgentNpmPackage(packageName, version) {
     const invocation = resolveNpmInstallInvocation(packageName, version);
+    if (process.platform === 'win32') {
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.prefixArgs[0]);
+    }
     (0, node_child_process_1.execFileSync)(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
 }
 function resolveNpmInstallInvocation(packageName, version, platform = process.platform, environment = process.env) {
@@ -83767,6 +83801,62 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
 
 /***/ }),
 
+/***/ 44324:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertWindowsExecutableDacl = assertWindowsExecutableDacl;
+/** Read-only trust policy for installed executables; managed artifacts use a stricter owner-only policy. */
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
+    const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
+    const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
+    if (localAdministrator)
+        trusted.add('LA');
+    const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
+    if (!owner || !trusted.has(owner) || !section)
+        throw new Error('Unsafe executable ACL owner or DACL.');
+    const firstAce = section.indexOf('(');
+    if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
+        throw new Error('Unrecognized executable ACL.');
+    }
+    const entries = section.slice(firstAce);
+    const aces = [...entries.matchAll(/\(([^()]*)\)/gu)].map(match => match[1].split(';'));
+    if (aces.length === 0 || entries.replace(/\([^()]*\)/gu, '') !== '') {
+        throw new Error('Unrecognized executable ACL entries.');
+    }
+    for (const fields of aces) {
+        if (fields.length !== 6 || !['A', 'D'].includes(fields[0]) || fields[3] || fields[4]
+            || !/^(?:(?:OI|CI|NP|IO|ID))*$/u.test(fields[1])) {
+            throw new Error('Unrecognized executable ACL entry.');
+        }
+        if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5]))
+            continue;
+        if (grantsMutation(fields[2]))
+            throw new Error('Agent executable is writable by another principal.');
+    }
+}
+function grantsMutation(rights) {
+    if (/^0x[0-9a-f]+$/iu.test(rights)) {
+        const mask = Number.parseInt(rights.slice(2), 16);
+        if (!Number.isSafeInteger(mask) || mask > 4294967295) {
+            throw new Error('Unrecognized executable ACL rights.');
+        }
+        return (mask & 0x500D0156) !== 0;
+    }
+    const tokens = rights.match(/.{2}/gu) ?? [];
+    if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
+        throw new Error('Unrecognized executable ACL rights.');
+    }
+    return tokens.some(token => MUTATING_RIGHTS.has(token));
+}
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'WD', 'WO']);
+const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
+
+
+/***/ }),
+
 /***/ 55362:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -83777,10 +83867,12 @@ exports.matchesWindowsRuntimePrincipal = matchesWindowsRuntimePrincipal;
 exports.isLocalWindowsAdministrator = isLocalWindowsAdministrator;
 exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
 exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
+exports.verifyWindowsAgentExecutableAcl = verifyWindowsAgentExecutableAcl;
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
+const windows_executable_acl_policy_1 = __nccwpck_require__(44324);
 const SID_PATTERN = /S-\d+(?:-\d+)+/;
 function systemTool(name) {
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
@@ -83875,6 +83967,12 @@ function verifyWindowsRuntimePathPrivate(path, directory) {
     // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
     runIcacls([path, '/setowner', `*${sid}`]);
     assertOwnerOnlyDacl(savedDacl(path), identity, directory);
+}
+function verifyWindowsAgentExecutableAcl(path) {
+    if (process.platform !== 'win32')
+        return;
+    const identity = currentUserIdentity();
+    (0, windows_executable_acl_policy_1.assertWindowsExecutableDacl)(savedDacl(path), identity.sid, identity.localAdministrator);
 }
 
 
@@ -88104,8 +88202,7 @@ async function inspectOrganizationProjectsRead(requirement, response) {
             return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
         }
         return {
-            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; listing is available, but the PAT grant is not proven.'),
-            operationallyAvailable: true,
+            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; confirm the Projects: read grant before continuing.'),
             publicReadEvidence: 'public-organization-projects',
         };
     }

@@ -942,6 +942,19 @@ API does not prove there are none, so neither web nor CLI may assert a
 genuinely empty organization. Show the applicable GitHub Project link and a
 specific recovery action for each discovery state.
 
+The setup-PAT audit MUST NOT treat an empty or public-only organization
+Projects response as proof of `Projects: read` or as an automatically usable
+required read. It remains `Unverifiable`. Because Project numbers are selected
+only after this audit, the operator may explicitly attest that the displayed
+`Projects: read` grant is present, alongside any unverifiable writes. This
+attestation is never labelled GitHub verification and is not defaulted; a
+denial, malformed response, or unavailable identity remains blocking. Later
+discovery and selected-Project Status inspection retain their own checks and
+recovery states. Web and CLI must identify the exact unconfirmed grant, with
+English CLI copy and equivalent wording in all four advertised web locales.
+Fixture acceptance includes empty/public-only lists, explicit yes/no,
+unconfirmed denial, and later selected-Project inspection without a live PAT.
+
 ```text
 Want Projects? → audit setup PAT → list owner's Projects or explain why
               → select by title/URL (or enter numbers manually)

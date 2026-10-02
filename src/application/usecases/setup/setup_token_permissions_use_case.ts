@@ -8,6 +8,7 @@ import type {
     SetupTokenPermissionReport,
 } from '../../../domain/setup_token_permissions';
 import {
+    isAttestableProjectsRead,
     isOperationallyAvailableSetupRead,
     reconcileSetupTokenPermissionEvidence,
 } from '../../policies/setup_token_permission_evidence_policy';
@@ -56,8 +57,10 @@ export class SetupTokenPermissionsUseCase {
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
         const ready = readsUsable && requiredWrites.length === 0;
-        const confirmationRequired = readsUsable
-            && requiredWrites.length > 0
+        const readsConfirmable = requiredReads.every(check => readUsable(check)
+            || (check.status === 'unverifiable' && isAttestableProjectsRead(check, check.publicReadEvidence)));
+        const unverifiedAccess = requiredReads.some(check => !readUsable(check)) || requiredWrites.length > 0;
+        const confirmationRequired = readsConfirmable && unverifiedAccess
             && requiredWrites.every(check => check.status === 'unverifiable');
         return {
             role: request.role,

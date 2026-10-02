@@ -78329,6 +78329,7 @@ exports.assertAgentExecutableMetadata = assertAgentExecutableMetadata;
 exports.validateAgentExecutableFile = validateAgentExecutableFile;
 const node_fs_1 = __nccwpck_require__(87561);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
 function assertAgentExecutableMetadata(metadata, platform, currentUid) {
     if (!metadata.isFile)
         throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
@@ -78353,6 +78354,14 @@ function validateAgentExecutableFile(path) {
         mode: stats.mode,
         ownerUid: stats.uid,
     }, process.platform, process.getuid?.());
+    if (process.platform === 'win32') {
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(path);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+        }
+    }
 }
 
 
@@ -78373,6 +78382,7 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_file_1 = __nccwpck_require__(87997);
 function resolveAgentExecutablePath(selected, environment, platform = process.platform) {
     if ((0, node_path_1.isAbsolute)(selected))
         return (0, node_fs_1.realpathSync)(selected);
@@ -78435,6 +78445,10 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
 function readAgentExecutableVersion(selected, provider, environment) {
     const path = resolveAgentExecutablePath(selected, environment);
     const invocation = resolveAgentExecutableInvocation(path, provider);
+    (0, agent_executable_file_1.validateAgentExecutableFile)(path);
+    (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+    for (const prefixArg of invocation.prefixArgs)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(prefixArg);
     return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
         env: environment,
         encoding: 'utf8',
@@ -78444,6 +78458,10 @@ function readAgentExecutableVersion(selected, provider, environment) {
 }
 function installAgentNpmPackage(packageName, version) {
     const invocation = resolveNpmInstallInvocation(packageName, version);
+    if (process.platform === 'win32') {
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.prefixArgs[0]);
+    }
     (0, node_child_process_1.execFileSync)(invocation.executable, invocation.prefixArgs, { stdio: 'inherit' });
 }
 function resolveNpmInstallInvocation(packageName, version, platform = process.platform, environment = process.env) {
@@ -78694,6 +78712,62 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
 
 /***/ }),
 
+/***/ 44324:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertWindowsExecutableDacl = assertWindowsExecutableDacl;
+/** Read-only trust policy for installed executables; managed artifacts use a stricter owner-only policy. */
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
+    const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
+    const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
+    if (localAdministrator)
+        trusted.add('LA');
+    const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
+    if (!owner || !trusted.has(owner) || !section)
+        throw new Error('Unsafe executable ACL owner or DACL.');
+    const firstAce = section.indexOf('(');
+    if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
+        throw new Error('Unrecognized executable ACL.');
+    }
+    const entries = section.slice(firstAce);
+    const aces = [...entries.matchAll(/\(([^()]*)\)/gu)].map(match => match[1].split(';'));
+    if (aces.length === 0 || entries.replace(/\([^()]*\)/gu, '') !== '') {
+        throw new Error('Unrecognized executable ACL entries.');
+    }
+    for (const fields of aces) {
+        if (fields.length !== 6 || !['A', 'D'].includes(fields[0]) || fields[3] || fields[4]
+            || !/^(?:(?:OI|CI|NP|IO|ID))*$/u.test(fields[1])) {
+            throw new Error('Unrecognized executable ACL entry.');
+        }
+        if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5]))
+            continue;
+        if (grantsMutation(fields[2]))
+            throw new Error('Agent executable is writable by another principal.');
+    }
+}
+function grantsMutation(rights) {
+    if (/^0x[0-9a-f]+$/iu.test(rights)) {
+        const mask = Number.parseInt(rights.slice(2), 16);
+        if (!Number.isSafeInteger(mask) || mask > 4294967295) {
+            throw new Error('Unrecognized executable ACL rights.');
+        }
+        return (mask & 0x500D0156) !== 0;
+    }
+    const tokens = rights.match(/.{2}/gu) ?? [];
+    if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
+        throw new Error('Unrecognized executable ACL rights.');
+    }
+    return tokens.some(token => MUTATING_RIGHTS.has(token));
+}
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'WD', 'WO']);
+const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
+
+
+/***/ }),
+
 /***/ 55362:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -78704,10 +78778,12 @@ exports.matchesWindowsRuntimePrincipal = matchesWindowsRuntimePrincipal;
 exports.isLocalWindowsAdministrator = isLocalWindowsAdministrator;
 exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
 exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
+exports.verifyWindowsAgentExecutableAcl = verifyWindowsAgentExecutableAcl;
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
+const windows_executable_acl_policy_1 = __nccwpck_require__(44324);
 const SID_PATTERN = /S-\d+(?:-\d+)+/;
 function systemTool(name) {
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
@@ -78802,6 +78878,12 @@ function verifyWindowsRuntimePathPrivate(path, directory) {
     // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
     runIcacls([path, '/setowner', `*${sid}`]);
     assertOwnerOnlyDacl(savedDacl(path), identity, directory);
+}
+function verifyWindowsAgentExecutableAcl(path) {
+    if (process.platform !== 'win32')
+        return;
+    const identity = currentUserIdentity();
+    (0, windows_executable_acl_policy_1.assertWindowsExecutableDacl)(savedDacl(path), identity.sid, identity.localAdministrator);
 }
 
 

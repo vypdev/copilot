@@ -241,7 +241,7 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0]).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
     });
 
-    it('accepts bounded public organization Projects discovery without claiming the PAT grant', async () => {
+    it('requires explicit confirmation for public organization Projects discovery', async () => {
         const projects: SetupTokenPermissionRequirement = {
             ...required, id: 'setup.organization.projects', scope: 'organization',
             permission: 'Projects', probe: 'projects',
@@ -251,8 +251,9 @@ describe('SetupTokenPermissionsUseCase', () => {
             ...projects, status: 'unverifiable', operationallyAvailable: true,
             publicReadEvidence: 'public-organization-projects', message: 'public Projects list usable',
         }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [projects] });
-        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
-        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', publicReadEvidence: 'public-organization-projects' });
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
     });
 
     it('rejects organization Projects usability on an unrelated permission', async () => {

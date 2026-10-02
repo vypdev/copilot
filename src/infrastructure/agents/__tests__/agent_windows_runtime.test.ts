@@ -4,11 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
+import { validateAgentExecutableFile } from '../agent_executable_file';
 import {
     makeWindowsRuntimePathPrivate,
     matchesWindowsRuntimePrincipal,
     isLocalWindowsAdministrator,
     verifyWindowsRuntimePathPrivate,
+    verifyWindowsAgentExecutableAcl,
 } from '../windows_runtime_acl';
 
 const windowsIt = process.platform === 'win32' ? it : it.skip;
@@ -81,6 +83,21 @@ describe('isolated Windows agent runtime', () => {
             expect(() => verifyWindowsRuntimePathPrivate(artifact, false)).not.toThrow();
             execFileSync('icacls.exe', [artifact, '/grant', '*S-1-1-0:R'], { stdio: 'ignore' });
             expect(() => verifyWindowsRuntimePathPrivate(artifact, false)).toThrow();
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    windowsIt('rejects an installed executable writable by Everyone without changing its ACL', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-executable-acl-'));
+        const executable = join(directory, 'agent.cmd');
+        try {
+            writeFileSync(executable, '@echo off\r\n');
+            expect(() => verifyWindowsAgentExecutableAcl(executable)).not.toThrow();
+            expect(() => validateAgentExecutableFile(executable)).not.toThrow();
+            execFileSync('icacls.exe', [executable, '/grant', '*S-1-1-0:M'], { stdio: 'ignore' });
+            expect(() => verifyWindowsAgentExecutableAcl(executable)).toThrow('writable by another principal');
+            expect(() => validateAgentExecutableFile(executable)).toThrow('unsafe or unreadable Windows ACL');
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }

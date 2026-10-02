@@ -301,6 +301,16 @@ performed, execution fails closed. Windows CLI and Action support remain an open
 acceptance gate until isolated Windows CI fixtures pass and a real runner review
 confirms the job without a credential-bearing test dispatch.
 
+Selected executables, their package-owned JavaScript entrypoints, and the Node
+interpreter also require a read-only Windows ACL preflight before version checks
+or execution. The file owner must be the runner user or a trusted platform
+principal. No untrusted principal may hold write, delete, ownership, or DACL
+mutation rights, whether an ACE is explicit or inherited. Read/execute access
+alone may be shared. Unknown ACE rights or unreadable ACLs fail closed. The
+preflight must not rewrite an operator-owned executable. Fixtures cover a
+normal Git for Windows/npm or Node ACL, a broad writable grant, inherited
+write, and malformed ACL evidence on hosted and service Windows runners.
+
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
 rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
