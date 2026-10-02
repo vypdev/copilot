@@ -168,6 +168,10 @@ isolated fake-CLI fixture MUST prove a writable candidate is never started.
 The Windows verifier fixture MUST answer both headless `exec --help` and
 `--version` promptly, and report an optional missing login separately; a
 fixture that hangs on help is not evidence of CLI readiness.
+On hosted Windows, the isolated readiness test MUST retain its bounded verifier
+stdout on failure so `NOT_READY` is distinguishable from a test harness timeout.
+The timeout fixture's Jest budget MUST include native ACL setup and teardown;
+the admitted child still uses its own short execution deadline.
 
 ### 6.2 Alternative paths
 

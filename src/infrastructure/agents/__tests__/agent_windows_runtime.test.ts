@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -168,7 +168,7 @@ describe('isolated Windows agent runtime', () => {
             + 'else if(process.argv.includes("login")){process.exit(1)}else{process.exit(2)}';
         const fixture = fakeRuntime(source);
         try {
-            const output = execFileSync(process.execPath, [join(process.cwd(), 'scripts', 'verify-agent-clis.cjs')], {
+            const result = spawnSync(process.execPath, [join(process.cwd(), 'scripts', 'verify-agent-clis.cjs')], {
                 cwd: fixture.workspace,
                 env: {
                     ...fixture.environment,
@@ -176,14 +176,17 @@ describe('isolated Windows agent runtime', () => {
                     AGENT_AUTH_PREFLIGHT: 'optional',
                     CODEX_HOME: join(fixture.root, 'no-session'),
                 },
-                encoding: 'utf8', timeout: 20_000,
+                encoding: 'utf8', timeout: 30_000,
             });
-            expect(output).toContain('codex: available');
-            expect(output).toContain('codex-cli 0.156.1');
+            expect({ status: result.status, output: result.stdout.trim() }).toEqual({
+                status: 0,
+                output: expect.stringContaining('codex: available'),
+            });
+            expect(result.stdout).toContain('codex-cli 0.156.1');
         } finally {
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    });
+    }, 45_000);
 
     windowsIt('times out a fake agent and removes its private artifacts', async () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'
@@ -196,7 +199,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    });
+    }, 15_000);
 
     windowsIt('cancels a fake agent and its descendant before cleaning artifacts', async () => {
         const pidFile = join(tmpdir(), `copilot-agent-descendant-${process.pid}-${Date.now()}.txt`);
