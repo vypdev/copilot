@@ -1899,6 +1899,20 @@ invocation, version reading, canonical workspace, absolute selection and
 missing PATH rejection. The 95/95/90 budget MUST remain in force, and a new
 Windows coverage run MUST prove it passes without a real agent or credentials.
 
+The [first expanded fixture matrix](https://github.com/vypdev/copilot/actions/runs/36979702107)
+exposed two fixture assumptions. The Windows PATH case passed, but explicit
+`codex.cmd` selection was rejected by the basename policy before the reviewed
+shim resolver could inspect it. On Ubuntu the planner test used a hosted Node
+binary whose group/world write mode violated the existing executable safety
+rule. Absolute Windows selections MUST accept only the provider's exact
+reviewed `.cmd` or native `.exe` basename; `.bat`, `.ps1`, arguments and
+unrelated wrappers remain rejected. Planner tests on Unix MUST use a private
+local fixture file with mode 0700, without changing runner binaries or the
+runtime ownership and mode checks. The application basename policy MUST remain
+runtime-neutral: identify drive-absolute Windows selections from path syntax,
+and leave actual executable, package and OS checks to infrastructure. Repeat
+the matrix and full Windows coverage after these repairs.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup

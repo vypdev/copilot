@@ -9,16 +9,30 @@ import { verifyWindowsRuntimePathPrivate } from '../windows_runtime_acl';
 
 const unixIt = process.platform === 'win32' ? it.skip : it;
 const windowsIt = process.platform === 'win32' ? it : it.skip;
+let systemExecutable = process.execPath;
+let systemFixtureDirectory: string | undefined;
 
 function system(provider: AgentProvider, workspace = process.cwd()): AgentExecutionPlanningSystem {
     return {
-        resolveExecutable: jest.fn(() => process.execPath),
+        resolveExecutable: jest.fn(() => systemExecutable),
         readVersion: jest.fn(() => getAgentRuntimeManifestEntry(provider).reviewedVersion),
         resolveWorkspace: jest.fn(() => workspace),
     };
 }
 
 describe('AgentExecutionPlanner', () => {
+    beforeAll(() => {
+        if (process.platform === 'win32') return;
+        systemFixtureDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-system-executable-'));
+        systemExecutable = join(systemFixtureDirectory, 'agent');
+        writeFileSync(systemExecutable, '#!/bin/sh\nexit 0\n');
+        chmodSync(systemExecutable, 0o700);
+    });
+
+    afterAll(() => {
+        if (systemFixtureDirectory) rmSync(systemFixtureDirectory, { recursive: true, force: true });
+    });
+
     windowsIt('preflights a reviewed local npm shim through PATH and an absolute selection', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-windows-system-'));
         const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
@@ -119,7 +133,7 @@ describe('AgentExecutionPlanner', () => {
                 childNetwork: 'deny', approval: 'never', sessionPersistence: false,
                 timeoutMs: 10_000, maxPromptBytes: 524_288, maxOutputBytes: 4_194_304,
             });
-            expect(plan.executable).toBe(process.execPath);
+            expect(plan.executable).toBe(systemExecutable);
             expect(plan.runtimeContract.version).toBe(getAgentRuntimeManifestEntry(provider).reviewedVersion);
             expect(plan.environment).not.toHaveProperty('GITHUB_TOKEN');
             expect(plan.environment.GIT_TERMINAL_PROMPT).toBe('0');
