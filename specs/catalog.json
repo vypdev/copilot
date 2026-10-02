@@ -1713,6 +1713,7 @@
         "src/utils/setup_files.ts",
         "src/utils/repository_agent_guidance.ts",
         "scripts/coverage-budgets.json",
+        "scripts/mdx-frontmatter.cjs",
         "scripts/validate-agent-documentation.cjs",
         "scripts/validate-npm-package.cjs",
         "scripts/smoke-test-npm-package.cjs"
@@ -1728,6 +1729,7 @@
         "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
         "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
+        "src/tooling/__tests__/mdx_frontmatter.test.ts",
         "src/utils/__tests__/setup_files.test.ts"
       ],
       "documentation": [

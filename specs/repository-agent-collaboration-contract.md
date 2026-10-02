@@ -497,6 +497,10 @@ flowchart LR
 8. Architecture tests MUST prevent the internal Action agent prompt/context
    builders from importing or automatically ingesting generated collaborator
    instructions.
+9. The documentation validator MUST accept equivalent LF and CRLF MDX
+   frontmatter on Windows and Unix checkouts, and reject missing or malformed
+   frontmatter. Generated collaborator artifact hashes remain byte-exact; line
+   ending tolerance in the MDX check MUST NOT weaken manifest verification.
 
 ## 9. UI/UX and content contract
 

@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const yaml = require('js-yaml');
+const { hasValidMdxFrontmatter } = require('./mdx-frontmatter.cjs');
 
 const root = path.resolve(__dirname, '..');
 const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
@@ -86,7 +87,7 @@ for (const file of requiredPages) {
   const absolute = path.join(docsRoot, file);
   if (!fs.existsSync(absolute)) throw new Error(`Missing required documentation page: ${file}`);
   const content = fs.readFileSync(absolute, 'utf8');
-  if (!content.startsWith('---\n') || !content.includes('\ntitle:')) {
+  if (!hasValidMdxFrontmatter(content)) {
     throw new Error(`Invalid MDX frontmatter: ${file}`);
   }
 }
