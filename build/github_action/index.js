@@ -78724,24 +78724,31 @@ function assertOwnerOnlyDacl(sddl, sid, directory) {
     const firstAce = dacl.indexOf('(');
     const flags = firstAce < 0 ? '' : dacl.slice(0, firstAce);
     const entries = firstAce < 0 ? '' : dacl.slice(firstAce);
-    const ace = /^\(([^()]*)\)$/.exec(entries)?.[1];
-    const fields = ace?.split(';');
-    const inheritance = fields?.[1] ?? '';
-    const rights = fields?.[2] ?? '';
-    if ((owner !== undefined && owner !== sid) || !flags.startsWith('D:') || !flags.slice(2).includes('P') || !fields || fields.length !== 6
-        || fields[0] !== 'A' || fields[3] !== '' || fields[4] !== ''
-        || fields[5] !== sid || rights !== 'FA'
-        || (directory && (!inheritance.includes('OI') || !inheritance.includes('CI')))
-        || (!directory && inheritance !== '')) {
+    const aces = [...entries.matchAll(/\(([^()]*)\)/g)].map(match => match[1].split(';'));
+    const noUnparsedEntries = entries.replace(/\([^()]*\)/g, '') === '';
+    const validOwnerAce = (fields) => fields.length === 6
+        && fields[0] === 'A' && fields[2] === 'FA'
+        && fields[3] === '' && fields[4] === '' && fields[5] === sid;
+    const appliesToPath = (fields) => !fields[1].includes('IO');
+    const inheritsToChildren = (fields) => fields[1].includes('OI') && fields[1].includes('CI');
+    if ((owner !== undefined && owner !== sid) || !flags.startsWith('D:') || !flags.slice(2).includes('P')
+        || !noUnparsedEntries || aces.length === 0 || !aces.every(validOwnerAce)
+        || !aces.some(appliesToPath)
+        || (directory && !aces.some(inheritsToChildren))
+        || (!directory && !aces.every(fields => fields[1] === ''))) {
         throw new Error(`Unsafe managed runtime ACL (${JSON.stringify({
             ownerPresent: owner !== undefined,
             ownerMatches: owner === sid,
             flags,
-            aceFields: fields?.length ?? 0,
-            aceType: fields?.[0] ?? '',
-            inheritance,
-            rights,
-            principalMatches: fields?.[5] === sid,
+            aceCount: aces.length,
+            noUnparsedEntries,
+            aces: aces.map(fields => ({
+                fields: fields.length,
+                type: fields[0],
+                inheritance: fields[1],
+                rights: fields[2],
+                principalMatches: fields[5] === sid,
+            })),
         })}).`);
     }
 }
