@@ -98,7 +98,8 @@ export function reconcileRepositoryAgentGuidance(
     artifacts: Object.fromEntries(Object.entries(records).sort(([left], [right]) => left.localeCompare(right))),
   };
   const manifestContent = `${JSON.stringify(manifest, null, 2)}\n`;
-  if (!fs.existsSync(manifestDestination) || fs.readFileSync(manifestDestination, 'utf8') !== manifestContent) {
+  if (!fs.existsSync(manifestDestination)
+    || canonicalGuidanceText(fs.readFileSync(manifestDestination, 'utf8')) !== manifestContent) {
     atomicWrite(manifestDestination, manifestContent);
     copied++;
   }
@@ -136,7 +137,8 @@ export function inspectRepositoryAgentGuidance(
     const content = fs.readFileSync(file, 'utf8');
     const actual = record.role === 'pointer' ? pointerBlock(content) : content;
     const matchesManifest = actual !== undefined && sha256(actual) === record.sha256;
-    const matchesDesired = record.role === 'pointer' || !desired || desired.get(relativePath) === content;
+    const matchesDesired = record.role === 'pointer' || !desired
+      || desired.get(relativePath) === canonicalGuidanceText(content);
     const semantic = record.role !== 'profile' || validRepositoryAgentProfile(content);
     checks.push(matchesManifest && matchesDesired && semantic
       ? { id: checkId(record.role), status: 'pass', summary: `${relativePath} matches the setup manifest.`, path: relativePath }
@@ -161,7 +163,7 @@ export function inspectRepositoryAgentGuidance(
   const profile = path.join(cwd, REPOSITORY_AGENT_PROFILE_PATH);
   const profileContent = fs.existsSync(profile) ? fs.readFileSync(profile, 'utf8') : undefined;
   if (!profileContent || sha256(profileContent) !== manifest.profileDigest
-    || (desired && desired.get(REPOSITORY_AGENT_PROFILE_PATH) !== profileContent)) {
+    || (desired && desired.get(REPOSITORY_AGENT_PROFILE_PATH) !== canonicalGuidanceText(profileContent))) {
     checks.push({ id: 'agent-profile-runtime-parity', status: 'fail', summary: 'Repository profile digest does not match the setup manifest.', path: REPOSITORY_AGENT_PROFILE_PATH });
   } else {
     checks.push({ id: 'agent-profile-runtime-parity', status: 'pass', summary: 'Repository profile digest matches the setup manifest.', path: REPOSITORY_AGENT_PROFILE_PATH });
@@ -184,7 +186,7 @@ function reconcileManagedArtifact(
     return { applied: true, changed: true };
   }
   const current = fs.readFileSync(destination, 'utf8');
-  if (current === artifact.content) return { applied: true, changed: false };
+  if (canonicalGuidanceText(current) === artifact.content) return { applied: true, changed: false };
   if (!prior || prior.role !== artifact.role || sha256(current) !== prior.sha256) return { applied: false, changed: false };
   backupFile(cwd, artifact.path);
   atomicWrite(destination, artifact.content);
@@ -205,7 +207,9 @@ function reconcilePointer(
   }
   const current = fs.readFileSync(destination, 'utf8');
   const existingBlock = pointerBlock(current);
-  if (existingBlock === block) return { changed: false, skipped: false, hash: sha256(block) };
+  if (existingBlock !== undefined && canonicalGuidanceText(existingBlock) === block) {
+    return { changed: false, skipped: false, hash: sha256(block) };
+  }
   if (existingBlock !== undefined) {
     if (prior?.role === 'pointer' && sha256(existingBlock) !== prior.sha256) {
       logInfo('⚠️  The managed AGENTS.md pointer has drifted; preserving it for explicit reconciliation.');
@@ -345,7 +349,11 @@ function backupDestination(cwd: string, relativePath: string, operation: string)
 }
 
 function sha256(content: string): string {
-  return createHash('sha256').update(content, 'utf8').digest('hex');
+  return createHash('sha256').update(canonicalGuidanceText(content), 'utf8').digest('hex');
+}
+
+function canonicalGuidanceText(content: string): string {
+  return content.replace(/\r\n/gu, '\n');
 }
 
 function containsSensitiveGuidance(content: string): boolean {

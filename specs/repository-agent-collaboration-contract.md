@@ -499,8 +499,12 @@ flowchart LR
    instructions.
 9. The documentation validator MUST accept equivalent LF and CRLF MDX
    frontmatter on Windows and Unix checkouts, and reject missing or malformed
-   frontmatter. Generated collaborator artifact hashes remain byte-exact; line
-   ending tolerance in the MDX check MUST NOT weaken manifest verification.
+   frontmatter. Generated collaborator artifact hashes MUST use canonical LF
+   text. Only CRLF-to-LF normalization is allowed before hashing or comparing
+   a generated artifact with its desired rendering; any other content change,
+   missing marker, invalid profile, or malformed manifest remains drift.
+   Setup reruns MUST treat a CRLF-only checkout as unchanged, and doctor and
+   retirement MUST use the same ownership rule.
 10. CI MUST verify the generated guidance contract immediately after dependency
     installation and again after the full test suite. On Windows, it MUST show
     the checkout line-ending attributes for the hash-owned files. A failure at
@@ -509,6 +513,14 @@ flowchart LR
     Windows setup fixture job MUST run the same checkout check before its build
     and full coverage suite, so the Windows evidence does not depend on generic
     CI runner assignment.
+
+The [self-hosted Windows checkout run](https://github.com/vypdev/copilot/actions/runs/37000932411)
+showed `i/lf w/crlf attr/text eol=lf` for all three tracked guidance artifacts
+immediately after checkout. The manifest still records LF digests. This is a
+checkout representation difference, not a source-content edit; the validator,
+doctor, reconcile, and retirement paths MUST apply the canonical text rule
+consistently. A fresh Windows run MUST prove the early validation and full
+suite pass before this platform gate closes.
 
 ## 9. UI/UX and content contract
 

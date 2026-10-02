@@ -113,7 +113,7 @@ for (const [relative, role] of Object.entries(generatedArtifactPaths)) {
   const hashedContent = role === 'pointer'
     ? content.match(/<!-- copilot:agent-guidance:start -->[\s\S]*?<!-- copilot:agent-guidance:end -->/)?.[0]
     : content;
-  if (!hashedContent || createHash('sha256').update(hashedContent, 'utf8').digest('hex') !== record.sha256) {
+  if (!hashedContent || createHash('sha256').update(hashedContent.replace(/\r\n/g, '\n'), 'utf8').digest('hex') !== record.sha256) {
     throw new Error(`Dogfood ${role} content does not match its manifest hash: ${relative}.`);
   }
 }
