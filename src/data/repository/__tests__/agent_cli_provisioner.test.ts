@@ -75,11 +75,12 @@ describe('AgentCliProvisioner', () => {
             }
             (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
                 if (command === 'npm') return Buffer.alloc(0);
-                if (process.platform === 'win32' && command === jobNode) {
-                    if (args[0] === npmCli) return Buffer.alloc(0);
-                    if (args[1] === '--version' && args[0].toLowerCase().endsWith('codex.js')) {
-                        return 'codex-cli 0.156.1\n';
-                    }
+                if (process.platform === 'win32' && command === jobNode && args[0] === npmCli) {
+                    return Buffer.alloc(0);
+                }
+                if (process.platform === 'win32' && command === process.execPath
+                    && args[1] === '--version' && args[0].toLowerCase().endsWith('codex.js')) {
+                    return 'codex-cli 0.156.1\n';
                 }
                 if (command === realpathSync(executable) && args[0] === '--version') return 'codex-cli 0.156.1\n';
                 throw new Error(`Unexpected command: ${command}`);
