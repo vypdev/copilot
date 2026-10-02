@@ -42,15 +42,18 @@ if ($rule.IdentityReference.Value -ne $me -or
 function runAclScript(script: string, path: string, directory: boolean): void {
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
     const powershell = join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-    execFileSync(powershell, ['-NoProfile', '-NonInteractive', '-Command', script], {
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    execFileSync(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
         env: {
             SystemRoot: systemRoot,
             PATH: process.env.PATH,
             COPILOT_PRIVATE_PATH: path,
             COPILOT_PRIVATE_DIRECTORY: directory ? '1' : '0',
         },
-        stdio: 'ignore',
-        timeout: 15_000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024,
+        timeout: 30_000,
         windowsHide: true,
     });
 }

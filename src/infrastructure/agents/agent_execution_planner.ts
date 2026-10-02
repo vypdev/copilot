@@ -13,7 +13,7 @@ import {
     writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { buildProviderExecutionPolicy } from '../../application/policies/agent_execution/agent_execution_policy_dispatcher';
 import type { AgentArtifactTemplate } from '../../application/policies/agent_execution/provider_execution_policy';
 import type { AgentCapability, AgentConfiguration, AgentProvider } from '../../domain/agent';
@@ -66,7 +66,9 @@ const DEFAULT_SYSTEM: AgentExecutionPlanningSystem = {
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15_000,
         }).trim());
-        if (requested !== root) throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        if (relative(requested, root) !== '') {
+            throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        }
         return root;
     },
 };

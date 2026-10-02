@@ -78460,8 +78460,9 @@ const DEFAULT_SYSTEM = {
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15000,
         }).trim());
-        if (requested !== root)
+        if ((0, node_path_1.relative)(requested, root) !== '') {
             throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        }
         return root;
     },
 };
@@ -78713,15 +78714,18 @@ if ($rule.IdentityReference.Value -ne $me -or
 function runAclScript(script, path, directory) {
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
     const powershell = (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-    (0, node_child_process_1.execFileSync)(powershell, ['-NoProfile', '-NonInteractive', '-Command', script], {
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
+    (0, node_child_process_1.execFileSync)(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
         env: {
             SystemRoot: systemRoot,
             PATH: process.env.PATH,
             COPILOT_PRIVATE_PATH: path,
             COPILOT_PRIVATE_DIRECTORY: directory ? '1' : '0',
         },
-        stdio: 'ignore',
-        timeout: 15000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024,
+        timeout: 30000,
         windowsHide: true,
     });
 }
