@@ -350,7 +350,7 @@
     {"id":"X024","assertion":"local web setup server bounds simultaneous loopback connections","status":"pass","evidence":{"kind":"jest","file":"src/cli/__tests__/web_setup_server.test.ts","test":"local web setup server bounds simultaneous loopback connections"}},
     {"id":"X025","assertion":"local web setup server ends a response safely if an asset write fails after headers were sent","status":"pass","evidence":{"kind":"jest","file":"src/cli/__tests__/web_setup_server.test.ts","test":"local web setup server ends a response safely if an asset write fails after headers were sent"}},
     {"id":"X026","assertion":"local web setup server startup refuses an index symlink outside the asset root","status":"pass","evidence":{"kind":"jest","file":"src/cli/__tests__/web_setup_server.test.ts","test":"local web setup server startup refuses an index symlink outside the asset root"}},
-    {"id":"X027","assertion":"local web setup server startup refuses missing or symlinked packaged assets","status":"pass","evidence":{"kind":"jest","file":"src/cli/__tests__/web_setup_server.test.ts","test":"local web setup server startup refuses missing or symlinked packaged assets"}},
+    {"id":"X027","assertion":"local web setup server startup refuses missing packaged assets","status":"pass","evidence":{"kind":"jest","file":"src/cli/__tests__/web_setup_server.test.ts","test":"local web setup server startup refuses missing packaged assets"}},
     {"id":"X028","assertion":"local web setup server uses the packaged web asset location when no override is supplied","status":"pass","evidence":{"kind":"jest","file":"src/cli/__tests__/web_setup_server.test.ts","test":"local web setup server uses the packaged web asset location when no override is supplied"}}
   ]
 }
