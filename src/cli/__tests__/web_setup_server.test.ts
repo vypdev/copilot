@@ -422,11 +422,17 @@ describe('local web setup server', () => {
     await pending;
   });
 
-  fileSymlinkTest('startup refuses missing or symlinked packaged assets', async () => {
+  test('startup refuses missing packaged assets', async () => {
     const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-assets-test-'));
     try {
       writeFileSync(join(invalid, 'index.html'), '<title>No assets</title>');
       await expect(startWebSetupServer(new WebSetupBridge('owner/repo'), invalid)).rejects.toThrow('incomplete');
+    } finally { rmSync(invalid, { recursive: true, force: true }); }
+  });
+
+  fileSymlinkTest('startup refuses symlinked packaged assets', async () => {
+    const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-assets-test-'));
+    try {
       mkdirSync(join(invalid, 'assets'));
       writeFileSync(join(invalid, 'index.html'), '<link href="./assets/app.css"><script src="./assets/app.js"></script>');
       writeFileSync(join(invalid, 'assets/app.css'), 'body {}');

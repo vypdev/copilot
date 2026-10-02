@@ -73,6 +73,7 @@ describe('isolated Windows agent runtime', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-acl-'));
         const artifact = join(directory, 'artifact');
         try {
+            execFileSync('icacls.exe', [directory, '/grant', '*S-1-1-0:R'], { stdio: 'ignore' });
             makeWindowsRuntimePathPrivate(directory, true);
             writeFileSync(artifact, 'fixture');
             makeWindowsRuntimePathPrivate(artifact, false);

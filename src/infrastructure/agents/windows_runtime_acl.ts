@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
@@ -49,7 +49,7 @@ function currentUserIdentity(): WindowsUserIdentity {
     };
 }
 
-function withSavedAcl<T>(path: string, use: (snapshot: string, lines: string[]) => T): T {
+function savedDacl(path: string): string {
     const directory = mkdtempSync(join(tmpdir(), 'copilot-acl-inspect-'));
     const snapshot = join(directory, 'acl.txt');
     try {
@@ -58,14 +58,10 @@ function withSavedAcl<T>(path: string, use: (snapshot: string, lines: string[]) 
         const contents = data.includes(0) ? data.toString('utf16le') : data.toString('utf8');
         const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
         if (!lines[0] || !lines[1]) throw new Error('Could not read the Windows runtime ACL.');
-        return use(snapshot, lines);
+        return lines[1].trim();
     } finally {
         rmSync(directory, { recursive: true, force: true });
     }
-}
-
-function savedDacl(path: string): string {
-    return withSavedAcl(path, (_snapshot, lines) => lines[1].trim());
 }
 
 function assertOwnerOnlyDacl(sddl: string, identity: WindowsUserIdentity, directory: boolean): void {
@@ -95,11 +91,11 @@ export function makeWindowsRuntimePathPrivate(path: string, directory: boolean):
     if (process.platform !== 'win32') return;
     const { sid } = currentUserIdentity();
     runIcacls([path, '/setowner', `*${sid}`]);
-    withSavedAcl(path, (snapshot, lines) => {
-        lines[1] = `D:P(A;${directory ? 'OICI' : ''};FA;;;${sid})`;
-        writeFileSync(snapshot, `\uFEFF${lines.join('\r\n')}`, 'utf16le');
-        runIcacls([dirname(path), '/restore', snapshot]);
-    });
+    // The owner can replace its DACL without the restore privilege required by
+    // icacls /restore on an unprivileged Windows runner service account.
+    runIcacls([path, '/reset']);
+    runIcacls([path, '/inheritance:r']);
+    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
     verifyWindowsRuntimePathPrivate(path, directory);
 }
 

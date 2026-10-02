@@ -259,6 +259,16 @@ passed the fake Windows runtime cases and package smoke on hosted Windows,
 Ubuntu and macOS. It does not establish self-hosted runner behavior or a live
 agent result; those human gates remain open without dogfooding.
 
+The first self-hosted Windows fixture reached `windows-intel-runner-1` and
+exposed that its unprivileged service account cannot apply an ACL snapshot
+with `icacls /restore`. Managed artifact hardening MUST use operations
+available to the file owner to remove inherited and explicit grants, then
+grant full control only to that owner's SID. It MUST verify the effective
+saved DACL afterward and fail closed if any broad principal survives. A
+fixture MUST begin with an explicit Everyone grant and prove it is removed.
+This is a runtime prerequisite for the self-hosted fixture gate; real agent
+execution remains a separate open review.
+
 ### 6.4 Codex policy
 
 Managed argv includes `exec`, `--strict-config`, `--ignore-user-config`,
