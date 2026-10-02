@@ -67,8 +67,10 @@ function assertCommandTrust(command) {
   }
 }
 
-function invokeCommand(command, args, options) {
+function invokeCommand(command, args, options, reportPhase = () => undefined) {
+  reportPhase('trust');
   assertCommandTrust(command);
+  reportPhase('execute');
   return execFileSync(command.executable, [...command.prefix, ...args], options);
 }
 
@@ -158,13 +160,17 @@ if (!checks[0]) {
 
 let failed = false;
 for (const check of checks) {
+  let phase = 'resolve';
   try {
     const command = resolveCommand(check);
-    invokeCommand(command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
-    const version = invokeCommand(command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 })
+    const helpPhase = (stage) => { phase = `help-${stage}`; };
+    invokeCommand(command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }, helpPhase);
+    const versionPhase = (stage) => { phase = `version-${stage}`; };
+    const version = invokeCommand(command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }, versionPhase)
       .trim()
       .replace(/\s+/g, ' ')
       .slice(0, 200);
+    phase = 'credential';
     const credentialNamesForCheck = credentialNames(check);
     const credentialState = credentialNamesForCheck.length === 0
       ? 'credential-resolution-deferred-to-cli'
@@ -177,8 +183,9 @@ for (const check of checks) {
     if (credentialState === 'credential-reference-missing' && authIsRequired()) failed = true;
   } catch (error) {
     failed = true;
-    const code = error?.status ?? 'unavailable';
-    console.log(`${check.name}: NOT_READY (${code}); install the official CLI and configure credentials by environment reference`);
+    const code = Number.isInteger(error?.status) && error.status >= 0 && error.status <= 255
+      ? error.status : 'unavailable';
+    console.log(`${check.name}: NOT_READY (${phase}/${code}); install the official CLI and configure credentials by environment reference`);
   }
 }
 

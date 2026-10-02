@@ -43,7 +43,7 @@ describe('standalone agent CLI verifier trust', () => {
             chmodSync(executable, 0o777);
             const unsafe = runVerifier(directory, directory);
             expect(unsafe.status).toBe(1);
-            expect(unsafe.stdout).toContain('codex: NOT_READY');
+            expect(unsafe.stdout).toContain('codex: NOT_READY (help-trust/unavailable)');
             expect(existsSync(marker)).toBe(false);
         } finally {
             rmSync(directory, { recursive: true, force: true });
@@ -67,7 +67,7 @@ describe('standalone agent CLI verifier trust', () => {
 
             const result = runVerifier(directory, directory);
             expect(result.status).toBe(1);
-            expect(result.stdout).toContain('codex: NOT_READY');
+            expect(result.stdout).toContain('codex: NOT_READY (help-trust/unavailable)');
             expect(existsSync(marker)).toBe(false);
         } finally {
             rmSync(directory, { recursive: true, force: true });

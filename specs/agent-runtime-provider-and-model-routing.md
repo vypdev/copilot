@@ -170,6 +170,9 @@ The Windows verifier fixture MUST answer both headless `exec --help` and
 fixture that hangs on help is not evidence of CLI readiness.
 On hosted Windows, the isolated readiness test MUST retain its bounded verifier
 stdout on failure so `NOT_READY` is distinguishable from a test harness timeout.
+The verifier's `NOT_READY` result MUST distinguish executable resolution,
+file trust, and headless help/version execution using fixed phase labels and
+bounded status codes, without exposing paths, raw stderr, arguments, or secrets.
 The timeout fixture's Jest budget MUST include native ACL setup and teardown;
 the admitted child still uses its own short execution deadline.
 
