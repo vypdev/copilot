@@ -39,6 +39,7 @@ jobs:
         with:
           version: 10.12.4
           standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
 
       - name: Set up Node.js 24
         uses: actions/setup-node@v7

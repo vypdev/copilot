@@ -24,6 +24,7 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const SETUP_NODE_ACTION = 'actions/setup-node@v7';
+const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
 const PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state';
@@ -205,6 +206,17 @@ function runnerLabels(value) {
   return Array.isArray(value) ? value.map(String) : [String(value)];
 }
 
+function assertIsolatedPnpm(relativeFile, jobId, job) {
+  const labels = runnerLabels(job['runs-on']);
+  if (!labels.includes('self-hosted') || !labels.includes('codex')) return;
+  for (const step of job.steps ?? []) {
+    if (typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@')
+      && step.with?.dest !== ISOLATED_PNPM_DEST) {
+      throw new Error(`${relativeFile} job ${jobId} must isolate pnpm/action-setup by runner, run, attempt and job.`);
+    }
+  }
+}
+
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
@@ -225,6 +237,7 @@ function assertRunner(file, workflow) {
         !== JSON.stringify(['self-hosted', 'codex', 'Windows'])) {
         throw new Error(`${relativeFile} must target the self-hosted Windows codex runner.`);
       }
+      assertIsolatedPnpm(relativeFile, jobId, job);
       continue;
     }
     const expected = relativeFile.startsWith('setup/workflows/')
@@ -239,6 +252,7 @@ function assertRunner(file, workflow) {
     if (expected.length === 1 ? labels[0] !== expected[0] : expected.some(label => !labels.includes(label))) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
+    assertIsolatedPnpm(relativeFile, jobId, job);
   }
 }
 

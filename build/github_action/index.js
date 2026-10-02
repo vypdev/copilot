@@ -65489,7 +65489,7 @@ function getGitRepositoryRoot(cwd) {
 }
 function isGitRepositoryRoot(cwd) {
     try {
-        return (0, child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], { cwd, encoding: 'utf8', stdio: 'pipe' }).trim() === '';
+        return (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
     }
     catch {
         return false;

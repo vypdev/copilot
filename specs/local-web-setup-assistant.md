@@ -1862,6 +1862,17 @@ isolated 117-case CLI suite passes. A full-suite run still MUST pass before
 counting this repair; increasing the heap or ignoring that suite is not
 acceptance evidence.
 
+The later [Windows fixture run](https://github.com/vypdev/copilot/actions/runs/36976422911)
+failed before fixtures: `pnpm/action-setup` attempted to remove a shared
+`~/setup-pnpm` directory while another service runner was installing there.
+Every `pnpm/action-setup` step on a self-hosted `codex` runner MUST use a
+destination isolated by runner temporary directory, workflow run, attempt and
+job. This applies to setup fixtures, CI, release and hotfix preparation so
+concurrent jobs cannot race in the same service account. Workflow contract
+tests MUST reject a shared destination. A new concurrent platform run MUST
+reach and pass its fixture steps; this earlier failure is not product test
+evidence.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup

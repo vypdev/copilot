@@ -723,6 +723,20 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted platform and self-hosted Windows fixture jobs');
   });
 
+  it.each([
+    ['ci_check.yml', 'ci-check'],
+    ['setup_platform_smoke.yml', 'setup-windows-codex-smoke'],
+    ['release_workflow.yml', 'prepare-version-files'],
+    ['hotfix_workflow.yml', 'prepare-version-files'],
+  ])('requires an isolated pnpm destination in %s', (fileName, jobId) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    const setup = workflow.jobs[jobId].steps.find((step: { uses?: string }) => step.uses === 'pnpm/action-setup@v5');
+    delete setup.with.dest;
+    expect(() => assertRunner(file, workflow)).toThrow('must isolate pnpm/action-setup');
+  });
+
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     expect(() => assertMajorActionReferences(file, {
