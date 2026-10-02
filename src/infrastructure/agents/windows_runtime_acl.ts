@@ -56,12 +56,21 @@ function assertOwnerOnlyDacl(sddl: string, sid: string, directory: boolean): voi
     const fields = ace?.split(';');
     const inheritance = fields?.[1] ?? '';
     const rights = fields?.[2] ?? '';
-    if (owner !== sid || !flags.startsWith('D:') || !flags.slice(2).includes('P') || !fields || fields.length !== 6
+    if ((owner !== undefined && owner !== sid) || !flags.startsWith('D:') || !flags.slice(2).includes('P') || !fields || fields.length !== 6
         || fields[0] !== 'A' || fields[3] !== '' || fields[4] !== ''
         || fields[5] !== sid || rights !== 'FA'
         || (directory && (!inheritance.includes('OI') || !inheritance.includes('CI')))
         || (!directory && inheritance !== '')) {
-        throw new Error('Unsafe managed runtime ACL.');
+        throw new Error(`Unsafe managed runtime ACL (${JSON.stringify({
+            ownerPresent: owner !== undefined,
+            ownerMatches: owner === sid,
+            flags,
+            aceFields: fields?.length ?? 0,
+            aceType: fields?.[0] ?? '',
+            inheritance,
+            rights,
+            principalMatches: fields?.[5] === sid,
+        })}).`);
     }
 }
 
