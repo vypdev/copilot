@@ -80,6 +80,24 @@ describe('isolated Windows agent runtime', () => {
         }
     });
 
+    windowsIt('observes separate path and DACL lines in the icacls saved snapshot', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-icacls-format-'));
+        const artifact = join(directory, 'artifact');
+        const snapshot = join(directory, 'acl.txt');
+        try {
+            writeFileSync(artifact, 'fixture');
+            execFileSync('icacls.exe', [artifact, '/save', snapshot], { stdio: 'ignore' });
+            const lines = readFileSync(snapshot, 'utf16le').replace(/^\uFEFF/u, '').trim().split(/\r?\n/u);
+            expect(lines).toHaveLength(2);
+            expect(lines[0]).toContain('artifact');
+            expect(lines[1]).toMatch(/^D:/u);
+            makeWindowsRuntimePathPrivate(artifact, false);
+            expect(() => verifyWindowsRuntimePathPrivate(artifact, false)).not.toThrow();
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
     windowsIt('protects managed directory and artifacts with an owner-only ACL', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-acl-'));
         const artifact = join(directory, 'artifact');

@@ -266,6 +266,11 @@ the installed-file trust gate correctly rejects them. Repository credentialed
 Action jobs route to macOS while Windows tooling ACLs are repaired and tested.
 The Windows agent gate remains open even if setup web/CLI and Bash fixtures
 pass; no runtime finding is waived or counted as a pass.
+The `icacls /save` managed-artifact snapshot is a UTF-16LE path line followed
+by an SDDL DACL line. A Windows fixture must assert this raw two-line format
+and the existing owner-only verification must continue to pass. This is direct
+evidence for the parser; a claim that the path and DACL share one line must not
+override the observed fixture output.
 The [2026-10-02 isolated platform matrix](https://github.com/vypdev/copilot/actions/runs/36955416020)
 passed the fake Windows runtime cases and package smoke on hosted Windows,
 Ubuntu and macOS. It does not establish self-hosted runner behavior or a live
