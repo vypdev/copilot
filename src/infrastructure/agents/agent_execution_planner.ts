@@ -1,15 +1,12 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {
-    accessSync,
-    constants,
     existsSync,
     mkdirSync,
     mkdtempSync,
     readFileSync,
     realpathSync,
     rmSync,
-    statSync,
     writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -30,6 +27,7 @@ import { buildAgentCliEnvironment } from '../../data/repository/agent_authentica
 import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
 import { readAgentExecutableVersion, resolveAgentExecutableInvocation, resolveAgentExecutablePath } from './agent_executable_invocation';
 import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
+import { validateAgentExecutableFile } from './agent_executable_file';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -91,10 +89,10 @@ export class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            validateExecutableFile(executable);
+            validateAgentExecutableFile(executable);
             const invocation = resolveAgentExecutableInvocation(executable, request.configuration.provider);
-            validateExecutableFile(invocation.executable);
-            for (const argument of invocation.prefixArgs) validateExecutableFile(argument);
+            validateAgentExecutableFile(invocation.executable);
+            for (const argument of invocation.prefixArgs) validateAgentExecutableFile(argument);
             const safeEnvironment = buildAgentCliEnvironment(
                 request.configuration.provider,
                 sourceEnvironment,
@@ -181,26 +179,6 @@ function validateLimits(request: AgentExecutionPlanningRequest) {
 function assertBoundedLimit(name: string, value: number, maximum: number): void {
     if (!Number.isFinite(value) || value <= 0 || value > maximum) {
         throw new AgentCliError(`Agent CLI ${name} must be a finite positive number no greater than ${maximum}.`, 'configuration');
-    }
-}
-
-function validateExecutableFile(path: string): void {
-    let stats;
-    try {
-        stats = statSync(path);
-        accessSync(path, constants.X_OK);
-    } catch {
-        throw new AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
-    }
-    if (!stats.isFile()) throw new AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if (process.platform !== 'win32' && (stats.mode & 0o022) !== 0) {
-        throw new AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
-    }
-    if (typeof process.getuid === 'function') {
-        const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0) {
-            throw new AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
-        }
     }
 }
 

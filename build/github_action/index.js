@@ -78319,6 +78319,45 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
+/***/ 87997:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertAgentExecutableMetadata = assertAgentExecutableMetadata;
+exports.validateAgentExecutableFile = validateAgentExecutableFile;
+const node_fs_1 = __nccwpck_require__(87561);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+function assertAgentExecutableMetadata(metadata, platform, currentUid) {
+    if (!metadata.isFile)
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
+    if (platform !== 'win32' && (metadata.mode & 0o022) !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
+    }
+    if (currentUid !== undefined && metadata.ownerUid !== currentUid && metadata.ownerUid !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
+    }
+}
+function validateAgentExecutableFile(path) {
+    let stats;
+    try {
+        stats = (0, node_fs_1.statSync)(path);
+        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
+    }
+    catch {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
+    }
+    assertAgentExecutableMetadata({
+        isFile: stats.isFile(),
+        mode: stats.mode,
+        ownerUid: stats.uid,
+    }, process.platform, process.getuid?.());
+}
+
+
+/***/ }),
+
 /***/ 16608:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -78444,6 +78483,7 @@ const agent_authentication_1 = __nccwpck_require__(51371);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const agent_executable_file_1 = __nccwpck_require__(87997);
 const DEFAULT_SYSTEM = {
     resolveExecutable(executable, environment) {
         try {
@@ -78487,11 +78527,11 @@ class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            validateExecutableFile(executable);
+            (0, agent_executable_file_1.validateAgentExecutableFile)(executable);
             const invocation = (0, agent_executable_invocation_1.resolveAgentExecutableInvocation)(executable, request.configuration.provider);
-            validateExecutableFile(invocation.executable);
+            (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
             for (const argument of invocation.prefixArgs)
-                validateExecutableFile(argument);
+                (0, agent_executable_file_1.validateAgentExecutableFile)(argument);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
             const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
@@ -78570,27 +78610,6 @@ function validateLimits(request) {
 function assertBoundedLimit(name, value, maximum) {
     if (!Number.isFinite(value) || value <= 0 || value > maximum) {
         throw new agent_cli_contracts_1.AgentCliError(`Agent CLI ${name} must be a finite positive number no greater than ${maximum}.`, 'configuration');
-    }
-}
-function validateExecutableFile(path) {
-    let stats;
-    try {
-        stats = (0, node_fs_1.statSync)(path);
-        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
-    }
-    catch {
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
-    }
-    if (!stats.isFile())
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if (process.platform !== 'win32' && (stats.mode & 0o022) !== 0) {
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
-    }
-    if (typeof process.getuid === 'function') {
-        const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0) {
-            throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
-        }
     }
 }
 function materializeArtifacts(templates) {

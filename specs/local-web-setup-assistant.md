@@ -1913,6 +1913,16 @@ runtime-neutral: identify drive-absolute Windows selections from path syntax,
 and leave actual executable, package and OS checks to infrastructure. Repeat
 the matrix and full Windows coverage after these repairs.
 
+The [full Windows CI after the fixture repair](https://github.com/vypdev/copilot/actions/runs/36980809204)
+passed all 513 suites and 5,794 tests. Planner lines and statements crossed
+95%, but branch coverage stayed at 84.78%; the only uncovered source lines in
+the report were Unix file-mode and owner checks. Keep those security checks,
+move executable-file metadata validation into a focused infrastructure module,
+and test its Unix and Windows decisions with explicit facts on every host.
+Both the planner and the new module MUST independently meet the same 95%
+lines/statements and 90% branches/functions budget in full Windows CI. A
+passing platform fixture alone does not close this coverage gate.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
