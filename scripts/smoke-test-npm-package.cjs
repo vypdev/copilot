@@ -29,7 +29,8 @@ try {
 
   const extractedDirectory = path.join(temporaryDirectory, 'package');
   fs.mkdirSync(extractedDirectory);
-  execFileSync('tar', ['-C', 'package', '-xzf', packageFile], { cwd: temporaryDirectory });
+  const archivePath = path.join(temporaryDirectory, packageFile);
+  execFileSync('tar', ['-C', extractedDirectory, '-xzf', archivePath]);
 
   const packageRoot = path.join(extractedDirectory, 'package');
   const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));

@@ -7,12 +7,15 @@ describe('installed Windows executable ACL policy', () => {
     it('allows trusted owner writes and shared read/execute grants', () => {
         expect(() => check(`O:${user}G:SYD:AI(A;;FA;;;${user})(A;ID;FRFX;;;BU)`)).not.toThrow();
         expect(() => check('O:BAD:AI(A;;FA;;;BA)(A;ID;0x1200a9;;;BU)')).not.toThrow();
+        expect(() => check(`O:${user}D:AI(A;;0xa0000000;;;BU)`)).not.toThrow();
     });
 
     it.each([
         `O:${user}D:AI(A;;FA;;;BU)`,
         `O:${user}D:AI(A;ID;FW;;;WD)`,
         `O:${user}D:AI(A;;0x001301bf;;;AU)`,
+        `O:${user}D:AI(A;;0x40000000;;;AU)`,
+        `O:${user}D:AI(A;;0x10000000;;;AU)`,
         `O:${user}D:AI(A;;WD;;;AU)`,
         `O:${user}D:AI(A;;SD;;;AU)`,
     ])('rejects an untrusted mutation grant in %s', sddl => {

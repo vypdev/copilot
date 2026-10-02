@@ -78757,7 +78757,10 @@ function grantsMutation(rights) {
         if (!Number.isSafeInteger(mask) || mask > 4294967295) {
             throw new Error('Unrecognized executable ACL rights.');
         }
-        return (mask & 0x500D0156) !== 0;
+        const genericWrite = 1073741824;
+        const genericAll = 268435456;
+        const fileMutation = 852310;
+        return (mask & (genericWrite | genericAll | fileMutation)) !== 0;
     }
     const tokens = rights.match(/.{2}/gu) ?? [];
     if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {

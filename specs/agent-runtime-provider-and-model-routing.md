@@ -310,6 +310,11 @@ alone may be shared. Unknown ACE rights or unreadable ACLs fail closed. The
 preflight must not rewrite an operator-owned executable. Fixtures cover a
 normal Git for Windows/npm or Node ACL, a broad writable grant, inherited
 write, and malformed ACL evidence on hosted and service Windows runners.
+Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
+generic all (`0x10000000`) for an untrusted principal, as well as file-specific
+mutation bits. Focused tests MUST exercise those generic rights directly;
+the mask definition should make their inclusion reviewable without mental
+hexadecimal arithmetic.
 The installed-file preflight must read the full descriptor, including owner;
 `icacls /save` exports a DACL only and cannot establish ownership. A bounded
 read-only Windows ACL query is required, while generated runtime artifacts

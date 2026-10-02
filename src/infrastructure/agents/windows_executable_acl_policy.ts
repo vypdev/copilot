@@ -34,7 +34,10 @@ function grantsMutation(rights: string): boolean {
         if (!Number.isSafeInteger(mask) || mask > 0xFFFF_FFFF) {
             throw new Error('Unrecognized executable ACL rights.');
         }
-        return (mask & 0x500D0156) !== 0;
+        const genericWrite = 0x4000_0000;
+        const genericAll = 0x1000_0000;
+        const fileMutation = 0x000D_0156;
+        return (mask & (genericWrite | genericAll | fileMutation)) !== 0;
     }
     const tokens = rights.match(/.{2}/gu) ?? [];
     if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {

@@ -1372,6 +1372,11 @@ remains open until a reviewer records browser/OS, viewport or zoom, assistive
 technology where relevant, locale, date, and observed result. Each automated
 row must identify a focused assertion or table case; one test cannot be used
 as evidence for unrelated rows.
+The isolated npm package smoke MUST open its packed archive from an absolute
+path before extracting into a separate temporary directory, then inspect the
+extracted CLI, web assets, and API. This keeps archive lookup independent of
+`tar -C` interpretation across platforms; the existing package smoke is the
+acceptance test.
 
 | IDs | Cases | Acceptance family |
 |---|---:|---|
