@@ -83824,7 +83824,12 @@ function assertOwnerOnlyDacl(sddl, sid, directory) {
                 inheritance: fields[1],
                 rights: fields[2],
                 principalMatches: fields[5] === sid,
+                principalKind: fields[5]?.startsWith('S-') ? 'sid' : fields[5],
+                principalSuffix: fields[5]?.split('-').at(-1),
+                principalLength: fields[5]?.length,
             })),
+            ownerSidSuffix: sid.split('-').at(-1),
+            ownerSidLength: sid.length,
         })}).`);
     }
 }
