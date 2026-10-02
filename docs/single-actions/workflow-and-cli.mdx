@@ -68,7 +68,8 @@ Use a repository checkout when testing unreleased changes or developing Copilot:
 ```bash
 git clone https://github.com/vypdev/copilot.git
 cd copilot
-corepack pnpm install . --global
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 The repository includes the generated `build/` directory. If you are installing from a checkout where `build/` is missing, build it first:
@@ -76,7 +77,8 @@ The repository includes the generated `build/` directory. If you are installing 
 ```bash
 corepack pnpm install
 corepack pnpm run build
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 ### Update the global pnpm installation
@@ -111,8 +113,13 @@ Pull the version you want into the Copilot checkout, then reinstall the local pa
 ```bash
 cd /path/to/copilot
 git pull --ff-only origin master
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
+
+Use the tarball produced by this checkout even when its version matches an
+existing global installation. Remove the tarball after installation if it is
+no longer needed.
 
 Verify that the executable is on `PATH` and that the installed package is the expected one:
 

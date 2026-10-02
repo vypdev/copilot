@@ -31,10 +31,11 @@ For local development or when testing an unreleased checkout, install from the r
 ```bash
 git clone https://github.com/vypdev/copilot.git
 cd copilot
-corepack pnpm install . --global
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
-If the checkout does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
+If the checkout does not include the compiled `build/` folder, run `corepack pnpm install` and `corepack pnpm run build` before packing. The tarball can be removed after installation. Packing the checkout avoids silently retaining a different global package with the same version.
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
@@ -279,7 +280,8 @@ For an unreleased checkout, update the checkout and reinstall the local package 
 ```bash
 cd /path/to/copilot
 git pull --ff-only origin master
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 After installation, confirm the executable and installed package:
