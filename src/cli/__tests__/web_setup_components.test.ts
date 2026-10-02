@@ -82,10 +82,12 @@ describe('web setup component semantics', () => {
         confirmationRequired: false, checks: [{ id: 'setup.organization.projects', role: 'setup',
           permission: 'Projects', scope: 'organization', level: 'read', applicability: 'required',
           reason: 'Inspect Projects', probe: 'projects', status: 'unverifiable',
+          operationallyAvailable: true,
           message: 'private diagnostic secret-token' }] } }, locale);
     expect(html).toContain(title);
     expect(html).toContain(name);
     expect(html).toContain(status);
+    expect(html).not.toContain('No required grant failed this check');
     if (locale !== 'en') expect(html).toContain('GitHub · Projects');
     expect(html).not.toContain('private diagnostic');
     expect(html).not.toContain('secret-token');

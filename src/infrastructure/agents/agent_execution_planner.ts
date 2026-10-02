@@ -25,9 +25,8 @@ import { AgentCliError } from '../../data/repository/agent_cli_contracts';
 import { validateAgentExecutableSelection } from '../../application/policies/agent_executable_policy';
 import { buildAgentCliEnvironment } from '../../data/repository/agent_authentication';
 import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
-import { readAgentExecutableVersion, resolveAgentExecutableInvocation, resolveAgentExecutablePath } from './agent_executable_invocation';
+import { readAgentExecutableVersion, resolveAgentExecutablePath, validateResolvedAgentInvocation } from './agent_executable_invocation';
 import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
-import { validateAgentExecutableFile } from './agent_executable_file';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -89,10 +88,7 @@ export class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            validateAgentExecutableFile(executable);
-            const invocation = resolveAgentExecutableInvocation(executable, request.configuration.provider);
-            validateAgentExecutableFile(invocation.executable);
-            for (const argument of invocation.prefixArgs) validateAgentExecutableFile(argument);
+            const invocation = validateResolvedAgentInvocation(executable, request.configuration.provider);
             const safeEnvironment = buildAgentCliEnvironment(
                 request.configuration.provider,
                 sourceEnvironment,

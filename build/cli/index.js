@@ -73171,7 +73171,7 @@ const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
             const selected = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
-            const invocation = (0, agent_executable_invocation_1.resolveAgentExecutableInvocation)(selected, 'codex');
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex');
             (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
@@ -83464,6 +83464,7 @@ function validateAgentExecutableFile(path) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveAgentExecutablePath = resolveAgentExecutablePath;
 exports.resolveAgentExecutableInvocation = resolveAgentExecutableInvocation;
+exports.validateResolvedAgentInvocation = validateResolvedAgentInvocation;
 exports.readAgentExecutableVersion = readAgentExecutableVersion;
 exports.installAgentNpmPackage = installAgentNpmPackage;
 exports.resolveNpmInstallInvocation = resolveNpmInstallInvocation;
@@ -83531,13 +83532,19 @@ function resolveAgentExecutableInvocation(selected, provider, platform = process
         default: throw new Error('Windows agent package bin is not a supported direct executable.');
     }
 }
-function readAgentExecutableVersion(selected, provider, environment) {
-    const path = resolveAgentExecutablePath(selected, environment);
-    const invocation = resolveAgentExecutableInvocation(path, provider);
-    (0, agent_executable_file_1.validateAgentExecutableFile)(path);
-    (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+/** Verify every file that may execute before a version or login probe starts. */
+function validateResolvedAgentInvocation(selected, provider) {
+    (0, agent_executable_file_1.validateAgentExecutableFile)(selected);
+    const invocation = resolveAgentExecutableInvocation(selected, provider);
+    if (invocation.executable !== selected)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
     for (const prefixArg of invocation.prefixArgs)
         (0, agent_executable_file_1.validateAgentExecutableFile)(prefixArg);
+    return invocation;
+}
+function readAgentExecutableVersion(selected, provider, environment) {
+    const path = resolveAgentExecutablePath(selected, environment);
+    const invocation = validateResolvedAgentInvocation(path, provider);
     return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
         env: environment,
         encoding: 'utf8',
@@ -83598,7 +83605,6 @@ const agent_authentication_1 = __nccwpck_require__(51371);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
-const agent_executable_file_1 = __nccwpck_require__(87997);
 const DEFAULT_SYSTEM = {
     resolveExecutable(executable, environment) {
         try {
@@ -83642,11 +83648,7 @@ class AgentExecutionPlanner {
                 executable: requestedExecutable,
             });
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            (0, agent_executable_file_1.validateAgentExecutableFile)(executable);
-            const invocation = (0, agent_executable_invocation_1.resolveAgentExecutableInvocation)(executable, request.configuration.provider);
-            (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
-            for (const argument of invocation.prefixArgs)
-                (0, agent_executable_file_1.validateAgentExecutableFile)(argument);
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
             const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));

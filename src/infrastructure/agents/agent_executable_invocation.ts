@@ -80,16 +80,22 @@ export function resolveAgentExecutableInvocation(
     }
 }
 
+/** Verify every file that may execute before a version or login probe starts. */
+export function validateResolvedAgentInvocation(selected: string, provider: AgentProvider): AgentExecutableInvocation {
+    validateAgentExecutableFile(selected);
+    const invocation = resolveAgentExecutableInvocation(selected, provider);
+    if (invocation.executable !== selected) validateAgentExecutableFile(invocation.executable);
+    for (const prefixArg of invocation.prefixArgs) validateAgentExecutableFile(prefixArg);
+    return invocation;
+}
+
 export function readAgentExecutableVersion(
     selected: string,
     provider: AgentProvider,
     environment: NodeJS.ProcessEnv,
 ): string {
     const path = resolveAgentExecutablePath(selected, environment);
-    const invocation = resolveAgentExecutableInvocation(path, provider);
-    validateAgentExecutableFile(path);
-    validateAgentExecutableFile(invocation.executable);
-    for (const prefixArg of invocation.prefixArgs) validateAgentExecutableFile(prefixArg);
+    const invocation = validateResolvedAgentInvocation(path, provider);
     return execFileSync(invocation.executable, [...invocation.prefixArgs, '--version'], {
         env: environment,
         encoding: 'utf8',

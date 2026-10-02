@@ -1577,6 +1577,11 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
     grant with its scope and access level in the selected locale. If identity
     itself failed, the result says so separately. A completed or unrelated
     blocked result must not attribute an earlier PAT report as its cause.
+    A required read that was operationally accessible but whose PAT grant was
+    unverified still appears as `unverifiable`; operational availability never
+    hides it or triggers the "No required grant failed" fallback. The
+    four-locale result fixture MUST cover this distinction without exposing
+    provider diagnostics or a token.
 
 ## 17. Requirements traceability
 

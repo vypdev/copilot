@@ -13,7 +13,7 @@ import {
     selectSafeAgentRuntimeEnvironment,
 } from './agent_credential_policy';
 import { getAgentRuntimeManifestEntry } from '../../infrastructure/agents/agent_runtime_manifest';
-import { resolveAgentExecutableInvocation, resolveAgentExecutablePath } from '../../infrastructure/agents/agent_executable_invocation';
+import { resolveAgentExecutablePath, validateResolvedAgentInvocation } from '../../infrastructure/agents/agent_executable_invocation';
 
 export type AgentCredentialStatus = 'available' | 'missing' | 'not_required';
 
@@ -31,7 +31,7 @@ const DEFAULT_AUTHENTICATION_SYSTEM: AgentAuthenticationSystem = {
     hasOperationalCodexLogin(executable, environment) {
         try {
             const selected = resolveAgentExecutablePath(executable, environment);
-            const invocation = resolveAgentExecutableInvocation(selected, 'codex');
+            const invocation = validateResolvedAgentInvocation(selected, 'codex');
             execFileSync(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',

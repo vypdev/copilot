@@ -145,6 +145,17 @@ No legacy behavior is supported; the hardened runtime is the only contract.
 6. Invoke the generic process adapter with the admitted role plan.
 7. Bound/parse/validate output and return semantic result.
 
+An operational Codex login probe is itself an agent process. Before `login
+status`, it MUST resolve the selected executable and any Windows npm package
+bin, validate the shim, direct interpreter, and package bin with the same
+owner/ACL file policy used for version and execution preflight, and execute
+with literal arguments and the bounded credential environment. A failed trust
+check reports authentication as unavailable without starting the CLI. A
+focused fixture MUST prove a writable launcher cannot run during this probe.
+The admitted execution plan separately records and rechecks its launcher hash
+when that plan is later executed; the synchronous login probe has no stored
+execution plan to recheck.
+
 ### 6.2 Alternative paths
 
 - Different active roles in one workflow may use different runtimes/models.

@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { checkAgentAuthentication } from '../../../data/repository/agent_authentication';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
@@ -127,6 +128,24 @@ describe('isolated Windows agent runtime', () => {
             expect(() => validateAgentExecutableFile(executable)).toThrow('unsafe or unreadable Windows ACL');
         } finally {
             rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    windowsIt('does not run login status through a writable npm shim', () => {
+        const markerDirectory = mkdtempSync(join(tmpdir(), 'copilot-login-marker-'));
+        const marker = join(markerDirectory, 'ran');
+        const runtime = fakeRuntime(`require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ran');`);
+        try {
+            const shim = join(runtime.root, 'npm bin', 'codex.cmd');
+            execFileSync('icacls.exe', [shim, '/grant', '*S-1-1-0:M'], { stdio: 'ignore' });
+            expect(checkAgentAuthentication(
+                { provider: 'codex', model: 'fixture' },
+                { ...runtime.environment, HOME: runtime.root },
+            ).status).toBe('missing');
+            expect(existsSync(marker)).toBe(false);
+        } finally {
+            rmSync(markerDirectory, { recursive: true, force: true });
+            rmSync(runtime.root, { recursive: true, force: true });
         }
     });
 

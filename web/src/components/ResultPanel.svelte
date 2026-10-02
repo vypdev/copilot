@@ -32,7 +32,7 @@
     ? permissionReport : undefined;
   $: unresolvedPermissions = blockedPermissionReport?.identityStatus === 'valid'
     ? blockedPermissionReport.checks.filter(check => check.applicability === 'required'
-      && check.status !== 'verified' && check.operationallyAvailable !== true) : [];
+      && check.status !== 'verified') : [];
 </script>
 
 <section class="card result-card" tabindex="-1" use:focusOnRevision={1}><span class="result-icon" aria-hidden="true">{outcome === 'complete' ? '✓' : '!'}</span><h2>{heading}</h2>
