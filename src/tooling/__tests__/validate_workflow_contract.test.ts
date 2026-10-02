@@ -727,6 +727,10 @@ describe('workflow contract validator', () => {
       .jobs['setup-windows-codex-smoke'].steps
       .filter((step: { name?: string }) => step.name !== 'Validate generated guidance checkout on codex Windows');
     expect(() => assertRunner(file, workflow)).toThrow('verify generated guidance at Windows checkout');
+    workflow.jobs['setup-windows-codex-smoke'].steps = (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow)
+      .jobs['setup-windows-codex-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full Windows documentation and contract validators');
+    expect(() => assertRunner(file, workflow)).toThrow('full Windows documentation and contract validators');
     delete workflow.jobs['setup-windows-codex-smoke'];
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted platform and self-hosted Windows fixture jobs');
   });

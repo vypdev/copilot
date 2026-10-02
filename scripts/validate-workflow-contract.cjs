@@ -247,6 +247,15 @@ function assertRunner(file, workflow) {
           || !guidanceStep.run.includes('git ls-files --eol')) {
           throw new Error(`${relativeFile} must verify generated guidance at Windows checkout.`);
         }
+        const validationStep = (job.steps ?? []).find(step => step?.name === 'Full Windows documentation and contract validators');
+        const requiredValidations = [
+          'validate:agent-docs', 'validate:docs-page', 'validate:documentation',
+          'validate:workflows', 'validate:specifications', 'validate:setup-acceptance',
+        ];
+        if (!validationStep?.run || requiredValidations.some(command => !validationStep.run.includes(`pnpm run ${command}`))
+          || (job.steps ?? []).indexOf(validationStep) <= (job.steps ?? []).indexOf(coverageStep)) {
+          throw new Error(`${relativeFile} must retain full Windows documentation and contract validators after coverage.`);
+        }
       }
       assertIsolatedPnpm(relativeFile, jobId, job);
       continue;

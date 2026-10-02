@@ -80,3 +80,12 @@ jobs:
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
       - name: Full Windows coverage and acceptance budgets
         run: pnpm run test:coverage
+      - name: Full Windows documentation and contract validators
+        run: |
+          pnpm run validate:agent-docs
+          pnpm run validate:docs-page
+          pnpm run validate:documentation
+          pnpm run validate:workflows
+          pnpm run validate:specifications
+          pnpm run validate:setup-acceptance
+          git diff --check

@@ -1952,6 +1952,11 @@ documentation validator's read boundary. Keep the same route, snippet,
 template, and required-copy assertions, and test that normalization preserves
 ordinary content drift. A fresh full Windows CI run MUST pass the complete
 documentation contract before the platform gate is considered verified.
+Because generic CI runner assignment is nondeterministic, the dedicated
+self-hosted Windows setup job MUST also execute the documentation, workflow,
+specification, and acceptance validators after its full coverage suite. Its
+workflow contract test MUST reject removal of that step. A passing macOS CI
+run alone cannot close the Windows validator gate.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
