@@ -853,6 +853,7 @@
         "src/application/policies/setup_pat_creation_url_policy.ts",
         "src/infrastructure/composition/setup_credentials_composition_root.ts",
         "scripts/validate-npm-package.cjs",
+        "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-setup-assistant-acceptance.cjs",
         "scripts/serve-web-setup-review.cjs",
         "scripts/validate-workflow-contract.cjs",
@@ -1481,6 +1482,7 @@
         "src/data/repository/agent_cli_execution.ts",
         "src/data/repository/agent_credential_policy.ts",
         "scripts/verify-agent-clis.cjs",
+        "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-workflow-contract.cjs"
       ],
       "tests": [

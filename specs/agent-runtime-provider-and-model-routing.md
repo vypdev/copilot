@@ -383,7 +383,7 @@ errors and credential masking.
 | provisioning/auth | provisioner/preflight adapters | ownership/install/infra tests | provisioning/credentials |
 | semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
-| Windows runtime | npm/bin resolver, planner, process and ACL adapters | Windows CI fake package, ACL, descendant cancellation and cleanup fixtures; human runner gate open | provisioning and failure policy |
+| Windows runtime | npm/bin resolver, planner, process and ACL adapters | [2026-10-02 isolated matrix](https://github.com/vypdev/copilot/actions/runs/36955416020): hosted Windows passed 20 fake package, ACL, descendant cancellation and cleanup cases; macOS/Ubuntu and npm-pack smoke passed; self-hosted runner and live agent review remain open | provisioning and failure policy |
 
 ## 18. Maintenance sequence
 

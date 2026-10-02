@@ -254,6 +254,10 @@ argv/prompt bytes, suppress raw stderr, and record cancellation/timeout as a
 failed capability with no trusted result. Isolated Windows fixtures MUST prove
 ACL rejection, argv safety, descendant termination, and cleanup; a real runner
 review remains open until observed (issue #404).
+The [2026-10-02 isolated platform matrix](https://github.com/vypdev/copilot/actions/runs/36955416020)
+passed the fake Windows runtime cases and package smoke on hosted Windows,
+Ubuntu and macOS. It does not establish self-hosted runner behavior or a live
+agent result; those human gates remain open without dogfooding.
 
 ### 6.4 Codex policy
 

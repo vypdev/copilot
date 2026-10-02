@@ -1797,6 +1797,16 @@ typecheck, isolated session tests and npm package validation/smoke. A passing
 Windows fixture after this change is required before counting those paths as
 verified; it does not prove all Action jobs or Windows cancellation behavior.
 
+The isolated [2026-10-02 three-platform fixture run](https://github.com/vypdev/copilot/actions/runs/36955416020)
+passed on hosted Windows, Ubuntu and macOS. Each job built and typechecked,
+exercised local setup/session fixtures, validated the npm package, and extracted
+and smoked its packaged CLI/API without a PAT or live setup. The Windows job
+also passed 20 fake-agent runtime cases, including ACL rejection, literal
+arguments, timeout, descendant cancellation and cleanup. This closes the
+automatable fixture path only. A global installation and browser/terminal
+review on each target platform, actual self-hosted `codex` runner behavior,
+and the human UX/security gates in §19 remain open.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
@@ -1833,8 +1843,9 @@ verified; it does not prove all Action jobs or Windows cancellation behavior.
       recovery, and PAT cleanup/renewal guidance are linked and validated.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
-- [ ] No readiness-blocking decision remains unresolved; no GitHub issue,
-      Action run, or test PAT is created while validating this implementation.
+- [ ] No readiness-blocking decision remains unresolved; no test GitHub issue,
+      credential-bearing setup Action run, or test PAT is created while
+      validating this implementation.
 
 ## 20. References and decisions
 
