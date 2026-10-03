@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { checkAgentAuthentication } from '../../../data/repository/agent_authentication';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
@@ -36,8 +36,10 @@ function fakeRuntime(source: string) {
         makeWindowsRuntimePathPrivate(path, false);
     }
     execFileSync('git', ['init', '-q', workspace], { stdio: 'ignore' });
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
     const environment = {
-        PATH: binRoot,
+        PATH: [binRoot, join(systemRoot, 'System32'), systemRoot,
+            join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')].join(delimiter),
         PATHEXT: '.EXE;.CMD',
         SystemRoot: process.env.SystemRoot,
         WINDIR: process.env.WINDIR,

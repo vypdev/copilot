@@ -392,7 +392,9 @@ timeout may be retried once; unsafe or malformed ACL evidence is never
 retried as success. Hosted and service Windows fixtures must prove readiness
 without increasing the 15-second ACL query limit. The verifier fixture
 supplies only non-secret Windows system plumbing variables to its child;
-its outer deadline includes the bounded retry and help/version probes.
+its `PATH` contains the private fake runtime followed by Windows system
+directories, and its outer deadline includes the bounded retry and
+help/version probes.
 Agent execution failure telemetry MUST include only a closed preflight stage
 (`workspace`, `ambient-configuration`, `manifest`, `selection`, `resolution`,
 `invocation-trust`, `environment`, `version`, `artifacts`, or `policy`). It

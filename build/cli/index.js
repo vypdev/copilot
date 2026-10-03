@@ -88012,7 +88012,7 @@ class SetupTokenPermissionQueryAdapter {
                 return target.check;
             const response = target.response ?? await request(target.url);
             if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
-                return inspectOrganizationProjectsRead(requirement, response, owner, request);
+                return await inspectOrganizationProjectsRead(requirement, response, owner, request);
             }
             return mapProbeResponse(requirement, response, target.readEvidence, owner);
         }

@@ -944,7 +944,15 @@ specific recovery action for each discovery state.
 
 The setup-PAT audit MUST NOT treat an empty or public-only organization
 Projects response as proof of `Projects: read` or as an automatically usable
-required read. It remains `Unverifiable`. Because Project numbers are selected
+required read. It remains `Unverifiable`.
+
+The permission probe's single deadline covers both bounded Projects pages,
+including each page request and response inspection. Its abort controller
+remains active until pagination finishes; a stalled later page returns
+`Unverifiable` without retaining public-read evidence or hanging the setup.
+An isolated fetch double must prove this second-page timeout behavior.
+
+Because Project numbers are selected
 only after this audit, the operator may explicitly attest that the displayed
 `Projects: read` grant is present, alongside any unverifiable writes. This
 attestation is never labelled GitHub verification and is not defaulted; a

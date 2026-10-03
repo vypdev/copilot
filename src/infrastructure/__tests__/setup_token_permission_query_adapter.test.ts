@@ -516,6 +516,35 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, next]);
     });
 
+    it('keeps the permission deadline active while a second Projects page stalls', async () => {
+        jest.useFakeTimers();
+        try {
+            const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
+            const next = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
+            let secondSignal: AbortSignal | undefined;
+            const fetcher = jest.fn((url: string, options?: RequestInit) => url === root
+                ? Promise.resolve(response(true, 200, {
+                    payload: [{ number: 1, public: true }],
+                    headers: { link: '<' + next + '>; rel="next"' },
+                }))
+                : new Promise<Response>((_resolve, reject) => {
+                    secondSignal = options?.signal ?? undefined;
+                    secondSignal?.addEventListener('abort', () => reject(new Error('stalled second page')), { once: true });
+                }));
+            const inspection = new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch, timeoutMs: 5 })
+                .inspect('owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')]);
+            await jest.advanceTimersByTimeAsync(0);
+            expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, next]);
+            await jest.advanceTimersByTimeAsync(5);
+            const [check] = await inspection;
+            expect(check.status).toBe('unverifiable');
+            expect(check.publicReadEvidence).toBeUndefined();
+            expect(secondSignal?.aborted).toBe(true);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     it('keeps a still-paginated public Projects list unverifiable after two pages', async () => {
         const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
         const second = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
