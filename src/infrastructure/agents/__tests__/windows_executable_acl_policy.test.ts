@@ -1,6 +1,7 @@
 import { assertWindowsExecutableDacl, assertWindowsExecutableParentDacl } from '../windows_executable_acl_policy';
 
 const user = 'S-1-5-21-100-200-300-1001';
+const trustedInstaller = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
 const check = (sddl: string) => assertWindowsExecutableDacl(sddl, user, false);
 
 describe('installed Windows executable ACL policy', () => {
@@ -45,6 +46,8 @@ describe('installed Windows executable parent ACL policy', () => {
     it('allows shared reads and add-only directory rights without replacement authority', () => {
         expect(() => checkParent(`O:${user}D:AI(A;;FA;;;${user})(A;;0x1200a9;;;BU)`)).not.toThrow();
         expect(() => checkParent('O:BAD:AI(A;;FA;;;BA)(A;;0x00000006;;;BU)')).not.toThrow();
+        expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;FR;;;BU)`)).not.toThrow();
+        expect(() => check(`O:${trustedInstaller}D:AI(A;;FA;;;SY)`)).toThrow('owner');
     });
 
     it.each([

@@ -264,6 +264,11 @@ path component or rewrite its ACL. It distinguishes harmless add-only rights
 from delete-child rights and fails closed on unreadable descriptors. Real
 Windows fixtures must pass for a safe parent and reject an untrusted
 delete-child grant without changing the operator-owned executable.
+The known `NT SERVICE\TrustedInstaller` SID may own a Windows ancestor,
+including the system volume root; it is trusted only for ancestor assessment.
+It must not make a foreign-owned executable acceptable. Hosted and service
+Windows fixtures must prove this exact owner case and still reject an
+untrusted parent owner or replacement grant.
 The installed-file check reads a full Windows security descriptor; the
 managed-artifact `icacls /save` snapshot contains only the DACL and is not
 owner evidence for an installed executable.

@@ -371,6 +371,11 @@ directory grants without replacement rights do not by themselves reject an
 otherwise safe installed path. This read-only check applies equally to native
 CLIs, resolved npm shims, interpreters, and package bins; fixtures prove both
 safe shared-read parents and a parent with an untrusted delete-child grant.
+The known `NT SERVICE\TrustedInstaller` SID is trusted as a Windows ancestor
+owner, including for `C:\`, because both hosted and service fixtures expose
+that system-owned volume root. The exception applies only to ancestor
+descriptors; it does not admit a foreign-owned executable. A fixture must
+verify the exact SID and continue rejecting another owner or mutation grant.
 Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
 generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;

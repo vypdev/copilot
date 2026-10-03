@@ -84721,6 +84721,7 @@ const { hostname } = __nccwpck_require__(70612);
 const { dirname, join } = __nccwpck_require__(49411);
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
+const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
 const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO']);
 const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO']);
 const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
@@ -84781,6 +84782,7 @@ function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, director
   const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
   const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
   if (localAdministrator) trusted.add('LA');
+  if (directory) trusted.add(TRUSTED_INSTALLER_SID);
   const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
   if (!owner || !trusted.has(owner)) throw new Error(`Unsafe executable ACL owner (${owner || 'missing'}).`);
   if (!section) throw new Error('Missing executable ACL DACL.');
