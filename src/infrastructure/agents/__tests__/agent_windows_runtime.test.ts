@@ -53,7 +53,19 @@ function fakeRuntime(source: string) {
         HOMEPATH: process.env.HOMEPATH,
         APPDATA: process.env.APPDATA,
         LOCALAPPDATA: process.env.LOCALAPPDATA,
+        ALLUSERSPROFILE: process.env.ALLUSERSPROFILE,
+        CommonProgramFiles: process.env.CommonProgramFiles,
+        'CommonProgramFiles(x86)': process.env['CommonProgramFiles(x86)'],
+        ProgramFiles: process.env.ProgramFiles,
+        'ProgramFiles(x86)': process.env['ProgramFiles(x86)'],
         ProgramData: process.env.ProgramData,
+        PUBLIC: process.env.PUBLIC,
+        USERDOMAIN: process.env.USERDOMAIN,
+        USERNAME: process.env.USERNAME,
+        LOGONSERVER: process.env.LOGONSERVER,
+        PROCESSOR_ARCHITECTURE: process.env.PROCESSOR_ARCHITECTURE,
+        NUMBER_OF_PROCESSORS: process.env.NUMBER_OF_PROCESSORS,
+        SESSIONNAME: process.env.SESSIONNAME,
     };
     return { root, workspace, environment, node };
 }
@@ -188,7 +200,7 @@ describe('isolated Windows agent runtime', () => {
             ] as const;
             for (const [name, executable, args] of probes) {
                 const probe = spawnSync(executable, [...args], {
-                    env: fixture.environment, encoding: 'utf8', timeout: 5_000,
+                    env: fixture.environment, encoding: 'utf8', timeout: 5_000, windowsHide: true,
                 });
                 if (probe.status !== 0) {
                     const code = probe.error && 'code' in probe.error ? probe.error.code : `exit-${probe.status}`;

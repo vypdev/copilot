@@ -183,7 +183,9 @@ needed by Windows PowerShell and native process startup. Its fixture must prove
 readiness on hosted Windows while retaining the 15-second ACL query deadline.
 It MUST omit an inherited PowerShell 7 `PSModulePath` when launching Windows
 PowerShell 5.1 so that the native shell constructs its compatible default
-module path.
+module path. The allowlist includes standard process, profile, Program Files,
+and account-domain context needed for noninteractive Windows PowerShell startup;
+it never includes GitHub tokens or provider credentials.
 The fixture MUST separately confirm that `whoami.exe` and a no-op Windows
 PowerShell command start under that bounded non-secret environment; a failed
 verifier ACL query identifies identity versus descriptor timeout by fixed code.
