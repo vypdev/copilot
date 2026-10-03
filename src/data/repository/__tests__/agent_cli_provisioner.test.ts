@@ -1,200 +1,221 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { execFileSync } from 'node:child_process';
-import {
-    AgentCliProvisioner,
-    agentExecutableExists,
-    type AgentCliProvisioningSystem,
-} from '../agent_cli_provisioner';
+import { join } from 'node:path';
+import type { AgentProvider } from '../../../domain/agent';
+import { AgentCliError } from '../agent_cli_contracts';
+import { AgentCliProvisioner, agentExecutableExists, type AgentCliProvisioningSystem } from '../agent_cli_provisioner';
 
-jest.mock('node:child_process', () => ({ execFileSync: jest.fn() }));
+function fakeInstallation(provider: AgentProvider) {
+    const root = mkdtempSync(join(tmpdir(), 'copilot-official-agent-'));
+    const directory = join(root, 'bin');
+    mkdirSync(directory);
+    const command = provider === 'cursor' ? 'agent' : provider;
+    const executable = join(directory, process.platform === 'win32' ? `${command}.exe` : command);
+    writeFileSync(executable, '#!/bin/sh\nexit 0\n');
+    chmodSync(executable, 0o755);
+    return { root, directory, executable: realpathSync(executable) };
+}
 
-function provisioningSystem(
-    executableAvailable: boolean | readonly boolean[] = false,
-    version = 'codex-cli 0.156.1',
-): AgentCliProvisioningSystem & { installPackage: jest.Mock; readVersion: jest.Mock } {
-    const availability = Array.isArray(executableAvailable) ? [...executableAvailable] : [executableAvailable];
+function system(installation: ReturnType<typeof fakeInstallation>, version = 'provider-cli future-version') {
     return {
-        executableExists: jest.fn(() => availability.length > 1 ? availability.shift()! : availability[0]),
-        readVersion: jest.fn(() => version),
-        installPackage: jest.fn(),
-    };
+        executableExists: jest.fn(agentExecutableExists),
+        readVersion: jest.fn((_executable: string, _provider: AgentProvider, _environment: NodeJS.ProcessEnv) => version),
+        readLatestVersion: jest.fn(() => '0.159.2'),
+        installOfficial: jest.fn(() => installation),
+    } satisfies AgentCliProvisioningSystem;
 }
 
 describe('AgentCliProvisioner', () => {
-    beforeEach(() => {
-        (execFileSync as unknown as jest.Mock).mockReset();
-    });
-
-    it('resolves bare executables through PATH and rejects missing path selections', () => {
-        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-path-test-'));
-        const executable = join(directory, 'codex');
+    it('uses the default system for an existing CLI and accepts a blank executable override', () => {
+        const installation = fakeInstallation('codex');
         try {
-            writeFileSync(executable, '#!/bin/sh\nexit 0\n');
-            chmodSync(executable, 0o755);
-            expect(agentExecutableExists('codex', { PATH: directory })).toBe(true);
-            expect(agentExecutableExists('missing', { PATH: directory })).toBe(false);
-            expect(agentExecutableExists('missing', {})).toBe(false);
-            expect(agentExecutableExists(join(directory, 'missing'), {})).toBe(false);
+            const environment = { PATH: installation.directory };
+            new AgentCliProvisioner().provision({ provider: 'codex', executable: ' ' }, environment);
+            expect(environment.PATH).toBe(installation.directory);
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(installation.root, { recursive: true, force: true });
         }
     });
 
-    it('accepts a preinstalled Codex CLI without replacing an operator-owned runtime', () => {
-        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-test-'));
-        const executable = join(directory, 'codex');
+    it('uses an available operator CLI without installing or requiring an exact version', () => {
+        const installation = fakeInstallation('codex');
+        const adapter = system(installation);
         try {
-            writeFileSync(executable, '#!/bin/sh\necho "codex-cli 0.156.1"\n');
-            chmodSync(executable, 0o755);
-            expect(() => new AgentCliProvisioner().provision({ provider: 'codex', executable }, { PATH: directory })).not.toThrow();
+            new AgentCliProvisioner(adapter).provision('codex', { PATH: installation.directory });
+            expect(adapter.installOfficial).not.toHaveBeenCalled();
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(installation.root, { recursive: true, force: true });
         }
     });
 
-    it('uses system npm and version commands for a forced pinned installation', () => {
-        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-default-system-'));
-        const executable = join(directory, 'codex');
+    it('uses a private official update when a newer stable Codex release is proven', () => {
+        const old = fakeInstallation('codex');
+        const updated = fakeInstallation('codex');
+        const adapter = system(updated);
+        adapter.readVersion.mockImplementation((path: string) => path === 'codex'
+            ? 'codex-cli 0.149.1' : 'codex-cli 0.159.2');
+        const environment = { PATH: old.directory };
         try {
-            writeFileSync(executable, '#!/bin/sh\nexit 0\n');
-            chmodSync(executable, 0o755);
-            (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
-                if (command === 'npm') return Buffer.alloc(0);
-                if (command === 'codex' && args[0] === '--version') return 'codex-cli 0.156.1\n';
-                throw new Error(`Unexpected command: ${command}`);
-            });
-
-            new AgentCliProvisioner().provision('codex', {
-                PATH: directory,
-                AGENT_PROVISIONING: 'always',
-            });
-
-            expect(execFileSync).toHaveBeenCalledWith(
-                'npm',
-                ['install', '--global', '@openai/codex@0.156.1'],
-                { stdio: 'inherit' },
-            );
-            expect(execFileSync).toHaveBeenCalledWith(
-                'codex',
-                ['--version'],
-                expect.objectContaining({ encoding: 'utf8', timeout: 15_000 }),
-            );
+            new AgentCliProvisioner(adapter).provision('codex', environment);
+            expect(adapter.readLatestVersion).toHaveBeenCalledWith('codex');
+            expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
+            expect(environment.PATH?.split(require('node:path').delimiter)[0]).toBe(updated.directory);
+            expect(existsSync(old.executable)).toBe(true);
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(old.root, { recursive: true, force: true });
+            rmSync(updated.root, { recursive: true, force: true });
         }
     });
 
-    it('accepts a preinstalled non-manifest Codex version without reinstalling it', () => {
-        const system = provisioningSystem(true, 'codex-cli 0.154.0');
+    it.each(['codex-cli 0.159.2', 'codex-cli 0.160.0', 'unparseable-version'])(
+        'keeps an installed %s when no newer release is proven', (version) => {
+            const installation = fakeInstallation('codex');
+            const adapter = system(installation, version);
+            try {
+                new AgentCliProvisioner(adapter).provision('codex', { PATH: installation.directory });
+                expect(adapter.installOfficial).not.toHaveBeenCalled();
+            } finally {
+                rmSync(installation.root, { recursive: true, force: true });
+            }
+        },
+    );
 
-        expect(() => new AgentCliProvisioner(system).provision({
-            provider: 'codex',
-            executable: '   ',
-        }, {})).not.toThrow();
-        expect(system.installPackage).not.toHaveBeenCalled();
-        expect(system.readVersion).not.toHaveBeenCalled();
+    it('uses the installed CLI if the official update check is unavailable', () => {
+        const installation = fakeInstallation('codex');
+        const adapter = system(installation, 'codex-cli 0.149.1');
+        adapter.readLatestVersion.mockImplementation(() => { throw new Error('network unavailable'); });
+        try {
+            new AgentCliProvisioner(adapter).provision('codex', { PATH: installation.directory });
+            expect(adapter.installOfficial).not.toHaveBeenCalled();
+        } finally {
+            rmSync(installation.root, { recursive: true, force: true });
+        }
     });
 
-    it('accepts an available operator runtime when provisioning is disabled', () => {
-        const system = provisioningSystem(true, 'codex-cli 0.154.0');
-
-        expect(() => new AgentCliProvisioner(system).provision('codex', {
-            AGENT_PROVISIONING: 'disabled',
-        })).not.toThrow();
-        expect(system.installPackage).not.toHaveBeenCalled();
-        expect(system.readVersion).not.toHaveBeenCalled();
+    it('installs a private official runtime when the discovered default fails trust before execution', () => {
+        const unsafe = fakeInstallation('codex');
+        const replacement = fakeInstallation('codex');
+        const adapter = system(replacement);
+        adapter.readVersion.mockImplementation((path: string) => {
+            if (path === 'codex') {
+                const error = new AgentCliError('unsafe fixture executable', 'configuration');
+                error.preflightDiagnostic = 'acl-writable';
+                throw error;
+            }
+            return 'codex-cli 0.159.2';
+        });
+        const environment = { PATH: unsafe.directory };
+        try {
+            new AgentCliProvisioner(adapter).provision('codex', environment);
+            expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
+            expect(adapter.readLatestVersion).not.toHaveBeenCalled();
+            expect(environment.PATH?.split(require('node:path').delimiter)[0]).toBe(replacement.directory);
+            expect(existsSync(unsafe.executable)).toBe(true);
+        } finally {
+            rmSync(unsafe.root, { recursive: true, force: true });
+            rmSync(replacement.root, { recursive: true, force: true });
+        }
     });
 
-    it('accepts but never replaces an available explicit executable', () => {
-        const system = provisioningSystem(true, 'codex-cli 0.154.0');
-
-        expect(() => new AgentCliProvisioner(system).provision({
-            provider: 'codex',
-            executable: '/controlled/codex',
-        }, { AGENT_PROVISIONING: 'always' })).not.toThrow();
-        expect(system.installPackage).not.toHaveBeenCalled();
-        expect(system.readVersion).not.toHaveBeenCalled();
+    it('fails closed and removes the private replacement if it also fails trust', () => {
+        const unsafe = fakeInstallation('codex');
+        const replacement = fakeInstallation('codex');
+        const adapter = system(replacement);
+        adapter.readVersion.mockImplementation(() => { throw new AgentCliError('unsafe fixture executable', 'configuration'); });
+        const environment = { PATH: unsafe.directory };
+        expect(() => new AgentCliProvisioner(adapter).provision('codex', environment))
+            .toThrow('unsafe fixture executable');
+        expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
+        expect(environment.PATH).toBe(unsafe.directory);
+        expect(existsSync(replacement.root)).toBe(false);
+        rmSync(unsafe.root, { recursive: true, force: true });
     });
 
-    it('never installs a missing explicit executable', () => {
-        const system = provisioningSystem(false);
-
-        expect(() => new AgentCliProvisioner(system).provision({
-            provider: 'codex',
-            executable: '/controlled/codex',
-        }, {})).toThrow('explicit executables are never installed or replaced');
-        expect(system.installPackage).not.toHaveBeenCalled();
+    it('does not replace a discovered CLI for an unrelated version probe failure', () => {
+        const installation = fakeInstallation('codex');
+        const adapter = system(installation);
+        adapter.readVersion.mockImplementation(() => { throw new Error('version probe unavailable'); });
+        try {
+            new AgentCliProvisioner(adapter).provision('codex', { PATH: installation.directory });
+            expect(adapter.installOfficial).not.toHaveBeenCalled();
+        } finally {
+            rmSync(installation.root, { recursive: true, force: true });
+        }
     });
 
-    it('fails clearly when provisioning is disabled and the CLI is absent', () => {
-        expect(() => new AgentCliProvisioner(provisioningSystem(false)).provision('cursor', {
-            PATH: '', AGENT_PROVISIONING: 'disabled',
-        })).toThrow('provisioning is disabled');
+    it('removes an update that does not actually advance the selected CLI', () => {
+        const old = fakeInstallation('codex');
+        const updated = fakeInstallation('codex');
+        const adapter = system(updated, 'codex-cli 0.149.1');
+        const environment = { PATH: old.directory };
+        expect(() => new AgentCliProvisioner(adapter).provision('codex', environment))
+            .toThrow('did not provide the newer release');
+        expect(environment.PATH).toBe(old.directory);
+        expect(existsSync(old.executable)).toBe(true);
+        expect(existsSync(updated.root)).toBe(false);
+        rmSync(old.root, { recursive: true, force: true });
     });
 
-    it('rejects unknown provisioning modes before touching the runner', () => {
-        expect(() => new AgentCliProvisioner().provision('codex', {
-            PATH: '', AGENT_PROVISIONING: 'sometimes',
-        })).toThrow('AGENT_PROVISIONING must be one of');
+    it('installs only a missing selected provider from its official source and exposes its private bin', () => {
+        const installation = fakeInstallation('opencode');
+        const adapter = system(installation, '99.12.3');
+        const environment = { PATH: '' };
+        try {
+            const provisioner = new AgentCliProvisioner(adapter);
+            provisioner.provision('opencode', environment);
+            provisioner.provision('opencode', environment);
+            expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
+            expect(adapter.installOfficial).toHaveBeenCalledWith('opencode');
+            expect(adapter.readVersion).toHaveBeenCalledTimes(1);
+            expect(adapter.readVersion.mock.calls[0][0].toLowerCase()).toBe(installation.executable.toLowerCase());
+            expect(adapter.readVersion.mock.calls[0].slice(1)).toEqual(['opencode', environment]);
+            expect(environment.PATH).toContain(installation.directory);
+        } finally {
+            rmSync(installation.root, { recursive: true, force: true });
+        }
     });
 
-    it('does not provision the same executable twice', () => {
-        const system = provisioningSystem([false, true]);
-        const provisioner = new AgentCliProvisioner(system);
-        provisioner.provision({ provider: 'codex' }, { PATH: '' });
-        provisioner.provision({ provider: 'codex' }, { PATH: '' });
-        expect(system.installPackage).toHaveBeenCalledTimes(1);
-        expect(system.readVersion).toHaveBeenCalledTimes(1);
+    it('never replaces an explicitly selected executable', () => {
+        const installation = fakeInstallation('cursor');
+        const adapter = system(installation);
+        try {
+            expect(() => new AgentCliProvisioner(adapter).provision({
+                provider: 'cursor', executable: join(installation.root, 'missing', 'agent'),
+            }, { PATH: '' })).toThrow('operator executables are never installed or replaced');
+            expect(adapter.installOfficial).not.toHaveBeenCalled();
+            expect(adapter.readLatestVersion).not.toHaveBeenCalled();
+        } finally {
+            rmSync(installation.root, { recursive: true, force: true });
+        }
     });
 
-    it('uses the process environment when no explicit environment is supplied', () => {
-        const system = provisioningSystem(true);
-        new AgentCliProvisioner(system).provision('codex');
-        expect(system.executableExists).toHaveBeenCalledWith('codex', process.env);
-        expect(system.readVersion).not.toHaveBeenCalled();
+    it('rolls back PATH and removes a partial installation after version failure', () => {
+        const installation = fakeInstallation('codex');
+        const adapter = system(installation, '  \n');
+        const environment = { PATH: 'existing-path' };
+        expect(() => new AgentCliProvisioner(adapter).provision('codex', environment)).toThrow('empty version');
+        expect(environment.PATH).toBe('existing-path');
+        expect(existsSync(installation.root)).toBe(false);
     });
 
-    it.each([
-        ['codex', '@openai/codex', '0.156.1', 'codex-cli 0.156.1'],
-        ['opencode', 'opencode-ai', '1.18.3', '1.18.3'],
-    ] as const)('provisions missing %s from its pinned installation', (provider, packageName, version, output) => {
-        const system = provisioningSystem([false, true], output);
-        new AgentCliProvisioner(system).provision(provider, { PATH: '' });
-        expect(system.installPackage).toHaveBeenCalledWith(packageName, version);
+    it('rejects a missing CLI after the installer claims success', () => {
+        const installation = fakeInstallation('cursor');
+        const adapter = system(installation);
+        rmSync(installation.executable);
+        const environment = { PATH: '' };
+        expect(() => new AgentCliProvisioner(adapter).provision('cursor', environment))
+            .toThrow('did not expose its executable');
+        expect(existsSync(installation.root)).toBe(false);
     });
 
-    it('always reinstalls and then validates the exact version', () => {
-        const system = provisioningSystem(true);
-        new AgentCliProvisioner(system).provision('codex', { AGENT_PROVISIONING: 'always' });
-        expect(system.installPackage).toHaveBeenCalledWith('@openai/codex', '0.156.1');
-        expect(system.readVersion).toHaveBeenCalledTimes(1);
-    });
-
-    it('requires Cursor to be preinstalled because it has no reviewed installer', () => {
-        const system = provisioningSystem(false);
-        expect(() => new AgentCliProvisioner(system).provision('cursor', {})).toThrow('must be preinstalled');
-        expect(system.installPackage).not.toHaveBeenCalled();
-    });
-
-    it('fails when installation does not make the exact executable available', () => {
-        const system = provisioningSystem([false, false]);
-        expect(() => new AgentCliProvisioner(system).provision({ provider: 'codex', executable: '  ' }, {
-            PATH: '',
-        })).toThrow('not available on PATH');
-    });
-
-    it('bounds non-Error post-install version failures behind a stable message', () => {
-        const system = provisioningSystem([false, true]);
-        system.readVersion.mockImplementation(() => { throw 'unparseable'; });
-        expect(() => new AgentCliProvisioner(system).provision('codex', {}))
-            .toThrow('failed pinned-version verification');
-    });
-
-    it('rejects a pinned package when its installed CLI reports another version', () => {
-        const system = provisioningSystem([false, true], 'codex-cli 0.154.0');
-        expect(() => new AgentCliProvisioner(system).provision('codex', {}))
-            .toThrow('failed pinned-version verification');
+    it('rejects an installer that exposes a different executable and restores an absent PATH', () => {
+        const installation = fakeInstallation('opencode');
+        const adapter = system({ ...installation, executable: join(installation.root, 'unexpected') });
+        const environment: NodeJS.ProcessEnv = { Path: 'original-windows-path' };
+        expect(() => new AgentCliProvisioner(adapter).provision('opencode', environment))
+            .toThrow('resolved to another executable');
+        expect(environment.PATH).toBeUndefined();
+        expect(environment.Path).toBe('original-windows-path');
+        expect(existsSync(installation.root)).toBe(false);
     });
 });

@@ -37603,7 +37603,7 @@ const main_run_lifecycle_1 = __nccwpck_require__(916);
 const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
 const application_error_1 = __nccwpck_require__(75999);
 const issue_start_policy_1 = __nccwpck_require__(90332);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -37640,7 +37640,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message)];
     }
     await prepareRuntime?.(execution);
-    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface);
+    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress);
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
@@ -37998,7 +37998,7 @@ async function runLocalAction(additionalParams, options = {}) {
             owner: execution.owner,
             repository: execution.repo,
             token: execution.tokens.token,
-        }));
+        }), undefined, options.onSetupProgress);
         if (options.render !== false) {
             const catalog = await (0, publication_message_catalog_1.resolvePublicationCatalog)(execution.locale.repository, execution.ai.getAgentConfiguration('planner'), composition.catalogResolver);
             (0, local_action_output_1.renderLocalActionResults)(results, catalog);
@@ -39426,9 +39426,11 @@ function validateAgentExecutableSelection(configuration) {
         return;
     const expected = agent_1.AGENT_EXECUTABLE_BASENAMES[configuration.provider];
     const isExpectedBareName = selected === expected;
-    const isAbsolutePath = selected.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(selected);
+    const isWindowsAbsolutePath = /^[a-zA-Z]:[\\/]/.test(selected);
+    const isAbsolutePath = selected.startsWith('/') || isWindowsAbsolutePath;
     const selectedBasename = selected.split(/[\\/]/).at(-1);
-    const isExpectedAbsolutePath = isAbsolutePath && selectedBasename === expected;
+    const isExpectedAbsolutePath = isAbsolutePath && (selectedBasename === expected
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`));
     if (!isExpectedBareName && !isExpectedAbsolutePath) {
         throw new application_error_1.ApplicationError('agent.policy-rejected', `Agent executable must be the bare name "${expected}" or an absolute path with that basename.`);
     }
@@ -46474,7 +46476,6 @@ function buildSetupRepositoryVariables(configuration) {
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_EXECUTABLE', base.executable);
-    add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
@@ -46650,9 +46651,6 @@ function buildSetupWarnings(configuration) {
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
-    if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
-    }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
@@ -46660,7 +46658,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
@@ -48205,7 +48203,6 @@ const special = {
     'ai.includeReasoning': { summary: 'Demandez des explications supplémentaires si la réponse du fournisseur les contient.', when: 'Réservé aux diagnostics avancés ; le parcours CLI actuel ne fournit pas de parties de raisonnement séparées.', example: 'Laissez désactivé pour une configuration normale.', effect: 'Cela peut ajouter du texte du fournisseur, sans garantir des métadonnées brèves.', verify: 'Inspectez une réponse structurée contrôlée ; ne supposez pas que l’option a produit plus de texte.' },
     'ai.bugbotDryRun': { summary: 'Gardez Bugbot en mode analyse seule pour ses futures exécutions.', when: 'Utile pour une évaluation ; incompatible avec les preuves nécessaires à l’approbation.', example: 'Choisissez Non pour publier les revues normales.', effect: 'Bugbot analyse sans publier de résultat ni modifier le dépôt. Ce n’est pas setup --dry-run.', verify: 'Inspectez le résultat du workflow Bugbot : le mode analyse seule ne publie ni revue ni vérification.' },
     'ai.bugbotOrganizationRules': { summary: 'Définissez des consignes générales pour Bugbot, une règle par ligne.', when: 'Utile si l’équipe partage des critères de revue dans le dépôt configuré.', example: 'Signaler les changements qui contournent l’isolation des clients.', effect: 'Ces règles précèdent celles du dépôt ; le périmètre de la Variable détermine le stockage.', verify: 'Inspectez la Variable configurée et activez le traçage des sources de règles.' },
-    'ai.provisioningMode': { summary: 'Décidez comment l’Action trouve ou installe l’agent CLI.', when: 'Ce choix s’applique sur le runner au démarrage d’une tâche IA activée.', example: 'Auto réutilise un CLI installé ou installe une version fixée de Codex/OpenCode.', effect: 'Always réinstalle les versions examinées ; Disabled exige un CLI préinstallé. Cursor doit être préinstallé.', verify: 'Inspectez l’étape de préparation et la version du binaire rapportée par le runner.' },
     'pullRequestApproval.testChecks': { summary: 'Choisissez les jobs CI que le bot peut considérer comme preuve de tests indépendante.', when: 'Obligatoire pour les modes Recommend et Guarded.', example: 'Sélectionnez le job Tests exact, son ID d’App GitHub et son workflow dans une exécution récente.', effect: 'Seules les identités exactes listées satisfont la condition d’approbation.', verify: 'Ouvrez l’exécution liée et vérifiez le job, l’App et le résultat pour le commit courant.' },
     'pullRequestApproval.producerAttested': { summary: 'Confirmez avoir inspecté le producteur CI exact et son étape obligatoire de couverture.', when: 'Obligatoire avant que le mode Guarded puisse approuver.', example: 'Vérifiez que le job Tests échoue si le seuil de couverture n’est pas atteint.', effect: 'Votre confirmation est enregistrée ; Copilot ne la déduit pas d’une vérification verte.', verify: 'Inspectez le fichier du workflow et une exécution réelle avant de répondre Oui.' },
     'pullRequestApproval.coverage.mode': { summary: 'Choisissez comment prouver la couverture exigée du code modifié.', when: 'Ce choix s’applique lorsque l’approbation de PR est activée.', example: 'Check : le CI impose le seuil. Numeric : un workflow fiable publie des décomptes limités.', effect: 'Check fait confiance au garde CI ; Numeric lit copilot-diff-coverage-v1 et compare un seuil.', verify: 'Inspectez respectivement la condition d’échec du CI ou l’artefact du rapporteur.' },
@@ -48292,10 +48289,6 @@ const special = {
     'ai.bugbotOrganizationRules': {
         en: { summary: 'Set broad Bugbot review instructions, one rule per line.', when: 'Use when your team needs review criteria shared across its configured repository.', example: 'Flag changes that bypass tenant isolation.', effect: 'These rules run before repository rules; the selected Variable scope determines storage, not the title.', verify: 'Inspect the configured Variable and enable rule-source tracing for a review.' },
         es: { summary: 'Define criterios generales de revisión para Bugbot, una regla por línea.', when: 'Úsalo si el equipo necesita criterios comunes en el repositorio configurado.', example: 'Señala cambios que omitan el aislamiento entre clientes.', effect: 'Se aplican antes que las reglas del repositorio; el ámbito de la Variable determina dónde se guardan.', verify: 'Revisa la Variable configurada y activa el rastreo de fuentes de reglas.' },
-    },
-    'ai.provisioningMode': {
-        en: { summary: 'Decide how the Action finds or installs the selected agent CLI.', when: 'Applies on the runner when an enabled AI task starts.', example: 'Auto reuses an installed CLI or installs pinned Codex/OpenCode when missing.', effect: 'Always reinstalls reviewed defaults; Disabled requires a preinstalled CLI. Cursor must be preinstalled.', verify: 'Inspect the runner provisioning step and its reported binary version.' },
-        es: { summary: 'Decide cómo encuentra o instala la Action el agente CLI.', when: 'Se aplica en el runner cuando empieza una tarea de IA.', example: 'Auto reutiliza el CLI existente o instala una versión fijada de Codex/OpenCode si falta.', effect: 'Always reinstala versiones fijadas; Disabled exige instalación previa. Cursor debe estar preinstalado en el runner.', verify: 'Revisa el paso de preparación y la versión del binario en el runner.' },
     },
     'pullRequestApproval.testChecks': {
         en: { summary: 'Choose CI jobs the approval bot may trust as independent test evidence.', when: 'Required for recommend or guarded approval.', example: 'Select the exact Tests job, its GitHub App ID, and parent workflow from a recent run.', effect: 'Only the listed exact producer identities can satisfy the approval gate.', verify: 'Open the linked workflow run and confirm the job, App, and current-head result.' },
@@ -48433,7 +48426,6 @@ const special = {
     'ai.includeReasoning': { summary: 'Peça explicações adicionais se a resposta do fornecedor as disponibilizar.', when: 'Só para diagnóstico avançado; o percurso CLI atual não fornece partes de raciocínio separadas.', example: 'Mantenha desativado numa configuração normal.', effect: 'Pode acrescentar texto do fornecedor, sem garantir metadados breves.', verify: 'Inspecione uma resposta estruturada controlada; não presuma que a opção produziu texto adicional.' },
     'ai.bugbotDryRun': { summary: 'Mantenha o Bugbot em modo apenas de análise nas próximas execuções.', when: 'Útil numa avaliação; incompatível com provas de aprovação.', example: 'Escolha Não para publicar revisões normais.', effect: 'O Bugbot analisa sem publicar resultados nem alterar o repositório. Não é setup --dry-run.', verify: 'Inspecione o resultado do fluxo Bugbot: a simulação não publica revisão nem verificação.' },
     'ai.bugbotOrganizationRules': { summary: 'Defina instruções gerais para o Bugbot, uma regra por linha.', when: 'Use se a equipa precisar de critérios de revisão partilhados no repositório configurado.', example: 'Assinalar alterações que contornem o isolamento entre clientes.', effect: 'Estas regras precedem as do repositório; o âmbito da Variable determina o armazenamento.', verify: 'Inspecione a Variable configurada e ative o rastreio das fontes das regras.' },
-    'ai.provisioningMode': { summary: 'Decida como a Action encontra ou instala o agente CLI.', when: 'Aplica-se no runner quando começa uma tarefa de IA ativa.', example: 'Auto reutiliza um CLI instalado ou instala uma versão fixa de Codex/OpenCode.', effect: 'Always reinstala as versões revistas; Disabled exige um CLI pré-instalado. Cursor tem de estar pré-instalado.', verify: 'Inspecione a etapa de preparação e a versão do binário comunicada pelo runner.' },
     'pullRequestApproval.testChecks': { summary: 'Escolha os jobs CI que o bot pode aceitar como prova independente de testes.', when: 'Obrigatório para os modos Recommend e Guarded.', example: 'Selecione o job Tests exato, o ID da App GitHub e o workflow de uma execução recente.', effect: 'Só as identidades exatas listadas satisfazem a condição de aprovação.', verify: 'Abra a execução associada e confirme job, App e resultado do commit atual.' },
     'pullRequestApproval.producerAttested': { summary: 'Confirme que inspecionou o produtor CI exato e a sua etapa obrigatória de cobertura.', when: 'Obrigatório antes de o modo Guarded poder aprovar.', example: 'Confirme que o job Tests falha se o limite de cobertura não for atingido.', effect: 'A sua confirmação fica registada; o Copilot não a deduz de uma verificação verde.', verify: 'Inspecione o ficheiro do workflow e uma execução real antes de escolher Sim.' },
     'pullRequestApproval.coverage.mode': { summary: 'Escolha como comprovar a cobertura exigida do código alterado.', when: 'Aplica-se quando a aprovação de PR está ativa.', example: 'Check: o CI exige o limite. Numeric: um workflow fiável publica contagens limitadas.', effect: 'Check confia numa condição CI; Numeric lê copilot-diff-coverage-v1 e compara o limite.', verify: 'Inspecione, respetivamente, a condição de falha CI ou o artefacto do relatório.' },
@@ -48550,7 +48542,6 @@ exports.questionLabelsFr = {
     'ai.bugbotTelemetry': 'Enregistrer des métriques Bugbot sans contenu ?',
     'ai.bugbotFailOnUnresolved': 'Faire échouer la vérification si des résultats restent ouverts ?',
     'ai.bugbotOrganizationRules': 'Règles Bugbot communes, une par ligne',
-    'ai.provisioningMode': 'Comment préparer l’agent CLI sur le runner',
     'pullRequestApproval.mode': 'Que peut faire le bot pour approuver les pull requests ?',
     'pullRequestApproval.testChecks': 'Quelles vérifications CI sont fiables pour approuver ?',
     'pullRequestApproval.producerAttested': 'Avez-vous vérifié le job, l’App et l’étape obligatoire de couverture ?',
@@ -48645,7 +48636,6 @@ exports.questionLabelsPt = {
     'ai.bugbotTelemetry': 'Registar métricas do Bugbot sem conteúdo?',
     'ai.bugbotFailOnUnresolved': 'Fazer falhar a verificação se houver resultados por resolver?',
     'ai.bugbotOrganizationRules': 'Regras Bugbot partilhadas, uma por linha',
-    'ai.provisioningMode': 'Como preparar o agente CLI no runner',
     'pullRequestApproval.mode': 'O que pode o bot fazer na aprovação de pull requests?',
     'pullRequestApproval.testChecks': 'Que verificações CI são fiáveis para aprovar?',
     'pullRequestApproval.producerAttested': 'Verificou o job, a App e a etapa obrigatória de cobertura?',
@@ -49095,7 +49085,6 @@ exports.spanishQuestionLabels = {
     'ai.bugbotTelemetry': '¿Registrar métricas de Bugbot sin contenido?',
     'ai.bugbotFailOnUnresolved': '¿Bloquear el check si quedan hallazgos sin resolver?',
     'ai.bugbotOrganizationRules': 'Reglas generales de Bugbot, una por línea',
-    'ai.provisioningMode': 'Cómo preparar el agente CLI en el runner',
     'pullRequestApproval.mode': '¿Qué puede hacer el bot con las aprobaciones de PR?',
     'pullRequestApproval.testChecks': '¿Qué checks de CI son fiables para aprobar PRs?',
     'pullRequestApproval.producerAttested': '¿Has comprobado el job, la App y el paso obligatorio de cobertura?',
@@ -49512,7 +49501,6 @@ function bugbotQuestions() {
         { stateId: 'bugbot', id: 'ai.bugbotTelemetry', label: 'Emit content-free Bugbot telemetry?', kind: 'boolean' },
         { stateId: 'bugbot', id: 'ai.bugbotFailOnUnresolved', label: 'Fail the workflow check while findings remain unresolved?', kind: 'boolean' },
         { stateId: 'bugbot', id: 'ai.bugbotOrganizationRules', label: 'Organization Bugbot rules (newline-separated)', kind: 'text' },
-        { stateId: 'bugbot', id: 'ai.provisioningMode', label: 'Agent CLI provisioning mode', kind: 'choice', choices: ['auto', 'always', 'disabled'] },
     ];
 }
 function approvalQuestions() {
@@ -49922,6 +49910,7 @@ function safeTerminalChoiceText(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileSetupTokenPermissionEvidence = reconcileSetupTokenPermissionEvidence;
 exports.isOperationallyAvailableSetupRead = isOperationallyAvailableSetupRead;
+exports.isAttestableProjectsRead = isAttestableProjectsRead;
 const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
 const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access cannot be verified with a safe read-only permission probe.';
 /**
@@ -49948,6 +49937,10 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
                 ? { operationallyAvailable: true, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
+            ...(candidate.status === 'unverifiable'
+                && isAttestableProjectsRead(requirement, candidate.publicReadEvidence)
+                ? { publicReadEvidence: candidate.publicReadEvidence }
+                : {}),
         };
     });
 }
@@ -49958,6 +49951,13 @@ function isOperationallyAvailableSetupRead(requirement, evidence) {
         && evidence === 'public-repository'
         && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
         && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+}
+function isAttestableProjectsRead(requirement, evidence) {
+    return requirement.level === 'read'
+        && requirement.scope === 'organization'
+        && requirement.permission === 'Projects'
+        && requirement.probe === 'projects'
+        && evidence === 'public-organization-projects';
 }
 const PUBLIC_REPOSITORY_READ_PROBES = new Set([
     'metadata', 'contents', 'administration', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
@@ -49976,7 +49976,8 @@ function isMatchingEvidence(requirement, value) {
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
         && (value.publicReadEvidence === undefined
-            || value.publicReadEvidence === 'public-repository');
+            || (value.status === 'unverifiable' && (isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence)
+                || isAttestableProjectsRead(requirement, value.publicReadEvidence))));
 }
 function isPermissionStatus(value) {
     return value === 'verified' || value === 'missing' || value === 'unverifiable';
@@ -52160,7 +52161,7 @@ exports.InitialSetupUseCase = void 0;
 const initial_setup_workflow_1 = __nccwpck_require__(18079);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
-    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
+    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort, progress) {
         this.authenticatedUserPort = authenticatedUserPort;
         this.initialLabelProvisioningPort = initialLabelProvisioningPort;
         this.issueTypeProvisioningPort = issueTypeProvisioningPort;
@@ -52171,6 +52172,7 @@ class InitialSetupUseCase {
         this.setupRepositoryVariablesPort = setupRepositoryVariablesPort;
         this.setupRepositorySecretsPort = setupRepositorySecretsPort;
         this.setupRemoteConfigurationReadPort = setupRemoteConfigurationReadPort;
+        this.progress = progress;
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
@@ -52185,6 +52187,7 @@ class InitialSetupUseCase {
             setupRepositoryVariablesPort: this.setupRepositoryVariablesPort,
             setupRepositorySecretsPort: this.setupRepositorySecretsPort,
             setupRemoteConfigurationReadPort: this.setupRemoteConfigurationReadPort,
+            progress: this.progress,
         });
     }
 }
@@ -52226,8 +52229,13 @@ async function runInitialSetupWorkflow(request, dependencies) {
     const mark = (id, state) => {
         const index = effects.findIndex(effect => effect.id === id);
         effects[index] = { ...effects[index], state };
+        try {
+            dependencies.progress?.(Object.freeze({ ...effects[index] }));
+        }
+        catch { /* Presentation observers cannot abort provisioning. */ }
     };
-    const receipt = () => buildResult(errors, steps, effects);
+    const receipt = () => buildResult(errors, steps, effects.map(effect => effect.state === 'in-progress'
+        ? { ...effect, state: 'needs-inspection' } : effect));
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken()) {
@@ -52285,12 +52293,12 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
-        mark('files', 'needs-inspection');
+        mark('files', 'in-progress');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
-            mark('secrets', 'needs-inspection');
+            mark('secrets', 'in-progress');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step)
@@ -52298,7 +52306,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (secrets.errors.length > 0)
             errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
-        mark('labels', 'needs-inspection');
+        mark('labels', 'in-progress');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
         mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
             ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
@@ -52310,7 +52318,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             appendLabelSummary(steps, errors, labels.progress, 'Progress labels');
         }
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
-        mark('issue-types', 'needs-inspection');
+        mark('issue-types', 'in-progress');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
         mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
@@ -52320,7 +52328,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
         if (setupConfiguration?.manageRepositoryVariables)
-            mark('variables', 'needs-inspection');
+            mark('variables', 'in-progress');
         const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
@@ -52328,7 +52336,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (variables.errors.length > 0)
             errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
         if (setupConfiguration?.createInitialTag !== false)
-            mark('initial-tag', 'needs-inspection');
+            mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
             : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
@@ -57566,6 +57574,106 @@ function toEvent(input) {
 
 /***/ }),
 
+/***/ 70102:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupSessionCoordinator = void 0;
+/** Owns cross-frontend stage order, the write boundary and conservative outcomes. */
+class SetupSessionCoordinator {
+    constructor(ports) {
+        this.ports = ports;
+        this.running = false;
+        this.finished = false;
+        this.mutationStarted = false;
+        this.stage = 'repository';
+        this.effects = new Map();
+    }
+    async execute() {
+        if (this.running || this.finished)
+            throw new Error('Setup session can run only once.');
+        this.running = true;
+        try {
+            const stages = [
+                ['repository', this.ports.repository],
+                ['choices', this.ports.choices],
+                ['setup-pat', this.ports.setupPat],
+                ['plan', this.ports.plan],
+                ['credentials', () => this.ports.credentials(() => this.markPossibleMutation())],
+                ['apply', this.ports.authorizeApply],
+            ];
+            for (const [stage, operation] of stages) {
+                this.stage = stage;
+                this.ports.present(stage, this.mutationStarted);
+                const before = this.liveOutcome();
+                if (before)
+                    return this.finish(before);
+                const decision = await operation();
+                const after = this.liveOutcome();
+                if (after)
+                    return this.finish(after);
+                if (decision !== 'continue')
+                    return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+            }
+            // The authorization operation must finish while the live session is active.
+            // The mutation marker is set before entering the provider boundary: a
+            // rejected/unknown request can already have reached GitHub.
+            this.markPossibleMutation();
+            const receipt = await this.ports.apply(effect => this.record(effect));
+            for (const effect of receipt.effects)
+                this.record(effect);
+            return this.finish(receipt.success && !this.hasUncertainEffect() ? 'complete' : 'partial');
+        }
+        catch (error) {
+            const cancelled = this.ports.isCancellationError(error) || this.ports.liveness() === 'cancelled';
+            return this.finish(this.mutationStarted ? 'partial' : cancelled ? 'cancelled' : 'blocked', error);
+        }
+        finally {
+            this.running = false;
+            this.finished = true;
+        }
+    }
+    liveOutcome() {
+        const state = this.ports.liveness();
+        if (state === 'active')
+            return undefined;
+        return this.mutationStarted ? 'partial' : state === 'cancelled' ? 'cancelled' : 'blocked';
+    }
+    markPossibleMutation() {
+        if (this.mutationStarted)
+            return;
+        this.mutationStarted = true;
+        this.ports.present(this.stage, true);
+    }
+    record(effect) {
+        const previous = this.effects.get(effect.id);
+        if (previous?.state === 'completed' && effect.state !== 'completed')
+            return;
+        this.effects.set(effect.id, Object.freeze({ ...effect }));
+    }
+    hasUncertainEffect() {
+        return [...this.effects.values()].some(effect => effect.state === 'needs-inspection' || effect.state === 'in-progress');
+    }
+    finish(outcome, error) {
+        // An interrupted in-flight write must not be reported as no change.
+        const finalOutcome = this.mutationStarted && (outcome === 'cancelled' || outcome === 'blocked'
+            || (outcome === 'complete' && this.hasUncertainEffect())) ? 'partial' : outcome;
+        for (const [id, effect] of this.effects) {
+            if (effect.state === 'in-progress')
+                this.effects.set(id, Object.freeze({ ...effect, state: 'needs-inspection' }));
+        }
+        this.ports.present(this.stage, this.mutationStarted, finalOutcome);
+        return { outcome: finalOutcome, mutationStarted: this.mutationStarted,
+            effects: [...this.effects.values()], ...(error === undefined ? {} : { error }) };
+    }
+}
+exports.SetupSessionCoordinator = SetupSessionCoordinator;
+
+
+/***/ }),
+
 /***/ 11797:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -57611,8 +57719,10 @@ class SetupTokenPermissionsUseCase {
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
         const ready = readsUsable && requiredWrites.length === 0;
-        const confirmationRequired = readsUsable
-            && requiredWrites.length > 0
+        const readsConfirmable = requiredReads.every(check => readUsable(check)
+            || (check.status === 'unverifiable' && (0, setup_token_permission_evidence_policy_1.isAttestableProjectsRead)(check, check.publicReadEvidence)));
+        const unverifiedAccess = requiredReads.some(check => !readUsable(check)) || requiredWrites.length > 0;
+        const confirmationRequired = readsConfirmable && unverifiedAccess
             && requiredWrites.every(check => check.status === 'unverifiable');
         return {
             role: request.role,
@@ -57984,7 +58094,7 @@ class VerifySetupPatBootstrapUseCase {
                     role: 'setup', owner: request.owner, repository: request.repository,
                     expiresIn: 1, requirements: request.requirements,
                 }));
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.');
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Review the permission report, correct or explicitly confirm the required grants, and retry.');
         }
         if (!await this.ports.confirmAccount(report.account)) {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
@@ -67455,48 +67565,9 @@ function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerSetupCommand = registerSetupCommand;
-const local_action_1 = __nccwpck_require__(76102);
 const product_identity_1 = __nccwpck_require__(18739);
-const setup_files_1 = __nccwpck_require__(59126);
-const logger_1 = __nccwpck_require__(91151);
-const cli_context_1 = __nccwpck_require__(21307);
-const setup_policy_1 = __nccwpck_require__(28732);
 const setup_command_options_1 = __nccwpck_require__(99254);
-const setup_1 = __nccwpck_require__(36888);
-const setup_configuration_plan_1 = __nccwpck_require__(87770);
-const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
-const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(60830);
-const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(23388);
-const setup_configuration_policy_1 = __nccwpck_require__(56637);
-const setup_token_permission_policy_1 = __nccwpck_require__(99590);
-const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
-const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
-const setup_workspace_adapter_1 = __nccwpck_require__(5729);
-const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
-const github_setup_approval_check_discovery_adapter_1 = __nccwpck_require__(42294);
-const github_setup_project_discovery_adapter_1 = __nccwpck_require__(29564);
-const application_error_1 = __nccwpck_require__(75999);
-const setup_terminal_driver_1 = __nccwpck_require__(5462);
-const setup_question_renderer_1 = __nccwpck_require__(89481);
-const setup_plan_presenter_1 = __nccwpck_require__(33441);
-const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
-const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
-const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
-const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
-const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
-const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
-const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
-const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
-const verify_web_setup_apply_use_case_1 = __nccwpck_require__(5303);
-const setup_journey_use_case_1 = __nccwpck_require__(8419);
-const setup_journey_policy_1 = __nccwpck_require__(53289);
-const setup_journey_presenter_1 = __nccwpck_require__(20462);
-const web_setup_bridge_1 = __nccwpck_require__(21518);
-const setup_apply_snapshot_1 = __nccwpck_require__(84136);
-const setup_session_guard_1 = __nccwpck_require__(53104);
-const web_setup_server_1 = __nccwpck_require__(63080);
-const web_setup_adapters_1 = __nccwpck_require__(60574);
-const setup_result_receipt_1 = __nccwpck_require__(44132);
+const setup_execution_1 = __nccwpck_require__(51293);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -67528,416 +67599,372 @@ function registerSetupCommand(program) {
         .option('--update-workflows', 'Allow setup-managed workflows already in the repository to be updated', false)
         .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
         .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', setup_command_options_1.collectSecret, {})
-        .action(async (options) => {
-        const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
-        const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
-        let webServer;
-        const credentialPrompt = webBridge ? new web_setup_adapters_1.WebSetupCredentialPrompt(webBridge) : new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
-            ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
-            ...options.secret,
-        }, Boolean(options.confirmUnverifiableWritePermissions));
-        const permissionPresenter = webBridge ? new web_setup_adapters_1.WebSetupPermissionPresenter(webBridge)
-            : new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
-        const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
-        const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
-        const cwd = process.cwd();
-        let setupMutationStarted = false;
-        let setupApplyStarted = false;
-        let releaseSetupGuard;
-        let journey;
-        try {
-            if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
-                || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
-                throw new application_error_1.ApplicationError('configuration.invalid', '--web cannot be combined with --non-interactive, --yes, --token, --workflow-pat, --secret, or --confirm-unverifiable-write-permissions. Use the browser for these decisions or run copilot setup in the terminal.');
-            }
-            (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
-            if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
-                (0, logger_1.logError)('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
-                process.exitCode = 1;
-                return;
-            }
-            (0, logger_1.logInfo)('✅ Git repository detected.');
-            (0, logger_1.logInfo)('🔗 Resolving repository (owner/repo)...');
-            const gitInfo = (0, cli_context_1.getGitInfo)();
-            if ('error' in gitInfo) {
-                (0, logger_1.logError)(gitInfo.error);
-                process.exitCode = 1;
-                return;
-            }
-            (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
-            const checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
-            if (webBridge && !(0, cli_context_1.isGitRepositoryRoot)(cwd)) {
-                throw new application_error_1.ApplicationError('configuration.invalid', `Web setup must start from the repository root (${checkoutRoot}). Change to that directory and rerun before creating PATs. No local setup session started.`);
-            }
-            releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
-            const initialBranch = webBridge ? (0, cli_context_1.getCurrentAttachedBranch)(cwd) : undefined;
-            const initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
-            if (webBridge && (!initialBranch || !initialHead)) {
-                throw new application_error_1.ApplicationError('configuration.invalid', 'An attached Git branch and revision are required for web setup. Check out a branch before creating PATs. No local setup session started.');
-            }
-            if (webBridge) {
-                webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
-                webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
-                webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
-                (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
-                (0, logger_1.logInfo)(`🔑 Browser pairing code: ${webServer.pairingCode}`, false, undefined, true);
-                (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer, then enter the pairing code shown above. The terminal setup remains available with copilot setup.');
-                (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
-            }
-            if (!options.nonInteractive) {
-                journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+        .action(setup_execution_1.executeSetupCommand);
+}
+
+
+/***/ }),
+
+/***/ 51293:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.executeSetupCommand = executeSetupCommand;
+const local_action_1 = __nccwpck_require__(76102);
+const setup_files_1 = __nccwpck_require__(59126);
+const logger_1 = __nccwpck_require__(91151);
+const cli_context_1 = __nccwpck_require__(21307);
+const setup_policy_1 = __nccwpck_require__(28732);
+const setup_command_options_1 = __nccwpck_require__(99254);
+const setup_1 = __nccwpck_require__(36888);
+const setup_session_coordinator_1 = __nccwpck_require__(70102);
+const setup_configuration_plan_1 = __nccwpck_require__(87770);
+const setup_pat_intent_adapter_1 = __nccwpck_require__(67610);
+const audit_configured_setup_pat_use_case_1 = __nccwpck_require__(60830);
+const verify_setup_pat_bootstrap_use_case_1 = __nccwpck_require__(23388);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const setup_credential_collection_1 = __nccwpck_require__(19469);
+const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
+const github_setup_approval_check_discovery_adapter_1 = __nccwpck_require__(42294);
+const github_setup_project_discovery_adapter_1 = __nccwpck_require__(29564);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_terminal_driver_1 = __nccwpck_require__(5462);
+const setup_question_renderer_1 = __nccwpck_require__(89481);
+const setup_plan_presenter_1 = __nccwpck_require__(33441);
+const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
+const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
+const setup_apply_authorization_1 = __nccwpck_require__(75885);
+const setup_journey_use_case_1 = __nccwpck_require__(8419);
+const setup_journey_policy_1 = __nccwpck_require__(53289);
+const setup_journey_presenter_1 = __nccwpck_require__(20462);
+const web_setup_bridge_1 = __nccwpck_require__(21518);
+const setup_apply_snapshot_1 = __nccwpck_require__(84136);
+const setup_session_guard_1 = __nccwpck_require__(53104);
+const web_setup_server_1 = __nccwpck_require__(63080);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
+const setup_result_receipt_1 = __nccwpck_require__(44132);
+const setup_outcome_adapter_1 = __nccwpck_require__(9961);
+async function executeSetupCommand(options) {
+    const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
+    const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
+    let webServer;
+    const credentialPrompt = webBridge ? new web_setup_adapters_1.WebSetupCredentialPrompt(webBridge) : new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
+        ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
+        ...options.secret,
+    }, Boolean(options.confirmUnverifiableWritePermissions));
+    const permissionPresenter = webBridge ? new web_setup_adapters_1.WebSetupPermissionPresenter(webBridge)
+        : new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
+    const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
+    const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
+    const cwd = process.cwd();
+    let setupMutationStarted = false;
+    let setupApplyStarted = false;
+    let releaseSetupGuard;
+    let journey;
+    let gitInfo;
+    let checkoutRoot = cwd;
+    let initialBranch;
+    let initialHead;
+    let overrides;
+    let presentationMode = 'custom';
+    let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
+    let token;
+    let setupPatAccount;
+    let permissionIntent;
+    let assertedOwnerKind;
+    let auditConfiguredSetupPat;
+    let remoteConfigurationReader;
+    let configuration;
+    let remoteConfiguration;
+    let guardedFiles;
+    let webApplySnapshot;
+    let approvedWorkflowFiles = [];
+    let credentialsCollection;
+    try {
+        const session = new setup_session_coordinator_1.SetupSessionCoordinator({
+            repository: async () => {
+                if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
+                    || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', '--web cannot be combined with --non-interactive, --yes, --token, --workflow-pat, --secret, or --confirm-unverifiable-write-permissions. Use the browser for these decisions or run copilot setup in the terminal.');
+                }
+                (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
+                if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
+                    (0, logger_1.logError)('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
+                    process.exitCode = 1;
+                    return 'blocked';
+                }
+                (0, logger_1.logInfo)('✅ Git repository detected.');
+                (0, logger_1.logInfo)('🔗 Resolving repository (owner/repo)...');
+                const resolvedGitInfo = (0, cli_context_1.getGitInfo)();
+                if ('error' in resolvedGitInfo) {
+                    (0, logger_1.logError)(resolvedGitInfo.error);
+                    process.exitCode = 1;
+                    return 'blocked';
+                }
+                gitInfo = resolvedGitInfo;
+                (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+                checkoutRoot = webBridge ? (0, cli_context_1.getGitRepositoryRoot)(cwd) : cwd;
+                if (webBridge && !(0, cli_context_1.isGitRepositoryRoot)(cwd)) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', `Web setup must start from the repository root (${checkoutRoot}). Change to that directory and rerun before creating PATs. No local setup session started.`);
+                }
+                releaseSetupGuard = (0, setup_session_guard_1.acquireSetupSessionGuard)(cwd);
+                initialBranch = webBridge ? (0, cli_context_1.getCurrentAttachedBranch)(cwd) : undefined;
+                initialHead = webBridge ? (0, cli_context_1.getCurrentHeadSha)() : undefined;
+                if (webBridge && (!initialBranch || !initialHead)) {
+                    throw new application_error_1.ApplicationError('configuration.invalid', 'An attached Git branch and revision are required for web setup. Check out a branch before creating PATs. No local setup session started.');
+                }
                 if (webBridge) {
-                    const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository', copyId: 'repository.confirm', copyValues: { repository: `${gitInfo.owner}/${gitInfo.repo}`, branch: initialBranch ?? '' },
-                        description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
-                        choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
-                    if (target === undefined)
-                        throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                    if (target !== 'Yes, this is my repository') {
-                        journey.finish('cancelled');
-                        return;
+                    webBridge.setRepository(`${gitInfo.owner}/${gitInfo.repo}`);
+                    webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, 'repository', false));
+                    webServer = await (0, web_setup_server_1.startWebSetupServer)(webBridge);
+                    (0, logger_1.logInfo)(`🌐 Local setup assistant: ${webServer.url}`);
+                    (0, logger_1.logInfo)(`🔑 Browser pairing code: ${webServer.pairingCode}`, false, undefined, true);
+                    (0, logger_1.logInfo)('If the browser does not open, copy this URL into a browser on this computer, then enter the pairing code shown above. The terminal setup remains available with copilot setup.');
+                    (0, web_setup_server_1.openWebSetupBrowser)(webServer.url);
+                }
+                if (!options.nonInteractive) {
+                    journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, webBridge ? new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge) : new setup_journey_presenter_1.ConsoleSetupJourneyPresenter());
+                    if (webBridge) {
+                        const target = await webBridge.ask({ kind: 'confirm', title: 'Confirm this repository', copyId: 'repository.confirm', copyValues: { repository: `${gitInfo.owner}/${gitInfo.repo}`, branch: initialBranch ?? '' },
+                            description: `This local checkout resolves to ${gitInfo.owner}/${gitInfo.repo} on branch ${initialBranch}. Confirm the target before configuring PAT access or files.`,
+                            choices: ['Yes, this is my repository', 'Stop and choose another checkout'] });
+                        if (target === undefined)
+                            throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                        if (target !== 'Yes, this is my repository')
+                            return 'cancelled';
                     }
                 }
-                journey.advance('choices');
-            }
-            const overrides = (0, setup_command_options_1.loadSetupOverrides)(options);
-            let presentationMode = 'custom';
-            if (!options.nonInteractive && !options.dryRun) {
-                if (webBridge) {
-                    const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
-                        choices: ['Basic guided setup', 'Customize every setting'], defaultValue: 'Basic guided setup' });
-                    if (depth === undefined)
+                return 'continue';
+            },
+            choices: async () => {
+                overrides = (0, setup_command_options_1.loadSetupOverrides)(options);
+                if (!options.nonInteractive && !options.dryRun) {
+                    if (webBridge) {
+                        const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
+                            choices: ['Basic guided setup', 'Customize every setting'], defaultValue: 'Basic guided setup' });
+                        if (depth === undefined)
+                            throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+                        presentationMode = depth === 'Basic guided setup' ? 'basic' : 'custom';
+                    }
+                    else if (credentialPrompt instanceof setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter) {
+                        presentationMode = await credentialPrompt.chooseSetupPresentationMode();
+                    }
+                }
+                token = (0, setup_files_1.getSetupToken)(cwd, options.token);
+                if (webBridge && token) {
+                    const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
+                        description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
+                        choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
+                    if (choice === undefined)
                         throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                    presentationMode = depth === 'Basic guided setup' ? 'basic' : 'custom';
+                    if (choice !== 'Use the environment PAT')
+                        token = undefined;
                 }
-                else if (credentialPrompt instanceof setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter) {
-                    presentationMode = await credentialPrompt.chooseSetupPresentationMode();
-                }
-            }
-            let setupPatPermissions = (0, setup_token_permission_policy_1.buildSetupPatPermissionRequirements)();
-            let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
-            if (webBridge && token) {
-                const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
-                    description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
-                    choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
-                if (choice === undefined)
-                    throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                if (choice !== 'Use the environment PAT')
-                    token = undefined;
-            }
-            if (token || options.nonInteractive)
-                permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-            else
-                permissionPresenter.showRequirements('setup', setupPatPermissions);
-            let setupPatAccount;
-            let permissionIntent;
-            let assertedOwnerKind;
-            if (!token && !options.nonInteractive && !options.dryRun) {
-                if (await credentialPrompt.chooseSetupPatMethod() === 'guided') {
-                    const prepared = await new prepare_setup_pat_intent_use_case_1.PrepareSetupPatIntentUseCase({
-                        collect: (initial, context, pass) => (webBridge
-                            ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge, pass)
-                            : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', pass)))
-                            .collect(initial, context),
-                        chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
-                        review: () => credentialPrompt.reviewSetupPatIntent(),
-                        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass, projectsWanted }) => {
-                            if (ownerConflict)
-                                (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
-                            if (errors.length)
-                                (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${errors.map(item => `  - ${item}`).join('\n')}`);
-                            if (pass > 1)
-                                (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
-                            (0, logger_1.logInfo)('Permission intent:');
-                            (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
-                            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${projectsWanted ? 'yes (choose exact Projects after PAT)' : 'none'}`);
-                            webBridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${projectsWanted ? 'yes (choose after PAT)' : 'none'}.`, 'info', undefined, 'permission.preview', {
-                                issues: draft.features.issues ? draft.issueWorkflows.enabled.join('|') || 'none' : 'disabled',
-                                approval: draft.pullRequestApproval.mode,
-                                secrets: draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off',
-                                variables: draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off',
-                                projects: projectsWanted ? 'yes' : 'none',
-                            });
-                            permissionPresenter.showRequirements('setup', requirements);
-                            if (uncertain.length)
-                                (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
-                        },
-                        showDetails: requirements => permissionPresenter.showDetailedRequirements('setup', requirements),
-                        onManual: reason => {
-                            if (reason === 'owner-unknown')
-                                (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
-                            if (reason === 'unsupported')
-                                (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
-                            credentialPrompt.useManualSetupPat();
-                            permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
-                        },
-                        advanceToSetupPat: () => { journey?.advance('setup-pat'); },
-                        revisitChoices: () => journey.revisitChoices(),
-                    }).execute({
+                if (token || options.nonInteractive)
+                    permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+                else
+                    permissionPresenter.showRequirements('setup', setupPatPermissions);
+                if (!token && !options.nonInteractive && !options.dryRun) {
+                    const intent = await (0, setup_pat_intent_adapter_1.collectSetupPatIntent)({
                         owner: gitInfo.owner, repository: gitInfo.repo, overrides,
                         skipRepositoryVariables: Boolean(options.skipVariables),
                         skipRepositorySecrets: Boolean(options.skipSecrets),
+                        terminal, bridge: webBridge, journey, credentialPrompt, permissionPresenter,
+                        initialRequirements: setupPatPermissions,
                     });
-                    if (prepared.kind === 'guided') {
-                        credentialPrompt.configureSetupPatGuide(prepared.url);
-                        setupPatPermissions = [...prepared.requirements];
-                        assertedOwnerKind = prepared.ownerKind;
-                        permissionIntent = prepared.permissionIntent;
-                    }
+                    setupPatPermissions = [...intent.requirements];
+                    assertedOwnerKind = intent.assertedOwnerKind;
+                    permissionIntent = intent.permissionIntent;
                 }
-                else {
-                    journey?.advance('setup-pat');
-                    permissionPresenter.showDetailedRequirements('setup', setupPatPermissions);
+                return 'continue';
+            },
+            setupPat: async () => {
+                if (!token && !options.nonInteractive && !options.dryRun)
+                    token = await credentialPrompt.requestSetupPat();
+                if (!token && !options.dryRun) {
+                    (0, logger_1.logError)('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
+                    (0, logger_1.logInfo)('   You can:');
+                    (0, logger_1.logInfo)('   • Pass it on the command line: copilot setup --token <your_github_token>');
+                    (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
+                    process.exitCode = 1;
+                    return 'blocked';
                 }
-            }
-            if (options.dryRun && !token && !webBridge)
-                journey?.advance('plan');
-            if (!token && !options.dryRun)
-                journey?.advance('setup-pat');
-            if (!token && !options.nonInteractive && !options.dryRun)
-                token = await credentialPrompt.requestSetupPat();
-            if (!token && !options.dryRun) {
-                (0, logger_1.logError)('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
-                (0, logger_1.logInfo)('   You can:');
-                (0, logger_1.logInfo)('   • Pass it on the command line: copilot setup --token <your_github_token>');
-                (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
-                process.exitCode = 1;
-                return;
-            }
-            if (token) {
-                journey?.advance('setup-pat');
-                setupPatAccount = await new verify_setup_pat_bootstrap_use_case_1.VerifySetupPatBootstrapUseCase({
+                if (token) {
+                    setupPatAccount = await new verify_setup_pat_bootstrap_use_case_1.VerifySetupPatBootstrapUseCase({
+                        permissions: tokenPermissions,
+                        presenter: permissionPresenter,
+                        confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
+                        confirmAccount: account => credentialPrompt.confirmGuidedSetupAccount(account),
+                        showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
+                    }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
+                        requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat });
+                }
+                return 'continue';
+            },
+            plan: async () => {
+                (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
+                auditConfiguredSetupPat = new audit_configured_setup_pat_use_case_1.AuditConfiguredSetupPatUseCase({
+                    owner: gitInfo.owner, repository: gitInfo.repo, token,
+                    provisionalRequirements: setupPatPermissions, assertedOwnerKind,
+                    guided: credentialPrompt.usedGuidedSetupPat,
+                }, {
                     permissions: tokenPermissions,
                     presenter: permissionPresenter,
                     confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
-                    confirmAccount: account => credentialPrompt.confirmGuidedSetupAccount(account),
-                    showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
-                }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
-                    requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat });
-                journey?.advance('plan');
-            }
-            (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
-            const auditConfiguredSetupPat = new audit_configured_setup_pat_use_case_1.AuditConfiguredSetupPatUseCase({
-                owner: gitInfo.owner, repository: gitInfo.repo, token,
-                provisionalRequirements: setupPatPermissions, assertedOwnerKind,
-                guided: credentialPrompt.usedGuidedSetupPat,
-            }, {
-                permissions: tokenPermissions,
-                presenter: permissionPresenter,
-                confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
-                showOwnerMismatch: (asserted, actual) => (0, logger_1.logInfo)(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
-                showExcessGrants: grants => (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
-                showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
-            });
-            const remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
-            const wizard = new setup_1.SetupWizardUseCase({
-                ...(terminal || webBridge ? {
-                    collector: webBridge ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge)
-                        : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
-                } : {}),
-                planPresenter: webBridge ? new web_setup_adapters_1.WebSetupPlanPresenter(webBridge) : new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
-                confirmation: options.dryRun
-                    ? new setup_confirmation_adapter_1.DryRunSetupPlanConfirmation()
-                    : webBridge ? new web_setup_adapters_1.WebSetupPlanConfirmation(webBridge)
-                        : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
-                finalPermissionAudit: auditConfiguredSetupPat,
-                remoteConfiguration: remoteConfigurationReader,
-                mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
-                approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
-                approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
-                projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
-            });
-            const result = await wizard.execute({
-                mode: options.nonInteractive ? 'non-interactive' : 'interactive',
-                overrides,
-                ...(permissionIntent ? { permissionIntent } : {}),
-                skipRepositoryVariables: Boolean(options.skipVariables),
-                skipRepositorySecrets: Boolean(options.skipSecrets),
-                previewOnly: Boolean(options.dryRun),
-                presentationMode,
-                developmentBranchObservedLocally: (0, cli_context_1.hasLocalOrTrackedGitBranch)(cwd, overrides.repository?.developmentBranch ?? 'develop'),
-                ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
-            });
-            if (result.status === 'cancelled') {
-                journey?.finish('cancelled');
-                if (result.reason !== 'questionnaire-cancelled') {
-                    (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
-                }
-                if (result.exitCode !== 0)
-                    process.exitCode = result.exitCode;
-                return;
-            }
-            if (result.status === 'blocked') {
-                journey?.finish('blocked');
-                webBridge?.resultReason(result.reason === 'setup-permissions-unavailable' ? 'permissions' : 'storage');
-                (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
-                    ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
-                    : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
-                process.exitCode = result.exitCode;
-                return;
-            }
-            const { configuration, remoteConfiguration } = result;
-            const guardedFiles = webBridge ? (0, setup_configuration_plan_1.setupPlanGuardPaths)(result.plan) : undefined;
-            const webApplySnapshot = guardedFiles ? (0, setup_apply_snapshot_1.captureSetupApplySnapshot)(checkoutRoot, guardedFiles) : undefined;
-            const credentialRequirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration);
-            const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
-            const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
-            const approvedWorkflowFiles = updateWorkflows
-                ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
-                : [];
-            if (options.dryRun) {
-                if (webBridge)
-                    journey?.advance('plan');
-                journey?.finish('dry-run');
-                (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
-                return;
-            }
-            journey?.advance('credentials');
-            const workflowTokenPermissions = (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(configuration, remoteConfiguration);
-            const githubIdentities = new setup_github_identity_query_adapter_1.SetupGithubIdentityQueryAdapter();
-            if (!options.nonInteractive && !options.workflowPat && !options.secret?.PAT) {
-                try {
-                    const workflowPatGuide = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
-                        role: 'workflow', owner: gitInfo.owner, repository: gitInfo.repo, expiresIn: 90,
-                        requirements: workflowTokenPermissions,
-                    });
-                    credentialPrompt.configureWorkflowPatGuide(workflowPatGuide, login => githubIdentities.resolve(login, token), workflowTokenPermissions);
-                }
-                catch (error) {
-                    if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
-                        throw error;
-                    (0, logger_1.logInfo)('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');
-                    permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
-                }
-            }
-            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt, permissionPresenter, webBridge ? { allowPreApplyHealthWorkflow: false } : {
-                onTemporaryWorkflowMutationAttempt: () => {
-                    setupMutationStarted = true;
-                    journey?.markMutationStarted();
-                },
-            }).collect({
-                owner: gitInfo.owner,
-                repository: gitInfo.repo,
-                setupToken: token ?? '',
-                requirements: credentialRequirements,
-                manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
-                secretStoragePolicy: configuration.storage.secrets,
-                ref: configuration.repository.mainBranch,
-                remoteConfiguration,
-                workflowTokenPermissions,
-            });
-            const guidedBotIdentity = credentialPrompt.guidedWorkflowBotIdentity;
-            if (guidedBotIdentity && credentials.collection.workflowPat) {
-                const verifiedBot = await new verify_guided_workflow_pat_identity_use_case_1.VerifyGuidedWorkflowPatIdentityUseCase(githubIdentities)
-                    .execute(guidedBotIdentity, credentials.collection.workflowPat.value);
-                (0, logger_1.logInfo)(`✅ Workflow PAT owner verified as @${verifiedBot.login} (GitHub account ID ${verifiedBot.id}).`);
-                if (setupPatAccount?.toLowerCase() === verifiedBot.login.toLowerCase()) {
-                    (0, logger_1.logInfo)('The workflow PAT and setup PAT use the same GitHub account. If this account authors PRs, bot-generated events and guarded self-approval may not behave as intended; use a dedicated bot account where required.');
-                }
-            }
-            if (webBridge) {
-                if (!remoteConfiguration || !guardedFiles || !webApplySnapshot || !initialBranch || !initialHead || !token) {
-                    throw new application_error_1.ApplicationError('configuration.invalid', 'The approved setup evidence is incomplete. No mutation started; restart and review a new plan.');
-                }
-                const authorization = await new verify_web_setup_apply_use_case_1.VerifyWebSetupApplyUseCase({
-                    confirm: async () => {
-                        const answer = await webBridge.ask({ kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
-                            description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
-                            choices: ['Apply setup', 'Stop without applying'] });
-                        return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
-                    },
-                    readRepositoryFacts: () => {
-                        const current = (0, cli_context_1.getGitInfo)();
-                        return 'error' in current ? undefined : {
-                            owner: current.owner, repository: current.repo, checkoutRoot: (0, cli_context_1.getGitRepositoryRoot)(cwd),
-                            branch: (0, cli_context_1.getCurrentAttachedBranch)(cwd) ?? '', head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
-                        };
-                    },
-                    fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
-                    remote: remoteConfigurationReader,
-                    permissionAudit: auditConfiguredSetupPat,
-                    sessionState: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
-                        : webBridge.snapshot().outcome ? 'ended' : 'active',
-                }).execute({
-                    repository: { owner: gitInfo.owner, repository: gitInfo.repo, checkoutRoot,
-                        branch: initialBranch, head: initialHead },
-                    selectedFiles: guardedFiles, fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
-                    configuration, setupToken: token,
+                    showOwnerMismatch: (asserted, actual) => (0, logger_1.logInfo)(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
+                    showExcessGrants: grants => (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
+                    showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
                 });
-                if (authorization === 'cancelled')
-                    throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
-                if (authorization === 'declined') {
-                    journey?.finish('cancelled');
-                    return;
+                remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
+                const wizard = new setup_1.SetupWizardUseCase({
+                    ...(terminal || webBridge ? {
+                        collector: webBridge ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(webBridge)
+                            : new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
+                    } : {}),
+                    planPresenter: webBridge ? new web_setup_adapters_1.WebSetupPlanPresenter(webBridge) : new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
+                    confirmation: options.dryRun
+                        ? new setup_confirmation_adapter_1.DryRunSetupPlanConfirmation()
+                        : webBridge ? new web_setup_adapters_1.WebSetupPlanConfirmation(webBridge)
+                            : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
+                    finalPermissionAudit: auditConfiguredSetupPat,
+                    remoteConfiguration: remoteConfigurationReader,
+                    mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
+                    approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
+                    approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
+                    projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
+                });
+                const result = await wizard.execute({
+                    mode: options.nonInteractive ? 'non-interactive' : 'interactive',
+                    overrides,
+                    ...(permissionIntent ? { permissionIntent } : {}),
+                    skipRepositoryVariables: Boolean(options.skipVariables),
+                    skipRepositorySecrets: Boolean(options.skipSecrets),
+                    previewOnly: Boolean(options.dryRun),
+                    presentationMode,
+                    developmentBranchObservedLocally: (0, cli_context_1.hasLocalOrTrackedGitBranch)(cwd, overrides.repository?.developmentBranch ?? 'develop'),
+                    ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
+                });
+                if (result.status === 'cancelled') {
+                    if (result.reason !== 'questionnaire-cancelled') {
+                        (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
+                    }
+                    if (result.exitCode !== 0)
+                        process.exitCode = result.exitCode;
+                    return 'cancelled';
                 }
-            }
-            (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
-            journey?.advance('apply');
-            const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles, remoteConfiguration);
-            setupMutationStarted = true;
-            journey?.markMutationStarted();
-            setupApplyStarted = true;
-            const actionResults = await (0, local_action_1.runLocalAction)(params);
-            webBridge?.effects((0, setup_result_receipt_1.setupResultEffects)(actionResults));
-            if (actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
-                const failure = (0, setup_result_receipt_1.setupActionResultFailure)(actionResults);
-                if (failure)
-                    webBridge?.resultReason(failure.reasonCode, failure.diagnosticRef);
-                journey?.finish('partial');
-                (0, logger_1.logInfo)('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
-                process.exitCode = 1;
-            }
-            else {
-                if (webBridge && token) {
-                    const doctorToken = token;
-                    webBridge.configureReadOnlyDoctor(async () => {
-                        const diagnosis = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({ owner: gitInfo.owner,
-                            repository: gitInfo.repo, setupToken: doctorToken, configuration, readOnly: true });
-                        return { healthy: diagnosis.report.healthy, ...diagnosis.report.totals };
+                if (result.status === 'blocked') {
+                    webBridge?.resultReason(result.reason === 'setup-permissions-unavailable' ? 'permissions' : 'storage');
+                    (0, logger_1.logError)(new application_error_1.ApplicationError(result.reason === 'setup-permissions-unavailable' ? 'authorization.credential-invalid' : 'provider.unavailable', `${result.reason === 'setup-permissions-unavailable'
+                        ? 'Setup is blocked by missing or unconfirmed PAT permissions:'
+                        : 'Setup is blocked by unavailable remote storage:'}\n${result.errors.map(error => `- ${error}`).join('\n')}`));
+                    process.exitCode = result.exitCode;
+                    return 'blocked';
+                }
+                configuration = result.configuration;
+                remoteConfiguration = result.remoteConfiguration;
+                guardedFiles = webBridge ? (0, setup_configuration_plan_1.setupPlanGuardPaths)(result.plan) : undefined;
+                webApplySnapshot = guardedFiles ? (0, setup_apply_snapshot_1.captureSetupApplySnapshot)(checkoutRoot, guardedFiles) : undefined;
+                const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows((0, setup_configuration_policy_1.effectiveIssueWorkflowFeatures)(configuration), configuration);
+                const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
+                approvedWorkflowFiles = updateWorkflows
+                    ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
+                    : [];
+                if (options.dryRun) {
+                    (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
+                    return 'dry-run';
+                }
+                return 'continue';
+            },
+            credentials: async (possibleMutation) => {
+                credentialsCollection = await (0, setup_credential_collection_1.collectSetupCredentials)({
+                    owner: gitInfo.owner, repository: gitInfo.repo, setupToken: token ?? '',
+                    setupPatAccount, configuration, remoteConfiguration,
+                    skipSecrets: Boolean(options.skipSecrets), nonInteractive: Boolean(options.nonInteractive),
+                    workflowPat: options.workflowPat, secret: options.secret, bridge: webBridge,
+                    prompt: credentialPrompt, permissionPresenter,
+                    possibleMutation: () => { setupMutationStarted = true; possibleMutation(); },
+                });
+                return 'continue';
+            },
+            authorizeApply: async () => {
+                if (webBridge)
+                    return (0, setup_apply_authorization_1.authorizeWebSetupApply)({
+                        bridge: webBridge, cwd, owner: gitInfo.owner, repository: gitInfo.repo,
+                        checkoutRoot, initialBranch, initialHead, selectedFiles: guardedFiles,
+                        fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
+                        configuration, setupToken: token, remoteReader: remoteConfigurationReader,
+                        permissionAudit: auditConfiguredSetupPat,
                     });
+                return 'continue';
+            },
+            apply: async (report) => {
+                (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
+                const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentialsCollection, approvedWorkflowFiles, remoteConfiguration);
+                setupMutationStarted = true;
+                setupApplyStarted = true;
+                const actionResults = await (0, local_action_1.runLocalAction)(params, {
+                    onSetupProgress: effect => { report(effect); webBridge?.progress(effect); },
+                });
+                webBridge?.effects((0, setup_result_receipt_1.setupResultEffects)(actionResults));
+                if (actionResults.length === 0 || actionResults.some(actionResult => !actionResult.success || actionResult.errors.length > 0)) {
+                    const failure = (0, setup_result_receipt_1.setupActionResultFailure)(actionResults);
+                    if (failure)
+                        webBridge?.resultReason(failure.reasonCode, failure.diagnosticRef);
+                    (0, logger_1.logInfo)('Setup reported failures or partial completion. If a bot PAT was supplied, its Secret may already have been written; inspect the result and GitHub Secret name/scope before retrying or revoking it.');
+                    process.exitCode = 1;
                 }
-                journey?.finish('complete');
-            }
-        }
-        catch (error) {
-            journey?.finish(setupMutationStarted ? 'partial' : error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled' : 'blocked');
-            const normalizedError = error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? undefined
-                : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.');
-            webBridge?.resultReason(error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError ? 'cancelled'
-                : (0, setup_result_receipt_1.setupResultReason)(normalizedError.code), normalizedError?.correlationId);
-            if (setupMutationStarted && !setupApplyStarted) {
-                (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
-            }
-            if (credentialPrompt.guidedWorkflowBotIdentity) {
-                (0, logger_1.logInfo)(setupApplyStarted
-                    ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
-                    : 'No bot Secret write started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
-            }
-            if (error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError) {
-                (0, logger_1.logInfo)(setupMutationStarted
-                    ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
-                    : 'Setup cancelled. No changes were applied.');
-                process.exitCode = 130;
-                return;
-            }
-            (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.'));
+                else {
+                    if (webBridge && token) {
+                        const doctorToken = token;
+                        webBridge.configureReadOnlyDoctor(async () => {
+                            const diagnosis = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({ owner: gitInfo.owner,
+                                repository: gitInfo.repo, setupToken: doctorToken, configuration, readOnly: true });
+                            return { healthy: diagnosis.report.healthy, ...diagnosis.report.totals };
+                        });
+                    }
+                }
+                return { success: actionResults.length > 0 && actionResults.every(actionResult => actionResult.success && actionResult.errors.length === 0), effects: [] };
+            },
+            liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
+                : webBridge?.snapshot().outcome ? 'expired' : 'active',
+            present: (stage, mutationStarted, outcome) => {
+                if (!journey)
+                    return;
+                journey.advance(stage);
+                if (mutationStarted)
+                    journey.markMutationStarted();
+                if (outcome)
+                    journey.finish(outcome);
+            },
+            isCancellationError: error => error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError,
+        });
+        const run = await session.execute();
+        setupMutationStarted = run.mutationStarted;
+        if (run.error !== undefined)
+            throw run.error;
+        if (run.outcome === 'blocked' || run.outcome === 'partial')
             process.exitCode = 1;
-        }
-        finally {
-            credentialPrompt.showSetupPatCleanupReminder();
-            terminal?.close();
-            if (webBridge && webServer) {
-                const outcome = webBridge.snapshot().journey?.outcome ?? (process.exitCode ? 'blocked' : 'cancelled');
-                webBridge.finish(outcome, outcome === 'complete'
-                    ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
-                    : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
-                        : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor --read-only before retrying.'
-                            : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
-                (0, logger_1.logInfo)('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
-                await webServer.closed;
-            }
-            releaseSetupGuard?.();
-        }
-    });
+    }
+    catch (error) {
+        process.exitCode = (0, setup_outcome_adapter_1.reportSetupFailure)(error, { journey, bridge: webBridge,
+            mutationStarted: setupMutationStarted, applyStarted: setupApplyStarted,
+            guidedBotIdentity: Boolean(credentialPrompt.guidedWorkflowBotIdentity) });
+    }
+    finally {
+        credentialPrompt.showSetupPatCleanupReminder();
+        terminal?.close();
+        await (0, setup_outcome_adapter_1.finishWebSetupSession)(webBridge, webServer, process.exitCode);
+        releaseSetupGuard?.();
+    }
 }
 
 
@@ -68091,6 +68118,57 @@ function registerUpgradeCommand(program) {
         .command('upgrade')
         .description('Upgrade the global @vypdev/copilot installation to the latest published version')
         .action(() => runUpgradeCommand());
+}
+
+
+/***/ }),
+
+/***/ 75885:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.authorizeWebSetupApply = authorizeWebSetupApply;
+const cli_context_1 = __nccwpck_require__(21307);
+const verify_web_setup_apply_use_case_1 = __nccwpck_require__(5303);
+const application_error_1 = __nccwpck_require__(75999);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_apply_snapshot_1 = __nccwpck_require__(84136);
+/** Web transport and Git facts for the application-owned final approval. */
+async function authorizeWebSetupApply(input) {
+    const { bridge } = input;
+    if (!input.approvedRemote || !input.selectedFiles || !input.fileSnapshot || !input.initialBranch || !input.initialHead || !input.setupToken) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'The approved setup evidence is incomplete. No mutation started; restart and review a new plan.');
+    }
+    const authorization = await new verify_web_setup_apply_use_case_1.VerifyWebSetupApplyUseCase({
+        confirm: async () => {
+            const answer = await bridge.ask({ kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
+                description: 'This is the final approval. Local files and selected GitHub resources may change. A partial result may require inspection before retrying.',
+                choices: ['Apply setup', 'Stop without applying'] });
+            return answer === undefined ? undefined : answer === 'Apply setup' ? 'apply' : 'stop';
+        },
+        readRepositoryFacts: () => {
+            const current = (0, cli_context_1.getGitInfo)();
+            return 'error' in current ? undefined : {
+                owner: current.owner, repository: current.repo, checkoutRoot: (0, cli_context_1.getGitRepositoryRoot)(input.cwd),
+                branch: (0, cli_context_1.getCurrentAttachedBranch)(input.cwd) ?? '', head: (0, cli_context_1.getCurrentHeadSha)() ?? '',
+            };
+        },
+        fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
+        remote: input.remoteReader,
+        permissionAudit: input.permissionAudit,
+        sessionState: () => bridge.snapshot().outcome === 'cancelled' ? 'cancelled'
+            : bridge.snapshot().outcome ? 'ended' : 'active',
+    }).execute({
+        repository: { owner: input.owner, repository: input.repository, checkoutRoot: input.checkoutRoot,
+            branch: input.initialBranch, head: input.initialHead },
+        selectedFiles: input.selectedFiles, fileSnapshot: input.fileSnapshot, approvedRemote: input.approvedRemote,
+        configuration: input.configuration, setupToken: input.setupToken,
+    });
+    if (authorization === 'cancelled')
+        throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+    return authorization === 'declined' ? 'cancelled' : 'continue';
 }
 
 
@@ -68651,6 +68729,64 @@ exports.DryRunSetupPlanConfirmation = DryRunSetupPlanConfirmation;
 
 /***/ }),
 
+/***/ 19469:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.collectSetupCredentials = collectSetupCredentials;
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const verify_guided_workflow_pat_identity_use_case_1 = __nccwpck_require__(35697);
+const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const setup_github_identity_query_adapter_1 = __nccwpck_require__(56098);
+const logger_1 = __nccwpck_require__(91151);
+/** Wires bot-PAT guidance and credential ports for both setup presentations. */
+async function collectSetupCredentials(input) {
+    const requirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(input.configuration);
+    const workflowTokenPermissions = (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(input.configuration, input.remoteConfiguration);
+    const githubIdentities = new setup_github_identity_query_adapter_1.SetupGithubIdentityQueryAdapter();
+    if (!input.nonInteractive && !input.workflowPat && !input.secret?.PAT) {
+        try {
+            const guide = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
+                role: 'workflow', owner: input.owner, repository: input.repository, expiresIn: 90,
+                requirements: workflowTokenPermissions,
+            });
+            input.prompt.configureWorkflowPatGuide(guide, login => githubIdentities.resolve(login, input.setupToken), workflowTokenPermissions);
+        }
+        catch (error) {
+            if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
+                throw error;
+            (0, logger_1.logInfo)('A guided fine-grained bot PAT link is unavailable for one or more required permissions. Use the permission table and manual path; review whether a classic PAT is required for this plan.');
+            input.permissionPresenter.showDetailedRequirements('workflow', workflowTokenPermissions);
+        }
+    }
+    const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(input.prompt, input.permissionPresenter, input.bridge ? { allowPreApplyHealthWorkflow: false } : {
+        onTemporaryWorkflowMutationAttempt: input.possibleMutation,
+    }).collect({
+        owner: input.owner, repository: input.repository, setupToken: input.setupToken,
+        requirements, manageSecrets: !input.skipSecrets && input.configuration.manageRepositorySecrets,
+        secretStoragePolicy: input.configuration.storage.secrets,
+        ref: input.configuration.repository.mainBranch, remoteConfiguration: input.remoteConfiguration,
+        workflowTokenPermissions,
+    });
+    const guidedBotIdentity = input.prompt.guidedWorkflowBotIdentity;
+    if (guidedBotIdentity && credentials.collection.workflowPat) {
+        const verifiedBot = await new verify_guided_workflow_pat_identity_use_case_1.VerifyGuidedWorkflowPatIdentityUseCase(githubIdentities)
+            .execute(guidedBotIdentity, credentials.collection.workflowPat.value);
+        (0, logger_1.logInfo)(`✅ Workflow PAT owner verified as @${verifiedBot.login} (GitHub account ID ${verifiedBot.id}).`);
+        if (input.setupPatAccount?.toLowerCase() === verifiedBot.login.toLowerCase()) {
+            (0, logger_1.logInfo)('The workflow PAT and setup PAT use the same GitHub account. If this account authors PRs, bot-generated events and guarded self-approval may not behave as intended; use a dedicated bot account where required.');
+        }
+    }
+    return credentials.collection;
+}
+
+
+/***/ }),
+
 /***/ 93232:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -68760,12 +68896,17 @@ class SetupCredentialPromptAdapter {
     async confirmUnverifiableTokenPermissions(report) {
         const permissions = report.checks
             .filter(check => check.applicability === 'required'
-            && check.level === 'write'
-            && check.status === 'unverifiable')
+            && check.status === 'unverifiable'
+            && (check.level === 'write' || (check.scope === 'organization'
+                && check.permission === 'Projects' && check.level === 'read'
+                && check.publicReadEvidence === 'public-organization-projects')))
             .map(check => `${check.permission} ${check.level} (${check.scope})`);
         if (!report.confirmationRequired || permissions.length === 0)
             return false;
-        if (this.confirmUnverifiableWritePermissions) {
+        const needsProjectReadAttestation = report.checks.some(check => check.applicability === 'required'
+            && check.permission === 'Projects' && check.level === 'read'
+            && check.publicReadEvidence === 'public-organization-projects');
+        if (this.confirmUnverifiableWritePermissions && !needsProjectReadAttestation) {
             console.log((0, setup_prompt_rendering_1.renderBox)(`Explicit acknowledgement received for: ${permissions.join(', ')}. These permissions remain Unverifiable; no test mutation was performed.`, 'Write permission acknowledgement', 33));
             return true;
         }
@@ -68773,7 +68914,7 @@ class SetupCredentialPromptAdapter {
             return false;
         while (true) {
             const result = await this.terminal.readText([
-                'GitHub cannot safely prove these write permissions without a mutation:',
+                'GitHub could not prove these required PAT grants. Check them in GitHub:',
                 ...permissions.map(permission => `  - ${permission}`),
                 `Confirm that the PAT was configured exactly as shown above? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `,
             ].join('\n'));
@@ -69015,6 +69156,127 @@ function renderSetupJourney(view, maximumWidth) {
         `Next: ${view.pending.join(' → ') || 'none'}`,
         state,
     ].join('\n'), 'Copilot setup', 36, maximumWidth);
+}
+
+
+/***/ }),
+
+/***/ 9961:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reportSetupFailure = reportSetupFailure;
+exports.finishWebSetupSession = finishWebSetupSession;
+const application_error_1 = __nccwpck_require__(75999);
+const logger_1 = __nccwpck_require__(91151);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_result_receipt_1 = __nccwpck_require__(44132);
+/** Terminal diagnostics are separate from the redacted browser result. */
+function reportSetupFailure(error, context) {
+    const cancelled = error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError;
+    context.journey?.finish(context.mutationStarted ? 'partial' : cancelled ? 'cancelled' : 'blocked');
+    const normalized = cancelled ? undefined : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.');
+    context.bridge?.resultReason(cancelled ? 'cancelled' : (0, setup_result_receipt_1.setupResultReason)(normalized.code), normalized?.correlationId);
+    if (context.mutationStarted && !context.applyStarted) {
+        (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
+    }
+    if (context.guidedBotIdentity) {
+        (0, logger_1.logInfo)(context.applyStarted
+            ? 'Setup may be partially applied. Inspect the GitHub Secret before deleting or replacing the bot PAT.'
+            : 'No bot Secret write started. If you generated an unused bot PAT in GitHub, delete it there; Copilot cannot revoke it.');
+    }
+    if (cancelled) {
+        (0, logger_1.logInfo)(context.mutationStarted
+            ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
+            : 'Setup cancelled. No changes were applied.');
+        return 130;
+    }
+    (0, logger_1.logError)(normalized);
+    return 1;
+}
+async function finishWebSetupSession(bridge, server, exitCode) {
+    if (!bridge || !server)
+        return;
+    const outcome = bridge.snapshot().journey?.outcome ?? (exitCode ? 'blocked' : 'cancelled');
+    bridge.finish(outcome, outcome === 'complete'
+        ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
+        : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'
+            : outcome === 'partial' ? 'Setup may be partial. Inspect GitHub resources and run copilot doctor --read-only before retrying.'
+                : 'No further setup changes will be applied. Any PAT already created in GitHub still exists until you delete it there.');
+    (0, logger_1.logInfo)('The local browser page shows the result. Choose “Close local session” there, or stop this command with Ctrl+C.');
+    await server.closed;
+}
+
+
+/***/ }),
+
+/***/ 67610:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.collectSetupPatIntent = collectSetupPatIntent;
+const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
+const setup_questionnaire_controller_1 = __nccwpck_require__(41644);
+const logger_1 = __nccwpck_require__(91151);
+const setup_question_renderer_1 = __nccwpck_require__(89481);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
+/** Presentation wiring for the shared application permission-intent decision. */
+async function collectSetupPatIntent(input) {
+    const { bridge, credentialPrompt, permissionPresenter } = input;
+    if (await credentialPrompt.chooseSetupPatMethod() !== 'guided') {
+        permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+        return { requirements: input.initialRequirements };
+    }
+    const prepared = await new prepare_setup_pat_intent_use_case_1.PrepareSetupPatIntentUseCase({
+        collect: (initial, context, pass) => (bridge
+            ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(bridge, pass)
+            : new setup_questionnaire_controller_1.SetupQuestionnaireController(input.terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent', pass)))
+            .collect(initial, context),
+        chooseOwnerKind: () => credentialPrompt.chooseSetupOwnerKind(),
+        review: () => credentialPrompt.reviewSetupPatIntent(),
+        showPreview: ({ draft, requirements, uncertain, ownerConflict, errors, pass, projectsWanted }) => {
+            if (ownerConflict)
+                (0, logger_1.logInfo)('This plan selects organization storage or Projects, but the owner was declared a personal account. Revise the choices or use the manual PAT path.');
+            if (errors.length)
+                (0, logger_1.logInfo)(`The selected local configuration needs correction before a guided link can be generated:\n${errors.map(item => `  - ${item}`).join('\n')}`);
+            if (pass > 1)
+                (0, logger_1.logInfo)('Choice review complete. Returning to setup PAT permission review.');
+            (0, logger_1.logInfo)('Permission intent:');
+            (0, logger_1.logInfo)(`  Initial tag: ${draft.createInitialTag ? 'yes' : 'no'}; issue workflows: ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval: ${draft.pullRequestApproval.mode}`);
+            (0, logger_1.logInfo)(`  Secrets: ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables: ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects: ${projectsWanted ? 'yes (choose exact Projects after PAT)' : 'none'}`);
+            bridge?.message(`Permission preview: issue workflows ${draft.features.issues ? draft.issueWorkflows.enabled.join(', ') || 'none' : 'disabled'}; PR approval ${draft.pullRequestApproval.mode}; Secrets ${draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off'}; Variables ${draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off'}; Projects ${projectsWanted ? 'yes (choose after PAT)' : 'none'}.`, 'info', undefined, 'permission.preview', {
+                issues: draft.features.issues ? draft.issueWorkflows.enabled.join('|') || 'none' : 'disabled',
+                approval: draft.pullRequestApproval.mode,
+                secrets: draft.manageRepositorySecrets ? draft.storage.secrets.defaultScope : 'off',
+                variables: draft.manageRepositoryVariables ? draft.storage.variables.defaultScope : 'off',
+                projects: projectsWanted ? 'yes' : 'none',
+            });
+            permissionPresenter.showRequirements('setup', requirements);
+            if (uncertain.length)
+                (0, logger_1.logInfo)(`May need after GitHub inspection:\n${uncertain.map(item => `  - ${item}`).join('\n')}`);
+        },
+        showDetails: requirements => permissionPresenter.showDetailedRequirements('setup', requirements),
+        onManual: reason => {
+            if (reason === 'owner-unknown')
+                (0, logger_1.logInfo)('Owner type was not confirmed. Use the manual PAT table, or check whether the GitHub owner is an organization before retrying guided setup.');
+            if (reason === 'unsupported')
+                (0, logger_1.logInfo)('A guided setup PAT link is unavailable for this owner or permission set. Enter a manually created PAT using the table above.');
+            credentialPrompt.useManualSetupPat();
+            permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+        },
+        advanceToSetupPat: () => { input.journey?.advance('setup-pat'); },
+        revisitChoices: () => input.journey.revisitChoices(),
+    }).execute({ owner: input.owner, repository: input.repository, overrides: input.overrides,
+        skipRepositoryVariables: input.skipRepositoryVariables, skipRepositorySecrets: input.skipRepositorySecrets });
+    if (prepared.kind !== 'guided')
+        return { requirements: input.initialRequirements };
+    credentialPrompt.configureSetupPatGuide(prepared.url);
+    return { requirements: [...prepared.requirements], assertedOwnerKind: prepared.ownerKind,
+        permissionIntent: prepared.permissionIntent };
 }
 
 
@@ -69430,7 +69692,7 @@ function setupResultEffects(results) {
     }));
 }
 const EFFECT_IDS = ['files', 'secrets', 'labels', 'issue-types', 'variables', 'initial-tag'];
-const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started'];
+const EFFECT_STATES = ['completed', 'skipped', 'needs-inspection', 'not-started', 'in-progress'];
 const EFFECT_SCOPES = ['local', 'repository', 'organization', 'mixed'];
 function parseEffect(value) {
     const effect = (0, result_1.getResultPayload)(value);
@@ -69840,10 +70102,10 @@ function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
-        : unverifiableRequiredReads.length > 0
-            ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
-            : report.confirmationRequired
-                ? 'Confirmation required: inspect the PAT settings for every Unverifiable write row. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
+        : report.confirmationRequired
+            ? 'Confirmation required: inspect every Unverifiable required PAT grant in GitHub, including Projects read when shown. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
+            : unverifiableRequiredReads.length > 0
+                ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
                 : unverifiable.length > 0
                     ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
                     : 'All safely verifiable required permissions are available.';
@@ -70107,10 +70369,13 @@ class WebSetupCredentialPrompt {
             this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens', 'setupPat.cleanup');
     }
     async confirmUnverifiableTokenPermissions(report) {
-        const writes = report.checks.filter(item => item.applicability === 'required' && item.level === 'write' && item.status === 'unverifiable');
-        if (!report.confirmationRequired || writes.length === 0)
+        const access = report.checks.filter(item => item.applicability === 'required'
+            && item.status === 'unverifiable'
+            && (item.level === 'write' || (item.scope === 'organization' && item.permission === 'Projects'
+                && item.level === 'read' && item.publicReadEvidence === 'public-organization-projects')));
+        if (!report.confirmationRequired || access.length === 0)
             return false;
-        return await this.choice('GitHub cannot safely prove these write grants without a mutation. Confirm they are configured exactly as shown.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmWrites') === 'Yes, I checked them';
+        return await this.choice('GitHub could not prove every required PAT grant. Check the displayed grants in GitHub, then explicitly confirm them.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
     }
     configureWorkflowPatGuide(url, resolveIdentity, requirements) {
         this.workflowGuide = url;
@@ -70385,12 +70650,24 @@ class WebSetupBridge {
                 mutationStarted: this.view.journey?.mutationStarted === true, effects,
                 ...(this.view.resultDetail?.diagnosticRef ? { diagnosticRef: this.view.resultDetail.diagnosticRef } : {}) } });
     }
+    progress(effect) {
+        if (this.view.outcome)
+            return;
+        const previous = this.view.resultDetail?.effects ?? [];
+        const effects = previous.some(item => item.id === effect.id)
+            ? previous.map(item => item.id === effect.id ? { ...effect } : item)
+            : [...previous, { ...effect }];
+        this.effects(effects);
+    }
     finish(outcome, text) {
         if (this.view.outcome)
             return;
         this.pending?.resolve(undefined);
         this.pending = undefined;
+        const effects = this.view.resultDetail?.effects?.map(effect => effect.state === 'in-progress'
+            ? { ...effect, state: 'needs-inspection' } : effect);
         this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text },
+            ...(this.view.resultDetail && effects ? { resultDetail: { ...this.view.resultDetail, effects } } : {}),
             ...(this.view.resultDetail ? {} : { resultDetail: {
                     reasonCode: outcome === 'cancelled' ? 'cancelled' : outcome === 'blocked' ? 'unknown' : 'unknown',
                     stoppedStage: this.view.journey?.current ?? 'Preparation',
@@ -70931,8 +71208,7 @@ function getCurrentHeadSha() {
 }
 function isInsideGitRepo(cwd) {
     try {
-        (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
-        return true;
+        return (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' }).toString().trim() === 'true';
     }
     catch {
         return false;
@@ -70945,7 +71221,8 @@ function getGitRepositoryRoot(cwd) {
 }
 function isGitRepositoryRoot(cwd) {
     try {
-        return getGitRepositoryRoot(cwd) === (0, node_fs_1.realpathSync)(cwd);
+        return isInsideGitRepo(cwd)
+            && (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
     }
     catch {
         return false;
@@ -72875,10 +73152,13 @@ const node_path_1 = __nccwpck_require__(49411);
 const node_child_process_1 = __nccwpck_require__(17718);
 const agent_credential_policy_1 = __nccwpck_require__(36529);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
-            (0, node_child_process_1.execFileSync)(executable, ['login', 'status'], {
+            const selected = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex', environment);
+            (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
                 timeout: 15000,
@@ -73083,8 +73363,14 @@ function failureObservation(request, error, phase, startedAt) {
         provider: request.configuration.provider, capability: request.capability,
         durationMilliseconds: Date.now() - startedAt,
         failureCategory: category,
+        ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightStage
+            ? { preflightStage: error.preflightStage } : {}),
+        ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightDiagnostic
+            ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
+        exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
+        exitDiagnostic: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitDiagnostic : undefined,
     };
 }
 function semanticCodeForFailure(category) {
@@ -73118,10 +73404,12 @@ function observeSafely(observer, observation) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliError = void 0;
 class AgentCliError extends Error {
-    constructor(message, category, retryable = false) {
+    constructor(message, category, retryable = false, exitCode, exitDiagnostic) {
         super(message);
         this.category = category;
         this.retryable = retryable;
+        this.exitCode = exitCode;
+        this.exitDiagnostic = exitDiagnostic;
         this.name = 'AgentCliError';
     }
 }
@@ -73139,12 +73427,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAgentCli = runAgentCli;
 exports.createAgentProcessLifecycle = createAgentProcessLifecycle;
 exports.decodeAgentCliOutput = decodeAgentCliOutput;
+exports.verifyWindowsLauncherTrust = verifyWindowsLauncherTrust;
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_cli_exit_diagnostic_1 = __nccwpck_require__(86654);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const agent_executable_file_1 = __nccwpck_require__(87997);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
@@ -73162,16 +73455,14 @@ function runAgentCli(plan, prompt, signal) {
             reject(error instanceof agent_cli_contracts_1.AgentCliError ? error : new agent_cli_contracts_1.AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
-        let cleaned = false;
-        const cleanup = () => {
-            if (cleaned)
-                return;
-            cleaned = true;
-            cleanupRuntimeDirectory(runtimeDirectory);
-        };
+        const cleanup = () => cleanupRuntimeDirectory(runtimeDirectory);
         const child = (() => {
             try {
-                return (0, node_child_process_1.spawn)(plan.executable, plan.promptMode === 'final-argv' ? [...plan.argv, prompt] : plan.argv, {
+                return (0, node_child_process_1.spawn)(plan.executable, [
+                    ...(plan.launcherArgv || []),
+                    ...plan.argv,
+                    ...(plan.promptMode === 'final-argv' ? [prompt] : []),
+                ], {
                     cwd: plan.workspace,
                     env: plan.environment,
                     stdio: ['pipe', 'pipe', 'pipe'],
@@ -73202,6 +73493,7 @@ function runAgentCli(plan, prompt, signal) {
 function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
     const stdoutChunks = [];
     let stderrBytes = 0;
+    const stderrChunks = [];
     let outputBytes = 0;
     let settled = false;
     let terminationError;
@@ -73262,7 +73554,11 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
+        if (stderrBytes < MAX_STDERR_BYTES) {
+            const retained = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+            stderrChunks.push(retained);
+            stderrBytes += retained.byteLength;
+        }
     };
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
@@ -73273,7 +73569,10 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
+            const exitDiagnostic = stderrBytes > 0
+                ? (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'))
+                : undefined;
+            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
         }
         try {
@@ -73340,15 +73639,38 @@ function verifyOwnedRuntimeDirectory(requestedPath) {
         || (0, node_path_1.dirname)(runtimeDirectory) !== expectedParent
         || !/^copilot-agent-runtime-[A-Za-z0-9_-]{6}$/u.test(name)
         || !stats.isDirectory()
-        || (stats.mode & 0o077) !== 0) {
+        || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
         throw new Error('Managed runtime directory is not an owned private execution directory.');
     }
     if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
         throw new Error('Managed runtime directory has an unexpected owner.');
     }
+    (0, windows_runtime_acl_1.verifyWindowsRuntimePathPrivate)(runtimeDirectory, true);
     return runtimeDirectory;
 }
 function verifyAdmittedPlan(plan, runtimeDirectory) {
+    if (process.platform === 'win32' && !/\.exe$/iu.test(plan.executable)) {
+        throw new Error('Windows command wrappers cannot execute an admitted agent plan.');
+    }
+    if (plan.launcherArgv?.length) {
+        if (plan.launcherArgv.length !== 1
+            || (process.platform !== 'win32' && plan.executable !== process.execPath)
+            || !(0, node_path_1.isAbsolute)(plan.executable)
+            || !(0, node_path_1.isAbsolute)(plan.launcherArgv[0]) || !plan.launcherSha256) {
+            throw new Error('Managed agent launcher is invalid.');
+        }
+        if (process.platform === 'win32')
+            verifyWindowsLauncherTrust(plan.executable, plan.launcherArgv[0]);
+        const launcher = (0, node_fs_1.realpathSync)(plan.launcherArgv[0]);
+        if (launcher !== plan.launcherArgv[0]
+            || !(0, node_fs_1.statSync)(launcher).isFile()
+            || (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(launcher)).digest('hex') !== plan.launcherSha256) {
+            throw new Error('Managed agent launcher changed after preflight.');
+        }
+    }
+    else if (plan.launcherSha256) {
+        throw new Error('Managed agent launcher hash has no launcher.');
+    }
     for (const artifact of plan.artifacts) {
         const path = (0, node_fs_1.realpathSync)(artifact.path);
         const relation = (0, node_path_1.relative)(runtimeDirectory, path);
@@ -73359,19 +73681,34 @@ function verifyAdmittedPlan(plan, runtimeDirectory) {
             throw new Error('Managed artifact escaped its runtime directory.');
         }
         const stats = (0, node_fs_1.statSync)(path);
-        if (!stats.isFile() || (stats.mode & 0o077) !== 0)
+        if (!stats.isFile() || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
             throw new Error('Managed artifact permissions changed.');
+        }
+        (0, windows_runtime_acl_1.verifyWindowsRuntimePathPrivate)(path, false);
         const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(path)).digest('hex');
         if (actual !== artifact.sha256)
             throw new Error('Managed artifact hash changed.');
     }
+}
+/** Recheck a separate Windows interpreter and package entrypoint immediately before spawn. */
+function verifyWindowsLauncherTrust(executable, launcher, validate = agent_executable_file_1.validateAgentExecutableFile) {
+    if ((0, node_fs_1.realpathSync)(executable) !== executable) {
+        throw new Error('Managed agent interpreter changed after preflight.');
+    }
+    validate(executable);
+    validate(launcher);
 }
 function cleanupRuntimeDirectory(runtimeDirectory) {
     (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
 }
 function signalProcessTree(child, signal) {
     try {
-        if (process.platform !== 'win32' && child.pid) {
+        if (process.platform === 'win32' && child.pid) {
+            (0, node_child_process_1.execFileSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+                stdio: 'ignore', timeout: 5000, windowsHide: true,
+            });
+        }
+        else if (child.pid) {
             process.kill(-child.pid, signal);
         }
         else {
@@ -73380,7 +73717,41 @@ function signalProcessTree(child, signal) {
     }
     catch {
         // The process may have exited between the lifecycle check and signal.
+        try {
+            child.kill(signal);
+        }
+        catch { /* Already exited. */ }
     }
+}
+
+
+/***/ }),
+
+/***/ 86654:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
+function classifyAgentCliExitDiagnostic(stderr) {
+    if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
+        return 'reported-authentication';
+    }
+    if (/\b(?:unknown model|unsupported model|model[^\r\n]{0,100}(?:not found|not available|unsupported|does not exist|invalid))\b/iu.test(stderr)) {
+        return 'reported-model-unavailable';
+    }
+    if (/\b(?:unexpected argument|unknown option|unrecognized option|unsupported option|invalid option)\b/iu.test(stderr)) {
+        return 'reported-unsupported-option';
+    }
+    if (/\b(?:unknown (?:config(?:uration)? )?(?:field|key)|unrecognized config(?:uration)?|unsupported config(?:uration)?|error parsing configuration)\b/iu.test(stderr)) {
+        return 'reported-unsupported-configuration';
+    }
+    if (/\b(?:connection (?:refused|failed|reset)|network error|timed out|rate limit|too many requests|http 429|503 service unavailable)\b/iu.test(stderr)) {
+        return 'reported-transport-or-rate-limit';
+    }
+    return 'unclassified';
 }
 
 
@@ -73578,6 +73949,12 @@ const SAFE_AGENT_RUNTIME_VARIABLES = [
     'XDG_CACHE_HOME',
     'OPENCODE_DATA_DIR',
     'OPENCODE_AUTH_FILE',
+    'SystemRoot',
+    'WINDIR',
+    'USERPROFILE',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'PATHEXT',
 ];
 function selectSafeAgentRuntimeEnvironment(environment) {
     return Object.fromEntries(SAFE_AGENT_RUNTIME_VARIABLES.flatMap((variable) => (environment[variable] === undefined ? [] : [[variable, environment[variable]]])));
@@ -83078,6 +83455,191 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
+/***/ 87997:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyWindowsExecutableAclFailure = classifyWindowsExecutableAclFailure;
+exports.assertAgentExecutableMetadata = assertAgentExecutableMetadata;
+exports.validateAgentExecutableFile = validateAgentExecutableFile;
+const node_fs_1 = __nccwpck_require__(87561);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+function classifyWindowsExecutableAclFailure(error) {
+    if (!(error instanceof Error))
+        return 'acl-unavailable';
+    if ('code' in error && error.code === 'ETIMEDOUT')
+        return 'acl-query-timeout';
+    const message = error.message;
+    if (message.includes('Could not identify the Windows runtime owner'))
+        return 'acl-identity';
+    if (message.includes('Unsafe executable ACL owner')) {
+        return message.includes('Unsafe Windows executable ancestor') ? 'acl-ancestor-owner' : 'acl-file-owner';
+    }
+    if (message.includes('Agent executable is writable by another principal'))
+        return 'acl-writable';
+    if (message.includes('Incomplete Windows executable ACL'))
+        return 'acl-format-batch';
+    if (message.includes('Missing executable ACL'))
+        return 'acl-format-dacl';
+    if (message.includes('Unrecognized executable ACL rights'))
+        return 'acl-format-rights';
+    if (message.includes('Unrecognized executable ACL entries')
+        || message.includes('Unrecognized executable ACL entry'))
+        return 'acl-format-ace';
+    if (message.includes('Unrecognized executable ACL'))
+        return 'acl-format-flags';
+    if ('code' in error || 'status' in error)
+        return 'acl-query-failed';
+    return 'acl-unavailable';
+}
+function assertAgentExecutableMetadata(metadata, platform, currentUid) {
+    if (!metadata.isFile)
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
+    if (platform !== 'win32' && (metadata.mode & 0o022) !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
+    }
+    if (currentUid !== undefined && metadata.ownerUid !== currentUid && metadata.ownerUid !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
+    }
+}
+function validateAgentExecutableFile(path) {
+    let stats;
+    try {
+        stats = (0, node_fs_1.statSync)(path);
+        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
+    }
+    catch {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
+    }
+    assertAgentExecutableMetadata({
+        isFile: stats.isFile(),
+        mode: stats.mode,
+        ownerUid: stats.uid,
+    }, process.platform, process.getuid?.());
+    if (process.platform === 'win32') {
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(path);
+        }
+        catch (error) {
+            const rejected = new agent_cli_contracts_1.AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+            rejected.preflightDiagnostic = classifyWindowsExecutableAclFailure(error);
+            throw rejected;
+        }
+    }
+}
+
+
+/***/ }),
+
+/***/ 16608:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveAgentExecutablePath = resolveAgentExecutablePath;
+exports.resolveAgentExecutableInvocation = resolveAgentExecutableInvocation;
+exports.validateResolvedAgentInvocation = validateResolvedAgentInvocation;
+exports.readAgentExecutableVersion = readAgentExecutableVersion;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_file_1 = __nccwpck_require__(87997);
+function resolveAgentExecutablePath(selected, environment, platform = process.platform) {
+    if ((0, node_path_1.isAbsolute)(selected))
+        return (0, node_fs_1.realpathSync)(selected);
+    const extensions = platform === 'win32'
+        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+        : [''];
+    for (const directory of (environment.PATH || environment.Path || '').split(node_path_1.delimiter).filter(Boolean)) {
+        for (const extension of extensions) {
+            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
+            try {
+                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
+                return (0, node_fs_1.realpathSync)(candidate);
+            }
+            catch {
+                // Continue through the trusted PATH candidates.
+            }
+        }
+    }
+    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+}
+/** Resolve npm's Windows command shim without ever passing agent argv to cmd.exe. */
+function resolveAgentExecutableInvocation(selected, provider, platform = process.platform, environment = process.env) {
+    if (platform === 'win32' && !/\.(exe|cmd)$/iu.test(selected)) {
+        throw new Error('Windows agent executable must be a native executable or a reviewed npm command shim.');
+    }
+    if (platform !== 'win32' || !/\.cmd$/iu.test(selected)) {
+        return { executable: selected, prefixArgs: [] };
+    }
+    const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider);
+    const legacyPackage = manifest.legacyNpmPackage;
+    if (!legacyPackage || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
+        throw new Error('Windows agent command shim does not match a reviewed npm runtime.');
+    }
+    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...legacyPackage.split('/')));
+    const packageJson = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(packageRoot, 'package.json'), 'utf8'));
+    if (packageJson.name !== legacyPackage) {
+        throw new Error('Windows agent command shim resolves to an unexpected package.');
+    }
+    const bin = typeof packageJson.bin === 'string'
+        ? packageJson.bin
+        : packageJson.bin && typeof packageJson.bin === 'object'
+            ? packageJson.bin[manifest.executable]
+            : undefined;
+    if (typeof bin !== 'string' || !bin || (0, node_path_1.isAbsolute)(bin) || node_path_1.win32.isAbsolute(bin)) {
+        throw new Error('Windows agent package has no safe executable bin.');
+    }
+    const target = (0, node_fs_1.realpathSync)((0, node_path_1.resolve)(packageRoot, bin));
+    const relation = (0, node_path_1.relative)(packageRoot, target);
+    if (!relation || relation === '..' || relation.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(relation)) {
+        throw new Error('Windows agent package bin escaped its package directory.');
+    }
+    if (!(0, node_fs_1.statSync)(target).isFile())
+        throw new Error('Windows agent package bin is not a file.');
+    switch ((0, node_path_1.extname)(target).toLowerCase()) {
+        case '.js': return { executable: resolveAgentExecutablePath('node', environment, platform), prefixArgs: [target] };
+        case '.exe': return { executable: target, prefixArgs: [] };
+        default: throw new Error('Windows agent package bin is not a supported direct executable.');
+    }
+}
+/** Verify every file that may execute before a version or login probe starts. */
+function validateResolvedAgentInvocation(selected, provider, environment = process.env) {
+    (0, agent_executable_file_1.validateAgentExecutableFile)(selected);
+    const invocation = resolveAgentExecutableInvocation(selected, provider, process.platform, environment);
+    if (invocation.executable !== selected)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+    for (const prefixArg of invocation.prefixArgs)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(prefixArg);
+    return invocation;
+}
+function readAgentExecutableVersion(selected, provider, environment) {
+    const path = resolveAgentExecutablePath(selected, environment);
+    const invocation = validateResolvedAgentInvocation(path, provider, environment);
+    const probeEnvironment = {};
+    for (const key of [
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'HOME', 'USERPROFILE',
+        'LOCALAPPDATA', 'APPDATA', 'XDG_CONFIG_HOME', 'TMP', 'TEMP', 'TMPDIR', 'LANG', 'LC_ALL',
+    ]) {
+        if (environment[key])
+            probeEnvironment[key] = environment[key];
+    }
+    return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
+        env: probeEnvironment,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 15000,
+    });
+}
+
+
+/***/ }),
+
 /***/ 11800:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -83096,27 +83658,30 @@ const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_executable_policy_1 = __nccwpck_require__(12570);
 const agent_authentication_1 = __nccwpck_require__(51371);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const DEFAULT_SYSTEM = {
-    resolveExecutable: resolveExecutablePath,
-    readVersion(executable, environment) {
-        return (0, node_child_process_1.execFileSync)(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15000,
-        });
+    resolveExecutable(executable, environment) {
+        try {
+            return (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${executable}" was not found on PATH.`, 'configuration');
+        }
     },
+    readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = (0, node_fs_1.realpathSync)(cwd);
-        const root = (0, node_fs_1.realpathSync)((0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
+        const prefix = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15000,
-        }).trim());
-        if (requested !== root)
+        }).trim();
+        if (prefix !== '') {
             throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
-        return root;
+        }
+        return requested;
     },
 };
 class AgentExecutionPlanner {
@@ -83127,22 +83692,33 @@ class AgentExecutionPlanner {
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
         let runtimeDirectory;
+        let stage = 'workspace';
         try {
             const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            stage = 'manifest';
             const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifest)();
             const runtime = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(request.configuration.provider);
             const requestedExecutable = request.configuration.executable?.trim() || runtime.executable;
+            stage = 'selection';
             (0, agent_executable_policy_1.validateAgentExecutableSelection)({
                 provider: request.configuration.provider,
                 executable: requestedExecutable,
             });
+            stage = 'resolution';
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            validateExecutableFile(executable);
+            stage = 'invocation-trust';
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider, sourceEnvironment);
+            stage = 'environment';
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
-            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
+            stage = 'version';
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
+            stage = 'artifacts';
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(runtimeDirectory, true);
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
+            stage = 'policy';
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
                 configuration: request.configuration,
                 capability: request.capability,
@@ -83150,6 +83726,7 @@ class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
             });
+            stage = 'artifacts';
             const artifacts = materializeArtifacts([
                 { path: gitConfigPath, contents: '', purpose: 'git-config' },
                 ...providerPolicy.artifacts,
@@ -83164,7 +83741,11 @@ class AgentExecutionPlanner {
             return {
                 provider: request.configuration.provider,
                 capability: request.capability,
-                executable,
+                executable: invocation.executable,
+                launcherArgv: invocation.prefixArgs,
+                ...(invocation.prefixArgs.length > 0 ? {
+                    launcherSha256: (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(invocation.prefixArgs[0])).digest('hex'),
+                } : {}),
                 argv: providerPolicy.argv,
                 promptMode: providerPolicy.promptMode,
                 outputProtocol: providerPolicy.outputProtocol,
@@ -83190,9 +83771,13 @@ class AgentExecutionPlanner {
         catch (error) {
             if (runtimeDirectory)
                 (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
-            if (error instanceof agent_cli_contracts_1.AgentCliError)
+            if (error instanceof agent_cli_contracts_1.AgentCliError) {
+                error.preflightStage = stage;
                 throw error;
-            throw new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
+            }
+            const rejected = new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
+            rejected.preflightStage = stage;
+            throw rejected;
         }
     }
 }
@@ -83214,51 +83799,11 @@ function assertBoundedLimit(name, value, maximum) {
         throw new agent_cli_contracts_1.AgentCliError(`Agent CLI ${name} must be a finite positive number no greater than ${maximum}.`, 'configuration');
     }
 }
-function resolveExecutablePath(selected, environment) {
-    if ((0, node_path_1.isAbsolute)(selected))
-        return (0, node_fs_1.realpathSync)(selected);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    for (const directory of (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean)) {
-        for (const extension of extensions) {
-            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
-            try {
-                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
-                return (0, node_fs_1.realpathSync)(candidate);
-            }
-            catch {
-                // Continue through the trusted PATH candidates.
-            }
-        }
-    }
-    throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
-}
-function validateExecutableFile(path) {
-    let stats;
-    try {
-        stats = (0, node_fs_1.statSync)(path);
-        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
-    }
-    catch {
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
-    }
-    if (!stats.isFile())
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if ((stats.mode & 0o022) !== 0) {
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
-    }
-    if (typeof process.getuid === 'function') {
-        const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0) {
-            throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
-        }
-    }
-}
 function materializeArtifacts(templates) {
     return templates.map((template) => {
         (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(template.path), { recursive: true, mode: 0o700 });
         (0, node_fs_1.writeFileSync)(template.path, template.contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(template.path, false);
         return {
             path: template.path,
             sha256: (0, node_crypto_1.createHash)('sha256').update(template.contents).digest('hex'),
@@ -83297,7 +83842,6 @@ exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
 exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
-exports.assertInstalledAgentRuntimeVersion = assertInstalledAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
 function getAgentRuntimeManifest() {
@@ -83315,14 +83859,143 @@ function readAgentRuntimeVersion(provider, output) {
         throw new Error(`${provider} CLI returned empty version output.`);
     return actual;
 }
-/** Exact matching applies only to a package installed by Copilot itself. */
-function assertInstalledAgentRuntimeVersion(provider, output) {
-    const actual = readAgentRuntimeVersion(provider, output);
-    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
-    if (actual !== expected) {
-        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
+
+
+/***/ }),
+
+/***/ 76049:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.trustedSystemPath = trustedSystemPath;
+exports.windowsSystemPath = windowsSystemPath;
+exports.trustedCurlPath = trustedCurlPath;
+exports.trustedWindowsSystemTool = trustedWindowsSystemTool;
+exports.windowsSystemTool = windowsSystemTool;
+exports.trustedUnixShellPath = trustedUnixShellPath;
+const node_path_1 = __nccwpck_require__(49411);
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
+function trustedSystemPath() {
+    if (process.platform !== 'win32')
+        return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
+    return windowsSystemPath((0, windows_system_root_cjs_1.trustedWindowsSystemRoot)());
+}
+function windowsSystemPath(systemRoot) {
+    return [(0, node_path_1.join)(systemRoot, 'System32'), systemRoot,
+        (0, node_path_1.join)(systemRoot, 'System32', 'Wbem'),
+        (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
+}
+function trustedCurlPath() {
+    return process.platform === 'win32'
+        ? trustedWindowsSystemTool('curl.exe') : '/usr/bin/curl';
+}
+function trustedWindowsSystemTool(name) {
+    return windowsSystemTool((0, windows_system_root_cjs_1.trustedWindowsSystemRoot)(), name);
+}
+function windowsSystemTool(systemRoot, name) {
+    return (0, node_path_1.join)(systemRoot, 'System32', name);
+}
+function trustedUnixShellPath(name) {
+    return `/bin/${name}`;
+}
+
+
+/***/ }),
+
+/***/ 55362:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isLocalWindowsAdministrator = void 0;
+exports.matchesWindowsRuntimePrincipal = matchesWindowsRuntimePrincipal;
+exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
+exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
+exports.verifyWindowsAgentExecutableAcl = verifyWindowsAgentExecutableAcl;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const windows_executable_trust_cjs_1 = __nccwpck_require__(37631);
+var windows_executable_trust_cjs_2 = __nccwpck_require__(37631);
+Object.defineProperty(exports, "isLocalWindowsAdministrator", ({ enumerable: true, get: function () { return windows_executable_trust_cjs_2.isLocalWindowsAdministrator; } }));
+function runIcacls(args, cwd) {
+    (0, node_child_process_1.execFileSync)((0, windows_executable_trust_cjs_1.systemTool)('icacls.exe'), args, {
+        cwd,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 15000,
+        windowsHide: true,
+    });
+}
+function matchesWindowsRuntimePrincipal(principal, identity) {
+    return principal === identity.sid || (principal === 'LA' && identity.localAdministrator);
+}
+function savedDacl(path) {
+    const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-acl-inspect-'));
+    const snapshot = (0, node_path_1.join)(directory, 'acl.txt');
+    try {
+        runIcacls([(0, node_path_1.basename)(path), '/save', snapshot], (0, node_path_1.dirname)(path));
+        const data = (0, node_fs_1.readFileSync)(snapshot);
+        const contents = data.includes(0) ? data.toString('utf16le') : data.toString('utf8');
+        const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
+        if (!lines[0] || !lines[1])
+            throw new Error('Could not read the Windows runtime ACL.');
+        return lines[1].trim();
     }
-    return actual;
+    finally {
+        (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
+    }
+}
+function assertOwnerOnlyDacl(sddl, identity, directory) {
+    const isCurrentUser = (principal) => matchesWindowsRuntimePrincipal(principal, identity);
+    const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
+    const dacl = /D:.*?(?=S:|$)/.exec(sddl)?.[0] ?? '';
+    const firstAce = dacl.indexOf('(');
+    const flags = firstAce < 0 ? '' : dacl.slice(0, firstAce);
+    const entries = firstAce < 0 ? '' : dacl.slice(firstAce);
+    const aces = [...entries.matchAll(/\(([^()]*)\)/g)].map(match => match[1].split(';'));
+    const noUnparsedEntries = entries.replace(/\([^()]*\)/g, '') === '';
+    const validOwnerAce = (fields) => fields.length === 6
+        && fields[0] === 'A' && fields[2] === 'FA'
+        && fields[3] === '' && fields[4] === '' && isCurrentUser(fields[5]);
+    const appliesToPath = (fields) => !fields[1].includes('IO');
+    const inheritsToChildren = (fields) => fields[1].includes('OI') && fields[1].includes('CI');
+    if ((owner !== undefined && !isCurrentUser(owner)) || !flags.startsWith('D:') || !flags.slice(2).includes('P')
+        || !noUnparsedEntries || aces.length === 0 || !aces.every(validOwnerAce)
+        || !aces.some(appliesToPath)
+        || (directory && !aces.some(inheritsToChildren))
+        || (!directory && !aces.every(fields => fields[1] === ''))) {
+        throw new Error('Unsafe managed runtime ACL.');
+    }
+}
+function makeWindowsRuntimePathPrivate(path, directory) {
+    if (process.platform !== 'win32')
+        return;
+    const { sid } = (0, windows_executable_trust_cjs_1.currentWindowsUserIdentity)();
+    runIcacls([path, '/setowner', `*${sid}`]);
+    // The owner can replace its DACL without the restore privilege required by
+    // icacls /restore on an unprivileged Windows runner service account.
+    runIcacls([path, '/reset']);
+    runIcacls([path, '/inheritance:r']);
+    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
+    verifyWindowsRuntimePathPrivate(path, directory);
+}
+function verifyWindowsRuntimePathPrivate(path, directory) {
+    if (process.platform !== 'win32')
+        return;
+    const identity = (0, windows_executable_trust_cjs_1.currentWindowsUserIdentity)();
+    const { sid } = identity;
+    // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
+    runIcacls([path, '/setowner', `*${sid}`]);
+    assertOwnerOnlyDacl(savedDacl(path), identity, directory);
+}
+function verifyWindowsAgentExecutableAcl(path) {
+    if (process.platform !== 'win32')
+        return;
+    (0, windows_executable_trust_cjs_1.verifyWindowsAgentExecutableAcl)(path);
 }
 
 
@@ -83561,10 +84234,11 @@ exports.NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(copi
 exports.UPDATE_CHECK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 exports.UPDATE_CHECK_TIMEOUT_MS = 1500;
 function resolveUpdateCheckCachePath(platform = process.platform, environment = process.env, homeDirectory = (0, node_os_1.homedir)()) {
+    const paths = platform === 'win32' ? node_path_1.win32 : node_path_1.posix;
     const cacheRoot = platform === 'win32'
-        ? environment.LOCALAPPDATA || (0, node_path_1.join)(homeDirectory, 'AppData', 'Local')
-        : environment.XDG_CACHE_HOME || (0, node_path_1.join)(homeDirectory, '.cache');
-    return (0, node_path_1.join)(cacheRoot, 'copilot', 'update-check.json');
+        ? environment.LOCALAPPDATA || paths.join(homeDirectory, 'AppData', 'Local')
+        : environment.XDG_CACHE_HOME || paths.join(homeDirectory, '.cache');
+    return paths.join(cacheRoot, 'copilot', 'update-check.json');
 }
 class FileCliUpdateCheckCache {
     constructor(filePath = resolveUpdateCheckCachePath()) {
@@ -84207,10 +84881,10 @@ const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_2 = __nccwpck_require__(93081);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
-function createInitialSetupCompositionRoot(binding) {
+function createInitialSetupCompositionRoot(binding, progress) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding));
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
 }
 
 
@@ -84650,7 +85324,7 @@ function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()));
 }
-function createSingleActionUseCaseCompositionRoot(surface, binding) {
+function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgress) {
     const catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const repositoryTagPort = surface === "github-workflow"
@@ -84664,7 +85338,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -84717,7 +85391,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress) {
     let singleAction;
     let issueComment;
     let issue;
@@ -84726,7 +85400,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
     let push;
     return {
         "single-action": async (execution) => {
-            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution), setupProgress));
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
@@ -86260,8 +86934,20 @@ exports.LoggerAgentExecutionObserverAdapter = void 0;
 const logger_1 = __nccwpck_require__(91151);
 class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
-        if (observation.state === 'completed' || observation.state === 'failed') {
-            (0, logger_1.logInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
+        if (observation.state === 'failed') {
+            const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
+            const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
+            const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
+            const preflightDiagnostic = observation.preflightDiagnostic ? `, ${observation.preflightDiagnostic}` : '';
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}).`, false, { agentExecution: observation });
+            return;
+        }
+        if (observation.state === 'completed') {
+            (0, logger_1.logInfo)('Agent execution completed.', false, { agentExecution: observation });
+            return;
+        }
+        if (observation.state === 'admitted') {
+            (0, logger_1.logDebugInfo)(`Agent execution admitted (${observation.provider} ${observation.version}).`, false, { agentExecution: observation });
             return;
         }
         (0, logger_1.logDebugInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
@@ -86364,6 +87050,7 @@ exports.PreBranchSddWorkspaceAdapter = void 0;
 const fs = __importStar(__nccwpck_require__(87561));
 const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
+const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_util_1 = __nccwpck_require__(47261);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
@@ -86654,6 +87341,23 @@ function pathExists(target) {
     }
 }
 function writeSpecFile(target, content, exists) {
+    if (process.platform === 'win32') {
+        // Windows rejects O_NOFOLLOW. Replace the directory entry instead of
+        // opening the destination, so a file symlink is never followed for writes.
+        const temporary = path.join(path.dirname(target), `.copilot-sdd-${(0, node_crypto_1.randomUUID)()}.tmp`);
+        fs.writeFileSync(temporary, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+        try {
+            if (exists)
+                assertRegularSpecFile(target);
+            else if (pathExists(target))
+                throw new Error('The new SDD path is already occupied.');
+            fs.renameSync(temporary, target);
+        }
+        finally {
+            fs.rmSync(temporary, { force: true });
+        }
+        return;
+    }
     const flags = fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW
         | (exists ? fs.constants.O_TRUNC : fs.constants.O_CREAT | fs.constants.O_EXCL);
     const descriptor = fs.openSync(target, flags, 0o644);
@@ -86999,6 +87703,53 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 
 /***/ }),
 
+/***/ 78337:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nextOrganizationProjectsProbePage = nextOrganizationProjectsProbePage;
+/** Restricts a provider Link header to the same read-only organization Projects endpoint. */
+function nextOrganizationProjectsProbePage(link, owner) {
+    if (!link)
+        return { status: 'none' };
+    const nextEntries = link.split(',').filter(entry => /\brel\s*=\s*"?next"?/iu.test(entry));
+    if (nextEntries.length === 0)
+        return { status: 'none' };
+    if (nextEntries.length !== 1)
+        return { status: 'unsafe' };
+    const match = /^\s*<([^<>]+)>\s*;\s*rel="?next"?\s*$/iu.exec(nextEntries[0]);
+    if (!match || match[1].length > 600)
+        return { status: 'unsafe' };
+    try {
+        const url = new URL(match[1]);
+        const expectedPath = `/orgs/${encodeURIComponent(owner)}/projectsV2`;
+        if (url.protocol !== 'https:' || url.host !== 'api.github.com' || url.pathname !== expectedPath
+            || url.username || url.password || url.hash)
+            return { status: 'unsafe' };
+        const keys = [...url.searchParams.keys()];
+        if (keys.length !== 2 || !keys.includes('per_page') || url.searchParams.get('per_page') !== '100') {
+            return { status: 'unsafe' };
+        }
+        const page = url.searchParams.get('page');
+        const after = url.searchParams.get('after');
+        if (keys.includes('page') && page && /^[1-9]\d{0,5}$/u.test(page) && Number(page) >= 2) {
+            return { status: 'next', url: url.toString() };
+        }
+        if (keys.includes('after') && after && after.length <= 200 && !/[\p{Cc}\p{Cf}]/u.test(after)) {
+            return { status: 'next', url: url.toString() };
+        }
+        return { status: 'unsafe' };
+    }
+    catch {
+        return { status: 'unsafe' };
+    }
+}
+
+
+/***/ }),
+
 /***/ 1489:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -87309,6 +88060,7 @@ exports.SetupTokenPermissionQueryAdapter = void 0;
 const github_error_policy_1 = __nccwpck_require__(58791);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
 const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
+const setup_projects_probe_page_policy_1 = __nccwpck_require__(78337);
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
@@ -87326,13 +88078,18 @@ class SetupTokenPermissionQueryAdapter {
         try {
             const request = (url) => this.fetcher(url, {
                 method: 'GET',
-                headers: permissionProbeHeaders(token),
+                headers: permissionProbeHeaders(token, requirement),
                 signal: controller.signal,
+                redirect: 'error',
             });
             const target = await resolveProbeTarget(owner, repository, requirement, request);
             if (target.status === 'complete')
                 return target.check;
-            return mapProbeResponse(requirement, target.response ?? await request(target.url), target.readEvidence, owner);
+            const response = target.response ?? await request(target.url);
+            if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
+                return await inspectOrganizationProjectsRead(requirement, response, owner, request);
+            }
+            return mapProbeResponse(requirement, response, target.readEvidence, owner);
         }
         catch {
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
@@ -87343,11 +88100,12 @@ class SetupTokenPermissionQueryAdapter {
     }
 }
 exports.SetupTokenPermissionQueryAdapter = SetupTokenPermissionQueryAdapter;
-function permissionProbeHeaders(token) {
+function permissionProbeHeaders(token, requirement) {
     return {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
+        'X-GitHub-Api-Version': requirement.scope === 'organization' && requirement.probe === 'projects'
+            ? '2026-03-10' : '2022-11-28',
     };
 }
 async function resolveProbeTarget(owner, repository, requirement, request) {
@@ -87365,6 +88123,9 @@ async function resolveProbeTarget(owner, repository, requirement, request) {
     }
     if (requirement.scope === 'organization' && requirement.probe === 'members') {
         return { status: 'ready', url, readEvidence: 'organization-membership' };
+    }
+    if (requirement.scope === 'organization' && requirement.probe === 'projects') {
+        return { status: 'ready', url, readEvidence: 'organization-projects' };
     }
     if (requiresRepositoryVisibilityProof(requirement)) {
         const metadataResponse = await request(repositoryRoot(owner, repository));
@@ -87512,6 +88273,37 @@ async function mapProbeResponse(requirement, response, readEvidence, owner) {
     }
     return outcome(requirement, 'unverifiable', `GitHub could not verify this permission safely (HTTP ${response.status}).`);
 }
+async function inspectOrganizationProjectsRead(requirement, firstResponse, owner, request) {
+    try {
+        let response = firstResponse;
+        for (let page = 0; page < 2; page += 1) {
+            const payload = await response.json();
+            if (!Array.isArray(payload) || payload.some(project => typeof project !== 'object' || project === null
+                || Array.isArray(project) || typeof project.public !== 'boolean')) {
+                return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
+            }
+            if (payload.some(project => project.public === false)) {
+                return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
+            }
+            const next = (0, setup_projects_probe_page_policy_1.nextOrganizationProjectsProbePage)(response.headers.get('link'), owner);
+            if (next.status === 'unsafe') {
+                return outcome(requirement, 'unverifiable', 'GitHub returned an unsafe organization Projects pagination link.');
+            }
+            if (next.status === 'none' || page === 1)
+                break;
+            response = await request(next.url);
+            if (!response.ok)
+                return mapProbeResponse(requirement, response, 'organization-projects', owner);
+        }
+        return {
+            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were observed within the bounded read; confirm the Projects: read grant before continuing.'),
+            publicReadEvidence: 'public-organization-projects',
+        };
+    }
+    catch {
+        return outcome(requirement, 'unverifiable', 'GitHub organization Projects response could not be inspected safely.');
+    }
+}
 async function isActiveOrganizationMembership(response, owner) {
     try {
         const payload = await response.json();
@@ -87577,6 +88369,8 @@ function probeUrl(owner, repository, requirement) {
             return `https://api.github.com/user/memberships/orgs/${encodedOwner}`;
         if (requirement.probe === 'issue-types')
             return `${organizationRoot}/issue-types?per_page=1`;
+        if (requirement.probe === 'projects')
+            return `${organizationRoot}/projectsV2?per_page=100`;
         return undefined;
     }
     if (requirement.probe === 'metadata')
@@ -89578,7 +90372,8 @@ function reconcileRepositoryAgentGuidance(cwd, configuration) {
         artifacts: Object.fromEntries(Object.entries(records).sort(([left], [right]) => left.localeCompare(right))),
     };
     const manifestContent = `${JSON.stringify(manifest, null, 2)}\n`;
-    if (!fs.existsSync(manifestDestination) || fs.readFileSync(manifestDestination, 'utf8') !== manifestContent) {
+    if (!fs.existsSync(manifestDestination)
+        || canonicalGuidanceText(fs.readFileSync(manifestDestination, 'utf8')) !== manifestContent) {
         atomicWrite(manifestDestination, manifestContent);
         copied++;
     }
@@ -89612,7 +90407,8 @@ function inspectRepositoryAgentGuidance(cwd, configuration) {
         const content = fs.readFileSync(file, 'utf8');
         const actual = record.role === 'pointer' ? pointerBlock(content) : content;
         const matchesManifest = actual !== undefined && sha256(actual) === record.sha256;
-        const matchesDesired = record.role === 'pointer' || !desired || desired.get(relativePath) === content;
+        const matchesDesired = record.role === 'pointer' || !desired
+            || desired.get(relativePath) === canonicalGuidanceText(content);
         const semantic = record.role !== 'profile' || validRepositoryAgentProfile(content);
         checks.push(matchesManifest && matchesDesired && semantic
             ? { id: checkId(record.role), status: 'pass', summary: `${relativePath} matches the setup manifest.`, path: relativePath }
@@ -89637,7 +90433,7 @@ function inspectRepositoryAgentGuidance(cwd, configuration) {
     const profile = path.join(cwd, repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH);
     const profileContent = fs.existsSync(profile) ? fs.readFileSync(profile, 'utf8') : undefined;
     if (!profileContent || sha256(profileContent) !== manifest.profileDigest
-        || (desired && desired.get(repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH) !== profileContent)) {
+        || (desired && desired.get(repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH) !== canonicalGuidanceText(profileContent))) {
         checks.push({ id: 'agent-profile-runtime-parity', status: 'fail', summary: 'Repository profile digest does not match the setup manifest.', path: repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH });
     }
     else {
@@ -89657,7 +90453,7 @@ function reconcileManagedArtifact(cwd, artifact, prior) {
         return { applied: true, changed: true };
     }
     const current = fs.readFileSync(destination, 'utf8');
-    if (current === artifact.content)
+    if (canonicalGuidanceText(current) === artifact.content)
         return { applied: true, changed: false };
     if (!prior || prior.role !== artifact.role || sha256(current) !== prior.sha256)
         return { applied: false, changed: false };
@@ -89676,8 +90472,9 @@ function reconcilePointer(cwd, policy, prior) {
     }
     const current = fs.readFileSync(destination, 'utf8');
     const existingBlock = pointerBlock(current);
-    if (existingBlock === block)
+    if (existingBlock !== undefined && canonicalGuidanceText(existingBlock) === block) {
         return { changed: false, skipped: false, hash: sha256(block) };
+    }
     if (existingBlock !== undefined) {
         if (prior?.role === 'pointer' && sha256(existingBlock) !== prior.sha256) {
             (0, logger_1.logInfo)('⚠️  The managed AGENTS.md pointer has drifted; preserving it for explicit reconciliation.');
@@ -89819,7 +90616,10 @@ function backupDestination(cwd, relativePath, operation) {
     return destination;
 }
 function sha256(content) {
-    return (0, node_crypto_1.createHash)('sha256').update(content, 'utf8').digest('hex');
+    return (0, node_crypto_1.createHash)('sha256').update(canonicalGuidanceText(content), 'utf8').digest('hex');
+}
+function canonicalGuidanceText(content) {
+    return content.replace(/\r\n/gu, '\n');
 }
 function containsSensitiveGuidance(content) {
     return /(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\/(?:Users|home)\/[^/\s]+\/)/u.test(content);
@@ -94580,6 +95380,218 @@ exports.suggestSimilar = suggestSimilar;
 
 /***/ }),
 
+/***/ 37631:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { execFileSync } = __nccwpck_require__(17718);
+const { Buffer } = __nccwpck_require__(72254);
+const { realpathSync } = __nccwpck_require__(87561);
+const { hostname } = __nccwpck_require__(70612);
+const { dirname, join } = __nccwpck_require__(49411);
+const { trustedWindowsSystemRoot } = __nccwpck_require__(48176);
+
+const SID_PATTERN = /S-\d+(?:-\d+)+/u;
+const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO', 'LC', 'RP', 'CR', 'DT']);
+const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO', 'RP', 'CR', 'DT']);
+const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC', 'CC', 'SW', 'WP', 'LO']);
+const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
+
+function systemTool(name) {
+  return join(trustedWindowsSystemRoot(), 'System32', name);
+}
+
+function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
+  return sid.endsWith('-500') && accountDomain?.toLowerCase() === computerName.toLowerCase();
+}
+
+function currentWindowsUserIdentity() {
+  let identity;
+  try {
+    identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+    });
+  } catch (error) {
+    if (error && error.code === 'ETIMEDOUT') error.aclProbeStage = 'identity';
+    throw error;
+  }
+  const sid = identity.match(SID_PATTERN)?.[0];
+  if (!sid) throw new Error('Could not identify the Windows runtime owner.');
+  const account = /^\uFEFF?"([^"\r\n]+)"\s*,/u.exec(identity)?.[1];
+  const accountDomain = account?.split('\\')[0];
+  return { sid, localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, hostname()) };
+}
+
+function parseWindowsExecutableDescriptors(output, expectedCount) {
+  const descriptors = JSON.parse(output);
+  if (!Array.isArray(descriptors) || descriptors.length !== expectedCount
+    || descriptors.some(descriptor => typeof descriptor !== 'string' || !descriptor)) {
+    throw new Error('Incomplete Windows executable ACL descriptor batch.');
+  }
+  return descriptors;
+}
+
+function installedExecutableDescriptors(paths) {
+  // icacls /save omits the owner; read full descriptors in one bounded process.
+  const literals = paths.map(path => `'${path.replace(/'/gu, "''")}'`).join(',');
+  const command = "$ErrorActionPreference='Stop'; $paths=@(" + literals + "); "
+    + '$sections=[System.Security.AccessControl.AccessControlSections]::All; $descriptors=@(); '
+    + '$descriptors += [System.IO.File]::GetAccessControl($paths[0]).GetSecurityDescriptorSddlForm($sections); '
+    + 'for($i=1;$i -lt $paths.Length;$i++){ '
+    + '$descriptors += [System.IO.Directory]::GetAccessControl($paths[$i]).GetSecurityDescriptorSddlForm($sections) }; '
+    + 'ConvertTo-Json -Compress -InputObject $descriptors';
+  let output;
+  try {
+    output = execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+        encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, maxBuffer: 1_048_576, windowsHide: true,
+      }).replace(/^\uFEFF/u, '').trim();
+  } catch (error) {
+    if (error && error.code === 'ETIMEDOUT') error.aclProbeStage = 'descriptor';
+    throw error;
+  }
+  return parseWindowsExecutableDescriptors(output, paths.length);
+}
+
+function grantsMutation(rights, directory = false) {
+  if (/^0x[0-9a-f]+$/iu.test(rights)) {
+    const mask = Number.parseInt(rights.slice(2), 16);
+    if (!Number.isSafeInteger(mask) || mask > 0xFFFF_FFFF) {
+      throw new Error('Unrecognized executable ACL rights.');
+    }
+    const genericWrite = 0x4000_0000;
+    const genericAll = 0x1000_0000;
+    const fileMutation = 0x000D_0156;
+    const directoryReplacement = 0x000D_0040;
+    return (mask & (directory ? genericAll | directoryReplacement : genericWrite | genericAll | fileMutation)) !== 0;
+  }
+  const tokens = rights.match(/.{2}/gu) ?? [];
+  const known = directory ? KNOWN_DIRECTORY_RIGHTS : KNOWN_RIGHTS;
+  if (tokens.length * 2 !== rights.length || tokens.some(token => !known.has(token))) {
+    throw new Error(`Unrecognized executable ACL rights (${rights}).`);
+  }
+  const dangerous = directory ? DIRECTORY_REPLACEMENT_RIGHTS : MUTATING_RIGHTS;
+  return tokens.some(token => dangerous.has(token));
+}
+
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, directory = false) {
+  const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
+  const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
+  if (localAdministrator) trusted.add('LA');
+  if (directory) trusted.add(TRUSTED_INSTALLER_SID);
+  const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
+  if (!owner || !trusted.has(owner)) throw new Error(`Unsafe executable ACL owner (${owner || 'missing'}).`);
+  if (!section) throw new Error('Missing executable ACL DACL.');
+  const firstAce = section.indexOf('(');
+  if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
+    throw new Error('Unrecognized executable ACL.');
+  }
+  const entries = section.slice(firstAce);
+  const aces = [...entries.matchAll(/\(([^()]*)\)/gu)].map(match => match[1].split(';'));
+  if (aces.length === 0 || entries.replace(/\([^()]*\)/gu, '') !== '') {
+    throw new Error('Unrecognized executable ACL entries.');
+  }
+  for (const fields of aces) {
+    if (fields.length !== 6 || !['A', 'D'].includes(fields[0]) || fields[3] || fields[4]
+      || !/^(?:(?:OI|CI|NP|IO|ID))*$/u.test(fields[1])) {
+      throw new Error('Unrecognized executable ACL entry.');
+    }
+    if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5])) continue;
+    if (grantsMutation(fields[2], directory)) {
+      // The public boundary wraps this detail; isolated diagnostics keep the ACE.
+      throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
+    }
+  }
+}
+
+function assertWindowsExecutableParentDacl(sddl, userSid, localAdministrator) {
+  assertWindowsExecutableDacl(sddl, userSid, localAdministrator, true);
+}
+
+function verifyWindowsAgentExecutableAcl(path) {
+  const identity = currentWindowsUserIdentity();
+  const canonical = realpathSync(path);
+  const paths = [canonical];
+  let parent = dirname(canonical);
+  while (true) {
+    paths.push(parent);
+    const next = dirname(parent);
+    if (next === parent) break;
+    parent = next;
+  }
+  const descriptors = installedExecutableDescriptors(paths);
+  assertWindowsExecutableDacl(descriptors[0], identity.sid, identity.localAdministrator);
+  for (let index = 1; index < paths.length; index += 1) {
+    try {
+      assertWindowsExecutableParentDacl(descriptors[index], identity.sid, identity.localAdministrator);
+    } catch (error) {
+      throw new Error(`Unsafe Windows executable ancestor ${paths[index]}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+  }
+}
+
+module.exports = {
+  assertWindowsExecutableDacl,
+  assertWindowsExecutableParentDacl,
+  currentWindowsUserIdentity,
+  isLocalWindowsAdministrator,
+  parseWindowsExecutableDescriptors,
+  systemTool,
+  verifyWindowsAgentExecutableAcl,
+};
+
+
+/***/ }),
+
+/***/ 48176:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { lstatSync, realpathSync } = __nccwpck_require__(87561);
+const { win32 } = __nccwpck_require__(49411);
+
+/** Parse machine facts without consulting a mutable search path or child environment. */
+function resolveWindowsSystemRoot(source) {
+  const root = source.SystemRoot;
+  const windir = source.WINDIR;
+  if (typeof root !== 'string' || typeof windir !== 'string'
+    || !/^[a-z]:\\[^\\/]+$/iu.test(root)
+    || win32.normalize(root).toLowerCase() !== win32.normalize(windir).toLowerCase()
+    || win32.basename(root).toLowerCase() !== 'windows') {
+    throw new Error('Windows runner system directory is invalid or inconsistent.');
+  }
+  const drive = win32.parse(root).root.slice(0, 2);
+  if (typeof source.SystemDrive !== 'string'
+    || source.SystemDrive.toLowerCase() !== drive.toLowerCase()) {
+    throw new Error('Windows runner system drive does not match its system directory.');
+  }
+  return win32.normalize(root);
+}
+
+function captureWindowsSystemRoot(source) {
+  const root = resolveWindowsSystemRoot(source);
+  for (const directory of [root, win32.join(root, 'System32')]) {
+    if (!lstatSync(directory).isDirectory()
+      || win32.normalize(realpathSync.native(directory)).toLowerCase() !== directory.toLowerCase()) {
+      throw new Error('Windows runner system directory is not a canonical directory.');
+    }
+  }
+  return root;
+}
+
+// The Action's startup environment comes from its runner. Capture it before
+// workflow data or provider subprocesses can mutate process.env.
+const systemRoot = process.platform === 'win32' ? captureWindowsSystemRoot(process.env) : undefined;
+
+function trustedWindowsSystemRoot() {
+  if (!systemRoot) throw new Error('Windows system tools are unavailable on this platform.');
+  return systemRoot;
+}
+
+module.exports = { resolveWindowsSystemRoot, trustedWindowsSystemRoot };
+
+
+/***/ }),
+
 /***/ 29617:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -94825,6 +95837,10 @@ function renderCatalog(catalog) {
   ].join('\n');
 }
 
+function normalizeCheckoutLineEndings(content, platform = process.platform) {
+  return platform === 'win32' ? content.replace(/\r\n/g, '\n') : content;
+}
+
 function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
   return paths.map(relativePath => {
@@ -94855,7 +95871,7 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
-  if (current !== rendered) {
+  if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;
     return;
@@ -94875,6 +95891,7 @@ module.exports = {
   main,
   readCatalog,
   renderCatalog,
+  normalizeCheckoutLineEndings,
   validateAsBuiltSpecification,
   validateCatalog,
 };
@@ -101651,7 +102668,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-24.p1-c.3","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","installation":{"package":"@openai/codex","version":"0.156.1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-10-02.standalone.1","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
 
 /***/ })
 

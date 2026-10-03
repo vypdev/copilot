@@ -83,10 +83,10 @@ export function renderSetupTokenPermissionReport(
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
+        : report.confirmationRequired
+            ? 'Confirmation required: inspect every Unverifiable required PAT grant in GitHub, including Projects read when shown. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
         : unverifiableRequiredReads.length > 0
             ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
-            : report.confirmationRequired
-                ? 'Confirmation required: inspect the PAT settings for every Unverifiable write row. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
         : unverifiable.length > 0
             ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
             : 'All safely verifiable required permissions are available.';

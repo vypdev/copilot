@@ -110,6 +110,6 @@ describe('NpmCliUpdateCheckAdapter', () => {
         expect(resolveUpdateCheckCachePath('darwin', { XDG_CACHE_HOME: '/tmp/cache' }, '/Users/test'))
             .toBe('/tmp/cache/copilot/update-check.json');
         expect(resolveUpdateCheckCachePath('win32', { LOCALAPPDATA: 'C:\\Users\\test\\AppData\\Local' }, '/Users/test'))
-            .toBe('C:\\Users\\test\\AppData\\Local/copilot/update-check.json');
+            .toBe('C:\\Users\\test\\AppData\\Local\\copilot\\update-check.json');
     });
 });

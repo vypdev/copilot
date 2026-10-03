@@ -64,7 +64,6 @@ export const questionLabelsPt: Readonly<Record<keyof typeof spanishQuestionLabel
   'ai.bugbotTelemetry': 'Registar métricas do Bugbot sem conteúdo?',
   'ai.bugbotFailOnUnresolved': 'Fazer falhar a verificação se houver resultados por resolver?',
   'ai.bugbotOrganizationRules': 'Regras Bugbot partilhadas, uma por linha',
-  'ai.provisioningMode': 'Como preparar o agente CLI no runner',
   'pullRequestApproval.mode': 'O que pode o bot fazer na aprovação de pull requests?',
   'pullRequestApproval.testChecks': 'Que verificações CI são fiáveis para aprovar?',
   'pullRequestApproval.producerAttested': 'Verificou o job, a App e a etapa obrigatória de cobertura?',

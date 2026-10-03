@@ -260,6 +260,6 @@ export interface SetupPlan {
 /** Structured, value-free receipt for the local setup workflow. */
 export interface SetupOperationEffect {
     readonly id: 'files' | 'secrets' | 'labels' | 'issue-types' | 'variables' | 'initial-tag';
-    readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started';
+    readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started' | 'in-progress';
     readonly scope: 'local' | 'repository' | 'organization' | 'mixed';
 }

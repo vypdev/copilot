@@ -231,6 +231,10 @@ The process adapter starts with an empty environment and adds only trusted
 `PATH`, locale, controlled temp/config path, provider's one required credential,
 and explicitly provisioned CA variables. Proxy variables are denied by default
 and require an organization-managed runner policy outside repository input.
+On Windows, the bounded runtime environment also admits only the platform paths
+needed for Node and provider configuration (`SystemRoot`, `WINDIR`,
+`USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, and `PATHEXT`). These values are read
+from the trusted runner process, not from repository content.
 It strips `GITHUB_TOKEN`, `GH_TOKEN`, `GIT_ASKPASS`, `SSH_AUTH_SOCK`, Git author/
 committer variables, cloud credentials, and every unrelated `*KEY|*SECRET|*TOKEN`.
 It sets `GIT_TERMINAL_PROMPT=0`, `GIT_CONFIG_GLOBAL` to a managed empty file, and
@@ -240,6 +244,77 @@ The child process uses `shell: false`, a new process group, bounded stdout/stder
 abort/timeout TERM then bounded KILL, and exact cleanup of only its ephemeral
 directory. Agent-selected verification is not trusted: Copilot runs configured
 verification commands later through its existing validated trusted runner.
+
+On Windows, the equivalent contract requires direct process launch without
+`.cmd`/`.bat` shell interpretation, owner-only ACLs on the ephemeral directory
+and artifacts, and bounded termination of descendants before cleanup. POSIX
+mode bits and `child.kill()` alone do not prove these properties on Windows.
+The process adapter MUST reject an unverified Windows runtime, preserve literal
+argv/prompt bytes, suppress raw stderr, and record cancellation/timeout as a
+failed capability with no trusted result. Isolated Windows fixtures MUST prove
+ACL rejection, argv safety, descendant termination, and cleanup; a real runner
+review remains open until observed (issue #404).
+The executable, its interpreter and package-owned entrypoint require a
+read-only ACL preflight: trusted ownership and no untrusted write/delete/ACL
+control ACE. Existing installed files are never modified. An unreadable or
+unrecognized ACL fails before a provider process starts.
+The preflight also checks the containing directory and each ancestor to the
+volume root for untrusted ownership or rights to delete/replace a checked
+path component or rewrite its ACL. It distinguishes harmless add-only rights
+from delete-child rights and fails closed on unreadable descriptors. Real
+Windows fixtures must pass for a safe parent and reject an untrusted
+delete-child grant without changing the operator-owned executable.
+The known `NT SERVICE\TrustedInstaller` SID may own a Windows ancestor,
+including the system volume root; it is trusted only for ancestor assessment.
+It must not make a foreign-owned executable acceptable. Hosted and service
+Windows fixtures must prove this exact owner case and still reject an
+untrusted parent owner or replacement grant.
+The SDDL `LC` right is accepted only on a directory ancestor, where it does
+not grant deletion or replacement of an existing component. It remains
+unrecognized on an executable file. Fixture tests must prove both decisions.
+The installed file and all of its ancestors are read in one bounded,
+read-only Windows PowerShell invocation. An incomplete or malformed batch
+fails closed, and execution/timeout/cancellation fixtures must finish within
+their existing 15-second Jest deadline on hosted and service Windows runners.
+The standalone read-only verifier may reuse the complete trust decision for
+help, version, and login probes in its short-lived process. It retries only
+a transient ACL query timeout once; a rejected owner, ACE, or malformed
+descriptor remains rejected. Action telemetry records a closed preflight
+stage without including paths, arguments, prompts, or environment values.
+The installed-file check reads a full Windows security descriptor; the
+managed-artifact `icacls /save` snapshot contains only the DACL and is not
+owner evidence for an installed executable.
+The hosted Windows fixture exposed `AU:0x1301bf` on both Action and job Node;
+the installed-file trust gate correctly rejects them. Repository credentialed
+Action jobs route to macOS while Windows tooling ACLs are repaired and tested.
+The Windows agent gate remains open even if setup web/CLI and Bash fixtures
+pass; no runtime finding is waived or counted as a pass.
+The `icacls /save` managed-artifact snapshot is a UTF-16LE path line followed
+by an SDDL DACL line. A Windows fixture must assert this raw two-line format
+and the existing owner-only verification must continue to pass. This is direct
+evidence for the parser; a claim that the path and DACL share one line must not
+override the observed fixture output.
+The [2026-10-02 isolated platform matrix](https://github.com/vypdev/copilot/actions/runs/36955416020)
+passed the fake Windows runtime cases and package smoke on hosted Windows,
+Ubuntu and macOS. It does not establish self-hosted runner behavior or a live
+agent result; those human gates remain open without dogfooding.
+
+The first self-hosted Windows fixture reached `windows-intel-runner-1` and
+exposed that its unprivileged service account cannot apply an ACL snapshot
+with `icacls /restore`. Managed artifact hardening MUST use operations
+available to the file owner to remove inherited and explicit grants, then
+grant full control only to that owner's SID. It MUST verify the effective
+saved DACL afterward and fail closed if any broad principal survives. A
+fixture MUST begin with an explicit Everyone grant and prove it is removed.
+This is a runtime prerequisite for the self-hosted fixture gate; real agent
+execution remains a separate open review.
+
+The [2026-10-02 self-hosted Windows fixture](https://github.com/vypdev/copilot/actions/runs/36972025378)
+passed 20/20 fake-agent tests on `windows-intel-runner-2`, including removal
+of an explicit Everyone grant, literal prompt arguments, timeout, descendant
+cancellation, and cleanup. This is direct service-runner fixture evidence,
+not a real agent request. The workflow remained red on unrelated canonical
+Unix bundle drift until the generated files are committed and rerun.
 
 ### 6.4 Codex policy
 
@@ -305,27 +380,26 @@ role is `configuration.unsupported`; it never degrades to a less safe mode.
 
 ### 6.7 Runtime manifest and preflight
 
-`src/infrastructure/agents/agent-runtime-manifest.json` starts with reviewed
-known-good identities and reproducible installation recipes:
+`src/infrastructure/agents/agent-runtime-manifest.json` records historical
+known-good smoke identities and the selected providers' official standalone
+sources:
 
-| Provider | Reviewed identity / pinned installation | Required smoke |
+| Provider | Reviewed smoke identity / missing CLI source | Required smoke |
 |---|---|---|
-| Codex | `codex-cli 0.156.1` / `@openai/codex@0.156.1` | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema and configured model |
-| OpenCode | `1.18.3` / `opencode-ai@1.18.3` | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
-| Cursor | `2026.09.10-fd3934a` / no automatic installer | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
+| Codex | `codex-cli 0.156.1` / official OpenAI standalone installer | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema and configured model |
+| OpenCode | `1.18.3` / official installer or Windows release archive | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
+| Cursor | `2026.09.10-fd3934a` / official installer or Windows archive | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
 
-An available operator-owned executable is never replaced and any non-empty
-reported version is recorded in the admitted plan. The fixed provider argv is
-still fail-closed: an incompatible runtime exits terminally and no fallback is
-attempted. In `auto`, only a missing default Codex or OpenCode executable is
-installed; `always` forces that same pinned installation. An explicit executable
-is operator-owned in every mode. A Copilot-installed package must report the
-reviewed identity exactly after installation. Cursor must be preinstalled
-because no reviewed automatic installer exists. Installation upgrades require
-one PR that updates the exact package recipe, provider fixture snapshots,
-official-source links, automated contract/smoke tests, target-runner
-provisioning, and reviewed human smoke. Provisioning never selects a floating
-or unreviewed package version.
+An available selected executable is never replaced and any non-empty reported
+version is recorded in the admitted plan. The fixed provider argv is still
+fail-closed: an incompatible runtime exits terminally and no fallback is
+attempted. A missing default executable is installed from that provider's
+official source in a private job directory. An explicit executable is never
+installed or replaced. The new installation must report a non-empty version;
+there is no exact version pin or provisioning-mode override. Source changes
+require a reviewed PR with fixture, contract, and target-runner evidence.
+Installer processes receive no model or GitHub credentials. The agent workflows
+do not use `actions/setup-node`, npm, or pnpm to install agents.
 
 ### 6.8 State machine
 
@@ -345,7 +419,7 @@ Existing provider/model/effort and per-role override precedence remains.
 `agent-command` is invalid and has no replacement that accepts arguments;
 `agent-executable` may select only the validated binary described above. The
 recommended default remains Codex. OpenCode and Cursor are explicit alternatives
-and require a compatible operator-owned runtime or a supported pinned installation.
+and reuse a compatible installed runtime or use the selected official installer.
 
 Sandbox, write role, network, approvals, environment, config directory,
 permissions, plugins/MCP/subagents, session persistence, process limits, output
@@ -491,7 +565,7 @@ verification. Attach sanitized evidence to the upgrade/implementation PR.
 Update all `docs/agents/*` runtime, command, input, model, execution, failure, and
 provider pages; setup/provisioning/doctor docs; security operations; architecture;
 and the release change notice. Provider pages link current official CLI/security
-references, state reviewed identity and pinned installation recipe, managed authority, unsupported
+references, state reviewed smoke identity and official installation source, managed authority, unsupported
 recovery, and upgrade process. Examples are generated/tested from golden plans.
 
 ## 16. Acceptance scenarios
@@ -515,7 +589,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
    its owned temp directory.
 9. Ambient/project/user config cannot broaden effective authority in smoke fixtures.
 10. Target-runner provisioning and execution preflight agree on runtime ownership,
-    pinned installation, and reported identity;
+    official installation source, and reported identity;
     doctor agrees with the structured provider/model/credential configuration.
 11. Negative fixtures prove removed command shapes are invalid and no parser,
     alias, deprecated field, or compatibility adapter ships.

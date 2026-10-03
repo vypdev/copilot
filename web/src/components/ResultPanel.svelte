@@ -3,21 +3,22 @@
   import { tr, stageLabel, type SetupMessageKey } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
   import ActionButton from './ActionButton.svelte';
+  import ResourceProgress from './ResourceProgress.svelte';
   import { focusOnRevision } from '../lib/focusOnRevision';
+  import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   export let outcome: NonNullable<WebSetupView['outcome']>;
   export let controller: boolean;
   export let onClose: () => Promise<void>;
   export let onDoctor: () => Promise<void> = async () => undefined;
   export let doctor: WebSetupView['doctor'] = undefined;
   export let detail: WebSetupView['resultDetail'] = undefined;
+  export let permissionReport: NonNullable<WebSetupView['permissions']>['report'] = undefined;
   const reasons: Record<NonNullable<WebSetupView['resultDetail']>['reasonCode'], [SetupMessageKey, SetupMessageKey]> = {
     permissions: ['reasonPermissions', 'nextPermissions'], storage: ['reasonStorage', 'nextStorage'],
     configuration: ['reasonConfiguration', 'nextConfiguration'], 'session-expired': ['reasonExpired', 'nextExpired'],
     cancelled: ['reasonCancelled', 'nextCancelled'], provider: ['reasonProvider', 'nextProvider'],
     'rate-limit': ['reasonRateLimit', 'nextRateLimit'], unknown: ['reasonUnknown', 'nextUnknown'],
   };
-  const effectKeys: Record<string, SetupMessageKey> = { files: 'receiptFiles', secrets: 'receiptSecrets',
-    labels: 'receiptLabels', 'issue-types': 'receiptIssueTypes', variables: 'receiptVariables', 'initial-tag': 'receiptInitialTag' };
   $: heading = outcome === 'complete' ? tr('resultApplied', $setupLocale)
     : outcome === 'dry-run' ? tr('resultNoChanges', $setupLocale)
     : outcome === 'cancelled' || outcome === 'blocked' ? tr('resultStopped', $setupLocale)
@@ -27,6 +28,11 @@
     : outcome === 'partial'
       ? tr('resultPartialBody', $setupLocale)
       : tr('resultNoChangesBody', $setupLocale);
+  $: blockedPermissionReport = outcome === 'blocked' && detail?.reasonCode === 'permissions'
+    ? permissionReport : undefined;
+  $: unresolvedPermissions = blockedPermissionReport
+    ? blockedPermissionReport.checks.filter(check => check.applicability === 'required'
+      && check.status !== 'verified') : [];
 </script>
 
 <section class="card result-card" tabindex="-1" use:focusOnRevision={1}><span class="result-icon" aria-hidden="true">{outcome === 'complete' ? '✓' : '!'}</span><h2>{heading}</h2>
@@ -39,10 +45,20 @@
       {#if detail?.diagnosticRef}<p><strong>{tr('diagnosticReference', $setupLocale)}:</strong> <code>{detail.diagnosticRef}</code></p>{/if}
     </div>
   {/if}
-  {#if detail?.effects?.length}
-    <section class="result-effects"><h3>{tr('resourceReceipt', $setupLocale)}</h3>
-      <ul>{#each detail.effects as effect}<li><bdi>{effectKeys[effect.id] ? tr(effectKeys[effect.id], $setupLocale) : effect.id}</bdi> — {tr(effect.state === 'completed' ? 'effectCompleted' : effect.state === 'skipped' ? 'effectSkipped' : effect.state === 'not-started' ? 'effectNotStarted' : 'effectInspect', $setupLocale)}{#if effect.scope} · {tr(effect.scope === 'local' ? 'scopeLocal' : effect.scope === 'organization' ? 'scopeOrganization' : effect.scope === 'mixed' ? 'scopeMixed' : 'scopeRepository', $setupLocale)}{/if}</li>{/each}</ul>
+  {#if blockedPermissionReport}
+    <section class="result-facts" aria-label={tr('permissionReportTitle', $setupLocale)}>
+      <h3>{tr('permissionReportTitle', $setupLocale)}</h3>
+      <p>{tr('permissionReportLead', $setupLocale)}</p>
+      <p><strong>{tr('permissionIdentity', $setupLocale)}:</strong> {tr(blockedPermissionReport.identityStatus === 'valid' ? 'permissionIdentityValid' : blockedPermissionReport.identityStatus === 'invalid' ? 'permissionIdentityInvalid' : 'permissionIdentityUnknown', $setupLocale)}</p>
+      {#if unresolvedPermissions.length}
+        <ul>{#each unresolvedPermissions as check}<li><strong>{permissionName($setupLocale, check.permission)}</strong>{#if $setupLocale !== 'en' && permissionName($setupLocale, check.permission) !== check.permission} <small><bdi>GitHub · {check.permission}</bdi></small>{/if} — {permissionTerm($setupLocale, check.scope)} · {permissionTerm($setupLocale, check.level)} · <strong>{blockedPermissionReport.identityStatus === 'valid' ? permissionTerm($setupLocale, check.status) : tr('permissionGrantNotChecked', $setupLocale)}</strong></li>{/each}</ul>
+      {:else if blockedPermissionReport.identityStatus === 'valid'}
+        <p>{tr('permissionReportNoFailedGrant', $setupLocale)}</p>
+      {/if}
     </section>
+  {/if}
+  {#if detail?.effects?.length}
+    <ResourceProgress effects={detail.effects} />
   {/if}
   <p>{explanation}</p>
   {#if outcome === 'complete'}<p>{tr('botRenewal', $setupLocale)}</p>{/if}

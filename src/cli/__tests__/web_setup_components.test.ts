@@ -70,6 +70,66 @@ describe('web setup component semantics', () => {
     expect(html).toContain('No se iniciaron cambios');
   });
 
+  test.each([
+    ['en', 'PAT permission evidence', 'Projects', 'Unverifiable'],
+    ['es', 'Comprobación de permisos del PAT', 'Proyectos', 'No verificable'],
+    ['fr', 'Vérification des droits du PAT', 'Projets', 'Non vérifiable'],
+    ['pt', 'Verificação das permissões do PAT', 'Projetos', 'Não verificável'],
+  ])('%s blocked PAT result preserves the exact failed grant without a credential', (locale, title, name, status) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.organization.projects', role: 'setup',
+          permission: 'Projects', scope: 'organization', level: 'read', applicability: 'required',
+          reason: 'Inspect Projects', probe: 'projects', status: 'unverifiable',
+          operationallyAvailable: true,
+          message: 'private diagnostic secret-token' }] } }, locale);
+    expect(html).toContain(title);
+    expect(html).toContain(name);
+    expect(html).toContain(status);
+    expect(html).not.toContain('No required grant failed this check');
+    if (locale !== 'en') expect(html).toContain('GitHub · Projects');
+    expect(html).not.toContain('private diagnostic');
+    expect(html).not.toContain('secret-token');
+  });
+
+  test.each([
+    ['en', 'Rejected', 'Not checked'],
+    ['es', 'Rechazados', 'Sin comprobar'],
+    ['fr', 'Refusés', 'Non vérifié'],
+    ['pt', 'Recusados', 'Não verificada'],
+  ])('%s invalid identity lists required grants without claiming individual denial', (locale, identity, status) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'invalid', identityMessage: 'rejected',
+        ready: false, confirmationRequired: false, checks: [{ permission: 'Projects',
+          scope: 'organization', level: 'read', applicability: 'required', status: 'missing' }] } }, locale);
+    expect(html).toContain(identity);
+    expect(html).toContain('Projects');
+    expect(html).toContain(status);
+    expect(html).not.toContain('private diagnostic');
+  });
+
+  test('unverifiable identity lists grants as not checked', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'unverifiable', identityMessage: 'private diagnostic',
+        ready: false, confirmationRequired: false, checks: [{ permission: 'Secrets',
+          scope: 'organization', level: 'write', applicability: 'required', status: 'unverifiable' }] } });
+    expect(html).toContain('Secrets');
+    expect(html).toContain('Not checked');
+    expect(html).not.toContain('private diagnostic');
+  });
+
+  test('unrelated blocked outcome does not attribute stale permission evidence to its cause', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'storage', stoppedStage: 'Plan', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', checks: [{ permission: 'Projects',
+        scope: 'organization', level: 'read', applicability: 'required', status: 'unverifiable' }] } });
+    expect(html).not.toContain('PAT permission evidence');
+    expect(html).not.toContain('Projects');
+  });
+
   test('partial result shows structured cause, safe effects, and diagnostic reference', () => {
     const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
       detail: { reasonCode: 'provider', stoppedStage: 'Apply', mutationStarted: true,
@@ -79,6 +139,19 @@ describe('web setup component semantics', () => {
     expect(html).toContain('Reported completed');
     expect(html).toContain('Outcome needs inspection');
     expect(html).toContain('12345678-1234-4123-8123-123456789abc');
+  });
+
+  test.each([
+    ['en', 'which changes completed', 'before Apply'],
+    ['es', 'qué cambios se completaron', 'antes de aplicar cambios'],
+    ['fr', 'modifications effectuées', 'avant l’application'],
+    ['pt', 'quais alterações foram concluídas', 'antes de aplicar'],
+  ])('%s partial result with unknown cause does not claim Apply never started', (locale, expected, falseClaim) => {
+    const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
+      detail: { reasonCode: 'unknown', stoppedStage: 'Apply', mutationStarted: true,
+        effects: [{ id: 'secrets', state: 'needs-inspection', scope: 'repository' }] } }, locale);
+    expect(html).toContain(expected);
+    expect(html).not.toContain(falseClaim);
   });
 
   test('French technical question guidance is complete, not a mixed-language preview', () => {
@@ -210,12 +283,12 @@ describe('web setup component semantics', () => {
 
   test('choice recommendations translate their display label without changing the option value', () => {
     const html = markup('QuestionPrompt', { prompt: {
-      kind: 'question', title: 'Provisioning', phase: 'full', pass: 1,
-      question: { stateId: 'provisioning', id: 'ai.provisioningMode', label: 'Provisioning mode',
-        kind: 'choice', defaultValue: 'always', choices: ['auto', 'always', 'disabled'] },
+      kind: 'question', title: 'Bugbot', phase: 'full', pass: 1,
+      question: { stateId: 'bugbot', id: 'ai.bugbotEffort', label: 'Bugbot effort',
+        kind: 'choice', defaultValue: 'smart', choices: ['smart', 'low', 'default', 'high'] },
     }, controller: true, busy: false }, 'es');
-    expect(html).toContain('Respuesta sugerida: Reinstalar siempre');
-    expect(html).toContain('value="always"');
+    expect(html).toContain('Respuesta sugerida: Adaptativa');
+    expect(html).toContain('value="smart"');
   });
 
   test('read-only result cannot show its close control', () => {

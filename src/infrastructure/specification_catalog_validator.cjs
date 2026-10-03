@@ -240,6 +240,10 @@ function renderCatalog(catalog) {
   ].join('\n');
 }
 
+function normalizeCheckoutLineEndings(content, platform = process.platform) {
+  return platform === 'win32' ? content.replace(/\r\n/g, '\n') : content;
+}
+
 function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
   return paths.map(relativePath => {
@@ -270,7 +274,7 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
-  if (current !== rendered) {
+  if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;
     return;
@@ -290,6 +294,7 @@ module.exports = {
   main,
   readCatalog,
   renderCatalog,
+  normalizeCheckoutLineEndings,
   validateAsBuiltSpecification,
   validateCatalog,
 };

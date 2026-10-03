@@ -37,7 +37,7 @@ export class VerifySetupPatBootstrapUseCase {
         expiresIn: 1, requirements: request.requirements,
       }));
       throw new ApplicationError('authorization.credential-invalid',
-        'The setup PAT has missing or unconfirmed required access. Grant or explicitly confirm the permissions shown above and retry.');
+        'The setup PAT has missing or unconfirmed required access. Review the permission report, correct or explicitly confirm the required grants, and retry.');
     }
     if (!await this.ports.confirmAccount(report.account)) {
       throw new ApplicationError('authorization.credential-invalid',

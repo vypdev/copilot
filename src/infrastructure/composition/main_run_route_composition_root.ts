@@ -114,6 +114,7 @@ export type MainRunCompositionSurface = "github-workflow" | "local";
 export function createSingleActionUseCaseCompositionRoot(
   surface: MainRunCompositionSurface,
   binding: BugbotScmBinding,
+  setupProgress?: (effect: import('../../domain/setup').SetupOperationEffect) => void,
 ): SingleActionUseCase {
   const catalogResolver = new ResolveMessageCatalogUseCase(createLanguageQueryPort());
   const issueDescriptionQueryPort = createIssueContentCompositionRoot();
@@ -136,7 +137,7 @@ export function createSingleActionUseCaseCompositionRoot(
       bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
       createFindingsQueryPort(),
     ),
-    createInitialSetupCompositionRoot(binding),
+    createInitialSetupCompositionRoot(binding, setupProgress),
     createCheckProgressCompositionRoot(binding),
     createDetectPotentialProblemsUseCase(binding),
     new RecommendStepsUseCase(
@@ -312,6 +313,7 @@ export function createCommitUseCaseCompositionRoot(
 export function createMainRunRouteCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
   surface: MainRunCompositionSurface,
+  setupProgress?: (effect: import('../../domain/setup').SetupOperationEffect) => void,
 ): MainRunRouteHandlers {
   let singleAction: SingleActionUseCase | undefined;
   let issueComment: IssueCommentUseCase | undefined;
@@ -321,7 +323,7 @@ export function createMainRunRouteCompositionRoot(
   let push: CommitUseCase | undefined;
   return {
     "single-action": async (execution) => {
-      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution));
+      singleAction ??= createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution), setupProgress);
       return singleAction.invoke(execution);
     },
     "issue-comment": async (execution) => {

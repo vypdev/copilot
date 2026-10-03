@@ -5,6 +5,9 @@ import { request, ServerResponse } from 'node:http';
 import { connect, type Socket } from 'node:net';
 import { WebSetupBridge } from '../web_setup_bridge';
 import { startWebSetupServer, type WebSetupServer } from '../web_setup_server';
+import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
+
+const fileSymlinkTest = canCreateFileSymlink() ? test : test.skip;
 
 const sessionKeys = new Map<string, string>();
 const registerSession = async (session: WebSetupServer): Promise<void> => {
@@ -402,11 +405,17 @@ describe('local web setup server', () => {
     await pending;
   });
 
-  test('startup refuses missing or symlinked packaged assets', async () => {
+  test('startup refuses missing packaged assets', async () => {
     const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-assets-test-'));
     try {
       writeFileSync(join(invalid, 'index.html'), '<title>No assets</title>');
       await expect(startWebSetupServer(new WebSetupBridge('owner/repo'), invalid)).rejects.toThrow('incomplete');
+    } finally { rmSync(invalid, { recursive: true, force: true }); }
+  });
+
+  fileSymlinkTest('startup refuses symlinked packaged assets', async () => {
+    const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-assets-test-'));
+    try {
       mkdirSync(join(invalid, 'assets'));
       writeFileSync(join(invalid, 'index.html'), '<link href="./assets/app.css"><script src="./assets/app.js"></script>');
       writeFileSync(join(invalid, 'assets/app.css'), 'body {}');
@@ -415,7 +424,7 @@ describe('local web setup server', () => {
     } finally { rmSync(invalid, { recursive: true, force: true }); }
   });
 
-  test('startup refuses an index symlink outside the asset root', async () => {
+  fileSymlinkTest('startup refuses an index symlink outside the asset root', async () => {
     const invalid = mkdtempSync(join(tmpdir(), 'copilot-web-index-test-'));
     try {
       symlinkSync(join(root, 'index.html'), join(invalid, 'index.html'));
@@ -423,7 +432,7 @@ describe('local web setup server', () => {
     } finally { rmSync(invalid, { recursive: true, force: true }); }
   });
 
-  test('an asset replaced by an escaping symlink is not served', async () => {
+  fileSymlinkTest('an asset replaced by an escaping symlink is not served', async () => {
     unlinkSync(join(root, 'assets', 'app.js'));
     const outside = mkdtempSync(join(tmpdir(), 'copilot-asset-escape-test-'));
     try {

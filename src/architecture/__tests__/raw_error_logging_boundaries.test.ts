@@ -261,7 +261,7 @@ describe('raw error logging boundaries', () => {
             return rawErrorLoggingViolations(
                 fixtureProgram,
                 repositoryRoot,
-                source => source.fileName === fixtureFile,
+                source => resolve(source.fileName) === fixtureFile,
             );
         } finally {
             rmSync(fixtureDirectory, { recursive: true, force: true });

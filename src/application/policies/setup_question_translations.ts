@@ -63,7 +63,6 @@ export const spanishQuestionLabels: Readonly<Record<string, string>> = {
   'ai.bugbotTelemetry': '¿Registrar métricas de Bugbot sin contenido?',
   'ai.bugbotFailOnUnresolved': '¿Bloquear el check si quedan hallazgos sin resolver?',
   'ai.bugbotOrganizationRules': 'Reglas generales de Bugbot, una por línea',
-  'ai.provisioningMode': 'Cómo preparar el agente CLI en el runner',
   'pullRequestApproval.mode': '¿Qué puede hacer el bot con las aprobaciones de PR?',
   'pullRequestApproval.testChecks': '¿Qué checks de CI son fiables para aprobar PRs?',
   'pullRequestApproval.producerAttested': '¿Has comprobado el job, la App y el paso obligatorio de cobertura?',

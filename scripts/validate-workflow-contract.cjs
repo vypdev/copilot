@@ -23,7 +23,8 @@ const DEPLOYMENT_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_i
 const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}';
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
-const SETUP_NODE_ACTION = 'actions/setup-node@v7';
+const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
 const PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state';
@@ -205,20 +206,148 @@ function runnerLabels(value) {
   return Array.isArray(value) ? value.map(String) : [String(value)];
 }
 
+function assertIsolatedPnpm(relativeFile, jobId, job) {
+  const labels = runnerLabels(job['runs-on']);
+  if (!labels.includes('self-hosted') || !labels.includes('codex')) return;
+  for (const step of job.steps ?? []) {
+    if (typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@')
+      && step.with?.dest !== ISOLATED_PNPM_DEST) {
+      throw new Error(`${relativeFile} job ${jobId} must isolate pnpm/action-setup by runner, run, attempt and job.`);
+    }
+  }
+}
+
+function assertPlatformCoverageAndValidators(relativeFile, job) {
+  const steps = job.steps ?? [];
+  const coverageStep = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
+  if (coverageStep?.run !== 'pnpm run test:coverage' || coverageStep.if !== undefined) {
+    throw new Error(`${relativeFile} must retain full platform coverage and acceptance budgets.`);
+  }
+  const validationStep = steps.find(step => step?.name === 'Full platform documentation and contract validators');
+  const requiredValidations = [
+    'validate:agent-docs', 'validate:docs-page', 'validate:documentation',
+    'validate:workflows', 'validate:specifications', 'validate:setup-acceptance',
+  ];
+  if (!validationStep?.run || requiredValidations.some(command => !validationStep.run.includes(`pnpm run ${command}`))
+    || steps.indexOf(validationStep) <= steps.indexOf(coverageStep)
+    || validationStep.if !== undefined) {
+    throw new Error(`${relativeFile} must retain full platform documentation and contract validators after coverage.`);
+  }
+  if (!steps.some(step => step?.run === 'pnpm run validate:npm-package && pnpm run smoke:npm-package')
+    || !steps.some(step => step?.name === 'Local setup fixtures only')
+    || !steps.some(step => step?.name === 'Isolated agent runtime fixtures')
+    || !steps.some(step => step?.run === 'pnpm run build')
+    || !steps.some(step => step?.run === 'pnpm run typecheck')) {
+    throw new Error(`${relativeFile} must retain build, typecheck, setup, agent and packaged npm fixtures on every platform.`);
+  }
+}
+
+function assertWindowsJobNpm(relativeFile, job) {
+  const steps = job.steps ?? [];
+  const npmCheck = steps.find(step => step?.name === 'Verify Windows job Node npm CLI');
+  if (npmCheck?.run !== 'node scripts/verify-windows-job-npm.cjs'
+    || npmCheck.if !== "runner.os == 'Windows'"
+    || steps.indexOf(npmCheck) >= steps.findIndex(step => step?.run === 'pnpm install --frozen-lockfile')) {
+    throw new Error(`${relativeFile} must verify the Windows job Node npm CLI before installation.`);
+  }
+}
+
+function assertPlatformHistoryCheckout(relativeFile, job) {
+  const checkout = (job.steps ?? []).find(step => step?.uses === 'actions/checkout@v5');
+  if (checkout?.with?.['fetch-depth'] !== 0 || checkout.with?.['persist-credentials'] !== false) {
+    throw new Error(`${relativeFile} must fetch full platform-test history without persisted checkout credentials.`);
+  }
+}
+
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
+  if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+    const jobIds = Object.keys(workflow.jobs ?? {}).sort();
+    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])) {
+      throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs.`);
+    }
+  }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+      if (jobId === 'setup-platform-smoke') {
+        const platforms = job.strategy?.matrix?.os;
+        if (job['runs-on'] !== '${{ matrix.os }}'
+          || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
+          throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
+        }
+        assertPlatformCoverageAndValidators(relativeFile, job);
+        assertWindowsJobNpm(relativeFile, job);
+        assertPlatformHistoryCheckout(relativeFile, job);
+        const codecov = (job.steps ?? []).find(step => step?.name === 'Upload Windows coverage to Codecov');
+        if (codecov?.uses !== 'codecov/codecov-action@v6'
+          || codecov.if !== "${{ runner.os == 'Windows' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}"
+          || codecov.with?.files !== './coverage/lcov.info'
+          || codecov.with?.fail_ci_if_error !== true
+          || codecov.with?.flags !== 'windows'
+          || codecov.with?.token !== '${{ secrets.CODECOV_TOKEN }}'
+          || (job.steps ?? []).indexOf(codecov) <= (job.steps ?? []).findIndex(step => step?.name === 'Full platform coverage and acceptance budgets')) {
+          throw new Error(`${relativeFile} must upload hosted Windows coverage for same-repository revisions.`);
+        }
+      } else {
+        const expectedMatrix = [
+          { platform: 'Windows', labels: ['self-hosted', 'codex', 'Windows'] },
+          { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
+          { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
+        ];
+        if (job['runs-on'] !== '${{ matrix.labels }}'
+          || job.name !== 'Setup package and local session (self-hosted ${{ matrix.platform }} codex)'
+          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(expectedMatrix)
+          || job.strategy?.['fail-fast'] !== false) {
+          throw new Error(`${relativeFile} must target self-hosted Windows, macOS and Ubuntu codex runners.`);
+        }
+        if (job.if !== "github.event_name == 'workflow_dispatch'") {
+          throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch.`);
+        }
+        const steps = job.steps ?? [];
+        if (!steps.some(step => step?.name === 'Verify Ubuntu distribution'
+          && step.if === "runner.os == 'Linux'" && step.run === '. /etc/os-release && test "$ID" = ubuntu')
+          || !steps.some(step => step?.name === 'Git Bash in runner service PATH'
+            && step.if === "runner.os == 'Windows'")) {
+          throw new Error(`${relativeFile} must verify Ubuntu and Windows Bash on self-hosted runners.`);
+        }
+        const pnpmSetup = steps.find(step => typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@'));
+        if (pnpmSetup?.with?.dest !== ISOLATED_PNPM_DEST) {
+          throw new Error(`${relativeFile} must isolate self-hosted pnpm installation by job.`);
+        }
+        assertPlatformCoverageAndValidators(relativeFile, job);
+        assertWindowsJobNpm(relativeFile, job);
+        assertPlatformHistoryCheckout(relativeFile, job);
+        const guidanceStep = steps.find(step => step?.name === 'Validate generated guidance checkout on codex runner');
+        if (!guidanceStep?.run?.includes('pnpm run validate:agent-docs')
+          || !guidanceStep.run.includes('git ls-files --eol')) {
+          throw new Error(`${relativeFile} must verify generated guidance at self-hosted checkout.`);
+        }
+      }
+      assertIsolatedPnpm(relativeFile, jobId, job);
+      const validationStep = (job.steps ?? []).find(step => step?.name === 'Full platform documentation and contract validators');
+      if (!validationStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check -- . ':(exclude)build/**'`)) {
+        throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
+      }
+      continue;
+    }
     const expected = relativeFile.startsWith('setup/workflows/')
       || relativeFile === '.github/workflows/copilot_pull_request_approval.yml'
+      || relativeFile === '.github/workflows/ci_check.yml'
+      || relativeFile === '.github/workflows/repowise.yml'
       ? ['ubuntu-latest']
       : /^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm'
         ? ['ubuntu-latest']
-        : relativeFile === '.github/workflows/repowise.yml'
-          ? ['self-hosted', 'coolify']
-          : ['self-hosted', 'codex'];
+        : ['self-hosted', 'codex'];
     const labels = runnerLabels(job['runs-on']);
-    if (expected.length === 1 ? labels[0] !== expected[0] : expected.some(label => !labels.includes(label))) {
+    if (JSON.stringify(labels) !== JSON.stringify(expected)) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
+    }
+    assertIsolatedPnpm(relativeFile, jobId, job);
+    if (relativeFile === '.github/workflows/ci_check.yml') {
+      const diffStep = (job.steps ?? []).find(step => step?.name === 'Validate Git diff');
+      if (!diffStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`)) {
+        throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
+      }
     }
   }
 }
@@ -278,14 +407,12 @@ function assertAgentInstallationPrerequisites(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const steps = job.steps ?? [];
-    const targetIndex = manifestFile === 'agent-cli-provisioning.yml'
-      ? steps.findIndex(step => step?.name === 'Verify selected CLI binary and headless contract')
-      : steps.findIndex(isCopilotAction);
-    if (targetIndex < 0) continue;
-    const setupIndex = steps.findIndex(step => step?.uses === SETUP_NODE_ACTION
-      && step?.with?.['node-version'] === '24.x');
-    if (setupIndex < 0 || setupIndex >= targetIndex) {
-      throw new Error(`${relativeFile} job ${jobId} must set up Node.js 24 before pinned agent installation can run.`);
+    for (const step of steps) {
+      if (/^(?:actions\/setup-node|pnpm\/action-setup)@/u.test(String(step?.uses ?? ''))
+        || /\b(?:npm|pnpm|npx)\s+(?:install|add|ci|i)\b/u.test(String(step?.run ?? ''))
+        || Object.hasOwn(step?.env ?? {}, 'AGENT_PROVISIONING')) {
+        throw new Error(`${relativeFile} job ${jobId} must use standalone official agent installation without Node/package-manager setup.`);
+      }
     }
   }
 }
@@ -993,6 +1120,25 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
   }
 }
 
+function assertPortableRunShell(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const isCodexRunner = relativeFile.startsWith('.github/workflows/')
+      && runnerLabels(job['runs-on']).includes('codex');
+    const isDistributedReviewRange = relativeFile === 'setup/workflows/copilot_commit.yml'
+      || relativeFile === 'setup/workflows/copilot_pull_request.yml';
+    const isSetupPlatformSmoke = relativeFile === '.github/workflows/setup_platform_smoke.yml';
+    if (!isCodexRunner && !isDistributedReviewRange && !isSetupPlatformSmoke) continue;
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      if (typeof step?.run !== 'string') continue;
+      const shell = step.shell ?? job.defaults?.run?.shell ?? workflow.defaults?.run?.shell;
+      if (shell !== 'bash') {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} must select shell: bash for portable run execution.`);
+      }
+    }
+  }
+}
+
 function assertSequentialMutationWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!QUEUE_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) return;
@@ -1017,6 +1163,7 @@ function validateWorkflow(file, workflow) {
   assertApprovalObserverWorkflow(file, workflow);
   assertPullRequestMergeQueueWorkflow(file, workflow);
   assertRunner(file, workflow);
+  assertPortableRunShell(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
   assertRepositoryLocaleInputs(file, workflow);
@@ -1089,6 +1236,7 @@ module.exports = {
   assertQueueWorkflow,
   assertIncrementalRangeFetch,
   assertRunner,
+  assertPortableRunShell,
   assertSequentialMutationWorkflow,
   assertDeploymentContinuationWorkflow,
   assertMergeQueueWorkflowSupport,

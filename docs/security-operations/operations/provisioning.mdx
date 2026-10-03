@@ -1,6 +1,6 @@
 ---
 title: CLI provisioning
-description: Pinned installation and verification of the selected agent CLI.
+description: Reuse a selected CLI or install it from its official source.
 ---
 # CLI provisioning
 
@@ -10,19 +10,4 @@ Vite development server, download browser assets, or provision an agent CLI.
 If the browser opener is unavailable, use the loopback URL printed in the
 terminal. The default `copilot setup` remains a fully terminal-driven path.
 
-When running in GitHub Actions, the Action provisions and verifies only the
-selected runtime. `AGENT_PROVISIONING=auto` reuses any available operator-owned
-executable without replacing it. If the default Codex or OpenCode executable is
-missing, the Action installs the manifest-owned package through the runner's
-system `npm` and validates that new installation exactly. An explicit executable
-is never installed or replaced. Cursor must be preinstalled because Copilot has
-no reviewed automatic installer for it. The Action never uses `npx`, Yarn,
-Bun, a floating tag, or an unpinned installer.
-
-| Runtime | Provisioning source | Required pin |
-| --- | --- | --- |
-| OpenCode | `opencode-ai@1.18.3` through runner `npm` | Manifest `1.18.3` |
-| Codex | `@openai/codex@0.156.1` through runner `npm` | Manifest `codex-cli 0.156.1` |
-| Cursor | Controlled runner image | No automatic installation |
-
-Provisioning failure is terminal. The Action MUST NOT install another runtime as a fallback.
+When running in GitHub Actions, the Action reuses an available selected CLI. If the default command is missing, it installs only the selected provider from its official standalone source into a private job directory. An explicit executable path is never installed or replaced. The installed CLI must report a non-empty version and pass the normal guarded preflight. The Action does not pin an exact CLI version or require npm, pnpm, or `actions/setup-node` in agent workflows. Installation failure is terminal; it never falls back to another provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).

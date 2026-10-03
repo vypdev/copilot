@@ -1,121 +1,38 @@
 ---
 title: Agent CLI provisioning
-description: Reuse operator runtimes or provision pinned OpenCode and Codex CLI packages for Copilot AI features.
+description: Reuse a selected agent CLI or privately use a newer official release when available.
 ---
 
 # Agent CLI provisioning
 
-The Action executes external provider-specific CLIs. It does not embed agent SDKs, start an HTTP server, copy authentication files, or fall back to another provider.
+The Action runs one selected external CLI. If its default executable is already available, the Action checks its version against the provider's current official release. When a newer stable release is confirmed, it installs that release into a private directory and uses it for this job. If the release cannot be checked, it uses the installed CLI. If the default command is absent, it installs only that provider's official CLI privately. A custom `agent-executable` must already exist and is always used as selected. No runner installation or persistent PATH is modified. Every selected CLI must report a non-empty version and pass the guarded executable and command checks before an agent task runs.
 
-## Supported runtimes
+| Runtime | Default command | Official source when missing |
+| --- | --- | --- |
+| Codex | `codex` | [OpenAI standalone installer](https://learn.chatgpt.com/docs/codex/cli), Unix shell or Windows PowerShell |
+| OpenCode | `opencode` | [OpenCode installer](https://opencode.ai/docs) on Unix; official GitHub release archive on Windows |
+| Cursor | `agent` | [Cursor CLI installer](https://cursor.com/docs/cli/installation) on Unix; official Cursor archive described by its Windows installer |
 
-| Runtime | Binary | Invocation | Credential reference |
-| --- | --- | --- | --- |
-| OpenCode | `opencode` | `opencode run --pure --agent managed-role --format json --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex` | `codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox mode --model model ... -` | `OPENAI_API_KEY`, `CODEX_API_KEY`, or controlled local session |
-| Cursor | `agent` | `agent -p --output-format text --sandbox enabled --model model [--mode ask\|--force] <prompt>` | `CURSOR_API_KEY` |
+The six distributed agent workflows do not run `actions/setup-node`, pnpm, or npm. GitHub Actions supplies the Node runtime for the bundled JavaScript Action. Development, CI, documentation, and package workflows still use their own Node toolchain. The provider installers receive a minimal environment without GitHub tokens or model credentials. The Action does not run unselected installers or send prompts through an installer.
 
-## Runtime ownership and installation manifest
+Installer downloads and Unix shells use fixed system executable paths. Installer children receive a system-only `PATH`, so a workflow-added directory cannot replace `curl`, `sh`, `bash`, or a helper called by an official installer. On Windows the supported system tool root is `C:\Windows`; other system installations fail closed until reviewed.
 
-The manifest records reviewed known-good runtime identities and the exact
-package recipe Copilot may install:
+Direct downloads are bounded before any bytes are written to disk: installer scripts to 1 MiB, release metadata to 2 MiB, and archives to 256 MiB. An empty, oversized, or failed transfer leaves no partial installer artifact. The official installer may perform its own further downloads after its script starts; those remain under that provider's installer behavior.
 
-```text
-Codex CLI: codex-cli 0.156.1
-OpenCode: 1.18.3
-Cursor Agent: 2026.09.10-fd3934a
-AGENT_PROVISIONING=auto
-```
+On Windows, a native provider executable runs directly. The Cursor PowerShell installer normally changes the user PATH and replaces a user installation; the Action instead reads its official download address and extracts the official archive inside the private job directory. OpenCode likewise uses its official release archive. Existing npm `.cmd` wrappers remain supported only when their package entrypoint and a separate trusted Node executable pass the read-only ACL checks, including their containing directories and ancestors. Agent arguments and prompts never go through `cmd.exe`.
 
-The selected provider is prepared only when needed. In the recommended `auto`
-mode, an available default executable is operator-owned: Copilot records its
-non-empty `--version` identity and does not reinstall it. A missing default
-Codex/OpenCode executable is installed from the exact pinned package and the
-new installation must report the reviewed identity. Set `always` to reinstall a
-default Codex/OpenCode executable from the pinned package, or `disabled` to
-require the runner image. Any explicitly selected executable is operator-owned
-in every mode and is never installed or replaced. Repository Variables cannot
-replace, widen, or float the installation recipe.
+No exact CLI version is pinned by the Action. The reviewed identities in the manifest are historical smoke baselines, not installation requirements. The update check uses the [Codex stable release channel](https://releases.openai.com/codex/channels/latest), [OpenCode releases](https://github.com/anomalyco/opencode/releases/latest), or the [Cursor platform installer](https://cursor.com/install). A version that cannot be compared is kept as installed; a failed confirmed update blocks the task before execution. The Action never retries an already-started agent task with a different CLI. Provider self-update commands are not used because they can change the runner's persistent installation or invoke its original package manager.
 
-## Approved installation methods
+Presence and `--version` do not prove the selected model or account works; operators must verify those separately with an authorized smoke run. A missing credential, unsafe executable, unsupported command surface, or failed installation stops the selected task without switching providers. Process exit diagnostics expose only fixed categories such as reported model or authentication failure; raw provider stderr remains suppressed because it may contain secrets.
 
-Codex and OpenCode are installed with the pinned package versions using the runner's system `npm`. This avoids depending on a Corepack/pnpm binary on the runner (including the Intel macOS SEA failure mode):
+Older setups may retain an `AGENT_PROVISIONING` repository Variable. The current Action ignores it; it can be removed during normal configuration cleanup. The setup assistant no longer offers that choice.
 
-```bash
-npm install --global "@openai/codex@0.156.1"
-npm install --global "opencode-ai@1.18.3"
-```
+## Credential scope
 
-Cursor automatic installation is unsupported because there is no reviewed,
-reproducible package recipe. Preinstall a compatible Cursor Agent on the
-controlled runner; do not substitute an unofficial npm package.
+Map the selected provider credential only on the Copilot Action step. The Action never copies local OAuth files to a hosted runner. A controlled self-hosted Codex session can be used where its owner authorizes it; otherwise supply the relevant Secret. Do not put tokens in action inputs, command arguments, prompts, repository files, or logs.
 
-Do not use `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
+## Read-only verification
 
-## Copilot action step environment
+From the repository root, `node scripts/verify-agent-clis.cjs` checks executable availability, help, version, and sanitized credential state. A help or version check does not send a model request. On Windows it validates native binaries or safely resolves an existing npm shim without invoking `cmd.exe`.
 
-```yaml
-env:
-  AGENT_PROVISIONING: ${{ vars.AGENT_PROVISIONING || 'auto' }}
-  OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
-  CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-```
-
-Map these values only on the Copilot action step, never at workflow or job scope. The Action does not require every secret. Only the credential for the selected runtime/model provider should be supplied, and Codex needs none of these environment values when a controlled runner already passes `codex login status`. Never expose a local OpenCode or Codex OAuth file to a GitHub-hosted runner.
-
-## Recommended model policy
-
-```yaml
-with:
-  agent-provider: codex
-  agent-model-provider: openai
-  agent-model: gpt-6-luna
-env:
-  AGENT_ALLOWED_MODEL_PROVIDERS: openai
-  AGENT_ALLOWED_MODELS: openai/gpt-6-luna
-```
-
-The managed Codex shape includes:
-
-```text
-codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-6-luna --config 'model_provider="openai"' -
-```
-
-The allowlists are authorization policy, not credentials and not model selectors. A rejected provider/model is a terminal failure.
-
-## Verification
-
-From the repository root:
-
-```bash
-node scripts/verify-agent-clis.cjs
-```
-
-The verifier never prints secret values. It checks executable availability, headless help, and sanitized credential state. A real smoke test may incur provider usage and must be explicitly authorized with an appropriate cost limit.
-For the `gpt-6-luna` default, verify the *actual runner binary* reports
-`codex-cli 0.156.1` (or a separately approved compatible version) and run a
-minimal model request using the same credential as the Action. Codex CLI
-`0.153.4` fails this model smoke even though the CLI itself starts. If `auto`
-reuses that older operator-owned binary, upgrade the runner explicitly or use
-`AGENT_PROVISIONING=always` to install the reviewed pin; do not interpret the
-CLI's presence or a generic credential check as model compatibility.
-
-For Codex authentication modes and account restrictions, see [Codex authentication and compliance](/security-operations/security/authentication-compliance). For the configuration contract, see [Agent CLI configuration](/agents/cli-configuration).
-
-## Reviewed development baseline
-
-The current known-good smoke baseline is:
-
-```text
-Codex CLI: codex-cli 0.156.1
-OpenCode: 1.18.3
-Cursor Agent: 2026.09.10-fd3934a
-```
-
-Changing a pinned installation is a reviewed code change to the manifest,
-provider fixtures, provisioning, automated checks, documentation, and
-authenticated smoke evidence. A newer operator-owned runtime is not silently
-downgraded; verify its fixed command surface with the safe checks above before
-production use.
+Windows agent support remains open until isolated hosted and self-hosted fixture jobs pass and the runner owner reviews ACLs, private artifact cleanup, cancellation, and the intended model/account. Do not use a credential-bearing test dispatch without authorization. See [Agent CLI runners](/security-operations/operations/cli-runners) and [Runtime selection](/agents/runtime-selection).

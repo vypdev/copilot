@@ -142,11 +142,16 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   async confirmUnverifiableTokenPermissions(report: SetupTokenPermissionReport): Promise<boolean> {
     const permissions = report.checks
       .filter(check => check.applicability === 'required'
-        && check.level === 'write'
-        && check.status === 'unverifiable')
+        && check.status === 'unverifiable'
+        && (check.level === 'write' || (check.scope === 'organization'
+          && check.permission === 'Projects' && check.level === 'read'
+          && check.publicReadEvidence === 'public-organization-projects')))
       .map(check => `${check.permission} ${check.level} (${check.scope})`);
     if (!report.confirmationRequired || permissions.length === 0) return false;
-    if (this.confirmUnverifiableWritePermissions) {
+    const needsProjectReadAttestation = report.checks.some(check => check.applicability === 'required'
+      && check.permission === 'Projects' && check.level === 'read'
+      && check.publicReadEvidence === 'public-organization-projects');
+    if (this.confirmUnverifiableWritePermissions && !needsProjectReadAttestation) {
       console.log(renderBox(
         `Explicit acknowledgement received for: ${permissions.join(', ')}. These permissions remain Unverifiable; no test mutation was performed.`,
         'Write permission acknowledgement',
@@ -157,7 +162,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     if (!this.terminal) return false;
     while (true) {
       const result = await this.terminal.readText([
-        'GitHub cannot safely prove these write permissions without a mutation:',
+        'GitHub could not prove these required PAT grants. Check them in GitHub:',
         ...permissions.map(permission => `  - ${permission}`),
         `Confirm that the PAT was configured exactly as shown above? ${color('[N]', 90)}: `,
       ].join('\n'));

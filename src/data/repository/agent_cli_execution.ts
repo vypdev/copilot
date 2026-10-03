@@ -1,10 +1,14 @@
 import { createHash } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync, rmSync, statSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
+import { classifyAgentCliExitDiagnostic } from './agent_cli_exit_diagnostic';
+import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
+import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
+import { trustedWindowsSystemTool } from '../../infrastructure/agents/agent_trusted_system_tools';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -22,15 +26,14 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
             reject(error instanceof AgentCliError ? error : new AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
-        let cleaned = false;
-        const cleanup = () => {
-            if (cleaned) return;
-            cleaned = true;
-            cleanupRuntimeDirectory(runtimeDirectory);
-        };
+        const cleanup = () => cleanupRuntimeDirectory(runtimeDirectory);
         const child = (() => {
             try {
-                return spawn(plan.executable, plan.promptMode === 'final-argv' ? [...plan.argv, prompt] : plan.argv, {
+                return spawn(plan.executable, [
+                    ...(plan.launcherArgv || []),
+                    ...plan.argv,
+                    ...(plan.promptMode === 'final-argv' ? [prompt] : []),
+                ], {
                     cwd: plan.workspace,
                     env: plan.environment,
                     stdio: ['pipe', 'pipe', 'pipe'],
@@ -71,6 +74,7 @@ export function createAgentProcessLifecycle(
 ) {
     const stdoutChunks: Buffer[] = [];
     let stderrBytes = 0;
+    const stderrChunks: Buffer[] = [];
     let outputBytes = 0;
     let settled = false;
     let terminationError: Error | undefined;
@@ -121,7 +125,11 @@ export function createAgentProcessLifecycle(
             beginTermination(new AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
+        if (stderrBytes < MAX_STDERR_BYTES) {
+            const retained = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+            stderrChunks.push(retained);
+            stderrBytes += retained.byteLength;
+        }
     };
     const onStdinError = () => beginTermination(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new AgentCliError('Unable to start agent CLI.', 'process'));
@@ -132,7 +140,10 @@ export function createAgentProcessLifecycle(
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
+            const exitDiagnostic = stderrBytes > 0
+                ? classifyAgentCliExitDiagnostic(Buffer.concat(stderrChunks).toString('utf8'))
+                : undefined;
+            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
         }
         try {
@@ -197,16 +208,37 @@ function verifyOwnedRuntimeDirectory(requestedPath: string): string {
         || dirname(runtimeDirectory) !== expectedParent
         || !/^copilot-agent-runtime-[A-Za-z0-9_-]{6}$/u.test(name)
         || !stats.isDirectory()
-        || (stats.mode & 0o077) !== 0) {
+        || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
         throw new Error('Managed runtime directory is not an owned private execution directory.');
     }
     if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
         throw new Error('Managed runtime directory has an unexpected owner.');
     }
+    verifyWindowsRuntimePathPrivate(runtimeDirectory, true);
     return runtimeDirectory;
 }
 
 function verifyAdmittedPlan(plan: AgentExecutionPlan, runtimeDirectory: string): void {
+    if (process.platform === 'win32' && !/\.exe$/iu.test(plan.executable)) {
+        throw new Error('Windows command wrappers cannot execute an admitted agent plan.');
+    }
+    if (plan.launcherArgv?.length) {
+        if (plan.launcherArgv.length !== 1
+            || (process.platform !== 'win32' && plan.executable !== process.execPath)
+            || !isAbsolute(plan.executable)
+            || !isAbsolute(plan.launcherArgv[0]) || !plan.launcherSha256) {
+            throw new Error('Managed agent launcher is invalid.');
+        }
+        if (process.platform === 'win32') verifyWindowsLauncherTrust(plan.executable, plan.launcherArgv[0]);
+        const launcher = realpathSync(plan.launcherArgv[0]);
+        if (launcher !== plan.launcherArgv[0]
+            || !statSync(launcher).isFile()
+            || createHash('sha256').update(readFileSync(launcher)).digest('hex') !== plan.launcherSha256) {
+            throw new Error('Managed agent launcher changed after preflight.');
+        }
+    } else if (plan.launcherSha256) {
+        throw new Error('Managed agent launcher hash has no launcher.');
+    }
     for (const artifact of plan.artifacts) {
         const path = realpathSync(artifact.path);
         const relation = relative(runtimeDirectory, path);
@@ -217,10 +249,26 @@ function verifyAdmittedPlan(plan: AgentExecutionPlan, runtimeDirectory: string):
             throw new Error('Managed artifact escaped its runtime directory.');
         }
         const stats = statSync(path);
-        if (!stats.isFile() || (stats.mode & 0o077) !== 0) throw new Error('Managed artifact permissions changed.');
+        if (!stats.isFile() || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
+            throw new Error('Managed artifact permissions changed.');
+        }
+        verifyWindowsRuntimePathPrivate(path, false);
         const actual = createHash('sha256').update(readFileSync(path)).digest('hex');
         if (actual !== artifact.sha256) throw new Error('Managed artifact hash changed.');
     }
+}
+
+/** Recheck a separate Windows interpreter and package entrypoint immediately before spawn. */
+export function verifyWindowsLauncherTrust(
+    executable: string,
+    launcher: string,
+    validate: (path: string) => void = validateAgentExecutableFile,
+): void {
+    if (realpathSync(executable) !== executable) {
+        throw new Error('Managed agent interpreter changed after preflight.');
+    }
+    validate(executable);
+    validate(launcher);
 }
 
 function cleanupRuntimeDirectory(runtimeDirectory: string): void {
@@ -229,12 +277,17 @@ function cleanupRuntimeDirectory(runtimeDirectory: string): void {
 
 function signalProcessTree(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {
     try {
-        if (process.platform !== 'win32' && child.pid) {
+        if (process.platform === 'win32' && child.pid) {
+            execFileSync(trustedWindowsSystemTool('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+                stdio: 'ignore', timeout: 5_000, windowsHide: true,
+            });
+        } else if (child.pid) {
             process.kill(-child.pid, signal);
         } else {
             child.kill(signal);
         }
     } catch {
         // The process may have exited between the lifecycle check and signal.
+        try { child.kill(signal); } catch { /* Already exited. */ }
     }
 }

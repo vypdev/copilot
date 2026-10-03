@@ -24,7 +24,7 @@ export type SetupQuestionPresentation = Readonly<Record<'en' | 'es' | 'fr' | 'pt
 export type WebSetupPromptCopyId =
   | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
   | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setupPat.entry'
-  | 'setupPat.confirmAccount' | 'setupPat.confirmWrites' | 'botPat.method' | 'botPat.login'
+  | 'setupPat.confirmAccount' | 'setupPat.confirmUnverifiedAccess' | 'botPat.method' | 'botPat.login'
   | 'botPat.entry.guided' | 'botPat.entry.manual' | 'credential.apiKey'
   | 'credential.existing' | 'apply.confirm';
 
@@ -103,6 +103,6 @@ export interface WebSetupView {
     readonly stoppedStage: string;
     readonly mutationStarted: boolean;
     readonly diagnosticRef?: string;
-    readonly effects?: readonly { readonly id: string; readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started'; readonly scope?: 'local' | 'repository' | 'organization' | 'mixed' }[];
+    readonly effects?: readonly { readonly id: string; readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started' | 'in-progress'; readonly scope?: 'local' | 'repository' | 'organization' | 'mixed' }[];
   };
 }

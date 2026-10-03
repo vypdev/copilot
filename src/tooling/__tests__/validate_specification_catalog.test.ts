@@ -24,6 +24,7 @@ interface Catalog {
 interface CatalogValidator {
   readCatalog(root: string): Catalog;
   renderCatalog(catalog: Catalog): string;
+  normalizeCheckoutLineEndings(content: string, platform?: string): string;
   validateCatalog(root: string, catalog: Catalog): string[];
   isSafeRelativePath(value: unknown): boolean;
   isIsoDate(value: unknown): boolean;
@@ -42,10 +43,16 @@ describe('specification catalog validator', () => {
     expect(validator.validateCatalog(root, cloneCatalog())).toEqual([]);
   });
 
-  it('keeps the human catalog byte-for-byte generated from metadata', () => {
+  it('keeps the human catalog equivalent to metadata across checkout line endings', () => {
     const catalog = cloneCatalog();
-    expect(readFileSync(path.join(root, 'specs/CATALOG.md'), 'utf8'))
+    expect(validator.normalizeCheckoutLineEndings(readFileSync(path.join(root, 'specs/CATALOG.md'), 'utf8')))
       .toBe(validator.renderCatalog(catalog));
+  });
+
+  it('normalizes only Windows checkout line endings', () => {
+    expect(validator.normalizeCheckoutLineEndings('first\r\nsecond\r\n', 'win32')).toBe('first\nsecond\n');
+    expect(validator.normalizeCheckoutLineEndings('first\r\nsecond\r\n', 'linux')).toBe('first\r\nsecond\r\n');
+    expect(validator.normalizeCheckoutLineEndings('changed\r\n', 'win32')).not.toBe('original\n');
   });
 
   it('rejects duplicate capability ownership and duplicate specification ownership', () => {

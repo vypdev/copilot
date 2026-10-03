@@ -288,7 +288,7 @@ describe('mainRun', () => {
     expect(Object.isFrozen(context)).toBe(true);
     expect(Object.isFrozen(context.branches)).toBe(true);
     expect(logger.clearAccumulatedLogs).toHaveBeenCalledTimes(1);
-    expect(createMainRunRouteCompositionRoot).toHaveBeenCalledWith(projectBoardCommandPort, 'github-workflow');
+    expect(createMainRunRouteCompositionRoot).toHaveBeenCalledWith(projectBoardCommandPort, 'github-workflow', undefined);
   });
 
   it('rejects an execution without repository context before calling use cases', async () => {

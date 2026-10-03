@@ -44,20 +44,7 @@ Copilot never prints, copies, or serializes token values. With no exported crede
 
 ## Provisioning
 
-GitHub Actions provisioning treats a preinitialized `codex` executable as
-operator-owned: its non-empty version identity is recorded and the Action does
-not replace it. If the default executable is missing, `auto` installs the exact
-manifest package and validates that new installation:
-
-```text
-@openai/codex@0.156.1
-```
-
-The approved package installation shape is:
-
-```bash
-npm install --global "@openai/codex@0.156.1"
-```
+GitHub Actions reuses an available `codex` executable. If the default command is missing, the Action runs the [official OpenAI standalone installer](https://learn.chatgpt.com/docs/codex/cli) in a private job directory, without npm or pnpm. It does not require an exact version; the resulting CLI must report a non-empty version and pass the normal guarded preflight. An explicit executable path is never replaced.
 
 Verify the executable before a real request:
 

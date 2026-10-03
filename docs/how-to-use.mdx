@@ -31,12 +31,15 @@ For local development or when testing an unreleased checkout, install from the r
 ```bash
 git clone https://github.com/vypdev/copilot.git
 cd copilot
-corepack pnpm install . --global
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
-If the checkout does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
+If the checkout does not include the compiled `build/` folder, run `corepack pnpm install` and `corepack pnpm run build` before packing. The tarball can be removed after installation. Packing the checkout avoids silently retaining a different global package with the same version.
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
+
+The target must be a working checkout. A bare Git repository has no files for setup or doctor to inspect and is rejected.
 
 Prefer a visual walkthrough? Run `copilot setup --web` from the repository
 root on an attached Git branch. A detached HEAD is rejected before credentials
@@ -68,6 +71,11 @@ already deleted the setup PAT in GitHub, run `copilot doctor --read-only`
 with a valid setup PAT instead. A failed or partial Apply does
 not offer this button: inspect the itemized result and use the CLI command
 after resolving the uncertain resources.
+While Apply runs, the page reports each resource as in progress and then as
+completed, skipped, or needing inspection. If the process stops mid-write,
+the operation may already have reached GitHub; inspect that resource before
+starting a new setup session. A new process always requires a fresh review
+and approval.
 The language selector starts in English and offers Spanish, French, and
 Portuguese. Switching language does not change the repository locale or reset
 your answers. Question headings, explanations, options, permission details,
@@ -274,7 +282,8 @@ For an unreleased checkout, update the checkout and reinstall the local package 
 ```bash
 cd /path/to/copilot
 git pull --ff-only origin master
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 After installation, confirm the executable and installed package:
@@ -341,7 +350,7 @@ The complete command reference, including every supported option, is in [Workflo
     - **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
     - **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
 
-    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. Change every agent workflow, including `agent-cli-provisioning.yml`, to the same runner labels used by your infrastructure. This repository's active dogfooding workflows use `runs-on: [self-hosted, codex]` because its Codex runner is pre-initialized; that is an internal optimization, not a requirement for consumers.
+    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. Change every agent workflow, including `agent-cli-provisioning.yml`, to the same runner labels used by your infrastructure. This repository's Action workflows use `runs-on: [self-hosted, codex]`; the Windows agent runtime gate remains open until an assigned run passes the executable ACL and isolated runtime checks. These labels are an internal runner policy, not a requirement for consumers.
 
     **Optional but keep coherence:**
     - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
@@ -552,7 +561,7 @@ package.
 
 The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
 reported identities, and non-interactive help commands without making a paid model request. Runtime
-installation itself validates the pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
+installation checks the selected CLI from its official source without pinning an exact version. The `copilot_credential_health.yml` workflow is
 read-only with respect to repository configuration: it executes provider-specific
 health checks and reports only whether each requested credential is usable. GitHub
 does not expose Secret values through its API, so `copilot doctor` dispatches this

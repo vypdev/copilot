@@ -419,7 +419,6 @@ function bugbotQuestions(): QuestionDefinition[] {
     { stateId: 'bugbot', id: 'ai.bugbotTelemetry', label: 'Emit content-free Bugbot telemetry?', kind: 'boolean' },
     { stateId: 'bugbot', id: 'ai.bugbotFailOnUnresolved', label: 'Fail the workflow check while findings remain unresolved?', kind: 'boolean' },
     { stateId: 'bugbot', id: 'ai.bugbotOrganizationRules', label: 'Organization Bugbot rules (newline-separated)', kind: 'text' },
-    { stateId: 'bugbot', id: 'ai.provisioningMode', label: 'Agent CLI provisioning mode', kind: 'choice', choices: ['auto', 'always', 'disabled'] },
   ];
 }
 

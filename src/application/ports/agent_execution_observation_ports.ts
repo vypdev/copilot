@@ -15,6 +15,29 @@ export type AgentExecutionSemanticCode =
     | 'timeout'
     | 'workflow.cancelled';
 
+/** Closed stage identity; no executable path or provider output is admitted. */
+export type AgentExecutionPreflightStage =
+    | 'workspace' | 'ambient-configuration' | 'manifest' | 'selection'
+    | 'resolution' | 'invocation-trust' | 'environment' | 'version'
+    | 'artifacts' | 'policy';
+
+/** Fixed Windows executable trust reason; raw ACLs and paths stay local. */
+export type AgentExecutionPreflightDiagnostic =
+    | 'acl-file-owner' | 'acl-ancestor-owner' | 'acl-writable'
+    | 'acl-format-batch' | 'acl-format-dacl' | 'acl-format-flags'
+    | 'acl-format-ace' | 'acl-format-rights'
+    | 'acl-query-timeout' | 'acl-query-failed'
+    | 'acl-identity' | 'acl-unavailable';
+
+/** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+export type AgentExecutionExitDiagnostic =
+    | 'reported-authentication'
+    | 'reported-model-unavailable'
+    | 'reported-unsupported-option'
+    | 'reported-unsupported-configuration'
+    | 'reported-transport-or-rate-limit'
+    | 'unclassified';
+
 interface AgentExecutionIdentityObservation {
     readonly provider: AgentProvider;
     readonly capability: AgentCapability;
@@ -46,8 +69,12 @@ export type AgentExecutionObservation =
         readonly phase: 'preflight' | 'run';
         readonly durationMilliseconds: number;
         readonly failureCategory: AgentExecutionFailureCategory;
+        readonly preflightStage?: AgentExecutionPreflightStage;
+        readonly preflightDiagnostic?: AgentExecutionPreflightDiagnostic;
         readonly semanticCode: AgentExecutionSemanticCode;
         readonly retryable: boolean;
+        readonly exitCode?: number;
+        readonly exitDiagnostic?: AgentExecutionExitDiagnostic;
     });
 
 /** Receives bounded execution facts only; prompts, output, argv, paths, and environment are excluded by type. */

@@ -7,12 +7,16 @@ import { acquireSetupSessionGuard } from '../setup_session_guard';
 
 describe('setup session guard', () => {
   let root: string;
+  let canonicalRepository: string;
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'copilot-setup-guard-'));
     execFileSync('git', ['init', '-q', root]);
+    canonicalRepository = realpathSync(execFileSync('git', ['-C', root, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim());
     mkdirSync(join(root, 'nested'));
   });
-  const lockPath = () => join(tmpdir(), `copilot-setup-${createHash('sha256').update(realpathSync(root)).digest('hex').slice(0, 32)}.lock`);
+  // Git may report a different spelling of the same Windows checkout path.
+  // Seed the exact canonical path used by acquireSetupSessionGuard.
+  const lockPath = () => join(tmpdir(), `copilot-setup-${createHash('sha256').update(canonicalRepository).digest('hex').slice(0, 32)}.lock`);
   afterEach(() => {
     const lock = lockPath();
     if (existsSync(lock)) unlinkSync(lock);
@@ -32,7 +36,7 @@ describe('setup session guard', () => {
   });
 
   test('fails closed on a verified dead owner until the operator removes its exact lock', () => {
-    const oldRecord = JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: realpathSync(root) });
+    const oldRecord = JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: canonicalRepository });
     writeFileSync(lockPath(), oldRecord);
     expect(() => acquireSetupSessionGuard(root)).toThrow(`remove only that file manually`);
     expect(readFileSync(lockPath(), 'utf8')).toBe(oldRecord);
@@ -43,8 +47,8 @@ describe('setup session guard', () => {
   });
 
   test('a replacement lock is never unlinked after a stale-owner probe', () => {
-    writeFileSync(lockPath(), JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: realpathSync(root) }));
-    const newRecord = JSON.stringify({ pid: process.pid, nonce: 'new-owner', repository: realpathSync(root) });
+    writeFileSync(lockPath(), JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: canonicalRepository }));
+    const newRecord = JSON.stringify({ pid: process.pid, nonce: 'new-owner', repository: canonicalRepository });
     const probe = jest.spyOn(process, 'kill').mockImplementationOnce(() => {
       unlinkSync(lockPath());
       writeFileSync(lockPath(), newRecord); // Another process won the race after our read.
