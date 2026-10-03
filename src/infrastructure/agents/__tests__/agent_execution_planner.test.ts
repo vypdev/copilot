@@ -39,11 +39,12 @@ describe('AgentExecutionPlanner', () => {
         if (systemFixtureDirectory) rmSync(systemFixtureDirectory, { recursive: true, force: true });
     });
 
-    windowsIt('preflights a reviewed local npm shim through PATH and an absolute selection', () => {
+    windowsIt('preflights a PATH shim and native absolute binary but rejects an explicit command shim', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-windows-system-'));
         const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
         const shim = join(directory, 'codex.cmd');
         const node = join(directory, 'node.exe');
+        const native = join(directory, 'codex.exe');
         const runtimeDirectories: string[] = [];
         mkdirSync(join(packageRoot, 'bin'), { recursive: true });
         writeFileSync(shim, '@echo off\r\n');
@@ -70,13 +71,23 @@ describe('AgentExecutionPlanner', () => {
             expect(byPath.runtimeContract.version).toBe(version);
             expect(byPath.workspace).toBe(realpathSync(process.cwd()));
 
-            const absolute = planner.prepare({
-                configuration: { provider: 'codex', model: 'model', executable: shim }, capability: 'findings',
+            copyFileSync(process.execPath, native);
+            makeWindowsRuntimePathPrivate(native, false);
+            const absoluteNative = planner.prepare({
+                configuration: { provider: 'codex', model: 'model', executable: native }, capability: 'findings',
                 prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
                 environment: { PATH: directory, PATHEXT: '.EXE;.CMD' },
             });
-            runtimeDirectories.push(absolute.runtimeDirectory);
-            expect(absolute.launcherArgv).toEqual(byPath.launcherArgv);
+            runtimeDirectories.push(absoluteNative.runtimeDirectory);
+            expect(absoluteNative.executable.toLowerCase()).toBe(realpathSync(native).toLowerCase());
+            expect(absoluteNative.launcherArgv).toEqual([]);
+            expect(absoluteNative.runtimeContract.version).toBeTruthy();
+
+            expect(() => planner.prepare({
+                configuration: { provider: 'codex', model: 'model', executable: shim }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),
+                environment: { PATH: directory, PATHEXT: '.EXE;.CMD' },
+            })).toThrow('local runtime contract could not be validated');
             expect(() => planner.prepare({
                 configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
                 prompt: 'fixture', timeoutMs: 1_000, cwd: process.cwd(),

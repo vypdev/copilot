@@ -314,6 +314,10 @@ or prompts. An explicit absolute Windows executable selection ending in
 `.cmd` MUST fail at the configuration boundary, while the provider's exact
 native `.exe` basename remains admissible; package-shim inspection is an
 internal launcher resolution path, not an operator-selected execution plan.
+The Windows planner fixture MUST prove all three paths: default PATH discovery
+can resolve a trusted npm shim to a native interpreter and package bin; an
+explicit native `.exe` can be admitted; and the same `.cmd` shim supplied
+explicitly is rejected before an execution plan is admitted.
 The Action MUST NOT use npm, pnpm, `npx`, or `actions/setup-node`
 to install agent CLIs on any platform. Its six distributed agent workflows
 run the JavaScript Action under the GitHub Actions runner's embedded Node;
