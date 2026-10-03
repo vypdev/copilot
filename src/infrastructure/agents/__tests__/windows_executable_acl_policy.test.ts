@@ -1,4 +1,4 @@
-import { assertWindowsExecutableDacl, assertWindowsExecutableParentDacl } from '../windows_executable_acl_policy';
+import { assertWindowsExecutableDacl, assertWindowsExecutableParentDacl, parseWindowsExecutableDescriptors } from '../windows_executable_acl_policy';
 
 const user = 'S-1-5-21-100-200-300-1001';
 const trustedInstaller = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
@@ -62,5 +62,17 @@ describe('installed Windows executable parent ACL policy', () => {
         'O:S-1-5-21-9-9-9-1001D:AI(A;;FR;;;BU)',
     ])('rejects a replaceable ancestor %s', sddl => {
         expect(() => checkParent(sddl)).toThrow();
+    });
+});
+
+describe('installed Windows executable descriptor batch', () => {
+    it('requires one complete descriptor per file or ancestor', () => {
+        expect(parseWindowsExecutableDescriptors('["O:SYD:(A;;FA;;;SY)","O:BAD:(A;;FR;;;BU)"]', 2))
+            .toHaveLength(2);
+        expect(() => parseWindowsExecutableDescriptors('["O:SYD:(A;;FA;;;SY)"]', 2))
+            .toThrow('Incomplete');
+        expect(() => parseWindowsExecutableDescriptors('["O:SYD:(A;;FA;;;SY)",""]', 2))
+            .toThrow('Incomplete');
+        expect(() => parseWindowsExecutableDescriptors('not json', 2)).toThrow();
     });
 });

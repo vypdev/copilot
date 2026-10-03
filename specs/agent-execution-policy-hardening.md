@@ -272,6 +272,10 @@ untrusted parent owner or replacement grant.
 The SDDL `LC` right is accepted only on a directory ancestor, where it does
 not grant deletion or replacement of an existing component. It remains
 unrecognized on an executable file. Fixture tests must prove both decisions.
+The installed file and all of its ancestors are read in one bounded,
+read-only Windows PowerShell invocation. An incomplete or malformed batch
+fails closed, and execution/timeout/cancellation fixtures must finish within
+their existing 15-second Jest deadline on hosted and service Windows runners.
 The installed-file check reads a full Windows security descriptor; the
 managed-artifact `icacls /save` snapshot contains only the DACL and is not
 owner evidence for an installed executable.

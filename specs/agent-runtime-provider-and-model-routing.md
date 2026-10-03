@@ -379,6 +379,11 @@ verify the exact SID and continue rejecting another owner or mutation grant.
 The system volume may grant SDDL `LC` to another principal. Ancestor checks
 admit that directory-only right without treating it as delete-child; file
 checks do not admit `LC`. The isolated Windows matrix must cover both cases.
+The file and ancestor descriptors MUST be collected by one bounded,
+read-only PowerShell process. A missing descriptor, changed count, malformed
+JSON response, or query failure blocks the run. The existing Windows
+execution, timeout, and cancellation fixtures must meet their 15-second Jest
+deadlines without increasing the admitted provider timeout.
 Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
 generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;

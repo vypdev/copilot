@@ -84747,16 +84747,29 @@ function currentWindowsUserIdentity() {
   return { sid, localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, hostname()) };
 }
 
-function installedExecutableDescriptor(path, directory = false) {
-  // icacls /save omits the owner; a read-only full descriptor is required.
-  const command = "$ErrorActionPreference='Stop'; [System.IO."
-    + (directory ? 'Directory' : 'File') + "]::GetAccessControl('"
-    + path.replace(/'/gu, "''")
-    + "').GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::All)";
-  return execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
+function parseWindowsExecutableDescriptors(output, expectedCount) {
+  const descriptors = JSON.parse(output);
+  if (!Array.isArray(descriptors) || descriptors.length !== expectedCount
+    || descriptors.some(descriptor => typeof descriptor !== 'string' || !descriptor)) {
+    throw new Error('Incomplete Windows executable ACL descriptor batch.');
+  }
+  return descriptors;
+}
+
+function installedExecutableDescriptors(paths) {
+  // icacls /save omits the owner; read full descriptors in one bounded process.
+  const literals = paths.map(path => `'${path.replace(/'/gu, "''")}'`).join(',');
+  const command = "$ErrorActionPreference='Stop'; $paths=@(" + literals + "); "
+    + '$sections=[System.Security.AccessControl.AccessControlSections]::All; $descriptors=@(); '
+    + '$descriptors += [System.IO.File]::GetAccessControl($paths[0]).GetSecurityDescriptorSddlForm($sections); '
+    + 'for($i=1;$i -lt $paths.Length;$i++){ '
+    + '$descriptors += [System.IO.Directory]::GetAccessControl($paths[$i]).GetSecurityDescriptorSddlForm($sections) }; '
+    + 'ConvertTo-Json -Compress -InputObject $descriptors';
+  const output = execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
     ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
-      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, maxBuffer: 1_048_576, windowsHide: true,
     }).replace(/^\uFEFF/u, '').trim();
+  return parseWindowsExecutableDescriptors(output, paths.length);
 }
 
 function grantsMutation(rights, directory = false) {
@@ -84817,17 +84830,22 @@ function assertWindowsExecutableParentDacl(sddl, userSid, localAdministrator) {
 function verifyWindowsAgentExecutableAcl(path) {
   const identity = currentWindowsUserIdentity();
   const canonical = realpathSync(path);
-  assertWindowsExecutableDacl(installedExecutableDescriptor(canonical), identity.sid, identity.localAdministrator);
+  const paths = [canonical];
   let parent = dirname(canonical);
   while (true) {
-    try {
-      assertWindowsExecutableParentDacl(installedExecutableDescriptor(parent, true), identity.sid, identity.localAdministrator);
-    } catch (error) {
-      throw new Error(`Unsafe Windows executable ancestor ${parent}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
-    }
+    paths.push(parent);
     const next = dirname(parent);
     if (next === parent) break;
     parent = next;
+  }
+  const descriptors = installedExecutableDescriptors(paths);
+  assertWindowsExecutableDacl(descriptors[0], identity.sid, identity.localAdministrator);
+  for (let index = 1; index < paths.length; index += 1) {
+    try {
+      assertWindowsExecutableParentDacl(descriptors[index], identity.sid, identity.localAdministrator);
+    } catch (error) {
+      throw new Error(`Unsafe Windows executable ancestor ${paths[index]}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
   }
 }
 
@@ -84836,6 +84854,7 @@ module.exports = {
   assertWindowsExecutableParentDacl,
   currentWindowsUserIdentity,
   isLocalWindowsAdministrator,
+  parseWindowsExecutableDescriptors,
   systemTool,
   verifyWindowsAgentExecutableAcl,
 };
