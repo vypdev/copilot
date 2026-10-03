@@ -84782,7 +84782,8 @@ function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, director
   const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
   if (localAdministrator) trusted.add('LA');
   const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
-  if (!owner || !trusted.has(owner) || !section) throw new Error('Unsafe executable ACL owner or DACL.');
+  if (!owner || !trusted.has(owner)) throw new Error(`Unsafe executable ACL owner (${owner || 'missing'}).`);
+  if (!section) throw new Error('Missing executable ACL DACL.');
   const firstAce = section.indexOf('(');
   if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
     throw new Error('Unrecognized executable ACL.');
