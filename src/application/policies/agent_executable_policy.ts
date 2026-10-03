@@ -12,8 +12,7 @@ export function validateAgentExecutableSelection(configuration: Pick<AgentConfig
     const selectedBasename = selected.split(/[\\/]/).at(-1);
     const isExpectedAbsolutePath = isAbsolutePath && (
         selectedBasename === expected
-        || (isWindowsAbsolutePath && ['.cmd', '.exe'].some(extension =>
-            selectedBasename?.toLowerCase() === `${expected}${extension}`))
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`)
     );
     if (!isExpectedBareName && !isExpectedAbsolutePath) {
         throw new ApplicationError(

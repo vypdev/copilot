@@ -1582,7 +1582,10 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 29. Given setup stops at the PAT audit, the browser result retains the last
     redacted permission report and shows each required missing or unverifiable
     grant with its scope and access level in the selected locale. If identity
-    itself failed, the result says so separately. A completed or unrelated
+    itself failed, the result says so separately and still lists the required
+    grants as not checked, without presenting an identity-wide rejection as
+    an individual missing permission. The lead and recovery action describe
+    the rows actually shown in all four web locales. A completed or unrelated
     blocked result must not attribute an earlier PAT report as its cause.
     A required read that was operationally accessible but whose PAT grant was
     unverified still appears as `unverifiable`; operational availability never
@@ -1945,9 +1948,13 @@ exposed two fixture assumptions. The Windows PATH case passed, but explicit
 `codex.cmd` selection was rejected by the basename policy before the reviewed
 shim resolver could inspect it. On Ubuntu the planner test used a hosted Node
 binary whose group/world write mode violated the existing executable safety
-rule. Absolute Windows selections MUST accept only the provider's exact
-reviewed `.cmd` or native `.exe` basename; `.bat`, `.ps1`, arguments and
-unrelated wrappers remain rejected. Planner tests on Unix MUST use a private
+rule. The later Windows execution review found that an explicitly selected
+`.cmd` passes this basename policy but cannot run through the no-shell
+execution boundary. Explicit Windows selections MUST accept only the
+provider's exact native `.exe` basename; `.cmd`, `.bat`, `.ps1`, arguments and
+unrelated wrappers are rejected before planning. The reviewed `.cmd` fixture
+remains valid only for internal package-shim resolution to a trusted native
+interpreter, never as an admitted execution plan. Planner tests on Unix MUST use a private
 local fixture file with mode 0700, without changing runner binaries or the
 runtime ownership and mode checks. The application basename policy MUST remain
 runtime-neutral: identify drive-absolute Windows selections from path syntax,

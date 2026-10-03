@@ -102,7 +102,9 @@ The built-in commands are provider-specific:
 
 These shapes are generated entirely by provider policy. Callers cannot add,
 remove, or reorder arguments. `agent-executable` accepts only the runtime's exact
-basename or an absolute path whose basename matches; it never accepts arguments.
+basename or an absolute path whose basename matches; an explicit Windows path
+must select the provider's native `.exe`, not a `.cmd` or `.bat` wrapper. It
+never accepts arguments.
 Shell execution and automatic provider fallback are not used.
 
 ## Credentials

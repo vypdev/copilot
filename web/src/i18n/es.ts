@@ -29,6 +29,7 @@ export const es: Record<keyof typeof en, string> = {
   nextAction: 'Siguiente paso', reasonPermissions: 'Faltan permisos del PAT de configuración o no pudieron confirmarse.', nextPermissions: 'Comprueba los permisos mostrados, corrige el PAT en GitHub e inicia una nueva sesión.',
   permissionReportTitle: 'Comprobación de permisos del PAT', permissionReportLead: 'Se muestran los permisos obligatorios que no pudieron confirmarse. «No verificable» no significa «ausente».',
   permissionIdentity: 'Identidad de GitHub y acceso al repositorio', permissionIdentityValid: 'Verificados', permissionIdentityInvalid: 'Rechazados', permissionIdentityUnknown: 'No se pudieron confirmar',
+  permissionGrantNotChecked: 'Sin comprobar',
   permissionReportNoFailedGrant: 'La comprobación no detectó un permiso obligatorio fallido. Revisa la cuenta prevista para el PAT y el error de la terminal antes de reintentarlo.',
   reasonStorage: 'No se pudo usar de forma segura el almacenamiento elegido de GitHub Actions.', nextStorage: 'Revisa el ámbito de Variables/Secrets y los recursos existentes; después, reinténtalo.',
   reasonConfiguration: 'No se pudo validar la configuración elegida.', nextConfiguration: 'Revisa el detalle de validación en la terminal, corrige las opciones y reinténtalo.',

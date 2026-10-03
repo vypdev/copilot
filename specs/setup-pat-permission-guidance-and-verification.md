@@ -958,11 +958,15 @@ at widths 40/80/120 and `NO_COLOR`.
     bypass this; once GitHub verifies `User` or `Organization`, the requirements
     are recomputed for that actual type.
 52. Given organization Projects were selected before PAT entry, the bootstrap
-    audit performs a bounded GET of the organization's Projects V2 list. A
-    successful list containing an explicitly non-public Project verifies the
-    permission-bound read. A successful public-only or empty list is usable
-    only for the currently visible Projects and remains `Unverifiable` as PAT
-    grant evidence; later selected Project access must be checked separately.
+    audit performs at most two read-only GETs of the organization's Projects V2
+    list, requesting up to 100 rows per page. It follows only a bounded GitHub
+    `Link: rel="next"` URL for that exact organization and endpoint. A
+    successful page containing an explicitly non-public Project verifies the
+    permission-bound read, including when public Projects precede it. An
+    exhausted public-only or empty list, or a list still paginated at the
+    two-page limit with no non-public result, remains `Unverifiable` as PAT grant evidence; later
+    selected Project access must be checked separately. Unsafe or malformed
+    next links cannot trigger a request or become positive evidence.
     Denial, malformed data, timeout, and provider failure never become a pass.
     A `public-organization-projects` provenance marker matches only the exact
     organization-scoped, read-level `Projects` requirement with the `projects`

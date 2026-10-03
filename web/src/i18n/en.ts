@@ -27,6 +27,7 @@ export const en = {
   nextAction: 'Next action', reasonPermissions: 'The setup PAT lacked or could not confirm required permissions.', nextPermissions: 'Check the displayed grants, correct the PAT in GitHub, then start a fresh setup run.',
   permissionReportTitle: 'PAT permission evidence', permissionReportLead: 'Any required grants that could not be confirmed are listed below. Unverifiable does not mean missing.',
   permissionIdentity: 'GitHub identity and repository access', permissionIdentityValid: 'Verified', permissionIdentityInvalid: 'Rejected', permissionIdentityUnknown: 'Could not be confirmed',
+  permissionGrantNotChecked: 'Not checked',
   permissionReportNoFailedGrant: 'No required grant failed this check. Review the intended PAT account and the terminal error before retrying.',
   reasonStorage: 'The selected GitHub Actions storage could not be used safely.', nextStorage: 'Inspect the Variables/Secrets scope and existing resources, then retry.',
   reasonConfiguration: 'The chosen configuration could not be validated.', nextConfiguration: 'Review the terminal validation details, correct the choices, and retry.',

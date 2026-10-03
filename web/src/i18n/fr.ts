@@ -29,6 +29,7 @@ export const fr: Record<SetupMessageKey, string> = {
   nextAction: 'Prochaine étape', reasonPermissions: 'Les droits nécessaires du PAT de configuration manquent ou n’ont pas pu être confirmés.', nextPermissions: 'Vérifiez les droits affichés, corrigez le PAT sur GitHub, puis recommencez.',
   permissionReportTitle: 'Vérification des droits du PAT', permissionReportLead: 'Les droits requis qui n’ont pas pu être confirmés sont indiqués ci-dessous. « Non vérifiable » ne signifie pas « absent ».',
   permissionIdentity: 'Identité GitHub et accès au dépôt', permissionIdentityValid: 'Vérifiés', permissionIdentityInvalid: 'Refusés', permissionIdentityUnknown: 'Non confirmés',
+  permissionGrantNotChecked: 'Non vérifié',
   permissionReportNoFailedGrant: 'Cette vérification n’a trouvé aucun droit requis en échec. Vérifiez le compte prévu pour le PAT et l’erreur du terminal avant de réessayer.',
   reasonStorage: 'Le stockage GitHub Actions choisi ne peut pas être utilisé en sécurité.', nextStorage: 'Vérifiez la portée des Variables/Secrets et les ressources existantes, puis réessayez.',
   reasonConfiguration: 'La configuration choisie n’a pas pu être validée.', nextConfiguration: 'Lisez les détails du terminal, corrigez les choix et réessayez.',

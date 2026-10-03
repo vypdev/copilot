@@ -30,7 +30,7 @@
       : tr('resultNoChangesBody', $setupLocale);
   $: blockedPermissionReport = outcome === 'blocked' && detail?.reasonCode === 'permissions'
     ? permissionReport : undefined;
-  $: unresolvedPermissions = blockedPermissionReport?.identityStatus === 'valid'
+  $: unresolvedPermissions = blockedPermissionReport
     ? blockedPermissionReport.checks.filter(check => check.applicability === 'required'
       && check.status !== 'verified') : [];
 </script>
@@ -51,7 +51,7 @@
       <p>{tr('permissionReportLead', $setupLocale)}</p>
       <p><strong>{tr('permissionIdentity', $setupLocale)}:</strong> {tr(blockedPermissionReport.identityStatus === 'valid' ? 'permissionIdentityValid' : blockedPermissionReport.identityStatus === 'invalid' ? 'permissionIdentityInvalid' : 'permissionIdentityUnknown', $setupLocale)}</p>
       {#if unresolvedPermissions.length}
-        <ul>{#each unresolvedPermissions as check}<li><strong>{permissionName($setupLocale, check.permission)}</strong>{#if $setupLocale !== 'en' && permissionName($setupLocale, check.permission) !== check.permission} <small><bdi>GitHub · {check.permission}</bdi></small>{/if} — {permissionTerm($setupLocale, check.scope)} · {permissionTerm($setupLocale, check.level)} · <strong>{permissionTerm($setupLocale, check.status)}</strong></li>{/each}</ul>
+        <ul>{#each unresolvedPermissions as check}<li><strong>{permissionName($setupLocale, check.permission)}</strong>{#if $setupLocale !== 'en' && permissionName($setupLocale, check.permission) !== check.permission} <small><bdi>GitHub · {check.permission}</bdi></small>{/if} — {permissionTerm($setupLocale, check.scope)} · {permissionTerm($setupLocale, check.level)} · <strong>{blockedPermissionReport.identityStatus === 'valid' ? permissionTerm($setupLocale, check.status) : tr('permissionGrantNotChecked', $setupLocale)}</strong></li>{/each}</ul>
       {:else if blockedPermissionReport.identityStatus === 'valid'}
         <p>{tr('permissionReportNoFailedGrant', $setupLocale)}</p>
       {/if}

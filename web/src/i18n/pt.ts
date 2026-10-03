@@ -29,6 +29,7 @@ export const pt: Record<SetupMessageKey, string> = {
   nextAction: 'Próximo passo', reasonPermissions: 'Faltam permissões do PAT de configuração ou não foi possível confirmá-las.', nextPermissions: 'Verifique as permissões, corrija o PAT no GitHub e inicie uma nova sessão.',
   permissionReportTitle: 'Verificação das permissões do PAT', permissionReportLead: 'As permissões obrigatórias que não puderam ser confirmadas aparecem abaixo. «Não verificável» não significa «ausente».',
   permissionIdentity: 'Identidade GitHub e acesso ao repositório', permissionIdentityValid: 'Verificados', permissionIdentityInvalid: 'Recusados', permissionIdentityUnknown: 'Não confirmados',
+  permissionGrantNotChecked: 'Não verificada',
   permissionReportNoFailedGrant: 'Esta verificação não encontrou uma permissão obrigatória em falta. Confirme a conta prevista para o PAT e o erro no terminal antes de tentar novamente.',
   reasonStorage: 'O armazenamento GitHub Actions escolhido não pôde ser usado com segurança.', nextStorage: 'Verifique o âmbito das Variables/Secrets e os recursos existentes; depois tente novamente.',
   reasonConfiguration: 'Não foi possível validar a configuração escolhida.', nextConfiguration: 'Leia os detalhes no terminal, corrija as opções e tente novamente.',

@@ -48,7 +48,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         const requirements = buildSetupPatPermissionRequirements()
             .filter(item => item.permission === 'Metadata' || item.permission === 'Contents' || item.permission === 'Projects')
             .map(item => ({ ...item, applicability: 'required' as const }));
-        const fetcher = jest.fn(async (url: string) => url.endsWith('/projectsV2?per_page=1')
+        const fetcher = jest.fn(async (url: string) => url.endsWith('/projectsV2?per_page=100')
             ? response(true, 200, { payload: [] })
             : response(true, 200, { payload: { private: true, default_branch: 'main' } }));
         const audit = new SetupTokenPermissionsUseCase({
@@ -62,7 +62,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             publicReadEvidence: 'public-organization-projects',
         });
         expect(report.checks.find(check => check.permission === 'Projects')?.operationallyAvailable).toBeUndefined();
-        expect(fetcher.mock.calls.map(call => call[0])).toContain('https://api.github.com/orgs/owner/projectsV2?per_page=1');
+        expect(fetcher.mock.calls.map(call => call[0])).toContain('https://api.github.com/orgs/owner/projectsV2?per_page=100');
     });
     it('can be constructed with the production defaults', () => {
         expect(new SetupTokenPermissionQueryAdapter()).toBeInstanceOf(SetupTokenPermissionQueryAdapter);
@@ -486,7 +486,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             'https://api.github.com/orgs/owner/actions/variables?per_page=1',
             'https://api.github.com/user/memberships/orgs/owner',
             'https://api.github.com/orgs/owner/issue-types?per_page=1',
-            'https://api.github.com/orgs/owner/projectsV2?per_page=1',
+            'https://api.github.com/orgs/owner/projectsV2?per_page=100',
         ]));
         expect(checks.at(-1)).toMatchObject({ probe: 'projects', status: 'unverifiable' });
     });
@@ -497,9 +497,51 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
         );
         expect(check).toMatchObject({ status: 'verified' });
-        expect(fetcher).toHaveBeenCalledWith('https://api.github.com/orgs/owner/projectsV2?per_page=1',
+        expect(fetcher).toHaveBeenCalledWith('https://api.github.com/orgs/owner/projectsV2?per_page=100',
             expect.objectContaining({ method: 'GET', headers: expect.objectContaining({ 'X-GitHub-Api-Version': '2026-03-10' }) }));
         expect(JSON.stringify(check)).not.toContain('secret-token');
+    });
+
+    it('finds a non-public Project on the second bounded organization page', async () => {
+        const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
+        const next = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
+        const fetcher = jest.fn(async (url: string) => url === root
+            ? response(true, 200, { payload: [{ number: 1, public: true }],
+                headers: { link: '<' + next + '>; rel="next"' } })
+            : response(true, 200, { payload: [{ number: 2, public: false }] }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check.status).toBe('verified');
+        expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, next]);
+    });
+
+    it('keeps a still-paginated public Projects list unverifiable after two pages', async () => {
+        const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
+        const second = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
+        const third = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=3';
+        const fetcher = jest.fn(async (url: string) => response(true, 200, {
+            payload: [{ number: url === root ? 1 : 2, public: true }],
+            headers: { link: '<' + (url === root ? second : third) + '>; rel="next"' },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check).toMatchObject({ status: 'unverifiable', publicReadEvidence: 'public-organization-projects' });
+        expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, second]);
+    });
+
+    it('does not follow a cross-origin Projects pagination link with the PAT', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
+            payload: [{ number: 1, public: true }],
+            headers: { link: '<https://example.invalid/orgs/owner/projectsV2?per_page=100&page=2>; rel="next"' },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check.status).toBe('unverifiable');
+        expect(check.publicReadEvidence).toBeUndefined();
+        expect(fetcher).toHaveBeenCalledTimes(1);
     });
 
     it.each([

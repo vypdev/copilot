@@ -41872,7 +41872,7 @@ function validateAgentExecutableSelection(configuration) {
     const isAbsolutePath = selected.startsWith('/') || isWindowsAbsolutePath;
     const selectedBasename = selected.split(/[\\/]/).at(-1);
     const isExpectedAbsolutePath = isAbsolutePath && (selectedBasename === expected
-        || (isWindowsAbsolutePath && ['.cmd', '.exe'].some(extension => selectedBasename?.toLowerCase() === `${expected}${extension}`)));
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`));
     if (!isExpectedBareName && !isExpectedAbsolutePath) {
         throw new application_error_1.ApplicationError('agent.policy-rejected', `Agent executable must be the bare name "${expected}" or an absolute path with that basename.`);
     }

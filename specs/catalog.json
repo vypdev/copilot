@@ -644,7 +644,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-02",
+      "lastVerified": "2026-10-03",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -693,6 +693,7 @@
         "src/infrastructure/setup_remote_credential_health_adapter.ts",
         "src/infrastructure/setup_credential_validation_adapter.ts",
         "src/infrastructure/setup_token_permission_query_adapter.ts",
+        "src/infrastructure/setup_projects_probe_page_policy.ts",
         "src/cli/setup_terminal_driver.ts",
         "src/cli/setup_question_renderer.ts",
         "src/cli/setup_journey_presenter.ts",
@@ -730,6 +731,7 @@
         "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
         "src/infrastructure/__tests__/setup_remote_credential_health_adapter.test.ts",
         "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_projects_probe_page_policy.test.ts",
         "src/infrastructure/composition/__tests__/setup_token_permissions_composition_root.test.ts",
         "src/data/repository/__tests__/repository_variables_repository.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
@@ -1470,6 +1472,7 @@
       "code": [
         "src/domain/agent.ts",
         "src/domain/agent_execution_plan.ts",
+        "src/application/policies/agent_executable_policy.ts",
         "src/application/policies/agent_task_activation_policy.ts",
         "src/application/policies/agent_configuration_validation_policy.ts",
         "src/application/policies/setup_configuration_plan.ts",
@@ -1500,6 +1503,7 @@
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
         "src/actions/__tests__/github_action_runtime.test.ts",
+        "src/application/policies/__tests__/agent_executable_policy.test.ts",
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
         "src/data/repository/__tests__/agent_cli_client.test.ts",

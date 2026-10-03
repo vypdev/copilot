@@ -93,14 +93,32 @@ describe('web setup component semantics', () => {
     expect(html).not.toContain('secret-token');
   });
 
-  test('invalid identity is not presented as missing individual permissions', () => {
+  test.each([
+    ['en', 'Rejected', 'Not checked'],
+    ['es', 'Rechazados', 'Sin comprobar'],
+    ['fr', 'Refusés', 'Non vérifié'],
+    ['pt', 'Recusados', 'Não verificada'],
+  ])('%s invalid identity lists required grants without claiming individual denial', (locale, identity, status) => {
     const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
       detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
       permissionReport: { role: 'setup', identityStatus: 'invalid', identityMessage: 'rejected',
         ready: false, confirmationRequired: false, checks: [{ permission: 'Projects',
-          scope: 'organization', level: 'read', applicability: 'required', status: 'missing' }] } });
-    expect(html).toContain('Rejected');
-    expect(html).not.toContain('Projects');
+          scope: 'organization', level: 'read', applicability: 'required', status: 'missing' }] } }, locale);
+    expect(html).toContain(identity);
+    expect(html).toContain('Projects');
+    expect(html).toContain(status);
+    expect(html).not.toContain('private diagnostic');
+  });
+
+  test('unverifiable identity lists grants as not checked', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'unverifiable', identityMessage: 'private diagnostic',
+        ready: false, confirmationRequired: false, checks: [{ permission: 'Secrets',
+          scope: 'organization', level: 'write', applicability: 'required', status: 'unverifiable' }] } });
+    expect(html).toContain('Secrets');
+    expect(html).toContain('Not checked');
+    expect(html).not.toContain('private diagnostic');
   });
 
   test('unrelated blocked outcome does not attribute stale permission evidence to its cause', () => {

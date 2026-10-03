@@ -310,7 +310,11 @@ provider availability label alone is insufficient to diagnose a CLI failure.
 
 Windows support MUST use a native executable for provider version checks and
 admitted execution. A `.cmd`/`.bat` wrapper MUST NOT receive agent arguments
-or prompts. The Action MUST NOT use npm, pnpm, `npx`, or `actions/setup-node`
+or prompts. An explicit absolute Windows executable selection ending in
+`.cmd` MUST fail at the configuration boundary, while the provider's exact
+native `.exe` basename remains admissible; package-shim inspection is an
+internal launcher resolution path, not an operator-selected execution plan.
+The Action MUST NOT use npm, pnpm, `npx`, or `actions/setup-node`
 to install agent CLIs on any platform. Its six distributed agent workflows
 run the JavaScript Action under the GitHub Actions runner's embedded Node;
 development CI and packaging workflows keep their separate Node/pnpm setup.

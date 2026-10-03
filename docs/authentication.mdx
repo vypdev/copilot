@@ -54,9 +54,11 @@ For Projects, this early choice is only **whether you want the integration**.
 Listing private organization Projects requires authorization, so the assistant
 cannot reliably ask you to select Project numbers before the setup PAT exists.
 If you opt in, the guided setup PAT requests organization **Projects: read**.
-The read-only check lists at most one accessible organization Project. A
-non-public Project confirms the read grant. If the result contains only public
-Projects or is empty, discovery can continue but the PAT grant remains
+The read-only check inspects at most two pages of up to 100 accessible
+organization Projects each. A non-public Project on either page confirms the
+read grant. If no non-public Project appears within that bound, including a
+public-only or empty response with more pages still available, discovery can
+continue but the PAT grant remains
 `Unverifiable`; access to each selected Project is checked again later.
 After you enter that PAT, the assistant lists the accessible Projects and lets
 you choose their numeric Project numbers and, when available, their Status

@@ -39430,7 +39430,7 @@ function validateAgentExecutableSelection(configuration) {
     const isAbsolutePath = selected.startsWith('/') || isWindowsAbsolutePath;
     const selectedBasename = selected.split(/[\\/]/).at(-1);
     const isExpectedAbsolutePath = isAbsolutePath && (selectedBasename === expected
-        || (isWindowsAbsolutePath && ['.cmd', '.exe'].some(extension => selectedBasename?.toLowerCase() === `${expected}${extension}`)));
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`));
     if (!isExpectedBareName && !isExpectedAbsolutePath) {
         throw new application_error_1.ApplicationError('agent.policy-rejected', `Agent executable must be the bare name "${expected}" or an absolute path with that basename.`);
     }
@@ -87610,6 +87610,53 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 
 /***/ }),
 
+/***/ 78337:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nextOrganizationProjectsProbePage = nextOrganizationProjectsProbePage;
+/** Restricts a provider Link header to the same read-only organization Projects endpoint. */
+function nextOrganizationProjectsProbePage(link, owner) {
+    if (!link)
+        return { status: 'none' };
+    const nextEntries = link.split(',').filter(entry => /\brel\s*=\s*"?next"?/iu.test(entry));
+    if (nextEntries.length === 0)
+        return { status: 'none' };
+    if (nextEntries.length !== 1)
+        return { status: 'unsafe' };
+    const match = /^\s*<([^<>]+)>\s*;\s*rel="?next"?\s*$/iu.exec(nextEntries[0]);
+    if (!match || match[1].length > 600)
+        return { status: 'unsafe' };
+    try {
+        const url = new URL(match[1]);
+        const expectedPath = `/orgs/${encodeURIComponent(owner)}/projectsV2`;
+        if (url.protocol !== 'https:' || url.host !== 'api.github.com' || url.pathname !== expectedPath
+            || url.username || url.password || url.hash)
+            return { status: 'unsafe' };
+        const keys = [...url.searchParams.keys()];
+        if (keys.length !== 2 || !keys.includes('per_page') || url.searchParams.get('per_page') !== '100') {
+            return { status: 'unsafe' };
+        }
+        const page = url.searchParams.get('page');
+        const after = url.searchParams.get('after');
+        if (keys.includes('page') && page && /^[1-9]\d{0,5}$/u.test(page) && Number(page) >= 2) {
+            return { status: 'next', url: url.toString() };
+        }
+        if (keys.includes('after') && after && after.length <= 200 && !/[\p{Cc}\p{Cf}]/u.test(after)) {
+            return { status: 'next', url: url.toString() };
+        }
+        return { status: 'unsafe' };
+    }
+    catch {
+        return { status: 'unsafe' };
+    }
+}
+
+
+/***/ }),
+
 /***/ 1489:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -87920,6 +87967,7 @@ exports.SetupTokenPermissionQueryAdapter = void 0;
 const github_error_policy_1 = __nccwpck_require__(58791);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
 const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
+const setup_projects_probe_page_policy_1 = __nccwpck_require__(78337);
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
@@ -87939,11 +87987,16 @@ class SetupTokenPermissionQueryAdapter {
                 method: 'GET',
                 headers: permissionProbeHeaders(token, requirement),
                 signal: controller.signal,
+                redirect: 'error',
             });
             const target = await resolveProbeTarget(owner, repository, requirement, request);
             if (target.status === 'complete')
                 return target.check;
-            return mapProbeResponse(requirement, target.response ?? await request(target.url), target.readEvidence, owner);
+            const response = target.response ?? await request(target.url);
+            if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
+                return inspectOrganizationProjectsRead(requirement, response, owner, request);
+            }
+            return mapProbeResponse(requirement, response, target.readEvidence, owner);
         }
         catch {
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
@@ -88081,9 +88134,6 @@ function containsAsciiControl(value) {
 }
 async function mapProbeResponse(requirement, response, readEvidence, owner) {
     if (response.ok) {
-        if (readEvidence === 'organization-projects' && requirement.level === 'read') {
-            return inspectOrganizationProjectsRead(requirement, response);
-        }
         if (readEvidence === 'organization-membership') {
             return response.status === 200 && await isActiveOrganizationMembership(response, owner)
                 ? outcome(requirement, 'verified', 'GitHub confirmed active organization membership through a permission-bound Members-read probe.')
@@ -88130,21 +88180,30 @@ async function mapProbeResponse(requirement, response, readEvidence, owner) {
     }
     return outcome(requirement, 'unverifiable', `GitHub could not verify this permission safely (HTTP ${response.status}).`);
 }
-async function inspectOrganizationProjectsRead(requirement, response) {
+async function inspectOrganizationProjectsRead(requirement, firstResponse, owner, request) {
     try {
-        const payload = await response.json();
-        if (!Array.isArray(payload)) {
-            return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
-        }
-        if (payload.some(project => typeof project !== 'object' || project === null
-            || Array.isArray(project) || typeof project.public !== 'boolean')) {
-            return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
-        }
-        if (payload.some(project => project.public === false)) {
-            return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
+        let response = firstResponse;
+        for (let page = 0; page < 2; page += 1) {
+            const payload = await response.json();
+            if (!Array.isArray(payload) || payload.some(project => typeof project !== 'object' || project === null
+                || Array.isArray(project) || typeof project.public !== 'boolean')) {
+                return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
+            }
+            if (payload.some(project => project.public === false)) {
+                return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
+            }
+            const next = (0, setup_projects_probe_page_policy_1.nextOrganizationProjectsProbePage)(response.headers.get('link'), owner);
+            if (next.status === 'unsafe') {
+                return outcome(requirement, 'unverifiable', 'GitHub returned an unsafe organization Projects pagination link.');
+            }
+            if (next.status === 'none' || page === 1)
+                break;
+            response = await request(next.url);
+            if (!response.ok)
+                return mapProbeResponse(requirement, response, 'organization-projects', owner);
         }
         return {
-            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; confirm the Projects: read grant before continuing.'),
+            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were observed within the bounded read; confirm the Projects: read grant before continuing.'),
             publicReadEvidence: 'public-organization-projects',
         };
     }
@@ -88218,7 +88277,7 @@ function probeUrl(owner, repository, requirement) {
         if (requirement.probe === 'issue-types')
             return `${organizationRoot}/issue-types?per_page=1`;
         if (requirement.probe === 'projects')
-            return `${organizationRoot}/projectsV2?per_page=1`;
+            return `${organizationRoot}/projectsV2?per_page=100`;
         return undefined;
     }
     if (requirement.probe === 'metadata')

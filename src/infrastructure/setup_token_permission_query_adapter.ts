@@ -6,6 +6,7 @@ import type {
 import { isGithubPermissionDenied } from '../data/repository/github/github_error_policy';
 import { runWithConcurrencyLimit } from '../application/policies/bounded_concurrency_policy';
 import { isOperationallyAvailableSetupRead } from '../application/policies/setup_token_permission_evidence_policy';
+import { nextOrganizationProjectsProbePage } from './setup_projects_probe_page_policy';
 
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
@@ -66,12 +67,17 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
                 method: 'GET',
                 headers: permissionProbeHeaders(token, requirement),
                 signal: controller.signal,
+                redirect: 'error',
             });
             const target = await resolveProbeTarget(owner, repository, requirement, request);
             if (target.status === 'complete') return target.check;
+            const response = target.response ?? await request(target.url);
+            if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
+                return inspectOrganizationProjectsRead(requirement, response, owner, request);
+            }
             return mapProbeResponse(
                 requirement,
-                target.response ?? await request(target.url),
+                response,
                 target.readEvidence,
                 owner,
             );
@@ -240,9 +246,6 @@ async function mapProbeResponse(
     owner: string,
 ): Promise<SetupTokenPermissionCheck> {
     if (response.ok) {
-        if (readEvidence === 'organization-projects' && requirement.level === 'read') {
-            return inspectOrganizationProjectsRead(requirement, response);
-        }
         if (readEvidence === 'organization-membership') {
             return response.status === 200 && await isActiveOrganizationMembership(response, owner)
                 ? outcome(requirement, 'verified', 'GitHub confirmed active organization membership through a permission-bound Members-read probe.')
@@ -296,22 +299,31 @@ async function mapProbeResponse(
 
 async function inspectOrganizationProjectsRead(
     requirement: SetupTokenPermissionRequirement,
-    response: Response,
+    firstResponse: Response,
+    owner: string,
+    request: (url: string) => Promise<Response>,
 ): Promise<SetupTokenPermissionCheck> {
     try {
-        const payload: unknown = await response.json();
-        if (!Array.isArray(payload)) {
-            return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
-        }
-        if (payload.some(project => typeof project !== 'object' || project === null
-            || Array.isArray(project) || typeof (project as Record<string, unknown>).public !== 'boolean')) {
-            return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
-        }
-        if (payload.some(project => (project as Record<string, unknown>).public === false)) {
-            return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
+        let response = firstResponse;
+        for (let page = 0; page < 2; page += 1) {
+            const payload: unknown = await response.json();
+            if (!Array.isArray(payload) || payload.some(project => typeof project !== 'object' || project === null
+                || Array.isArray(project) || typeof (project as Record<string, unknown>).public !== 'boolean')) {
+                return outcome(requirement, 'unverifiable', 'GitHub returned an unrecognized organization Projects list.');
+            }
+            if (payload.some(project => (project as Record<string, unknown>).public === false)) {
+                return outcome(requirement, 'verified', 'GitHub returned a non-public organization Project through a read-only Projects probe.');
+            }
+            const next = nextOrganizationProjectsProbePage(response.headers.get('link'), owner);
+            if (next.status === 'unsafe') {
+                return outcome(requirement, 'unverifiable', 'GitHub returned an unsafe organization Projects pagination link.');
+            }
+            if (next.status === 'none' || page === 1) break;
+            response = await request(next.url);
+            if (!response.ok) return mapProbeResponse(requirement, response, 'organization-projects', owner);
         }
         return {
-            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were returned; confirm the Projects: read grant before continuing.'),
+            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were observed within the bounded read; confirm the Projects: read grant before continuing.'),
             publicReadEvidence: 'public-organization-projects',
         };
     } catch {
@@ -388,7 +400,7 @@ function probeUrl(
         if (requirement.probe === 'variables') return `${organizationRoot}/actions/variables?per_page=1`;
         if (requirement.probe === 'members') return `https://api.github.com/user/memberships/orgs/${encodedOwner}`;
         if (requirement.probe === 'issue-types') return `${organizationRoot}/issue-types?per_page=1`;
-        if (requirement.probe === 'projects') return `${organizationRoot}/projectsV2?per_page=1`;
+        if (requirement.probe === 'projects') return `${organizationRoot}/projectsV2?per_page=100`;
         return undefined;
     }
     if (requirement.probe === 'metadata') return root;
