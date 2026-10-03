@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { delimiter } from 'node:path';
 import {
     compareOfficialAgentVersion, parseOfficialLatestAgentVersion, readOfficialLatestAgentVersion,
 } from '../agent_official_version';
@@ -27,15 +28,23 @@ describe('official agent version discovery', () => {
             .replace('$version', '$other'))).toThrow();
     });
 
-    it('fetches only fixed official HTTPS metadata with no credential environment', () => {
-        execute.mockReturnValue('{"tag_name":"rust-v0.159.2"}');
-        expect(readOfficialLatestAgentVersion('codex')).toBe('0.159.2');
-        const [command, args, options] = execute.mock.calls[0];
-        expect(command).toContain('curl');
-        expect(args.at(-1)).toBe('https://releases.openai.com/codex/channels/latest');
-        expect(options.env.CODEX_API_KEY).toBeUndefined();
-        expect(options.env.GITHUB_TOKEN).toBeUndefined();
-        expect(options.timeout).toBe(20_000);
+    it('fetches fixed official HTTPS metadata without executing a PATH-controlled curl', () => {
+        const inheritedPath = process.env.PATH;
+        process.env.PATH = ['/attacker-controlled-tools', inheritedPath].filter(Boolean).join(delimiter);
+        try {
+            execute.mockReturnValue('{"tag_name":"rust-v0.159.2"}');
+            expect(readOfficialLatestAgentVersion('codex')).toBe('0.159.2');
+            const [command, args, options] = execute.mock.calls[0];
+            expect(command).toBe(process.platform === 'win32' ? 'C:\\Windows\\System32\\curl.exe' : '/usr/bin/curl');
+            expect(options.env.PATH).not.toContain('/attacker-controlled-tools');
+            expect(args.at(-1)).toBe('https://releases.openai.com/codex/channels/latest');
+            expect(options.env.CODEX_API_KEY).toBeUndefined();
+            expect(options.env.GITHUB_TOKEN).toBeUndefined();
+            expect(options.timeout).toBe(20_000);
+        } finally {
+            if (inheritedPath === undefined) delete process.env.PATH;
+            else process.env.PATH = inheritedPath;
+        }
     });
 
     it.each([

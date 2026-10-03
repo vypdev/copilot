@@ -37,8 +37,10 @@ function fakeRuntime(source: string) {
     }
     execFileSync('git', ['init', '-q', workspace], { stdio: 'ignore' });
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+    const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
     const environment = {
         PATH: [binRoot, join(systemRoot, 'System32'), systemRoot,
+            join(systemRoot, 'System32', 'Wbem'),
             join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')].join(delimiter),
         PATHEXT: '.EXE;.CMD',
         COMSPEC: process.env.COMSPEC,
@@ -49,6 +51,7 @@ function fakeRuntime(source: string) {
         TEMP: process.env.TEMP,
         TMP: process.env.TMP,
         USERPROFILE: process.env.USERPROFILE,
+        HOME: process.env.USERPROFILE,
         HOMEDRIVE: process.env.HOMEDRIVE,
         HOMEPATH: process.env.HOMEPATH,
         APPDATA: process.env.APPDATA,
@@ -59,6 +62,8 @@ function fakeRuntime(source: string) {
         ProgramFiles: process.env.ProgramFiles,
         'ProgramFiles(x86)': process.env['ProgramFiles(x86)'],
         ProgramData: process.env.ProgramData,
+        PSModulePath: [join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+            join(programFiles, 'WindowsPowerShell', 'Modules')].join(delimiter),
         PUBLIC: process.env.PUBLIC,
         USERDOMAIN: process.env.USERDOMAIN,
         USERNAME: process.env.USERNAME,
@@ -183,7 +188,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    }, 15_000);
+    }, 30_000);
 
     windowsIt('reports fake Codex readiness through the standalone operator verifier', () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'
@@ -191,7 +196,8 @@ describe('isolated Windows agent runtime', () => {
             + 'else if(process.argv.includes("login")){process.exit(1)}else{process.exit(2)}';
         const fixture = fakeRuntime(source);
         try {
-            expect('PSModulePath' in fixture.environment).toBe(false);
+            expect(fixture.environment.PSModulePath).toContain('WindowsPowerShell');
+            expect(fixture.environment.PSModulePath).not.toContain('PowerShell\\7');
             const systemRoot = fixture.environment.SystemRoot || fixture.environment.WINDIR || 'C:\\Windows';
             const probes = [
                 ['identity', join(systemRoot, 'System32', 'whoami.exe'), ['/user', '/fo', 'csv', '/nh']],
@@ -200,7 +206,8 @@ describe('isolated Windows agent runtime', () => {
             ] as const;
             for (const [name, executable, args] of probes) {
                 const probe = spawnSync(executable, [...args], {
-                    env: fixture.environment, encoding: 'utf8', timeout: 5_000, windowsHide: true,
+                    env: fixture.environment, encoding: 'utf8', timeout: name === 'powershell' ? 15_000 : 5_000,
+                    windowsHide: true,
                 });
                 if (probe.status !== 0) {
                     const code = probe.error && 'code' in probe.error ? probe.error.code : `exit-${probe.status}`;

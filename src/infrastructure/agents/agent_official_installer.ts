@@ -5,9 +5,10 @@ import {
     readdirSync, realpathSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
+import { trustedCurlPath, trustedSystemPath, trustedUnixShellPath } from './agent_trusted_system_tools';
 import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
 
 const MAX_SCRIPT_BYTES = 1_048_576;
@@ -19,16 +20,6 @@ export interface OfficialAgentInstallation {
     readonly executable: string;
     readonly directory: string;
     readonly root: string;
-}
-
-function trustedSystemPath(): string {
-    if (process.platform !== 'win32') return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(delimiter);
-    return [join(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
-        join(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(delimiter);
-}
-
-function trustedUnixTool(name: 'curl' | 'sh' | 'bash'): string {
-    return name === 'curl' ? '/usr/bin/curl' : `/bin/${name}`;
 }
 
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
@@ -59,9 +50,7 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
 
 function download(url: string, destination: string, environment: NodeJS.ProcessEnv, maxBytes: number): void {
     if (!url.startsWith('https://')) throw new Error('Official agent source must use HTTPS.');
-    const curl = process.platform === 'win32'
-        ? join(WINDOWS_SYSTEM_ROOT, 'System32', 'curl.exe')
-        : trustedUnixTool('curl');
+    const curl = trustedCurlPath();
     try {
         const contents = execFileSync(curl, [
             '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
@@ -101,7 +90,7 @@ function runScript(provider: AgentProvider, root: string, environment: NodeJS.Pr
         ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
         return join(root, 'bin', 'codex.exe');
     }
-    const shell = trustedUnixTool(provider === 'codex' ? 'sh' : 'bash');
+    const shell = trustedUnixShellPath(provider === 'codex' ? 'sh' : 'bash');
     const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
     execFileSync(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
     return provider === 'codex'

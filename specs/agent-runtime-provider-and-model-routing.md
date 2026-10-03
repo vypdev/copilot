@@ -176,18 +176,20 @@ bounded status codes, without exposing paths, raw stderr, arguments, or secrets.
 For a file-trust failure, the phase MUST identify whether the selected shim,
 resolved interpreter, or package launcher failed the check, again without
 printing its path or ACL contents.
-The timeout fixture's Jest budget MUST include native ACL setup and teardown;
-the admitted child still uses its own short execution deadline.
+The fake native execution, timeout, and cancellation fixtures' Jest budgets
+MUST include native ACL setup and teardown on service Windows; the admitted
+child still uses its own short execution deadline.
 The isolated Windows verifier receives only non-secret system process variables
 needed by Windows PowerShell and native process startup. Its fixture must prove
 readiness on hosted Windows while retaining the 15-second ACL query deadline.
-It MUST omit an inherited PowerShell 7 `PSModulePath` when launching Windows
-PowerShell 5.1 so that the native shell constructs its compatible default
-module path. The allowlist includes standard process, profile, Program Files,
+It MUST replace an inherited PowerShell 7 `PSModulePath` with only Windows
+PowerShell 5.1 system module directories when launching the native shell.
+The allowlist includes standard process, profile, Program Files,
 and account-domain context needed for noninteractive Windows PowerShell startup;
 it never includes GitHub tokens or provider credentials.
 The fixture MUST separately confirm that `whoami.exe` and a no-op Windows
-PowerShell command start under that bounded non-secret environment; a failed
+PowerShell command start under that bounded non-secret environment. The shell
+startup probe allows the same 15-second deadline as the real ACL query; a failed
 verifier ACL query identifies identity versus descriptor timeout by fixed code.
 
 ### 6.2 Alternative paths
@@ -349,6 +351,10 @@ installer. On Windows the trusted tool root is `C:\Windows`; a nonstandard
 system installation fails closed until explicitly supported. Missing trusted
 tools fail closed. A fixture prepends a fake tool
 directory and proves no fake downloader or shell is launched.
+Official latest-version metadata retrieval MUST use the same fixed trusted
+`curl` location and system-only child `PATH` as installation. A fixture MUST
+prepend a fake `curl` to the caller `PATH`, verify the official version is
+read through the trusted executable, and prove the fake tool is never run.
 Every direct official-source download MUST be bounded before bytes are written
 to disk: at most 1 MiB for installer scripts, 2 MiB for release metadata, and
 256 MiB for archives. Curl receives its transfer-size limit and the local

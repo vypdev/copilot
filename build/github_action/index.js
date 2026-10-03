@@ -78756,20 +78756,12 @@ const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
 const MAX_ARCHIVE_BYTES = 268435456;
 const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
-function trustedSystemPath() {
-    if (process.platform !== 'win32')
-        return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
-    return [(0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
-        (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
-}
-function trustedUnixTool(name) {
-    return name === 'curl' ? '/usr/bin/curl' : `/bin/${name}`;
-}
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 function installerEnvironment(root, source) {
     const allowed = [
@@ -78781,7 +78773,7 @@ function installerEnvironment(root, source) {
         if (source[name])
             environment[name] = source[name];
     }
-    environment.PATH = trustedSystemPath();
+    environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
     if (process.platform === 'win32') {
         environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
         environment.WINDIR = WINDOWS_SYSTEM_ROOT;
@@ -78799,9 +78791,7 @@ function installerEnvironment(root, source) {
 function download(url, destination, environment, maxBytes) {
     if (!url.startsWith('https://'))
         throw new Error('Official agent source must use HTTPS.');
-    const curl = process.platform === 'win32'
-        ? (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'curl.exe')
-        : trustedUnixTool('curl');
+    const curl = (0, agent_trusted_system_tools_1.trustedCurlPath)();
     try {
         const contents = (0, node_child_process_1.execFileSync)(curl, [
             '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
@@ -78840,7 +78830,7 @@ function runScript(provider, root, environment) {
         ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
         return (0, node_path_1.join)(root, 'bin', 'codex.exe');
     }
-    const shell = trustedUnixTool(provider === 'codex' ? 'sh' : 'bash');
+    const shell = (0, agent_trusted_system_tools_1.trustedUnixShellPath)(provider === 'codex' ? 'sh' : 'bash');
     const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
     (0, node_child_process_1.execFileSync)(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
     return provider === 'codex'
@@ -78983,19 +78973,23 @@ exports.parseOfficialLatestAgentVersion = parseOfficialLatestAgentVersion;
 exports.readOfficialLatestAgentVersion = readOfficialLatestAgentVersion;
 exports.compareOfficialAgentVersion = compareOfficialAgentVersion;
 const node_child_process_1 = __nccwpck_require__(17718);
-const node_path_1 = __nccwpck_require__(49411);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_METADATA_BYTES = 1024 * 1024;
 const CODEX_RELEASE_CHANNEL = 'https://releases.openai.com/codex/channels/latest';
 function readOfficialText(url) {
     if (!url.startsWith('https://'))
         throw new Error('Official version source must use HTTPS.');
-    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-    const curl = process.platform === 'win32' ? (0, node_path_1.join)(systemRoot, 'System32', 'curl.exe') : 'curl';
+    const curl = (0, agent_trusted_system_tools_1.trustedCurlPath)();
     const environment = {};
-    for (const name of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR']) {
+    for (const name of ['TEMP', 'TMP', 'TMPDIR', 'PATHEXT', 'COMSPEC', 'OS']) {
         if (process.env[name])
             environment[name] = process.env[name];
+    }
+    environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
+    if (process.platform === 'win32') {
+        environment.SystemRoot = 'C:\\Windows';
+        environment.WINDIR = 'C:\\Windows';
     }
     return (0, node_child_process_1.execFileSync)(curl, [
         '--fail', '--location', '--silent', '--show-error', '--max-time', '15',
@@ -79098,6 +79092,34 @@ function readAgentRuntimeVersion(provider, output) {
     if (!actual)
         throw new Error(`${provider} CLI returned empty version output.`);
     return actual;
+}
+
+
+/***/ }),
+
+/***/ 76049:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.trustedSystemPath = trustedSystemPath;
+exports.trustedCurlPath = trustedCurlPath;
+exports.trustedUnixShellPath = trustedUnixShellPath;
+const node_path_1 = __nccwpck_require__(49411);
+const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+function trustedSystemPath() {
+    if (process.platform !== 'win32')
+        return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
+    return [(0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
+        (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
+}
+function trustedCurlPath() {
+    return process.platform === 'win32'
+        ? (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'curl.exe') : '/usr/bin/curl';
+}
+function trustedUnixShellPath(name) {
+    return `/bin/${name}`;
 }
 
 

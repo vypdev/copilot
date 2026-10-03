@@ -1,18 +1,22 @@
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
+import { trustedCurlPath, trustedSystemPath } from './agent_trusted_system_tools';
 
 const MAX_METADATA_BYTES = 1024 * 1024;
 const CODEX_RELEASE_CHANNEL = 'https://releases.openai.com/codex/channels/latest';
 
 function readOfficialText(url: string): string {
     if (!url.startsWith('https://')) throw new Error('Official version source must use HTTPS.');
-    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-    const curl = process.platform === 'win32' ? join(systemRoot, 'System32', 'curl.exe') : 'curl';
+    const curl = trustedCurlPath();
     const environment: NodeJS.ProcessEnv = {};
-    for (const name of ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR']) {
+    for (const name of ['TEMP', 'TMP', 'TMPDIR', 'PATHEXT', 'COMSPEC', 'OS']) {
         if (process.env[name]) environment[name] = process.env[name];
+    }
+    environment.PATH = trustedSystemPath();
+    if (process.platform === 'win32') {
+        environment.SystemRoot = 'C:\\Windows';
+        environment.WINDIR = 'C:\\Windows';
     }
     return execFileSync(curl, [
         '--fail', '--location', '--silent', '--show-error', '--max-time', '15',
