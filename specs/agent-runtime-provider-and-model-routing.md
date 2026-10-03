@@ -181,6 +181,9 @@ the admitted child still uses its own short execution deadline.
 The isolated Windows verifier receives only non-secret system process variables
 needed by Windows PowerShell and native process startup. Its fixture must prove
 readiness on hosted Windows while retaining the 15-second ACL query deadline.
+It MUST omit an inherited PowerShell 7 `PSModulePath` when launching Windows
+PowerShell 5.1 so that the native shell constructs its compatible default
+module path.
 
 ### 6.2 Alternative paths
 

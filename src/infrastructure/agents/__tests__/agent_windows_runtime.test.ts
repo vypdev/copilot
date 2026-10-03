@@ -54,7 +54,6 @@ function fakeRuntime(source: string) {
         APPDATA: process.env.APPDATA,
         LOCALAPPDATA: process.env.LOCALAPPDATA,
         ProgramData: process.env.ProgramData,
-        PSModulePath: process.env.PSModulePath,
     };
     return { root, workspace, environment, node };
 }
@@ -180,6 +179,7 @@ describe('isolated Windows agent runtime', () => {
             + 'else if(process.argv.includes("login")){process.exit(1)}else{process.exit(2)}';
         const fixture = fakeRuntime(source);
         try {
+            expect('PSModulePath' in fixture.environment).toBe(false);
             const result = spawnSync(process.execPath, [join(process.cwd(), 'scripts', 'verify-agent-clis.cjs')], {
                 cwd: fixture.workspace,
                 env: {
