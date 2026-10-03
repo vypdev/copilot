@@ -434,6 +434,8 @@ The writable-shim rejection fixture uses the same native shell plumbing and
 allows up to 45 seconds for the verifier process, covering two bounded ACL
 queries under concurrent coverage execution. The result MUST be the specific
 unsafe ACL rejection, and its marker MUST prove the shim was never executed.
+Its restricted `PATH` includes the known Node interpreter directory so npm
+shim resolution can complete before the selected shim's ACL is inspected.
 Agent execution failure telemetry MUST include only a closed preflight stage
 (`workspace`, `ambient-configuration`, `manifest`, `selection`, `resolution`,
 `invocation-trust`, `environment`, `version`, `artifacts`, or `policy`). It

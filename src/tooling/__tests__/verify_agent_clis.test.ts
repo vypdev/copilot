@@ -1,7 +1,7 @@
 import { spawnSync, execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 
 const verifier = resolve(__dirname, '../../../scripts/verify-agent-clis.cjs');
 
@@ -13,7 +13,7 @@ function runVerifier(binDirectory: string, home: string) {
         encoding: 'utf8',
         timeout: windows ? 45_000 : 20_000,
         env: {
-            PATH: (windows ? [binDirectory, join(systemRoot, 'System32'), systemRoot,
+            PATH: (windows ? [binDirectory, dirname(process.execPath), join(systemRoot, 'System32'), systemRoot,
                 join(systemRoot, 'System32', 'Wbem'),
                 join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')]
                 : [binDirectory, process.env.PATH || '']).join(delimiter),
