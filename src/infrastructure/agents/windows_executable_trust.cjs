@@ -3,6 +3,7 @@ const { Buffer } = require('node:buffer');
 const { realpathSync } = require('node:fs');
 const { hostname } = require('node:os');
 const { dirname, join } = require('node:path');
+const { trustedWindowsSystemRoot } = require('./windows_system_root.cjs');
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
 const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
@@ -12,8 +13,7 @@ const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC', 
 const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
 
 function systemTool(name) {
-  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-  return join(systemRoot, 'System32', name);
+  return join(trustedWindowsSystemRoot(), 'System32', name);
 }
 
 function isLocalWindowsAdministrator(sid, accountDomain, computerName) {

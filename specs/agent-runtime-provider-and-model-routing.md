@@ -368,13 +368,23 @@ version checks before the Action uses it. Explicitly selected executables
 remain operator-owned and fail closed. A fixture MUST prove fallback for an
 unsafe default, no fallback for a generic metadata outage, and cleanup if the
 official replacement also fails trust.
-The downloader and installer shell MUST resolve from fixed system locations,
+The downloader and installer shell MUST resolve from trusted system locations,
 and every installer child uses a system-only `PATH`. A workflow-controlled
 directory cannot supply `curl`, `sh`, `bash`, or commands called by the official
-installer. On Windows the trusted tool root is `C:\Windows`; a nonstandard
-system installation fails closed until explicitly supported. Missing trusted
-tools fail closed. A fixture prepends a fake tool
-directory and proves no fake downloader or shell is launched.
+installer. On Windows, capture the runner's `SystemRoot`, `WINDIR`, and
+`SystemDrive` at process startup, before accepting Action inputs; require
+matching drive-absolute `SystemRoot` and `WINDIR` values, a consistent drive,
+and a canonical existing Windows system directory. Reject malformed,
+disagreeing, UNC, relative, or reparse-point roots. Use the captured root for
+`taskkill.exe`, PowerShell, curl, version checks, and the installer child's
+system-only `PATH` and module path. A later mutation of `process.env` or an
+installer environment argument MUST NOT change those executable locations.
+The runner startup environment is a trusted machine prerequisite; a runner
+whose own system variables have been replaced before the Action process starts
+is outside the Action's trust boundary. Missing trusted tools fail closed.
+Fixtures MUST cover a non-`C:` system drive, malformed or disagreeing roots,
+post-startup environment tampering, and a fake tool directory prepended to
+`PATH` without launching the fake downloader, shell, or process-tree killer.
 Official latest-version metadata retrieval MUST use the same fixed trusted
 `curl` location and system-only child `PATH` as installation. A fixture MUST
 prepend a fake `curl` to the caller `PATH`, verify the official version is

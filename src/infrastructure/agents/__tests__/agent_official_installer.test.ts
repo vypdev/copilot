@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { trustedSystemPath } from '../agent_trusted_system_tools';
+import { trustedWindowsSystemRoot } from '../windows_system_root.cjs';
 import {
     installOfficialAgentCli, installerEnvironment, OfficialAgentInstallationError,
     parseCursorWindowsInstaller, selectOpenCodeWindowsAsset,
@@ -15,18 +17,18 @@ beforeEach(() => execute.mockReset());
 describe('official agent installer boundaries', () => {
     it('passes only toolchain variables into installers, never Action or model credentials', () => {
         const environment = installerEnvironment('/private/agent-job', {
-            PATH: '/tmp/attacker:/usr/bin', SystemRoot: 'C:\\attacker', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
+            PATH: '/tmp/attacker:/usr/bin', SystemRoot: 'C:\\attacker', WINDIR: 'C:\\attacker',
+            SystemDrive: 'D:', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
             CODEX_API_KEY: 'secret', OPENAI_API_KEY: 'secret', CURSOR_API_KEY: 'secret',
             NPM_TOKEN: 'secret', HOME: '/operator/home', CODEX_HOME: '/operator/codex',
             PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
         });
-        expect(environment.PATH).toBe(process.platform === 'win32'
-            ? ['C:\\Windows\\System32', 'C:\\Windows', 'C:\\Windows\\System32\\Wbem',
-                'C:\\Windows\\System32\\WindowsPowerShell\\v1.0'].join(';')
-            : ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(':'));
+        expect(environment.PATH).toBe(trustedSystemPath());
         expect(environment.PATH).not.toContain('/tmp/attacker');
         if (process.platform === 'win32') {
-            expect(environment.SystemRoot).toBe('C:\\Windows');
+            expect(environment.SystemRoot).toBe(trustedWindowsSystemRoot());
+            expect(environment.SystemDrive).toBe(trustedWindowsSystemRoot().slice(0, 2));
+            expect(environment.COMSPEC).toBe(join(trustedWindowsSystemRoot(), 'System32', 'cmd.exe'));
             expect(environment.PSModulePath).toContain('WindowsPowerShell\\v1.0\\Modules');
             expect(environment.PSModulePath).not.toContain('PowerShell\\7');
             expect(environment.APPDATA).toBe(join('/private/agent-job', 'roaming'));

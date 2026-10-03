@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
 import { trustedCurlPath, trustedSystemPath } from './agent_trusted_system_tools';
+import { trustedWindowsSystemRoot } from './windows_system_root.cjs';
 
 const MAX_METADATA_BYTES = 1024 * 1024;
 const CODEX_RELEASE_CHANNEL = 'https://releases.openai.com/codex/channels/latest';
@@ -15,8 +16,8 @@ function readOfficialText(url: string): string {
     }
     environment.PATH = trustedSystemPath();
     if (process.platform === 'win32') {
-        environment.SystemRoot = 'C:\\Windows';
-        environment.WINDIR = 'C:\\Windows';
+        environment.SystemRoot = trustedWindowsSystemRoot();
+        environment.WINDIR = environment.SystemRoot;
     }
     return execFileSync(curl, [
         '--fail', '--location', '--silent', '--show-error', '--max-time', '15',

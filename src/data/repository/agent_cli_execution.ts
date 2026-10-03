@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync, rmSync, statSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, relative } from 'node:path';
+import { basename, dirname, isAbsolute, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
 import { classifyAgentCliExitDiagnostic } from './agent_cli_exit_diagnostic';
 import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
 import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
+import { trustedWindowsSystemTool } from '../../infrastructure/agents/agent_trusted_system_tools';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -277,8 +278,7 @@ function cleanupRuntimeDirectory(runtimeDirectory: string): void {
 function signalProcessTree(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {
     try {
         if (process.platform === 'win32' && child.pid) {
-            const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-            execFileSync(join(systemRoot, 'System32', 'taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+            execFileSync(trustedWindowsSystemTool('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
                 stdio: 'ignore', timeout: 5_000, windowsHide: true,
             });
         } else if (child.pid) {

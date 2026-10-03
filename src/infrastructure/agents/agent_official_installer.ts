@@ -8,13 +8,19 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
-import { trustedCurlPath, trustedSystemPath, trustedUnixShellPath } from './agent_trusted_system_tools';
+import { trustedCurlPath, trustedSystemPath, trustedUnixShellPath, trustedWindowsSystemTool } from './agent_trusted_system_tools';
 import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
+import { trustedWindowsSystemRoot } from './windows_system_root.cjs';
 
 const MAX_SCRIPT_BYTES = 1_048_576;
 const MAX_METADATA_BYTES = 2_097_152;
 const MAX_ARCHIVE_BYTES = 268_435_456;
-const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+const windowsMachineDirectories = process.platform === 'win32' ? {
+    ProgramFiles: process.env.ProgramFiles,
+    ProgramFilesX86: process.env['ProgramFiles(x86)'],
+    ProgramData: process.env.ProgramData,
+    CommonProgramFiles: process.env.CommonProgramFiles,
+} : undefined;
 
 export type OfficialAgentInstallationStage = 'private-root' | 'download' | 'installer-script' | 'installed-file';
 export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'access-denied' | 'missing-command' | 'unknown';
@@ -69,17 +75,22 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
     }
     environment.PATH = trustedSystemPath();
     if (process.platform === 'win32') {
-        environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
-        environment.WINDIR = WINDOWS_SYSTEM_ROOT;
-        environment.SystemDrive = 'C:';
-        environment.ProgramFiles = 'C:\\Program Files';
-        environment['ProgramFiles(x86)'] = 'C:\\Program Files (x86)';
-        environment.ProgramData = 'C:\\ProgramData';
-        environment.CommonProgramFiles = 'C:\\Program Files\\Common Files';
-        environment.ALLUSERSPROFILE = 'C:\\ProgramData';
+        const systemRoot = trustedWindowsSystemRoot();
+        const drive = systemRoot.slice(0, 2);
+        const programFiles = windowsMachineDirectories?.ProgramFiles || `${drive}\\Program Files`;
+        const programData = windowsMachineDirectories?.ProgramData || `${drive}\\ProgramData`;
+        environment.SystemRoot = systemRoot;
+        environment.WINDIR = systemRoot;
+        environment.SystemDrive = drive;
+        environment.COMSPEC = trustedWindowsSystemTool('cmd.exe');
+        environment.ProgramFiles = programFiles;
+        environment['ProgramFiles(x86)'] = windowsMachineDirectories?.ProgramFilesX86 || `${drive}\\Program Files (x86)`;
+        environment.ProgramData = programData;
+        environment.CommonProgramFiles = windowsMachineDirectories?.CommonProgramFiles || join(programFiles, 'Common Files');
+        environment.ALLUSERSPROFILE = programData;
         environment.PSModulePath = [
-            join(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
-            'C:\\Program Files\\WindowsPowerShell\\Modules',
+            join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+            join(programFiles, 'WindowsPowerShell', 'Modules'),
         ].join(delimiter);
     }
     environment.HOME = root;
@@ -130,8 +141,7 @@ function runScript(provider: AgentProvider, root: string, environment: NodeJS.Pr
     const script = join(root, windows ? 'install.ps1' : 'install.sh');
     downloadScript(url, script, environment);
     if (windows) {
-        const powershell = join(WINDOWS_SYSTEM_ROOT,
-            'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+        const powershell = trustedWindowsSystemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe'));
         try {
             execFileSync(powershell, [
                 '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
@@ -161,8 +171,7 @@ function extractWindowsArchive(archive: string, destination: string, environment
     mkdirSync(destination, { recursive: true });
     const quote = (value: string) => value.replace(/'/gu, "''");
     const command = `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${quote(archive)}' -DestinationPath '${quote(destination)}' -Force`;
-    const powershell = join(WINDOWS_SYSTEM_ROOT,
-        'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    const powershell = trustedWindowsSystemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe'));
     execFileSync(powershell, [
         '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
         Buffer.from(command, 'utf16le').toString('base64'),

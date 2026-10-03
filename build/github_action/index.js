@@ -67695,6 +67695,7 @@ const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_cli_exit_diagnostic_1 = __nccwpck_require__(86654);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
@@ -67961,8 +67962,7 @@ function cleanupRuntimeDirectory(runtimeDirectory) {
 function signalProcessTree(child, signal) {
     try {
         if (process.platform === 'win32' && child.pid) {
-            const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-            (0, node_child_process_1.execFileSync)((0, node_path_1.join)(systemRoot, 'System32', 'taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+            (0, node_child_process_1.execFileSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
                 stdio: 'ignore', timeout: 5000, windowsHide: true,
             });
         }
@@ -78783,10 +78783,16 @@ const node_path_1 = __nccwpck_require__(49411);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
 const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
 const MAX_ARCHIVE_BYTES = 268435456;
-const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+const windowsMachineDirectories = process.platform === 'win32' ? {
+    ProgramFiles: process.env.ProgramFiles,
+    ProgramFilesX86: process.env['ProgramFiles(x86)'],
+    ProgramData: process.env.ProgramData,
+    CommonProgramFiles: process.env.CommonProgramFiles,
+} : undefined;
 class OfficialAgentInstallationError extends Error {
     constructor(stage, message, exitCode, cause, reason) {
         super(message);
@@ -78831,17 +78837,22 @@ function installerEnvironment(root, source) {
     }
     environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
     if (process.platform === 'win32') {
-        environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
-        environment.WINDIR = WINDOWS_SYSTEM_ROOT;
-        environment.SystemDrive = 'C:';
-        environment.ProgramFiles = 'C:\\Program Files';
-        environment['ProgramFiles(x86)'] = 'C:\\Program Files (x86)';
-        environment.ProgramData = 'C:\\ProgramData';
-        environment.CommonProgramFiles = 'C:\\Program Files\\Common Files';
-        environment.ALLUSERSPROFILE = 'C:\\ProgramData';
+        const systemRoot = (0, windows_system_root_cjs_1.trustedWindowsSystemRoot)();
+        const drive = systemRoot.slice(0, 2);
+        const programFiles = windowsMachineDirectories?.ProgramFiles || `${drive}\\Program Files`;
+        const programData = windowsMachineDirectories?.ProgramData || `${drive}\\ProgramData`;
+        environment.SystemRoot = systemRoot;
+        environment.WINDIR = systemRoot;
+        environment.SystemDrive = drive;
+        environment.COMSPEC = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('cmd.exe');
+        environment.ProgramFiles = programFiles;
+        environment['ProgramFiles(x86)'] = windowsMachineDirectories?.ProgramFilesX86 || `${drive}\\Program Files (x86)`;
+        environment.ProgramData = programData;
+        environment.CommonProgramFiles = windowsMachineDirectories?.CommonProgramFiles || (0, node_path_1.join)(programFiles, 'Common Files');
+        environment.ALLUSERSPROFILE = programData;
         environment.PSModulePath = [
-            (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
-            'C:\\Program Files\\WindowsPowerShell\\Modules',
+            (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+            (0, node_path_1.join)(programFiles, 'WindowsPowerShell', 'Modules'),
         ].join(node_path_1.delimiter);
     }
     environment.HOME = root;
@@ -78892,7 +78903,7 @@ function runScript(provider, root, environment) {
     const script = (0, node_path_1.join)(root, windows ? 'install.ps1' : 'install.sh');
     downloadScript(url, script, environment);
     if (windows) {
-        const powershell = (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+        const powershell = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)((0, node_path_1.join)('WindowsPowerShell', 'v1.0', 'powershell.exe'));
         try {
             (0, node_child_process_1.execFileSync)(powershell, [
                 '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
@@ -78921,7 +78932,7 @@ function extractWindowsArchive(archive, destination, environment) {
     (0, node_fs_1.mkdirSync)(destination, { recursive: true });
     const quote = (value) => value.replace(/'/gu, "''");
     const command = `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${quote(archive)}' -DestinationPath '${quote(destination)}' -Force`;
-    const powershell = (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    const powershell = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)((0, node_path_1.join)('WindowsPowerShell', 'v1.0', 'powershell.exe'));
     (0, node_child_process_1.execFileSync)(powershell, [
         '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
         Buffer.from(command, 'utf16le').toString('base64'),
@@ -79058,6 +79069,7 @@ exports.compareOfficialAgentVersion = compareOfficialAgentVersion;
 const node_child_process_1 = __nccwpck_require__(17718);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
 const MAX_METADATA_BYTES = 1024 * 1024;
 const CODEX_RELEASE_CHANNEL = 'https://releases.openai.com/codex/channels/latest';
 function readOfficialText(url) {
@@ -79071,8 +79083,8 @@ function readOfficialText(url) {
     }
     environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
     if (process.platform === 'win32') {
-        environment.SystemRoot = 'C:\\Windows';
-        environment.WINDIR = 'C:\\Windows';
+        environment.SystemRoot = (0, windows_system_root_cjs_1.trustedWindowsSystemRoot)();
+        environment.WINDIR = environment.SystemRoot;
     }
     return (0, node_child_process_1.execFileSync)(curl, [
         '--fail', '--location', '--silent', '--show-error', '--max-time', '15',
@@ -79187,20 +79199,32 @@ function readAgentRuntimeVersion(provider, output) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.trustedSystemPath = trustedSystemPath;
+exports.windowsSystemPath = windowsSystemPath;
 exports.trustedCurlPath = trustedCurlPath;
+exports.trustedWindowsSystemTool = trustedWindowsSystemTool;
+exports.windowsSystemTool = windowsSystemTool;
 exports.trustedUnixShellPath = trustedUnixShellPath;
 const node_path_1 = __nccwpck_require__(49411);
-const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
 function trustedSystemPath() {
     if (process.platform !== 'win32')
         return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
-    return [(0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
-        (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'Wbem'),
-        (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
+    return windowsSystemPath((0, windows_system_root_cjs_1.trustedWindowsSystemRoot)());
+}
+function windowsSystemPath(systemRoot) {
+    return [(0, node_path_1.join)(systemRoot, 'System32'), systemRoot,
+        (0, node_path_1.join)(systemRoot, 'System32', 'Wbem'),
+        (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
 }
 function trustedCurlPath() {
     return process.platform === 'win32'
-        ? (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'curl.exe') : '/usr/bin/curl';
+        ? trustedWindowsSystemTool('curl.exe') : '/usr/bin/curl';
+}
+function trustedWindowsSystemTool(name) {
+    return windowsSystemTool((0, windows_system_root_cjs_1.trustedWindowsSystemRoot)(), name);
+}
+function windowsSystemTool(systemRoot, name) {
+    return (0, node_path_1.join)(systemRoot, 'System32', name);
 }
 function trustedUnixShellPath(name) {
     return `/bin/${name}`;
@@ -84892,6 +84916,7 @@ const { Buffer } = __nccwpck_require__(72254);
 const { realpathSync } = __nccwpck_require__(87561);
 const { hostname } = __nccwpck_require__(70612);
 const { dirname, join } = __nccwpck_require__(49411);
+const { trustedWindowsSystemRoot } = __nccwpck_require__(48176);
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
 const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
@@ -84901,8 +84926,7 @@ const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC', 
 const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
 
 function systemTool(name) {
-  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-  return join(systemRoot, 'System32', name);
+  return join(trustedWindowsSystemRoot(), 'System32', name);
 }
 
 function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
@@ -85043,6 +85067,55 @@ module.exports = {
   systemTool,
   verifyWindowsAgentExecutableAcl,
 };
+
+
+/***/ }),
+
+/***/ 48176:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { lstatSync, realpathSync } = __nccwpck_require__(87561);
+const { win32 } = __nccwpck_require__(49411);
+
+/** Parse machine facts without consulting a mutable search path or child environment. */
+function resolveWindowsSystemRoot(source) {
+  const root = source.SystemRoot;
+  const windir = source.WINDIR;
+  if (typeof root !== 'string' || typeof windir !== 'string'
+    || !/^[a-z]:\\[^\\/]+$/iu.test(root)
+    || win32.normalize(root).toLowerCase() !== win32.normalize(windir).toLowerCase()
+    || win32.basename(root).toLowerCase() !== 'windows') {
+    throw new Error('Windows runner system directory is invalid or inconsistent.');
+  }
+  const drive = win32.parse(root).root.slice(0, 2);
+  if (typeof source.SystemDrive !== 'string'
+    || source.SystemDrive.toLowerCase() !== drive.toLowerCase()) {
+    throw new Error('Windows runner system drive does not match its system directory.');
+  }
+  return win32.normalize(root);
+}
+
+function captureWindowsSystemRoot(source) {
+  const root = resolveWindowsSystemRoot(source);
+  for (const directory of [root, win32.join(root, 'System32')]) {
+    if (!lstatSync(directory).isDirectory()
+      || win32.normalize(realpathSync.native(directory)).toLowerCase() !== directory.toLowerCase()) {
+      throw new Error('Windows runner system directory is not a canonical directory.');
+    }
+  }
+  return root;
+}
+
+// The Action's startup environment comes from its runner. Capture it before
+// workflow data or provider subprocesses can mutate process.env.
+const systemRoot = process.platform === 'win32' ? captureWindowsSystemRoot(process.env) : undefined;
+
+function trustedWindowsSystemRoot() {
+  if (!systemRoot) throw new Error('Windows system tools are unavailable on this platform.');
+  return systemRoot;
+}
+
+module.exports = { resolveWindowsSystemRoot, trustedWindowsSystemRoot };
 
 
 /***/ }),

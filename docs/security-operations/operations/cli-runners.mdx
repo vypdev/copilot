@@ -49,6 +49,8 @@ node scripts/verify-agent-clis.cjs
 
 The verifier checks the selected launcher, interpreter, and package entry point before invoking help, version, or login status. It rejects files with unsafe ownership or write access, including Windows ACLs that grant modification to another principal. It reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
 
+On Windows, the Action captures the runner service's `SystemRoot`, `WINDIR`, and `SystemDrive` when it starts. They must identify the same canonical Windows installation; the drive may be other than `C:`. The Action uses that captured directory for PowerShell, curl, and process-tree termination, even if a later child environment changes those variables. If the variables disagree or the directory is redirected, repair the runner service environment and start a new job. The Action fails before installing an agent in that case. The setup platform smoke checks the isolated PowerShell module path with a local fixture; an authenticated agent run remains separate evidence.
+
 ## Provider notes
 
 ### OpenCode

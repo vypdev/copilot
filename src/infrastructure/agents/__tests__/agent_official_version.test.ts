@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { delimiter } from 'node:path';
+import { trustedCurlPath } from '../agent_trusted_system_tools';
 import {
     compareOfficialAgentVersion, parseOfficialLatestAgentVersion, readOfficialLatestAgentVersion,
 } from '../agent_official_version';
@@ -35,7 +36,7 @@ describe('official agent version discovery', () => {
             execute.mockReturnValue('{"tag_name":"rust-v0.159.2"}');
             expect(readOfficialLatestAgentVersion('codex')).toBe('0.159.2');
             const [command, args, options] = execute.mock.calls[0];
-            expect(command).toBe(process.platform === 'win32' ? 'C:\\Windows\\System32\\curl.exe' : '/usr/bin/curl');
+            expect(command).toBe(trustedCurlPath());
             expect(options.env.PATH).not.toContain('/attacker-controlled-tools');
             expect(args.at(-1)).toBe('https://releases.openai.com/codex/channels/latest');
             expect(options.env.CODEX_API_KEY).toBeUndefined();

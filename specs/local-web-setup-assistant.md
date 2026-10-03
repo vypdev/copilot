@@ -2093,6 +2093,16 @@ ACL fixtures; the multi-case Jest budget may be extended separately from each
 child process's five-second functional timeout. A fresh hosted Windows suite
 and a manual service-runner suite MUST both pass after the change.
 
+The [Bugbot review of `8aa335da`](https://github.com/vypdev/copilot/actions/runs/37114090732)
+found that cancellation used a live environment variable to locate
+`taskkill.exe` and that the official installer assumed Windows was installed
+on `C:`. The agent runtime SDD defines the repair: capture and validate the
+runner's system root once, then use that root for every system executable and
+for the isolated installer environment. Deterministic cases MUST reject
+tampered roots and demonstrate non-`C:` path selection. Hosted and service
+Windows fixture runs MUST pass after the repair; a real Windows Action agent
+run is still required to close the provider-runtime gate.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup
