@@ -68,17 +68,21 @@ function assertCommandTrust(command, reportTarget = () => undefined) {
     const stats = statSync(path);
     if (!stats.isFile()) throw new Error('Agent executable must be a regular file.');
     accessSync(path, constants.X_OK);
-    if (process.platform === 'win32') verifyWindowsAgentExecutableAcl(path);
-    else if ((stats.mode & 0o022) !== 0
+    if (process.platform === 'win32') {
+      try {
+        verifyWindowsAgentExecutableAcl(path);
+      } catch (error) {
+        if (error?.code !== 'ETIMEDOUT') throw error;
+        verifyWindowsAgentExecutableAcl(path);
+      }
+    } else if ((stats.mode & 0o022) !== 0
       || (typeof process.getuid === 'function' && stats.uid !== process.getuid() && stats.uid !== 0)) {
       throw new Error('Agent executable owner or permissions are unsafe.');
     }
   }
 }
 
-function invokeCommand(command, args, options, reportPhase = () => undefined) {
-  assertCommandTrust(command, (role) => reportPhase(`trust-${role}`));
-  reportPhase('execute');
+function invokeCommand(command, args, options) {
   return execFileSync(command.executable, [...command.prefix, ...args], options);
 }
 
@@ -163,7 +167,7 @@ function safeFailureCode(error) {
   if (['EACCES', 'ENOENT', 'EPERM', 'ETIMEDOUT'].includes(error?.code)) return error.code.toLowerCase();
   const message = typeof error?.message === 'string' ? error.message : '';
   if (message.startsWith('Agent executable is writable by another principal')) return 'acl-writable';
-  if (message.startsWith('Unsafe executable ACL owner or DACL')) return 'acl-owner';
+  if (message.startsWith('Unsafe executable ACL owner') || message.includes(': Unsafe executable ACL owner')) return 'acl-owner';
   if (message.startsWith('Unrecognized executable ACL')) return 'acl-format';
   if (message.startsWith('Could not identify the Windows runtime owner')) return 'identity';
   if (message.startsWith('Agent executable owner or permissions are unsafe')) return 'unsafe-permissions';
@@ -183,10 +187,11 @@ for (const check of checks) {
   let phase = 'resolve';
   try {
     const command = resolveCommand(check);
-    const helpPhase = (stage) => { phase = `help-${stage}`; };
-    invokeCommand(command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }, helpPhase);
-    const versionPhase = (stage) => { phase = `version-${stage}`; };
-    const version = invokeCommand(command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }, versionPhase)
+    assertCommandTrust(command, (role) => { phase = `help-trust-${role}`; });
+    phase = 'help-execute';
+    invokeCommand(command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
+    phase = 'version-execute';
+    const version = invokeCommand(command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 })
       .trim()
       .replace(/\s+/g, ' ')
       .slice(0, 200);

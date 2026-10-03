@@ -384,6 +384,19 @@ read-only PowerShell process. A missing descriptor, changed count, malformed
 JSON response, or query failure blocks the run. The existing Windows
 execution, timeout, and cancellation fixtures must meet their 15-second Jest
 deadlines without increasing the admitted provider timeout.
+The standalone CLI verifier checks the selected command, interpreter, and
+launcher once before its help/version/login probes. This permits reuse only
+within the same short-lived verifier process after all path components are
+proven inaccessible to untrusted mutation. A transient PowerShell query
+timeout may be retried once; unsafe or malformed ACL evidence is never
+retried as success. Hosted and service Windows fixtures must prove readiness
+without increasing the 15-second ACL query limit.
+Agent execution failure telemetry MUST include only a closed preflight stage
+(`workspace`, `ambient-configuration`, `manifest`, `selection`, `resolution`,
+`invocation-trust`, `environment`, `version`, `artifacts`, or `policy`). It
+MUST NOT include selected paths, argv, prompts, environment values, or raw
+provider stderr. A Windows PR review failure must expose the stage before
+its platform gate can close.
 Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
 generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;

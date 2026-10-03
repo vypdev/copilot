@@ -276,6 +276,11 @@ The installed file and all of its ancestors are read in one bounded,
 read-only Windows PowerShell invocation. An incomplete or malformed batch
 fails closed, and execution/timeout/cancellation fixtures must finish within
 their existing 15-second Jest deadline on hosted and service Windows runners.
+The standalone read-only verifier may reuse the complete trust decision for
+help, version, and login probes in its short-lived process. It retries only
+a transient ACL query timeout once; a rejected owner, ACE, or malformed
+descriptor remains rejected. Action telemetry records a closed preflight
+stage without including paths, arguments, prompts, or environment values.
 The installed-file check reads a full Windows security descriptor; the
 managed-artifact `icacls /save` snapshot contains only the DACL and is not
 owner evidence for an installed executable.

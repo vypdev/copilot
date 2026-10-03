@@ -22,6 +22,7 @@ import {
     type AgentManagedArtifact,
 } from '../../domain/agent_execution_plan';
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
+import type { AgentExecutionPreflightStage } from '../../application/ports/agent_execution_observation_ports';
 import { validateAgentExecutableSelection } from '../../application/policies/agent_executable_policy';
 import { buildAgentCliEnvironment } from '../../data/repository/agent_authentication';
 import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
@@ -77,30 +78,40 @@ export class AgentExecutionPlanner {
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
         let runtimeDirectory: string | undefined;
+        let stage: AgentExecutionPreflightStage = 'workspace';
         try {
             const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            stage = 'manifest';
             const manifest = getAgentRuntimeManifest();
             const runtime = getAgentRuntimeManifestEntry(request.configuration.provider);
             const requestedExecutable = request.configuration.executable?.trim() || runtime.executable;
+            stage = 'selection';
             validateAgentExecutableSelection({
                 provider: request.configuration.provider,
                 executable: requestedExecutable,
             });
+            stage = 'resolution';
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
+            stage = 'invocation-trust';
             const invocation = validateResolvedAgentInvocation(executable, request.configuration.provider, sourceEnvironment);
+            stage = 'environment';
             const safeEnvironment = buildAgentCliEnvironment(
                 request.configuration.provider,
                 sourceEnvironment,
                 request.configuration.modelProvider,
             );
+            stage = 'version';
             const version = readAgentRuntimeVersion(
                 request.configuration.provider,
                 this.system.readVersion(executable, request.configuration.provider, safeEnvironment),
             );
+            stage = 'artifacts';
             runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
             makeWindowsRuntimePathPrivate(runtimeDirectory, true);
             const gitConfigPath = join(runtimeDirectory, 'gitconfig');
+            stage = 'policy';
             const providerPolicy = buildProviderExecutionPolicy({
                 configuration: request.configuration,
                 capability: request.capability,
@@ -108,6 +119,7 @@ export class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
             });
+            stage = 'artifacts';
             const artifacts = materializeArtifacts([
                 { path: gitConfigPath, contents: '', purpose: 'git-config' },
                 ...providerPolicy.artifacts,
@@ -150,11 +162,16 @@ export class AgentExecutionPlanner {
             };
         } catch (error) {
             if (runtimeDirectory) rmSync(runtimeDirectory, { recursive: true, force: true });
-            if (error instanceof AgentCliError) throw error;
-            throw new AgentCliError(
+            if (error instanceof AgentCliError) {
+                error.preflightStage = stage;
+                throw error;
+            }
+            const rejected = new AgentCliError(
                 'Agent execution plan rejected because its local runtime contract could not be validated.',
                 'configuration',
             );
+            rejected.preflightStage = stage;
+            throw rejected;
         }
     }
 }

@@ -67610,6 +67610,8 @@ function failureObservation(request, error, phase, startedAt) {
         provider: request.configuration.provider, capability: request.capability,
         durationMilliseconds: Date.now() - startedAt,
         failureCategory: category,
+        ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightStage
+            ? { preflightStage: error.preflightStage } : {}),
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
         exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
@@ -78568,23 +78570,33 @@ class AgentExecutionPlanner {
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
         let runtimeDirectory;
+        let stage = 'workspace';
         try {
             const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            stage = 'manifest';
             const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifest)();
             const runtime = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(request.configuration.provider);
             const requestedExecutable = request.configuration.executable?.trim() || runtime.executable;
+            stage = 'selection';
             (0, agent_executable_policy_1.validateAgentExecutableSelection)({
                 provider: request.configuration.provider,
                 executable: requestedExecutable,
             });
+            stage = 'resolution';
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
+            stage = 'invocation-trust';
             const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider, sourceEnvironment);
+            stage = 'environment';
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
+            stage = 'version';
             const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
+            stage = 'artifacts';
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
             (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(runtimeDirectory, true);
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
+            stage = 'policy';
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
                 configuration: request.configuration,
                 capability: request.capability,
@@ -78592,6 +78604,7 @@ class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
             });
+            stage = 'artifacts';
             const artifacts = materializeArtifacts([
                 { path: gitConfigPath, contents: '', purpose: 'git-config' },
                 ...providerPolicy.artifacts,
@@ -78636,9 +78649,13 @@ class AgentExecutionPlanner {
         catch (error) {
             if (runtimeDirectory)
                 (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
-            if (error instanceof agent_cli_contracts_1.AgentCliError)
+            if (error instanceof agent_cli_contracts_1.AgentCliError) {
+                error.preflightStage = stage;
                 throw error;
-            throw new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
+            }
+            const rejected = new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
+            rejected.preflightStage = stage;
+            throw rejected;
         }
     }
 }
@@ -81594,7 +81611,8 @@ class LoggerAgentExecutionObserverAdapter {
         if (observation.state === 'failed') {
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
             const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
-            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${exit}${diagnostic}).`, false, { agentExecution: observation });
+            const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${exit}${diagnostic}).`, false, { agentExecution: observation });
             return;
         }
         if (observation.state === 'completed') {

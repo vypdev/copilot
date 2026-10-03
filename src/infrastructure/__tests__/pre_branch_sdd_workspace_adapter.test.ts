@@ -22,9 +22,13 @@ function fixture() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-sdd-workspace-test-'));
   const remote = path.join(temp, 'remote.git');
   const repo = path.join(temp, 'repo');
+  const hooks = path.join(temp, 'empty-hooks');
+  fs.mkdirSync(hooks);
   fs.mkdirSync(repo);
   git(temp, 'init', '--bare', remote);
+  git(remote, 'config', 'core.hooksPath', hooks);
   git(repo, 'init');
+  git(repo, 'config', 'core.hooksPath', hooks);
   git(repo, 'config', 'user.name', 'Test Maintainer');
   git(repo, 'config', 'user.email', 'maintainer@example.test');
   fs.mkdirSync(path.join(repo, 'specs'));

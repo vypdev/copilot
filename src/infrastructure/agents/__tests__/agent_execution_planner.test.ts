@@ -287,16 +287,32 @@ describe('AgentExecutionPlanner', () => {
 
     it('preserves semantic planner errors and sanitizes non-Error failures', () => {
         const semanticSystem = system('codex');
-        semanticSystem.resolveWorkspace = jest.fn(() => { throw new AgentCliError('semantic rejection', 'configuration'); });
+        const semanticError = new AgentCliError('semantic rejection', 'configuration');
+        semanticSystem.resolveWorkspace = jest.fn(() => { throw semanticError; });
         expect(() => new AgentExecutionPlanner(semanticSystem).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
         })).toThrow('semantic rejection');
+        expect(semanticError.preflightStage).toBe('workspace');
 
         const nonErrorSystem = system('codex');
         nonErrorSystem.resolveWorkspace = jest.fn(() => { throw 'opaque rejection'; });
         expect(() => new AgentExecutionPlanner(nonErrorSystem).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
         })).toThrow('local runtime contract could not be validated');
+        let resolutionFailure: unknown;
+        try {
+            new AgentExecutionPlanner({
+                ...system('codex'), resolveExecutable: () => { throw new Error('secret path'); },
+            }).prepare({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
+            });
+        } catch (error) {
+            resolutionFailure = error;
+        }
+        expect(resolutionFailure).toMatchObject({
+            preflightStage: 'resolution',
+            message: 'Agent execution plan rejected because its local runtime contract could not be validated.',
+        });
     });
 
     it('cleans a created runtime directory when policy artifact serialization fails', () => {

@@ -32,11 +32,11 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         observer.observe({
             state: 'failed', phase: 'preflight', provider: 'cursor', capability: 'fixer',
             durationMilliseconds: 10, failureCategory: 'configuration',
-            semanticCode: 'agent.policy-rejected', retryable: false,
+            semanticCode: 'agent.policy-rejected', retryable: false, preflightStage: 'invocation-trust',
         });
 
         expect(logInfo).toHaveBeenCalledWith(
-            'Agent execution failed (preflight/configuration).',
+            'Agent execution failed (preflight/configuration, stage invocation-trust).',
             false,
             { agentExecution: expect.not.objectContaining({ prompt: expect.anything(), environment: expect.anything() }) },
         );

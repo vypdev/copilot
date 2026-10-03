@@ -18,4 +18,6 @@ Only runtimes selected by active roles are provisioned, authenticated, and execu
 
 Windows agent execution remains an open gate. An earlier hosted fixture rejected an unsafe ambient Node ACL; missing native agent CLIs now use official standalone sources. Existing npm shims still require a separately trusted Node executable. The read-only trust check also rejects a replaceable parent directory on any selected executable path; it recognizes the known `NT SERVICE\TrustedInstaller` owner on system directory ancestors such as `C:\`, while continuing to reject that ownership on an executable. The distributed workflows use the shared `self-hosted, codex` pool, which can schedule Windows, macOS, or Ubuntu. A passing isolated Windows runner fixture and human review are still required before claiming Windows support.
 
+If agent preflight fails, the Action log identifies a fixed stage such as `resolution`, `invocation-trust`, or `version`. That diagnostic does not print the executable path, prompt, arguments, or credentials. The standalone read-only CLI verifier checks trust once before its help, version, and optional login probes and retries only a transient Windows ACL query timeout once.
+
 There is no runtime registry or provider fallback. The exhaustive dispatcher recognizes exactly these three values and rejects every other value before spawn.

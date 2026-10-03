@@ -15,6 +15,12 @@ export type AgentExecutionSemanticCode =
     | 'timeout'
     | 'workflow.cancelled';
 
+/** Closed stage identity; no executable path or provider output is admitted. */
+export type AgentExecutionPreflightStage =
+    | 'workspace' | 'ambient-configuration' | 'manifest' | 'selection'
+    | 'resolution' | 'invocation-trust' | 'environment' | 'version'
+    | 'artifacts' | 'policy';
+
 /** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
 export type AgentExecutionExitDiagnostic =
     | 'reported-authentication'
@@ -55,6 +61,7 @@ export type AgentExecutionObservation =
         readonly phase: 'preflight' | 'run';
         readonly durationMilliseconds: number;
         readonly failureCategory: AgentExecutionFailureCategory;
+        readonly preflightStage?: AgentExecutionPreflightStage;
         readonly semanticCode: AgentExecutionSemanticCode;
         readonly retryable: boolean;
         readonly exitCode?: number;

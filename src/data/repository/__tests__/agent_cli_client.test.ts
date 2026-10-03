@@ -172,12 +172,16 @@ describe('AgentCliClient admitted process execution', () => {
             prompt: 'p', timeoutMs: 5_000,
         };
         const planningFailure = new AgentCliClient({
-            prepare: () => { throw new AgentCliError('rejected', 'configuration'); },
+            prepare: () => {
+                const error = new AgentCliError('rejected', 'configuration');
+                error.preflightStage = 'invocation-trust';
+                throw error;
+            },
         }, { observe });
         await expect(planningFailure.execute(request)).rejects.toMatchObject({ category: 'configuration' });
         expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
             state: 'failed', phase: 'preflight', failureCategory: 'configuration',
-            semanticCode: 'agent.policy-rejected', retryable: false,
+            semanticCode: 'agent.policy-rejected', retryable: false, preflightStage: 'invocation-trust',
         }));
 
         await expect(client(plan('process.exit(75)'), { observe }).execute(request))
