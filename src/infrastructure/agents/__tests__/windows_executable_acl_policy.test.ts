@@ -47,6 +47,8 @@ describe('installed Windows executable parent ACL policy', () => {
         expect(() => checkParent(`O:${user}D:AI(A;;FA;;;${user})(A;;0x1200a9;;;BU)`)).not.toThrow();
         expect(() => checkParent('O:BAD:AI(A;;FA;;;BA)(A;;0x00000006;;;BU)')).not.toThrow();
         expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;FR;;;BU)`)).not.toThrow();
+        expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;LC;;;BU)`)).not.toThrow();
+        expect(() => check(`O:${user}D:AI(A;;LC;;;BU)`)).toThrow('Unrecognized executable ACL rights');
         expect(() => check(`O:${trustedInstaller}D:AI(A;;FA;;;SY)`)).toThrow('owner');
     });
 

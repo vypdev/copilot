@@ -95301,6 +95301,7 @@ const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-18532926
 const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO']);
 const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO']);
 const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
+const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
 
 function systemTool(name) {
   const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
@@ -95347,7 +95348,8 @@ function grantsMutation(rights, directory = false) {
     return (mask & (directory ? genericAll | directoryReplacement : genericWrite | genericAll | fileMutation)) !== 0;
   }
   const tokens = rights.match(/.{2}/gu) ?? [];
-  if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
+  const known = directory ? KNOWN_DIRECTORY_RIGHTS : KNOWN_RIGHTS;
+  if (tokens.length * 2 !== rights.length || tokens.some(token => !known.has(token))) {
     throw new Error(`Unrecognized executable ACL rights (${rights}).`);
   }
   const dangerous = directory ? DIRECTORY_REPLACEMENT_RIGHTS : MUTATING_RIGHTS;

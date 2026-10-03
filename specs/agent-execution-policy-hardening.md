@@ -269,6 +269,9 @@ including the system volume root; it is trusted only for ancestor assessment.
 It must not make a foreign-owned executable acceptable. Hosted and service
 Windows fixtures must prove this exact owner case and still reject an
 untrusted parent owner or replacement grant.
+The SDDL `LC` right is accepted only on a directory ancestor, where it does
+not grant deletion or replacement of an existing component. It remains
+unrecognized on an executable file. Fixture tests must prove both decisions.
 The installed-file check reads a full Windows security descriptor; the
 managed-artifact `icacls /save` snapshot contains only the DACL and is not
 owner evidence for an installed executable.

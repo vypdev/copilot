@@ -376,6 +376,9 @@ owner, including for `C:\`, because both hosted and service fixtures expose
 that system-owned volume root. The exception applies only to ancestor
 descriptors; it does not admit a foreign-owned executable. A fixture must
 verify the exact SID and continue rejecting another owner or mutation grant.
+The system volume may grant SDDL `LC` to another principal. Ancestor checks
+admit that directory-only right without treating it as delete-child; file
+checks do not admit `LC`. The isolated Windows matrix must cover both cases.
 Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
 generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;
