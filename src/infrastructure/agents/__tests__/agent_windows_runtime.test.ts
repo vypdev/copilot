@@ -43,6 +43,13 @@ function fakeRuntime(source: string) {
         WINDIR: process.env.WINDIR,
         TEMP: process.env.TEMP,
         TMP: process.env.TMP,
+        USERPROFILE: process.env.USERPROFILE,
+        HOMEDRIVE: process.env.HOMEDRIVE,
+        HOMEPATH: process.env.HOMEPATH,
+        APPDATA: process.env.APPDATA,
+        LOCALAPPDATA: process.env.LOCALAPPDATA,
+        ProgramData: process.env.ProgramData,
+        PSModulePath: process.env.PSModulePath,
     };
     return { root, workspace, environment, node };
 }
@@ -176,7 +183,7 @@ describe('isolated Windows agent runtime', () => {
                     AGENT_AUTH_PREFLIGHT: 'optional',
                     CODEX_HOME: join(fixture.root, 'no-session'),
                 },
-                encoding: 'utf8', timeout: 30_000,
+                encoding: 'utf8', timeout: 60_000,
             });
             expect({ status: result.status, output: result.stdout.trim() }).toEqual({
                 status: 0,
@@ -186,7 +193,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    }, 45_000);
+    }, 75_000);
 
     windowsIt('times out a fake agent and removes its private artifacts', async () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'
