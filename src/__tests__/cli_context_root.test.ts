@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { getGitRepositoryRoot, isGitRepositoryRoot } from '../cli_context';
+import { getGitRepositoryRoot, isGitRepositoryRoot, isInsideGitRepo } from '../cli_context';
 
 describe('canonical checkout root for setup plans', () => {
   test('repository-relative files resolve from the root even when launched in a child directory', () => {
@@ -26,6 +26,18 @@ describe('canonical checkout root for setup plans', () => {
       expect(isGitRepositoryRoot(outside)).toBe(false);
     } finally {
       rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('a bare repository has no working-tree root', () => {
+    const bare = mkdtempSync(join(tmpdir(), 'copilot-bare-root-test-'));
+    try {
+      execFileSync('git', ['init', '--bare', '-q', bare]);
+      expect(isInsideGitRepo(bare)).toBe(false);
+      expect(isGitRepositoryRoot(bare)).toBe(false);
+      expect(() => getGitRepositoryRoot(bare)).toThrow();
+    } finally {
+      rmSync(bare, { recursive: true, force: true });
     }
   });
 });

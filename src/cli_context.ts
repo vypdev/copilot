@@ -63,8 +63,7 @@ export function getCurrentHeadSha(): string | undefined {
 
 export function isInsideGitRepo(cwd: string): boolean {
   try {
-    execSync('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
-    return true;
+    return execSync('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' }).toString().trim() === 'true';
   } catch {
     return false;
   }
@@ -78,7 +77,8 @@ export function getGitRepositoryRoot(cwd: string): string {
 
 export function isGitRepositoryRoot(cwd: string): boolean {
   try {
-    return execSync('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
+    return isInsideGitRepo(cwd)
+      && execSync('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
   } catch {
     return false;
   }

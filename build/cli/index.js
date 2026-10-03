@@ -71208,8 +71208,7 @@ function getCurrentHeadSha() {
 }
 function isInsideGitRepo(cwd) {
     try {
-        (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
-        return true;
+        return (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' }).toString().trim() === 'true';
     }
     catch {
         return false;
@@ -71222,7 +71221,8 @@ function getGitRepositoryRoot(cwd) {
 }
 function isGitRepositoryRoot(cwd) {
     try {
-        return (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
+        return isInsideGitRepo(cwd)
+            && (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
     }
     catch {
         return false;

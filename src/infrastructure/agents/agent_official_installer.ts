@@ -5,7 +5,7 @@ import {
     readdirSync, realpathSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
 import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
@@ -13,6 +13,7 @@ import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
 const MAX_SCRIPT_BYTES = 1_048_576;
 const MAX_METADATA_BYTES = 2_097_152;
 const MAX_ARCHIVE_BYTES = 268_435_456;
+const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
 
 export interface OfficialAgentInstallation {
     readonly executable: string;
@@ -20,15 +21,30 @@ export interface OfficialAgentInstallation {
     readonly root: string;
 }
 
+function trustedSystemPath(): string {
+    if (process.platform !== 'win32') return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(delimiter);
+    return [join(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
+        join(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(delimiter);
+}
+
+function trustedUnixTool(name: 'curl' | 'sh' | 'bash'): string {
+    return name === 'curl' ? '/usr/bin/curl' : `/bin/${name}`;
+}
+
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     const allowed = [
-        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'OS', 'COMSPEC',
+        'PATHEXT', 'OS', 'COMSPEC',
         'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
     ] as const;
     const environment: NodeJS.ProcessEnv = {};
     for (const name of allowed) {
         if (source[name]) environment[name] = source[name];
+    }
+    environment.PATH = trustedSystemPath();
+    if (process.platform === 'win32') {
+        environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
+        environment.WINDIR = WINDOWS_SYSTEM_ROOT;
     }
     environment.HOME = root;
     environment.USERPROFILE = root;
@@ -44,8 +60,8 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
 function download(url: string, destination: string, environment: NodeJS.ProcessEnv, maxBytes: number): void {
     if (!url.startsWith('https://')) throw new Error('Official agent source must use HTTPS.');
     const curl = process.platform === 'win32'
-        ? join(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'curl.exe')
-        : 'curl';
+        ? join(WINDOWS_SYSTEM_ROOT, 'System32', 'curl.exe')
+        : trustedUnixTool('curl');
     try {
         const contents = execFileSync(curl, [
             '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
@@ -78,14 +94,14 @@ function runScript(provider: AgentProvider, root: string, environment: NodeJS.Pr
     const script = join(root, windows ? 'install.ps1' : 'install.sh');
     downloadScript(url, script, environment);
     if (windows) {
-        const powershell = join(environment.SystemRoot || environment.WINDIR || 'C:\\Windows',
+        const powershell = join(WINDOWS_SYSTEM_ROOT,
             'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
         execFileSync(powershell, [
             '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
         ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
         return join(root, 'bin', 'codex.exe');
     }
-    const shell = provider === 'codex' ? 'sh' : 'bash';
+    const shell = trustedUnixTool(provider === 'codex' ? 'sh' : 'bash');
     const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
     execFileSync(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
     return provider === 'codex'
@@ -99,7 +115,7 @@ function extractWindowsArchive(archive: string, destination: string, environment
     mkdirSync(destination, { recursive: true });
     const quote = (value: string) => value.replace(/'/gu, "''");
     const command = `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${quote(archive)}' -DestinationPath '${quote(destination)}' -Force`;
-    const powershell = join(environment.SystemRoot || environment.WINDIR || 'C:\\Windows',
+    const powershell = join(WINDOWS_SYSTEM_ROOT,
         'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
     execFileSync(powershell, [
         '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',

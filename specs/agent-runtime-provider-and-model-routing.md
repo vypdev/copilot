@@ -342,6 +342,13 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+The downloader and installer shell MUST resolve from fixed system locations,
+and every installer child uses a system-only `PATH`. A workflow-controlled
+directory cannot supply `curl`, `sh`, `bash`, or commands called by the official
+installer. On Windows the trusted tool root is `C:\Windows`; a nonstandard
+system installation fails closed until explicitly supported. Missing trusted
+tools fail closed. A fixture prepends a fake tool
+directory and proves no fake downloader or shell is launched.
 Every direct official-source download MUST be bounded before bytes are written
 to disk: at most 1 MiB for installer scripts, 2 MiB for release metadata, and
 256 MiB for archives. Curl receives its transfer-size limit and the local

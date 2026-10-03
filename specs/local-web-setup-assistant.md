@@ -233,6 +233,9 @@ exactly what completed and what remains.
    canonical repository root and tells the operator to change directory and
    rerun. Canonical path comparison permits a symlink spelling of that same
    root, but never a nested directory.
+   The root predicate MUST require Git to report a work tree as well as an
+   empty relative prefix. A bare repository is not a checkout and MUST be
+   rejected by setup and doctor; local bare Git fixtures prove this boundary.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
    one-run session key, a separate 16-hex-character pairing code, and first
    controller lease in process memory. Print the pairing code only to the

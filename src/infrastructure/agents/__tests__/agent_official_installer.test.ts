@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
     installOfficialAgentCli, installerEnvironment,
     parseCursorWindowsInstaller, selectOpenCodeWindowsAsset,
@@ -15,11 +15,15 @@ beforeEach(() => execute.mockReset());
 describe('official agent installer boundaries', () => {
     it('passes only toolchain variables into installers, never Action or model credentials', () => {
         const environment = installerEnvironment('/private/agent-job', {
-            PATH: '/usr/bin', SystemRoot: 'C:\\Windows', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
+            PATH: '/tmp/attacker:/usr/bin', SystemRoot: 'C:\\attacker', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
             CODEX_API_KEY: 'secret', OPENAI_API_KEY: 'secret', CURSOR_API_KEY: 'secret',
             NPM_TOKEN: 'secret', HOME: '/operator/home', CODEX_HOME: '/operator/codex',
         });
-        expect(environment.PATH).toBe('/usr/bin');
+        expect(environment.PATH).toBe(process.platform === 'win32'
+            ? ['C:\\Windows\\System32', 'C:\\Windows', 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0'].join(';')
+            : ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(':'));
+        expect(environment.PATH).not.toContain('/tmp/attacker');
+        if (process.platform === 'win32') expect(environment.SystemRoot).toBe('C:\\Windows');
         expect(environment.OS).toBe('Windows_NT');
         expect(environment.HOME).toBe('/private/agent-job');
         expect(environment.CODEX_HOME).toBe(join('/private/agent-job', '.codex'));
@@ -101,11 +105,12 @@ describe('official agent installer boundaries', () => {
 
     (process.platform === 'win32' ? it.skip : it)('downloads and executes a fake official shell installer inside a private job directory', () => {
         execute.mockImplementation((file: string, args: string[], options: { env: NodeJS.ProcessEnv }) => {
-            if (file === 'curl') {
+            if (file === '/usr/bin/curl') {
                 expect(args.at(-1)).toBe('https://chatgpt.com/codex/install.sh');
                 expect(args).toContain('--max-filesize');
+                expect(options.env.PATH).not.toContain('/tmp/attacker');
                 return Buffer.from('#!/bin/sh\n');
-            } else if (file === 'sh') {
+            } else if (file === '/bin/sh') {
                 const binary = join(options.env.CODEX_INSTALL_DIR!, 'codex');
                 mkdirSync(options.env.CODEX_INSTALL_DIR!, { recursive: true });
                 writeFileSync(binary, '#!/bin/sh\n');
@@ -119,9 +124,34 @@ describe('official agent installer boundaries', () => {
             expect(existsSync(installed.executable)).toBe(true);
             expect(readFileSync(join(installed.root, 'install.sh'), 'utf8')).toBe('#!/bin/sh\n');
             expect(execute).toHaveBeenCalledTimes(2);
+            expect(execute.mock.calls.map(([file]) => file)).toEqual(['/usr/bin/curl', '/bin/sh']);
             const installerEnvironmentUsed = execute.mock.calls[1][2].env as NodeJS.ProcessEnv;
             expect(installerEnvironmentUsed.GITHUB_TOKEN).toBeUndefined();
             expect(installerEnvironmentUsed.CODEX_API_KEY).toBeUndefined();
+        } finally {
+            rmSync(installed.root, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it.skip : it).each([
+        ['opencode', '.opencode/bin/opencode'],
+        ['cursor', '.local/bin/agent'],
+    ] as const)('uses the trusted Bash for a fake %s installer', (provider, installedPath) => {
+        execute.mockImplementation((file: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+            expect(options.env.PATH).toBe(['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(':'));
+            if (file === '/usr/bin/curl') return Buffer.from('#!/bin/bash\n');
+            if (file === '/bin/bash') {
+                const binary = join(options.env.HOME!, installedPath);
+                mkdirSync(dirname(binary), { recursive: true });
+                writeFileSync(binary, 'native fixture');
+                return Buffer.alloc(0);
+            }
+            throw new Error(`Unexpected installer command ${file}`);
+        });
+        const installed = installOfficialAgentCli(provider);
+        try {
+            expect(execute.mock.calls.map(([file]) => file)).toEqual(['/usr/bin/curl', '/bin/bash']);
+            expect(existsSync(installed.executable)).toBe(true);
         } finally {
             rmSync(installed.root, { recursive: true, force: true });
         }

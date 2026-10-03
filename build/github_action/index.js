@@ -65473,8 +65473,7 @@ function getCurrentHeadSha() {
 }
 function isInsideGitRepo(cwd) {
     try {
-        (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
-        return true;
+        return (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' }).toString().trim() === 'true';
     }
     catch {
         return false;
@@ -65487,7 +65486,8 @@ function getGitRepositoryRoot(cwd) {
 }
 function isGitRepositoryRoot(cwd) {
     try {
-        return (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
+        return isInsideGitRepo(cwd)
+            && (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
     }
     catch {
         return false;
@@ -78760,16 +78760,31 @@ const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
 const MAX_ARCHIVE_BYTES = 268435456;
+const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+function trustedSystemPath() {
+    if (process.platform !== 'win32')
+        return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
+    return [(0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
+        (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
+}
+function trustedUnixTool(name) {
+    return name === 'curl' ? '/usr/bin/curl' : `/bin/${name}`;
+}
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 function installerEnvironment(root, source) {
     const allowed = [
-        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'OS', 'COMSPEC',
+        'PATHEXT', 'OS', 'COMSPEC',
         'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
     ];
     const environment = {};
     for (const name of allowed) {
         if (source[name])
             environment[name] = source[name];
+    }
+    environment.PATH = trustedSystemPath();
+    if (process.platform === 'win32') {
+        environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
+        environment.WINDIR = WINDOWS_SYSTEM_ROOT;
     }
     environment.HOME = root;
     environment.USERPROFILE = root;
@@ -78785,8 +78800,8 @@ function download(url, destination, environment, maxBytes) {
     if (!url.startsWith('https://'))
         throw new Error('Official agent source must use HTTPS.');
     const curl = process.platform === 'win32'
-        ? (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'curl.exe')
-        : 'curl';
+        ? (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'curl.exe')
+        : trustedUnixTool('curl');
     try {
         const contents = (0, node_child_process_1.execFileSync)(curl, [
             '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
@@ -78819,13 +78834,13 @@ function runScript(provider, root, environment) {
     const script = (0, node_path_1.join)(root, windows ? 'install.ps1' : 'install.sh');
     downloadScript(url, script, environment);
     if (windows) {
-        const powershell = (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+        const powershell = (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
         (0, node_child_process_1.execFileSync)(powershell, [
             '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
         ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
         return (0, node_path_1.join)(root, 'bin', 'codex.exe');
     }
-    const shell = provider === 'codex' ? 'sh' : 'bash';
+    const shell = trustedUnixTool(provider === 'codex' ? 'sh' : 'bash');
     const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
     (0, node_child_process_1.execFileSync)(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
     return provider === 'codex'
@@ -78838,7 +78853,7 @@ function extractWindowsArchive(archive, destination, environment) {
     (0, node_fs_1.mkdirSync)(destination, { recursive: true });
     const quote = (value) => value.replace(/'/gu, "''");
     const command = `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${quote(archive)}' -DestinationPath '${quote(destination)}' -Force`;
-    const powershell = (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    const powershell = (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
     (0, node_child_process_1.execFileSync)(powershell, [
         '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
         Buffer.from(command, 'utf16le').toString('base64'),

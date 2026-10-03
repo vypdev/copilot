@@ -39,6 +39,8 @@ If the checkout does not include the compiled `build/` folder, run `corepack pnp
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
+The target must be a working checkout. A bare Git repository has no files for setup or doctor to inspect and is rejected.
+
 Prefer a visual walkthrough? Run `copilot setup --web` from the repository
 root on an attached Git branch. A detached HEAD is rejected before credentials
 are requested; check out a branch first. Running from a subdirectory is also
