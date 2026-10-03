@@ -164,6 +164,9 @@ function credentialNames(check) {
 
 function safeFailureCode(error) {
   if (Number.isInteger(error?.status) && error.status >= 0 && error.status <= 255) return error.status;
+  if (error?.code === 'ETIMEDOUT' && ['identity', 'descriptor'].includes(error.aclProbeStage)) {
+    return `acl-${error.aclProbeStage}-timeout`;
+  }
   if (['EACCES', 'ENOENT', 'EPERM', 'ETIMEDOUT'].includes(error?.code)) return error.code.toLowerCase();
   const message = typeof error?.message === 'string' ? error.message : '';
   if (message.startsWith('Agent executable is writable by another principal')) return 'acl-writable';

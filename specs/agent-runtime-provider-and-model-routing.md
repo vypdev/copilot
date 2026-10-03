@@ -184,6 +184,9 @@ readiness on hosted Windows while retaining the 15-second ACL query deadline.
 It MUST omit an inherited PowerShell 7 `PSModulePath` when launching Windows
 PowerShell 5.1 so that the native shell constructs its compatible default
 module path.
+The fixture MUST separately confirm that `whoami.exe` and a no-op Windows
+PowerShell command start under that bounded non-secret environment; a failed
+verifier ACL query identifies identity versus descriptor timeout by fixed code.
 
 ### 6.2 Alternative paths
 
@@ -409,7 +412,8 @@ provider stderr. A Windows PR review failure must expose the stage before
 its platform gate can close.
 For a Windows executable trust rejection, telemetry MUST also carry a closed
 reason code distinguishing file owner, ancestor owner, writable principal,
-invalid ACL format, ACL query timeout/failure, and owner identity failure.
+invalid ACL format (descriptor batch, missing DACL, ACE shape or flags, and
+rights token), ACL query timeout/failure, and owner identity failure.
 Unknown failures use a generic code. The exception and observation must never
 carry a raw path or ACL entry into the log, and fixture tests must cover that
 boundary. The reason is diagnostic only and cannot relax the trust decision.

@@ -180,6 +180,19 @@ describe('isolated Windows agent runtime', () => {
         const fixture = fakeRuntime(source);
         try {
             expect('PSModulePath' in fixture.environment).toBe(false);
+            const systemRoot = fixture.environment.SystemRoot || fixture.environment.WINDIR || 'C:\\Windows';
+            const probes = [
+                [join(systemRoot, 'System32', 'whoami.exe'), ['/user', '/fo', 'csv', '/nh']],
+                [join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+                    ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'Write-Output ready']],
+            ] as const;
+            for (const [executable, args] of probes) {
+                const probe = spawnSync(executable, [...args], {
+                    env: fixture.environment, encoding: 'utf8', timeout: 5_000,
+                });
+                expect({ status: probe.status, code: probe.error && 'code' in probe.error ? probe.error.code : undefined })
+                    .toEqual({ status: 0, code: undefined });
+            }
             const result = spawnSync(process.execPath, [join(process.cwd(), 'scripts', 'verify-agent-clis.cjs')], {
                 cwd: fixture.workspace,
                 env: {

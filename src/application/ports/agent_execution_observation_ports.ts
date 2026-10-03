@@ -24,7 +24,9 @@ export type AgentExecutionPreflightStage =
 /** Fixed Windows executable trust reason; raw ACLs and paths stay local. */
 export type AgentExecutionPreflightDiagnostic =
     | 'acl-file-owner' | 'acl-ancestor-owner' | 'acl-writable'
-    | 'acl-format' | 'acl-query-timeout' | 'acl-query-failed'
+    | 'acl-format-batch' | 'acl-format-dacl' | 'acl-format-flags'
+    | 'acl-format-ace' | 'acl-format-rights'
+    | 'acl-query-timeout' | 'acl-query-failed'
     | 'acl-identity' | 'acl-unavailable';
 
 /** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */

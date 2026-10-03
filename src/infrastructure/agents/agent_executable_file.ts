@@ -18,8 +18,12 @@ export function classifyWindowsExecutableAclFailure(error: unknown): AgentExecut
         return message.includes('Unsafe Windows executable ancestor') ? 'acl-ancestor-owner' : 'acl-file-owner';
     }
     if (message.includes('Agent executable is writable by another principal')) return 'acl-writable';
-    if (message.includes('Unrecognized executable ACL') || message.includes('Missing executable ACL')
-        || message.includes('Incomplete Windows executable ACL')) return 'acl-format';
+    if (message.includes('Incomplete Windows executable ACL')) return 'acl-format-batch';
+    if (message.includes('Missing executable ACL')) return 'acl-format-dacl';
+    if (message.includes('Unrecognized executable ACL rights')) return 'acl-format-rights';
+    if (message.includes('Unrecognized executable ACL entries')
+        || message.includes('Unrecognized executable ACL entry')) return 'acl-format-ace';
+    if (message.includes('Unrecognized executable ACL')) return 'acl-format-flags';
     if ('code' in error || 'status' in error) return 'acl-query-failed';
     return 'acl-unavailable';
 }

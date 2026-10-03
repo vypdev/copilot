@@ -83480,9 +83480,17 @@ function classifyWindowsExecutableAclFailure(error) {
     }
     if (message.includes('Agent executable is writable by another principal'))
         return 'acl-writable';
-    if (message.includes('Unrecognized executable ACL') || message.includes('Missing executable ACL')
-        || message.includes('Incomplete Windows executable ACL'))
-        return 'acl-format';
+    if (message.includes('Incomplete Windows executable ACL'))
+        return 'acl-format-batch';
+    if (message.includes('Missing executable ACL'))
+        return 'acl-format-dacl';
+    if (message.includes('Unrecognized executable ACL rights'))
+        return 'acl-format-rights';
+    if (message.includes('Unrecognized executable ACL entries')
+        || message.includes('Unrecognized executable ACL entry'))
+        return 'acl-format-ace';
+    if (message.includes('Unrecognized executable ACL'))
+        return 'acl-format-flags';
     if ('code' in error || 'status' in error)
         return 'acl-query-failed';
     return 'acl-unavailable';
@@ -95357,9 +95365,15 @@ function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
 }
 
 function currentWindowsUserIdentity() {
-  const identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
-    encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
-  });
+  let identity;
+  try {
+    identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+    });
+  } catch (error) {
+    if (error && error.code === 'ETIMEDOUT') error.aclProbeStage = 'identity';
+    throw error;
+  }
   const sid = identity.match(SID_PATTERN)?.[0];
   if (!sid) throw new Error('Could not identify the Windows runtime owner.');
   const account = /^\uFEFF?"([^"\r\n]+)"\s*,/u.exec(identity)?.[1];
@@ -95385,10 +95399,16 @@ function installedExecutableDescriptors(paths) {
     + 'for($i=1;$i -lt $paths.Length;$i++){ '
     + '$descriptors += [System.IO.Directory]::GetAccessControl($paths[$i]).GetSecurityDescriptorSddlForm($sections) }; '
     + 'ConvertTo-Json -Compress -InputObject $descriptors';
-  const output = execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
-    ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
-      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, maxBuffer: 1_048_576, windowsHide: true,
-    }).replace(/^\uFEFF/u, '').trim();
+  let output;
+  try {
+    output = execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+        encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, maxBuffer: 1_048_576, windowsHide: true,
+      }).replace(/^\uFEFF/u, '').trim();
+  } catch (error) {
+    if (error && error.code === 'ETIMEDOUT') error.aclProbeStage = 'descriptor';
+    throw error;
+  }
   return parseWindowsExecutableDescriptors(output, paths.length);
 }
 
