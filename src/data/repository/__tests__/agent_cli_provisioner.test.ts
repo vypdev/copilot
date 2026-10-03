@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, wr
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentProvider } from '../../../domain/agent';
+import { AgentCliError } from '../agent_cli_contracts';
 import { AgentCliProvisioner, agentExecutableExists, type AgentCliProvisioningSystem } from '../agent_cli_provisioner';
 
 function fakeInstallation(provider: AgentProvider) {
@@ -83,6 +84,57 @@ describe('AgentCliProvisioner', () => {
         const installation = fakeInstallation('codex');
         const adapter = system(installation, 'codex-cli 0.149.1');
         adapter.readLatestVersion.mockImplementation(() => { throw new Error('network unavailable'); });
+        try {
+            new AgentCliProvisioner(adapter).provision('codex', { PATH: installation.directory });
+            expect(adapter.installOfficial).not.toHaveBeenCalled();
+        } finally {
+            rmSync(installation.root, { recursive: true, force: true });
+        }
+    });
+
+    it('installs a private official runtime when the discovered default fails trust before execution', () => {
+        const unsafe = fakeInstallation('codex');
+        const replacement = fakeInstallation('codex');
+        const adapter = system(replacement);
+        adapter.readVersion.mockImplementation((path: string) => {
+            if (path === 'codex') {
+                const error = new AgentCliError('unsafe fixture executable', 'configuration');
+                error.preflightDiagnostic = 'acl-writable';
+                throw error;
+            }
+            return 'codex-cli 0.159.2';
+        });
+        const environment = { PATH: unsafe.directory };
+        try {
+            new AgentCliProvisioner(adapter).provision('codex', environment);
+            expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
+            expect(adapter.readLatestVersion).not.toHaveBeenCalled();
+            expect(environment.PATH?.split(require('node:path').delimiter)[0]).toBe(replacement.directory);
+            expect(existsSync(unsafe.executable)).toBe(true);
+        } finally {
+            rmSync(unsafe.root, { recursive: true, force: true });
+            rmSync(replacement.root, { recursive: true, force: true });
+        }
+    });
+
+    it('fails closed and removes the private replacement if it also fails trust', () => {
+        const unsafe = fakeInstallation('codex');
+        const replacement = fakeInstallation('codex');
+        const adapter = system(replacement);
+        adapter.readVersion.mockImplementation(() => { throw new AgentCliError('unsafe fixture executable', 'configuration'); });
+        const environment = { PATH: unsafe.directory };
+        expect(() => new AgentCliProvisioner(adapter).provision('codex', environment))
+            .toThrow('unsafe fixture executable');
+        expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
+        expect(environment.PATH).toBe(unsafe.directory);
+        expect(existsSync(replacement.root)).toBe(false);
+        rmSync(unsafe.root, { recursive: true, force: true });
+    });
+
+    it('does not replace a discovered CLI for an unrelated version probe failure', () => {
+        const installation = fakeInstallation('codex');
+        const adapter = system(installation);
+        adapter.readVersion.mockImplementation(() => { throw new Error('version probe unavailable'); });
         try {
             new AgentCliProvisioner(adapter).provision('codex', { PATH: installation.directory });
             expect(adapter.installOfficial).not.toHaveBeenCalled();

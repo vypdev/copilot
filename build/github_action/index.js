@@ -68015,6 +68015,7 @@ exports.agentExecutableExists = agentExecutableExists;
 const node_path_1 = __nccwpck_require__(49411);
 const node_fs_1 = __nccwpck_require__(87561);
 const agent_1 = __nccwpck_require__(79937);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const agent_official_installer_1 = __nccwpck_require__(28520);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
@@ -68053,13 +68054,25 @@ class AgentCliProvisioner {
                 return;
             }
             let installedVersion;
-            let latestVersion;
             try {
                 installedVersion = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(executable, provider, environment));
+            }
+            catch (error) {
+                if (error instanceof agent_cli_contracts_1.AgentCliError && error.category === 'configuration') {
+                    // A discovered but untrusted default is not an available runtime.
+                    this.installPrivate(provider, executable, environment, key);
+                    return;
+                }
+                // A version probe failure does not authorize replacing an existing CLI.
+                this.preparedExecutables.add(key);
+                return;
+            }
+            let latestVersion;
+            try {
                 latestVersion = this.system.readLatestVersion(provider);
             }
             catch {
-                // Update lookup is advisory when an existing executable is available.
+                // Update metadata is advisory when a trusted executable is available.
                 this.preparedExecutables.add(key);
                 return;
             }

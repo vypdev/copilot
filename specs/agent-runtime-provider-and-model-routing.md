@@ -344,6 +344,14 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+If the default discovered CLI fails the executable trust preflight before its
+version can run, provisioning MUST treat it as unavailable and install a fresh
+official CLI in a private job directory. It MUST NOT execute or repair the
+untrusted file, and the installed replacement must pass the same trust and
+version checks before the Action uses it. Explicitly selected executables
+remain operator-owned and fail closed. A fixture MUST prove fallback for an
+unsafe default, no fallback for a generic metadata outage, and cleanup if the
+official replacement also fails trust.
 The downloader and installer shell MUST resolve from fixed system locations,
 and every installer child uses a system-only `PATH`. A workflow-controlled
 directory cannot supply `curl`, `sh`, `bash`, or commands called by the official
@@ -422,6 +430,10 @@ supplies only non-secret Windows system plumbing variables to its child;
 its `PATH` contains the private fake runtime followed by Windows system
 directories, and its outer deadline includes the bounded retry and
 help/version probes.
+The writable-shim rejection fixture uses the same native shell plumbing and
+allows up to 45 seconds for the verifier process, covering two bounded ACL
+queries under concurrent coverage execution. The result MUST be the specific
+unsafe ACL rejection, and its marker MUST prove the shim was never executed.
 Agent execution failure telemetry MUST include only a closed preflight stage
 (`workspace`, `ambient-configuration`, `manifest`, `selection`, `resolution`,
 `invocation-trust`, `environment`, `version`, `artifacts`, or `policy`). It

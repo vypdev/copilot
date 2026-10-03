@@ -2,6 +2,7 @@ import { delimiter } from 'node:path';
 import { rmSync } from 'node:fs';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
 import { AGENT_EXECUTABLE_BASENAMES } from '../model/agent';
+import { AgentCliError } from './agent_cli_contracts';
 import {
     readAgentExecutableVersion,
     resolveAgentExecutablePath,
@@ -55,12 +56,23 @@ export class AgentCliProvisioner {
                 return;
             }
             let installedVersion: string;
-            let latestVersion: string;
             try {
                 installedVersion = readAgentRuntimeVersion(provider, this.system.readVersion(executable, provider, environment));
+            } catch (error) {
+                if (error instanceof AgentCliError && error.category === 'configuration') {
+                    // A discovered but untrusted default is not an available runtime.
+                    this.installPrivate(provider, executable, environment, key);
+                    return;
+                }
+                // A version probe failure does not authorize replacing an existing CLI.
+                this.preparedExecutables.add(key);
+                return;
+            }
+            let latestVersion: string;
+            try {
                 latestVersion = this.system.readLatestVersion(provider);
             } catch {
-                // Update lookup is advisory when an existing executable is available.
+                // Update metadata is advisory when a trusted executable is available.
                 this.preparedExecutables.add(key);
                 return;
             }

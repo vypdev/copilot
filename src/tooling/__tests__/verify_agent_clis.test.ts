@@ -6,19 +6,41 @@ import { delimiter, join, resolve } from 'node:path';
 const verifier = resolve(__dirname, '../../../scripts/verify-agent-clis.cjs');
 
 function runVerifier(binDirectory: string, home: string) {
+    const windows = process.platform === 'win32';
+    const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+    const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
     return spawnSync(process.execPath, [verifier], {
         encoding: 'utf8',
-        timeout: 20_000,
+        timeout: windows ? 45_000 : 20_000,
         env: {
-            PATH: [binDirectory, process.env.PATH || ''].join(delimiter),
+            PATH: (windows ? [binDirectory, join(systemRoot, 'System32'), systemRoot,
+                join(systemRoot, 'System32', 'Wbem'),
+                join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')]
+                : [binDirectory, process.env.PATH || '']).join(delimiter),
             PATHEXT: '.CMD;.EXE',
             CODEX_HOME: home,
             HOME: home,
             USERPROFILE: home,
-            SystemRoot: process.env.SystemRoot,
-            WINDIR: process.env.WINDIR,
+            COMSPEC: process.env.COMSPEC,
+            OS: process.env.OS,
+            SystemDrive: process.env.SystemDrive,
+            SystemRoot: windows ? systemRoot : process.env.SystemRoot,
+            WINDIR: windows ? systemRoot : process.env.WINDIR,
             TEMP: process.env.TEMP,
             TMP: process.env.TMP,
+            APPDATA: process.env.APPDATA,
+            LOCALAPPDATA: process.env.LOCALAPPDATA,
+            ALLUSERSPROFILE: process.env.ALLUSERSPROFILE,
+            CommonProgramFiles: process.env.CommonProgramFiles,
+            'CommonProgramFiles(x86)': process.env['CommonProgramFiles(x86)'],
+            ProgramFiles: process.env.ProgramFiles,
+            'ProgramFiles(x86)': process.env['ProgramFiles(x86)'],
+            ProgramData: process.env.ProgramData,
+            PSModulePath: windows ? [join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+                join(programFiles, 'WindowsPowerShell', 'Modules')].join(delimiter) : undefined,
+            USERDOMAIN: process.env.USERDOMAIN,
+            USERNAME: process.env.USERNAME,
+            LOGONSERVER: process.env.LOGONSERVER,
             AGENT_PROVIDER: 'codex',
             VERIFY_ALL_AGENT_CLIS: 'false',
             AGENT_AUTH_PREFLIGHT: 'required',
@@ -72,5 +94,5 @@ describe('standalone agent CLI verifier trust', () => {
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }
-    });
+    }, 60_000);
 });
