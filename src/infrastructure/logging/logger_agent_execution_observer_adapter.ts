@@ -10,7 +10,8 @@ export class LoggerAgentExecutionObserverAdapter implements AgentExecutionObserv
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
             const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
             const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
-            logInfo(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${exit}${diagnostic}).`, false,
+            const preflightDiagnostic = observation.preflightDiagnostic ? `, ${observation.preflightDiagnostic}` : '';
+            logInfo(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}).`, false,
                 { agentExecution: observation });
             return;
         }

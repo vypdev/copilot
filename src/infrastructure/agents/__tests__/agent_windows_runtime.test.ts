@@ -41,6 +41,9 @@ function fakeRuntime(source: string) {
         PATH: [binRoot, join(systemRoot, 'System32'), systemRoot,
             join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')].join(delimiter),
         PATHEXT: '.EXE;.CMD',
+        COMSPEC: process.env.COMSPEC,
+        OS: process.env.OS,
+        SystemDrive: process.env.SystemDrive,
         SystemRoot: process.env.SystemRoot,
         WINDIR: process.env.WINDIR,
         TEMP: process.env.TEMP,
@@ -208,7 +211,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(fixture.root, { recursive: true, force: true });
         }
-    }, 15_000);
+    }, 30_000);
 
     windowsIt('cancels a fake agent and its descendant before cleaning artifacts', async () => {
         const pidFile = join(tmpdir(), `copilot-agent-descendant-${process.pid}-${Date.now()}.txt`);

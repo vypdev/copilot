@@ -175,6 +175,7 @@ describe('AgentCliClient admitted process execution', () => {
             prepare: () => {
                 const error = new AgentCliError('rejected', 'configuration');
                 error.preflightStage = 'invocation-trust';
+                error.preflightDiagnostic = 'acl-ancestor-owner';
                 throw error;
             },
         }, { observe });
@@ -182,6 +183,7 @@ describe('AgentCliClient admitted process execution', () => {
         expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
             state: 'failed', phase: 'preflight', failureCategory: 'configuration',
             semanticCode: 'agent.policy-rejected', retryable: false, preflightStage: 'invocation-trust',
+            preflightDiagnostic: 'acl-ancestor-owner',
         }));
 
         await expect(client(plan('process.exit(75)'), { observe }).execute(request))

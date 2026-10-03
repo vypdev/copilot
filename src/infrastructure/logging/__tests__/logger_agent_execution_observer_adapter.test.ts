@@ -42,6 +42,20 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         );
     });
 
+    it('logs only the closed Windows ACL reason after a rejected preflight', () => {
+        const observer = new LoggerAgentExecutionObserverAdapter();
+        observer.observe({
+            state: 'failed', phase: 'preflight', provider: 'codex', capability: 'findings',
+            durationMilliseconds: 10, failureCategory: 'configuration', semanticCode: 'agent.policy-rejected',
+            retryable: false, preflightStage: 'invocation-trust', preflightDiagnostic: 'acl-ancestor-owner',
+        });
+        expect(logInfo).toHaveBeenCalledWith(
+            'Agent execution failed (preflight/configuration, stage invocation-trust, acl-ancestor-owner).',
+            false,
+            { agentExecution: expect.objectContaining({ preflightDiagnostic: 'acl-ancestor-owner' }) },
+        );
+    });
+
     it('reports only the sanitized version identity and numeric exit code', () => {
         const observer = new LoggerAgentExecutionObserverAdapter();
         observer.observe({

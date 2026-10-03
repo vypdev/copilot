@@ -21,6 +21,12 @@ export type AgentExecutionPreflightStage =
     | 'resolution' | 'invocation-trust' | 'environment' | 'version'
     | 'artifacts' | 'policy';
 
+/** Fixed Windows executable trust reason; raw ACLs and paths stay local. */
+export type AgentExecutionPreflightDiagnostic =
+    | 'acl-file-owner' | 'acl-ancestor-owner' | 'acl-writable'
+    | 'acl-format' | 'acl-query-timeout' | 'acl-query-failed'
+    | 'acl-identity' | 'acl-unavailable';
+
 /** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
 export type AgentExecutionExitDiagnostic =
     | 'reported-authentication'
@@ -62,6 +68,7 @@ export type AgentExecutionObservation =
         readonly durationMilliseconds: number;
         readonly failureCategory: AgentExecutionFailureCategory;
         readonly preflightStage?: AgentExecutionPreflightStage;
+        readonly preflightDiagnostic?: AgentExecutionPreflightDiagnostic;
         readonly semanticCode: AgentExecutionSemanticCode;
         readonly retryable: boolean;
         readonly exitCode?: number;

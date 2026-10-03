@@ -73365,6 +73365,8 @@ function failureObservation(request, error, phase, startedAt) {
         failureCategory: category,
         ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightStage
             ? { preflightStage: error.preflightStage } : {}),
+        ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightDiagnostic
+            ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
         exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
@@ -83459,11 +83461,32 @@ function featureEnabled(feature, features) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyWindowsExecutableAclFailure = classifyWindowsExecutableAclFailure;
 exports.assertAgentExecutableMetadata = assertAgentExecutableMetadata;
 exports.validateAgentExecutableFile = validateAgentExecutableFile;
 const node_fs_1 = __nccwpck_require__(87561);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
+function classifyWindowsExecutableAclFailure(error) {
+    if (!(error instanceof Error))
+        return 'acl-unavailable';
+    if ('code' in error && error.code === 'ETIMEDOUT')
+        return 'acl-query-timeout';
+    const message = error.message;
+    if (message.includes('Could not identify the Windows runtime owner'))
+        return 'acl-identity';
+    if (message.includes('Unsafe executable ACL owner')) {
+        return message.includes('Unsafe Windows executable ancestor') ? 'acl-ancestor-owner' : 'acl-file-owner';
+    }
+    if (message.includes('Agent executable is writable by another principal'))
+        return 'acl-writable';
+    if (message.includes('Unrecognized executable ACL') || message.includes('Missing executable ACL')
+        || message.includes('Incomplete Windows executable ACL'))
+        return 'acl-format';
+    if ('code' in error || 'status' in error)
+        return 'acl-query-failed';
+    return 'acl-unavailable';
+}
 function assertAgentExecutableMetadata(metadata, platform, currentUid) {
     if (!metadata.isFile)
         throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
@@ -83492,8 +83515,10 @@ function validateAgentExecutableFile(path) {
         try {
             (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(path);
         }
-        catch {
-            throw new agent_cli_contracts_1.AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+        catch (error) {
+            const rejected = new agent_cli_contracts_1.AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+            rejected.preflightDiagnostic = classifyWindowsExecutableAclFailure(error);
+            throw rejected;
         }
     }
 }
@@ -86864,7 +86889,8 @@ class LoggerAgentExecutionObserverAdapter {
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
             const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
             const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
-            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${exit}${diagnostic}).`, false, { agentExecution: observation });
+            const preflightDiagnostic = observation.preflightDiagnostic ? `, ${observation.preflightDiagnostic}` : '';
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}).`, false, { agentExecution: observation });
             return;
         }
         if (observation.state === 'completed') {

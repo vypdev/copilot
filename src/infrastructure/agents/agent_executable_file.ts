@@ -1,11 +1,27 @@
 import { accessSync, constants, statSync } from 'node:fs';
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
+import type { AgentExecutionPreflightDiagnostic } from '../../application/ports/agent_execution_observation_ports';
 import { verifyWindowsAgentExecutableAcl } from './windows_runtime_acl';
 
 export interface AgentExecutableMetadata {
     readonly isFile: boolean;
     readonly mode: number;
     readonly ownerUid: number;
+}
+
+export function classifyWindowsExecutableAclFailure(error: unknown): AgentExecutionPreflightDiagnostic {
+    if (!(error instanceof Error)) return 'acl-unavailable';
+    if ('code' in error && error.code === 'ETIMEDOUT') return 'acl-query-timeout';
+    const message = error.message;
+    if (message.includes('Could not identify the Windows runtime owner')) return 'acl-identity';
+    if (message.includes('Unsafe executable ACL owner')) {
+        return message.includes('Unsafe Windows executable ancestor') ? 'acl-ancestor-owner' : 'acl-file-owner';
+    }
+    if (message.includes('Agent executable is writable by another principal')) return 'acl-writable';
+    if (message.includes('Unrecognized executable ACL') || message.includes('Missing executable ACL')
+        || message.includes('Incomplete Windows executable ACL')) return 'acl-format';
+    if ('code' in error || 'status' in error) return 'acl-query-failed';
+    return 'acl-unavailable';
 }
 
 export function assertAgentExecutableMetadata(
@@ -38,8 +54,10 @@ export function validateAgentExecutableFile(path: string): void {
     if (process.platform === 'win32') {
         try {
             verifyWindowsAgentExecutableAcl(path);
-        } catch {
-            throw new AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+        } catch (error) {
+            const rejected = new AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+            rejected.preflightDiagnostic = classifyWindowsExecutableAclFailure(error);
+            throw rejected;
         }
     }
 }

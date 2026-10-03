@@ -178,6 +178,9 @@ resolved interpreter, or package launcher failed the check, again without
 printing its path or ACL contents.
 The timeout fixture's Jest budget MUST include native ACL setup and teardown;
 the admitted child still uses its own short execution deadline.
+The isolated Windows verifier receives only non-secret system process variables
+needed by Windows PowerShell and native process startup. Its fixture must prove
+readiness on hosted Windows while retaining the 15-second ACL query deadline.
 
 ### 6.2 Alternative paths
 
@@ -401,6 +404,12 @@ Agent execution failure telemetry MUST include only a closed preflight stage
 MUST NOT include selected paths, argv, prompts, environment values, or raw
 provider stderr. A Windows PR review failure must expose the stage before
 its platform gate can close.
+For a Windows executable trust rejection, telemetry MUST also carry a closed
+reason code distinguishing file owner, ancestor owner, writable principal,
+invalid ACL format, ACL query timeout/failure, and owner identity failure.
+Unknown failures use a generic code. The exception and observation must never
+carry a raw path or ACL entry into the log, and fixture tests must cover that
+boundary. The reason is diagnostic only and cannot relax the trust decision.
 Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
 generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;
