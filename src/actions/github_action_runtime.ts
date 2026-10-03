@@ -1,8 +1,19 @@
-import type { AgentTask, AgentTaskConfiguration } from '../data/model/agent';
+import type { AgentProvider, AgentTask, AgentTaskConfiguration } from '../data/model/agent';
 import { AgentCliProvisioner } from '../data/repository/agent_cli_provisioner';
+import { AgentCliError } from '../data/repository/agent_cli_contracts';
+import { OfficialAgentInstallationError } from '../infrastructure/agents/agent_official_installer';
 import { runAgentAuthenticationPreflight } from '../data/repository/agent_authentication_preflight';
 import { logInfo, logDebugInfo } from '../utils/logger';
 import { ApplicationError } from '../application/errors/application_error';
+
+function logProvisioningFailure(provider: AgentProvider, failure: unknown): void {
+    const diagnostic = failure instanceof OfficialAgentInstallationError
+        ? `official-${failure.stage}${failure.exitCode === undefined ? '' : `-exit-${failure.exitCode}`}`
+            + `${failure.reason === undefined ? '' : `-${failure.reason}`}`
+        : failure instanceof AgentCliError && failure.preflightDiagnostic
+            ? `replacement-trust-${failure.preflightDiagnostic}` : 'unavailable';
+    logInfo(`Agent runtime ${provider} provisioning failed (${diagnostic}).`);
+}
 
 /** Reuses selected agent CLIs, installing missing default CLIs from official sources. */
 export function prepareGithubAgentRuntime(
@@ -16,6 +27,7 @@ export function prepareGithubAgentRuntime(
             try {
                 provisioner.provision(configuration);
             } catch (cause) {
+                logProvisioningFailure(configuration.provider, cause);
                 throw new ApplicationError(
                     'configuration.unsupported',
                     `The ${configuration.provider} runtime is unavailable or its official installation failed.`,

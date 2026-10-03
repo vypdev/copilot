@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
-    installOfficialAgentCli, installerEnvironment,
+    installOfficialAgentCli, installerEnvironment, OfficialAgentInstallationError,
     parseCursorWindowsInstaller, selectOpenCodeWindowsAsset,
 } from '../agent_official_installer';
 
@@ -18,12 +18,19 @@ describe('official agent installer boundaries', () => {
             PATH: '/tmp/attacker:/usr/bin', SystemRoot: 'C:\\attacker', OS: 'Windows_NT', GITHUB_TOKEN: 'secret',
             CODEX_API_KEY: 'secret', OPENAI_API_KEY: 'secret', CURSOR_API_KEY: 'secret',
             NPM_TOKEN: 'secret', HOME: '/operator/home', CODEX_HOME: '/operator/codex',
+            PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
         });
         expect(environment.PATH).toBe(process.platform === 'win32'
-            ? ['C:\\Windows\\System32', 'C:\\Windows', 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0'].join(';')
+            ? ['C:\\Windows\\System32', 'C:\\Windows', 'C:\\Windows\\System32\\Wbem',
+                'C:\\Windows\\System32\\WindowsPowerShell\\v1.0'].join(';')
             : ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(':'));
         expect(environment.PATH).not.toContain('/tmp/attacker');
-        if (process.platform === 'win32') expect(environment.SystemRoot).toBe('C:\\Windows');
+        if (process.platform === 'win32') {
+            expect(environment.SystemRoot).toBe('C:\\Windows');
+            expect(environment.PSModulePath).toContain('WindowsPowerShell\\v1.0\\Modules');
+            expect(environment.PSModulePath).not.toContain('PowerShell\\7');
+            expect(environment.APPDATA).toBe(join('/private/agent-job', 'roaming'));
+        }
         expect(environment.OS).toBe('Windows_NT');
         expect(environment.HOME).toBe('/private/agent-job');
         expect(environment.CODEX_HOME).toBe(join('/private/agent-job', '.codex'));
@@ -213,6 +220,23 @@ describe('official agent installer boundaries', () => {
             } finally {
                 rmSync(installed.root, { recursive: true, force: true });
             }
+        }
+    });
+
+    (process.platform === 'win32' ? it : it.skip)('reports a bounded installer stage and code without raw stderr', () => {
+        execute.mockImplementation((file: string) => {
+            if (file.toLowerCase().endsWith('curl.exe')) return Buffer.from('fixture script');
+            throw Object.assign(new Error('secret-bearing installer error'), {
+                status: 1, stderr: Buffer.from('Get-FileHash: secret-bearing installer stderr'),
+            });
+        });
+        try {
+            installOfficialAgentCli('codex');
+            throw new Error('Expected a fixture installer failure.');
+        } catch (error) {
+            expect(error).toBeInstanceOf(OfficialAgentInstallationError);
+            expect(error).toMatchObject({ stage: 'installer-script', exitCode: 1, reason: 'hash-module' });
+            expect((error as Error).message).not.toContain('secret-bearing');
         }
     });
 });

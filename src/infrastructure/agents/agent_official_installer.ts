@@ -5,7 +5,7 @@ import {
     readdirSync, realpathSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
 import { trustedCurlPath, trustedSystemPath, trustedUnixShellPath } from './agent_trusted_system_tools';
@@ -15,6 +15,40 @@ const MAX_SCRIPT_BYTES = 1_048_576;
 const MAX_METADATA_BYTES = 2_097_152;
 const MAX_ARCHIVE_BYTES = 268_435_456;
 const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+
+export type OfficialAgentInstallationStage = 'private-root' | 'download' | 'installer-script' | 'installed-file';
+export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'access-denied' | 'missing-command' | 'unknown';
+
+export class OfficialAgentInstallationError extends Error {
+    constructor(
+        readonly stage: OfficialAgentInstallationStage,
+        message: string,
+        readonly exitCode?: number,
+        cause?: unknown,
+        readonly reason?: OfficialAgentInstallationReason,
+    ) {
+        super(message);
+        this.name = 'OfficialAgentInstallationError';
+        if (cause !== undefined) Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+
+function installerScriptReason(error: unknown): OfficialAgentInstallationReason {
+    const raw = error && typeof error === 'object' && 'stderr' in error ? error.stderr : undefined;
+    const stderr = Buffer.isBuffer(raw) ? raw.toString('utf8') : typeof raw === 'string' ? raw : '';
+    if (/Get-FileHash|Get-AuthenticodeSignature/iu.test(stderr)) return 'hash-module';
+    if (/Invoke-WebRequest|Invoke-RestMethod|Could not resolve host|Unable to resolve|TLS|SSL|HTTP (?:403|404|429|5\d\d)/iu.test(stderr)) {
+        return 'network';
+    }
+    if (/Access (?:is )?denied|UnauthorizedAccess/iu.test(stderr)) return 'access-denied';
+    if (/is not recognized as the name of a cmdlet|command not found/iu.test(stderr)) return 'missing-command';
+    return 'unknown';
+}
+
+function boundedExitCode(error: unknown): number | undefined {
+    const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+    return Number.isInteger(status) && Number(status) >= 0 && Number(status) <= 255 ? Number(status) : undefined;
+}
 
 export interface OfficialAgentInstallation {
     readonly executable: string;
@@ -27,6 +61,7 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
     const allowed = [
         'PATHEXT', 'OS', 'COMSPEC',
         'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
+        'PROCESSOR_ARCHITECTURE', 'NUMBER_OF_PROCESSORS', 'USERDOMAIN', 'USERNAME', 'LOGONSERVER',
     ] as const;
     const environment: NodeJS.ProcessEnv = {};
     for (const name of allowed) {
@@ -36,9 +71,20 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
     if (process.platform === 'win32') {
         environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
         environment.WINDIR = WINDOWS_SYSTEM_ROOT;
+        environment.SystemDrive = 'C:';
+        environment.ProgramFiles = 'C:\\Program Files';
+        environment['ProgramFiles(x86)'] = 'C:\\Program Files (x86)';
+        environment.ProgramData = 'C:\\ProgramData';
+        environment.CommonProgramFiles = 'C:\\Program Files\\Common Files';
+        environment.ALLUSERSPROFILE = 'C:\\ProgramData';
+        environment.PSModulePath = [
+            join(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+            'C:\\Program Files\\WindowsPowerShell\\Modules',
+        ].join(delimiter);
     }
     environment.HOME = root;
     environment.USERPROFILE = root;
+    if (process.platform === 'win32') environment.APPDATA = join(root, 'roaming');
     environment.LOCALAPPDATA = join(root, 'local');
     environment.XDG_CONFIG_HOME = join(root, '.config');
     environment.CODEX_HOME = join(root, '.codex');
@@ -60,9 +106,10 @@ function download(url: string, destination: string, environment: NodeJS.ProcessE
             throw new Error('Official agent download size is invalid.');
         }
         writeFileSync(destination, contents, { flag: 'wx' });
-    } catch {
+    } catch (error) {
         rmSync(destination, { force: true });
-        throw new Error('Official agent download failed or exceeded its size limit.');
+        throw new OfficialAgentInstallationError('download',
+            'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error);
     }
 }
 
@@ -85,14 +132,24 @@ function runScript(provider: AgentProvider, root: string, environment: NodeJS.Pr
     if (windows) {
         const powershell = join(WINDOWS_SYSTEM_ROOT,
             'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-        execFileSync(powershell, [
-            '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
-        ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
+        try {
+            execFileSync(powershell, [
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
+            ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
+        } catch (error) {
+            throw new OfficialAgentInstallationError('installer-script',
+                'Official agent installer script failed.', boundedExitCode(error), error, installerScriptReason(error));
+        }
         return join(root, 'bin', 'codex.exe');
     }
     const shell = trustedUnixShellPath(provider === 'codex' ? 'sh' : 'bash');
     const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
-    execFileSync(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
+    try {
+        execFileSync(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300_000 });
+    } catch (error) {
+        throw new OfficialAgentInstallationError('installer-script',
+            'Official agent installer script failed.', boundedExitCode(error), error, installerScriptReason(error));
+    }
     return provider === 'codex'
         ? join(root, 'bin', 'codex')
         : provider === 'opencode'
@@ -203,21 +260,26 @@ function installWindowsOpenCode(root: string, environment: NodeJS.ProcessEnv): s
 
 export function installOfficialAgentCli(provider: AgentProvider): OfficialAgentInstallation {
     const root = mkdtempSync(join(process.env.RUNNER_TEMP || tmpdir(), 'copilot-agent-install-'));
+    let stage: OfficialAgentInstallationStage = 'private-root';
     try {
         chmodSync(root, 0o700);
         makeWindowsRuntimePathPrivate(root, true);
         const environment = installerEnvironment(root, process.env);
+        stage = 'installer-script';
         const path = process.platform === 'win32' && provider === 'cursor'
             ? installWindowsCursor(root, environment)
             : process.platform === 'win32' && provider === 'opencode'
                 ? installWindowsOpenCode(root, environment)
                 : runScript(provider, root, environment);
+        stage = 'installed-file';
         const executable = realpathSync(path);
         if (!statSync(executable).isFile()) throw new Error('Official agent installer did not create a file.');
         process.once('exit', () => rmSync(root, { recursive: true, force: true }));
         return { executable, directory: dirname(path), root };
     } catch (error) {
         rmSync(root, { recursive: true, force: true });
-        throw error;
+        if (error instanceof OfficialAgentInstallationError) throw error;
+        throw new OfficialAgentInstallationError(stage, 'Official agent installation failed.',
+            boundedExitCode(error), error);
     }
 }

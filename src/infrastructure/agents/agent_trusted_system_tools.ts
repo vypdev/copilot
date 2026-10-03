@@ -5,6 +5,7 @@ const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
 export function trustedSystemPath(): string {
     if (process.platform !== 'win32') return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(delimiter);
     return [join(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
+        join(WINDOWS_SYSTEM_ROOT, 'System32', 'Wbem'),
         join(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(delimiter);
 }
 

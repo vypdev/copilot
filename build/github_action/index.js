@@ -40061,9 +40061,19 @@ function readGithubActionProjectInputs(getInput, projects) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareGithubAgentRuntime = prepareGithubAgentRuntime;
 const agent_cli_provisioner_1 = __nccwpck_require__(3115);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_official_installer_1 = __nccwpck_require__(28520);
 const agent_authentication_preflight_1 = __nccwpck_require__(67766);
 const logger_1 = __nccwpck_require__(91151);
 const application_error_1 = __nccwpck_require__(75999);
+function logProvisioningFailure(provider, failure) {
+    const diagnostic = failure instanceof agent_official_installer_1.OfficialAgentInstallationError
+        ? `official-${failure.stage}${failure.exitCode === undefined ? '' : `-exit-${failure.exitCode}`}`
+            + `${failure.reason === undefined ? '' : `-${failure.reason}`}`
+        : failure instanceof agent_cli_contracts_1.AgentCliError && failure.preflightDiagnostic
+            ? `replacement-trust-${failure.preflightDiagnostic}` : 'unavailable';
+    (0, logger_1.logInfo)(`Agent runtime ${provider} provisioning failed (${diagnostic}).`);
+}
 /** Reuses selected agent CLIs, installing missing default CLIs from official sources. */
 function prepareGithubAgentRuntime(agentTasks, activeTasks) {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
@@ -40074,6 +40084,7 @@ function prepareGithubAgentRuntime(agentTasks, activeTasks) {
                 provisioner.provision(configuration);
             }
             catch (cause) {
+                logProvisioningFailure(configuration.provider, cause);
                 throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime is unavailable or its official installation failed.`, { cause });
             }
         }
@@ -78759,6 +78770,7 @@ function definedEnvironment(environment) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OfficialAgentInstallationError = void 0;
 exports.installerEnvironment = installerEnvironment;
 exports.parseCursorWindowsInstaller = parseCursorWindowsInstaller;
 exports.selectOpenCodeWindowsAsset = selectOpenCodeWindowsAsset;
@@ -78775,11 +78787,42 @@ const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
 const MAX_ARCHIVE_BYTES = 268435456;
 const WINDOWS_SYSTEM_ROOT = 'C:\\Windows';
+class OfficialAgentInstallationError extends Error {
+    constructor(stage, message, exitCode, cause, reason) {
+        super(message);
+        this.stage = stage;
+        this.exitCode = exitCode;
+        this.reason = reason;
+        this.name = 'OfficialAgentInstallationError';
+        if (cause !== undefined)
+            Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+exports.OfficialAgentInstallationError = OfficialAgentInstallationError;
+function installerScriptReason(error) {
+    const raw = error && typeof error === 'object' && 'stderr' in error ? error.stderr : undefined;
+    const stderr = Buffer.isBuffer(raw) ? raw.toString('utf8') : typeof raw === 'string' ? raw : '';
+    if (/Get-FileHash|Get-AuthenticodeSignature/iu.test(stderr))
+        return 'hash-module';
+    if (/Invoke-WebRequest|Invoke-RestMethod|Could not resolve host|Unable to resolve|TLS|SSL|HTTP (?:403|404|429|5\d\d)/iu.test(stderr)) {
+        return 'network';
+    }
+    if (/Access (?:is )?denied|UnauthorizedAccess/iu.test(stderr))
+        return 'access-denied';
+    if (/is not recognized as the name of a cmdlet|command not found/iu.test(stderr))
+        return 'missing-command';
+    return 'unknown';
+}
+function boundedExitCode(error) {
+    const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+    return Number.isInteger(status) && Number(status) >= 0 && Number(status) <= 255 ? Number(status) : undefined;
+}
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 function installerEnvironment(root, source) {
     const allowed = [
         'PATHEXT', 'OS', 'COMSPEC',
         'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
+        'PROCESSOR_ARCHITECTURE', 'NUMBER_OF_PROCESSORS', 'USERDOMAIN', 'USERNAME', 'LOGONSERVER',
     ];
     const environment = {};
     for (const name of allowed) {
@@ -78790,9 +78833,21 @@ function installerEnvironment(root, source) {
     if (process.platform === 'win32') {
         environment.SystemRoot = WINDOWS_SYSTEM_ROOT;
         environment.WINDIR = WINDOWS_SYSTEM_ROOT;
+        environment.SystemDrive = 'C:';
+        environment.ProgramFiles = 'C:\\Program Files';
+        environment['ProgramFiles(x86)'] = 'C:\\Program Files (x86)';
+        environment.ProgramData = 'C:\\ProgramData';
+        environment.CommonProgramFiles = 'C:\\Program Files\\Common Files';
+        environment.ALLUSERSPROFILE = 'C:\\ProgramData';
+        environment.PSModulePath = [
+            (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+            'C:\\Program Files\\WindowsPowerShell\\Modules',
+        ].join(node_path_1.delimiter);
     }
     environment.HOME = root;
     environment.USERPROFILE = root;
+    if (process.platform === 'win32')
+        environment.APPDATA = (0, node_path_1.join)(root, 'roaming');
     environment.LOCALAPPDATA = (0, node_path_1.join)(root, 'local');
     environment.XDG_CONFIG_HOME = (0, node_path_1.join)(root, '.config');
     environment.CODEX_HOME = (0, node_path_1.join)(root, '.codex');
@@ -78815,9 +78870,9 @@ function download(url, destination, environment, maxBytes) {
         }
         (0, node_fs_1.writeFileSync)(destination, contents, { flag: 'wx' });
     }
-    catch {
+    catch (error) {
         (0, node_fs_1.rmSync)(destination, { force: true });
-        throw new Error('Official agent download failed or exceeded its size limit.');
+        throw new OfficialAgentInstallationError('download', 'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error);
     }
 }
 function downloadScript(url, destination, environment) {
@@ -78838,14 +78893,24 @@ function runScript(provider, root, environment) {
     downloadScript(url, script, environment);
     if (windows) {
         const powershell = (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-        (0, node_child_process_1.execFileSync)(powershell, [
-            '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
-        ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+        try {
+            (0, node_child_process_1.execFileSync)(powershell, [
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
+            ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+        }
+        catch (error) {
+            throw new OfficialAgentInstallationError('installer-script', 'Official agent installer script failed.', boundedExitCode(error), error, installerScriptReason(error));
+        }
         return (0, node_path_1.join)(root, 'bin', 'codex.exe');
     }
     const shell = (0, agent_trusted_system_tools_1.trustedUnixShellPath)(provider === 'codex' ? 'sh' : 'bash');
     const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
-    (0, node_child_process_1.execFileSync)(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+    try {
+        (0, node_child_process_1.execFileSync)(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+    }
+    catch (error) {
+        throw new OfficialAgentInstallationError('installer-script', 'Official agent installer script failed.', boundedExitCode(error), error, installerScriptReason(error));
+    }
     return provider === 'codex'
         ? (0, node_path_1.join)(root, 'bin', 'codex')
         : provider === 'opencode'
@@ -78952,15 +79017,18 @@ function installWindowsOpenCode(root, environment) {
 }
 function installOfficialAgentCli(provider) {
     const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), 'copilot-agent-install-'));
+    let stage = 'private-root';
     try {
         (0, node_fs_1.chmodSync)(root, 0o700);
         (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
         const environment = installerEnvironment(root, process.env);
+        stage = 'installer-script';
         const path = process.platform === 'win32' && provider === 'cursor'
             ? installWindowsCursor(root, environment)
             : process.platform === 'win32' && provider === 'opencode'
                 ? installWindowsOpenCode(root, environment)
                 : runScript(provider, root, environment);
+        stage = 'installed-file';
         const executable = (0, node_fs_1.realpathSync)(path);
         if (!(0, node_fs_1.statSync)(executable).isFile())
             throw new Error('Official agent installer did not create a file.');
@@ -78969,7 +79037,9 @@ function installOfficialAgentCli(provider) {
     }
     catch (error) {
         (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
-        throw error;
+        if (error instanceof OfficialAgentInstallationError)
+            throw error;
+        throw new OfficialAgentInstallationError(stage, 'Official agent installation failed.', boundedExitCode(error), error);
     }
 }
 
@@ -79125,6 +79195,7 @@ function trustedSystemPath() {
     if (process.platform !== 'win32')
         return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
     return [(0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32'), WINDOWS_SYSTEM_ROOT,
+        (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'Wbem'),
         (0, node_path_1.join)(WINDOWS_SYSTEM_ROOT, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
 }
 function trustedCurlPath() {

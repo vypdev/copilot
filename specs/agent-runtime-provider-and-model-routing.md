@@ -316,6 +316,13 @@ For an admitted CLI, the debug log MUST include the normalized first-line versio
 On process failure it MUST expose the bounded numeric exit code and failure
 category, never raw stderr, prompts, environment values, or credentials. A
 provider availability label alone is insufficient to diagnose a CLI failure.
+Official CLI provisioning failures MUST expose a closed stage and bounded exit
+status when available (private-root, download, installer-script, installed-file,
+or replacement-trust). The Action log MUST NOT include raw installer stderr,
+URLs, local paths, environment values, tokens, or command arguments.
+For installer-script failures it MAY add a closed reason inferred from stderr
+(`hash-module`, `network`, `access-denied`, `missing-command`, or `unknown`);
+the raw text MUST stay private even when debug logging is enabled.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -344,6 +351,11 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+On Windows the official installer runs under Windows PowerShell 5.1 with fixed
+system tool directories, a private profile, and only non-secret native process
+variables. Its `PSModulePath` contains only Windows PowerShell 5.1 system module
+directories; inherited PowerShell 7 module entries cannot reach it. A fixture
+MUST assert the closed environment and failure-stage telemetry.
 If the default discovered CLI fails the executable trust preflight before its
 version can run, provisioning MUST treat it as unavailable and install a fresh
 official CLI in a private job directory. It MUST NOT execute or repair the
