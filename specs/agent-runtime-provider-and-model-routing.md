@@ -385,14 +385,17 @@ owner, including for `C:\`, because both hosted and service fixtures expose
 that system-owned volume root. The exception applies only to ancestor
 descriptors; it does not admit a foreign-owned executable. A fixture must
 verify the exact SID and continue rejecting another owner or mutation grant.
-The system volume may grant SDDL `LC` to another principal. Ancestor checks
-admit that directory-only right without treating it as delete-child; file
-checks do not admit `LC`. The isolated Windows matrix must cover both cases.
+The system volume may grant SDDL `LC` to another principal. On NTFS its bit
+allows adding a subdirectory, but does not allow replacing the existing path
+component without delete, owner, or DACL authority. Ancestor checks admit it;
+file checks reject it as append authority. The isolated Windows matrix must
+cover both cases.
 The file and ancestor descriptors MUST be collected by one bounded,
 read-only PowerShell process. A missing descriptor, changed count, malformed
-JSON response, or query failure blocks the run. The existing Windows
-execution, timeout, and cancellation fixtures must meet their 15-second Jest
-deadlines without increasing the admitted provider timeout.
+JSON response, or query failure blocks the run. The Windows timeout and
+cancellation fixtures may use a 30-second Jest budget for native ACL setup,
+process-tree cleanup, and loaded service runners; each admitted provider
+timeout remains independently bounded by its short test value.
 The standalone CLI verifier checks the selected command, interpreter, and
 launcher once before its help/version/login probes. This permits reuse only
 within the same short-lived verifier process after all path components are
@@ -422,6 +425,13 @@ generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;
 the mask definition should make their inclusion reviewable without mental
 hexadecimal arithmetic.
+The equivalent documented two-letter SDDL rights MUST use their filesystem
+bit meaning: `CC` is file read/directory list; `SW` is read extended attributes;
+`WP` is execute/traverse; `LO` is read attributes. `RP`, `CR`, and `DT` grant
+file mutation or a parent mutation and MUST not silently become trusted reads.
+Unknown rights remain rejected. A service Windows runner must prove the
+installed CLI's descriptor is accepted or rejected for a concrete known right,
+not because its standard token was absent from the parser.
 The installed-file preflight must read the full descriptor, including owner;
 `icacls /save` exports a DACL only and cannot establish ownership. A bounded
 read-only Windows ACL query is required, while generated runtime artifacts

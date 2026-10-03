@@ -95350,9 +95350,9 @@ const { dirname, join } = __nccwpck_require__(49411);
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
 const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
-const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO']);
-const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO']);
-const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO', 'LC', 'RP', 'CR', 'DT']);
+const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO', 'RP', 'CR', 'DT']);
+const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC', 'CC', 'SW', 'WP', 'LO']);
 const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
 
 function systemTool(name) {

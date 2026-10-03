@@ -9,6 +9,7 @@ describe('installed Windows executable ACL policy', () => {
         expect(() => check(`O:${user}G:SYD:AI(A;;FA;;;${user})(A;ID;FRFX;;;BU)`)).not.toThrow();
         expect(() => check('O:BAD:AI(A;;FA;;;BA)(A;ID;0x1200a9;;;BU)')).not.toThrow();
         expect(() => check(`O:${user}D:AI(A;;0xa0000000;;;BU)`)).not.toThrow();
+        expect(() => check(`O:${user}D:AI(A;;CCSWLOWP;;;BU)`)).not.toThrow();
     });
 
     it.each([
@@ -19,6 +20,10 @@ describe('installed Windows executable ACL policy', () => {
         `O:${user}D:AI(A;;0x10000000;;;AU)`,
         `O:${user}D:AI(A;;WD;;;AU)`,
         `O:${user}D:AI(A;;SD;;;AU)`,
+        `O:${user}D:AI(A;;LC;;;BU)`,
+        `O:${user}D:AI(A;;RP;;;BU)`,
+        `O:${user}D:AI(A;;CR;;;BU)`,
+        `O:${user}D:AI(A;;DT;;;BU)`,
     ])('rejects an untrusted mutation grant in %s', sddl => {
         expect(() => check(sddl)).toThrow('writable by another principal');
     });
@@ -48,7 +53,8 @@ describe('installed Windows executable parent ACL policy', () => {
         expect(() => checkParent('O:BAD:AI(A;;FA;;;BA)(A;;0x00000006;;;BU)')).not.toThrow();
         expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;FR;;;BU)`)).not.toThrow();
         expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;LC;;;BU)`)).not.toThrow();
-        expect(() => check(`O:${user}D:AI(A;;LC;;;BU)`)).toThrow('Unrecognized executable ACL rights');
+        expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;CCSWLOWP;;;BU)`)).not.toThrow();
+        expect(() => check(`O:${user}D:AI(A;;LC;;;BU)`)).toThrow('writable');
         expect(() => check(`O:${trustedInstaller}D:AI(A;;FA;;;SY)`)).toThrow('owner');
     });
 
@@ -59,6 +65,9 @@ describe('installed Windows executable parent ACL policy', () => {
         `O:${user}D:AI(A;;WD;;;AU)`,
         `O:${user}D:AI(A;;WO;;;AU)`,
         `O:${user}D:AI(A;;GA;;;AU)`,
+        `O:${user}D:AI(A;;RP;;;AU)`,
+        `O:${user}D:AI(A;;CR;;;AU)`,
+        `O:${user}D:AI(A;;DT;;;AU)`,
         'O:S-1-5-21-9-9-9-1001D:AI(A;;FR;;;BU)',
     ])('rejects a replaceable ancestor %s', sddl => {
         expect(() => checkParent(sddl)).toThrow();
