@@ -356,6 +356,10 @@ system tool directories, a private profile, and only non-secret native process
 variables. Its `PSModulePath` contains only Windows PowerShell 5.1 system module
 directories; inherited PowerShell 7 module entries cannot reach it. A fixture
 MUST assert the closed environment and failure-stage telemetry.
+The Windows platform smoke MUST also start the native Windows PowerShell 5.1
+under that exact installer environment and hash a local fixture file with
+`Get-FileHash`; this verifies module loading without downloading an agent,
+using credentials, or invoking setup against a repository.
 If the default discovered CLI fails the executable trust preflight before its
 version can run, provisioning MUST treat it as unavailable and install a fresh
 official CLI in a private job directory. It MUST NOT execute or repair the

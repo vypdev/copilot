@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
@@ -6,6 +7,7 @@ import { checkAgentAuthentication } from '../../../data/repository/agent_authent
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
+import { installerEnvironment } from '../agent_official_installer';
 import {
     makeWindowsRuntimePathPrivate,
     matchesWindowsRuntimePrincipal,
@@ -84,6 +86,29 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 }
 
 describe('isolated Windows agent runtime', () => {
+    windowsIt('loads Windows PowerShell 5.1 hash modules under the private installer environment', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot-installer-shell-'));
+        const fixture = join(root, 'fixture.txt');
+        try {
+            writeFileSync(fixture, 'isolated installer module fixture');
+            const environment = installerEnvironment(root, process.env);
+            expect(environment.PSModulePath).not.toContain('PowerShell\\7');
+            expect(environment.GITHUB_TOKEN).toBeUndefined();
+            const systemRoot = environment.SystemRoot || 'C:\\Windows';
+            const command = `$ErrorActionPreference='Stop'; (Get-FileHash -LiteralPath '${fixture.replace(/'/gu, "''")}' -Algorithm SHA256).Hash`;
+            const result = spawnSync(join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), [
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
+                Buffer.from(command, 'utf16le').toString('base64'),
+            ], { env: environment, encoding: 'utf8', timeout: 30_000, windowsHide: true });
+            expect(result.status).toBe(0);
+            expect(result.stdout.trim().toLowerCase()).toBe(
+                createHash('sha256').update('isolated installer module fixture').digest('hex'),
+            );
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
+    }, 45_000);
+
     it('accepts the SDDL local administrator alias only for the verified local administrator', () => {
         const sid = 'S-1-5-21-100-200-300-500';
         expect(isLocalWindowsAdministrator(sid, 'RUNNER', 'runner')).toBe(true);
