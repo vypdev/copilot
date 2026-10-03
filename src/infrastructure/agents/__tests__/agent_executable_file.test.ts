@@ -38,6 +38,9 @@ describe('agent executable file trust', () => {
         writeFileSync(executable, process.platform === 'win32' ? '@echo off\r\n' : '#!/bin/sh\nexit 0\n');
         if (process.platform !== 'win32') chmodSync(executable, 0o700);
         try {
+            if (process.platform === 'win32') {
+                expect(() => windowsRuntimeAcl.verifyWindowsAgentExecutableAcl(executable)).not.toThrow();
+            }
             expect(() => validateAgentExecutableFile(executable)).not.toThrow();
             expect(() => validateAgentExecutableFile(join(directory, 'missing')))
                 .toThrow('accessible executable file');

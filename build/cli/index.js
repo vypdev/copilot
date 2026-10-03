@@ -95391,7 +95391,11 @@ function verifyWindowsAgentExecutableAcl(path) {
   assertWindowsExecutableDacl(installedExecutableDescriptor(canonical), identity.sid, identity.localAdministrator);
   let parent = dirname(canonical);
   while (true) {
-    assertWindowsExecutableParentDacl(installedExecutableDescriptor(parent, true), identity.sid, identity.localAdministrator);
+    try {
+      assertWindowsExecutableParentDacl(installedExecutableDescriptor(parent, true), identity.sid, identity.localAdministrator);
+    } catch (error) {
+      throw new Error(`Unsafe Windows executable ancestor ${parent}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
     const next = dirname(parent);
     if (next === parent) break;
     parent = next;
