@@ -56,7 +56,7 @@ function grantsMutation(rights, directory = false) {
   }
   const tokens = rights.match(/.{2}/gu) ?? [];
   if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
-    throw new Error('Unrecognized executable ACL rights.');
+    throw new Error(`Unrecognized executable ACL rights (${rights}).`);
   }
   const dangerous = directory ? DIRECTORY_REPLACEMENT_RIGHTS : MUTATING_RIGHTS;
   return tokens.some(token => dangerous.has(token));
