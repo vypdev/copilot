@@ -4,6 +4,7 @@ export interface WindowsUserIdentity {
 }
 
 export function assertWindowsExecutableDacl(sddl: string, userSid: string, localAdministrator: boolean): void;
+export function assertWindowsExecutableParentDacl(sddl: string, userSid: string, localAdministrator: boolean): void;
 export function currentWindowsUserIdentity(): WindowsUserIdentity;
 export function isLocalWindowsAdministrator(sid: string, accountDomain: string | undefined, computerName: string): boolean;
 export function systemTool(name: string): string;

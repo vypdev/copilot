@@ -331,6 +331,13 @@ archive in a private job directory. Installer child processes receive no
 GitHub or model credentials. Explicit and present operator CLIs are never
 replaced. Installation checks require a nonempty version and the admitted
 headless command surface, without enforcing an exact version.
+Every direct official-source download MUST be bounded before bytes are written
+to disk: at most 1 MiB for installer scripts, 2 MiB for release metadata, and
+256 MiB for archives. Curl receives its transfer-size limit and the local
+process buffer imposes the same independent bound when a server omits its
+length. Zero-byte, oversized, or failed downloads leave no partial artifact
+and cannot execute or extract. Fixture tests exercise the actual download
+boundary for each content class without external network access.
 The Windows Codex installer checks the standard `OS=Windows_NT` service
 environment value before release work. The private installer environment MUST
 preserve that platform fact while still excluding all credentials. The PR #403
@@ -356,6 +363,14 @@ alone may be shared. Unknown ACE rights or unreadable ACLs fail closed. The
 preflight must not rewrite an operator-owned executable. Fixtures cover a
 normal Git for Windows/npm or Node ACL, a broad writable grant, inherited
 write, and malformed ACL evidence on hosted and service Windows runners.
+The preflight also reads the containing directory and its ancestors to the
+volume root. An untrusted principal must not own any path component or hold
+`DELETE_CHILD`, delete, DACL/owner mutation, or generic-all rights on an
+ancestor that could replace a previously checked executable. Add-only
+directory grants without replacement rights do not by themselves reject an
+otherwise safe installed path. This read-only check applies equally to native
+CLIs, resolved npm shims, interpreters, and package bins; fixtures prove both
+safe shared-read parents and a parent with an untrusted delete-child grant.
 Numeric SDDL ACE masks MUST reject both generic write (`0x40000000`) and
 generic all (`0x10000000`) for an untrusted principal, as well as file-specific
 mutation bits. Focused tests MUST exercise those generic rights directly;

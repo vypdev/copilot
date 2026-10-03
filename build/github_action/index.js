@@ -78709,6 +78709,7 @@ const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
+const MAX_ARCHIVE_BYTES = 268435456;
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 function installerEnvironment(root, source) {
     const allowed = [
@@ -78730,19 +78731,29 @@ function installerEnvironment(root, source) {
     environment.NO_COLOR = '1';
     return environment;
 }
-function download(url, destination, environment) {
+function download(url, destination, environment, maxBytes) {
     if (!url.startsWith('https://'))
         throw new Error('Official agent source must use HTTPS.');
     const curl = process.platform === 'win32'
         ? (0, node_path_1.join)(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'curl.exe')
         : 'curl';
-    (0, node_child_process_1.execFileSync)(curl, [
-        '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
-        '--proto', '=https', '--proto-redir', '=https', '--output', destination, url,
-    ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 130000 });
+    try {
+        const contents = (0, node_child_process_1.execFileSync)(curl, [
+            '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
+            '--max-filesize', String(maxBytes), '--proto', '=https', '--proto-redir', '=https', url,
+        ], { env: environment, stdio: ['ignore', 'pipe', 'pipe'], timeout: 130000, maxBuffer: maxBytes + 1 });
+        if (contents.length === 0 || contents.length > maxBytes) {
+            throw new Error('Official agent download size is invalid.');
+        }
+        (0, node_fs_1.writeFileSync)(destination, contents, { flag: 'wx' });
+    }
+    catch {
+        (0, node_fs_1.rmSync)(destination, { force: true });
+        throw new Error('Official agent download failed or exceeded its size limit.');
+    }
 }
 function downloadScript(url, destination, environment) {
-    download(url, destination, environment);
+    download(url, destination, environment, MAX_SCRIPT_BYTES);
     const contents = (0, node_fs_1.readFileSync)(destination);
     if (contents.length === 0 || contents.length > MAX_SCRIPT_BYTES) {
         throw new Error('Official agent installer size is invalid.');
@@ -78799,7 +78810,7 @@ function installWindowsCursor(root, environment) {
     if (!arch)
         throw new Error('Unsupported Cursor Windows architecture.');
     const archive = (0, node_path_1.join)(root, 'cursor.zip');
-    download(parseCursorWindowsInstaller(script, arch), archive, environment);
+    download(parseCursorWindowsInstaller(script, arch), archive, environment, MAX_ARCHIVE_BYTES);
     const extracted = (0, node_path_1.join)(root, 'extracted');
     extractWindowsArchive(archive, extracted, environment);
     const packageRoot = (0, node_path_1.join)(extracted, 'dist-package');
@@ -78843,7 +78854,7 @@ function installWindowsOpenCode(root, environment) {
     if (!api)
         throw new Error('Official OpenCode Windows release source is absent.');
     const metadataFile = (0, node_path_1.join)(root, 'opencode-release.json');
-    download(api, metadataFile, environment);
+    download(api, metadataFile, environment, MAX_METADATA_BYTES);
     const metadataBytes = (0, node_fs_1.readFileSync)(metadataFile);
     if (metadataBytes.length === 0 || metadataBytes.length > MAX_METADATA_BYTES) {
         throw new Error('Official OpenCode release metadata size is invalid.');
@@ -78854,7 +78865,7 @@ function installWindowsOpenCode(root, environment) {
         throw new Error('Unsupported OpenCode Windows architecture.');
     const asset = selectOpenCodeWindowsAsset(metadata, arch);
     const archive = (0, node_path_1.join)(root, 'opencode.zip');
-    download(asset.url, archive, environment);
+    download(asset.url, archive, environment, MAX_ARCHIVE_BYTES);
     if (asset.digest) {
         const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(archive)).digest('hex');
         if (asset.digest !== `sha256:${actual}`)
@@ -84705,11 +84716,13 @@ module.exports = require("util");
 
 const { execFileSync } = __nccwpck_require__(17718);
 const { Buffer } = __nccwpck_require__(72254);
+const { realpathSync } = __nccwpck_require__(87561);
 const { hostname } = __nccwpck_require__(70612);
-const { join } = __nccwpck_require__(49411);
+const { dirname, join } = __nccwpck_require__(49411);
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
-const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'WD', 'WO']);
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO']);
+const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO']);
 const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC']);
 
 function systemTool(name) {
@@ -84732,9 +84745,10 @@ function currentWindowsUserIdentity() {
   return { sid, localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, hostname()) };
 }
 
-function installedExecutableDescriptor(path) {
+function installedExecutableDescriptor(path, directory = false) {
   // icacls /save omits the owner; a read-only full descriptor is required.
-  const command = "$ErrorActionPreference='Stop'; [System.IO.File]::GetAccessControl('"
+  const command = "$ErrorActionPreference='Stop'; [System.IO."
+    + (directory ? 'Directory' : 'File') + "]::GetAccessControl('"
     + path.replace(/'/gu, "''")
     + "').GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::All)";
   return execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
@@ -84743,7 +84757,7 @@ function installedExecutableDescriptor(path) {
     }).replace(/^\uFEFF/u, '').trim();
 }
 
-function grantsMutation(rights) {
+function grantsMutation(rights, directory = false) {
   if (/^0x[0-9a-f]+$/iu.test(rights)) {
     const mask = Number.parseInt(rights.slice(2), 16);
     if (!Number.isSafeInteger(mask) || mask > 0xFFFF_FFFF) {
@@ -84752,16 +84766,18 @@ function grantsMutation(rights) {
     const genericWrite = 0x4000_0000;
     const genericAll = 0x1000_0000;
     const fileMutation = 0x000D_0156;
-    return (mask & (genericWrite | genericAll | fileMutation)) !== 0;
+    const directoryReplacement = 0x000D_0040;
+    return (mask & (directory ? genericAll | directoryReplacement : genericWrite | genericAll | fileMutation)) !== 0;
   }
   const tokens = rights.match(/.{2}/gu) ?? [];
   if (tokens.length * 2 !== rights.length || tokens.some(token => !KNOWN_RIGHTS.has(token))) {
     throw new Error('Unrecognized executable ACL rights.');
   }
-  return tokens.some(token => MUTATING_RIGHTS.has(token));
+  const dangerous = directory ? DIRECTORY_REPLACEMENT_RIGHTS : MUTATING_RIGHTS;
+  return tokens.some(token => dangerous.has(token));
 }
 
-function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, directory = false) {
   const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
   const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
   if (localAdministrator) trusted.add('LA');
@@ -84782,20 +84798,33 @@ function assertWindowsExecutableDacl(sddl, userSid, localAdministrator) {
       throw new Error('Unrecognized executable ACL entry.');
     }
     if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5])) continue;
-    if (grantsMutation(fields[2])) {
+    if (grantsMutation(fields[2], directory)) {
       // The public boundary wraps this detail; isolated diagnostics keep the ACE.
       throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
     }
   }
 }
 
+function assertWindowsExecutableParentDacl(sddl, userSid, localAdministrator) {
+  assertWindowsExecutableDacl(sddl, userSid, localAdministrator, true);
+}
+
 function verifyWindowsAgentExecutableAcl(path) {
   const identity = currentWindowsUserIdentity();
-  assertWindowsExecutableDacl(installedExecutableDescriptor(path), identity.sid, identity.localAdministrator);
+  const canonical = realpathSync(path);
+  assertWindowsExecutableDacl(installedExecutableDescriptor(canonical), identity.sid, identity.localAdministrator);
+  let parent = dirname(canonical);
+  while (true) {
+    assertWindowsExecutableParentDacl(installedExecutableDescriptor(parent, true), identity.sid, identity.localAdministrator);
+    const next = dirname(parent);
+    if (next === parent) break;
+    parent = next;
+  }
 }
 
 module.exports = {
   assertWindowsExecutableDacl,
+  assertWindowsExecutableParentDacl,
   currentWindowsUserIdentity,
   isLocalWindowsAdministrator,
   systemTool,

@@ -258,6 +258,12 @@ The executable, its interpreter and package-owned entrypoint require a
 read-only ACL preflight: trusted ownership and no untrusted write/delete/ACL
 control ACE. Existing installed files are never modified. An unreadable or
 unrecognized ACL fails before a provider process starts.
+The preflight also checks the containing directory and each ancestor to the
+volume root for untrusted ownership or rights to delete/replace a checked
+path component or rewrite its ACL. It distinguishes harmless add-only rights
+from delete-child rights and fails closed on unreadable descriptors. Real
+Windows fixtures must pass for a safe parent and reject an untrusted
+delete-child grant without changing the operator-owned executable.
 The installed-file check reads a full Windows security descriptor; the
 managed-artifact `icacls /save` snapshot contains only the DACL and is not
 owner evidence for an installed executable.

@@ -1,4 +1,4 @@
-import { assertWindowsExecutableDacl } from '../windows_executable_acl_policy';
+import { assertWindowsExecutableDacl, assertWindowsExecutableParentDacl } from '../windows_executable_acl_policy';
 
 const user = 'S-1-5-21-100-200-300-1001';
 const check = (sddl: string) => assertWindowsExecutableDacl(sddl, user, false);
@@ -36,5 +36,26 @@ describe('installed Windows executable ACL policy', () => {
         `O:${user}D:AI`,
     ])('fails closed for unknown or untrusted ACL evidence in %s', sddl => {
         expect(() => check(sddl)).toThrow();
+    });
+});
+
+describe('installed Windows executable parent ACL policy', () => {
+    const checkParent = (sddl: string) => assertWindowsExecutableParentDacl(sddl, user, false);
+
+    it('allows shared reads and add-only directory rights without replacement authority', () => {
+        expect(() => checkParent(`O:${user}D:AI(A;;FA;;;${user})(A;;0x1200a9;;;BU)`)).not.toThrow();
+        expect(() => checkParent('O:BAD:AI(A;;FA;;;BA)(A;;0x00000006;;;BU)')).not.toThrow();
+    });
+
+    it.each([
+        `O:${user}D:AI(A;;DC;;;BU)`,
+        `O:${user}D:AI(A;;0x00000040;;;AU)`,
+        `O:${user}D:AI(A;;SD;;;AU)`,
+        `O:${user}D:AI(A;;WD;;;AU)`,
+        `O:${user}D:AI(A;;WO;;;AU)`,
+        `O:${user}D:AI(A;;GA;;;AU)`,
+        'O:S-1-5-21-9-9-9-1001D:AI(A;;FR;;;BU)',
+    ])('rejects a replaceable ancestor %s', sddl => {
+        expect(() => checkParent(sddl)).toThrow();
     });
 });

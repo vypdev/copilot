@@ -1,4 +1,5 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assertAgentExecutableMetadata, validateAgentExecutableFile } from '../agent_executable_file';
@@ -62,6 +63,25 @@ describe('agent executable file trust', () => {
         } finally {
             Object.defineProperty(process, 'platform', platform);
             acl.mockRestore();
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it : it.skip)('rejects a replaceable ancestor even when the executable and its parent are private', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-parent-acl-'));
+        const parent = join(directory, 'private-bin');
+        const executable = join(parent, 'agent.exe');
+        try {
+            mkdirSync(parent);
+            writeFileSync(executable, 'fixture');
+            windowsRuntimeAcl.makeWindowsRuntimePathPrivate(directory, true);
+            windowsRuntimeAcl.makeWindowsRuntimePathPrivate(parent, true);
+            windowsRuntimeAcl.makeWindowsRuntimePathPrivate(executable, false);
+            expect(() => validateAgentExecutableFile(executable)).not.toThrow();
+            execFileSync('icacls.exe', [directory, '/grant', '*S-1-1-0:F'], { stdio: 'ignore' });
+            expect(() => validateAgentExecutableFile(executable))
+                .toThrow('unsafe or unreadable Windows ACL');
+        } finally {
             rmSync(directory, { recursive: true, force: true });
         }
     });

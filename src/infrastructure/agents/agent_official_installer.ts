@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
     chmodSync, copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync,
-    readdirSync, realpathSync, rmSync, statSync,
+    readdirSync, realpathSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -12,6 +12,7 @@ import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
 
 const MAX_SCRIPT_BYTES = 1_048_576;
 const MAX_METADATA_BYTES = 2_097_152;
+const MAX_ARCHIVE_BYTES = 268_435_456;
 
 export interface OfficialAgentInstallation {
     readonly executable: string;
@@ -40,19 +41,28 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
     return environment;
 }
 
-function download(url: string, destination: string, environment: NodeJS.ProcessEnv): void {
+function download(url: string, destination: string, environment: NodeJS.ProcessEnv, maxBytes: number): void {
     if (!url.startsWith('https://')) throw new Error('Official agent source must use HTTPS.');
     const curl = process.platform === 'win32'
         ? join(environment.SystemRoot || environment.WINDIR || 'C:\\Windows', 'System32', 'curl.exe')
         : 'curl';
-    execFileSync(curl, [
-        '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
-        '--proto', '=https', '--proto-redir', '=https', '--output', destination, url,
-    ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 130_000 });
+    try {
+        const contents = execFileSync(curl, [
+            '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
+            '--max-filesize', String(maxBytes), '--proto', '=https', '--proto-redir', '=https', url,
+        ], { env: environment, stdio: ['ignore', 'pipe', 'pipe'], timeout: 130_000, maxBuffer: maxBytes + 1 });
+        if (contents.length === 0 || contents.length > maxBytes) {
+            throw new Error('Official agent download size is invalid.');
+        }
+        writeFileSync(destination, contents, { flag: 'wx' });
+    } catch {
+        rmSync(destination, { force: true });
+        throw new Error('Official agent download failed or exceeded its size limit.');
+    }
 }
 
 function downloadScript(url: string, destination: string, environment: NodeJS.ProcessEnv): string {
-    download(url, destination, environment);
+    download(url, destination, environment, MAX_SCRIPT_BYTES);
     const contents = readFileSync(destination);
     if (contents.length === 0 || contents.length > MAX_SCRIPT_BYTES) {
         throw new Error('Official agent installer size is invalid.');
@@ -111,7 +121,7 @@ function installWindowsCursor(root: string, environment: NodeJS.ProcessEnv): str
     const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'x64' ? 'x64' : undefined;
     if (!arch) throw new Error('Unsupported Cursor Windows architecture.');
     const archive = join(root, 'cursor.zip');
-    download(parseCursorWindowsInstaller(script, arch), archive, environment);
+    download(parseCursorWindowsInstaller(script, arch), archive, environment, MAX_ARCHIVE_BYTES);
     const extracted = join(root, 'extracted');
     extractWindowsArchive(archive, extracted, environment);
     const packageRoot = join(extracted, 'dist-package');
@@ -157,7 +167,7 @@ function installWindowsOpenCode(root: string, environment: NodeJS.ProcessEnv): s
     const api = getAgentRuntimeManifestEntry('opencode').installation.windowsReleaseApi;
     if (!api) throw new Error('Official OpenCode Windows release source is absent.');
     const metadataFile = join(root, 'opencode-release.json');
-    download(api, metadataFile, environment);
+    download(api, metadataFile, environment, MAX_METADATA_BYTES);
     const metadataBytes = readFileSync(metadataFile);
     if (metadataBytes.length === 0 || metadataBytes.length > MAX_METADATA_BYTES) {
         throw new Error('Official OpenCode release metadata size is invalid.');
@@ -170,7 +180,7 @@ function installWindowsOpenCode(root: string, environment: NodeJS.ProcessEnv): s
     if (!arch) throw new Error('Unsupported OpenCode Windows architecture.');
     const asset = selectOpenCodeWindowsAsset(metadata, arch);
     const archive = join(root, 'opencode.zip');
-    download(asset.url, archive, environment);
+    download(asset.url, archive, environment, MAX_ARCHIVE_BYTES);
     if (asset.digest) {
         const actual = createHash('sha256').update(readFileSync(archive)).digest('hex');
         if (asset.digest !== `sha256:${actual}`) throw new Error('Official OpenCode archive digest mismatch.');

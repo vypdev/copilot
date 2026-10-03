@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import {
     installOfficialAgentCli, installerEnvironment,
     parseCursorWindowsInstaller, selectOpenCodeWindowsAsset,
@@ -55,12 +55,56 @@ describe('official agent installer boundaries', () => {
         expect(() => selectOpenCodeWindowsAsset({ ...release, tag_name: 'latest' }, 'x64')).toThrow('tag is invalid');
     });
 
+    it('rejects an oversized script before writing it or executing the installer', () => {
+        let root = '';
+        execute.mockImplementation((file: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+            if (!file.toLowerCase().includes('curl')) throw new Error('Installer ran after oversized download.');
+            root = options.env.HOME!;
+            return Buffer.alloc(1_048_577, 65);
+        });
+        expect(() => installOfficialAgentCli('codex')).toThrow('size limit');
+        expect(root).not.toBe('');
+        expect(existsSync(root)).toBe(false);
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+
+    (process.platform === 'win32' ? it : it.skip)('rejects oversized release metadata before writing it', () => {
+        let root = '';
+        execute.mockImplementation((file: string, _args: string[], options: { env: NodeJS.ProcessEnv }) => {
+            if (!file.toLowerCase().endsWith('curl.exe')) throw new Error('Release handling ran after oversized metadata.');
+            root = options.env.HOME!;
+            return Buffer.alloc(2_097_153, 65);
+        });
+        expect(() => installOfficialAgentCli('opencode')).toThrow('size limit');
+        expect(root).not.toBe('');
+        expect(existsSync(root)).toBe(false);
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+
+    (process.platform === 'win32' ? it : it.skip)('removes a failed archive download before extraction', () => {
+        let root = '';
+        execute.mockImplementation((file: string, args: string[], options: { env: NodeJS.ProcessEnv }) => {
+            if (!file.toLowerCase().endsWith('curl.exe')) throw new Error('Extraction ran after failed download.');
+            root = options.env.HOME!;
+            if (args.at(-1)?.includes('cursor.com/install')) {
+                return Buffer.from("$downloadUrl = 'https://downloads.cursor.com/lab/2026.10.01-e373342/'\n$version = '2026.10.01-e373342'");
+            }
+            expect(args[args.indexOf('--max-filesize') + 1]).toBe('268435456');
+            expect(options).toMatchObject({ maxBuffer: 268_435_457 });
+            throw new Error('Simulated transfer exceeded its byte limit.');
+        });
+        expect(() => installOfficialAgentCli('cursor')).toThrow('size limit');
+        expect(root).not.toBe('');
+        expect(existsSync(root)).toBe(false);
+        expect(execute).toHaveBeenCalledTimes(2);
+    });
+
     (process.platform === 'win32' ? it.skip : it)('downloads and executes a fake official shell installer inside a private job directory', () => {
         execute.mockImplementation((file: string, args: string[], options: { env: NodeJS.ProcessEnv }) => {
             if (file === 'curl') {
-                const destination = args[args.indexOf('--output') + 1];
-                writeFileSync(destination, '#!/bin/sh\n');
                 expect(args.at(-1)).toBe('https://chatgpt.com/codex/install.sh');
+                expect(args).toContain('--max-filesize');
+                return Buffer.from('#!/bin/sh\n');
             } else if (file === 'sh') {
                 const binary = join(options.env.CODEX_INSTALL_DIR!, 'codex');
                 mkdirSync(options.env.CODEX_INSTALL_DIR!, { recursive: true });
@@ -89,8 +133,7 @@ describe('official agent installer boundaries', () => {
             let root = '';
             execute.mockImplementation((file: string, args: string[], options: { env: NodeJS.ProcessEnv }) => {
                 if (file.toLowerCase().endsWith('curl.exe')) {
-                    const destination = args[args.indexOf('--output') + 1];
-                    root = root || dirname(destination);
+                    root = root || options.env.HOME!;
                     const url = args.at(-1) || '';
                     const content = url.includes('cursor.com/install')
                         ? "$downloadUrl = 'https://downloads.cursor.com/lab/2026.10.01-e373342/'\n$version = '2026.10.01-e373342'"
@@ -100,7 +143,7 @@ describe('official agent installer boundaries', () => {
                                 browser_download_url: `https://github.com/anomalyco/opencode/releases/download/v1.2.3/opencode-windows-${process.arch}-baseline.zip`,
                             }] })
                             : 'fake official payload';
-                    writeFileSync(destination, content);
+                    return Buffer.from(content);
                 } else if (file.toLowerCase().endsWith('powershell.exe')) {
                     if (args.includes('-File')) {
                         expect(options.env.OS).toBe('Windows_NT');
@@ -124,6 +167,19 @@ describe('official agent installer boundaries', () => {
                 expect(existsSync(installed.executable)).toBe(true);
                 expect(installed.executable.toLowerCase()).toContain(`${provider === 'cursor' ? 'agent' : provider}.exe`);
                 expect(execute.mock.calls.some(([file]) => String(file).toLowerCase().includes('npm'))).toBe(false);
+                const limits = execute.mock.calls
+                    .filter(([file]) => String(file).toLowerCase().endsWith('curl.exe'))
+                    .map(([, args, options]) => ({
+                        curlLimit: args[args.indexOf('--max-filesize') + 1],
+                        bufferLimit: options.maxBuffer,
+                    }));
+                expect(limits).toEqual(provider === 'codex'
+                    ? [{ curlLimit: '1048576', bufferLimit: 1_048_577 }]
+                    : provider === 'cursor'
+                        ? [{ curlLimit: '1048576', bufferLimit: 1_048_577 },
+                            { curlLimit: '268435456', bufferLimit: 268_435_457 }]
+                        : [{ curlLimit: '2097152', bufferLimit: 2_097_153 },
+                            { curlLimit: '268435456', bufferLimit: 268_435_457 }]);
             } finally {
                 rmSync(installed.root, { recursive: true, force: true });
             }
