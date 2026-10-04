@@ -2119,6 +2119,15 @@ the same coverage, acceptance budget and documentation gates on hosted and
 self-hosted Windows. The other five jobs do not substitute for that run.
 Agent provisioning on macOS also remains open after the installed-file failure
 described in the agent runtime SDD.
+The [Bugbot review on `2319b41b`](https://github.com/vypdev/copilot/actions/runs/37244058136)
+reported that the web journey could end as cancelled after a successful
+session. The command currently creates the journey during the repository stage
+and the shared coordinator publishes its outcome before the browser bridge
+finishes, so this diagnosis requires end-to-end evidence rather than a status
+assumption. Fake-port CLI/web tests MUST assert both the journey outcome and
+the final browser outcome for complete, dry-run, partial, cancelled and
+blocked runs. A mismatch is a correctness defect; a matching result can be
+used to resolve the finding with exact code and test evidence.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

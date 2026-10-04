@@ -336,6 +336,8 @@ describe('isolated Windows agent runtime', () => {
             + 'setInterval(()=>{},1000)}';
         const fixture = fakeRuntime(source);
         const controller = new AbortController();
+        const originalSystemRoot = process.env.SystemRoot;
+        const originalWindir = process.env.WINDIR;
         let pending: Promise<string> | undefined;
         let descendantPid: number | undefined;
         try {
@@ -347,11 +349,17 @@ describe('isolated Windows agent runtime', () => {
             }
             expect(existsSync(pidFile)).toBe(true);
             descendantPid = Number(readFileSync(pidFile, 'utf8'));
+            process.env.SystemRoot = fixture.root;
+            process.env.WINDIR = fixture.root;
             controller.abort();
             await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
             expect(existsSync(plan.runtimeDirectory)).toBe(false);
             expect(() => process.kill(descendantPid!, 0)).toThrow();
         } finally {
+            if (originalSystemRoot === undefined) delete process.env.SystemRoot;
+            else process.env.SystemRoot = originalSystemRoot;
+            if (originalWindir === undefined) delete process.env.WINDIR;
+            else process.env.WINDIR = originalWindir;
             controller.abort();
             await pending?.catch(() => undefined);
             if (descendantPid) {

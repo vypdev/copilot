@@ -405,6 +405,10 @@ and its fixture evidence. Do not restore live environment lookup.
 Fixtures MUST cover a non-`C:` system drive, malformed or disagreeing roots,
 post-startup environment tampering, and a fake tool directory prepended to
 `PATH` without launching the fake downloader, shell, or process-tree killer.
+The actual Windows cancellation fixture MUST also change `SystemRoot` and
+`WINDIR` after the Action modules load, then verify that the agent's descendant
+is terminated. This guards the `taskkill.exe` call path, not only the tool-path
+helper, against later environment tampering.
 Official latest-version metadata retrieval MUST use the same fixed trusted
 `curl` location and system-only child `PATH` as installation. A fixture MUST
 prepend a fake `curl` to the caller `PATH`, verify the official version is

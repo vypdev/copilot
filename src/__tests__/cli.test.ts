@@ -505,6 +505,7 @@ describe('CLI', () => {
     describe('local web command handoff', () => {
       let ask: jest.SpyInstance;
       let collect: jest.SpyInstance;
+      const webView = () => ((startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge).snapshot();
 
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
@@ -549,6 +550,8 @@ describe('CLI', () => {
         expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(2);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBeUndefined();
+        expect(webView().journey?.outcome).toBe('complete');
+        expect(webView().outcome).toBe('complete');
         const bridge = (startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge;
         expect(await bridge.runReadOnlyDoctor()).toBe('complete');
         expect(mockDoctorExecute).toHaveBeenCalledWith(expect.objectContaining({
@@ -576,6 +579,8 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web']);
         expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
         expect(runLocalAction).not.toHaveBeenCalled();
+        expect(webView().journey?.outcome).toBe('cancelled');
+        expect(webView().outcome).toBe('cancelled');
       });
 
       it('treats a dismissed repository confirmation as cancellation', async () => {
@@ -701,6 +706,8 @@ describe('CLI', () => {
         expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBeUndefined();
+        expect(webView().journey?.outcome).toBe('dry-run');
+        expect(webView().outcome).toBe('dry-run');
       });
 
       it('requires explicit selection before using an environment PAT', async () => {
@@ -740,6 +747,8 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
+        expect(webView().journey?.outcome).toBe('blocked');
+        expect(webView().outcome).toBe('blocked');
       });
 
       it('does not enter the mutation boundary when final Apply is declined', async () => {
@@ -777,6 +786,8 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBe(1);
+        expect(webView().journey?.outcome).toBe('partial');
+        expect(webView().outcome).toBe('partial');
         const { logInfo } = require('../utils/logger');
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('partial completion'));
       });
