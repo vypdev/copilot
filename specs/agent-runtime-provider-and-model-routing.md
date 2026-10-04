@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-02
+- Last updated: 2026-10-05
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -397,6 +397,11 @@ installer environment argument MUST NOT change those executable locations.
 The runner startup environment is a trusted machine prerequisite; a runner
 whose own system variables have been replaced before the Action process starts
 is outside the Action's trust boundary. Missing trusted tools fail closed.
+Bugbot's [review of `9adcd05c`](https://github.com/vypdev/copilot/actions/runs/37182427514)
+still lists the earlier environment-controlled `taskkill.exe` and fixed-`C:`
+findings. The current source uses the startup-captured root for both; the
+threads remain review work until the new head is verified against that code
+and its fixture evidence. Do not restore live environment lookup.
 Fixtures MUST cover a non-`C:` system drive, malformed or disagreeing roots,
 post-startup environment tampering, and a fake tool directory prepended to
 `PATH` without launching the fake downloader, shell, or process-tree killer.
@@ -411,6 +416,17 @@ process buffer imposes the same independent bound when a server omits its
 length. Zero-byte, oversized, or failed downloads leave no partial artifact
 and cannot execute or extract. Fixture tests exercise the actual download
 boundary for each content class without external network access.
+The [macOS Action run on `9adcd05c`](https://github.com/vypdev/copilot/actions/runs/37182424818)
+failed after the official Codex script returned, at the installed-file stage.
+The [official Unix installer](https://github.com/openai/codex/blob/main/scripts/install/install.sh)
+publishes the visible `codex` command as a symlink to a release under
+`CODEX_HOME`. Resolve that link and any intermediate links without following
+one outside the newly created private root. The final target MUST be a regular
+executable inside that root, while the returned command directory continues
+to expose `codex` for PATH resolution. An escaped, dangling, or non-file
+target fails closed and removes the installation. Fixture tests MUST cover
+the official internal-link layout and an external target without downloading
+a real agent. A passing macOS Action job remains required.
 The Windows Codex installer checks the standard `OS=Windows_NT` service
 environment value before release work. The private installer environment MUST
 preserve that platform fact while still excluding all credentials. The PR #403

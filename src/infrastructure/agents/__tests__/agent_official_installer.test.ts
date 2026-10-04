@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { trustedSystemPath } from '../agent_trusted_system_tools';
 import { trustedWindowsSystemRoot } from '../windows_system_root.cjs';
+import { securePrivateInstalledAgent } from '../agent_private_install_root';
 import {
     installOfficialAgentCli, installerEnvironment, OfficialAgentInstallationError,
     parseCursorWindowsInstaller, selectOpenCodeWindowsAsset,
@@ -122,9 +124,15 @@ describe('official agent installer boundaries', () => {
                 expect(options.env.PATH).not.toContain('/tmp/attacker');
                 return Buffer.from('#!/bin/sh\n');
             } else if (file === '/bin/sh') {
-                const binary = join(options.env.CODEX_INSTALL_DIR!, 'codex');
+                const release = join(options.env.CODEX_HOME!, 'packages', 'standalone', 'releases', '1.2.3');
+                const current = join(options.env.CODEX_HOME!, 'packages', 'standalone', 'current');
+                const binary = join(release, 'bin', 'codex');
+                mkdirSync(dirname(binary), { recursive: true });
                 mkdirSync(options.env.CODEX_INSTALL_DIR!, { recursive: true });
                 writeFileSync(binary, '#!/bin/sh\n');
+                chmodSync(binary, 0o755);
+                symlinkSync(release, current);
+                symlinkSync(join(current, 'bin', 'codex'), join(options.env.CODEX_INSTALL_DIR!, 'codex'));
             } else {
                 throw new Error(`Unexpected installer command ${file}`);
             }
@@ -132,6 +140,7 @@ describe('official agent installer boundaries', () => {
         const installed = installOfficialAgentCli('codex');
         try {
             expect(installed.executable).toBe(realpathSync(join(installed.directory, 'codex')));
+            expect(installed.directory).toBe(join(installed.root, 'bin'));
             expect(existsSync(installed.executable)).toBe(true);
             expect(readFileSync(join(installed.root, 'install.sh'), 'utf8')).toBe('#!/bin/sh\n');
             expect(execute).toHaveBeenCalledTimes(2);
@@ -155,6 +164,7 @@ describe('official agent installer boundaries', () => {
                 const binary = join(options.env.HOME!, installedPath);
                 mkdirSync(dirname(binary), { recursive: true });
                 writeFileSync(binary, 'native fixture');
+                chmodSync(binary, 0o755);
                 return Buffer.alloc(0);
             }
             throw new Error(`Unexpected installer command ${file}`);
@@ -165,6 +175,40 @@ describe('official agent installer boundaries', () => {
             expect(existsSync(installed.executable)).toBe(true);
         } finally {
             rmSync(installed.root, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it.skip : it)('rejects an official installer link that escapes its private root', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot-install-link-'));
+        const outside = mkdtempSync(join(tmpdir(), 'copilot-install-outside-'));
+        const link = join(root, 'codex');
+        try {
+            const executable = join(outside, 'codex');
+            writeFileSync(executable, '#!/bin/sh\n');
+            chmodSync(executable, 0o755);
+            symlinkSync(executable, link);
+            expect(() => securePrivateInstalledAgent(root, link)).toThrow('escaped its private directory');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+            rmSync(outside, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it.skip : it)('rejects an intermediate link outside the private root and a dangling command', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot-install-links-'));
+        const outside = mkdtempSync(join(tmpdir(), 'copilot-install-outside-'));
+        try {
+            const executable = join(outside, 'codex');
+            writeFileSync(executable, '#!/bin/sh\n');
+            chmodSync(executable, 0o755);
+            symlinkSync(outside, join(root, 'bin'));
+            expect(() => securePrivateInstalledAgent(root, join(root, 'bin', 'codex')))
+                .toThrow('escaped its private directory');
+            symlinkSync(join(root, 'missing'), join(root, 'codex'));
+            expect(() => securePrivateInstalledAgent(root, join(root, 'codex'))).toThrow();
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+            rmSync(outside, { recursive: true, force: true });
         }
     });
 

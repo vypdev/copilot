@@ -15,7 +15,9 @@ The Action runs one selected external CLI. If its default executable is already 
 
 The six distributed agent workflows do not run `actions/setup-node`, pnpm, or npm. GitHub Actions supplies the Node runtime for the bundled JavaScript Action. Development, CI, documentation, and package workflows still use their own Node toolchain. The provider installers receive a minimal environment without GitHub tokens or model credentials. The Action does not run unselected installers or send prompts through an installer.
 
-Installer downloads and Unix shells use fixed system executable paths. Installer children receive a system-only `PATH`, so a workflow-added directory cannot replace `curl`, `sh`, `bash`, or a helper called by an official installer. On Windows the supported system tool root is `C:\Windows`; other system installations fail closed until reviewed.
+Installer downloads and Unix shells use fixed system executable paths. Installer children receive a system-only `PATH`, so a workflow-added directory cannot replace `curl`, `sh`, `bash`, or a helper called by an official installer. On Windows, the Action validates and captures the runner's system directory at startup, including a Windows installation on another drive. Later environment changes cannot redirect `taskkill.exe`, PowerShell, curl, or the installer PATH.
+
+The official Unix Codex installer exposes its command through links to a release stored under its private `CODEX_HOME`. The Action accepts that layout only while every link stays inside the new private installation directory and resolves to an executable file. A link outside that directory or a missing target fails installation and removes the temporary files.
 
 Direct downloads are bounded before any bytes are written to disk: installer scripts to 1 MiB, release metadata to 2 MiB, and archives to 256 MiB. An empty, oversized, or failed transfer leaves no partial installer artifact. The official installer may perform its own further downloads after its script starts; those remain under that provider's installer behavior.
 

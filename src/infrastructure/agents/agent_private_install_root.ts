@@ -1,6 +1,6 @@
-import { chmodSync, lstatSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { accessSync, chmodSync, constants, lstatSync, mkdtempSync, readlinkSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, relative } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { makeWindowsRuntimePathPrivate, verifyWindowsAgentExecutableAcl } from './windows_runtime_acl';
 
 const INSTALL_PREFIX = 'copilot-agent-install-';
@@ -59,10 +59,11 @@ export function createPrivateAgentInstallRoot(): string {
 /** This may change ACLs only for a newly installed file contained in our root. */
 export function securePrivateInstalledAgent(root: string, path: string): string {
     const canonicalRoot = realpathSync(root);
-    const canonicalPath = realpathSync(path);
-    const relation = relative(canonicalRoot, canonicalPath);
-    if (!relation || relation.startsWith('..') || isAbsolute(relation) || lstatSync(path).isSymbolicLink()) {
-        throw new Error('Official agent installer output escaped its private directory.');
+    const relation = relative(root, path);
+    if (!isWithinPrivateRoot(relation)) throw new Error('Official agent installer output escaped its private directory.');
+    const canonicalPath = resolvePrivateInstalledFile(root, canonicalRoot, relation);
+    if (process.platform === 'win32' && lstatSync(path).isSymbolicLink()) {
+        throw new Error('Official agent installer output is a Windows symlink.');
     }
     if (process.platform === 'win32') {
         const directories: string[] = [];
@@ -79,5 +80,47 @@ export function securePrivateInstalledAgent(root: string, path: string): string 
         makeWindowsRuntimePathPrivate(canonicalPath, false);
         verifyWindowsAgentExecutableAcl(canonicalPath);
     }
+    accessSync(canonicalPath, constants.X_OK);
     return canonicalPath;
+}
+
+function isWithinPrivateRoot(relation: string): boolean {
+    return Boolean(relation) && relation !== '..' && !relation.startsWith(`..${sep}`) && !isAbsolute(relation);
+}
+
+/** Follow official Unix launch links only while each hop stays under our private root. */
+function resolvePrivateInstalledFile(root: string, canonicalRoot: string, relation: string): string {
+    let current = canonicalRoot;
+    let pending = relation.split(sep).filter(Boolean);
+    let links = 0;
+    while (pending.length > 0) {
+        const next = resolve(current, pending.shift()!);
+        if (!isWithinPrivateRoot(relative(canonicalRoot, next))) {
+            throw new Error('Official agent installer output escaped its private directory.');
+        }
+        const entry = lstatSync(next);
+        if (entry.isSymbolicLink()) {
+            if (process.platform === 'win32') {
+                throw new Error('Official agent installer output is a Windows symlink.');
+            }
+            if (++links > 32) throw new Error('Official agent installer output has too many links.');
+            const target = resolve(dirname(next), readlinkSync(next));
+            const canonicalRelation = relative(canonicalRoot, target);
+            const targetRelation = isWithinPrivateRoot(canonicalRelation)
+                ? canonicalRelation : relative(root, target);
+            if (!isWithinPrivateRoot(targetRelation)) {
+                throw new Error('Official agent installer output escaped its private directory.');
+            }
+            pending = [...targetRelation.split(sep).filter(Boolean), ...pending];
+            current = canonicalRoot;
+        } else if (pending.length > 0 && !entry.isDirectory()) {
+            throw new Error('Official agent installer output has a non-directory ancestor.');
+        } else {
+            current = next;
+            if (pending.length === 0 && !entry.isFile()) {
+                throw new Error('Official agent installer did not create a file.');
+            }
+        }
+    }
+    return current;
 }

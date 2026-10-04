@@ -763,7 +763,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-05",
       "specs": [
         "specs/local-web-setup-assistant.md"
       ],
@@ -1449,7 +1449,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-05",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"

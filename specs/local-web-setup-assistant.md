@@ -3,7 +3,7 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-10-02 (PR #402 merge baseline and fixture-only follow-up evidence are recorded below; the operator incident is external evidence, not agent dogfooding)
+- Last verified: 2026-10-05 (PR #402 merge baseline and fixture-only follow-up evidence are recorded below; the operator incident is external evidence, not agent dogfooding)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
@@ -2109,6 +2109,16 @@ roots, falling back to a safe profile-local directory, and securing the
 installed files without changing an operator CLI. The manual Windows setup
 smoke on the same commit failed during checkout, before the fixtures ran; it
 does not close any Windows service gate.
+The [manual six-platform smoke on `9adcd05c`](https://github.com/vypdev/copilot/actions/runs/37182449153)
+passed hosted Ubuntu, macOS and Windows plus self-hosted macOS and Ubuntu.
+The self-hosted Windows job reached the full coverage step and passed 522 of
+523 suites, but a Jest worker ran out of memory in the architecture import
+ratchet suite. This is a resource failure, not an assertion pass or evidence
+for X023/X026. Windows coverage MUST bound Jest worker concurrency and rerun
+the same coverage, acceptance budget and documentation gates on hosted and
+self-hosted Windows. The other five jobs do not substitute for that run.
+Agent provisioning on macOS also remains open after the installed-file failure
+described in the agent runtime SDD.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

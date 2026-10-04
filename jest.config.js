@@ -38,5 +38,6 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },
-  verbose: true
+  verbose: true,
+  ...(process.platform === 'win32' ? { maxWorkers: 2 } : {})
 };
