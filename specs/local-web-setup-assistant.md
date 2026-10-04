@@ -2102,6 +2102,13 @@ for the isolated installer environment. Deterministic cases MUST reject
 tampered roots and demonstrate non-`C:` path selection. Hosted and service
 Windows fixture runs MUST pass after the repair; a real Windows Action agent
 run is still required to close the provider-runtime gate.
+The [Windows Action run on `8e4978e9`](https://github.com/vypdev/copilot/actions/runs/37115583847)
+rejected the private Codex replacement for a writable ACL before any agent
+execution. The agent runtime SDD now requires preflighting private install
+roots, falling back to a safe profile-local directory, and securing the
+installed files without changing an operator CLI. The manual Windows setup
+smoke on the same commit failed during checkout, before the fixtures ran; it
+does not close any Windows service gate.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

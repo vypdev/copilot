@@ -1,15 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
-    chmodSync, copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync,
-    readdirSync, realpathSync, rmSync, statSync, writeFileSync,
+    copyFileSync, cpSync, mkdirSync, readFileSync,
+    readdirSync, rmSync, statSync, writeFileSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
 import { trustedCurlPath, trustedSystemPath, trustedUnixShellPath, trustedWindowsSystemTool } from './agent_trusted_system_tools';
-import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
+import { createPrivateAgentInstallRoot, securePrivateInstalledAgent } from './agent_private_install_root';
 import { trustedWindowsSystemRoot } from './windows_system_root.cjs';
 
 const MAX_SCRIPT_BYTES = 1_048_576;
@@ -268,11 +267,15 @@ function installWindowsOpenCode(root: string, environment: NodeJS.ProcessEnv): s
 }
 
 export function installOfficialAgentCli(provider: AgentProvider): OfficialAgentInstallation {
-    const root = mkdtempSync(join(process.env.RUNNER_TEMP || tmpdir(), 'copilot-agent-install-'));
+    let root: string;
+    try {
+        root = createPrivateAgentInstallRoot();
+    } catch (error) {
+        throw new OfficialAgentInstallationError('private-root',
+            'No protected agent installation directory is available.', undefined, error);
+    }
     let stage: OfficialAgentInstallationStage = 'private-root';
     try {
-        chmodSync(root, 0o700);
-        makeWindowsRuntimePathPrivate(root, true);
         const environment = installerEnvironment(root, process.env);
         stage = 'installer-script';
         const path = process.platform === 'win32' && provider === 'cursor'
@@ -281,7 +284,7 @@ export function installOfficialAgentCli(provider: AgentProvider): OfficialAgentI
                 ? installWindowsOpenCode(root, environment)
                 : runScript(provider, root, environment);
         stage = 'installed-file';
-        const executable = realpathSync(path);
+        const executable = securePrivateInstalledAgent(root, path);
         if (!statSync(executable).isFile()) throw new Error('Official agent installer did not create a file.');
         process.once('exit', () => rmSync(root, { recursive: true, force: true }));
         return { executable, directory: dirname(path), root };

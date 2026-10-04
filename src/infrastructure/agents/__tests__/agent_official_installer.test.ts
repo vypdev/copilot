@@ -9,7 +9,9 @@ import {
 } from '../agent_official_installer';
 
 jest.mock('node:child_process', () => ({ execFileSync: jest.fn() }));
-jest.mock('../windows_runtime_acl', () => ({ makeWindowsRuntimePathPrivate: jest.fn() }));
+jest.mock('../windows_runtime_acl', () => ({
+    makeWindowsRuntimePathPrivate: jest.fn(), verifyWindowsAgentExecutableAcl: jest.fn(),
+}));
 const execute = execFileSync as jest.Mock;
 
 beforeEach(() => execute.mockReset());

@@ -78778,11 +78778,10 @@ exports.installOfficialAgentCli = installOfficialAgentCli;
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_fs_1 = __nccwpck_require__(87561);
-const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
-const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
 const windows_system_root_cjs_1 = __nccwpck_require__(48176);
 const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
@@ -79027,11 +79026,15 @@ function installWindowsOpenCode(root, environment) {
     return (0, node_path_1.join)(bin, 'opencode.exe');
 }
 function installOfficialAgentCli(provider) {
-    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), 'copilot-agent-install-'));
+    let root;
+    try {
+        root = (0, agent_private_install_root_1.createPrivateAgentInstallRoot)();
+    }
+    catch (error) {
+        throw new OfficialAgentInstallationError('private-root', 'No protected agent installation directory is available.', undefined, error);
+    }
     let stage = 'private-root';
     try {
-        (0, node_fs_1.chmodSync)(root, 0o700);
-        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
         const environment = installerEnvironment(root, process.env);
         stage = 'installer-script';
         const path = process.platform === 'win32' && provider === 'cursor'
@@ -79040,7 +79043,7 @@ function installOfficialAgentCli(provider) {
                 ? installWindowsOpenCode(root, environment)
                 : runScript(provider, root, environment);
         stage = 'installed-file';
-        const executable = (0, node_fs_1.realpathSync)(path);
+        const executable = (0, agent_private_install_root_1.securePrivateInstalledAgent)(root, path);
         if (!(0, node_fs_1.statSync)(executable).isFile())
             throw new Error('Official agent installer did not create a file.');
         process.once('exit', () => (0, node_fs_1.rmSync)(root, { recursive: true, force: true }));
@@ -79153,6 +79156,96 @@ function compareOfficialAgentVersion(provider, installedOutput, latestVersion) {
             return left < right ? 'older' : 'current-or-newer';
     }
     return current[4] ? 'older' : 'current-or-newer';
+}
+
+
+/***/ }),
+
+/***/ 44640:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectPrivateInstallRoot = selectPrivateInstallRoot;
+exports.prepareWindowsInstallRoot = prepareWindowsInstallRoot;
+exports.createPrivateAgentInstallRoot = createPrivateAgentInstallRoot;
+exports.securePrivateInstalledAgent = securePrivateInstalledAgent;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const INSTALL_PREFIX = 'copilot-agent-install-';
+/** Keep a failed candidate from preventing a safer profile-local fallback. */
+function selectPrivateInstallRoot(parents, prepare) {
+    const tried = new Set();
+    for (const parent of parents) {
+        const key = parent.toLowerCase();
+        if (tried.has(key))
+            continue;
+        tried.add(key);
+        try {
+            return prepare(parent);
+        }
+        catch {
+            // The candidate is cleaned by prepare before another parent is tried.
+        }
+    }
+    throw new Error('No protected agent installation directory is available.');
+}
+function prepareWindowsInstallRoot(parent, verify = windows_runtime_acl_1.verifyWindowsAgentExecutableAcl) {
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(parent, INSTALL_PREFIX));
+    const probe = (0, node_path_1.join)(root, '.acl-probe');
+    try {
+        (0, node_fs_1.chmodSync)(root, 0o700);
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
+        (0, node_fs_1.writeFileSync)(probe, '', { flag: 'wx' });
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(probe, false);
+        verify(probe);
+        (0, node_fs_1.rmSync)(probe);
+        return root;
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        throw error;
+    }
+}
+function createPrivateAgentInstallRoot() {
+    if (process.platform === 'win32') {
+        return selectPrivateInstallRoot([
+            process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(),
+            (0, node_path_1.join)((0, node_os_1.homedir)(), 'AppData', 'Local', 'Temp'),
+        ], prepareWindowsInstallRoot);
+    }
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), INSTALL_PREFIX));
+    (0, node_fs_1.chmodSync)(root, 0o700);
+    return root;
+}
+/** This may change ACLs only for a newly installed file contained in our root. */
+function securePrivateInstalledAgent(root, path) {
+    const canonicalRoot = (0, node_fs_1.realpathSync)(root);
+    const canonicalPath = (0, node_fs_1.realpathSync)(path);
+    const relation = (0, node_path_1.relative)(canonicalRoot, canonicalPath);
+    if (!relation || relation.startsWith('..') || (0, node_path_1.isAbsolute)(relation) || (0, node_fs_1.lstatSync)(path).isSymbolicLink()) {
+        throw new Error('Official agent installer output escaped its private directory.');
+    }
+    if (process.platform === 'win32') {
+        const directories = [];
+        let parent = (0, node_path_1.dirname)(canonicalPath);
+        while (parent !== canonicalRoot) {
+            const parentRelation = (0, node_path_1.relative)(canonicalRoot, parent);
+            if (!parentRelation || parentRelation.startsWith('..') || (0, node_path_1.isAbsolute)(parentRelation)) {
+                throw new Error('Official agent installer output escaped its private directory.');
+            }
+            directories.unshift(parent);
+            parent = (0, node_path_1.dirname)(parent);
+        }
+        for (const directory of directories)
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(directory, true);
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(canonicalPath, false);
+        (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(canonicalPath);
+    }
+    return canonicalPath;
 }
 
 

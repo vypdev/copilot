@@ -368,6 +368,21 @@ version checks before the Action uses it. Explicitly selected executables
 remain operator-owned and fail closed. A fixture MUST prove fallback for an
 unsafe default, no fallback for a generic metadata outage, and cleanup if the
 official replacement also fails trust.
+The [Windows service run on `8e4978e9`](https://github.com/vypdev/copilot/actions/runs/37115583847)
+reached the private Codex replacement but rejected its ACL as writable before
+executing the CLI. A private installation root MUST pass the same file and
+ancestor trust policy before any official installer is downloaded or run.
+Prefer the job temporary directory when its ancestors pass; otherwise try a
+profile-local temporary directory with the same preflight. Never weaken the
+ACL policy or modify the rejected operator CLI. After the official installer
+returns, constrain its output to that private root, reassert owner-only ACLs
+on the installed directory and executable, and check the complete executable
+path again before returning it to provisioning. Failure to find a safe root or
+to secure the private replacement fails closed and cleans that attempt.
+Deterministic tests MUST cover unsafe first candidate, safe fallback, no safe
+candidate, path escape, private executable repair, and cleanup. Hosted and
+service Windows fixtures MUST exercise the real ACL preflight using only
+local dummy files; a real Action job is required to verify provisioning.
 The downloader and installer shell MUST resolve from trusted system locations,
 and every installer child uses a system-only `PATH`. A workflow-controlled
 directory cannot supply `curl`, `sh`, `bash`, or commands called by the official

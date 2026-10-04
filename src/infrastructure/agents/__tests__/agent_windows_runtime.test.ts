@@ -2,12 +2,14 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { checkAgentAuthentication } from '../../../data/repository/agent_authentication';
 import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
 import { installerEnvironment } from '../agent_official_installer';
+import { createPrivateAgentInstallRoot, prepareWindowsInstallRoot,
+    securePrivateInstalledAgent, selectPrivateInstallRoot } from '../agent_private_install_root';
 import {
     makeWindowsRuntimePathPrivate,
     matchesWindowsRuntimePrincipal,
@@ -86,6 +88,60 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 }
 
 describe('isolated Windows agent runtime', () => {
+    it('falls back from an unsafe installation parent and fails closed when none is safe', () => {
+        const attempts: string[] = [];
+        const prepare = (parent: string): string => {
+            attempts.push(parent);
+            if (parent === 'unsafe') throw new Error('unsafe ancestor');
+            return 'private root';
+        };
+        expect(selectPrivateInstallRoot(['unsafe', 'safe', 'SAFE'], prepare)).toBe('private root');
+        expect(attempts).toEqual(['unsafe', 'safe']);
+        expect(() => selectPrivateInstallRoot(['unsafe'], prepare)).toThrow('No protected agent installation directory');
+    });
+
+    it('rejects an installer output outside its private root before changing its ACL', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot-install-boundary-'));
+        const other = mkdtempSync(join(tmpdir(), 'copilot-install-outside-'));
+        const file = join(other, 'codex.exe');
+        try {
+            writeFileSync(file, 'dummy');
+            expect(() => securePrivateInstalledAgent(root, file)).toThrow('escaped its private directory');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+            rmSync(other, { recursive: true, force: true });
+        }
+    });
+
+    it('cleans a candidate whose ancestor check fails before trying another parent', () => {
+        const parent = mkdtempSync(join(tmpdir(), 'copilot-install-parent-'));
+        let candidate = '';
+        try {
+            expect(() => prepareWindowsInstallRoot(parent, probe => {
+                candidate = dirname(probe);
+                throw new Error('unsafe ancestor fixture');
+            })).toThrow('unsafe ancestor fixture');
+            expect(candidate).not.toBe('');
+            expect(existsSync(candidate)).toBe(false);
+        } finally {
+            rmSync(parent, { recursive: true, force: true });
+        }
+    });
+
+    windowsIt('preflights a private install root and secures a local dummy replacement', () => {
+        const root = createPrivateAgentInstallRoot();
+        const bin = join(root, 'bin');
+        const file = join(bin, 'codex.exe');
+        try {
+            mkdirSync(bin);
+            writeFileSync(file, 'dummy executable fixture');
+            expect(securePrivateInstalledAgent(root, file)).toBe(file);
+            expect(() => verifyWindowsAgentExecutableAcl(file)).not.toThrow();
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
+    }, 45_000);
+
     windowsIt('loads Windows PowerShell 5.1 hash modules under the private installer environment', () => {
         const root = mkdtempSync(join(tmpdir(), 'copilot-installer-shell-'));
         const fixture = join(root, 'fixture.txt');
