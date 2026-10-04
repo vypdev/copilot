@@ -79253,7 +79253,7 @@ function securePrivateInstalledAgent(root, path) {
 function isWithinPrivateRoot(relation) {
     return Boolean(relation) && relation !== '..' && !relation.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(relation);
 }
-/** Follow official Unix launch links only while each hop stays under our private root. */
+/** Follow installer launch links only while each hop stays under our private root. */
 function resolvePrivateInstalledFile(root, canonicalRoot, relation) {
     let current = canonicalRoot;
     let pending = relation.split(node_path_1.sep).filter(Boolean);
@@ -79265,12 +79265,14 @@ function resolvePrivateInstalledFile(root, canonicalRoot, relation) {
         }
         const entry = (0, node_fs_1.lstatSync)(next);
         if (entry.isSymbolicLink()) {
-            if (process.platform === 'win32') {
+            // The official Windows Codex installer publishes bin and current as
+            // directory junctions. Never admit a linked executable itself.
+            if (process.platform === 'win32' && pending.length === 0) {
                 throw new Error('Official agent installer output is a Windows symlink.');
             }
             if (++links > 32)
                 throw new Error('Official agent installer output has too many links.');
-            const target = (0, node_path_1.resolve)((0, node_path_1.dirname)(next), (0, node_fs_1.readlinkSync)(next));
+            const target = (0, node_path_1.resolve)((0, node_path_1.dirname)(next), normalizedLinkTarget((0, node_fs_1.readlinkSync)(next)));
             const canonicalRelation = (0, node_path_1.relative)(canonicalRoot, target);
             const targetRelation = isWithinPrivateRoot(canonicalRelation)
                 ? canonicalRelation : (0, node_path_1.relative)(root, target);
@@ -79291,6 +79293,15 @@ function resolvePrivateInstalledFile(root, canonicalRoot, relation) {
         }
     }
     return current;
+}
+function normalizedLinkTarget(target) {
+    if (process.platform !== 'win32')
+        return target;
+    // Node may return the NT namespaced form of a junction target. Compare its
+    // ordinary drive path with the private root before following any next hop.
+    const namespaced = target.startsWith('\\\\?\\') || target.startsWith('\\??\\');
+    const ordinary = namespaced ? target.slice(4) : target;
+    return /^[A-Za-z]:\\/u.test(ordinary) ? ordinary : target;
 }
 
 
