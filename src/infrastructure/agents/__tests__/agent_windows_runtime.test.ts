@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 import { checkAgentAuthentication } from '../../../data/repository/agent_authentication';
@@ -139,6 +139,38 @@ describe('isolated Windows agent runtime', () => {
             expect(() => verifyWindowsAgentExecutableAcl(file)).not.toThrow();
         } finally {
             rmSync(root, { recursive: true, force: true });
+        }
+    }, 45_000);
+
+    windowsIt('accepts the official Codex Windows junction layout inside its private root', () => {
+        const root = createPrivateAgentInstallRoot();
+        const standalone = join(root, '.codex', 'packages', 'standalone');
+        const release = join(standalone, 'releases', '1.2.3-win32-x64');
+        const binary = join(release, 'bin', 'codex.exe');
+        const visible = join(root, 'bin', 'codex.exe');
+        try {
+            mkdirSync(dirname(binary), { recursive: true });
+            writeFileSync(binary, 'dummy Codex executable fixture');
+            symlinkSync(release, join(standalone, 'current'), 'junction');
+            symlinkSync(join(standalone, 'current', 'bin'), join(root, 'bin'), 'junction');
+            expect(securePrivateInstalledAgent(root, visible)).toBe(realpathSync(binary));
+            expect(() => verifyWindowsAgentExecutableAcl(binary)).not.toThrow();
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
+    }, 45_000);
+
+    windowsIt('rejects an official-looking junction that leaves the private root', () => {
+        const root = createPrivateAgentInstallRoot();
+        const outside = mkdtempSync(join(tmpdir(), 'copilot-install-outside-'));
+        try {
+            writeFileSync(join(outside, 'codex.exe'), 'outside executable fixture');
+            symlinkSync(outside, join(root, 'bin'), 'junction');
+            expect(() => securePrivateInstalledAgent(root, join(root, 'bin', 'codex.exe')))
+                .toThrow('escaped its private directory');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+            rmSync(outside, { recursive: true, force: true });
         }
     }, 45_000);
 

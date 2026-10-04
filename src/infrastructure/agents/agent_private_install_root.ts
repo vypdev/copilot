@@ -88,7 +88,7 @@ function isWithinPrivateRoot(relation: string): boolean {
     return Boolean(relation) && relation !== '..' && !relation.startsWith(`..${sep}`) && !isAbsolute(relation);
 }
 
-/** Follow official Unix launch links only while each hop stays under our private root. */
+/** Follow installer launch links only while each hop stays under our private root. */
 function resolvePrivateInstalledFile(root: string, canonicalRoot: string, relation: string): string {
     let current = canonicalRoot;
     let pending = relation.split(sep).filter(Boolean);
@@ -100,11 +100,13 @@ function resolvePrivateInstalledFile(root: string, canonicalRoot: string, relati
         }
         const entry = lstatSync(next);
         if (entry.isSymbolicLink()) {
-            if (process.platform === 'win32') {
+            // The official Windows Codex installer publishes bin and current as
+            // directory junctions. Never admit a linked executable itself.
+            if (process.platform === 'win32' && pending.length === 0) {
                 throw new Error('Official agent installer output is a Windows symlink.');
             }
             if (++links > 32) throw new Error('Official agent installer output has too many links.');
-            const target = resolve(dirname(next), readlinkSync(next));
+            const target = resolve(dirname(next), normalizedLinkTarget(readlinkSync(next)));
             const canonicalRelation = relative(canonicalRoot, target);
             const targetRelation = isWithinPrivateRoot(canonicalRelation)
                 ? canonicalRelation : relative(root, target);
@@ -123,4 +125,13 @@ function resolvePrivateInstalledFile(root: string, canonicalRoot: string, relati
         }
     }
     return current;
+}
+
+function normalizedLinkTarget(target: string): string {
+    if (process.platform !== 'win32') return target;
+    // Node may return the NT namespaced form of a junction target. Compare its
+    // ordinary drive path with the private root before following any next hop.
+    const namespaced = target.startsWith('\\\\?\\') || target.startsWith('\\??\\');
+    const ordinary = namespaced ? target.slice(4) : target;
+    return /^[A-Za-z]:\\/u.test(ordinary) ? ordinary : target;
 }

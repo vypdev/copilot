@@ -431,6 +431,20 @@ to expose `codex` for PATH resolution. An escaped, dangling, or non-file
 target fails closed and removes the installation. Fixture tests MUST cover
 the official internal-link layout and an external target without downloading
 a real agent. A passing macOS Action job remains required.
+The [Windows Action run on `50784d14`](https://github.com/vypdev/copilot/actions/runs/37245063995)
+failed at `official-installed-file` after the official Codex installer returned.
+The [official Windows installer](https://github.com/openai/codex/blob/main/scripts/install/install.ps1)
+publishes the visible `bin` directory as a junction into the versioned release
+under `CODEX_HOME`. The installed-file gate MUST accept that directory junction
+only when its resolved regular executable stays inside the new private root;
+the canonical executable and all of its real parent directories MUST receive
+the existing owner-only ACL hardening and executable trust check. The visible
+directory remains the command directory for PATH. A junction to another root,
+a dangling junction, or a linked final file MUST fail closed without changing
+ACLs outside the private root. Windows hosted and self-hosted fixtures MUST
+replay the official junction layout and the escape cases with dummy files.
+A fresh Windows Action run MUST reach active agent roles before this gate closes;
+the setup smoke matrix alone is insufficient evidence for live provisioning.
 The Windows Codex installer checks the standard `OS=Windows_NT` service
 environment value before release work. The private installer environment MUST
 preserve that platform fact while still excluding all credentials. The PR #403

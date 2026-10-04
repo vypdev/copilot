@@ -232,8 +232,12 @@ describe('official agent installer boundaries', () => {
                 } else if (file.toLowerCase().endsWith('powershell.exe')) {
                     if (args.includes('-File')) {
                         expect(options.env.OS).toBe('Windows_NT');
-                        mkdirSync(options.env.CODEX_INSTALL_DIR!, { recursive: true });
-                        writeFileSync(join(options.env.CODEX_INSTALL_DIR!, 'codex.exe'), 'native fixture');
+                        const standalone = join(options.env.CODEX_HOME!, 'packages', 'standalone');
+                        const release = join(standalone, 'releases', '1.2.3-win32-x64');
+                        mkdirSync(join(release, 'bin'), { recursive: true });
+                        writeFileSync(join(release, 'bin', 'codex.exe'), 'native fixture');
+                        symlinkSync(release, join(standalone, 'current'), 'junction');
+                        symlinkSync(join(standalone, 'current', 'bin'), options.env.CODEX_INSTALL_DIR!, 'junction');
                     } else if (provider === 'cursor') {
                         const packageRoot = join(root, 'extracted', 'dist-package');
                         mkdirSync(packageRoot, { recursive: true });
@@ -251,6 +255,10 @@ describe('official agent installer boundaries', () => {
             try {
                 expect(existsSync(installed.executable)).toBe(true);
                 expect(installed.executable.toLowerCase()).toContain(`${provider === 'cursor' ? 'agent' : provider}.exe`);
+                if (provider === 'codex') {
+                    expect(installed.executable).toBe(realpathSync(join(installed.directory, 'codex.exe')));
+                    expect(installed.directory).toBe(join(installed.root, 'bin'));
+                }
                 expect(execute.mock.calls.some(([file]) => String(file).toLowerCase().includes('npm'))).toBe(false);
                 const limits = execute.mock.calls
                     .filter(([file]) => String(file).toLowerCase().endsWith('curl.exe'))
