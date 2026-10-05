@@ -1,5 +1,5 @@
 import { spawnSync, execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 
@@ -104,6 +104,8 @@ describe('standalone agent CLI verifier trust', () => {
         try {
             mkdirSync(binDirectory, { recursive: true });
             mkdirSync(join(packageRoot, 'bin'), { recursive: true });
+            // Hosted setup-node may live under an ACL the verifier must reject.
+            copyFileSync(process.execPath, join(binDirectory, 'node.exe'));
             writeFileSync(join(binDirectory, 'codex.cmd'), '@echo off\r\n');
             writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
                 name: '@openai/codex', bin: { codex: 'bin/codex.js' },
@@ -113,8 +115,8 @@ describe('standalone agent CLI verifier trust', () => {
                 `if (process.argv.includes('--version')) console.log('codex-local-fixture');\n` +
                 `if (process.argv.includes('login')) process.exit(1);\n`);
             const result = runVerifier(binDirectory, directory, false);
-            expect(result.status).toBe(0);
             expect(result.stdout).toContain('codex: available');
+            expect(result.status).toBe(0);
             expect(result.stdout).toContain('codex-local-fixture');
             expect(existsSync(marker)).toBe(true);
         } finally { rmSync(directory, { recursive: true, force: true }); }
