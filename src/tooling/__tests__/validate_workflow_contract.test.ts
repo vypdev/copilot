@@ -863,10 +863,18 @@ describe('workflow contract validator', () => {
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const job = workflow.jobs['code-health'];
     job.env.REPOWISE_VENV_NAME = 'repowise-venv';
-    expect(() => assertRunner(file, workflow)).toThrow('isolate and remove RepoWise temporary files');
+    expect(() => assertRunner(file, workflow)).toThrow('select complete Python, isolate RepoWise files');
     job.env.REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
     job.steps = job.steps.filter((step: { name?: string }) => step.name !== 'Remove RepoWise temporary files');
-    expect(() => assertRunner(file, workflow)).toThrow('isolate and remove RepoWise temporary files');
+    expect(() => assertRunner(file, workflow)).toThrow('select complete Python, isolate RepoWise files');
+  });
+
+  it('requires a complete Python distribution before RepoWise creates its venv', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['code-health'].steps = workflow.jobs['code-health'].steps
+      .filter((step: { name?: string }) => step.name !== 'Set up Python 3.12 for RepoWise');
+    expect(() => assertRunner(file, workflow)).toThrow('select complete Python, isolate RepoWise files');
   });
 
   it('rejects runner context before a job has been assigned to a runner', () => {

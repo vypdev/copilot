@@ -33,8 +33,11 @@ symlink or process behavior. A queued or skipped service job is unverified.
 
 Release and hotfix publication to npm remain GitHub-hosted because npm Trusted
 Publishing currently requires a hosted runner. Their other jobs continue on
-self-hosted runners. RepoWise creates its virtual environment and reports in
-run-specific temporary directories and removes them after artifact upload.
+self-hosted runners. RepoWise obtains a complete Python 3.12 distribution via
+`actions/setup-python`, creates its virtual environment and reports in
+run-specific temporary directories, and removes them after artifact upload.
+Its runner needs a writable Actions tool cache; the workflow does not install
+Ubuntu system packages.
 
 The `codex` label can route a job to macOS, Windows or Linux. Install Git and
 Bash on every runner; Windows needs Git for Windows with its Bash available to

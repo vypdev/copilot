@@ -2111,6 +2111,15 @@ workflow contract reject `runner.*` in job-level `env`. A new remote RepoWise
 run MUST actually start on a self-hosted Ubuntu runner and finish before this
 routing gate can close.
 
+The [next RepoWise run on `8ac43b0a`](https://github.com/vypdev/copilot/actions/runs/37290766093)
+reached `ubuntu-runner-3` but failed while creating a virtual environment:
+its system Python 3.14 lacks Ubuntu's `ensurepip`/`python3.14-venv` package.
+The workflow MUST select a complete Python distribution using the official
+`actions/setup-python` action before creating its private virtual environment;
+it MUST NOT install OS packages into the persistent runner. Workflow contracts
+MUST reject removal of that setup step, and a subsequent actual RepoWise run
+MUST complete report generation and upload on an Ubuntu self-hosted runner.
+
 The [Codecov report for 67b81ab](https://app.codecov.io/gh/vypdev/copilot/pull/403)
 shows 83.64% patch coverage and 105 missing changed lines, including Windows
 ACL code that the Unix CI upload cannot exercise. The hosted Windows full

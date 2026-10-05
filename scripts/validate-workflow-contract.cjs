@@ -225,15 +225,24 @@ function assertIsolatedPnpm(relativeFile, jobId, job) {
 
 function assertRepoWiseTemporaryCleanup(relativeFile, job) {
   if (relativeFile !== '.github/workflows/repowise.yml') return;
+  const python = (job.steps ?? []).find(step => step?.name === 'Set up Python 3.12 for RepoWise');
+  const pythonCheck = (job.steps ?? []).find(step => step?.name === 'Verify isolated Python toolchain');
+  const environment = (job.steps ?? []).find(step => step?.name === 'Create isolated RepoWise environment');
   const cleanup = (job.steps ?? []).find(step => step?.name === 'Remove RepoWise temporary files');
   const upload = (job.steps ?? []).find(step => step?.name === 'Upload RepoWise reports');
-  if (job.env?.REPOWISE_VENV_NAME !== ISOLATED_REPOWISE_VENV_NAME
+  if (python?.uses !== 'actions/setup-python@v7'
+    || python.id !== 'python' || python.with?.['python-version'] !== '3.12'
+    || pythonCheck?.env?.PYTHON_BIN !== '${{ steps.python.outputs.python-path }}'
+    || !pythonCheck.run?.includes('"$PYTHON_BIN" -m ensurepip --version')
+    || environment?.env?.PYTHON_BIN !== '${{ steps.python.outputs.python-path }}'
+    || job.steps.indexOf(python) >= job.steps.indexOf(environment)
+    || job.env?.REPOWISE_VENV_NAME !== ISOLATED_REPOWISE_VENV_NAME
     || job.env?.REPOWISE_REPORT_NAME !== ISOLATED_REPOWISE_REPORT_NAME
     || upload?.with?.path !== '${{ runner.temp }}/${{ env.REPOWISE_REPORT_NAME }}/'
     || cleanup?.if !== '${{ always() }}'
     || cleanup?.run !== 'rm -rf -- "$RUNNER_TEMP/$REPOWISE_VENV_NAME" "$RUNNER_TEMP/$REPOWISE_REPORT_NAME"'
     || job.steps.indexOf(cleanup) <= job.steps.indexOf(upload)) {
-    throw new Error(`${relativeFile} must isolate and remove RepoWise temporary files after artifact upload.`);
+    throw new Error(`${relativeFile} must select complete Python, isolate RepoWise files, and remove them after artifact upload.`);
   }
 }
 

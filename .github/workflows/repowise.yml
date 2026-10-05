@@ -34,28 +34,20 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Select system Python
+      - name: Set up Python 3.12 for RepoWise
         id: python
-        shell: bash
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Verify isolated Python toolchain
+        env:
+          PYTHON_BIN: ${{ steps.python.outputs.python-path }}
         run: |
-          set -euo pipefail
-          python_bin=""
-          for candidate in python3.11 python3 python; do
-            if command -v "$candidate" >/dev/null 2>&1 && \
-              "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
-              python_bin="$(command -v "$candidate")"
-              break
-            fi
-          done
-          if [[ -z "$python_bin" ]]; then
-            echo "::error::RepoWise requires Python 3.11 or newer on the runner."
-            exit 1
-          fi
-          "$python_bin" -c 'import sys; print(f"Using Python {sys.version.split()[0]}")'
-          echo "path=$python_bin" >> "$GITHUB_OUTPUT"
+          "$PYTHON_BIN" -c 'import sys; print(f"Using Python {sys.version.split()[0]}")'
+          "$PYTHON_BIN" -m ensurepip --version
       - name: Create isolated RepoWise environment
         env:
-          PYTHON_BIN: "${{ steps.python.outputs.path }}"
+          PYTHON_BIN: ${{ steps.python.outputs.python-path }}
         run: |
           "$PYTHON_BIN" -m venv "$RUNNER_TEMP/$REPOWISE_VENV_NAME"
       - name: Install RepoWise
