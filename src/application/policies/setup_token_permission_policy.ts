@@ -26,13 +26,17 @@ interface PermissionInput {
     reason: string;
     condition?: string;
     probe: SetupTokenPermissionProbe;
+    idSuffix?: 'read' | 'write';
 }
 
-const requirement = (input: PermissionInput): SetupTokenPermissionRequirement => ({
-    id: `${input.role}.${input.scope}.${input.permission.toLowerCase().replace(/[^a-z0-9]+/gu, '-')}`,
-    applicability: 'required',
-    ...input,
-});
+const requirement = (input: PermissionInput): SetupTokenPermissionRequirement => {
+    const { idSuffix, ...details } = input;
+    return {
+        id: `${input.role}.${input.scope}.${input.permission.toLowerCase().replace(/[^a-z0-9]+/gu, '-')}${idSuffix ? `-${idSuffix}` : ''}`,
+        applicability: 'required',
+        ...details,
+    };
+};
 
 /**
  * Bootstrap guidance is intentionally comprehensive because the final
@@ -44,14 +48,14 @@ export function buildSetupPatPermissionRequirements(): SetupTokenPermissionRequi
     return [
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
-        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', applicability: 'conditional',
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', idSuffix: 'write', applicability: 'conditional',
             condition: 'Initial tag or credential-health check enabled',
             reason: 'Create the initial tag or an isolated branch for the Actions permission check.', probe: 'contents' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Secret provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Secrets.', probe: 'secrets' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Variables', level: 'write', applicability: 'conditional', condition: 'Variable provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Variables.', probe: 'variables' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Issues', level: 'write', applicability: 'conditional', condition: 'Issue workflows enabled', reason: 'Provision labels and issue resources.', probe: 'issues' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', applicability: 'conditional', condition: 'Credential health enabled', reason: 'Inspect and dispatch credential-health workflows.', probe: 'actions' }),
-        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Inspect CI workflow runs and jobs for exact producer identities.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', idSuffix: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Inspect CI workflow runs and jobs for exact producer identities.', probe: 'actions' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Administration', level: 'read', applicability: 'conditional', condition: 'Release, hotfix, or guarded approval enabled', reason: 'Inspect branch protection and rulesets.', probe: 'administration' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', applicability: 'conditional', condition: 'Temporary health workflow required', reason: 'Bootstrap a missing credential-health workflow.', probe: 'workflows' }),

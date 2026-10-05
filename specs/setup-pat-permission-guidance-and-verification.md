@@ -57,7 +57,11 @@ an unproved PAT grant exists cannot make the permission audit pass.
    accessible live region; every row contains text and an actionable,
    sanitized result. The `secret-collision` diagnostic survives the web bridge
    allowlist and selects the existing localized audit-trail guidance. Locale
-   coverage is en/es/fr/pt; CLI remains English.
+   coverage is en/es/fr/pt; CLI remains English. Bootstrap READ and conditional
+   WRITE rows for the same permission MUST have distinct stable row IDs, so a
+   progress update cannot change the other row's state or collide in a keyed
+   browser list. The configured final audit may still collapse them to the
+   strongest required grant.
 5. A probe uses a random, namespaced resource name and create-only semantics
    where GitHub provides them. It reads back the exact resource and deletes
    only the exact object it created. Upsert-only Secret endpoints require a

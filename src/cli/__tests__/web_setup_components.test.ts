@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { setupQuestionPresentation } from '../../application/policies/setup_question_guidance_policy';
+import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
 import type { SetupQuestion } from '../../domain/setup_questionnaire';
 
 function markup(name: string, props: Record<string, unknown>, locale = 'en'): string {
@@ -12,6 +13,16 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test('bootstrap Contents read progress leaves the conditional write row pending', () => {
+    const requirements = buildSetupPatPermissionRequirements().filter(item => item.permission === 'Contents');
+    const html = markup('PermissionProgressPanel', { permissions: { requirements, progress: [
+      { role: 'setup', requirementId: requirements[0].id, phase: 'verified' },
+    ] } });
+    expect((html.match(/permission-progress-done/gu) ?? []).length).toBe(1);
+    expect((html.match(/permission-progress-state/gu) ?? []).length).toBe(2);
+    expect(html).toContain('Waiting');
+  });
+
   test('permission progress displays each grant’s latest outcome and a bounded HTTP failure', () => {
     const html = markup('PermissionProgressPanel', { permissions: {
       requirements: [
