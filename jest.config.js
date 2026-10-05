@@ -41,8 +41,8 @@ module.exports = {
   verbose: true,
   ...(process.platform === 'win32' ? {
     maxWorkers: 2,
-    // Only Windows service runners need recycling. On hosted Windows this
-    // limit made the full suite exceed the job timeout.
+    // Both Windows jobs cap concurrency. Only service runners recycle workers:
+    // recycling also slowed hosted Windows beyond its job timeout.
     ...(process.env.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE === '1'
       ? { workerIdleMemoryLimit: '512MB' } : {})
   } : {})

@@ -745,6 +745,18 @@ describe('workflow contract validator', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    const dispatchGuard = workflow.jobs['setup-self-hosted-codex-smoke'].if;
+    for (const [eventName, ref, expected] of [
+      ['workflow_dispatch', 'refs/heads/master', true],
+      ['workflow_dispatch', 'refs/heads/develop', false],
+      ['workflow_dispatch', 'refs/heads/codex/unreviewed', false],
+      ['workflow_dispatch', 'refs/tags/unreviewed', false],
+      ['pull_request', 'refs/heads/master', false],
+    ] as const) {
+      expect(runInNewContext(dispatchGuard.slice(4, -3), {
+        github: { event_name: eventName, ref },
+      })).toBe(expected);
+    }
     workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
     expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows, macOS and Ubuntu');
     workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = '${{ matrix.labels }}';
@@ -753,8 +765,11 @@ describe('workflow contract validator', () => {
     workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include =
       (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow).jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include;
     delete workflow.jobs['setup-self-hosted-codex-smoke'].if;
-    expect(() => assertRunner(file, workflow)).toThrow('manual dispatch');
+    expect(() => assertRunner(file, workflow)).toThrow('manual dispatch from protected master');
     workflow.jobs['setup-self-hosted-codex-smoke'].if = "github.event_name == 'workflow_dispatch'";
+    expect(() => assertRunner(file, workflow)).toThrow('manual dispatch from protected master');
+    workflow.jobs['setup-self-hosted-codex-smoke'].if =
+      "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}";
     workflow.jobs['setup-self-hosted-codex-smoke'].steps = workflow.jobs['setup-self-hosted-codex-smoke'].steps
       .filter((step: { name?: string }) => step.name !== 'Full platform coverage and acceptance budgets');
     expect(() => assertRunner(file, workflow)).toThrow('full platform coverage and acceptance budgets');

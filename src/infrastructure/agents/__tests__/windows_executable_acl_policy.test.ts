@@ -20,7 +20,6 @@ describe('installed Windows executable ACL policy', () => {
         `O:${user}D:AI(A;;0x10000000;;;AU)`,
         `O:${user}D:AI(A;;WD;;;AU)`,
         `O:${user}D:AI(A;;SD;;;AU)`,
-        `O:${user}D:AI(A;;LC;;;BU)`,
         `O:${user}D:AI(A;;RP;;;BU)`,
         `O:${user}D:AI(A;;CR;;;BU)`,
         `O:${user}D:AI(A;;DT;;;BU)`,
@@ -30,6 +29,10 @@ describe('installed Windows executable ACL policy', () => {
 
     it('ignores inherit-only and deny entries that do not grant writes on this file', () => {
         expect(() => check(`O:${user}D:AI(A;;FA;;;${user})(A;OICIIO;FA;;;WD)(D;;FA;;;WD)`)).not.toThrow();
+    });
+
+    it('rejects directory-only LC evidence on an executable file', () => {
+        expect(() => check(`O:${user}D:AI(A;;LC;;;BU)`)).toThrow('Unrecognized executable ACL rights');
     });
 
     it.each([
@@ -55,7 +58,7 @@ describe('installed Windows executable parent ACL policy', () => {
         expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;FR;;;BU)`)).not.toThrow();
         expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;LC;;;BU)`)).not.toThrow();
         expect(() => checkParent(`O:${trustedInstaller}D:AI(A;;FA;;;SY)(A;;CCSWLOWP;;;BU)`)).not.toThrow();
-        expect(() => check(`O:${user}D:AI(A;;LC;;;BU)`)).toThrow('writable');
+        expect(() => check(`O:${user}D:AI(A;;LC;;;BU)`)).toThrow('Unrecognized executable ACL rights');
         expect(() => check(`O:${trustedInstaller}D:AI(A;;FA;;;SY)`)).toThrow('owner');
         expect(() => checkDirectParent(`O:${user}D:AI(A;;FA;;;${user})(A;;FRFX;;;BU)`)).not.toThrow();
     });
@@ -82,10 +85,14 @@ describe('installed Windows executable parent ACL policy', () => {
         `O:${user}D:AI(A;;0x00000002;;;AU)`,
         `O:${user}D:AI(A;;0x00000004;;;AU)`,
         `O:${user}D:AI(A;;0x00000006;;;AU)`,
-        `O:${user}D:AI(A;;LC;;;AU)`,
     ])('rejects an untrusted file-creation grant in the containing directory %s', sddl => {
         expect(() => checkDirectParent(sddl)).toThrow('writable by another principal');
         expect(() => checkParent(sddl)).not.toThrow();
+    });
+
+    it('allows listing the direct parent without a create or replacement grant', () => {
+        expect(() => checkDirectParent(`O:${user}D:AI(A;;FA;;;${user})(A;;LC;;;AU)`)).not.toThrow();
+        expect(() => checkParent(`O:${user}D:AI(A;;FA;;;${user})(A;;LC;;;AU)`)).not.toThrow();
     });
 });
 

@@ -274,8 +274,11 @@ including the system volume root; it is trusted only for ancestor assessment.
 It must not make a foreign-owned executable acceptable. Hosted and service
 Windows fixtures must prove this exact owner case and still reject an
 untrusted parent owner or replacement grant.
-The SDDL `LC` right is accepted only on a directory ancestor, where it does
-not grant deletion or replacement of an existing component. It remains
+The SDDL `LC` right is accepted on every directory ancestor, including the
+executable's immediate parent: list access alone cannot create or replace the
+executable. A fixture MUST pair direct-parent `LC` acceptance with rejection
+of direct-parent create-child, delete-child, ACL-change, and generic-write
+grants. `LC` remains
 unrecognized on an executable file. Fixture tests must prove both decisions.
 The installed file and all of its ancestors are read in one bounded,
 read-only Windows PowerShell invocation. An incomplete or malformed batch

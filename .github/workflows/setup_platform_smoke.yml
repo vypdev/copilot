@@ -100,7 +100,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   setup-self-hosted-codex-smoke:
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
     timeout-minutes: 20

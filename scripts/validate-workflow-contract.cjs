@@ -361,8 +361,8 @@ function assertRunner(file, workflow) {
           || job.strategy?.['fail-fast'] !== false) {
           throw new Error(`${relativeFile} must target self-hosted Windows, macOS and Ubuntu codex runners.`);
         }
-        if (job.if !== "github.event_name == 'workflow_dispatch'") {
-          throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch.`);
+        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}") {
+          throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch from protected master.`);
         }
         const steps = job.steps ?? [];
         if (!steps.some(step => step?.name === 'Verify Ubuntu distribution'

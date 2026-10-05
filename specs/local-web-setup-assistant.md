@@ -2098,6 +2098,26 @@ self-hosted automatic PR job in those three quality workflows, missing hosted Wi
 the manual service-runner evidence path. No live setup, PAT, or agent request
 is needed for these checks.
 
+A manual dispatch is not itself proof that the selected Git ref was reviewed.
+The persistent-runner setup matrix MUST accept only dispatches from the
+protected default `master` ref; a `develop`, PR branch, or tag dispatch MUST skip every self-hosted
+job before checkout or dependency installation. The workflow contract MUST
+reject removal or weakening of that ref guard and test both accepted and
+rejected ref expressions. This means a PR-head service-runner result cannot be
+claimed from this workflow until a separate, reviewed execution mechanism is
+available; hosted PR checks continue on the exact head. Maintain the human
+service-runner acceptance gate as open for the changed PR head, rather than
+inferring a pass from an earlier commit or a protected-branch run. GitHub's
+active `Master Push Check` ruleset applies to `~DEFAULT_BRANCH` (`master`),
+whereas `Develop Push Check` is disabled; the classic branch-protection API
+also reports `develop` unprotected on 2026-10-05. Workflow-level conditions
+cannot prevent a separately modified branch workflow from targeting an
+unrestricted runner group. The organization runner-group settings could not
+be audited with the available GitHub permission (`403`). A repository/org
+administrator MUST [restrict the runner group to reviewed workflow refs](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/manage-access) or
+provide an equivalent approval boundary before PR-head service runs can be
+called secure. That external policy review remains an open security gate.
+
 The 2026-10-05 runner-cost decision supersedes only the blanket hosted-runner
 requirement for the repository's `CI Check` and `RepoWise code health` jobs.
 Both MUST use an Ubuntu self-hosted `codex` runner for repository-owned PRs,

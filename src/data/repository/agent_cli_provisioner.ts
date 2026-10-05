@@ -100,6 +100,8 @@ export class AgentCliProvisioner {
     ): void {
         const installed = this.system.installOfficial(provider);
         const previousPath = environment.PATH;
+        // The Action keeps this process-local overlay for later agent resolution.
+        // It does not change the runner service, user or machine PATH.
         environment.PATH = `${installed.directory}${delimiter}${environment.PATH || environment.Path || ''}`;
         try {
             if (!this.system.executableExists(executable, environment)) {
