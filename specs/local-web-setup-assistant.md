@@ -2227,6 +2227,12 @@ assumption. Fake-port CLI/web tests MUST assert both the journey outcome and
 the final browser outcome for complete, dry-run, partial, cancelled and
 blocked runs. A mismatch is a correctness defect; a matching result can be
 used to resolve the finding with exact code and test evidence.
+When an unexpected finalization has no journey outcome, numeric and textual
+zero exit codes MUST use the same cancelled fallback; a nonzero or malformed
+exit code MUST use blocked. An adapter fixture MUST cover both representations
+and preserve a recorded journey outcome over either fallback. CI's event-base
+diff check MUST retain a full-history checkout; a workflow-contract mutation
+test MUST fail if `fetch-depth: 0` is removed, including for merge groups.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.

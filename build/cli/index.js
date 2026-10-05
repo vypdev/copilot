@@ -69199,7 +69199,8 @@ function reportSetupFailure(error, context) {
 async function finishWebSetupSession(bridge, server, exitCode) {
     if (!bridge || !server)
         return;
-    const outcome = bridge.snapshot().journey?.outcome ?? (exitCode ? 'blocked' : 'cancelled');
+    const failedExit = exitCode !== undefined && exitCode !== null && exitCode !== '' && Number(exitCode) !== 0;
+    const outcome = bridge.snapshot().journey?.outcome ?? (failedExit ? 'blocked' : 'cancelled');
     bridge.finish(outcome, outcome === 'complete'
         ? 'Setup completed. Delete the temporary setup PAT in GitHub; keep the bot PAT while its Secret is in use.'
         : outcome === 'dry-run' ? 'Dry run complete. No files or GitHub resources changed.'

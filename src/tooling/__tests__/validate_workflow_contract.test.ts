@@ -958,6 +958,15 @@ describe('workflow contract validator', () => {
     expect(step?.run).toContain(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`);
   });
 
+  it('retains full history for the CI event-base diff check', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const checkout = workflow.jobs['ci-check'].steps.find((step: { uses?: string }) => step.uses === 'actions/checkout@v5');
+    expect(checkout.with).toMatchObject({ 'fetch-depth': 0, 'persist-credentials': false });
+    delete checkout.with['fetch-depth'];
+    expect(() => assertRunner(file, workflow)).toThrow('fetch full history');
+  });
+
   it.each([
     ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full platform documentation and contract validators'],
     ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke', 'Full platform documentation and contract validators'],

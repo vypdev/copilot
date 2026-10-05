@@ -419,6 +419,10 @@ function assertRunner(file, workflow) {
       }
     }
     if (relativeFile === '.github/workflows/ci_check.yml') {
+      const checkout = (job.steps ?? []).find(step => step?.uses === 'actions/checkout@v5');
+      if (checkout?.with?.['fetch-depth'] !== 0 || checkout.with?.['persist-credentials'] !== false) {
+        throw new Error(`${relativeFile} must fetch full history without stored checkout credentials for the event-base diff check.`);
+      }
       const diffStep = (job.steps ?? []).find(step => step?.name === 'Validate Git diff');
       if (!diffStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`)) {
         throw new Error(`${relativeFile} must retain default whitespace checks alongside CRLF support.`);
