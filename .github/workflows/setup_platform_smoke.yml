@@ -51,15 +51,14 @@ jobs:
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
       - name: Full platform coverage and acceptance budgets
         run: pnpm run test:coverage
-      - name: Upload Windows coverage to Codecov
-        if: ${{ runner.os == 'Windows' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        uses: codecov/codecov-action@v6
+      - name: Preserve hosted Windows coverage
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
         with:
-          files: ./coverage/lcov.info
-          disable_search: true
-          fail_ci_if_error: true
-          flags: windows
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: hosted-windows-lcov
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
       - name: Full platform documentation and contract validators
         run: |
           pnpm run validate:agent-docs
@@ -69,6 +68,30 @@ jobs:
           pnpm run validate:specifications
           pnpm run validate:setup-acceptance
           git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check -- . ':(exclude)build/**'
+
+  upload-windows-coverage:
+    name: Upload hosted Windows coverage to Codecov
+    needs: setup-platform-smoke
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download hosted Windows coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: hosted-windows-lcov
+          path: coverage-windows
+      - name: Upload Windows coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage-windows/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+          flags: windows
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   setup-self-hosted-codex-smoke:
     if: github.event_name == 'workflow_dispatch'

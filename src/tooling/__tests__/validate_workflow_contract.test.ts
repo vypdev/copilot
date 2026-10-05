@@ -752,7 +752,7 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted and manually dispatched self-hosted');
   });
 
-  it('requires full hosted platform coverage, validators and a same-repository Windows Codecov upload', () => {
+  it('requires full hosted platform coverage and a dependent same-repository Windows Codecov upload', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
@@ -767,14 +767,30 @@ describe('workflow contract validator', () => {
 
     workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
     workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
-      .filter((step: { name?: string }) => step.name !== 'Upload Windows coverage to Codecov');
-    expect(() => assertRunner(file, workflow)).toThrow('upload hosted Windows coverage');
+      .filter((step: { name?: string }) => step.name !== 'Preserve hosted Windows coverage');
+    expect(() => assertRunner(file, workflow)).toThrow('preserve hosted Windows coverage');
 
     workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
-    const upload = workflow.jobs['setup-platform-smoke'].steps.find((step: { name?: string }) =>
-      step.name === 'Upload Windows coverage to Codecov');
-    upload.if = "runner.os == 'Windows'";
-    expect(() => assertRunner(file, workflow)).toThrow('upload hosted Windows coverage');
+    const artifact = workflow.jobs['setup-platform-smoke'].steps.find((step: { name?: string }) =>
+      step.name === 'Preserve hosted Windows coverage');
+    artifact.if = "runner.os == 'Linux'";
+    expect(() => assertRunner(file, workflow)).toThrow('preserve hosted Windows coverage');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    delete workflow.jobs['upload-windows-coverage'];
+    expect(() => assertRunner(file, workflow)).toThrow('Windows coverage upload');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.jobs['upload-windows-coverage'].needs = undefined;
+    expect(() => assertRunner(file, workflow)).toThrow('dependent Ubuntu job');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.jobs['upload-windows-coverage'].if = undefined;
+    expect(() => assertRunner(file, workflow)).toThrow('same-repository revisions');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.jobs['upload-windows-coverage'].steps[2].with.fail_ci_if_error = false;
+    expect(() => assertRunner(file, workflow)).toThrow('dependent Ubuntu job');
   });
 
   it.each(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])(

@@ -263,12 +263,32 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
-    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])) {
-      throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs.`);
+    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage'])) {
+      throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs and Windows coverage upload.`);
     }
   }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+      if (jobId === 'upload-windows-coverage') {
+        const steps = job.steps ?? [];
+        const checkout = steps[0];
+        const download = steps[1];
+        const upload = steps[2];
+        if (job['runs-on'] !== 'ubuntu-latest' || job.needs !== 'setup-platform-smoke'
+          || job.if !== "${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}"
+          || steps.length !== 3
+          || checkout?.uses !== 'actions/checkout@v5'
+          || checkout.with?.['persist-credentials'] !== false || checkout.with?.['fetch-depth'] !== 0
+          || download?.uses !== 'actions/download-artifact@v4'
+          || download.with?.name !== 'hosted-windows-lcov' || download.with?.path !== 'coverage-windows'
+          || upload?.uses !== 'codecov/codecov-action@v6'
+          || upload.with?.files !== './coverage-windows/lcov.info'
+          || upload.with?.disable_search !== true || upload.with?.fail_ci_if_error !== true
+          || upload.with?.flags !== 'windows' || upload.with?.token !== '${{ secrets.CODECOV_TOKEN }}') {
+          throw new Error(`${relativeFile} must upload hosted Windows coverage from a dependent Ubuntu job only for same-repository revisions.`);
+        }
+        continue;
+      }
       if (jobId === 'setup-platform-smoke') {
         const platforms = job.strategy?.matrix?.os;
         if (job['runs-on'] !== '${{ matrix.os }}'
@@ -278,15 +298,15 @@ function assertRunner(file, workflow) {
         assertPlatformCoverageAndValidators(relativeFile, job);
         assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
-        const codecov = (job.steps ?? []).find(step => step?.name === 'Upload Windows coverage to Codecov');
-        if (codecov?.uses !== 'codecov/codecov-action@v6'
-          || codecov.if !== "${{ runner.os == 'Windows' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}"
-          || codecov.with?.files !== './coverage/lcov.info'
-          || codecov.with?.fail_ci_if_error !== true
-          || codecov.with?.flags !== 'windows'
-          || codecov.with?.token !== '${{ secrets.CODECOV_TOKEN }}'
-          || (job.steps ?? []).indexOf(codecov) <= (job.steps ?? []).findIndex(step => step?.name === 'Full platform coverage and acceptance budgets')) {
-          throw new Error(`${relativeFile} must upload hosted Windows coverage for same-repository revisions.`);
+        const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve hosted Windows coverage');
+        if (artifact?.uses !== 'actions/upload-artifact@v4'
+          || artifact.if !== "runner.os == 'Windows'"
+          || artifact.with?.name !== 'hosted-windows-lcov'
+          || artifact.with?.path !== 'coverage/lcov.info'
+          || artifact.with?.['if-no-files-found'] !== 'error'
+          || artifact.with?.['retention-days'] !== 1
+          || (job.steps ?? []).indexOf(artifact) <= (job.steps ?? []).findIndex(step => step?.name === 'Full platform coverage and acceptance budgets')) {
+          throw new Error(`${relativeFile} must preserve hosted Windows coverage for dependent upload.`);
         }
       } else {
         const expectedMatrix = [

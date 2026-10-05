@@ -2092,6 +2092,18 @@ three Jest five-second test-budget failures while preparing multiple native
 ACL fixtures; the multi-case Jest budget may be extended separately from each
 child process's five-second functional timeout. A fresh hosted Windows suite
 and a manual service-runner suite MUST both pass after the change.
+The [Windows hosted job on `f4703dc4`](https://github.com/vypdev/copilot/actions/runs/37245776836)
+passed its isolated runtime fixtures, 523 full-coverage suites, and acceptance
+budgets, then failed when Codecov's Windows uploader could not download its
+signature file. Keep the coverage measurement on hosted Windows. Transfer only
+its generated `lcov.info` through a same-run Actions artifact to a dependent
+GitHub-hosted Ubuntu job, and run the Codecov uploader there with the `windows`
+flag. The upload job MUST be skipped for fork PRs, use checkout without stored
+credentials, fail on a missing artifact or uploader error, and never mask a
+failed platform test job. Workflow contract mutation tests MUST enforce the
+Windows artifact and the dependent upload boundary. A processed Codecov report
+for the exact PR head remains required; an artifact or successful uploader step
+alone does not satisfy patch coverage.
 
 The [Bugbot review of `8aa335da`](https://github.com/vypdev/copilot/actions/runs/37114090732)
 found that cancellation used a live environment variable to locate
