@@ -61,7 +61,9 @@ describe('AgentCliProvisioner', () => {
             expect(adapter.readLatestVersion).toHaveBeenCalledWith('codex');
             expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
             expect(environment.PATH?.split(require('node:path').delimiter)[0]).toBe(updated.directory);
-            expect(resolveAgentExecutablePath('codex', environment)).toBe(updated.executable);
+            const selected = resolveAgentExecutablePath('codex', environment);
+            expect(process.platform === 'win32' ? selected.toLowerCase() : selected)
+                .toBe(process.platform === 'win32' ? updated.executable.toLowerCase() : updated.executable);
             expect(existsSync(old.executable)).toBe(true);
         } finally {
             rmSync(old.root, { recursive: true, force: true });
