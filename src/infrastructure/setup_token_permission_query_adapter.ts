@@ -9,7 +9,7 @@ import { runWithConcurrencyLimit } from '../application/policies/bounded_concurr
 import { isOperationallyAvailableSetupRead } from '../application/policies/setup_token_permission_evidence_policy';
 import { nextOrganizationProjectsProbePage } from './setup_projects_probe_page_policy';
 import { probeDisposableResource } from './setup_permission_resource_probes';
-import { ProbeFailure, SetupPermissionProbeHttp, writeProbeFailure } from './setup_permission_probe_http';
+import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, writeProbeFailure } from './setup_permission_probe_http';
 import { SetupPermissionProbeJournal } from './setup_permission_probe_journal';
 
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
@@ -528,6 +528,7 @@ function repositoryRoot(owner: string, repository: string): string {
 
 function probeDiagnostic(value: unknown): SetupTokenPermissionProgress['detail'] {
     if (value instanceof ProbeFailure) {
+        if (value instanceof ProbeCollision) return 'secret-collision';
         if (value.cleanupPending) return 'cleanup-pending';
         if (value.httpStatus !== undefined) return `http-${value.httpStatus}` as const;
         if (value.message.startsWith('No isolated')) return 'unsupported';

@@ -29,6 +29,9 @@
 <section class="plan-decisions" aria-label={tr('planPermissionProbeTitle', $setupLocale)}>
   <h3>{tr('planPermissionProbeTitle', $setupLocale)}</h3>
   <p>{tr('planPermissionProbeBody', $setupLocale)}</p>
+  {#if prompt.plan.permissionProbes?.some(probe => probe.permission === 'Secrets')}
+    <p>{tr('planSecretProbeLimit', $setupLocale)}</p>
+  {/if}
   <ul>{#each prompt.plan.permissionProbes as probe}<li>{permissionTerm($setupLocale, probe.scope)}: {permissionName($setupLocale, probe.permission)}</li>{:else}<li>{tr('none', $setupLocale)}</li>{/each}</ul>
 </section>
 <PlanDecisionSummary decisions={prompt.plan.decisions} />

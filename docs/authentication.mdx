@@ -192,7 +192,14 @@ response remains `Unverifiable` as PAT evidence; Contents write still needs
 its temporary branch create/read/delete test. An ambiguous `404` is never
 treated as empty-repository evidence.
 
-Permission checks use at most four concurrent read-only GitHub probes. Results
+Permission checks use at most four concurrent GitHub probes. Before plan
+approval, they only read. After approval, each required Write grant is checked
+with a temporary resource that is read back and removed. Secret writes use
+GitHub's create-or-update endpoint: Copilot chooses a private 256-bit random
+name, confirms absence first, and requires the create response. GitHub does
+not offer atomic create-only Secret writes. If it reports an update, setup
+stops, does not delete the Secret, and asks you to inspect the GitHub audit
+trail because a concurrent value may have been replaced. Results
 remain in the displayed requirement order even when provider responses complete
 out of order, reducing secondary-rate-limit pressure without making the report
 nondeterministic.

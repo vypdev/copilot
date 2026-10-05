@@ -22,6 +22,7 @@ export async function probeDisposableResource(context: ResourceProbeContext): Pr
 }
 
 function resourceName(): string { return `COPILOT_PERMISSION_TEST_${randomBytes(16).toString('hex').toUpperCase()}`; }
+function secretName(): string { return `COPILOT_PERMISSION_TEST_${randomBytes(32).toString('hex').toUpperCase()}`; }
 function repoRoot(context: ResourceProbeContext): string {
     return `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
 }
@@ -65,7 +66,7 @@ async function probeVariable(context: ResourceProbeContext): Promise<void> {
 }
 
 async function probeSecret(context: ResourceProbeContext): Promise<void> {
-    const name = resourceName();
+    const name = secretName();
     const root = context.scope === 'organization' ? `${orgRoot(context)}/actions/secrets` : `${repoRoot(context)}/actions/secrets`;
     const exact = `${root}/${name}`;
     const key = await probeJsonRecord(await context.http.expect(`${root}/public-key`, 'GET', [200]));
@@ -78,7 +79,7 @@ async function probeSecret(context: ResourceProbeContext): Promise<void> {
     await requireAbsent(context.http, exact);
     await withProbeCleanup(context, name, async owned => {
         const result = await context.http.request(exact, 'PUT', body);
-        if (result.status === 204) throw new ProbeCollision('GitHub reported an existing Secret at the temporary name; cleanup was not attempted.');
+        if (result.status === 204) throw new ProbeCollision('GitHub updated an existing Secret at the random temporary name. A concurrent Secret value may have been replaced; setup stopped and did not delete it. Inspect the GitHub Secret audit trail.', 204, true);
         if (result.status !== 201) throw new ProbeFailure(`GitHub PUT returned HTTP ${result.status}.`, result.status);
         owned();
         context.phase('reading');

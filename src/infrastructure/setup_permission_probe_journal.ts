@@ -202,7 +202,9 @@ function safeName(probe: SetupTokenPermissionProbe, name: string): boolean {
             ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
             : probe === 'issues'
                 ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
-                : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
+                : probe === 'secrets'
+                    ? /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}(?:[A-F0-9]{32})?$/u.test(name)
+                    : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
 }
 
 function validScope(scope: SetupTokenPermissionScope, probe: SetupTokenPermissionProbe): boolean {

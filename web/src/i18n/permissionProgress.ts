@@ -14,15 +14,15 @@ export function permissionProgressCopy(locale: SetupLocale, key: keyof typeof co
   return copy[locale][key];
 }
 
-const errors: Record<SetupLocale, Record<'unavailable' | 'cleanup-pending' | 'unsupported', string>> = {
-  en: { unavailable: 'The check did not complete. Review the terminal result.', 'cleanup-pending': 'Cleanup is unresolved; recovery is required before retrying.', unsupported: 'No isolated probe exists for this permission yet.' },
-  es: { unavailable: 'La comprobación no terminó. Revisa el resultado en el terminal.', 'cleanup-pending': 'La limpieza está pendiente; hay que recuperarla antes de reintentar.', unsupported: 'Aún no hay una prueba aislada para este permiso.' },
-  fr: { unavailable: 'La vérification n’a pas abouti. Consultez le résultat dans le terminal.', 'cleanup-pending': 'Le nettoyage reste à terminer avant de réessayer.', unsupported: 'Aucun test isolé n’existe encore pour cette permission.' },
-  pt: { unavailable: 'A verificação não terminou. Consulte o resultado no terminal.', 'cleanup-pending': 'A limpeza está pendente; é necessária recuperação antes de tentar novamente.', unsupported: 'Ainda não existe um teste isolado para esta permissão.' },
+const errors: Record<SetupLocale, Record<'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported', string>> = {
+  en: { unavailable: 'The check did not complete. Review the terminal result.', 'cleanup-pending': 'Cleanup is unresolved; recovery is required before retrying.', 'secret-collision': 'GitHub reported an existing Secret at the random test name. Setup stopped; inspect the GitHub Secret audit trail.', unsupported: 'No isolated probe exists for this permission yet.' },
+  es: { unavailable: 'La comprobación no terminó. Revisa el resultado en el terminal.', 'cleanup-pending': 'La limpieza está pendiente; hay que recuperarla antes de reintentar.', 'secret-collision': 'GitHub encontró un Secret existente con el nombre aleatorio de prueba. El setup se detuvo; revisa el historial del Secret.', unsupported: 'Aún no hay una prueba aislada para este permiso.' },
+  fr: { unavailable: 'La vérification n’a pas abouti. Consultez le résultat dans le terminal.', 'cleanup-pending': 'Le nettoyage reste à terminer avant de réessayer.', 'secret-collision': 'GitHub a trouvé un Secret existant sous le nom de test aléatoire. La configuration s’est arrêtée ; consultez l’historique du Secret.', unsupported: 'Aucun test isolé n’existe encore pour cette permission.' },
+  pt: { unavailable: 'A verificação não terminou. Consulte o resultado no terminal.', 'cleanup-pending': 'A limpeza está pendente; é necessária recuperação antes de tentar novamente.', 'secret-collision': 'O GitHub encontrou um Secret existente com o nome aleatório de teste. A configuração parou; consulte o histórico do Secret.', unsupported: 'Ainda não existe um teste isolado para esta permissão.' },
 };
 
 export function permissionProgressError(locale: SetupLocale, detail: string): string {
   if (/^http-[1-5][0-9]{2}$/u.test(detail)) return `GitHub HTTP ${detail.slice(5)}`;
-  if (detail === 'unavailable' || detail === 'cleanup-pending' || detail === 'unsupported') return errors[locale][detail];
+  if (detail === 'unavailable' || detail === 'cleanup-pending' || detail === 'secret-collision' || detail === 'unsupported') return errors[locale][detail];
   return errors[locale].unavailable;
 }

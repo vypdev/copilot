@@ -28,9 +28,10 @@
     : outcome === 'partial'
       ? tr('resultPartialBody', $setupLocale)
       : tr('resultNoChangesBody', $setupLocale);
-  $: blockedPermissionReport = outcome === 'blocked' && detail?.reasonCode === 'permissions'
+  $: blockedPermissionReport = (outcome === 'blocked' || outcome === 'partial') && detail?.reasonCode === 'permissions'
     ? permissionReport : undefined;
   $: pendingProbeCleanup = blockedPermissionReport?.checks.some(check => check.cleanupPending === true) === true;
+  $: secretCollision = blockedPermissionReport?.checks.some(check => check.incident === 'secret-collision') === true;
   $: unresolvedPermissions = blockedPermissionReport
     ? blockedPermissionReport.checks.filter(check => check.applicability === 'required'
       && check.status !== 'verified' && check.status !== 'available') : [];
@@ -41,8 +42,8 @@
     <div class="result-facts">
       <p><strong>{tr('whatHappened', $setupLocale)}:</strong> {tr(reasons[detail?.reasonCode ?? 'unknown'][0], $setupLocale)}</p>
       {#if detail?.stoppedStage}<p><strong>{tr('progress', $setupLocale)}:</strong> {stageLabel(detail.stoppedStage, $setupLocale)}</p>{/if}
-      <p><strong>{tr('alreadyChanged', $setupLocale)}:</strong> {pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : detail?.mutationStarted || outcome === 'partial' ? tr('inspectPartial', $setupLocale) : tr('noChanges', $setupLocale)}</p>
-      <p><strong>{tr('nextAction', $setupLocale)}:</strong> {pendingProbeCleanup ? tr('permissionProbeCleanupAction', $setupLocale) : outcome === 'partial' ? `${tr('inspectPartial', $setupLocale)} ${tr(reasons[detail?.reasonCode ?? 'unknown'][1], $setupLocale)}` : tr(reasons[detail?.reasonCode ?? 'unknown'][1], $setupLocale)}</p>
+      <p><strong>{tr('alreadyChanged', $setupLocale)}:</strong> {secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : detail?.mutationStarted || outcome === 'partial' ? tr('inspectPartial', $setupLocale) : tr('noChanges', $setupLocale)}</p>
+      <p><strong>{tr('nextAction', $setupLocale)}:</strong> {secretCollision ? tr('permissionSecretCollisionAction', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupAction', $setupLocale) : outcome === 'partial' ? `${tr('inspectPartial', $setupLocale)} ${tr(reasons[detail?.reasonCode ?? 'unknown'][1], $setupLocale)}` : tr(reasons[detail?.reasonCode ?? 'unknown'][1], $setupLocale)}</p>
       {#if detail?.diagnosticRef}<p><strong>{tr('diagnosticReference', $setupLocale)}:</strong> <code>{detail.diagnosticRef}</code></p>{/if}
     </div>
   {/if}
@@ -61,7 +62,7 @@
   {#if detail?.effects?.length}
     <ResourceProgress effects={detail.effects} />
   {/if}
-  <p>{pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : explanation}</p>
+  <p>{secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : explanation}</p>
   {#if outcome === 'complete'}<p>{tr('botRenewal', $setupLocale)}</p>{/if}
   <p>{tr('doctorHelp', $setupLocale)}</p>
   {#if outcome === 'complete'}

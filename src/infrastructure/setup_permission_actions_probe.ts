@@ -59,15 +59,14 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
         await handle.markDispatchAttempted();
         const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST',
             { ref: name, return_run_details: true });
-        if (dispatched.status !== 200) {
+        if (dispatched.status !== 200 && dispatched.status !== 204) {
             if (dispatched.status >= 400 && dispatched.status < 500) await handle.clearRejectedDispatch();
             throw new ProbeFailure(`GitHub Actions dispatch returned HTTP ${dispatched.status}.`, dispatched.status);
         }
-        const dispatch = await probeJsonRecord(dispatched);
-        const runId = dispatch.workflow_run_id;
-        if (!Number.isSafeInteger(runId) || (runId as number) <= 0) {
-            throw new ProbeFailure('GitHub did not identify the temporary Actions run.');
-        }
+        const runId = dispatched.status === 200
+            ? (await probeJsonRecord(dispatched)).workflow_run_id
+            : await findAcceptedDispatchRun(context, root, name, workflow.id);
+        if (!Number.isSafeInteger(runId) || (runId as number) <= 0) throw new ProbeFailure('GitHub did not identify the temporary Actions run.');
         await handle.setRunId(runId as number);
         context.phase('reading');
         const run = await probeJsonRecord(await context.http.expect(`${root}/actions/runs/${runId}`, 'GET', [200]));
@@ -81,6 +80,29 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
     catch { throw new ProbeFailure('Temporary Actions cleanup could not be confirmed; recovery is required before retrying.',
         undefined, true); }
     if (operationError) throw operationError;
+}
+
+/** Older GitHub dispatch responses omit the run ID even after accepting the request. */
+async function findAcceptedDispatchRun(
+    context: ResourceProbeContext, root: string, branch: string, workflowId: number,
+): Promise<number> {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+        const response = await probeJsonRecord(await context.http.expect(
+            `${root}/actions/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=100`, 'GET', [200]));
+        if (!Array.isArray(response.workflow_runs)) throw new ProbeFailure('GitHub returned an invalid temporary Actions run list.');
+        const matches = response.workflow_runs.filter(item => item && typeof item === 'object' && !Array.isArray(item)
+            && (item as Record<string, unknown>).head_branch === branch
+            && (item as Record<string, unknown>).event === 'workflow_dispatch'
+            && (item as Record<string, unknown>).workflow_id === workflowId);
+        if (matches.length > 1) throw new ProbeFailure('GitHub returned multiple temporary Actions runs for one dispatch.');
+        if (matches.length === 1) {
+            const id = (matches[0] as Record<string, unknown>).id;
+            if (!Number.isSafeInteger(id) || (id as number) <= 0) throw new ProbeFailure('GitHub returned an invalid temporary Actions run ID.');
+            return id as number;
+        }
+        if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    throw new ProbeFailure('GitHub accepted the temporary Actions dispatch but did not identify its run.');
 }
 
 async function findDispatchWorkflow(

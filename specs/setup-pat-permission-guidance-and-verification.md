@@ -58,7 +58,14 @@ an unproved PAT grant exists cannot make the permission audit pass.
    where GitHub provides them. It reads back the exact resource and deletes
    only the exact object it created. Upsert-only Secret endpoints require a
    404 preflight, a 201 create response, and an exact-name readback before
-   cleanup. No existing resource is changed. If the process times out, is
+   cleanup. Secret names use 256 bits of fresh entropy. GitHub does not offer
+   an atomic create-only Secret operation or conditional unsafe request: a
+   concurrent actor who learns and creates the same name between preflight and
+   PUT can still be overwritten. A 204 update response is a collision incident,
+   never a verified grant or ownership proof; do not delete that Secret. The
+   plan and failure must disclose this residual provider limitation rather than
+   claim that preflight makes upsert atomic. All other probes use create-only
+   operations and never change an existing resource. If the process times out, is
    cancelled, crashes, or loses the cleanup response, record only the bounded
    cleanup target and attempt id in a local, permission-restricted recovery
    journal; resume cleanup before a new probe. An unresolved cleanup blocks
@@ -70,11 +77,13 @@ an unproved PAT grant exists cannot make the permission audit pass.
    session. Secret-bearing values and raw provider messages never reach the
    browser or terminal.
 7. A workflow dispatch requests `return_run_details: true` in the **request
-   body** and requires the returned exact run ID before it can claim Actions
-   WRITE. A `204` response without an ID is uncertain, even if GitHub may have
-   accepted the dispatch; the recovery journal retains the target until the
-   run or its absence and branch cleanup are confirmed. Fixture tests assert
-   the request body and reject an unidentifiable accepted dispatch. This follows
+   body** and requires an exact run ID before it can claim Actions WRITE. A
+   `204` response is accepted only after the probe finds exactly one run for
+   its private branch, `workflow_dispatch` event, and selected workflow ID,
+   then reads that exact run before cleanup. If the run is not uniquely
+   identifiable, the recovery journal retains the target until the run or its
+   absence and branch cleanup are confirmed. Fixture tests assert the request
+   body, 200 and 204 success paths, and rejection of ambiguous responses. This follows
    [GitHub's workflow dispatch API](https://docs.github.com/en/rest/actions/workflows).
 8. The final audit reports whether any disposable write has **unconfirmed
    cleanup**. A cleanly deleted probe does not count as a remaining setup
@@ -90,7 +99,7 @@ an unproved PAT grant exists cannot make the permission audit pass.
 | Requirement | Disposable capability operation | Required cleanup |
 |---|---|---|
 | Repository / organization Variables WRITE | create a unique variable, GET exact name, DELETE exact name | verify absence; no overwrite |
-| Repository / organization Secrets WRITE | fetch public key, create unique encrypted secret, GET exact metadata, DELETE exact name | verify absence; no existing Secret values read |
+| Repository / organization Secrets WRITE | fetch public key, preflight absence, upsert a 256-bit random-name encrypted secret, require 201, GET exact metadata, DELETE exact name | verify absence; a 204 update is a collision incident with no automatic deletion; provider has no atomic create-only endpoint |
 | Repository Issues WRITE | create unique label, GET label, DELETE label | verify absence |
 | Organization Issue Types WRITE | create unique disabled issue type, GET/list exact id, DELETE id | verify absence; org admin prerequisite reported separately |
 | Repository Contents WRITE | create unique disposable ref, GET exact ref, DELETE ref; use a file on that ref when needed to prove file writes | verify ref absence; no default-branch commit |
@@ -189,7 +198,7 @@ capability contract without relabelling its 42 open gates.
 | P10 | Pending cleanup is visible on the result screen | Fixture `src/cli/__tests__/web_setup_components.test.ts` |
 | S01 | Journal persists no token or test Secret | Fixture W |
 | S02 | Secret probe encrypts value and checks metadata only | Fixture W |
-| S03 | Secret preflight and 201 response prevent accidental deletion on collision | Fixture W |
+| S03 | Secret preflight, 256-bit private name, and 201 response bound collision risk; a 204 response fails without deleting the unknown Secret, and the UI discloses that GitHub upsert cannot guarantee atomic create-only behavior | Fixture W; provider limitation open |
 | S04 | Interrupted Variable cleanup resumes from journal | Fixture W |
 | S05 | Interrupted Project cleanup resumes without a saved ID | Fixture W |
 | S06 | Pagination rejects cross-origin URL with the PAT | Fixture R |

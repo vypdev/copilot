@@ -50,6 +50,9 @@ export function renderSetupPlan(plan: SetupPlan): string {
       ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
       : ['  (none)']),
     '  Actions and Pull request checks may leave run history, PR history, or notifications after cleanup.', '',
+    ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
+      ? ['  GitHub Secret writes are upserts. A private random name and absence check reduce collision risk, but GitHub offers no atomic create-only guarantee; an unexpected update stops setup for inspection.', '']
+      : []),
     ...(plan.presentationDefaults?.length ? [color('Advanced defaults retained in basic setup', 36),
       ...plan.presentationDefaults.map(item => `  ${item.group}: ${item.count} settings not asked; use :edit at plan confirmation to review or change.`), ''] : []),
     ...(plan.mergeQueueReadiness.length > 0 ? [

@@ -64,5 +64,6 @@ export function writeProbeFailure(requirement: SetupTokenPermissionRequirement, 
         status: failure.httpStatus === 401 ? 'missing' : 'unverifiable',
         message: failure.message,
         ...(failure.cleanupPending ? { cleanupPending: true } : {}),
+        ...(failure instanceof ProbeCollision ? { incident: 'secret-collision' as const } : {}),
     };
 }

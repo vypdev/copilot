@@ -56467,7 +56467,7 @@ class AuditConfiguredSetupPatUseCase {
                 this.showCorrectedLink(required);
             return { status: 'blocked', errors: [
                     cleanupPending
-                        ? 'A temporary permission resource could not be confirmed as deleted. Review the failed permission and local recovery journal before retrying.'
+                        ? 'A temporary permission check may have left a resource or changed a concurrent Secret. Review the failed permission, GitHub audit trail, and any local recovery journal before retrying.'
                         : 'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
                 ], ...(cleanupPending ? { cleanupPending: true } : {}) };
         }
@@ -68747,6 +68747,8 @@ class SetupPlanConfirmationAdapter {
                     `This is the final approval. The plan lists ${plan.selectedFiles.length} file(s), ${plan.variables.length} Variable(s), and ${plan.requiredSecrets.length} Secret name(s).`,
                     'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
                     'Before setup changes, each selected write permission is tested with a temporary resource. Actions and PR tests can create visible runs, notifications, and history even after cleanup.',
+                    ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
+                        ? ['GitHub Secret writes are upserts. A random private name and absence check reduce collision risk, but GitHub does not guarantee atomic create-only behavior. An unexpected update stops setup for inspection.'] : []),
                     'A failure after writes begin may leave partial changes; inspect the result and run copilot doctor --read-only before retrying.',
                     'PATs created on GitHub are not deleted automatically if you decline or cancel.',
                     'Read more: https://docs.page/vypdev/copilot/how-to-use',
@@ -69396,6 +69398,9 @@ function renderSetupPlan(plan) {
             ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
             : ['  (none)']),
         '  Actions and Pull request checks may leave run history, PR history, or notifications after cleanup.', '',
+        ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
+            ? ['  GitHub Secret writes are upserts. A private random name and absence check reduce collision risk, but GitHub offers no atomic create-only guarantee; an unexpected update stops setup for inspection.', '']
+            : []),
         ...(plan.presentationDefaults?.length ? [(0, setup_prompt_rendering_1.color)('Advanced defaults retained in basic setup', 36),
             ...plan.presentationDefaults.map(item => `  ${item.group}: ${item.count} settings not asked; use :edit at plan confirmation to review or change.`), ''] : []),
         ...(plan.mergeQueueReadiness.length > 0 ? [
@@ -87870,16 +87875,16 @@ async function probeActions(context) {
         }
         await handle.markDispatchAttempted();
         const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST', { ref: name, return_run_details: true });
-        if (dispatched.status !== 200) {
+        if (dispatched.status !== 200 && dispatched.status !== 204) {
             if (dispatched.status >= 400 && dispatched.status < 500)
                 await handle.clearRejectedDispatch();
             throw new setup_permission_probe_http_1.ProbeFailure(`GitHub Actions dispatch returned HTTP ${dispatched.status}.`, dispatched.status);
         }
-        const dispatch = await (0, setup_permission_probe_http_1.probeJsonRecord)(dispatched);
-        const runId = dispatch.workflow_run_id;
-        if (!Number.isSafeInteger(runId) || runId <= 0) {
+        const runId = dispatched.status === 200
+            ? (await (0, setup_permission_probe_http_1.probeJsonRecord)(dispatched)).workflow_run_id
+            : await findAcceptedDispatchRun(context, root, name, workflow.id);
+        if (!Number.isSafeInteger(runId) || runId <= 0)
             throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not identify the temporary Actions run.');
-        }
         await handle.setRunId(runId);
         context.phase('reading');
         const run = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/runs/${runId}`, 'GET', [200]));
@@ -87900,6 +87905,29 @@ async function probeActions(context) {
     }
     if (operationError)
         throw operationError;
+}
+/** Older GitHub dispatch responses omit the run ID even after accepting the request. */
+async function findAcceptedDispatchRun(context, root, branch, workflowId) {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+        const response = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=100`, 'GET', [200]));
+        if (!Array.isArray(response.workflow_runs))
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid temporary Actions run list.');
+        const matches = response.workflow_runs.filter(item => item && typeof item === 'object' && !Array.isArray(item)
+            && item.head_branch === branch
+            && item.event === 'workflow_dispatch'
+            && item.workflow_id === workflowId);
+        if (matches.length > 1)
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned multiple temporary Actions runs for one dispatch.');
+        if (matches.length === 1) {
+            const id = matches[0].id;
+            if (!Number.isSafeInteger(id) || id <= 0)
+                throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid temporary Actions run ID.');
+            return id;
+        }
+        if (attempt < 5)
+            await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    throw new setup_permission_probe_http_1.ProbeFailure('GitHub accepted the temporary Actions dispatch but did not identify its run.');
 }
 async function findDispatchWorkflow(context, root, base) {
     const list = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/workflows?per_page=100`, 'GET', [200]));
@@ -88020,6 +88048,7 @@ function writeProbeFailure(requirement, error) {
         status: failure.httpStatus === 401 ? 'missing' : 'unverifiable',
         message: failure.message,
         ...(failure.cleanupPending ? { cleanupPending: true } : {}),
+        ...(failure instanceof ProbeCollision ? { incident: 'secret-collision' } : {}),
     };
 }
 
@@ -88249,7 +88278,9 @@ function safeName(probe, name) {
             ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
             : probe === 'issues'
                 ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
-                : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
+                : probe === 'secrets'
+                    ? /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}(?:[A-F0-9]{32})?$/u.test(name)
+                    : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
 }
 function validScope(scope, probe) {
     return (scope === 'repository' && probe !== 'issue-types' && probe !== 'projects')
@@ -88667,6 +88698,7 @@ async function probeDisposableResource(context) {
     throw new setup_permission_probe_http_1.ProbeFailure(`No isolated create/read/delete probe is implemented for ${context.scope} ${context.probe} Write.`);
 }
 function resourceName() { return `COPILOT_PERMISSION_TEST_${(0, node_crypto_1.randomBytes)(16).toString('hex').toUpperCase()}`; }
+function secretName() { return `COPILOT_PERMISSION_TEST_${(0, node_crypto_1.randomBytes)(32).toString('hex').toUpperCase()}`; }
 function repoRoot(context) {
     return `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
 }
@@ -88707,7 +88739,7 @@ async function probeVariable(context) {
     });
 }
 async function probeSecret(context) {
-    const name = resourceName();
+    const name = secretName();
     const root = context.scope === 'organization' ? `${orgRoot(context)}/actions/secrets` : `${repoRoot(context)}/actions/secrets`;
     const exact = `${root}/${name}`;
     const key = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/public-key`, 'GET', [200]));
@@ -88722,7 +88754,7 @@ async function probeSecret(context) {
     await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
         const result = await context.http.request(exact, 'PUT', body);
         if (result.status === 204)
-            throw new setup_permission_probe_http_1.ProbeCollision('GitHub reported an existing Secret at the temporary name; cleanup was not attempted.');
+            throw new setup_permission_probe_http_1.ProbeCollision('GitHub updated an existing Secret at the random temporary name. A concurrent Secret value may have been replaced; setup stopped and did not delete it. Inspect the GitHub Secret audit trail.', 204, true);
         if (result.status !== 201)
             throw new setup_permission_probe_http_1.ProbeFailure(`GitHub PUT returned HTTP ${result.status}.`, result.status);
         owned();
@@ -89611,6 +89643,8 @@ function repositoryRoot(owner, repository) {
 }
 function probeDiagnostic(value) {
     if (value instanceof setup_permission_probe_http_1.ProbeFailure) {
+        if (value instanceof setup_permission_probe_http_1.ProbeCollision)
+            return 'secret-collision';
         if (value.cleanupPending)
             return 'cleanup-pending';
         if (value.httpStatus !== undefined)

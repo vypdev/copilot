@@ -66,7 +66,7 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
       if (this.context.guided) this.showCorrectedLink(required);
       return { status: 'blocked', errors: [
         cleanupPending
-          ? 'A temporary permission resource could not be confirmed as deleted. Review the failed permission and local recovery journal before retrying.'
+          ? 'A temporary permission check may have left a resource or changed a concurrent Secret. Review the failed permission, GitHub audit trail, and any local recovery journal before retrying.'
           : 'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
       ], ...(cleanupPending ? { cleanupPending: true } : {}) };
     }

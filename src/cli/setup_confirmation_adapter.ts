@@ -31,6 +31,8 @@ export class SetupPlanConfirmationAdapter implements SetupPlanConfirmationPort {
           `This is the final approval. The plan lists ${plan.selectedFiles.length} file(s), ${plan.variables.length} Variable(s), and ${plan.requiredSecrets.length} Secret name(s).`,
           'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
           'Before setup changes, each selected write permission is tested with a temporary resource. Actions and PR tests can create visible runs, notifications, and history even after cleanup.',
+          ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
+            ? ['GitHub Secret writes are upserts. A random private name and absence check reduce collision risk, but GitHub does not guarantee atomic create-only behavior. An unexpected update stops setup for inspection.'] : []),
           'A failure after writes begin may leave partial changes; inspect the result and run copilot doctor --read-only before retrying.',
           'PATs created on GitHub are not deleted automatically if you decline or cancel.',
           'Read more: https://docs.page/vypdev/copilot/how-to-use',

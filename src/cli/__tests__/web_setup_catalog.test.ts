@@ -25,7 +25,7 @@ describe('web setup localization catalog', () => {
         expect(permissionProgressCopy(locale, phase).trim()).not.toBe('');
       }
       expect(permissionProgressError(locale, 'http-403')).toBe('GitHub HTTP 403');
-      for (const detail of ['unavailable', 'cleanup-pending', 'unsupported'] as const) {
+      for (const detail of ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'] as const) {
         expect(permissionProgressError(locale, detail).trim()).not.toBe('');
       }
       expect(permissionProgressError(locale, 'secret provider body')).not.toContain('secret provider body');
@@ -43,6 +43,15 @@ describe('web setup localization catalog', () => {
         expect([...value.matchAll(/\{([a-zA-Z]\w*)\}/gu)].map(match => match[1]).sort())
           .toEqual([...en[key as keyof typeof en].matchAll(/\{([a-zA-Z]\w*)\}/gu)].map(match => match[1]).sort());
       }
+    }
+  });
+
+  test('every locale warns about the non-atomic GitHub Secret write check', () => {
+    for (const locale of setupLocales) {
+      const warning = tr('planSecretProbeLimit', locale);
+      expect(warning).toMatch(/GitHub/u);
+      expect(warning).toMatch(/Secret/u);
+      expect(warning.length).toBeGreaterThan(100);
     }
   });
 

@@ -149,7 +149,7 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     }] });
     expect(await useCase.audit(configuration, remote, onCleanupPending)).toEqual({
       status: 'blocked', cleanupPending: true,
-      errors: [expect.stringContaining('could not be confirmed as deleted')],
+      errors: [expect.stringContaining('may have left a resource or changed a concurrent Secret')],
     });
     expect(onCleanupPending).toHaveBeenCalledTimes(1);
   });

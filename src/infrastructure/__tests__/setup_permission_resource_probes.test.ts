@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SetupPermissionProbeJournal } from '../setup_permission_probe_journal';
-import { SetupPermissionProbeHttp } from '../setup_permission_probe_http';
+import { SetupPermissionProbeHttp, writeProbeFailure } from '../setup_permission_probe_http';
 import { probeDisposableResource } from '../setup_permission_resource_probes';
 import type { ResourceProbeContext } from '../setup_permission_probe_context';
 import { SetupTokenPermissionQueryAdapter } from '../setup_token_permission_query_adapter';
@@ -247,7 +247,7 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
-    it('does not verify an accepted Actions dispatch without run details even after exact cleanup', async () => {
+    it('verifies a 204 Actions dispatch only after a unique exact run readback and cleanup', async () => {
         const root = '/repos/owner/repo';
         const workflowPath = '.github/workflows/copilot_credential_health.yml';
         const template = await committedHealthWorkflow();
@@ -275,10 +275,10 @@ describe('temporary permission resource probes', () => {
                 return reply(204);
             }
             if (path === `${root}/actions/runs` && method === 'GET') return reply(200, {
-                workflow_runs: run ? [{ id: 77, head_branch: branch, event: 'workflow_dispatch' }] : [],
+                workflow_runs: run ? [{ id: 77, head_branch: branch, event: 'workflow_dispatch', workflow_id: 123 }] : [],
             });
             if (path === `${root}/actions/runs/77` && method === 'GET') return run
-                ? reply(200, { id: 77, head_branch: branch, event: 'workflow_dispatch', status: 'completed' })
+                ? reply(200, { id: 77, head_branch: branch, event: 'workflow_dispatch', workflow_id: 123, status: 'completed' })
                 : reply(404);
             if (path === `${root}/actions/runs/77` && method === 'DELETE') { run = false; return reply(204); }
             if (path.startsWith(`${root}/git/refs/heads/copilot-permission-test-`) && method === 'DELETE') {
@@ -287,7 +287,8 @@ describe('temporary permission resource probes', () => {
             throw new Error(`Unexpected fixture request ${method} ${path}`);
         }) as unknown as typeof fetch;
         const probe = context('actions', 'repository', fetcher);
-        await expect(probeDisposableResource(probe.value)).rejects.toThrow('HTTP 204');
+        await probeDisposableResource(probe.value);
+        expect(probe.phases).toEqual(['creating', 'reading', 'deleting']);
         expect(run).toBe(false);
         expect(branch).toBeUndefined();
         expect(await readdir(folder)).toEqual([]);
@@ -302,6 +303,7 @@ describe('temporary permission resource probes', () => {
             if (path === '/repos/owner/repo' && method === 'GET') return reply(200, { id: 123 });
             if (path === `${root}/public-key`) return reply(200, { key: Buffer.alloc(32, 1).toString('base64'), key_id: 'fixture-key' });
             if (path.startsWith(`${root}/`) && method === 'PUT') {
+                expect(path.slice(root.length + 1)).toMatch(/^COPILOT_PERMISSION_TEST_[A-F0-9]{64}$/u);
                 const body = JSON.parse(String(options?.body)) as { encrypted_value: string; key_id: string; visibility?: string; selected_repository_ids?: number[] };
                 expect(body.key_id).toBe('fixture-key');
                 expect(Buffer.from(body.encrypted_value, 'base64').length).toBeGreaterThan(48);
@@ -334,7 +336,15 @@ describe('temporary permission resource probes', () => {
             throw new Error('Unexpected fixture request');
         }) as unknown as typeof fetch;
         const probe = context('secrets', 'repository', fetcher);
-        await expect(probeDisposableResource(probe.value)).rejects.toThrow('existing Secret');
+        let failure: unknown;
+        try { await probeDisposableResource(probe.value); } catch (error) { failure = error; }
+        expect(failure).toMatchObject({
+            message: expect.stringContaining('existing Secret'), httpStatus: 204, cleanupPending: true,
+        });
+        expect(writeProbeFailure({ id: 'test', role: 'setup', scope: 'repository', permission: 'Secrets',
+            level: 'write', applicability: 'required', reason: 'fixture', probe: 'secrets' }, failure))
+            .toMatchObject({ status: 'unverifiable', cleanupPending: true, incident: 'secret-collision' });
+        expect(methods).toContain('PUT');
         expect(methods).not.toContain('DELETE');
         expect(await readdir(folder)).toEqual([]);
     });

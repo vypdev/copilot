@@ -106,6 +106,19 @@ describe('web setup component semantics', () => {
     expect(html).not.toContain('No repository or GitHub setup changes');
   });
 
+  test('a Secret collision is displayed as a possible partial change with a specific action', () => {
+    const html = markup('ResultPanel', { outcome: 'partial', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: true },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.repository.secrets', role: 'setup',
+          permission: 'Secrets', scope: 'repository', level: 'write', applicability: 'required',
+          reason: 'Provision Secrets', probe: 'secrets', status: 'unverifiable',
+          cleanupPending: true, incident: 'secret-collision', message: 'bounded failure' }] } });
+    expect(html).toContain('A concurrent Secret value may have changed');
+    expect(html).toContain('Inspect the GitHub Secret audit trail');
+    expect(html).not.toContain('No repository or GitHub setup changes');
+  });
+
   test.each([
     ['en', 'PAT permission evidence', 'Projects', 'Unverifiable'],
     ['es', 'Comprobación de permisos del PAT', 'Proyectos', 'No verificable'],
@@ -384,12 +397,14 @@ describe('web setup component semantics', () => {
           coverageMode: 'check', coverageCheck: 'Tests', projectNumbers: ['12'],
           projectStatuses: [{ transition: 'issueCreated', value: 'Todo' }],
           variableScope: 'repository', secretScope: 'repository', initialTag: false },
-        files: ['AGENTS.md'], workflows: ['copilot.yml'], variables: ['MAIN_BRANCH'], secrets: ['PAT'], warnings: [],
+        files: ['AGENTS.md'], workflows: ['copilot.yml'], variables: ['MAIN_BRANCH'], secrets: ['PAT'],
+        permissionProbes: [{ scope: 'organization', permission: 'Secrets' }], warnings: [],
       } }, controller: true, busy: false, onSubmit: noOp,
     });
     for (const item of ['AGENTS.md', 'copilot.yml', 'MAIN_BRANCH', 'PAT']) expect(html).toContain(item);
     expect(html).toContain('main');
     for (const item of ['Planner', 'o3', 'Tests', '15368', 'Todo', '#12']) expect(html).toContain(item);
+    expect(html).toContain('GitHub cannot guarantee atomic create-only behavior');
     expect(html).toContain('Approve');
   });
 
