@@ -78771,6 +78771,7 @@ function definedEnvironment(environment) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OfficialAgentInstallationError = void 0;
+exports.installedFileFailureReason = installedFileFailureReason;
 exports.installerEnvironment = installerEnvironment;
 exports.parseCursorWindowsInstaller = parseCursorWindowsInstaller;
 exports.selectOpenCodeWindowsAsset = selectOpenCodeWindowsAsset;
@@ -78821,6 +78822,18 @@ function installerScriptReason(error) {
 function boundedExitCode(error) {
     const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
     return Number.isInteger(status) && Number(status) >= 0 && Number(status) <= 255 ? Number(status) : undefined;
+}
+function installedFileFailureReason(error) {
+    if (error instanceof agent_private_install_root_1.PrivateInstalledAgentValidationError)
+        return error.reason;
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    if (code === 'ENOENT')
+        return 'missing-file';
+    if (code === 'EACCES' || code === 'EPERM')
+        return 'access-denied';
+    if (code === 'ELOOP')
+        return 'unsafe-link';
+    return 'unknown';
 }
 /** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
 function installerEnvironment(root, source) {
@@ -79045,7 +79058,7 @@ function installOfficialAgentCli(provider) {
         stage = 'installed-file';
         const executable = (0, agent_private_install_root_1.securePrivateInstalledAgent)(root, path);
         if (!(0, node_fs_1.statSync)(executable).isFile())
-            throw new Error('Official agent installer did not create a file.');
+            throw new agent_private_install_root_1.PrivateInstalledAgentValidationError('invalid-file', 'Official agent installer did not create a file.');
         process.once('exit', () => (0, node_fs_1.rmSync)(root, { recursive: true, force: true }));
         return { executable, directory: (0, node_path_1.dirname)(path), root };
     }
@@ -79053,7 +79066,7 @@ function installOfficialAgentCli(provider) {
         (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
         if (error instanceof OfficialAgentInstallationError)
             throw error;
-        throw new OfficialAgentInstallationError(stage, 'Official agent installation failed.', boundedExitCode(error), error);
+        throw new OfficialAgentInstallationError(stage, 'Official agent installation failed.', boundedExitCode(error), error, stage === 'installed-file' ? installedFileFailureReason(error) : undefined);
     }
 }
 
@@ -79167,6 +79180,7 @@ function compareOfficialAgentVersion(provider, installedOutput, latestVersion) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrivateInstalledAgentValidationError = void 0;
 exports.selectPrivateInstallRoot = selectPrivateInstallRoot;
 exports.prepareWindowsInstallRoot = prepareWindowsInstallRoot;
 exports.createPrivateAgentInstallRoot = createPrivateAgentInstallRoot;
@@ -79176,6 +79190,16 @@ const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const INSTALL_PREFIX = 'copilot-agent-install-';
+class PrivateInstalledAgentValidationError extends Error {
+    constructor(reason, message, cause) {
+        super(message);
+        this.reason = reason;
+        this.name = 'PrivateInstalledAgentValidationError';
+        if (cause !== undefined)
+            Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+exports.PrivateInstalledAgentValidationError = PrivateInstalledAgentValidationError;
 /** Keep a failed candidate from preventing a safer profile-local fallback. */
 function selectPrivateInstallRoot(parents, prepare) {
     const tried = new Set();
@@ -79226,10 +79250,10 @@ function securePrivateInstalledAgent(root, path) {
     const canonicalRoot = (0, node_fs_1.realpathSync)(root);
     const relation = (0, node_path_1.relative)(root, path);
     if (!isWithinPrivateRoot(relation))
-        throw new Error('Official agent installer output escaped its private directory.');
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
     const canonicalPath = resolvePrivateInstalledFile(root, canonicalRoot, relation);
     if (process.platform === 'win32' && (0, node_fs_1.lstatSync)(path).isSymbolicLink()) {
-        throw new Error('Official agent installer output is a Windows symlink.');
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
     }
     if (process.platform === 'win32') {
         const directories = [];
@@ -79237,17 +79261,36 @@ function securePrivateInstalledAgent(root, path) {
         while (parent !== canonicalRoot) {
             const parentRelation = (0, node_path_1.relative)(canonicalRoot, parent);
             if (!parentRelation || parentRelation.startsWith('..') || (0, node_path_1.isAbsolute)(parentRelation)) {
-                throw new Error('Official agent installer output escaped its private directory.');
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
             }
             directories.unshift(parent);
             parent = (0, node_path_1.dirname)(parent);
         }
-        for (const directory of directories)
-            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(directory, true);
-        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(canonicalPath, false);
-        (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(canonicalPath);
+        try {
+            for (const directory of directories)
+                (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(directory, true);
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(canonicalPath, false);
+        }
+        catch (error) {
+            throw new PrivateInstalledAgentValidationError('acl-hardening', 'Could not protect the installed agent ACL.', error);
+        }
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(canonicalPath);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            const reason = message.startsWith('Unsafe Windows executable ancestor ')
+                ? 'acl-ancestor' : /^(?:Unsafe executable ACL owner|Agent executable is writable)/u.test(message)
+                ? 'acl-file' : 'acl-inspection';
+            throw new PrivateInstalledAgentValidationError(reason, 'Could not verify the installed agent ACL.', error);
+        }
     }
-    (0, node_fs_1.accessSync)(canonicalPath, node_fs_1.constants.X_OK);
+    try {
+        (0, node_fs_1.accessSync)(canonicalPath, node_fs_1.constants.X_OK);
+    }
+    catch (error) {
+        throw new PrivateInstalledAgentValidationError('access-denied', 'Installed agent is not executable.', error);
+    }
     return canonicalPath;
 }
 function isWithinPrivateRoot(relation) {
@@ -79261,34 +79304,34 @@ function resolvePrivateInstalledFile(root, canonicalRoot, relation) {
     while (pending.length > 0) {
         const next = (0, node_path_1.resolve)(current, pending.shift());
         if (!isWithinPrivateRoot((0, node_path_1.relative)(canonicalRoot, next))) {
-            throw new Error('Official agent installer output escaped its private directory.');
+            throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
         }
         const entry = (0, node_fs_1.lstatSync)(next);
         if (entry.isSymbolicLink()) {
             // The official Windows Codex installer publishes bin and current as
             // directory junctions. Never admit a linked executable itself.
             if (process.platform === 'win32' && pending.length === 0) {
-                throw new Error('Official agent installer output is a Windows symlink.');
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
             }
             if (++links > 32)
-                throw new Error('Official agent installer output has too many links.');
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output has too many links.');
             const target = (0, node_path_1.resolve)((0, node_path_1.dirname)(next), normalizedLinkTarget((0, node_fs_1.readlinkSync)(next)));
             const canonicalRelation = (0, node_path_1.relative)(canonicalRoot, target);
             const targetRelation = isWithinPrivateRoot(canonicalRelation)
                 ? canonicalRelation : (0, node_path_1.relative)(root, target);
             if (!isWithinPrivateRoot(targetRelation)) {
-                throw new Error('Official agent installer output escaped its private directory.');
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
             }
             pending = [...targetRelation.split(node_path_1.sep).filter(Boolean), ...pending];
             current = canonicalRoot;
         }
         else if (pending.length > 0 && !entry.isDirectory()) {
-            throw new Error('Official agent installer output has a non-directory ancestor.');
+            throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output has a non-directory ancestor.');
         }
         else {
             current = next;
             if (pending.length === 0 && !entry.isFile()) {
-                throw new Error('Official agent installer did not create a file.');
+                throw new PrivateInstalledAgentValidationError('invalid-file', 'Official agent installer did not create a file.');
             }
         }
     }
