@@ -49,4 +49,5 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Organization Variable storage selected': 'Stockage des Variables dans l’organisation choisi',
   'Issue type automation enabled': 'Automatisation des types de ticket activée',
   'Organization Projects selected': 'Projets de l’organisation choisis',
+  'After setup plan approval': 'Après approbation du plan de configuration',
 };

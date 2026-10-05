@@ -8,7 +8,26 @@
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
 - Required review gates: product UX, Clean Architecture, browser/loopback security, credential handling, packaging, cross-platform operation, accessibility, testing, documentation
-- Open decisions blocking readiness: none at the product-contract level; implementation MUST still pass the security and packaged-install review gates below
+- Open decisions blocking readiness: active PAT capability probes, incremental permission feedback, cleanup recovery, and live provider review described in the permission SDD remain open
+
+### 2026-10-05 permission-audit correction
+
+The web assistant MUST show live, localized progress for each permission after
+PAT submission. At PAT entry, identity and READ rows run; WRITE rows clearly
+wait for approval of the reviewed plan. After approval and before application,
+the final audit runs the selected temporary WRITE probes with live progress.
+The plan warns about temporary resources and any visible GitHub audit trail.
+Each READ row performs the named read and accepts an empty
+successful response; each required WRITE row performs a resource-specific
+temporary create/read/delete probe with exact-target cleanup. The session
+shows the current phase, result, bounded HTTP category, and any unresolved
+cleanup action. Neither a generic `Unverifiable` write row nor operator
+attestation is an accepted completion state. The same application audit and
+evidence rules apply to CLI. See
+[`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md#0-acceptance-correction-2026-10-05)
+for the normative transaction table and 60 additional test cases. §18–19
+remain open until fixture tests, packaged operation, four-locale and
+accessibility review, and explicitly authorized live cleanup evidence pass.
 
 ## 1. Executive summary
 

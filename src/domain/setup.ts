@@ -245,6 +245,8 @@ export interface SetupVariable {
 export interface SetupPlan {
     /** Informational only: advanced defaults not asked in basic presentation. */
     presentationDefaults?: readonly { group: string; count: number }[];
+    /** Temporary PAT write probes disclosed before final approval. */
+    permissionProbes?: readonly { scope: 'repository' | 'organization'; permission: string }[];
     configuration: SetupConfiguration;
     workflowFiles: string[];
     issueTemplateFiles: string[];

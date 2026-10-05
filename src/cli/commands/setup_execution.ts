@@ -63,7 +63,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
       }, Boolean(options.confirmUnverifiableWritePermissions));
       const permissionPresenter = webBridge ? new WebSetupPermissionPresenter(webBridge)
         : new ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
-      const tokenPermissions = createSetupTokenPermissionsUseCase();
+      const tokenPermissions = createSetupTokenPermissionsUseCase(permissionPresenter);
       const workflowPrompt = webBridge ? new WebSetupWorkflowUpdatePrompt(webBridge) : new SetupWorkflowUpdatePromptAdapter(terminal);
       const cwd = process.cwd();
       let setupMutationStarted = false;
@@ -90,6 +90,10 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
       let approvedWorkflowFiles: string[] = [];
       let credentialsCollection: SetupCredentialCollection | undefined;
       try {
+        if (options.confirmUnverifiableWritePermissions) {
+          throw new ApplicationError('configuration.invalid',
+            '--confirm-unverifiable-write-permissions is no longer accepted. Setup now tests each required Write capability with a temporary resource after plan approval.');
+        }
         const session = new SetupSessionCoordinator({
           repository: async (): Promise<SetupSessionDecision> => {
         if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
@@ -233,6 +237,8 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
           approvalCheckDiscovery: new GithubSetupApprovalCheckDiscoveryAdapter(),
           projectDiscovery: new GithubSetupProjectDiscoveryAdapter(),
+          ...(webBridge ? { sessionLiveness: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
+            : webBridge.snapshot().outcome ? 'expired' : 'active' } : {}),
         });
         const result = await wizard.execute({
           mode: options.nonInteractive ? 'non-interactive' : 'interactive',

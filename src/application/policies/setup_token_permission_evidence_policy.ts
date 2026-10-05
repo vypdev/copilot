@@ -6,7 +6,7 @@ import type {
 } from '../../domain/setup_token_permissions';
 
 const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
-const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access cannot be verified with a safe read-only permission probe.';
+const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access requires a completed temporary create/read/delete check.';
 
 /**
  * Reconciles untrusted adapter evidence against immutable permission requirements.
@@ -25,7 +25,8 @@ export function reconcileSetupTokenPermissionEvidence(
         if (candidates.length !== 1 || !isMatchingEvidence(requirement, candidate)) {
             return unverifiable(requirement, NO_SAFE_EVIDENCE_MESSAGE);
         }
-        if (requirement.level === 'write' && candidate.status === 'verified') {
+        if (requirement.level === 'write' && candidate.status === 'verified'
+            && candidate.writeProof !== 'transaction') {
             return unverifiable(requirement, WRITE_NOT_VERIFIABLE_MESSAGE);
         }
 
@@ -33,12 +34,16 @@ export function reconcileSetupTokenPermissionEvidence(
             ...requirement,
             status: candidate.status,
             message: candidate.message,
-            ...(candidate.status === 'unverifiable'
+            ...(requirement.level === 'write' && candidate.status === 'verified'
+                && candidate.writeProof === 'transaction' ? { writeProof: 'transaction' as const } : {}),
+            ...(requirement.level === 'write' && candidate.status === 'unverifiable'
+                && candidate.cleanupPending === true ? { cleanupPending: true as const } : {}),
+            ...(candidate.status === 'available'
                 && candidate.operationallyAvailable === true
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
                 ? { operationallyAvailable: true as const, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
-            ...(candidate.status === 'unverifiable'
+            ...(candidate.status === 'available'
                 && isAttestableProjectsRead(requirement, candidate.publicReadEvidence)
                 ? { publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
@@ -51,11 +56,13 @@ export function isOperationallyAvailableSetupRead(
     requirement: Pick<SetupTokenPermissionRequirement, 'scope' | 'permission' | 'level' | 'probe'>,
     evidence: SetupTokenPublicReadEvidence | undefined,
 ): boolean {
-    return requirement.level === 'read'
-        && requirement.scope === 'repository'
-        && evidence === 'public-repository'
-        && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
-        && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+    return requirement.level === 'read' && (
+        (requirement.scope === 'repository'
+            && evidence === 'public-repository'
+            && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
+            && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe)
+        || isAttestableProjectsRead(requirement, evidence)
+    );
 }
 
 export function isAttestableProjectsRead(
@@ -89,15 +96,19 @@ function isMatchingEvidence(
         && typeof value.message === 'string'
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
+        && (value.writeProof === undefined || (requirement.level === 'write'
+            && value.status === 'verified' && value.writeProof === 'transaction'))
+        && (value.cleanupPending === undefined || (requirement.level === 'write'
+            && value.status === 'unverifiable' && value.cleanupPending === true))
         && (value.publicReadEvidence === undefined
-            || (value.status === 'unverifiable' && (
+            || (value.status === 'available' && (
                 isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)
                 || isAttestableProjectsRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)
             )));
 }
 
 function isPermissionStatus(value: unknown): value is SetupTokenPermissionStatus {
-    return value === 'verified' || value === 'missing' || value === 'unverifiable';
+    return value === 'verified' || value === 'available' || value === 'missing' || value === 'unverifiable';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

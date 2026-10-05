@@ -9,6 +9,7 @@
   import ContextPanel from './components/ContextPanel.svelte';
   import ResultPanel from './components/ResultPanel.svelte';
   import WaitingPanel from './components/WaitingPanel.svelte';
+  import PermissionProgressPanel from './components/PermissionProgressPanel.svelte';
   import PairingPanel from './components/PairingPanel.svelte';
   import { tr } from './i18n/catalog';
   import { setupLocale } from './i18n/localeStore';
@@ -76,6 +77,8 @@
           <ContextPanel view={$session.view} />
         </div>
         {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>{tr('cancelSetup', $setupLocale)}</button>{/if}
+      {:else if $session.view?.permissions?.progress?.length && !$session.view.permissions.report}
+        <PermissionProgressPanel permissions={$session.view.permissions} />
       {:else}
         <WaitingPanel effects={$session.view?.resultDetail?.effects} />
       {/if}

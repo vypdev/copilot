@@ -48,6 +48,7 @@ export const permissionTexts = [
   'Organization Variable storage selected',
   'Issue type automation enabled',
   'Organization Projects selected',
+  'After setup plan approval',
 ] as const;
 
 export type PermissionText = typeof permissionTexts[number];

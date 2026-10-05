@@ -3,7 +3,7 @@ import type { SetupQuestion, SetupQuestionnaireProgress } from '../../domain/set
 export type { SetupApprovalCheckCandidate, SetupProjectCandidate, SetupDiscoveryStatus } from '../../domain/setup_questionnaire';
 export type { SetupQuestion } from '../../domain/setup_questionnaire';
 export type { SetupFeature } from '../../domain/setup';
-import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../../domain/setup_token_permissions';
+import type { SetupTokenPermissionProgress, SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../../domain/setup_token_permissions';
 import type { SetupCredentialStatus } from '../../domain/setup';
 
 export interface SetupQuestionExplanation {
@@ -58,6 +58,7 @@ export type WebSetupPrompt =
 
 export interface WebSetupPlan {
   readonly presentationDefaults: readonly { readonly group: string; readonly count: number }[];
+  readonly permissionProbes: readonly { readonly scope: 'repository' | 'organization'; readonly permission: string }[];
   readonly decisions: {
     readonly enabledCapabilities: readonly string[];
     readonly agentRouting: readonly { readonly role: string; readonly provider: string; readonly modelProvider: string; readonly model: string }[];
@@ -94,7 +95,8 @@ export interface WebSetupView {
   readonly message?: { tone: 'info' | 'success' | 'warning' | 'error'; text: string; link?: string;
     copyId?: WebSetupMessageCopyId; copyValues?: Readonly<Record<string, string>>;
     credentialChecks?: readonly { readonly name: string; readonly status: SetupCredentialStatus }[] };
-  readonly permissions?: { role: SetupTokenRole; requirements?: readonly SetupTokenPermissionRequirement[]; report?: SetupTokenPermissionReport };
+  readonly permissions?: { role: SetupTokenRole; requirements?: readonly SetupTokenPermissionRequirement[];
+    report?: SetupTokenPermissionReport; progress?: readonly SetupTokenPermissionProgress[] };
   readonly outcome?: 'complete' | 'partial' | 'blocked' | 'cancelled' | 'dry-run';
   readonly doctor?: { readonly status: 'running' | 'complete' | 'failed'; readonly healthy?: boolean;
     readonly pass?: number; readonly warn?: number; readonly fail?: number; readonly skipped?: number };

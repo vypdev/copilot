@@ -1,15 +1,189 @@
 # Setup PAT Permission Guidance and Verification
 
-- Status: Implemented — permission UX, deterministic provider mapping, scope-sensitive gating, coverage, and documentation gates complete
+- Status: Revision in progress — active capability probes and live progress are required before this gate can pass
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
 - Last verified: 2026-10-05
 - Owners: Copilot maintainers and setup operators
-- Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then report evidence-based permission checks without exposing or mutating credentials
+- Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then prove each selected read or write capability with bounded, visible operations
 - Related issues/PRs: none recorded
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, CLI accessibility
-- Open decisions blocking readiness: none
+- Open decisions blocking readiness: complete coverage of every write capability, interruption recovery, and human review of live provider behavior
+
+## 0. Acceptance correction (2026-10-05)
+
+This section supersedes the earlier read-only/write-acknowledgement design in
+sections 1, 4–7, 9–12, 14, and 16 wherever they conflict. The previous design
+is retained as implementation history until the active probes replace it. It
+does **not** describe an acceptable release gate: an operator's assertion that
+an unproved PAT grant exists cannot make the permission audit pass.
+
+### Capability evidence and result rules
+
+1. A required READ row runs a read of the exact resource family and scope. A
+   successful response with an empty collection is a successful read; an
+   error response is never interpreted as an empty collection. If the same
+   resource is anonymously public, the UI says *read succeeded; PAT grant not
+   independently established* rather than claiming the PAT has the grant.
+   Selected private Projects are checked at their exact identifiers after
+   selection; a public or empty organization list alone does not prove access
+   to a private selected Project.
+2. A required WRITE row must run a capability-specific create, read, and delete
+   cycle against a uniquely named disposable resource in the selected scope.
+   Successful READ alone never proves WRITE. One resource family cannot stand
+   in for another. A successful create with failed read or cleanup is **not**
+   Verified. The row names the failed phase and a bounded HTTP category,
+   without raw provider body, headers, token, or secret value.
+3. The bootstrap preview may display conditional requirements. After PAT entry,
+   bootstrap validates identity and required READ capabilities only; all WRITE
+   rows are marked deferred even when the provisional intent needs them. The
+   final capability audit runs **after** the operator approves the reviewed
+   plan and **before** any setup application or credential provisioning. The
+   plan must explicitly warn that temporary resources, organization objects,
+   workflow runs, or pull-request notifications may result from permission
+   checks and identify the exact probes selected. A revision or decline does
+   not start those probes. The workflow PAT
+   receives the same evidence standard. Where a capability has no isolated
+   disposable operation, setup blocks with a concrete explanation until an
+   equivalent operation is implemented; neither a generic confirmation prompt
+   nor `--confirm-unverifiable-write-permissions` constitutes evidence.
+4. The web and CLI show ordered, live events for identity validation and each
+   permission: pending, checking READ or creating/reading/deleting a temporary
+   resource, verified, failed, or interrupted. Concurrency is at most four
+   independent checks. The web publishes incremental revisions with an
+   accessible live region; every row contains text and an actionable,
+   sanitized result. Locale coverage is en/es/fr/pt; CLI remains English.
+5. A probe uses a random, namespaced resource name and create-only semantics
+   where GitHub provides them. It reads back the exact resource and deletes
+   only the exact object it created. Upsert-only Secret endpoints require a
+   404 preflight, a 201 create response, and an exact-name readback before
+   cleanup. No existing resource is changed. If the process times out, is
+   cancelled, crashes, or loses the cleanup response, record only the bounded
+   cleanup target and attempt id in a local, permission-restricted recovery
+   journal; resume cleanup before a new probe. An unresolved cleanup blocks
+   setup and is shown to the operator. Never persist the PAT or a test secret.
+6. Provider 401 and explicit permission-denial 403 are failures; rate limits,
+   SSO, ambiguous 403/404, network errors, malformed success bodies, and 5xx
+   remain indeterminate and block required work. A retry starts a new audit;
+   a stale asynchronous result cannot overwrite a newer run or a closed local
+   session. Secret-bearing values and raw provider messages never reach the
+   browser or terminal.
+
+### Planned permission-specific operations
+
+| Requirement | Disposable capability operation | Required cleanup |
+|---|---|---|
+| Repository / organization Variables WRITE | create a unique variable, GET exact name, DELETE exact name | verify absence; no overwrite |
+| Repository / organization Secrets WRITE | fetch public key, create unique encrypted secret, GET exact metadata, DELETE exact name | verify absence; no existing Secret values read |
+| Repository Issues WRITE | create unique label, GET label, DELETE label | verify absence |
+| Organization Issue Types WRITE | create unique disabled issue type, GET/list exact id, DELETE id | verify absence; org admin prerequisite reported separately |
+| Repository Contents WRITE | create unique disposable ref, GET exact ref, DELETE ref; use a file on that ref when needed to prove file writes | verify ref absence; no default-branch commit |
+| Repository Workflows WRITE | on the disposable ref, create a no-job workflow file, GET it, delete ref | verify ref absence; requires Contents WRITE too |
+| Repository Actions WRITE | after explicit plan approval, create a disposable ref, dispatch a registered workflow on that ref, GET the exact returned run ID, cancel if needed, DELETE the run, then delete the ref. The packaged credential-health workflow may run unchanged only when its remote bytes match the trusted packaged template and all job inputs default false; otherwise write a verified no-job override on the disposable ref before dispatch | report unavoidable run/audit trail; fallback requires Contents and Workflows WRITE; block if the isolated dispatch cannot be proved |
+| Repository Pull requests WRITE | open a draft PR from a disposable changed ref, GET exact PR, close PR and delete ref | report unavoidable PR audit trail and notifications |
+| Organization Projects WRITE | create a disposable Project, GET exact Project, delete it | verify absence; never edit an existing item |
+
+When a capability-specific operation needs another grant (for example,
+Workflows and Contents), the UI displays that dependency and tests each named
+permission separately. The audit cannot infer the missing grant from another
+probe's success or from `X-Accepted-GitHub-Permissions`, which documents
+endpoint requirements rather than the current token's grants.
+
+### New acceptance budget and executable gates
+
+The original 135 cases remain a historical baseline. Add **60 distinct
+cases**: 18 read outcomes (successful empty/nonempty, public/private,
+selected Project, denial/ambiguity), 24 write transactions (create/read/delete
+for each supported scope and rollback failure), 10 progress and session cases
+(ordered concurrency, keyboard/screen reader, cancel, timeout, stale result),
+and 8 security/recovery cases (collision, ambiguous create, crash journal,
+redaction). Total target: **195** cases, traceable in the acceptance matrix.
+All provider tests use local fixtures or doubles. A live PAT is never placed
+in source, test fixtures, logs, command arguments, CI, or screenshots. The
+human review gate remains open until provider behavior, localized web views,
+and cleanup are observed with disposable resources on an explicitly chosen
+test repository. Successful fixture tests alone do not pass that gate.
+
+### 60-case permission acceptance matrix
+
+`Fixture` means the named automated suite has an assertion for the case; it
+does not claim live GitHub behavior. `Open` requires a new automated test.
+`Human` requires an observed review and remains open. Test suites: `R` =
+`src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts`,
+`W` = `src/infrastructure/__tests__/setup_permission_resource_probes.test.ts`,
+`B` = `src/cli/__tests__/web_setup_bridge.test.ts`, and `Z` =
+`src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts`.
+The original 350-case web-assistant ledger remains a separate baseline in
+`specs/local-web-setup-assistant-acceptance.json`; these cases extend the PAT
+capability contract without relabelling its 42 open gates.
+
+| ID | Acceptance assertion | State / evidence |
+|---|---|---|
+| R01 | Private repository metadata GET verifies READ | Fixture R |
+| R02 | Public repository GET is usable but does not claim PAT grant | Fixture R |
+| R03 | Private empty commit list verifies Contents READ | Fixture R |
+| R04 | Public empty commit list remains public-only evidence | Fixture R |
+| R05 | Empty organization Projects list is a successful, public-only read | Fixture R |
+| R06 | Non-public organization Project result verifies Projects READ | Fixture R |
+| R07 | Non-public Project on a second bounded page is found | Fixture R |
+| R08 | Two public Project pages remain available without grant proof | Fixture R |
+| R09 | 401 blocks as missing | Fixture R |
+| R10 | Explicit permission-denial 403 blocks as missing | Fixture R |
+| R11 | Rate-limit/SSO/ambiguous 403 never passes | Fixture R |
+| R12 | 404 is not an empty successful read | Fixture R |
+| R13 | Unrelated 409 does not pass | Fixture R |
+| R14 | Malformed provider success does not pass | Fixture R |
+| R15 | Stalled read times out | Fixture R |
+| R16 | Cross-origin Projects pagination never receives the PAT | Fixture R |
+| R17 | Members READ requires active self-membership | Fixture R |
+| R18 | A selected private Project is read by exact number after selection | Fixture R |
+| W01 | Repository Variable create/read/delete | Fixture W |
+| W02 | Organization Variable create/read/delete | Fixture W |
+| W03 | Repository Secret encrypted create/metadata/delete | Fixture W |
+| W04 | Organization Secret encrypted create/metadata/delete | Fixture W |
+| W05 | Secret upsert collision never deletes the unknown value | Fixture W |
+| W06 | Repository label is cleaned after readback mismatch | Fixture W |
+| W07 | Repository label succeeds on create/read/delete | Fixture W |
+| W08 | Disabled organization Issue Type is deleted by exact ID | Fixture W |
+| W09 | Contents WRITE disposable ref is removed | Fixture W |
+| W10 | Workflows WRITE disposable workflow ref is removed | Fixture W |
+| W11 | Actions fallback dispatches verified no-job branch workflow and deletes run/ref | Fixture W |
+| W12 | Trusted packaged health workflow dispatch needs no workflow-file rewrite | Fixture W |
+| W13 | Rejected Actions dispatch cleans its branch without a false run claim | Fixture W |
+| W14 | Active Actions run is cancelled and deleted before branch cleanup | Fixture W |
+| W15 | Crash after accepted Actions dispatch recovers exact run/ref | Fixture W |
+| W16 | Draft PR is read, closed and its branch deleted | Fixture W |
+| W17 | Rejected PR creation deletes only its temporary branch | Fixture W |
+| W18 | Crash after PR creation finds and closes the exact draft | Fixture W |
+| W19 | Organization Project create/read/delete never edits an existing item | Fixture W |
+| W20 | Project crash before ID journal update recovers by unique title | Fixture W |
+| W21 | Failed cleanup retains journal and blocks new setup | Fixture W |
+| W22 | Ambiguous create response recovers without deleting an unrelated resource | Fixture W |
+| W23 | An existing Secret at the generated name is never deleted | Fixture W |
+| W24 | Workflow PAT write set uses the same post-plan transaction rule | Fixture `src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts` |
+| P01 | At most four probes run concurrently | Fixture R |
+| P02 | Results retain requirement order under concurrency | Fixture R |
+| P03 | Browser bridge publishes each bounded phase for one permission | Fixture B |
+| P04 | Unknown role/row, late phase and provider prose are dropped | Fixture B |
+| P05 | Cancellation during the audit stops before setup application | Fixture Z |
+| P06 | Expiration during the audit stops before setup application | Fixture Z |
+| P07 | Progress wording and error categories are verified in en/es/fr/pt | Fixture `src/cli/__tests__/web_setup_catalog.test.ts` |
+| P08 | Keyboard and screen-reader progress is observed in all result states | Human |
+| P09 | 200% zoom and responsive progress are observed in light/dark | Human |
+| P10 | Pending cleanup is visible on the result screen | Fixture `src/cli/__tests__/web_setup_components.test.ts` |
+| S01 | Journal persists no token or test Secret | Fixture W |
+| S02 | Secret probe encrypts value and checks metadata only | Fixture W |
+| S03 | Secret preflight and 201 response prevent accidental deletion on collision | Fixture W |
+| S04 | Interrupted Variable cleanup resumes from journal | Fixture W |
+| S05 | Interrupted Project cleanup resumes without a saved ID | Fixture W |
+| S06 | Pagination rejects cross-origin URL with the PAT | Fixture R |
+| S07 | Journal rejects forged scope/name combinations | Fixture W |
+| S08 | Windows journal ACL and service-account recovery are observed | Human |
+
+The matrix records 57 fixture assertions and three explicitly open human
+observations. Fixture coverage does not establish live GitHub behavior or close
+the separate 42 open web-assistant cases.
 
 ## 1. Executive summary
 

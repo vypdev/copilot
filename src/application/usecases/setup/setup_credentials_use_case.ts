@@ -206,17 +206,13 @@ export class SetupCredentialsUseCase {
                     requirements: workflowTokenPermissions,
                 });
                 this.permissionPresenter?.showReport(report);
-                const permissionAccepted = report.ready
-                    || (report.confirmationRequired
-                        && await this.prompt.confirmUnverifiableTokenPermissions?.(report) === true);
+                const permissionAccepted = report.ready;
                 check = {
                     name: requirement.name,
                     status: permissionAccepted && report.identityStatus === 'valid' ? 'valid' : 'invalid',
                     message: permissionAccepted
-                        ? report.ready
-                            ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
-                            : 'GitHub identity and required reads were verified; the operator explicitly acknowledged unverifiable write permissions.'
-                        : 'The workflow PAT has missing, unverifiable-read, or unconfirmed required GitHub access.',
+                        ? 'GitHub identity, repository access, and required capabilities were checked.'
+                        : 'The workflow PAT did not pass every required GitHub capability check.',
                     ...(report.account ? { account: report.account } : {}),
                 };
             } else {

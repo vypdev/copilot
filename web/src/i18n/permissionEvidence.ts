@@ -5,15 +5,19 @@ type PermissionRequirement = NonNullable<NonNullable<WebSetupView['permissions']
 
 /** Human meaning of bounded permission evidence; never renders provider text. */
 export function permissionEvidence(
-  check: Pick<PermissionRequirement, 'scope' | 'permission' | 'level'> &
+  check: Pick<PermissionRequirement, 'scope' | 'permission' | 'level' | 'applicability'> &
     { status: unknown; publicReadEvidence?: unknown },
   locale: SetupLocale,
 ): string {
   if (check.status === 'verified') {
-    return tr(check.scope === 'organization' && check.permission === 'Projects' && check.level === 'read'
-      ? 'permissionEvidencePrivateProject' : 'permissionEvidenceVerified', locale);
+    return tr(check.level === 'write' ? 'permissionEvidenceVerifiedWrite'
+      : check.scope === 'organization' && check.permission === 'Projects' && check.level === 'read'
+        ? 'permissionEvidencePrivateProject' : 'permissionEvidenceVerified', locale);
   }
   if (check.status === 'missing') return tr('permissionEvidenceMissing', locale);
+  if (check.applicability === 'conditional' && check.level === 'write') return tr('permissionEvidenceConditional', locale);
+  if (check.status === 'available') return tr(check.publicReadEvidence === 'public-organization-projects'
+    ? 'permissionEvidencePublicProjects' : 'permissionEvidencePublic', locale);
   if (check.level === 'write') return tr('permissionEvidenceWrite', locale);
   if (check.publicReadEvidence === 'public-organization-projects') return tr('permissionEvidencePublicProjects', locale);
   if (check.publicReadEvidence === 'public-repository') return tr('permissionEvidencePublic', locale);

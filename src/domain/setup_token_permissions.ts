@@ -2,7 +2,17 @@ export type SetupTokenRole = 'setup' | 'workflow';
 export type SetupTokenPermissionScope = 'repository' | 'organization';
 export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
-export type SetupTokenPermissionStatus = 'verified' | 'missing' | 'unverifiable';
+export type SetupTokenPermissionStatus = 'verified' | 'available' | 'missing' | 'unverifiable';
+export type SetupTokenPermissionProbePhase = 'checking' | 'creating' | 'reading' | 'deleting' | 'verified' | 'failed' | 'skipped';
+export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'unsupported' | `http-${number}`;
+
+/** Secret-free, bounded progress for one permission. Never contains provider prose. */
+export interface SetupTokenPermissionProgress {
+    readonly role: SetupTokenRole;
+    readonly requirementId: string;
+    readonly phase: SetupTokenPermissionProbePhase;
+    readonly detail?: SetupTokenPermissionProgressDetail;
+}
 export type SetupTokenPublicReadEvidence = 'public-repository' | 'public-organization-projects';
 
 export type SetupTokenPermissionProbe =
@@ -40,6 +50,10 @@ export interface SetupTokenPermissionCheck extends SetupTokenPermissionRequireme
     operationallyAvailable?: true;
     /** Adapter-derived public-read provenance, never a PAT permission claim. */
     publicReadEvidence?: SetupTokenPublicReadEvidence;
+    /** Set only after a matching temporary create/read/delete cycle completed. */
+    writeProof?: 'transaction';
+    /** A disposable resource may remain and must be recovered before retrying. */
+    cleanupPending?: true;
 }
 
 export interface SetupTokenPermissionReport {

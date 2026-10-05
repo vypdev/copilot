@@ -187,9 +187,10 @@ describe('SetupWizardUseCase', () => {
   });
 
   it('returns exit zero and no configuration when confirmation is declined', async () => {
-    const result = await new SetupWizardUseCase(dependencies({
+    const deps = dependencies({
       confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'declined' }) },
-    })).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    });
+    const result = await new SetupWizardUseCase(deps).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
 
     expect(result).toEqual(expect.objectContaining({
       status: 'cancelled',
@@ -197,18 +198,48 @@ describe('SetupWizardUseCase', () => {
       exitCode: 0,
     }));
     expect(result).not.toHaveProperty('configuration');
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
   });
 
   it('returns exit 130 when terminal input is interrupted during confirmation', async () => {
-    const result = await new SetupWizardUseCase(dependencies({
+    const deps = dependencies({
       confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'cancelled' }) },
-    })).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
+    });
+    const result = await new SetupWizardUseCase(deps).execute({ mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } } });
 
     expect(result).toEqual(expect.objectContaining({
       status: 'cancelled',
       reason: 'confirmation-cancelled',
       exitCode: 130,
     }));
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
+  });
+
+  it('does not continue after a browser cancellation arrives during the temporary permission audit', async () => {
+    let liveness: 'active' | 'cancelled' = 'active';
+    const deps = dependencies({
+      sessionLiveness: () => liveness,
+      finalPermissionAudit: { audit: jest.fn(async () => { liveness = 'cancelled'; return { status: 'accepted' }; }) },
+    });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+    });
+    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ status: 'cancelled', exitCode: 130 });
+    expect(result).not.toHaveProperty('plan');
+  });
+
+  it('blocks application when the local web session expires during the temporary permission audit', async () => {
+    let liveness: 'active' | 'expired' = 'active';
+    const deps = dependencies({
+      sessionLiveness: () => liveness,
+      finalPermissionAudit: { audit: jest.fn(async () => { liveness = 'expired'; return { status: 'accepted' }; }) },
+    });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+    });
+    expect(result).toMatchObject({ status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1 });
+    expect(result).not.toHaveProperty('plan');
   });
 
   it('returns exit 130 and no plan when interactive collection is cancelled', async () => {
@@ -426,14 +457,11 @@ describe('SetupWizardUseCase', () => {
     }));
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
-    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledWith(
-      expect.objectContaining({ manageRepositoryVariables: true }),
-      { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
-    );
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
   });
 
   it('returns the normalized configuration and bounded facts when the final permission audit rejects', async () => {
-    const blockedRemote = { ...remote, repositoryVariablesAccess: 'unavailable' as const };
+    const blockedRemote = { ...remote };
     const deps = dependencies({
       remoteConfiguration: { inspect: jest.fn().mockResolvedValue(blockedRemote) },
       finalPermissionAudit: { audit: jest.fn().mockResolvedValue({
@@ -452,8 +480,8 @@ describe('SetupWizardUseCase', () => {
       errors: ['Grant the required setup PAT access.'],
       remoteConfiguration: { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
     });
-    expect(deps.planPresenter.present).not.toHaveBeenCalled();
-    expect(deps.confirmation.confirm).not.toHaveBeenCalled();
+    expect(deps.planPresenter.present).toHaveBeenCalled();
+    expect(deps.confirmation.confirm).toHaveBeenCalled();
   });
 
   it('does not disguise unexpected audit transport failures as an ordinary denied permission', async () => {
@@ -463,7 +491,7 @@ describe('SetupWizardUseCase', () => {
     await expect(new SetupWizardUseCase(deps).execute({
       mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
     })).rejects.toThrow('provider transport unavailable');
-    expect(deps.planPresenter.present).not.toHaveBeenCalled();
+    expect(deps.planPresenter.present).toHaveBeenCalled();
   });
 
   it('replaces provisional workflow status using the selected main branch before the final audit', async () => {
@@ -522,7 +550,7 @@ describe('SetupWizardUseCase', () => {
       errors: [expect.stringContaining('Repository Variable inventory is unavailable')],
       remoteConfiguration: { ...blockedRemote, credentialHealthWorkflow: 'unavailable' },
     }));
-    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
   });
@@ -547,7 +575,7 @@ describe('SetupWizardUseCase', () => {
     expect(collect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       remote: expect.objectContaining({ repositoryVariablesAccess: 'unavailable' }),
     }), expect.objectContaining({ refresh: expect.any(Function) }));
-    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
     expect(JSON.stringify(result)).not.toContain('sensitive provider body');
@@ -586,7 +614,7 @@ describe('SetupWizardUseCase', () => {
 
     expect(result).toMatchObject({ status: 'blocked', exitCode: 1,
       errors: expect.arrayContaining([expect.stringContaining('Repository Variable inventory is unavailable')]) });
-    expect(deps.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
     expect(deps.planPresenter.present).not.toHaveBeenCalled();
     expect(deps.confirmation.confirm).not.toHaveBeenCalled();
   });

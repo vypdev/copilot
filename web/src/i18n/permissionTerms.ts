@@ -5,7 +5,7 @@ import { namesFr, termsFr } from './permissionTerms/fr';
 import { namesPt, termsPt } from './permissionTerms/pt';
 
 export type PermissionTerm = 'repository' | 'organization' | 'read' | 'write'
-  | 'required' | 'conditional' | 'verified' | 'missing' | 'unverifiable';
+  | 'required' | 'conditional' | 'verified' | 'available' | 'missing' | 'unverifiable';
 export type PermissionName = 'Metadata' | 'Contents' | 'Secrets' | 'Variables' | 'Issues'
   | 'Actions' | 'Checks' | 'Administration' | 'Workflows' | 'Issue Types'
   | 'Projects' | 'Pull requests' | 'Members';
@@ -24,7 +24,7 @@ export function permissionName(locale: SetupLocale, name: string): string {
 }
 
 export function permissionStatus(locale: SetupLocale, status: unknown): string | undefined {
-  if (status === 'verified' || status === 'missing' || status === 'unverifiable') return terms[locale][status];
+  if (status === 'verified' || status === 'available' || status === 'missing' || status === 'unverifiable') return terms[locale][status];
   return undefined;
 }
 

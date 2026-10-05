@@ -16,8 +16,21 @@ import { agentRoleName, agentRoleNames } from '../../../web/src/i18n/agentRoleNa
 import { projectTransitionKey } from '../../../web/src/i18n/projectTransitions';
 import { validationCopy } from '../web_setup_adapters';
 import { translatedQuestionLabel } from '../../application/policies/setup_question_labels_fr_pt';
+import { permissionProgressCopy, permissionProgressError } from '../../../web/src/i18n/permissionProgress';
 
 describe('web setup localization catalog', () => {
+  test('permission progress and bounded errors have four complete localized paths', () => {
+    for (const locale of setupLocales) {
+      for (const phase of ['pending', 'checking', 'creating', 'reading', 'deleting', 'verified', 'failed', 'skipped'] as const) {
+        expect(permissionProgressCopy(locale, phase).trim()).not.toBe('');
+      }
+      expect(permissionProgressError(locale, 'http-403')).toBe('GitHub HTTP 403');
+      for (const detail of ['unavailable', 'cleanup-pending', 'unsupported'] as const) {
+        expect(permissionProgressError(locale, detail).trim()).not.toBe('');
+      }
+      expect(permissionProgressError(locale, 'secret provider body')).not.toContain('secret provider body');
+    }
+  });
   test('English is the default and only the four selected locales are advertised', () => {
     expect(setupLocales).toEqual(['en', 'es', 'fr', 'pt']);
     expect(es).toBe(setupCatalogs.es);
@@ -86,7 +99,7 @@ describe('web setup localization catalog', () => {
   });
 
   test('permission evidence never turns an inconclusive read or write into a verified claim', () => {
-    const base = { scope: 'organization' as const, permission: 'Projects', level: 'read' as const };
+    const base = { scope: 'organization' as const, permission: 'Projects', level: 'read' as const, applicability: 'required' as const };
     for (const locale of setupLocales) {
       expect(permissionEvidence({ ...base, status: 'verified' }, locale))
         .toBe(tr('permissionEvidencePrivateProject', locale));
@@ -203,18 +216,23 @@ describe('web setup localization catalog', () => {
   });
 
   test('every literal permission reason and condition has exactly one translated key', () => {
-    const path = resolve(__dirname, '../../application/policies/setup_token_permission_policy.ts');
-    const file = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
     const emitted = new Set<string>();
-    const collect = (node: ts.Node): void => {
-      if (ts.isStringLiteral(node)) emitted.add(node.text);
-      else ts.forEachChild(node, collect);
-    };
-    const visit = (node: ts.Node): void => {
-      if (ts.isPropertyAssignment(node) && ['reason', 'condition'].includes(node.name.getText(file))) collect(node.initializer);
-      ts.forEachChild(node, visit);
-    };
-    visit(file);
+    for (const source of [
+      '../../application/policies/setup_token_permission_policy.ts',
+      '../../application/usecases/setup/verify_setup_pat_bootstrap_use_case.ts',
+    ]) {
+      const path = resolve(__dirname, source);
+      const file = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
+      const collect = (node: ts.Node): void => {
+        if (ts.isStringLiteral(node)) emitted.add(node.text);
+        else ts.forEachChild(node, collect);
+      };
+      const visit = (node: ts.Node): void => {
+        if (ts.isPropertyAssignment(node) && ['reason', 'condition'].includes(node.name.getText(file))) collect(node.initializer);
+        ts.forEachChild(node, visit);
+      };
+      visit(file);
+    }
     expect([...permissionTexts].sort()).toEqual([...emitted].sort());
     for (const locale of ['es', 'fr', 'pt'] as const) {
       expect(Object.keys(permissionCopyCatalogs[locale]).sort()).toEqual([...permissionTexts].sort());

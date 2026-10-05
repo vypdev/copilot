@@ -22,29 +22,32 @@ function harness() {
 }
 
 describe('VerifySetupPatBootstrapUseCase', () => {
-  test('audits read-only and returns the authenticated operator account', async () => {
+  test('audits capabilities and returns the authenticated operator account', async () => {
     const { ports, useCase } = harness();
     expect(await useCase.execute(request)).toBe('operator');
     expect(ports.permissions.inspect).toHaveBeenCalledWith({
-      role: 'setup', owner: 'owner', repository: 'repo', token: 'test-token', requirements: request.requirements,
+      role: 'setup', owner: 'owner', repository: 'repo', token: 'test-token',
+      requirements: request.requirements.map(requirement => requirement.level === 'write'
+        ? { ...requirement, applicability: 'conditional', condition: 'After setup plan approval' }
+        : requirement),
     });
     expect(ports.presenter.showReport).toHaveBeenCalledWith(report);
     expect(ports.confirmAccount).toHaveBeenCalledWith('operator');
     expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
   });
 
-  test('requires explicit confirmation for unverifiable write grants', async () => {
+  test('blocks unverifiable write grants even if legacy confirmation is offered', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false, confirmationRequired: true });
-    expect(await useCase.execute(request)).toBe('operator');
-    expect(ports.confirmUnverifiable).toHaveBeenCalledTimes(1);
+    await expect(useCase.execute(request)).rejects.toThrow('did not pass every required capability check');
+    expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
   });
 
   test('declined unverifiable grants block before account confirmation', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false, confirmationRequired: true });
     jest.spyOn(ports, 'confirmUnverifiable').mockResolvedValue(false);
-    await expect(useCase.execute(request)).rejects.toThrow('missing or unconfirmed required access');
+    await expect(useCase.execute(request)).rejects.toThrow('did not pass every required capability check');
     expect(ports.showCorrectedLink).toHaveBeenCalledWith(expect.stringContaining('target_name=owner'));
     expect(ports.confirmAccount).not.toHaveBeenCalled();
   });
@@ -52,14 +55,14 @@ describe('VerifySetupPatBootstrapUseCase', () => {
   test.each(['invalid', 'unverifiable'] as const)('%s identity blocks regardless of a ready permission table', async identityStatus => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, identityStatus });
-    await expect(useCase.execute(request)).rejects.toThrow('missing or unconfirmed required access');
+    await expect(useCase.execute(request)).rejects.toThrow('did not pass every required capability check');
     expect(ports.confirmAccount).not.toHaveBeenCalled();
   });
 
   test('manual PAT failure does not imply a guided correction URL', async () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false });
-    await expect(useCase.execute({ ...request, guided: false })).rejects.toThrow('missing or unconfirmed required access');
+    await expect(useCase.execute({ ...request, guided: false })).rejects.toThrow('did not pass every required capability check');
     expect(ports.showCorrectedLink).not.toHaveBeenCalled();
   });
 

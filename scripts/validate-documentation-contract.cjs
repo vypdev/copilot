@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
-const { publicPatDocumentationSources, findUnsafePatShellExamples } = require('./documentation_pat_exception_policy.cjs');
+const { publicPatDocumentationSources, findShellExamples } = require('./documentation_pat_exception_policy.cjs');
 const { normalizeDocumentationPath, normalizeDocumentationText } = require('./documentation_checkout_text.cjs');
 
 function readText(file) {
@@ -250,31 +250,24 @@ const setupCliDocumentation = docsByFile.get('single-actions/workflow-and-cli.md
 const setupAutomationSection = setupCliDocumentation
   .split('For automation, use the same defaults without prompts:')[1]
   ?.split('Without an explicit `--agent-guidance`')[0] ?? '';
-const genericSetupAutomation = setupAutomationSection
-  .split('Run these commands without a permission exception first.')[0] ?? '';
-const inspectedPatRecovery = setupAutomationSection
-  .split('Run these commands without a permission exception first.')[1] ?? '';
-const normalizedInspectedPatRecovery = inspectedPatRecovery.replace(/\s+/g, ' ');
 const unattendedCredentialProvisioning = setupCliDocumentation
   .split('For unattended credential provisioning')[1]
   ?.split('The explicit `--workflow-pat`')[0] ?? '';
 const unverifiableWriteAcknowledgement = '--confirm-unverifiable-write-permissions';
-if (!genericSetupAutomation || genericSetupAutomation.includes(unverifiableWriteAcknowledgement)) {
-  errors.push('single-actions/workflow-and-cli.mdx: generic automation commands must omit unverifiable-write acknowledgement');
+if (!setupAutomationSection.includes('temporary create/read/delete')
+  || !setupAutomationSection.includes('review those effects in the plan before approving it')) {
+  errors.push('single-actions/workflow-and-cli.mdx: automation setup must disclose temporary write tests and GitHub history');
 }
 if (!unattendedCredentialProvisioning || unattendedCredentialProvisioning.includes(unverifiableWriteAcknowledgement)) {
   errors.push('single-actions/workflow-and-cli.mdx: generic credential-provisioning command must omit unverifiable-write acknowledgement');
 }
-if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements against both PATs\' settings')
-  || !normalizedInspectedPatRecovery.includes('Repeat the same selections')
-  || !normalizedInspectedPatRecovery.includes('same configuration file, flags, and credentials')
-  || !normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex ${unverifiableWriteAcknowledgement}`)
-  || normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
-  errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must preserve the original setup plan and be adjacent to the exceptional command');
-}
 const publicShellDocumentation = publicPatDocumentationSources(readmeContent, docsByFile);
-for (const { file, line } of findUnsafePatShellExamples(publicShellDocumentation, unverifiableWriteAcknowledgement)) {
-  errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
+for (const [file, source] of publicShellDocumentation) {
+  for (const example of findShellExamples(source)) {
+    if (example.body.includes(unverifiableWriteAcknowledgement)) {
+      errors.push(`${file}:${source.slice(0, example.start).split('\n').length}: shell example must not use the rejected write-permission bypass`);
+    }
+  }
 }
 
 requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');
@@ -310,7 +303,8 @@ requireText('authentication.mdx', 'Workflows write and Contents write appear onl
 requireText('authentication.mdx', 'setup repeats both Contents', 'selected-ref workflow inspection before final audit');
 requireText('authentication.mdx', 'reports a bounded blocked result with the', 'final PAT audit structured denial');
 requireText('authentication.mdx', 'on an independently available agent-backed single action', 'members-only standalone action permission');
-requireText('authentication.mdx', 'all required reads are verified or usable', 'public-read operational acknowledgement');
+requireText('authentication.mdx', 'every required read succeeded or is positively usable', 'public-read operational acknowledgement');
+requireText('authentication.mdx', 'every required write completed its own temporary create/read/delete cycle', 'required write transaction acknowledgement');
 requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');
 requireText('security-operations/operations/troubleshooting.mdx', 'For the repository Contents row in the PAT permission table, setup probes', 'PAT Contents permission probe distinction');
 requireText('security-operations/operations/troubleshooting.mdx', "repository root (`path: ''`)", 'workflow-presence Contents root probe');

@@ -49912,7 +49912,7 @@ exports.reconcileSetupTokenPermissionEvidence = reconcileSetupTokenPermissionEvi
 exports.isOperationallyAvailableSetupRead = isOperationallyAvailableSetupRead;
 exports.isAttestableProjectsRead = isAttestableProjectsRead;
 const NO_SAFE_EVIDENCE_MESSAGE = 'No safe permission evidence was returned for this requirement.';
-const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access cannot be verified with a safe read-only permission probe.';
+const WRITE_NOT_VERIFIABLE_MESSAGE = 'Write access requires a completed temporary create/read/delete check.';
 /**
  * Reconciles untrusted adapter evidence against immutable permission requirements.
  * Provider output can describe evidence, but cannot redefine what setup requires.
@@ -49925,19 +49925,24 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
         if (candidates.length !== 1 || !isMatchingEvidence(requirement, candidate)) {
             return unverifiable(requirement, NO_SAFE_EVIDENCE_MESSAGE);
         }
-        if (requirement.level === 'write' && candidate.status === 'verified') {
+        if (requirement.level === 'write' && candidate.status === 'verified'
+            && candidate.writeProof !== 'transaction') {
             return unverifiable(requirement, WRITE_NOT_VERIFIABLE_MESSAGE);
         }
         return {
             ...requirement,
             status: candidate.status,
             message: candidate.message,
-            ...(candidate.status === 'unverifiable'
+            ...(requirement.level === 'write' && candidate.status === 'verified'
+                && candidate.writeProof === 'transaction' ? { writeProof: 'transaction' } : {}),
+            ...(requirement.level === 'write' && candidate.status === 'unverifiable'
+                && candidate.cleanupPending === true ? { cleanupPending: true } : {}),
+            ...(candidate.status === 'available'
                 && candidate.operationallyAvailable === true
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
                 ? { operationallyAvailable: true, publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
-            ...(candidate.status === 'unverifiable'
+            ...(candidate.status === 'available'
                 && isAttestableProjectsRead(requirement, candidate.publicReadEvidence)
                 ? { publicReadEvidence: candidate.publicReadEvidence }
                 : {}),
@@ -49946,11 +49951,11 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
 }
 /** Limits positive usability without promoting publicly readable evidence to verified PAT access. */
 function isOperationallyAvailableSetupRead(requirement, evidence) {
-    return requirement.level === 'read'
-        && requirement.scope === 'repository'
+    return requirement.level === 'read' && ((requirement.scope === 'repository'
         && evidence === 'public-repository'
         && PUBLIC_REPOSITORY_READ_PROBES.has(requirement.probe)
-        && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe;
+        && requirement.permission.toLowerCase().replace(/ /gu, '-') === requirement.probe)
+        || isAttestableProjectsRead(requirement, evidence));
 }
 function isAttestableProjectsRead(requirement, evidence) {
     return requirement.level === 'read'
@@ -49975,12 +49980,16 @@ function isMatchingEvidence(requirement, value) {
         && typeof value.message === 'string'
         && value.message.trim().length > 0
         && (value.operationallyAvailable === undefined || value.operationallyAvailable === true)
+        && (value.writeProof === undefined || (requirement.level === 'write'
+            && value.status === 'verified' && value.writeProof === 'transaction'))
+        && (value.cleanupPending === undefined || (requirement.level === 'write'
+            && value.status === 'unverifiable' && value.cleanupPending === true))
         && (value.publicReadEvidence === undefined
-            || (value.status === 'unverifiable' && (isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence)
+            || (value.status === 'available' && (isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence)
                 || isAttestableProjectsRead(requirement, value.publicReadEvidence))));
 }
 function isPermissionStatus(value) {
-    return value === 'verified' || value === 'missing' || value === 'unverifiable';
+    return value === 'verified' || value === 'available' || value === 'missing' || value === 'unverifiable';
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -56446,14 +56455,15 @@ class AuditConfiguredSetupPatUseCase {
         const report = await this.ports.permissions.inspect({
             role: 'setup', owner: this.context.owner, repository: this.context.repository,
             token: this.context.token, requirements: required,
+            ...(configuration.projects.ids ? { selectedProjectNumbers: configuration.projects.ids } : {}),
         });
         this.ports.presenter.showReport(report);
-        const accepted = report.ready || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+        const accepted = report.ready;
         if (!accepted || report.identityStatus !== 'valid') {
             if (this.context.guided)
                 this.showCorrectedLink(required);
             return { status: 'blocked', errors: [
-                    'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
+                    'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
                 ] };
         }
         return { status: 'accepted' };
@@ -57303,17 +57313,13 @@ class SetupCredentialsUseCase {
                     requirements: workflowTokenPermissions,
                 });
                 this.permissionPresenter?.showReport(report);
-                const permissionAccepted = report.ready
-                    || (report.confirmationRequired
-                        && await this.prompt.confirmUnverifiableTokenPermissions?.(report) === true);
+                const permissionAccepted = report.ready;
                 check = {
                     name: requirement.name,
                     status: permissionAccepted && report.identityStatus === 'valid' ? 'valid' : 'invalid',
                     message: permissionAccepted
-                        ? report.ready
-                            ? 'GitHub identity, repository access, and safely verifiable permissions were checked.'
-                            : 'GitHub identity and required reads were verified; the operator explicitly acknowledged unverifiable write permissions.'
-                        : 'The workflow PAT has missing, unverifiable-read, or unconfirmed required GitHub access.',
+                        ? 'GitHub identity, repository access, and required capabilities were checked.'
+                        : 'The workflow PAT did not pass every required GitHub capability check.',
                     ...(report.account ? { account: report.account } : {}),
                 };
             }
@@ -57682,11 +57688,12 @@ exports.SetupSessionCoordinator = SetupSessionCoordinator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupTokenPermissionsUseCase = void 0;
 const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
-/** Validates PAT identity first, then runs only read-only permission probes. */
+/** Validates PAT identity first, then runs scoped capability probes. */
 class SetupTokenPermissionsUseCase {
-    constructor(credentials, permissions) {
+    constructor(credentials, permissions, onProgress) {
         this.credentials = credentials;
         this.permissions = permissions;
+        this.onProgress = onProgress;
     }
     async inspect(request) {
         const identity = await this.credentials.validateSetupPat(request.owner, request.repository, request.token);
@@ -57708,22 +57715,21 @@ class SetupTokenPermissionsUseCase {
                 confirmationRequired: false,
             };
         }
-        const evidence = await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements);
+        const evidence = this.onProgress
+            ? await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, this.onProgress, request.selectedProjectNumbers)
+            : await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, undefined, request.selectedProjectNumbers);
         const checks = (0, setup_token_permission_evidence_policy_1.reconcileSetupTokenPermissionEvidence)(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');
         const requiredWrites = requiredChecks.filter(check => check.level === 'write');
         const readUsable = (check) => (check.status === 'verified' && check.level === 'read')
-            || (check.status === 'unverifiable' && check.level === 'read'
+            || (check.status === 'available' && check.level === 'read'
                 && (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(check, check.publicReadEvidence)
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
-        const ready = readsUsable && requiredWrites.length === 0;
-        const readsConfirmable = requiredReads.every(check => readUsable(check)
-            || (check.status === 'unverifiable' && (0, setup_token_permission_evidence_policy_1.isAttestableProjectsRead)(check, check.publicReadEvidence)));
-        const unverifiedAccess = requiredReads.some(check => !readUsable(check)) || requiredWrites.length > 0;
-        const confirmationRequired = readsConfirmable && unverifiedAccess
-            && requiredWrites.every(check => check.status === 'unverifiable');
+        const ready = readsUsable && requiredWrites.every(check => check.status === 'verified'
+            && check.writeProof === 'transaction');
+        const confirmationRequired = false;
         return {
             role: request.role,
             ...(identity.account ? { account: identity.account } : {}),
@@ -57755,6 +57761,7 @@ const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_project_selection_policy_1 = __nccwpck_require__(73750);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -57873,17 +57880,6 @@ class SetupWizardUseCase {
             }
             remoteConfiguration = { ...remoteConfiguration, credentialHealthWorkflow: selectedWorkflowState };
         }
-        const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
-        if (audit.status === 'blocked') {
-            return {
-                status: 'blocked',
-                reason: 'setup-permissions-unavailable',
-                exitCode: 1,
-                configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration),
-                errors: audit.errors,
-                ...(remoteConfiguration ? { remoteConfiguration } : {}),
-            };
-        }
         if (remoteConfiguration) {
             const remoteStorageErrors = [
                 ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration),
@@ -57955,6 +57951,9 @@ class SetupWizardUseCase {
             }
         }
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, approvalReadiness);
+        plan.permissionProbes = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration)
+            .filter(item => item.applicability === 'required' && item.level === 'write')
+            .map(item => ({ scope: item.scope, permission: item.permission }));
         if (basicSkippedQuestionIds.length) {
             const byGroup = new Map();
             for (const item of (0, setup_questionnaire_policy_1.setupQuestionContentInventory)()) {
@@ -57985,6 +57984,35 @@ class SetupWizardUseCase {
                 status: 'cancelled',
                 reason: decision.kind === 'cancelled' ? 'confirmation-cancelled' : 'confirmation-declined',
                 exitCode: decision.kind === 'cancelled' ? 130 : 0,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}),
+            };
+        }
+        if (this.dependencies.sessionLiveness?.() === 'cancelled') {
+            return { status: 'cancelled', reason: 'confirmation-cancelled', exitCode: 130,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
+        if (this.dependencies.sessionLiveness?.() === 'expired') {
+            return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+                configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), errors: ['The local setup session expired before permission checks began.'],
+                ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
+        const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+        if (this.dependencies.sessionLiveness?.() === 'cancelled') {
+            return { status: 'cancelled', reason: 'confirmation-cancelled', exitCode: 130,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
+        if (this.dependencies.sessionLiveness?.() === 'expired') {
+            return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+                configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), errors: ['The local setup session expired during permission checks.'],
+                ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
+        if (audit.status === 'blocked') {
+            return {
+                status: 'blocked',
+                reason: 'setup-permissions-unavailable',
+                exitCode: 1,
+                configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration),
+                errors: audit.errors,
                 ...(remoteConfiguration ? { remoteConfiguration } : {}),
             };
         }
@@ -58075,26 +58103,28 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VerifySetupPatBootstrapUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
-/** Initial read-only gate shared by terminal and browser setup presentations. */
+/** Initial identity and read gate. Temporary writes wait for plan approval. */
 class VerifySetupPatBootstrapUseCase {
     constructor(ports) {
         this.ports = ports;
     }
     async execute(request) {
+        const bootstrapRequirements = request.requirements.map(requirement => requirement.level === 'write'
+            ? { ...requirement, applicability: 'conditional', condition: 'After setup plan approval' }
+            : requirement);
         const report = await this.ports.permissions.inspect({
             role: 'setup', owner: request.owner, repository: request.repository,
-            token: request.token, requirements: request.requirements,
+            token: request.token, requirements: bootstrapRequirements,
         });
         this.ports.presenter.showReport(report);
-        const accepted = report.ready
-            || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+        const accepted = report.ready;
         if (!accepted || report.identityStatus !== 'valid') {
             if (request.guided)
                 this.ports.showCorrectedLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
                     role: 'setup', owner: request.owner, repository: request.repository,
                     expiresIn: 1, requirements: request.requirements,
                 }));
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT has missing or unconfirmed required access. Review the permission report, correct or explicitly confirm the required grants, and retry.');
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT did not pass every required capability check. Review the failed permission and cleanup result, correct access, and retry.');
         }
         if (!await this.ports.confirmAccount(report.account)) {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
@@ -67586,7 +67616,7 @@ function registerSetupCommand(program) {
         .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
         .option('--web', 'Run the optional local browser setup assistant (127.0.0.1 only)', false)
         .option('--yes', 'Apply the plan without the final confirmation prompt', false)
-        .option('--confirm-unverifiable-write-permissions', 'Confirm that required PAT write permissions shown as Unverifiable were configured exactly as displayed', false)
+        .option('--confirm-unverifiable-write-permissions', 'Deprecated: rejected because manual confirmation cannot prove PAT Write access', false)
         .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
         .option('--skip-variables', 'Do not create or update GitHub Repository Variables', false)
         .option('--skip-secrets', 'Do not validate or create/update GitHub Repository Secrets', false)
@@ -67663,7 +67693,7 @@ async function executeSetupCommand(options) {
     }, Boolean(options.confirmUnverifiableWritePermissions));
     const permissionPresenter = webBridge ? new web_setup_adapters_1.WebSetupPermissionPresenter(webBridge)
         : new setup_token_permission_presenter_1.ConsoleSetupTokenPermissionPresenter(options.nonInteractive ? 'full' : 'summary');
-    const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)();
+    const tokenPermissions = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(permissionPresenter);
     const workflowPrompt = webBridge ? new web_setup_adapters_1.WebSetupWorkflowUpdatePrompt(webBridge) : new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
     const cwd = process.cwd();
     let setupMutationStarted = false;
@@ -67690,6 +67720,9 @@ async function executeSetupCommand(options) {
     let approvedWorkflowFiles = [];
     let credentialsCollection;
     try {
+        if (options.confirmUnverifiableWritePermissions) {
+            throw new application_error_1.ApplicationError('configuration.invalid', '--confirm-unverifiable-write-permissions is no longer accepted. Setup now tests each required Write capability with a temporary resource after plan approval.');
+        }
         const session = new setup_session_coordinator_1.SetupSessionCoordinator({
             repository: async () => {
                 if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
@@ -67841,6 +67874,8 @@ async function executeSetupCommand(options) {
                     approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
                     approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
                     projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
+                    ...(webBridge ? { sessionLiveness: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
+                            : webBridge.snapshot().outcome ? 'expired' : 'active' } : {}),
                 });
                 const result = await wizard.execute({
                     mode: options.nonInteractive ? 'non-interactive' : 'interactive',
@@ -68683,7 +68718,7 @@ class SetupPlanConfirmationAdapter {
             : 'repository files';
         const groups = (0, setup_questionnaire_policy_1.setupEditableGroups)(plan.configuration);
         while (true) {
-            const result = await this.terminal.readText(`Apply this setup plan to ${target}? Type ? for details or :edit to change an answer. ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
+            const result = await this.terminal.readText(`Approve temporary PAT permission probes, then apply this setup plan to ${target}? Tests may create and remove GitHub resources; Actions or PR tests may leave runs, notifications, or history. Type ? for details or :edit to change an answer. ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
             if (result.kind !== 'value')
                 return { kind: 'cancelled' };
             const value = result.value.normalize('NFKC').trim().toLowerCase();
@@ -68691,6 +68726,7 @@ class SetupPlanConfirmationAdapter {
                 console.log((0, setup_prompt_rendering_1.renderBox)([
                     `This is the final approval. The plan lists ${plan.selectedFiles.length} file(s), ${plan.variables.length} Variable(s), and ${plan.requiredSecrets.length} Secret name(s).`,
                     'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
+                    'Before setup changes, each selected write permission is tested with a temporary resource. Actions and PR tests can create visible runs, notifications, and history even after cleanup.',
                     'A failure after writes begin may leave partial changes; inspect the result and run copilot doctor --read-only before retrying.',
                     'PATs created on GitHub are not deleted automatically if you decline or cancel.',
                     'Read more: https://docs.page/vypdev/copilot/how-to-use',
@@ -69335,6 +69371,11 @@ function renderSetupPlan(plan) {
         `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
         '  Labels and issue types: always checked by Copilot setup',
         `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+        (0, setup_prompt_rendering_1.color)('Temporary PAT write checks after approval', 33),
+        ...(plan.permissionProbes?.length
+            ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
+            : ['  (none)']),
+        '  Actions and Pull request checks may leave run history, PR history, or notifications after cleanup.', '',
         ...(plan.presentationDefaults?.length ? [(0, setup_prompt_rendering_1.color)('Advanced defaults retained in basic setup', 36),
             ...plan.presentationDefaults.map(item => `  ${item.group}: ${item.count} settings not asked; use :edit at plan confirmation to review or change.`), ''] : []),
         ...(plan.mergeQueueReadiness.length > 0 ? [
@@ -70063,6 +70104,10 @@ class ConsoleSetupTokenPermissionPresenter {
     showReport(report) {
         console.log(renderSetupTokenPermissionReport(report));
     }
+    showProgress(progress) {
+        const phase = progress.phase === 'verified' ? '✓' : progress.phase === 'failed' ? '✗' : '…';
+        console.log(`${phase} ${progress.requirementId}: ${progress.phase}${progress.detail ? ` (${progress.detail})` : ''}`);
+    }
 }
 exports.ConsoleSetupTokenPermissionPresenter = ConsoleSetupTokenPermissionPresenter;
 function renderSetupTokenPermissionSummary(role, requirements, maximumWidth = node_process_1.stdout.columns ?? 120) {
@@ -70098,18 +70143,16 @@ function renderSetupTokenPermissionReport(report, maximumWidth = node_process_1.
         && check.status === 'unverifiable'
         && check.operationallyAvailable !== true);
     const usablePublicReads = report.checks.filter(check => check.applicability === 'required'
-        && check.level === 'read' && check.status === 'unverifiable'
+        && check.level === 'read' && check.status === 'available'
         && check.operationallyAvailable === true);
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
-        : report.confirmationRequired
-            ? 'Confirmation required: inspect every Unverifiable required PAT grant in GitHub, including Projects read when shown. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
-            : unverifiableRequiredReads.length > 0
-                ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
-                : unverifiable.length > 0
-                    ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
-                    : 'All safely verifiable required permissions are available.';
+        : unverifiableRequiredReads.length > 0
+            ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
+            : unverifiable.length > 0
+                ? 'Some capabilities could not be proven. Review each failed phase and retry after correcting access or provider availability.'
+                : 'All required capability checks passed.';
     const publicReadLimitation = usablePublicReads.length > 0
         ? 'Public repository reads are usable for setup, but do not prove the PAT has those permissions. Protected operations remain independently checked.'
         : undefined;
@@ -70149,6 +70192,8 @@ function row(first, second, third, fourth) {
 function statusLabel(check) {
     if (check.status === 'verified')
         return '✅ Verified';
+    if (check.status === 'available')
+        return '✓ Read available';
     if (check.status === 'missing')
         return '❌ Missing';
     return '? Unverifiable';
@@ -70321,6 +70366,7 @@ class WebSetupPermissionPresenter {
     showRequirements(role, requirements) { this.bridge.requirements(role, requirements); }
     showDetailedRequirements(role, requirements) { this.bridge.requirements(role, requirements); }
     showReport(report) { this.bridge.report(report); }
+    showProgress(progress) { this.bridge.permissionProgress(progress); }
 }
 exports.WebSetupPermissionPresenter = WebSetupPermissionPresenter;
 class WebSetupJourneyPresenter {
@@ -70618,7 +70664,7 @@ class WebSetupBridge {
         this.pending = undefined;
         this.publish({ prompt: undefined, promptRevision: undefined, outcome: 'cancelled', resultDetail: {
                 reasonCode: 'cancelled', stoppedStage: this.view.journey?.current ?? 'Preparation', mutationStarted: false,
-            }, message: { tone: 'warning', text: 'Setup cancelled before applying further changes. Any PAT created at GitHub still exists until you delete it there.', copyId: 'session.cancelled' } });
+            }, message: { tone: 'warning', text: 'Setup cancellation requested. Temporary permission checks already started will finish cleanup before the process exits. Any PAT created at GitHub still exists until you delete it there.', copyId: 'session.cancelled' } });
         pending?.resolve(undefined);
         return true;
     }
@@ -70627,10 +70673,25 @@ class WebSetupBridge {
         this.publish({ message: { tone, text, ...(link ? { link } : {}), copyId, copyValues, credentialChecks } });
     }
     requirements(role, requirements) {
-        this.publish({ permissions: { role, requirements, report: undefined } });
+        this.publish({ permissions: { role, requirements, report: undefined, progress: [] } });
     }
     report(report) {
-        this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements, report } });
+        this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements,
+                progress: this.view.permissions?.progress, report } });
+    }
+    permissionProgress(progress) {
+        if (this.view.outcome || this.view.permissions?.role !== progress.role
+            || !this.view.permissions.requirements?.some(item => item.id === progress.requirementId))
+            return;
+        const previous = this.view.permissions.progress ?? [];
+        const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
+            || ['unavailable', 'cleanup-pending', 'unsupported'].includes(progress.detail))
+            ? progress.detail : undefined;
+        this.publish({ permissions: { ...this.view.permissions, progress: [
+                    ...previous.filter(item => item.requirementId !== progress.requirementId),
+                    { role: progress.role, requirementId: progress.requirementId, phase: progress.phase,
+                        ...(detail ? { detail } : {}) },
+                ] } });
     }
     resultReason(reasonCode, diagnosticRef) {
         if (this.view.outcome)
@@ -70698,6 +70759,7 @@ function sameCapability(provided, expected) {
 function toWebSetupPlan(plan) {
     return {
         presentationDefaults: plan.presentationDefaults ?? [],
+        permissionProbes: plan.permissionProbes ?? [],
         decisions: {
             enabledCapabilities: Object.entries(plan.configuration.features).filter(([, enabled]) => enabled).map(([name]) => name),
             agentRouting: Object.entries(plan.configuration.agents).map(([role, agent]) => ({ role,
@@ -85893,8 +85955,8 @@ exports.createSetupTokenPermissionsUseCase = createSetupTokenPermissionsUseCase;
 const setup_token_permissions_use_case_1 = __nccwpck_require__(11797);
 const setup_credential_validation_adapter_1 = __nccwpck_require__(47020);
 const setup_token_permission_query_adapter_1 = __nccwpck_require__(67758);
-function createSetupTokenPermissionsUseCase() {
-    return new setup_token_permissions_use_case_1.SetupTokenPermissionsUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), new setup_token_permission_query_adapter_1.SetupTokenPermissionQueryAdapter());
+function createSetupTokenPermissionsUseCase(presenter) {
+    return new setup_token_permissions_use_case_1.SetupTokenPermissionsUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), new setup_token_permission_query_adapter_1.SetupTokenPermissionQueryAdapter(), presenter?.showProgress ? progress => presenter.showProgress(progress) : undefined);
 }
 
 
@@ -87725,6 +87787,1025 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 
 /***/ }),
 
+/***/ 66933:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.probeActions = probeActions;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+// Hash of the packaged credential-health workflow: every job is guarded by a
+// false-by-default input. A different remote file is never dispatched directly.
+const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa6979dfda71446a54f607b18d61';
+/** Dispatches a disabled-job branch override of a workflow already registered on default. */
+async function probeActions(context) {
+    const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(root, 'GET', [200]));
+    const base = metadata.default_branch;
+    if (typeof base !== 'string' || !/^[A-Za-z0-9._/-]{1,255}$/u.test(base)
+        || base.startsWith('/') || base.endsWith('/')) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
+    }
+    const workflow = await findDispatchWorkflow(context, root, base);
+    if (!workflow) {
+        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
+    }
+    const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
+    const object = ref.object;
+    const sha = object && typeof object === 'object' && !Array.isArray(object)
+        ? object.sha : undefined;
+    if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
+    }
+    const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
+    const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
+    if (prior.status !== 404)
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
+    const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
+        scope: 'repository', probe: 'actions', name });
+    let operationError;
+    const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+    context.phase('creating');
+    try {
+        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        if (!workflow.trustedNoOp) {
+            const file = `${root}/contents/${workflow.path}`;
+            try {
+                await context.http.expect(file, 'PUT', [200], {
+                    message: 'chore: verify temporary Actions permission [skip ci]',
+                    content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
+                });
+            }
+            catch {
+                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
+            }
+            const observedFile = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
+            if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'
+                || typeof observedFile.content !== 'string'
+                || Buffer.from(observedFile.content, 'base64').toString('utf8') !== noOp) {
+                throw new setup_permission_probe_http_1.ProbeFailure('The temporary no-job workflow was not confirmed on the isolated branch.');
+            }
+        }
+        await handle.markDispatchAttempted();
+        const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST', { ref: name });
+        if (dispatched.status !== 200) {
+            if (dispatched.status >= 400 && dispatched.status < 500)
+                await handle.clearRejectedDispatch();
+            throw new setup_permission_probe_http_1.ProbeFailure(`GitHub Actions dispatch returned HTTP ${dispatched.status}.`, dispatched.status);
+        }
+        const dispatch = await (0, setup_permission_probe_http_1.probeJsonRecord)(dispatched);
+        const runId = dispatch.workflow_run_id;
+        if (!Number.isSafeInteger(runId) || runId <= 0) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not identify the temporary Actions run.');
+        }
+        await handle.setRunId(runId);
+        context.phase('reading');
+        const run = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/runs/${runId}`, 'GET', [200]));
+        if (run.id !== runId || run.head_branch !== name || run.event !== 'workflow_dispatch'
+            || run.workflow_id !== workflow.id) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions run readback did not match the isolated dispatch.');
+        }
+    }
+    catch (error) {
+        operationError = error;
+    }
+    context.phase('deleting');
+    try {
+        await handle.cleanup(context.http);
+    }
+    catch {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions cleanup could not be confirmed; recovery is required before retrying.', undefined, true);
+    }
+    if (operationError)
+        throw operationError;
+}
+async function findDispatchWorkflow(context, root, base) {
+    const list = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/workflows?per_page=100`, 'GET', [200]));
+    if (!Array.isArray(list.workflows))
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid Actions workflow list.');
+    let fallback;
+    const candidates = [...list.workflows].filter(item => item && typeof item === 'object' && !Array.isArray(item))
+        .sort((a, b) => Number(b.path === '.github/workflows/copilot_credential_health.yml')
+        - Number(a.path === '.github/workflows/copilot_credential_health.yml'))
+        .slice(0, 8);
+    for (const item of candidates) {
+        if (!item || typeof item !== 'object' || Array.isArray(item))
+            continue;
+        const workflow = item;
+        if (workflow.state !== 'active' || typeof workflow.path !== 'string'
+            || !/^\.github\/workflows\/[A-Za-z0-9_.-]+\.ya?ml$/u.test(workflow.path)
+            || !Number.isSafeInteger(workflow.id) || workflow.id <= 0)
+            continue;
+        const encodedPath = workflow.path.split('/').map(encodeURIComponent).join('/');
+        const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${encodeURIComponent(base)}`);
+        if (response.status !== 200)
+            continue;
+        const file = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+        if (file.encoding !== 'base64' || typeof file.content !== 'string'
+            || typeof file.sha !== 'string' || !/^[a-f0-9]{40}$/u.test(file.sha))
+            continue;
+        const content = Buffer.from(file.content, 'base64').toString('utf8');
+        if (/(?:^|\n)\s*workflow_dispatch\s*:/u.test(content)) {
+            const trustedNoOp = workflow.path === '.github/workflows/copilot_credential_health.yml'
+                && (0, node_crypto_1.createHash)('sha256').update(content).digest('hex') === TRUSTED_HEALTH_WORKFLOW_SHA256;
+            const candidate = { id: workflow.id, path: workflow.path, sha: file.sha, trustedNoOp };
+            if (trustedNoOp)
+                return candidate;
+            fallback ?? (fallback = candidate);
+        }
+    }
+    return fallback;
+}
+
+
+/***/ }),
+
+/***/ 5110:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProbeCollision = exports.ProbeFailure = exports.SetupPermissionProbeHttp = void 0;
+exports.probeJsonRecord = probeJsonRecord;
+exports.writeProbeFailure = writeProbeFailure;
+/** One bounded GitHub request; provider bodies and authorization never escape. */
+class SetupPermissionProbeHttp {
+    constructor(fetcher, token, timeoutMs) {
+        this.fetcher = fetcher;
+        this.token = token;
+        this.timeoutMs = timeoutMs;
+    }
+    async request(url, method = 'GET', body) {
+        if (!url.startsWith('https://api.github.com/'))
+            throw new ProbeFailure('Invalid GitHub probe target.');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+        try {
+            return await this.fetcher(url, {
+                method,
+                headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    Accept: 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2026-03-10',
+                    ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+                },
+                ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+                signal: controller.signal,
+                redirect: 'error',
+            });
+        }
+        catch {
+            throw new ProbeFailure(`GitHub ${method} did not complete or timed out.`);
+        }
+        finally {
+            clearTimeout(timeout);
+        }
+    }
+    async expect(url, method, statuses, body) {
+        const response = await this.request(url, method, body);
+        if (!statuses.includes(response.status)) {
+            throw new ProbeFailure(`GitHub ${method} returned HTTP ${response.status}.`, response.status);
+        }
+        return response;
+    }
+}
+exports.SetupPermissionProbeHttp = SetupPermissionProbeHttp;
+class ProbeFailure extends Error {
+    constructor(message, httpStatus, cleanupPending = false) {
+        super(message);
+        this.httpStatus = httpStatus;
+        this.cleanupPending = cleanupPending;
+    }
+}
+exports.ProbeFailure = ProbeFailure;
+class ProbeCollision extends ProbeFailure {
+}
+exports.ProbeCollision = ProbeCollision;
+async function probeJsonRecord(response) {
+    try {
+        const value = await response.json();
+        if (value !== null && typeof value === 'object' && !Array.isArray(value))
+            return value;
+    }
+    catch { /* Map malformed provider data to a bounded error. */ }
+    throw new ProbeFailure('GitHub returned an invalid response shape.');
+}
+function writeProbeFailure(requirement, error) {
+    const failure = error instanceof ProbeFailure ? error : new ProbeFailure('The temporary permission check could not complete.');
+    return {
+        ...requirement,
+        status: failure.httpStatus === 401 ? 'missing' : 'unverifiable',
+        message: failure.message,
+        ...(failure.cleanupPending ? { cleanupPending: true } : {}),
+    };
+}
+
+
+/***/ }),
+
+/***/ 4154:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProbeJournalHandle = exports.SetupPermissionProbeJournal = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const promises_1 = __nccwpck_require__(93977);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const supported = new Set(['variables', 'secrets', 'issues', 'issue-types', 'contents', 'workflows', 'projects', 'pull-requests', 'actions']);
+/** No token or test value is persisted. A file exists before the first remote mutation. */
+class SetupPermissionProbeJournal {
+    constructor(root = (0, node_path_1.join)((0, node_os_1.homedir)(), '.copilot', 'setup-permission-probes')) {
+        this.root = root;
+    }
+    async begin(entry) {
+        if (!supported.has(entry.probe) || !validScope(entry.scope, entry.probe) || !safeName(entry.probe, entry.name)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary resource journal rejected an unsafe target.');
+        }
+        await (0, promises_1.mkdir)(this.root, { recursive: true, mode: 0o700 });
+        await this.assertPrivateRoot();
+        const path = (0, node_path_1.join)(this.root, `${(0, node_crypto_1.randomBytes)(16).toString('hex')}.json`);
+        const file = await (0, promises_1.open)(path, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600);
+        try {
+            await file.writeFile(JSON.stringify({ ...entry, version: 1, pid: process.pid }));
+            await file.sync();
+        }
+        finally {
+            await file.close();
+        }
+        return new ProbeJournalHandle(path, { ...entry, version: 1, pid: process.pid });
+    }
+    async recover(owner, repository, http) {
+        let names;
+        try {
+            names = await (0, promises_1.readdir)(this.root);
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                return;
+            throw new setup_permission_probe_http_1.ProbeFailure('Could not inspect pending temporary-resource cleanup.');
+        }
+        await this.assertPrivateRoot();
+        for (const name of names.filter(value => /^[a-f0-9]{32}\.json$/u.test(value))) {
+            let entry;
+            try {
+                entry = JSON.parse(await (0, promises_1.readFile)((0, node_path_1.join)(this.root, name), 'utf8'));
+            }
+            catch {
+                throw new setup_permission_probe_http_1.ProbeFailure('A temporary-resource cleanup record could not be read.');
+            }
+            if (!validEntry(entry))
+                throw new setup_permission_probe_http_1.ProbeFailure('A temporary-resource cleanup record is invalid.');
+            if (entry.owner !== owner || entry.repository !== repository)
+                continue;
+            if (entry.pid !== process.pid && processIsRunning(entry.pid)) {
+                throw new setup_permission_probe_http_1.ProbeFailure('Another setup process has a temporary permission resource in progress.');
+            }
+            await new ProbeJournalHandle((0, node_path_1.join)(this.root, name), entry).cleanup(http);
+        }
+    }
+    async assertPrivateRoot() {
+        const stat = await (0, promises_1.lstat)(this.root);
+        if (!stat.isDirectory() || stat.isSymbolicLink()
+            || (process.platform !== 'win32' && (stat.mode & 0o077) !== 0)
+            || (process.getuid && stat.uid !== process.getuid())) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary resource journal directory is not private.');
+        }
+    }
+}
+exports.SetupPermissionProbeJournal = SetupPermissionProbeJournal;
+class ProbeJournalHandle {
+    constructor(path, entry) {
+        this.path = path;
+        this.entry = entry;
+    }
+    /** Use only when GitHub definitively rejected creation before ownership was established. */
+    async dismiss() { await (0, promises_1.unlink)(this.path); }
+    async setRemoteId(remoteId) {
+        if (this.entry.probe !== 'projects' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(remoteId)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project ID cannot be journaled safely.');
+        }
+        await this.update({ remoteId });
+    }
+    async markDispatchAttempted() {
+        if (this.entry.probe !== 'actions')
+            throw new setup_permission_probe_http_1.ProbeFailure('Invalid temporary Actions journal update.');
+        await this.update({ dispatchAttempted: true });
+    }
+    async clearRejectedDispatch() {
+        if (this.entry.probe !== 'actions' || this.entry.runId !== undefined) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Invalid temporary Actions journal update.');
+        }
+        const { dispatchAttempted: _removed, ...rest } = this.entry;
+        await this.replace(rest);
+    }
+    async setRunId(runId) {
+        if (this.entry.probe !== 'actions' || !Number.isSafeInteger(runId) || runId <= 0) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Invalid temporary Actions run ID.');
+        }
+        await this.update({ runId });
+    }
+    async markPullAttempted() {
+        if (this.entry.probe !== 'pull-requests')
+            throw new setup_permission_probe_http_1.ProbeFailure('Invalid temporary pull-request journal update.');
+        await this.update({ pullAttempted: true });
+    }
+    async clearRejectedPull() {
+        if (this.entry.probe !== 'pull-requests')
+            throw new setup_permission_probe_http_1.ProbeFailure('Invalid temporary pull-request journal update.');
+        const { pullAttempted: _removed, ...rest } = this.entry;
+        await this.replace(rest);
+    }
+    async update(fields) {
+        await this.replace({ ...this.entry, ...fields });
+    }
+    async replace(next) {
+        const temp = `${this.path}.${(0, node_crypto_1.randomBytes)(8).toString('hex')}.tmp`;
+        const file = await (0, promises_1.open)(temp, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600);
+        try {
+            await file.writeFile(JSON.stringify(next));
+            await file.sync();
+        }
+        finally {
+            await file.close();
+        }
+        await (0, promises_1.rename)(temp, this.path);
+        Object.assign(this.entry, next);
+        if (!next.dispatchAttempted)
+            delete this.entry.dispatchAttempted;
+        if (!next.pullAttempted)
+            delete this.entry.pullAttempted;
+    }
+    async cleanup(http) {
+        const { owner, repository, scope, probe, name } = this.entry;
+        const root = scope === 'organization'
+            ? `https://api.github.com/orgs/${encodeURIComponent(owner)}`
+            : `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
+        if (probe === 'projects') {
+            await cleanupProject(http, owner, name, this.entry.remoteId);
+        }
+        else if (probe === 'actions') {
+            await cleanupActionRun(http, root, name, this.entry.runId, this.entry.dispatchAttempted === true);
+            await cleanupReference(http, root, name);
+        }
+        else if (probe === 'pull-requests') {
+            if (this.entry.pullAttempted)
+                await cleanupPullRequest(http, root, owner, name);
+            await cleanupReference(http, root, name);
+        }
+        else if (probe === 'contents' || probe === 'workflows') {
+            await cleanupReference(http, root, name);
+        }
+        else if (probe === 'issue-types') {
+            const list = `${root}/issue-types`;
+            const matching = await matchingIssueTypeIds(http, list, name);
+            if (matching.length > 1)
+                throw new setup_permission_probe_http_1.ProbeFailure('Multiple temporary Issue Types matched the cleanup name.');
+            if (matching.length === 1)
+                await http.expect(`${list}/${matching[0]}`, 'DELETE', [204]);
+            if ((await matchingIssueTypeIds(http, list, name)).length !== 0) {
+                throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue Type cleanup could not be confirmed.');
+            }
+        }
+        else {
+            const resource = probe === 'issues' ? 'labels' : `actions/${probe}`;
+            const exact = `${root}/${resource}/${encodeURIComponent(name)}`;
+            const before = await http.request(exact);
+            if (before.status === 200)
+                await http.expect(exact, 'DELETE', [204]);
+            else if (before.status !== 404)
+                throw new setup_permission_probe_http_1.ProbeFailure(`Temporary resource cleanup check returned HTTP ${before.status}.`, before.status);
+            const after = await http.request(exact);
+            if (after.status !== 404)
+                throw new setup_permission_probe_http_1.ProbeFailure(`Temporary resource cleanup could not be confirmed (HTTP ${after.status}).`, after.status);
+        }
+        await (0, promises_1.unlink)(this.path);
+    }
+}
+exports.ProbeJournalHandle = ProbeJournalHandle;
+async function matchingIssueTypeIds(http, url, name) {
+    const response = await http.expect(url, 'GET', [200]);
+    let value;
+    try {
+        value = await response.json();
+    }
+    catch {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid Issue Types cleanup data.');
+    }
+    if (!Array.isArray(value))
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid Issue Types cleanup data.');
+    return value.filter(item => item && typeof item === 'object' && item.name === name)
+        .map(item => item.id)
+        .filter((id) => typeof id === 'number' && Number.isSafeInteger(id) && id > 0);
+}
+function validEntry(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const entry = value;
+    return entry.version === 1 && typeof entry.owner === 'string' && typeof entry.repository === 'string'
+        && (entry.scope === 'repository' || entry.scope === 'organization')
+        && supported.has(entry.probe)
+        && validScope(entry.scope, entry.probe)
+        && typeof entry.name === 'string' && safeName(entry.probe, entry.name)
+        && (entry.remoteId === undefined || (entry.probe === 'projects'
+            && typeof entry.remoteId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.remoteId)))
+        && (entry.runId === undefined || (entry.probe === 'actions'
+            && typeof entry.runId === 'number' && Number.isSafeInteger(entry.runId) && entry.runId > 0))
+        && (entry.dispatchAttempted === undefined || (entry.probe === 'actions' && entry.dispatchAttempted === true))
+        && (entry.pullAttempted === undefined || (entry.probe === 'pull-requests' && entry.pullAttempted === true))
+        && typeof entry.pid === 'number' && Number.isSafeInteger(entry.pid) && entry.pid > 0;
+}
+function safeName(probe, name) {
+    return probe === 'issue-types' || probe === 'projects'
+        ? /^Copilot permission test [a-f0-9]{24,32}$/u.test(name)
+        : probe === 'contents' || probe === 'workflows' || probe === 'pull-requests' || probe === 'actions'
+            ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
+            : probe === 'issues'
+                ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
+                : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
+}
+function validScope(scope, probe) {
+    return (scope === 'repository' && probe !== 'issue-types' && probe !== 'projects')
+        || (scope === 'organization'
+            && (probe === 'variables' || probe === 'secrets' || probe === 'issue-types' || probe === 'projects'));
+}
+async function cleanupReference(http, root, name) {
+    const exact = `${root}/git/ref/heads/${encodeURIComponent(name)}`;
+    const before = await http.request(exact);
+    if (before.status === 200)
+        await http.expect(`${root}/git/refs/heads/${encodeURIComponent(name)}`, 'DELETE', [204]);
+    else if (before.status !== 404)
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary reference cleanup check returned HTTP ${before.status}.`, before.status);
+    const after = await http.request(exact);
+    if (after.status !== 404)
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary reference cleanup could not be confirmed (HTTP ${after.status}).`, after.status);
+}
+async function cleanupPullRequest(http, root, owner, name) {
+    const title = `Copilot permission test ${name.slice('copilot-permission-test-'.length)}`;
+    const search = `${root}/pulls?state=all&head=${encodeURIComponent(`${owner}:${name}`)}&per_page=100`;
+    const response = await http.expect(search, 'GET', [200]);
+    let rows;
+    try {
+        rows = await response.json();
+    }
+    catch {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid temporary pull-request cleanup data.');
+    }
+    if (!Array.isArray(rows))
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid temporary pull-request cleanup data.');
+    const matches = rows.filter(item => item && typeof item === 'object' && !Array.isArray(item)
+        && item.title === title
+        && typeof item.head === 'object'
+        && item.head?.ref === name);
+    if (matches.length > 1)
+        throw new setup_permission_probe_http_1.ProbeFailure('Multiple temporary pull requests matched the cleanup branch.');
+    if (matches.length === 0)
+        return;
+    const row = matches[0];
+    const number = row.number;
+    if (!Number.isSafeInteger(number) || number <= 0 || row.merged_at) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary pull-request identity changed; automatic cleanup stopped.');
+    }
+    const exact = `${root}/pulls/${number}`;
+    if (row.state === 'open')
+        await http.expect(exact, 'PATCH', [200], { state: 'closed' });
+    else if (row.state !== 'closed')
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary pull request has an unexpected state.');
+    const after = await (0, setup_permission_probe_http_1.probeJsonRecord)(await http.expect(exact, 'GET', [200]));
+    if (after.number !== number || after.state !== 'closed' || after.title !== title) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary pull-request closure could not be confirmed.');
+    }
+}
+async function cleanupActionRun(http, root, branch, recordedId, attempted = false) {
+    if (!attempted && recordedId === undefined)
+        return;
+    let id = recordedId;
+    for (let attempt = 0; id === undefined && attempt < 6; attempt += 1) {
+        const response = await http.expect(`${root}/actions/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=100`, 'GET', [200]);
+        const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+        if (!Array.isArray(body.workflow_runs))
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid temporary Actions run cleanup data.');
+        const matches = body.workflow_runs.filter(item => item && typeof item === 'object' && !Array.isArray(item)
+            && item.head_branch === branch
+            && item.event === 'workflow_dispatch');
+        if (matches.length > 1)
+            throw new setup_permission_probe_http_1.ProbeFailure('Multiple temporary Actions runs matched the cleanup branch.');
+        if (matches.length === 1) {
+            const candidate = matches[0].id;
+            if (!Number.isSafeInteger(candidate) || candidate <= 0) {
+                throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid temporary Actions run ID.');
+            }
+            id = candidate;
+        }
+        else if (attempt < 5)
+            await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (id === undefined)
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions dispatch may have succeeded, but its run was not found for cleanup.');
+    const exact = `${root}/actions/runs/${id}`;
+    let run;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+        const response = await http.request(exact);
+        if (response.status === 404 && attempt === 7)
+            return;
+        if (response.status !== 200) {
+            if (response.status === 404 && attempt < 7) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                continue;
+            }
+            throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Actions run lookup returned HTTP ${response.status}.`, response.status);
+        }
+        run = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+        if (run.id !== id || run.head_branch !== branch || run.event !== 'workflow_dispatch') {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions run identity changed; automatic deletion stopped.');
+        }
+        if (run.status === 'completed')
+            break;
+        if (attempt === 0) {
+            const cancel = await http.request(`${exact}/cancel`, 'POST');
+            if (cancel.status !== 202 && cancel.status !== 409) {
+                throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Actions run cancellation returned HTTP ${cancel.status}.`, cancel.status);
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (run?.status !== 'completed')
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions run did not finish before cleanup deadline.');
+    await http.expect(exact, 'DELETE', [204]);
+    const after = await http.request(exact);
+    if (after.status !== 404)
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Actions run deletion could not be confirmed (HTTP ${after.status}).`, after.status);
+}
+function processIsRunning(pid) {
+    try {
+        process.kill(pid, 0);
+        return true;
+    }
+    catch (error) {
+        return error.code === 'EPERM';
+    }
+}
+async function cleanupProject(http, owner, title, recordedId) {
+    const id = recordedId ?? await findProjectByTitle(http, owner, title);
+    if (!id)
+        return;
+    const before = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    if (before.node === null)
+        return;
+    if (!before.node || typeof before.node !== 'object' || Array.isArray(before.node)
+        || before.node.id !== id
+        || before.node.title !== title) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project identity changed; automatic deletion was stopped.');
+    }
+    const deleted = await projectGraphQl(http, 'mutation($id:ID!){deleteProjectV2(input:{projectId:$id}){projectV2{id}}}', { id });
+    const result = deleted.deleteProjectV2;
+    if (!result || typeof result !== 'object' || Array.isArray(result)
+        || !result.projectV2
+        || typeof result.projectV2 !== 'object'
+        || result.projectV2.id !== id) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not confirm deletion of the temporary Project.');
+    }
+    const after = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    if (after.node !== null)
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup could not be confirmed.');
+}
+async function findProjectByTitle(http, owner, title) {
+    let after = null;
+    const matches = [];
+    for (let page = 0; page < 5; page += 1) {
+        const data = await projectGraphQl(http, 'query($owner:String!,$after:String){organization(login:$owner){projectsV2(first:100,after:$after){nodes{id title} pageInfo{hasNextPage endCursor}}}}', { owner, after });
+        const organization = data.organization;
+        if (!organization || typeof organization !== 'object' || Array.isArray(organization)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return organization Projects for cleanup.');
+        }
+        const projects = organization.projectsV2;
+        if (!projects || typeof projects !== 'object' || Array.isArray(projects)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid Projects cleanup data.');
+        }
+        const list = projects;
+        if (!Array.isArray(list.nodes))
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid Projects cleanup data.');
+        for (const item of list.nodes) {
+            if (item && typeof item === 'object' && !Array.isArray(item)
+                && item.title === title) {
+                const id = item.id;
+                if (typeof id !== 'string' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(id)) {
+                    throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid temporary Project ID.');
+                }
+                matches.push(id);
+            }
+        }
+        const pageInfo = list.pageInfo;
+        if (!pageInfo || typeof pageInfo !== 'object' || Array.isArray(pageInfo)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid Projects pagination data.');
+        }
+        const pageState = pageInfo;
+        if (pageState.hasNextPage === false)
+            break;
+        if (pageState.hasNextPage !== true || typeof pageState.endCursor !== 'string'
+            || pageState.endCursor.length > 256 || page === 4) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup exceeded the bounded organization scan.');
+        }
+        after = pageState.endCursor;
+    }
+    if (matches.length > 1)
+        throw new setup_permission_probe_http_1.ProbeFailure('Multiple Projects matched the temporary cleanup name.');
+    return matches[0];
+}
+async function projectGraphQl(http, query, variables) {
+    const response = await http.expect('https://api.github.com/graphql', 'POST', [200], { query, variables });
+    const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+    if (Array.isArray(body.errors) && body.errors.length > 0)
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub rejected temporary Project cleanup.');
+    const data = body.data;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid temporary Project cleanup data.');
+    }
+    return data;
+}
+
+
+/***/ }),
+
+/***/ 38509:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.withProbeCleanup = withProbeCleanup;
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+/** Journal before the first mutation and retain the record until cleanup is proved. */
+async function withProbeCleanup(context, name, operation) {
+    const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
+        scope: context.scope, probe: context.probe, name });
+    let operationError;
+    let created = false;
+    try {
+        await operation(() => { created = true; }, handle);
+    }
+    catch (error) {
+        operationError = error;
+    }
+    if (!created && (operationError instanceof setup_permission_probe_http_1.ProbeCollision
+        || (operationError instanceof setup_permission_probe_http_1.ProbeFailure && operationError.httpStatus !== undefined
+            && operationError.httpStatus >= 400 && operationError.httpStatus < 500))) {
+        await handle.dismiss();
+        throw operationError;
+    }
+    context.phase('deleting');
+    try {
+        await handle.cleanup(context.http);
+    }
+    catch {
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary ${context.probe} cleanup could not be confirmed; recovery is required before retrying.`, undefined, true);
+    }
+    if (operationError)
+        throw operationError;
+}
+
+
+/***/ }),
+
+/***/ 36808:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.probeOrganizationProject = probeOrganizationProject;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+/** The Project is private by default; only its exact ID may be deleted. */
+async function probeOrganizationProject(context) {
+    const title = `Copilot permission test ${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`https://api.github.com/orgs/${encodeURIComponent(context.owner)}`, 'GET', [200]));
+    const ownerId = metadata.node_id;
+    if (typeof ownerId !== 'string' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(ownerId)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return a valid organization node ID.');
+    }
+    const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
+        scope: 'organization', probe: 'projects', name: title });
+    let operationError;
+    context.phase('creating');
+    try {
+        const created = await projectGraphQl(context, `mutation($owner:ID!,$title:String!){createProjectV2(input:{ownerId:$owner,title:$title}){projectV2{id title}}}`, { owner: ownerId, title });
+        const project = field(field(created, 'createProjectV2'), 'projectV2');
+        const id = project.id;
+        if (typeof id !== 'string' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(id) || project.title !== title) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not identify the temporary Project for cleanup.');
+        }
+        await handle.setRemoteId(id);
+        context.phase('reading');
+        const read = await projectGraphQl(context, `query($id:ID!){node(id:$id){... on ProjectV2{id title}}}`, { id });
+        const observed = field(read, 'node');
+        if (observed.id !== id || observed.title !== title) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project readback did not match the created Project.');
+        }
+    }
+    catch (error) {
+        operationError = error;
+    }
+    context.phase('deleting');
+    try {
+        await handle.cleanup(context.http);
+    }
+    catch {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup could not be confirmed; recovery is required before retrying.', undefined, true);
+    }
+    if (operationError)
+        throw operationError;
+}
+async function projectGraphQl(context, query, variables) {
+    const response = await context.http.expect('https://api.github.com/graphql', 'POST', [200], { query, variables });
+    const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+    if (Array.isArray(body.errors) && body.errors.length > 0)
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub rejected the temporary Project operation.');
+    return field(body, 'data');
+}
+function field(value, key) {
+    const child = value[key];
+    if (!child || typeof child !== 'object' || Array.isArray(child)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid temporary Project response.');
+    }
+    return child;
+}
+
+
+/***/ }),
+
+/***/ 34801:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.probePullRequest = probePullRequest;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const setup_permission_probe_transaction_1 = __nccwpck_require__(38509);
+/** A draft PR with a one-file branch. It is closed, never merged. */
+async function probePullRequest(context) {
+    const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
+    const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(root, 'GET', [200]));
+    const base = metadata.default_branch;
+    if (typeof base !== 'string' || !/^[A-Za-z0-9._/-]{1,255}$/u.test(base) || base.startsWith('/') || base.endsWith('/')) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a safe base branch for the temporary pull request.');
+    }
+    const baseRef = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
+    const object = baseRef.object;
+    const sha = object && typeof object === 'object' && !Array.isArray(object)
+        ? object.sha : undefined;
+    if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a valid base commit for the temporary pull request.');
+    }
+    const ref = `${root}/git/ref/heads/${name}`;
+    const prior = await context.http.request(ref);
+    if (prior.status !== 404)
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
+    context.phase('creating');
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned, handle) => {
+        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        owned();
+        await context.http.expect(`${root}/contents/.copilot-permission-test/${name}.txt`, 'PUT', [201], {
+            message: 'chore: verify temporary pull request access [skip ci]',
+            content: Buffer.from('Temporary PAT permission test. This branch is removed automatically.\n', 'utf8').toString('base64'),
+            branch: name,
+        });
+        const title = `Copilot permission test ${name.slice('copilot-permission-test-'.length)}`;
+        await handle.markPullAttempted();
+        const response = await context.http.request(`${root}/pulls`, 'POST', {
+            title, head: name, base, draft: true,
+            body: 'Temporary PAT permission check. This pull request is closed automatically.',
+        });
+        if (response.status !== 201) {
+            if (response.status >= 400 && response.status < 500)
+                await handle.clearRejectedPull();
+            throw new setup_permission_probe_http_1.ProbeFailure(`GitHub pull-request creation returned HTTP ${response.status}.`, response.status);
+        }
+        const created = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+        const number = created.number;
+        if (!Number.isSafeInteger(number) || number <= 0) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not identify the temporary pull request.');
+        }
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/pulls/${number}`, 'GET', [200]));
+        const head = observed.head;
+        if (observed.number !== number || observed.title !== title || observed.state !== 'open'
+            || !head || typeof head !== 'object' || Array.isArray(head)
+            || head.ref !== name) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary pull request readback did not match the created draft.');
+        }
+    });
+}
+
+
+/***/ }),
+
+/***/ 30260:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.probeDisposableResource = probeDisposableResource;
+const node_crypto_1 = __nccwpck_require__(6005);
+const repository_variables_repository_1 = __nccwpck_require__(28493);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const setup_permission_project_probe_1 = __nccwpck_require__(36808);
+const setup_permission_pull_request_probe_1 = __nccwpck_require__(34801);
+const setup_permission_probe_transaction_1 = __nccwpck_require__(38509);
+const setup_permission_actions_probe_1 = __nccwpck_require__(66933);
+/** Returns only after exact readback, deletion, and absence verification. */
+async function probeDisposableResource(context) {
+    if (context.probe === 'variables')
+        return probeVariable(context);
+    if (context.probe === 'secrets')
+        return probeSecret(context);
+    if (context.probe === 'issues' && context.scope === 'repository')
+        return probeIssueLabel(context);
+    if (context.probe === 'issue-types' && context.scope === 'organization')
+        return probeIssueType(context);
+    if (context.probe === 'contents' && context.scope === 'repository')
+        return probeReference(context);
+    if (context.probe === 'workflows' && context.scope === 'repository')
+        return probeWorkflowFile(context);
+    if (context.probe === 'projects' && context.scope === 'organization')
+        return (0, setup_permission_project_probe_1.probeOrganizationProject)(context);
+    if (context.probe === 'pull-requests' && context.scope === 'repository')
+        return (0, setup_permission_pull_request_probe_1.probePullRequest)(context);
+    if (context.probe === 'actions' && context.scope === 'repository')
+        return (0, setup_permission_actions_probe_1.probeActions)(context);
+    throw new setup_permission_probe_http_1.ProbeFailure(`No isolated create/read/delete probe is implemented for ${context.scope} ${context.probe} Write.`);
+}
+function resourceName() { return `COPILOT_PERMISSION_TEST_${(0, node_crypto_1.randomBytes)(16).toString('hex').toUpperCase()}`; }
+function repoRoot(context) {
+    return `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
+}
+function orgRoot(context) {
+    return `https://api.github.com/orgs/${encodeURIComponent(context.owner)}`;
+}
+async function repositoryId(context) {
+    const response = await context.http.expect(repoRoot(context), 'GET', [200]);
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+    if (!Number.isSafeInteger(metadata.id) || metadata.id <= 0) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub repository metadata did not contain a valid repository ID.');
+    }
+    return metadata.id;
+}
+async function requireAbsent(http, url) {
+    const response = await http.request(url);
+    if (response.status !== 404) {
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary resource absence was not confirmed (HTTP ${response.status}).`, response.status);
+    }
+}
+async function probeVariable(context) {
+    const name = resourceName();
+    const root = context.scope === 'organization' ? `${orgRoot(context)}/actions/variables` : `${repoRoot(context)}/actions/variables`;
+    const exact = `${root}/${name}`;
+    const value = (0, node_crypto_1.randomBytes)(16).toString('hex');
+    const body = context.scope === 'organization'
+        ? { name, value, visibility: 'selected', selected_repository_ids: [await repositoryId(context)] }
+        : { name, value };
+    context.phase('creating');
+    await requireAbsent(context.http, exact);
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
+        await context.http.expect(root, 'POST', [201], body);
+        owned();
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(exact, 'GET', [200]));
+        if (observed.name !== name || observed.value !== value)
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Variable readback did not match the created value.');
+    });
+}
+async function probeSecret(context) {
+    const name = resourceName();
+    const root = context.scope === 'organization' ? `${orgRoot(context)}/actions/secrets` : `${repoRoot(context)}/actions/secrets`;
+    const exact = `${root}/${name}`;
+    const key = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/public-key`, 'GET', [200]));
+    if (typeof key.key !== 'string' || typeof key.key_id !== 'string')
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid Secret public key.');
+    const encrypted = (0, repository_variables_repository_1.encryptSecret)((0, node_crypto_1.randomBytes)(24).toString('hex'), key.key);
+    const body = context.scope === 'organization'
+        ? { encrypted_value: encrypted, key_id: key.key_id, visibility: 'selected', selected_repository_ids: [await repositoryId(context)] }
+        : { encrypted_value: encrypted, key_id: key.key_id };
+    context.phase('creating');
+    await requireAbsent(context.http, exact);
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
+        const result = await context.http.request(exact, 'PUT', body);
+        if (result.status === 204)
+            throw new setup_permission_probe_http_1.ProbeCollision('GitHub reported an existing Secret at the temporary name; cleanup was not attempted.');
+        if (result.status !== 201)
+            throw new setup_permission_probe_http_1.ProbeFailure(`GitHub PUT returned HTTP ${result.status}.`, result.status);
+        owned();
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(exact, 'GET', [200]));
+        if (observed.name !== name)
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Secret metadata readback did not match the created name.');
+    });
+}
+async function probeIssueLabel(context) {
+    const name = resourceName().toLowerCase().replace(/_/gu, '-');
+    const root = `${repoRoot(context)}/labels`;
+    const exact = `${root}/${encodeURIComponent(name)}`;
+    context.phase('creating');
+    await requireAbsent(context.http, exact);
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
+        await context.http.expect(root, 'POST', [201], { name, color: 'ededed', description: 'Temporary permission verification; safe to remove.' });
+        owned();
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(exact, 'GET', [200]));
+        if (observed.name !== name)
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary label readback did not match the created name.');
+    });
+}
+async function probeIssueType(context) {
+    const name = `Copilot permission test ${(0, node_crypto_1.randomBytes)(12).toString('hex')}`;
+    const root = `${orgRoot(context)}/issue-types`;
+    context.phase('creating');
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
+        const created = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(root, 'POST', [200, 201], {
+            name, is_enabled: false, description: 'Temporary permission verification; safe to remove.', color: 'gray',
+        }));
+        owned();
+        const id = created.id;
+        if (!Number.isSafeInteger(id) || id <= 0 || created.name !== name) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not identify the temporary Issue Type for cleanup.');
+        }
+        context.phase('reading');
+        const listed = await (await context.http.expect(root, 'GET', [200])).json();
+        if (!Array.isArray(listed) || !listed.some(item => item && typeof item === 'object'
+            && item.id === id && item.name === name)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue Type was not found in the organization readback.');
+        }
+    });
+}
+async function defaultBranchSha(context) {
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(repoRoot(context), 'GET', [200]));
+    const branch = metadata.default_branch;
+    if (typeof branch !== 'string' || branch.length < 1 || branch.length > 255
+        || Array.from(branch).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a safe default branch for the temporary reference.');
+    }
+    const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${repoRoot(context)}/git/ref/heads/${encodeURIComponent(branch)}`, 'GET', [200]));
+    const object = ref.object;
+    const sha = object && typeof object === 'object' && !Array.isArray(object)
+        ? object.sha : undefined;
+    if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a valid base commit for the temporary reference.');
+    }
+    return sha;
+}
+async function probeReference(context) {
+    const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
+    const root = repoRoot(context);
+    const sha = await defaultBranchSha(context);
+    context.phase('creating');
+    await requireAbsent(context.http, `${root}/git/ref/heads/${name}`);
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
+        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        owned();
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/git/ref/heads/${name}`, 'GET', [200]));
+        if (observed.ref !== `refs/heads/${name}`)
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary reference readback did not match the created branch.');
+    });
+}
+async function probeWorkflowFile(context) {
+    const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
+    const root = repoRoot(context);
+    const sha = await defaultBranchSha(context);
+    const workflowPath = `.github/workflows/${name}.yml`;
+    const workflowUrl = `${root}/contents/${workflowPath}`;
+    const content = `name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: false\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'true'\n`;
+    context.phase('creating');
+    await requireAbsent(context.http, `${root}/git/ref/heads/${name}`);
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
+        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        owned();
+        await context.http.expect(workflowUrl, 'PUT', [201], {
+            message: 'chore: temporary permission verification',
+            content: Buffer.from(content, 'utf8').toString('base64'), branch: name,
+        });
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${workflowUrl}?ref=${name}`, 'GET', [200]));
+        if (observed.path !== workflowPath || observed.type !== 'file') {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary workflow readback did not match the created file.');
+        }
+    });
+}
+
+
+/***/ }),
+
 /***/ 78337:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -88083,6 +89164,9 @@ const github_error_policy_1 = __nccwpck_require__(58791);
 const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
 const setup_token_permission_evidence_policy_1 = __nccwpck_require__(65640);
 const setup_projects_probe_page_policy_1 = __nccwpck_require__(78337);
+const setup_permission_resource_probes_1 = __nccwpck_require__(30260);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const setup_permission_probe_journal_1 = __nccwpck_require__(4154);
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
@@ -88090,11 +89174,46 @@ class SetupTokenPermissionQueryAdapter {
     constructor(options = {}) {
         this.fetcher = options.fetcher ?? fetch;
         this.timeoutMs = options.timeoutMs ?? 10000;
+        this.journal = options.journal ?? new setup_permission_probe_journal_1.SetupPermissionProbeJournal();
     }
-    inspect(owner, repository, token, requirements) {
-        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement)), SETUP_PERMISSION_PROBE_CONCURRENCY);
+    async inspect(owner, repository, token, requirements, onProgress, selectedProjectNumbers) {
+        try {
+            await this.journal.recover(owner, repository, new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+        }
+        catch {
+            return requirements.map(requirement => {
+                onProgress?.({ role: requirement.role, requirementId: requirement.id, phase: 'failed',
+                    detail: 'cleanup-pending' });
+                const check = outcome(requirement, 'unverifiable', 'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
+                return requirement.level === 'write' ? { ...check, cleanupPending: true } : check;
+            });
+        }
+        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers)), SETUP_PERMISSION_PROBE_CONCURRENCY);
     }
-    async inspectOne(owner, repository, token, requirement) {
+    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers) {
+        const emit = (phase, detail) => onProgress?.({ role: requirement.role, requirementId: requirement.id, phase, ...(detail ? { detail } : {}) });
+        if (requirement.level === 'write' && requirement.applicability === 'conditional') {
+            const check = outcome(requirement, 'unverifiable', 'Conditional write access will be tested if the selected plan requires it.');
+            emit('skipped');
+            return check;
+        }
+        emit('checking');
+        if (requirement.level === 'write') {
+            try {
+                await (0, setup_permission_resource_probes_1.probeDisposableResource)({ owner, repository, scope: requirement.scope, probe: requirement.probe,
+                    http: new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs),
+                    journal: this.journal, phase: emit });
+                const check = { ...requirement, status: 'verified', writeProof: 'transaction',
+                    message: 'GitHub accepted temporary create, exact readback, and confirmed cleanup.' };
+                emit('verified');
+                return check;
+            }
+            catch (error) {
+                const check = (0, setup_permission_probe_http_1.writeProbeFailure)(requirement, error);
+                emit('failed', probeDiagnostic(error));
+                return check;
+            }
+        }
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
         try {
@@ -88104,16 +89223,30 @@ class SetupTokenPermissionQueryAdapter {
                 signal: controller.signal,
                 redirect: 'error',
             });
+            if (requirement.scope === 'organization' && requirement.probe === 'projects'
+                && requirement.level === 'read' && requirement.applicability === 'required'
+                && selectedProjectNumbers) {
+                const check = await inspectSelectedOrganizationProjectsRead(requirement, owner, selectedProjectNumbers, request);
+                emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed', check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                return check;
+            }
             const target = await resolveProbeTarget(owner, repository, requirement, request);
-            if (target.status === 'complete')
+            if (target.status === 'complete') {
+                emit(target.check.status === 'verified' || target.check.status === 'available' ? 'verified' : 'failed', target.check.status === 'verified' || target.check.status === 'available' ? undefined : probeDiagnostic(target.check.message));
                 return target.check;
+            }
             const response = target.response ?? await request(target.url);
             if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
-                return await inspectOrganizationProjectsRead(requirement, response, owner, request);
+                const check = await inspectOrganizationProjectsRead(requirement, response, owner, request);
+                emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed', check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                return check;
             }
-            return mapProbeResponse(requirement, response, target.readEvidence, owner);
+            const check = await mapProbeResponse(requirement, response, target.readEvidence, owner);
+            emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed', check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+            return check;
         }
         catch {
+            emit('failed', 'unavailable');
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
         }
         finally {
@@ -88260,13 +89393,13 @@ async function mapProbeResponse(requirement, response, readEvidence, owner) {
         if (readEvidence === 'permission-bound') {
             return outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.');
         }
-        const publiclyReadable = outcome(requirement, 'unverifiable', requirement.scope === 'repository'
-            ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
-            : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.');
+        const publiclyReadable = outcome(requirement, 'available', requirement.scope === 'repository'
+            ? 'Read succeeded for this public repository; the PAT grant itself is not independently proven.'
+            : 'Read succeeded for this public organization resource; the PAT grant itself is not independently proven.');
         const publicReadEvidence = 'public-repository';
         return (0, setup_token_permission_evidence_policy_1.isOperationallyAvailableSetupRead)(requirement, publicReadEvidence)
             ? { ...publiclyReadable, operationallyAvailable: true, publicReadEvidence }
-            : publiclyReadable;
+            : outcome(requirement, 'unverifiable', 'A public read succeeded, but the named PAT grant could not be proven.');
     }
     if (response.status === 409
         && requirement.scope === 'repository'
@@ -88275,7 +89408,7 @@ async function mapProbeResponse(requirement, response, readEvidence, owner) {
             return outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.');
         }
         return requirement.level === 'read' && readEvidence === 'publicly-readable'
-            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true, publicReadEvidence: 'public-repository' }
+            ? { ...outcome(requirement, 'available', 'This public repository is empty; its read is available, but does not prove the PAT permission.'), operationallyAvailable: true, publicReadEvidence: 'public-repository' }
             : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
     }
     if (response.status === 401) {
@@ -88318,13 +89451,51 @@ async function inspectOrganizationProjectsRead(requirement, firstResponse, owner
                 return mapProbeResponse(requirement, response, 'organization-projects', owner);
         }
         return {
-            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were observed within the bounded read; confirm the Projects: read grant before continuing.'),
+            ...outcome(requirement, 'available', 'The organization Projects read succeeded, including an empty result; private Project access is not independently proven.'),
+            operationallyAvailable: true,
             publicReadEvidence: 'public-organization-projects',
         };
     }
     catch {
         return outcome(requirement, 'unverifiable', 'GitHub organization Projects response could not be inspected safely.');
     }
+}
+async function inspectSelectedOrganizationProjectsRead(requirement, owner, selection, request) {
+    const numbers = selection.split(',');
+    if (numbers.length < 1 || numbers.length > 10 || numbers.some(value => !/^[1-9][0-9]*$/u.test(value)
+        || !Number.isSafeInteger(Number(value)) || Number(value) > 2147483647)
+        || new Set(numbers).size !== numbers.length) {
+        return outcome(requirement, 'unverifiable', 'The approved Project selection was not a bounded list of numbers.');
+    }
+    let privateProjectObserved = false;
+    for (const number of numbers) {
+        const response = await request(`https://api.github.com/orgs/${encodeURIComponent(owner)}/projectsV2/${number}`);
+        if (response.status !== 200)
+            return mapProbeResponse(requirement, response, 'organization-projects', owner);
+        let project;
+        try {
+            const payload = await response.json();
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload))
+                throw new Error('invalid');
+            project = payload;
+        }
+        catch {
+            return outcome(requirement, 'unverifiable', 'GitHub returned an invalid selected Project response.');
+        }
+        const projectOwner = project.owner;
+        if (project.number !== Number(number) || typeof project.public !== 'boolean'
+            || !projectOwner || typeof projectOwner !== 'object' || Array.isArray(projectOwner)
+            || typeof projectOwner.login !== 'string'
+            || projectOwner.login.toLowerCase() !== owner.toLowerCase()) {
+            return outcome(requirement, 'unverifiable', 'GitHub did not confirm the exact selected Project and organization.');
+        }
+        if (project.public === false)
+            privateProjectObserved = true;
+    }
+    return privateProjectObserved
+        ? outcome(requirement, 'verified', 'GitHub returned every selected Project, including a private organization Project.')
+        : { ...outcome(requirement, 'available', 'Every selected Project read succeeded, but all are public; the PAT grant is not independently proven.'),
+            operationallyAvailable: true, publicReadEvidence: 'public-organization-projects' };
 }
 async function isActiveOrganizationMembership(response, owner) {
     try {
@@ -88417,6 +89588,22 @@ function probeUrl(owner, repository, requirement) {
 }
 function repositoryRoot(owner, repository) {
     return `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
+}
+function probeDiagnostic(value) {
+    if (value instanceof setup_permission_probe_http_1.ProbeFailure) {
+        if (value.cleanupPending)
+            return 'cleanup-pending';
+        if (value.httpStatus !== undefined)
+            return `http-${value.httpStatus}`;
+        if (value.message.startsWith('No isolated'))
+            return 'unsupported';
+        return 'unavailable';
+    }
+    if (typeof value === 'string') {
+        const match = /HTTP ([1-5][0-9]{2})/u.exec(value);
+        return match ? `http-${Number(match[1])}` : 'unavailable';
+    }
+    return 'unavailable';
 }
 
 

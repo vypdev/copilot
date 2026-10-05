@@ -183,7 +183,7 @@ Setup is the profile-creation surface, so its questionnaire, plan, confirmation,
 | `--config <path>` | No | Load non-secret YAML/JSON setup overrides. Interactive answers can still refine them. |
 | `--non-interactive` | No | Use defaults, flags, config-file values, and explicit credentials without creating a terminal or prompting. |
 | `--yes` | No | Approve only the final plan; it does not fill missing configuration or credentials. |
-| `--confirm-unverifiable-write-permissions` | No | Explicitly acknowledge, after inspecting the PAT settings, required write rows that safe read-only probes cannot verify. It never accepts missing access or unverifiable required reads. |
+| `--confirm-unverifiable-write-permissions` | No | Deprecated and rejected. Required Write permissions must pass their own temporary create/read/delete checks after plan approval. |
 | `--dry-run` | No | Print the complete plan without changing files or GitHub. A token is not required. |
 | `--skip-variables` | No | Copy files and provision metadata without changing Repository Variables. |
 | `--skip-secrets` | No | Do not validate or create/update repository Secrets. |
@@ -216,17 +216,13 @@ copilot setup --non-interactive --yes --features issues,pullRequests,commits,iss
 copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
 ```
 
-Run these commands without a permission exception first. If the audit stops
-only because required write rows are `Unverifiable`, inspect the displayed
-requirements against both PATs' settings. Only after confirming every required
-row may you explicitly acknowledge that limitation. Repeat the same selections
-if the original run was interactive; for automation, append the flag to the
-original invocation with the same configuration file, flags, and credentials.
-For example, preserving the feature and agent flags from the command above:
-
-```bash
-copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex --confirm-unverifiable-write-permissions
-```
+These commands perform required read checks before plan approval. After the
+plan is approved, setup performs a temporary create/read/delete cycle on a disposable resource for
+each required Write permission. A failed or unconfirmed check blocks setup;
+`--yes` cannot bypass it. Repeat the same selections, configuration file,
+flags, and credentials after correcting the PAT. Actions and Pull request
+checks can leave GitHub run or PR history and notifications despite cleanup;
+review those effects in the plan before approving it.
 
 Without an explicit `--agent-guidance` or config value, non-interactive setup
 still generates the profile, guide, and skill, but it uses

@@ -44,6 +44,15 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
   });
 
+  test('passes approved Project numbers to the exact-resource read audit', async () => {
+    const { ports, useCase } = harness({ token: 'test-token' });
+    const selected = { ...configuration, projects: { ...configuration.projects, ids: '7,9' } };
+    expect(await useCase.audit(selected, remote)).toEqual({ status: 'accepted' });
+    expect(ports.permissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
+      selectedProjectNumbers: '7,9',
+    }));
+  });
+
   test('preview without a PAT shows requirements but never probes permissions', async () => {
     const { ports, useCase } = harness();
     expect(await useCase.audit(configuration, remote)).toEqual({ status: 'accepted' });
@@ -101,11 +110,11 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     expect(ports.showExcessGrants).toHaveBeenCalledWith(expect.arrayContaining([expect.stringContaining('Secrets')]));
   });
 
-  test('unverifiable writes require explicit confirmation', async () => {
+  test('unverifiable writes block even if legacy confirmation is offered', async () => {
     const { ports, useCase } = harness({ token: 'test-token' });
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false, confirmationRequired: true });
-    expect(await useCase.audit(configuration, remote)).toEqual({ status: 'accepted' });
-    expect(ports.confirmUnverifiable).toHaveBeenCalledTimes(1);
+    expect(await useCase.audit(configuration, remote)).toEqual(expect.objectContaining({ status: 'blocked' }));
+    expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
   });
 
   test('declined unverifiable writes block the final plan', async () => {

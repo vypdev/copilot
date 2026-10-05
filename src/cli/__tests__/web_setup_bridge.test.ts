@@ -241,6 +241,29 @@ describe('WebSetupBridge', () => {
     expect(bridge.snapshot().permissions).toMatchObject({ role: 'setup', report: { ready: true }, requirements: [] });
   });
 
+  test('streams bounded permission phases and drops unknown, stale, or secret-bearing diagnostics', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const requirement = { id: 'setup.repository.contents', role: 'setup' as const,
+      scope: 'repository' as const, permission: 'Contents', level: 'write' as const,
+      applicability: 'required' as const, reason: 'temporary test', probe: 'contents' as const };
+    bridge.requirements('setup', [requirement]);
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id, phase: 'creating' });
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id, phase: 'failed',
+      detail: 'private provider body' as never });
+    bridge.permissionProgress({ role: 'workflow', requirementId: requirement.id, phase: 'verified' });
+    bridge.permissionProgress({ role: 'setup', requirementId: 'unknown', phase: 'verified' });
+    expect(bridge.snapshot().permissions?.progress).toEqual([
+      { role: 'setup', requirementId: requirement.id, phase: 'failed' },
+    ]);
+    bridge.requirements('setup', [requirement]);
+    expect(bridge.snapshot().permissions?.progress).toEqual([]);
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id, phase: 'failed', detail: 'http-403' });
+    bridge.finish('blocked', 'ended');
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id, phase: 'verified' });
+    expect(bridge.snapshot().permissions?.progress?.[0]).toMatchObject({ phase: 'failed', detail: 'http-403' });
+    expect(JSON.stringify(bridge.snapshot())).not.toContain('private provider body');
+  });
+
   test('blocked PAT result retains its redacted permission report after the prompt closes', () => {
     const bridge = new WebSetupBridge('owner/repo');
     bridge.report({ role: 'setup', identityStatus: 'valid', identityMessage: 'checked',

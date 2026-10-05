@@ -6,6 +6,7 @@
   import { localizedPlanWarning } from '../i18n/planWarningCopy';
   import type { SetupQuestion } from '../../../src/application/contracts/web_setup_view';
   import PlanDecisionSummary from './PlanDecisionSummary.svelte';
+  import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   export let prompt: Extract<WebSetupPrompt, { kind: 'plan' }>;
   export let controller: boolean;
   export let busy: boolean;
@@ -25,6 +26,11 @@
 </script>
 
 <p class="description">{tr('planBody', $setupLocale)}</p>
+<section class="plan-decisions" aria-label={tr('planPermissionProbeTitle', $setupLocale)}>
+  <h3>{tr('planPermissionProbeTitle', $setupLocale)}</h3>
+  <p>{tr('planPermissionProbeBody', $setupLocale)}</p>
+  <ul>{#each prompt.plan.permissionProbes as probe}<li>{permissionTerm($setupLocale, probe.scope)}: {permissionName($setupLocale, probe.permission)}</li>{:else}<li>{tr('none', $setupLocale)}</li>{/each}</ul>
+</section>
 <PlanDecisionSummary decisions={prompt.plan.decisions} />
 {#if prompt.plan.presentationDefaults.length}
   <section class="plan-decisions"><h3>{tr('planBasicDefaultsIntro', $setupLocale)}</h3>

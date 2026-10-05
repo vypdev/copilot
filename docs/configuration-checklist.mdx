@@ -24,10 +24,10 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] System/Light/Dark mode is readable in the current browser; theme choice does not change permission, credential, or setup policy.
 
 - [ ] Before entering each PAT, the setup terminal table or local web permission panel matches the intended repository/organization target, access level, selected features, and storage scope.
-- [ ] After entry, every `❌ Missing` required permission has been corrected; required unverifiable reads have been retried; every `? Unverifiable` required write has been compared manually with the PAT settings and explicitly acknowledged without treating it as a pass.
+- [ ] After entry, every failed required read has been corrected; after plan approval, every required Write row has a completed temporary create/read/delete result and no pending cleanup.
 - [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read may be operationally usable while still shown as `Unverifiable`; public organization Members, Issue Types and writes never gain that exception. Members read needs a verified, active self-membership response for the selected organization.
 - [ ] If the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
-- [ ] Permission verification used read-only probes only; no temporary label, branch, file, Variable, Secret, project item, comment, or workflow run was created as a permission test.
+- [ ] The plan disclosed each selected temporary Write check. Actions and Pull request checks may leave run/PR history or notifications; cleanup of their temporary resources was confirmed.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
 - [ ] No session file or token is copied into GitHub Secrets.
 - [ ] Secret values are never placed in `.copilot-setup.yml`, command configuration, or Variables.
@@ -54,7 +54,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] `copilot doctor` reports the effective repository, issue, and pull-request locales plus `exact`, `base`, `dynamic`, or `fallback` catalog paths.
 - [ ] Doctor headings, summaries, states, and actions use one repository-locale catalog; raw PAT, credential-health, rule, and workflow-provider prose is absent, and any dynamic-catalog failure produces a complete English report.
 - [ ] Every configured locale is a valid hyphenated BCP-47 tag such as `pt-BR`; underscore forms such as `pt_BR` are rejected before setup planning.
-- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; when safe probes cannot prove required writes, `--confirm-unverifiable-write-permissions` records the separate manual PAT-settings acknowledgement and `--yes` remains plan approval only.
+- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; `--yes` approves the plan and each selected Write capability still needs a successful temporary check.
 - [ ] Cancellation (`Ctrl-C` or EOF) has been observed to exit 130 with no writes; declining the final plan exits 0 with no writes.
 - [ ] Setup review lists Secret names only and no secret value appears in config, plan, logs, errors, reports, fixtures, or backups.
 - [ ] Setup PAT and workflow PAT permission reports contain only stable permission IDs, target scopes, access levels, semantic statuses, and bounded reasons; tokens and raw provider responses are absent.

@@ -2,11 +2,15 @@ import type { SetupTokenPermissionQueryPort } from '../application/ports/setup_t
 import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionRequirement,
+    SetupTokenPermissionProgress,
 } from '../domain/setup_token_permissions';
 import { isGithubPermissionDenied } from '../data/repository/github/github_error_policy';
 import { runWithConcurrencyLimit } from '../application/policies/bounded_concurrency_policy';
 import { isOperationallyAvailableSetupRead } from '../application/policies/setup_token_permission_evidence_policy';
 import { nextOrganizationProjectsProbePage } from './setup_projects_probe_page_policy';
+import { probeDisposableResource } from './setup_permission_resource_probes';
+import { ProbeFailure, SetupPermissionProbeHttp, writeProbeFailure } from './setup_permission_probe_http';
+import { SetupPermissionProbeJournal } from './setup_permission_probe_journal';
 
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
@@ -30,26 +34,44 @@ interface RepositoryProbeMetadata {
 export interface SetupTokenPermissionQueryOptions {
     fetcher?: typeof fetch;
     timeoutMs?: number;
+    journal?: SetupPermissionProbeJournal;
 }
 
 /** Maps safe GitHub reads to semantic permission evidence without test mutations. */
 export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQueryPort {
     private readonly fetcher: typeof fetch;
     private readonly timeoutMs: number;
+    private readonly journal: SetupPermissionProbeJournal;
 
     constructor(options: SetupTokenPermissionQueryOptions = {}) {
         this.fetcher = options.fetcher ?? fetch;
         this.timeoutMs = options.timeoutMs ?? 10_000;
+        this.journal = options.journal ?? new SetupPermissionProbeJournal();
     }
 
-    inspect(
+    async inspect(
         owner: string,
         repository: string,
         token: string,
         requirements: readonly SetupTokenPermissionRequirement[],
+        onProgress?: (progress: SetupTokenPermissionProgress) => void,
+        selectedProjectNumbers?: string,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
+        try {
+            await this.journal.recover(owner, repository,
+                new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+        } catch {
+            return requirements.map(requirement => {
+                onProgress?.({ role: requirement.role, requirementId: requirement.id, phase: 'failed',
+                    detail: 'cleanup-pending' });
+                const check = outcome(requirement, 'unverifiable',
+                    'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
+                return requirement.level === 'write' ? { ...check, cleanupPending: true } : check;
+            });
+        }
         return runWithConcurrencyLimit(
-            requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement)),
+            requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress,
+                selectedProjectNumbers)),
             SETUP_PERMISSION_PROBE_CONCURRENCY,
         );
     }
@@ -59,7 +81,32 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
         repository: string,
         token: string,
         requirement: SetupTokenPermissionRequirement,
+        onProgress?: (progress: SetupTokenPermissionProgress) => void,
+        selectedProjectNumbers?: string,
     ): Promise<SetupTokenPermissionCheck> {
+        const emit = (phase: SetupTokenPermissionProgress['phase'], detail?: SetupTokenPermissionProgress['detail']) =>
+            onProgress?.({ role: requirement.role, requirementId: requirement.id, phase, ...(detail ? { detail } : {}) });
+        if (requirement.level === 'write' && requirement.applicability === 'conditional') {
+            const check = outcome(requirement, 'unverifiable', 'Conditional write access will be tested if the selected plan requires it.');
+            emit('skipped');
+            return check;
+        }
+        emit('checking');
+        if (requirement.level === 'write') {
+            try {
+                await probeDisposableResource({ owner, repository, scope: requirement.scope, probe: requirement.probe,
+                    http: new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs),
+                    journal: this.journal, phase: emit });
+                const check: SetupTokenPermissionCheck = { ...requirement, status: 'verified', writeProof: 'transaction',
+                    message: 'GitHub accepted temporary create, exact readback, and confirmed cleanup.' };
+                emit('verified');
+                return check;
+            } catch (error) {
+                const check = writeProbeFailure(requirement, error);
+                emit('failed', probeDiagnostic(error));
+                return check;
+            }
+        }
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
         try {
@@ -69,19 +116,39 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
                 signal: controller.signal,
                 redirect: 'error',
             });
+            if (requirement.scope === 'organization' && requirement.probe === 'projects'
+                && requirement.level === 'read' && requirement.applicability === 'required'
+                && selectedProjectNumbers) {
+                const check = await inspectSelectedOrganizationProjectsRead(
+                    requirement, owner, selectedProjectNumbers, request);
+                emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed',
+                    check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                return check;
+            }
             const target = await resolveProbeTarget(owner, repository, requirement, request);
-            if (target.status === 'complete') return target.check;
+            if (target.status === 'complete') {
+                emit(target.check.status === 'verified' || target.check.status === 'available' ? 'verified' : 'failed',
+                    target.check.status === 'verified' || target.check.status === 'available' ? undefined : probeDiagnostic(target.check.message));
+                return target.check;
+            }
             const response = target.response ?? await request(target.url);
             if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
-                return await inspectOrganizationProjectsRead(requirement, response, owner, request);
+                const check = await inspectOrganizationProjectsRead(requirement, response, owner, request);
+                emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed',
+                    check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                return check;
             }
-            return mapProbeResponse(
+            const check = await mapProbeResponse(
                 requirement,
                 response,
                 target.readEvidence,
                 owner,
             );
+            emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed',
+                check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+            return check;
         } catch {
+            emit('failed', 'unavailable');
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
         } finally {
             clearTimeout(timeout);
@@ -259,15 +326,15 @@ async function mapProbeResponse(
         }
         const publiclyReadable = outcome(
             requirement,
-            'unverifiable',
+            'available',
             requirement.scope === 'repository'
-                ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
-                : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.',
+                ? 'Read succeeded for this public repository; the PAT grant itself is not independently proven.'
+                : 'Read succeeded for this public organization resource; the PAT grant itself is not independently proven.',
         );
         const publicReadEvidence = 'public-repository' as const;
         return isOperationallyAvailableSetupRead(requirement, publicReadEvidence)
             ? { ...publiclyReadable, operationallyAvailable: true, publicReadEvidence }
-            : publiclyReadable;
+            : outcome(requirement, 'unverifiable', 'A public read succeeded, but the named PAT grant could not be proven.');
     }
     if (response.status === 409
         && requirement.scope === 'repository'
@@ -276,7 +343,7 @@ async function mapProbeResponse(
             return outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.');
         }
         return requirement.level === 'read' && readEvidence === 'publicly-readable'
-            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true, publicReadEvidence: 'public-repository' }
+            ? { ...outcome(requirement, 'available', 'This public repository is empty; its read is available, but does not prove the PAT permission.'), operationallyAvailable: true, publicReadEvidence: 'public-repository' }
             : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
     }
     if (response.status === 401) {
@@ -323,12 +390,52 @@ async function inspectOrganizationProjectsRead(
             if (!response.ok) return mapProbeResponse(requirement, response, 'organization-projects', owner);
         }
         return {
-            ...outcome(requirement, 'unverifiable', 'Only public or no organization Projects were observed within the bounded read; confirm the Projects: read grant before continuing.'),
+            ...outcome(requirement, 'available', 'The organization Projects read succeeded, including an empty result; private Project access is not independently proven.'),
+            operationallyAvailable: true,
             publicReadEvidence: 'public-organization-projects',
         };
     } catch {
         return outcome(requirement, 'unverifiable', 'GitHub organization Projects response could not be inspected safely.');
     }
+}
+
+async function inspectSelectedOrganizationProjectsRead(
+    requirement: SetupTokenPermissionRequirement,
+    owner: string,
+    selection: string,
+    request: (url: string) => Promise<Response>,
+): Promise<SetupTokenPermissionCheck> {
+    const numbers = selection.split(',');
+    if (numbers.length < 1 || numbers.length > 10 || numbers.some(value => !/^[1-9][0-9]*$/u.test(value)
+        || !Number.isSafeInteger(Number(value)) || Number(value) > 2_147_483_647)
+        || new Set(numbers).size !== numbers.length) {
+        return outcome(requirement, 'unverifiable', 'The approved Project selection was not a bounded list of numbers.');
+    }
+    let privateProjectObserved = false;
+    for (const number of numbers) {
+        const response = await request(`https://api.github.com/orgs/${encodeURIComponent(owner)}/projectsV2/${number}`);
+        if (response.status !== 200) return mapProbeResponse(requirement, response, 'organization-projects', owner);
+        let project: Record<string, unknown>;
+        try {
+            const payload: unknown = await response.json();
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('invalid');
+            project = payload as Record<string, unknown>;
+        } catch {
+            return outcome(requirement, 'unverifiable', 'GitHub returned an invalid selected Project response.');
+        }
+        const projectOwner = project.owner;
+        if (project.number !== Number(number) || typeof project.public !== 'boolean'
+            || !projectOwner || typeof projectOwner !== 'object' || Array.isArray(projectOwner)
+            || typeof (projectOwner as Record<string, unknown>).login !== 'string'
+            || ((projectOwner as Record<string, unknown>).login as string).toLowerCase() !== owner.toLowerCase()) {
+            return outcome(requirement, 'unverifiable', 'GitHub did not confirm the exact selected Project and organization.');
+        }
+        if (project.public === false) privateProjectObserved = true;
+    }
+    return privateProjectObserved
+        ? outcome(requirement, 'verified', 'GitHub returned every selected Project, including a private organization Project.')
+        : { ...outcome(requirement, 'available', 'Every selected Project read succeeded, but all are public; the PAT grant is not independently proven.'),
+            operationallyAvailable: true, publicReadEvidence: 'public-organization-projects' };
 }
 
 async function isActiveOrganizationMembership(response: Response, owner: string): Promise<boolean> {
@@ -417,4 +524,18 @@ function probeUrl(
 
 function repositoryRoot(owner: string, repository: string): string {
     return `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
+}
+
+function probeDiagnostic(value: unknown): SetupTokenPermissionProgress['detail'] {
+    if (value instanceof ProbeFailure) {
+        if (value.cleanupPending) return 'cleanup-pending';
+        if (value.httpStatus !== undefined) return `http-${value.httpStatus}` as const;
+        if (value.message.startsWith('No isolated')) return 'unsupported';
+        return 'unavailable';
+    }
+    if (typeof value === 'string') {
+        const match = /HTTP ([1-5][0-9]{2})/u.exec(value);
+        return match ? `http-${Number(match[1])}` : 'unavailable';
+    }
+    return 'unavailable';
 }

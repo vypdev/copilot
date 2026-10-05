@@ -19,25 +19,28 @@ export interface VerifySetupPatBootstrapPorts {
   showCorrectedLink(url: string): void;
 }
 
-/** Initial read-only gate shared by terminal and browser setup presentations. */
+/** Initial identity and read gate. Temporary writes wait for plan approval. */
 export class VerifySetupPatBootstrapUseCase {
   constructor(private readonly ports: VerifySetupPatBootstrapPorts) {}
 
   async execute(request: VerifySetupPatBootstrapRequest): Promise<string | undefined> {
+    const bootstrapRequirements = request.requirements.map(requirement =>
+      requirement.level === 'write'
+        ? { ...requirement, applicability: 'conditional' as const, condition: 'After setup plan approval' }
+        : requirement);
     const report = await this.ports.permissions.inspect({
       role: 'setup', owner: request.owner, repository: request.repository,
-      token: request.token, requirements: request.requirements,
+      token: request.token, requirements: bootstrapRequirements,
     });
     this.ports.presenter.showReport(report);
-    const accepted = report.ready
-      || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+    const accepted = report.ready;
     if (!accepted || report.identityStatus !== 'valid') {
       if (request.guided) this.ports.showCorrectedLink(buildSetupPatCreationUrl({
         role: 'setup', owner: request.owner, repository: request.repository,
         expiresIn: 1, requirements: request.requirements,
       }));
       throw new ApplicationError('authorization.credential-invalid',
-        'The setup PAT has missing or unconfirmed required access. Review the permission report, correct or explicitly confirm the required grants, and retry.');
+        'The setup PAT did not pass every required capability check. Review the failed permission and cleanup result, correct access, and retry.');
     }
     if (!await this.ports.confirmAccount(report.account)) {
       throw new ApplicationError('authorization.credential-invalid',

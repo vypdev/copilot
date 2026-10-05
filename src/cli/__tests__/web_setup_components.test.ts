@@ -12,6 +12,28 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test('permission progress displays each grant’s latest outcome and a bounded HTTP failure', () => {
+    const html = markup('PermissionProgressPanel', { permissions: {
+      requirements: [
+        { id: 'setup.repository.contents', role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', applicability: 'required' },
+        { id: 'setup.organization.projects', role: 'setup', scope: 'organization', permission: 'Projects', level: 'read', applicability: 'required' },
+      ],
+      progress: [
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'checking' },
+        { role: 'setup', requirementId: 'setup.organization.projects', phase: 'checking' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'creating' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'reading' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'deleting' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'verified' },
+        { role: 'setup', requirementId: 'setup.organization.projects', phase: 'failed', detail: 'http-403' },
+      ],
+    } }, 'es');
+    expect(html).toContain('Contenido');
+    expect(html).toContain('Proyectos');
+    expect(html).toContain('HTTP 403');
+    expect(html).toContain('permission-progress-done');
+    expect(html).toContain('permission-progress-failed');
+  });
   test('pairing screen explains terminal code without exposing a key in the URL', () => {
     const html = markup('PairingPanel', { busy: false });
     expect(html).toContain('Pair this browser');
@@ -68,6 +90,20 @@ describe('web setup component semantics', () => {
     expect(html).toContain('Plan');
     expect(html).toContain('Comprueba los permisos mostrados');
     expect(html).toContain('No se iniciaron cambios');
+  });
+
+  test('blocked permission result exposes unfinished temporary-resource cleanup', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.repository.secrets', role: 'setup',
+          permission: 'Secrets', scope: 'repository', level: 'write', applicability: 'required',
+          reason: 'Provision Secrets', probe: 'secrets', status: 'unverifiable',
+          cleanupPending: true, message: 'bounded failure' }] } });
+    expect(html).toContain('temporary permission-test resource may still exist');
+    expect(html).toContain('cleanup');
+    expect(html).toContain('Secrets');
+    expect(html).not.toContain('No repository or GitHub setup changes');
   });
 
   test.each([
@@ -409,15 +445,15 @@ describe('web setup component semantics', () => {
   });
 
   test.each([
-    ['en', 'A non-public organization Project', 'public resource can be read', 'Read-only checks cannot prove Write'],
-    ['es', 'Un Project no público', 'recurso público se puede leer', 'consultas de solo lectura no demuestran Escritura'],
-    ['fr', 'Un Project non public', 'ressource publique est lisible', 'lectures seules ne prouvent pas'],
-    ['pt', 'Um Project não público', 'recurso público pode ser lido', 'consultas só de leitura não provam Escrita'],
+    ['en', 'A non-public organization Project', 'read succeeded', 'temporary write check did not finish'],
+    ['es', 'Un Project no público', 'lectura funcionó', 'comprobación temporal de escritura no terminó'],
+    ['fr', 'Un Project non public', 'lecture a réussi', 'vérification temporaire en écriture n’a pas abouti'],
+    ['pt', 'Um Project não público', 'leitura foi bem-sucedida', 'verificação temporária de escrita não terminou'],
   ])('%s explains mixed PAT evidence without leaking provider details', (locale, projectReason, publicReason, writeReason) => {
     const checks = [
       { id: 'metadata', role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read',
         applicability: 'required', reason: 'Resolve repository identity and visibility.', probe: 'metadata',
-        status: 'unverifiable', publicReadEvidence: 'public-repository', operationallyAvailable: true,
+        status: 'available', publicReadEvidence: 'public-repository', operationallyAvailable: true,
         message: 'private diagnostic token-marker' },
       { id: 'secrets', role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write',
         applicability: 'required', reason: 'Inspect and provision selected organization Actions Secrets.', probe: 'secrets',

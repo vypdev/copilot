@@ -114,7 +114,7 @@ these states:
 |---|---|---|
 | `✅ Verified` | A safe authentication-bound GitHub operation proved the requested read capability. | Continue. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
-| `? Unverifiable` | GitHub does not expose a safe non-mutating proof of the PAT grant, or the response was ambiguous/transient. | Required reads block unless an exact successful public-repository read or organization Projects list has separate operational evidence. Required writes pause for a separate explicit acknowledgement and remain non-verified. |
+| `? Unverifiable` | A read did not prove the PAT grant, or its response was ambiguous/transient. | Required reads block unless an exact successful public-repository read or organization Projects list has separate operational evidence. Required writes must pass a temporary create/read/delete test after plan approval. |
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
@@ -130,15 +130,18 @@ workflow files may be anonymously readable on a public repository. Copilot
 marks those reads `Verified` only when the same bounded probe establishes that
 the repository is private; on a public repository, or when visibility is
 unknown, success remains `Unverifiable`. Secret and Variable inventory
-reads are permission-bound; their corresponding write grants remain
-`Unverifiable` because GitHub exposes no safe non-mutating proof of write
-access, so setup requires explicit acknowledgement for those rows. Public
+reads are permission-bound; their corresponding write grants wait for
+temporary create/read/delete tests after plan approval. Public
 organization Issue Types reads remain `Unverifiable` as PAT evidence.
 After valid token identity, a successful public repository read can be used
 for that exact operation while its PAT permission row stays `Unverifiable`.
 An organization Projects list containing only public Projects, or no Projects,
 is similarly usable for discovery without proving the PAT grant. A malformed
-or denied Projects response is not usable.
+or denied Projects response is not usable. After the approved plan selects
+Projects, setup reads each Project by its exact organization and number. Every
+selected read must succeed; a private Project response proves the scoped read,
+while successful public Project responses remain operationally usable without
+claiming the PAT grant was independently established.
 The public organization members list can omit concealed members, so it cannot
 establish Members-read capability. Copilot instead checks the authenticated
 user's active organization membership through GitHub's permission-bound
@@ -150,31 +153,21 @@ visibility-unknown probe, organization Issue Types, or any write.
 The third state is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
 requires; it does not enumerate every effective grant of the presented
-fine-grained PAT. Copilot never creates a temporary label, branch, file,
-Variable, Secret, comment, project item, or workflow run merely to turn that
-unknown into a checkmark.
+fine-grained PAT. After plan approval, Copilot tests each required Write
+capability with a disposable resource and requires confirmed cleanup.
 
-In the web setup assistant, `Projects · organization · Read — Verified` may
-appear alongside `Metadata · repository · Read — Unverifiable` and several
-`Write — Unverifiable` rows. That combination does not mean GitHub ignored the
-PAT form: a public repository can be read without proving a PAT grant, while
-read-only requests cannot prove Write. Compare only **required** rows marked
-`Unverifiable` with the PAT settings before explicitly confirming. A verified
-Projects row needs no extra confirmation. A row marked `Missing` or an
-inconclusive required read without positive operational evidence still stops
-setup; confirmation does not turn an unknown row into a verified one.
+At PAT entry, the assistant checks identity and required reads. Required writes
+wait until the reviewed plan is approved. A public read can be usable without
+independently proving the PAT grant; the UI labels it accordingly. Failed
+required reads or writes stop setup, and operator confirmation cannot promote
+an unknown row to verified.
 
-`ready` is true only when every required row is read-level and each read is
-verified or positively usable; the read-only audit never accepts a provider
-claim that a write row is verified. A public read remains visibly
-`Unverifiable` as token-permission evidence even when setup can use it. When
-identity and all required reads are verified or usable and only required writes
-remain `Unverifiable`,
-interactive setup asks the operator to confirm that the PAT settings exactly
-match the displayed table, defaulting to No. Unattended setup requires the
-separate `--confirm-unverifiable-write-permissions` flag; `--yes` approves only
-the setup plan and is not permission evidence. Missing access, unverifiable
-required reads, and invalid identity can never be acknowledged past.
+`ready` is true only when every required read succeeded or is positively usable
+and every required write completed its own temporary create/read/delete cycle.
+`--yes` approves the plan; it is not permission evidence. The old
+`--confirm-unverifiable-write-permissions` option is rejected. Actions and Pull
+request tests may leave GitHub history and notifications after cleanup; the
+plan discloses the selected tests before approval.
 
 The setup-PAT table is comprehensive because it appears before the interactive
 feature choices are final. Repository Metadata and the read capabilities needed
@@ -190,9 +183,9 @@ Variables read access for the workflow PAT.
 The repository Contents read check uses the read-only commit-list endpoint. A
 documented empty-repository response is accepted as proof only after repository
 metadata proves the repository is private. For a public repository that same
-response remains `Unverifiable`; the corresponding write capability is also
-unverifiable and needs the normal explicit acknowledgement. An ambiguous `404`
-is never treated as empty-repository evidence.
+response remains `Unverifiable` as PAT evidence; Contents write still needs
+its temporary branch create/read/delete test. An ambiguous `404` is never
+treated as empty-repository evidence.
 
 Permission checks use at most four concurrent read-only GitHub probes. Results
 remain in the displayed requirement order even when provider responses complete

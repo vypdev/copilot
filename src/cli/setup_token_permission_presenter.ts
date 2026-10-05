@@ -4,6 +4,7 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
     SetupTokenPermissionRequirement,
+    SetupTokenPermissionProgress,
     SetupTokenRole,
 } from '../domain/setup_token_permissions';
 import { renderBox } from './setup_prompt_rendering';
@@ -24,6 +25,11 @@ export class ConsoleSetupTokenPermissionPresenter implements SetupTokenPermissio
 
     showReport(report: SetupTokenPermissionReport): void {
         console.log(renderSetupTokenPermissionReport(report));
+    }
+
+    showProgress(progress: SetupTokenPermissionProgress): void {
+        const phase = progress.phase === 'verified' ? '✓' : progress.phase === 'failed' ? '✗' : '…';
+        console.log(`${phase} ${progress.requirementId}: ${progress.phase}${progress.detail ? ` (${progress.detail})` : ''}`);
     }
 }
 
@@ -78,18 +84,16 @@ export function renderSetupTokenPermissionReport(
         && check.status === 'unverifiable'
         && check.operationallyAvailable !== true);
     const usablePublicReads = report.checks.filter(check => check.applicability === 'required'
-        && check.level === 'read' && check.status === 'unverifiable'
+        && check.level === 'read' && check.status === 'available'
         && check.operationallyAvailable === true);
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
-        : report.confirmationRequired
-            ? 'Confirmation required: inspect every Unverifiable required PAT grant in GitHub, including Projects read when shown. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
         : unverifiableRequiredReads.length > 0
             ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
         : unverifiable.length > 0
-            ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
-            : 'All safely verifiable required permissions are available.';
+            ? 'Some capabilities could not be proven. Review each failed phase and retry after correcting access or provider availability.'
+            : 'All required capability checks passed.';
     const publicReadLimitation = usablePublicReads.length > 0
         ? 'Public repository reads are usable for setup, but do not prove the PAT has those permissions. Protected operations remain independently checked.'
         : undefined;
@@ -137,6 +141,7 @@ function row(first: string, second: string, third: string, fourth: string): stri
 
 function statusLabel(check: SetupTokenPermissionCheck): string {
     if (check.status === 'verified') return '✅ Verified';
+    if (check.status === 'available') return '✓ Read available';
     if (check.status === 'missing') return '❌ Missing';
     return '? Unverifiable';
 }

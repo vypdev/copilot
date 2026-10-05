@@ -21,7 +21,7 @@ export function registerSetupCommand(program: Command): void {
     .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
     .option('--web', 'Run the optional local browser setup assistant (127.0.0.1 only)', false)
     .option('--yes', 'Apply the plan without the final confirmation prompt', false)
-    .option('--confirm-unverifiable-write-permissions', 'Confirm that required PAT write permissions shown as Unverifiable were configured exactly as displayed', false)
+    .option('--confirm-unverifiable-write-permissions', 'Deprecated: rejected because manual confirmation cannot prove PAT Write access', false)
     .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
     .option('--skip-variables', 'Do not create or update GitHub Repository Variables', false)
     .option('--skip-secrets', 'Do not validate or create/update GitHub Repository Secrets', false)

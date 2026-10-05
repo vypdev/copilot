@@ -100,6 +100,7 @@ export class WebSetupPermissionPresenter implements SetupTokenPermissionPresente
   showRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void { this.bridge.requirements(role, requirements); }
   showDetailedRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void { this.bridge.requirements(role, requirements); }
   showReport(report: SetupTokenPermissionReport): void { this.bridge.report(report); }
+  showProgress(progress: import('../domain/setup_token_permissions').SetupTokenPermissionProgress): void { this.bridge.permissionProgress(progress); }
 }
 
 export class WebSetupJourneyPresenter implements SetupJourneyPresenterPort {

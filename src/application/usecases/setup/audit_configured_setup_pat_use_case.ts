@@ -55,13 +55,14 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
     const report = await this.ports.permissions.inspect({
       role: 'setup', owner: this.context.owner, repository: this.context.repository,
       token: this.context.token, requirements: required,
+      ...(configuration.projects.ids ? { selectedProjectNumbers: configuration.projects.ids } : {}),
     });
     this.ports.presenter.showReport(report);
-    const accepted = report.ready || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+    const accepted = report.ready;
     if (!accepted || report.identityStatus !== 'valid') {
       if (this.context.guided) this.showCorrectedLink(required);
       return { status: 'blocked', errors: [
-        'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
+        'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
       ] };
     }
     return { status: 'accepted' };

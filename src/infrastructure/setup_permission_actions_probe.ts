@@ -1,0 +1,117 @@
+import { createHash, randomBytes } from 'node:crypto';
+import type { ResourceProbeContext } from './setup_permission_probe_context';
+import { ProbeFailure, probeJsonRecord } from './setup_permission_probe_http';
+
+interface DispatchWorkflow { readonly id: number; readonly path: string; readonly sha: string; readonly trustedNoOp: boolean; }
+
+// Hash of the packaged credential-health workflow: every job is guarded by a
+// false-by-default input. A different remote file is never dispatched directly.
+const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa6979dfda71446a54f607b18d61';
+
+/** Dispatches a disabled-job branch override of a workflow already registered on default. */
+export async function probeActions(context: ResourceProbeContext): Promise<void> {
+    const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
+    const metadata = await probeJsonRecord(await context.http.expect(root, 'GET', [200]));
+    const base = metadata.default_branch;
+    if (typeof base !== 'string' || !/^[A-Za-z0-9._/-]{1,255}$/u.test(base)
+        || base.startsWith('/') || base.endsWith('/')) {
+        throw new ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
+    }
+    const workflow = await findDispatchWorkflow(context, root, base);
+    if (!workflow) {
+        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
+    }
+    const ref = await probeJsonRecord(await context.http.expect(
+        `${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
+    const object = ref.object;
+    const sha = object && typeof object === 'object' && !Array.isArray(object)
+        ? (object as Record<string, unknown>).sha : undefined;
+    if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
+        throw new ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
+    }
+    const name = `copilot-permission-test-${randomBytes(16).toString('hex')}`;
+    const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
+    if (prior.status !== 404) throw new ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
+    const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
+        scope: 'repository', probe: 'actions', name });
+    let operationError: unknown;
+    const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+    context.phase('creating');
+    try {
+        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        if (!workflow.trustedNoOp) {
+            const file = `${root}/contents/${workflow.path}`;
+            try {
+                await context.http.expect(file, 'PUT', [200], {
+                    message: 'chore: verify temporary Actions permission [skip ci]',
+                    content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
+                });
+            } catch {
+                throw new ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
+            }
+            const observedFile = await probeJsonRecord(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
+            if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'
+                || typeof observedFile.content !== 'string'
+                || Buffer.from(observedFile.content, 'base64').toString('utf8') !== noOp) {
+                throw new ProbeFailure('The temporary no-job workflow was not confirmed on the isolated branch.');
+            }
+        }
+        await handle.markDispatchAttempted();
+        const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST', { ref: name });
+        if (dispatched.status !== 200) {
+            if (dispatched.status >= 400 && dispatched.status < 500) await handle.clearRejectedDispatch();
+            throw new ProbeFailure(`GitHub Actions dispatch returned HTTP ${dispatched.status}.`, dispatched.status);
+        }
+        const dispatch = await probeJsonRecord(dispatched);
+        const runId = dispatch.workflow_run_id;
+        if (!Number.isSafeInteger(runId) || (runId as number) <= 0) {
+            throw new ProbeFailure('GitHub did not identify the temporary Actions run.');
+        }
+        await handle.setRunId(runId as number);
+        context.phase('reading');
+        const run = await probeJsonRecord(await context.http.expect(`${root}/actions/runs/${runId}`, 'GET', [200]));
+        if (run.id !== runId || run.head_branch !== name || run.event !== 'workflow_dispatch'
+            || run.workflow_id !== workflow.id) {
+            throw new ProbeFailure('Temporary Actions run readback did not match the isolated dispatch.');
+        }
+    } catch (error) { operationError = error; }
+    context.phase('deleting');
+    try { await handle.cleanup(context.http); }
+    catch { throw new ProbeFailure('Temporary Actions cleanup could not be confirmed; recovery is required before retrying.',
+        undefined, true); }
+    if (operationError) throw operationError;
+}
+
+async function findDispatchWorkflow(
+    context: ResourceProbeContext, root: string, base: string,
+): Promise<DispatchWorkflow | undefined> {
+    const list = await probeJsonRecord(await context.http.expect(`${root}/actions/workflows?per_page=100`, 'GET', [200]));
+    if (!Array.isArray(list.workflows)) throw new ProbeFailure('GitHub returned an invalid Actions workflow list.');
+    let fallback: DispatchWorkflow | undefined;
+    const candidates = [...list.workflows].filter(item => item && typeof item === 'object' && !Array.isArray(item))
+        .sort((a, b) => Number((b as Record<string, unknown>).path === '.github/workflows/copilot_credential_health.yml')
+            - Number((a as Record<string, unknown>).path === '.github/workflows/copilot_credential_health.yml'))
+        .slice(0, 8);
+    for (const item of candidates) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+        const workflow = item as Record<string, unknown>;
+        if (workflow.state !== 'active' || typeof workflow.path !== 'string'
+            || !/^\.github\/workflows\/[A-Za-z0-9_.-]+\.ya?ml$/u.test(workflow.path)
+            || !Number.isSafeInteger(workflow.id) || (workflow.id as number) <= 0) continue;
+        const encodedPath = workflow.path.split('/').map(encodeURIComponent).join('/');
+        const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${encodeURIComponent(base)}`);
+        if (response.status !== 200) continue;
+        const file = await probeJsonRecord(response);
+        if (file.encoding !== 'base64' || typeof file.content !== 'string'
+            || typeof file.sha !== 'string' || !/^[a-f0-9]{40}$/u.test(file.sha)) continue;
+        const content = Buffer.from(file.content, 'base64').toString('utf8');
+        if (/(?:^|\n)\s*workflow_dispatch\s*:/u.test(content)) {
+            const trustedNoOp = workflow.path === '.github/workflows/copilot_credential_health.yml'
+                && createHash('sha256').update(content).digest('hex') === TRUSTED_HEALTH_WORKFLOW_SHA256;
+            const candidate = { id: workflow.id as number, path: workflow.path, sha: file.sha, trustedNoOp };
+            if (trustedNoOp) return candidate;
+            fallback ??= candidate;
+        }
+    }
+    return fallback;
+}

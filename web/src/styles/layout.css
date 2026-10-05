@@ -46,6 +46,18 @@ h1 { font-size: clamp(30px, 3vw, 45px); line-height: 1.15; letter-spacing: -.045
 .permissions li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
 .permissions li small { color: var(--muted); display: block; margin-top: 3px; }
 .permissions li strong { color: var(--accent-strong); text-transform: uppercase; font-size: 9px; }
+.permission-progress { padding: clamp(20px, 4vw, 38px); }
+.permission-progress h2 { margin: 0 0 8px; }
+.permission-progress p { color: var(--muted); line-height: 1.5; }
+.permission-progress ol { list-style: none; padding: 0; margin: 20px 0 0; }
+.permission-progress li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+.permission-progress li > span:nth-child(2) { flex: 1; min-width: 0; }
+.permission-progress li small { display: block; color: var(--muted); overflow-wrap: anywhere; }
+.permission-progress-symbol { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-soft); flex: none; }
+.permission-progress-done .permission-progress-symbol { color: var(--accent-strong); }
+.permission-progress-failed .permission-progress-symbol { color: var(--danger, #a33); }
+.permission-progress-state { text-align: right; font-weight: 600; font-size: .8rem; max-width: 35%; }
+@media (max-width: 600px) { .permission-progress li { align-items: flex-start; flex-wrap: wrap; } .permission-progress-state { max-width: none; margin-left: 44px; text-align: left; } }
 footer { margin-top: 40px; color: var(--muted); opacity: .85; font-size: 9px; letter-spacing: .11em; font-weight: 700; }
 footer span { margin: 0 8px; }
 [dir="rtl"] .context-card code, [dir="rtl"] .result-links code, [dir="rtl"] .producer-option strong,
