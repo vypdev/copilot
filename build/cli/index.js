@@ -56431,7 +56431,7 @@ class AuditConfiguredSetupPatUseCase {
         this.context = context;
         this.ports = ports;
     }
-    async audit(configuration, remote) {
+    async audit(configuration, remote, onCleanupPending) {
         const required = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remote);
         this.ports.presenter.showRequirements('setup', required);
         if (this.context.token && (!remote || remote.ownerType === 'Unknown')) {
@@ -56457,14 +56457,19 @@ class AuditConfiguredSetupPatUseCase {
             token: this.context.token, requirements: required,
             ...(configuration.projects.ids ? { selectedProjectNumbers: configuration.projects.ids } : {}),
         });
+        const cleanupPending = report.checks.some(check => check.cleanupPending === true);
+        if (cleanupPending)
+            onCleanupPending?.();
         this.ports.presenter.showReport(report);
-        const accepted = report.ready;
+        const accepted = report.ready && !cleanupPending;
         if (!accepted || report.identityStatus !== 'valid') {
             if (this.context.guided)
                 this.showCorrectedLink(required);
             return { status: 'blocked', errors: [
-                    'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
-                ] };
+                    cleanupPending
+                        ? 'A temporary permission resource could not be confirmed as deleted. Review the failed permission and local recovery journal before retrying.'
+                        : 'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
+                ], ...(cleanupPending ? { cleanupPending: true } : {}) };
         }
         return { status: 'accepted' };
     }
@@ -57440,8 +57445,8 @@ class SetupJourneyUseCase {
         return this.choiceReviewPass;
     }
     markMutationStarted() {
-        if ((this.stage !== 'credentials' && this.stage !== 'apply') || this.outcome) {
-            throw new Error('Setup mutation can start only during credential validation or apply.');
+        if ((this.stage !== 'plan' && this.stage !== 'credentials' && this.stage !== 'apply') || this.outcome) {
+            throw new Error('Setup mutation can start only during a pending permission cleanup, credential validation or apply.');
         }
         if (this.mutationStarted)
             return;
@@ -57606,9 +57611,9 @@ class SetupSessionCoordinator {
                 ['repository', this.ports.repository],
                 ['choices', this.ports.choices],
                 ['setup-pat', this.ports.setupPat],
-                ['plan', this.ports.plan],
+                ['plan', () => this.ports.plan(() => this.markPossibleMutation())],
                 ['credentials', () => this.ports.credentials(() => this.markPossibleMutation())],
-                ['apply', this.ports.authorizeApply],
+                ['apply', () => this.ports.authorizeApply(() => this.markPossibleMutation())],
             ];
             for (const [stage, operation] of stages) {
                 this.stage = stage;
@@ -57996,7 +58001,14 @@ class SetupWizardUseCase {
                 configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), errors: ['The local setup session expired before permission checks began.'],
                 ...(remoteConfiguration ? { remoteConfiguration } : {}) };
         }
-        const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+        const audit = this.dependencies.onPermissionCleanupPending
+            ? await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration, this.dependencies.onPermissionCleanupPending)
+            : await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+        if (audit.status === 'blocked' && audit.cleanupPending) {
+            return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+                configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), errors: audit.errors,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
         if (this.dependencies.sessionLiveness?.() === 'cancelled') {
             return { status: 'cancelled', reason: 'confirmation-cancelled', exitCode: 130,
                 ...(remoteConfiguration ? { remoteConfiguration } : {}) };
@@ -58172,7 +58184,12 @@ class VerifyWebSetupApplyUseCase {
         if (!(0, setup_remote_facts_policy_1.sameSetupRemoteFacts)(remote, request.approvedRemote)) {
             throw new application_error_1.ApplicationError('configuration.invalid', 'GitHub repository facts changed since plan review. No mutation started; restart and review a new plan.');
         }
-        const audit = await this.ports.permissionAudit.audit(request.configuration, remote);
+        const audit = this.ports.onPermissionCleanupPending
+            ? await this.ports.permissionAudit.audit(request.configuration, remote, this.ports.onPermissionCleanupPending)
+            : await this.ports.permissionAudit.audit(request.configuration, remote);
+        if (audit.status === 'blocked' && audit.cleanupPending) {
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', audit.errors.join(' '));
+        }
         this.assertActive();
         if (audit.status === 'blocked') {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Setup PAT access changed since plan review. No mutation started; correct the PAT and review a new plan.');
@@ -67843,7 +67860,7 @@ async function executeSetupCommand(options) {
                 }
                 return 'continue';
             },
-            plan: async () => {
+            plan: async (cleanupPending) => {
                 (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
                 auditConfiguredSetupPat = new audit_configured_setup_pat_use_case_1.AuditConfiguredSetupPatUseCase({
                     owner: gitInfo.owner, repository: gitInfo.repo, token,
@@ -67869,6 +67886,7 @@ async function executeSetupCommand(options) {
                         : webBridge ? new web_setup_adapters_1.WebSetupPlanConfirmation(webBridge)
                             : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
                     finalPermissionAudit: auditConfiguredSetupPat,
+                    onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
                     remoteConfiguration: remoteConfigurationReader,
                     mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
                     approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
@@ -67930,7 +67948,7 @@ async function executeSetupCommand(options) {
                 });
                 return 'continue';
             },
-            authorizeApply: async () => {
+            authorizeApply: async (cleanupPending) => {
                 if (webBridge)
                     return (0, setup_apply_authorization_1.authorizeWebSetupApply)({
                         bridge: webBridge, cwd, owner: gitInfo.owner, repository: gitInfo.repo,
@@ -67938,6 +67956,7 @@ async function executeSetupCommand(options) {
                         fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
                         configuration, setupToken: token, remoteReader: remoteConfigurationReader,
                         permissionAudit: auditConfiguredSetupPat,
+                        onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
                     });
                 return 'continue';
             },
@@ -68193,6 +68212,7 @@ async function authorizeWebSetupApply(input) {
         fileSnapshotMatches: setup_apply_snapshot_1.setupApplySnapshotMatches,
         remote: input.remoteReader,
         permissionAudit: input.permissionAudit,
+        onPermissionCleanupPending: input.onPermissionCleanupPending,
         sessionState: () => bridge.snapshot().outcome === 'cancelled' ? 'cancelled'
             : bridge.snapshot().outcome ? 'ended' : 'active',
     }).execute({
@@ -69216,7 +69236,7 @@ function reportSetupFailure(error, context) {
     const normalized = cancelled ? undefined : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.');
     context.bridge?.resultReason(cancelled ? 'cancelled' : (0, setup_result_receipt_1.setupResultReason)(normalized.code), normalized?.correlationId);
     if (context.mutationStarted && !context.applyStarted) {
-        (0, logger_1.logInfo)('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
+        (0, logger_1.logInfo)('A temporary GitHub resource may remain before Apply. Inspect the permission report, local recovery journal, selected branch, and workflow history before retrying; a failed request may still have reached GitHub.');
     }
     if (context.guidedBotIdentity) {
         (0, logger_1.logInfo)(context.applyStarted
@@ -69225,7 +69245,7 @@ function reportSetupFailure(error, context) {
     }
     if (cancelled) {
         (0, logger_1.logInfo)(context.mutationStarted
-            ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
+            ? 'Setup stopped after a possible temporary GitHub change. Inspect the permission report, local recovery journal, selected branch, and workflow history before retrying.'
             : 'Setup cancelled. No changes were applied.');
         return 130;
     }
@@ -87849,7 +87869,7 @@ async function probeActions(context) {
             }
         }
         await handle.markDispatchAttempted();
-        const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST', { ref: name });
+        const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST', { ref: name, return_run_details: true });
         if (dispatched.status !== 200) {
             if (dispatched.status >= 400 && dispatched.status < 500)
                 await handle.clearRejectedDispatch();

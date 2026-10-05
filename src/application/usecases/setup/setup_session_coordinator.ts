@@ -14,9 +14,9 @@ export interface SetupSessionPorts {
   readonly repository: () => Promise<SetupSessionDecision>;
   readonly choices: () => Promise<SetupSessionDecision>;
   readonly setupPat: () => Promise<SetupSessionDecision>;
-  readonly plan: () => Promise<SetupSessionDecision>;
+  readonly plan: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly credentials: (possibleMutation: () => void) => Promise<SetupSessionDecision>;
-  readonly authorizeApply: () => Promise<SetupSessionDecision>;
+  readonly authorizeApply: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly apply: (effect: (effect: SetupOperationEffect) => void) => Promise<SetupSessionReceipt>;
   readonly liveness: () => SetupSessionLiveness;
   readonly present: (stage: SetupJourneyStage, mutationStarted: boolean, outcome?: SetupJourneyOutcome) => void;
@@ -48,9 +48,9 @@ export class SetupSessionCoordinator {
         ['repository', this.ports.repository],
         ['choices', this.ports.choices],
         ['setup-pat', this.ports.setupPat],
-        ['plan', this.ports.plan],
+        ['plan', () => this.ports.plan(() => this.markPossibleMutation())],
         ['credentials', () => this.ports.credentials(() => this.markPossibleMutation())],
-        ['apply', this.ports.authorizeApply],
+        ['apply', () => this.ports.authorizeApply(() => this.markPossibleMutation())],
       ];
       for (const [stage, operation] of stages) {
         this.stage = stage;

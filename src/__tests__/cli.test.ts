@@ -1581,7 +1581,7 @@ describe('CLI', () => {
         '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
       const { logInfo } = require('../utils/logger');
-      expect(logInfo.mock.calls.flat().join('\n')).toContain('temporary credential-health workflow create was attempted before Apply');
+      expect(logInfo.mock.calls.flat().join('\n')).toContain('A temporary GitHub resource may remain before Apply');
       expect(logInfo.mock.calls.flat().join('\n')).not.toContain('No changes were applied');
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
@@ -1621,7 +1621,7 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
         const { logInfo } = require('../utils/logger');
-        expect(logInfo.mock.calls.flat().join('\n')).toContain('Setup stopped after a possible credential-health workflow change');
+        expect(logInfo.mock.calls.flat().join('\n')).toContain('Setup stopped after a possible temporary GitHub change');
         expect(logInfo.mock.calls.flat().join('\n')).not.toContain('Setup cancelled. No changes were applied.');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Partial: changes may exist');
         expect(process.exitCode).toBe(130);

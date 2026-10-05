@@ -20,7 +20,9 @@ describe('setup journey', () => {
     expect(() => journey.advance('choices')).toThrow('backwards');
     expect(() => journey.finish('complete')).toThrow('before applying');
     expect(() => journey.finish('partial')).toThrow('before mutation');
-    expect(() => journey.markMutationStarted()).toThrow('credential validation or apply');
+    const beforePlan = new SetupJourneyUseCase('owner/repo', { present: jest.fn() });
+    beforePlan.advance('setup-pat');
+    expect(() => beforePlan.markMutationStarted()).toThrow('pending permission cleanup');
   });
 
   it('distinguishes dry-run, blocked, cancelled, and post-mutation partial state', () => {
@@ -50,6 +52,15 @@ describe('setup journey', () => {
     journey.finish('partial');
     expect(present.mock.lastCall?.[0]).toMatchObject({ outcome: 'partial', mutationStarted: true });
     expect(() => journey.advance('apply')).toThrow('finished');
+  });
+
+  it('reports an unresolved temporary permission resource during plan review as partial', () => {
+    const present = jest.fn();
+    const journey = new SetupJourneyUseCase('owner/repo', { present });
+    journey.advance('plan');
+    journey.markMutationStarted();
+    journey.finish('partial');
+    expect(present.mock.lastCall?.[0]).toMatchObject({ current: 'Plan', mutationStarted: true, outcome: 'partial' });
   });
 
   it('reports completion only after mutation starts and ignores duplicate finish', () => {

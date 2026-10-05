@@ -23,6 +23,7 @@ export interface WebApplyAuthorizationInput {
   readonly setupToken?: string;
   readonly remoteReader: SetupRemoteConfigurationReadPort;
   readonly permissionAudit: AuditConfiguredSetupPatUseCase;
+  readonly onPermissionCleanupPending?: () => void;
 }
 
 /** Web transport and Git facts for the application-owned final approval. */
@@ -48,6 +49,7 @@ export async function authorizeWebSetupApply(input: WebApplyAuthorizationInput):
     fileSnapshotMatches: setupApplySnapshotMatches,
     remote: input.remoteReader,
     permissionAudit: input.permissionAudit,
+    onPermissionCleanupPending: input.onPermissionCleanupPending,
     sessionState: () => bridge.snapshot().outcome === 'cancelled' ? 'cancelled'
       : bridge.snapshot().outcome ? 'ended' : 'active',
   }).execute({

@@ -57,7 +57,8 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
             }
         }
         await handle.markDispatchAttempted();
-        const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST', { ref: name });
+        const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST',
+            { ref: name, return_run_details: true });
         if (dispatched.status !== 200) {
             if (dispatched.status >= 400 && dispatched.status < 500) await handle.clearRejectedDispatch();
             throw new ProbeFailure(`GitHub Actions dispatch returned HTTP ${dispatched.status}.`, dispatched.status);

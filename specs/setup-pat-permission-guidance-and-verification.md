@@ -69,6 +69,21 @@ an unproved PAT grant exists cannot make the permission audit pass.
    a stale asynchronous result cannot overwrite a newer run or a closed local
    session. Secret-bearing values and raw provider messages never reach the
    browser or terminal.
+7. A workflow dispatch requests `return_run_details: true` in the **request
+   body** and requires the returned exact run ID before it can claim Actions
+   WRITE. A `204` response without an ID is uncertain, even if GitHub may have
+   accepted the dispatch; the recovery journal retains the target until the
+   run or its absence and branch cleanup are confirmed. Fixture tests assert
+   the request body and reject an unidentifiable accepted dispatch. This follows
+   [GitHub's workflow dispatch API](https://docs.github.com/en/rest/actions/workflows).
+8. The final audit reports whether any disposable write has **unconfirmed
+   cleanup**. A cleanly deleted probe does not count as a remaining setup
+   mutation. If cancellation or expiration races with an audit that reports
+   pending cleanup, the session reports `partial`, retains the bounded
+   permission failure and local recovery journal, and blocks another run until
+   recovery succeeds. If cleanup was confirmed, cancellation remains
+   `cancelled` and expiration remains `blocked`. The web and CLI show the
+   affected permission and recovery action without raw provider data.
 
 ### Planned permission-specific operations
 

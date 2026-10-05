@@ -168,6 +168,11 @@ and every required write completed its own temporary create/read/delete cycle.
 `--confirm-unverifiable-write-permissions` option is rejected. Actions and Pull
 request tests may leave GitHub history and notifications after cleanup; the
 plan discloses the selected tests before approval.
+If a temporary permission resource cannot be confirmed as deleted, the row
+shows pending cleanup and setup stops. Cancelling or losing the local session
+during that failed cleanup is reported as partial; the local recovery journal
+is checked before another permission audit. A cancelled audit whose temporary
+resources were all confirmed deleted remains cancelled.
 
 The setup-PAT table is comprehensive because it appears before the interactive
 feature choices are final. Repository Metadata and the read capabilities needed

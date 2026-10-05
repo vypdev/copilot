@@ -186,7 +186,7 @@ describe('temporary permission resource probes', () => {
                 return reply(200);
             }
             if (path === `${root}/actions/workflows/123/dispatches` && method === 'POST') {
-                expect((JSON.parse(String(options?.body)) as { ref: string }).ref).toBe(branch);
+                expect(JSON.parse(String(options?.body))).toEqual({ ref: branch, return_run_details: true });
                 dispatched = true;
                 run = true;
                 return reply(200, { workflow_run_id: 77 });
@@ -231,7 +231,10 @@ describe('temporary permission resource probes', () => {
                 branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.slice('refs/heads/'.length);
                 return reply(201);
             }
-            if (path === `${root}/actions/workflows/123/dispatches` && method === 'POST') return reply(403);
+            if (path === `${root}/actions/workflows/123/dispatches` && method === 'POST') {
+                expect(JSON.parse(String(options?.body))).toEqual({ ref: branch, return_run_details: true });
+                return reply(403);
+            }
             if (path.startsWith(`${root}/git/refs/heads/copilot-permission-test-`) && method === 'DELETE') {
                 branch = undefined; return reply(204);
             }
@@ -241,6 +244,52 @@ describe('temporary permission resource probes', () => {
         await expect(probeDisposableResource(probe.value)).rejects.toThrow('HTTP 403');
         expect(branch).toBeUndefined();
         expect(methods.some(call => call.includes('/actions/runs'))).toBe(false);
+        expect(await readdir(folder)).toEqual([]);
+    });
+
+    it('does not verify an accepted Actions dispatch without run details even after exact cleanup', async () => {
+        const root = '/repos/owner/repo';
+        const workflowPath = '.github/workflows/copilot_credential_health.yml';
+        const template = await committedHealthWorkflow();
+        let branch: string | undefined;
+        let run = false;
+        const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+            const parsed = new URL(url);
+            const path = parsed.pathname;
+            const method = options?.method ?? 'GET';
+            if (path === root) return reply(200, { default_branch: 'main' });
+            if (path === `${root}/actions/workflows`) return reply(200, {
+                workflows: [{ id: 123, path: workflowPath, state: 'active' }],
+            });
+            if (path === `${root}/contents/${workflowPath}`) return reply(200, { path: workflowPath,
+                encoding: 'base64', sha: 'b'.repeat(40), content: Buffer.from(template).toString('base64') });
+            if (path === `${root}/git/ref/heads/main`) return reply(200, { object: { sha: 'a'.repeat(40) } });
+            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200) : reply(404);
+            if (path === `${root}/git/refs` && method === 'POST') {
+                branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.slice('refs/heads/'.length);
+                return reply(201);
+            }
+            if (path === `${root}/actions/workflows/123/dispatches` && method === 'POST') {
+                expect(JSON.parse(String(options?.body))).toEqual({ ref: branch, return_run_details: true });
+                run = true;
+                return reply(204);
+            }
+            if (path === `${root}/actions/runs` && method === 'GET') return reply(200, {
+                workflow_runs: run ? [{ id: 77, head_branch: branch, event: 'workflow_dispatch' }] : [],
+            });
+            if (path === `${root}/actions/runs/77` && method === 'GET') return run
+                ? reply(200, { id: 77, head_branch: branch, event: 'workflow_dispatch', status: 'completed' })
+                : reply(404);
+            if (path === `${root}/actions/runs/77` && method === 'DELETE') { run = false; return reply(204); }
+            if (path.startsWith(`${root}/git/refs/heads/copilot-permission-test-`) && method === 'DELETE') {
+                branch = undefined; return reply(204);
+            }
+            throw new Error(`Unexpected fixture request ${method} ${path}`);
+        }) as unknown as typeof fetch;
+        const probe = context('actions', 'repository', fetcher);
+        await expect(probeDisposableResource(probe.value)).rejects.toThrow('HTTP 204');
+        expect(run).toBe(false);
+        expect(branch).toBeUndefined();
         expect(await readdir(folder)).toEqual([]);
     });
 

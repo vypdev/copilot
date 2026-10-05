@@ -206,7 +206,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
         }
         return 'continue';
           },
-          plan: async (): Promise<SetupSessionDecision> => {
+          plan: async (cleanupPending): Promise<SetupSessionDecision> => {
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
         auditConfiguredSetupPat = new AuditConfiguredSetupPatUseCase({
           owner: gitInfo.owner, repository: gitInfo.repo, token,
@@ -232,6 +232,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             : webBridge ? new WebSetupPlanConfirmation(webBridge)
               : new SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
           finalPermissionAudit: auditConfiguredSetupPat,
+          onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
           remoteConfiguration: remoteConfigurationReader,
           mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
@@ -295,13 +296,14 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
         });
         return 'continue';
           },
-          authorizeApply: async (): Promise<SetupSessionDecision> => {
+          authorizeApply: async (cleanupPending): Promise<SetupSessionDecision> => {
         if (webBridge) return authorizeWebSetupApply({
           bridge: webBridge, cwd, owner: gitInfo.owner, repository: gitInfo.repo,
           checkoutRoot, initialBranch, initialHead, selectedFiles: guardedFiles,
           fileSnapshot: webApplySnapshot, approvedRemote: remoteConfiguration,
           configuration, setupToken: token, remoteReader: remoteConfigurationReader,
           permissionAudit: auditConfiguredSetupPat,
+          onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
         });
         return 'continue';
           },

@@ -242,6 +242,28 @@ describe('SetupWizardUseCase', () => {
     expect(result).not.toHaveProperty('plan');
   });
 
+  it.each(['cancelled', 'expired'] as const)('retains pending cleanup evidence when the session becomes %s during the audit', async state => {
+    let liveness: 'active' | typeof state = 'active';
+    const onPermissionCleanupPending = jest.fn();
+    const deps = dependencies({
+      sessionLiveness: () => liveness,
+      onPermissionCleanupPending,
+      finalPermissionAudit: { audit: jest.fn(async (_configuration, _remote, notify) => {
+        liveness = state;
+        notify?.();
+        return { status: 'blocked' as const, cleanupPending: true as const,
+          errors: ['Temporary Actions cleanup pending.'] };
+      }) },
+    });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive', overrides: { pullRequestApproval: { mode: 'off' } },
+    });
+    expect(result).toMatchObject({ status: 'blocked', reason: 'setup-permissions-unavailable',
+      errors: ['Temporary Actions cleanup pending.'] });
+    expect(onPermissionCleanupPending).toHaveBeenCalledTimes(1);
+    expect(result).not.toHaveProperty('plan');
+  });
+
   it('returns exit 130 and no plan when interactive collection is cancelled', async () => {
     const deps = dependencies({
       collector: {

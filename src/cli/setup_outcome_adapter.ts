@@ -21,7 +21,7 @@ export function reportSetupFailure(error: unknown, context: FailureContext): num
   const normalized = cancelled ? undefined : toApplicationError(error, 'workflow.failed', 'Setup failed.');
   context.bridge?.resultReason(cancelled ? 'cancelled' : setupResultReason(normalized!.code), normalized?.correlationId);
   if (context.mutationStarted && !context.applyStarted) {
-    logInfo('A temporary credential-health workflow create was attempted before Apply. Inspect the selected branch and GitHub workflow history before retrying; a failed request may still have reached GitHub.');
+    logInfo('A temporary GitHub resource may remain before Apply. Inspect the permission report, local recovery journal, selected branch, and workflow history before retrying; a failed request may still have reached GitHub.');
   }
   if (context.guidedBotIdentity) {
     logInfo(context.applyStarted
@@ -30,7 +30,7 @@ export function reportSetupFailure(error: unknown, context: FailureContext): num
   }
   if (cancelled) {
     logInfo(context.mutationStarted
-      ? 'Setup stopped after a possible credential-health workflow change. Inspect the selected branch and GitHub workflow history before retrying.'
+      ? 'Setup stopped after a possible temporary GitHub change. Inspect the permission report, local recovery journal, selected branch, and workflow history before retrying.'
       : 'Setup cancelled. No changes were applied.');
     return 130;
   }

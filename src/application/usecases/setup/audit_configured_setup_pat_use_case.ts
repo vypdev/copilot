@@ -33,7 +33,8 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
   async audit(
     configuration: Readonly<SetupConfiguration>,
     remote?: Readonly<SetupRemoteConfiguration>,
-  ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }> {
+    onCleanupPending?: () => void,
+  ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[]; cleanupPending?: true }> {
     const required = buildConfiguredSetupPatPermissionRequirements(configuration, remote);
     this.ports.presenter.showRequirements('setup', required);
     if (this.context.token && (!remote || remote.ownerType === 'Unknown')) {
@@ -57,13 +58,17 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
       token: this.context.token, requirements: required,
       ...(configuration.projects.ids ? { selectedProjectNumbers: configuration.projects.ids } : {}),
     });
+    const cleanupPending = report.checks.some(check => check.cleanupPending === true);
+    if (cleanupPending) onCleanupPending?.();
     this.ports.presenter.showReport(report);
-    const accepted = report.ready;
+    const accepted = report.ready && !cleanupPending;
     if (!accepted || report.identityStatus !== 'valid') {
       if (this.context.guided) this.showCorrectedLink(required);
       return { status: 'blocked', errors: [
-        'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
-      ] };
+        cleanupPending
+          ? 'A temporary permission resource could not be confirmed as deleted. Review the failed permission and local recovery journal before retrying.'
+          : 'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
+      ], ...(cleanupPending ? { cleanupPending: true } : {}) };
     }
     return { status: 'accepted' };
   }

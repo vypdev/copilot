@@ -105,6 +105,7 @@ export interface SetupWizardDependencies {
   approvalCheckDiscovery?: SetupApprovalCheckDiscoveryPort;
   projectDiscovery?: SetupProjectDiscoveryPort;
   sessionLiveness?: () => 'active' | 'cancelled' | 'expired';
+  onPermissionCleanupPending?: () => void;
 }
 
 export class SetupWizardUseCase {
@@ -360,7 +361,15 @@ export class SetupWizardUseCase {
         configuration: cloneSetupConfiguration(configuration), errors: ['The local setup session expired before permission checks began.'],
         ...(remoteConfiguration ? { remoteConfiguration } : {}) };
     }
-    const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+    const audit = this.dependencies.onPermissionCleanupPending
+      ? await this.dependencies.finalPermissionAudit.audit(
+        configuration, remoteConfiguration, this.dependencies.onPermissionCleanupPending)
+      : await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+    if (audit.status === 'blocked' && audit.cleanupPending) {
+      return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration), errors: audit.errors,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
     if (this.dependencies.sessionLiveness?.() === 'cancelled') {
       return { status: 'cancelled', reason: 'confirmation-cancelled', exitCode: 130,
         ...(remoteConfiguration ? { remoteConfiguration } : {}) };

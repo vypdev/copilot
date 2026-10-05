@@ -92,4 +92,15 @@ describe('shared setup session coordinator', () => {
     expect(await coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true });
     expect(calls).not.toContain('apply');
   });
+
+  test.each(['cancelled', 'expired'] as const)('pending permission cleanup remains partial when %s arrives during the plan audit', async state => {
+    let live: 'active' | typeof state = 'active';
+    const { coordinator, calls } = fixture({
+      plan: async cleanupPending => { cleanupPending(); live = state; return 'blocked'; },
+      liveness: () => live,
+    });
+    expect(await coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true });
+    expect(calls).not.toContain('credentials');
+    expect(calls).not.toContain('apply');
+  });
 });

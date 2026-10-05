@@ -28,6 +28,11 @@ evidence rules apply to CLI. See
 for the normative transaction table and 60 additional test cases. §18–19
 remain open until fixture tests, packaged operation, four-locale and
 accessibility review, and explicitly authorized live cleanup evidence pass.
+If cancellation or expiry overlaps an audit, confirmed deletion of all
+temporary resources retains the ordinary cancelled or blocked result. An
+unconfirmed cleanup produces a partial result and preserves the permission
+failure and local recovery journal, including during the final pre-Apply
+recheck. The browser must show the affected row and recovery action.
 
 ## 1. Executive summary
 

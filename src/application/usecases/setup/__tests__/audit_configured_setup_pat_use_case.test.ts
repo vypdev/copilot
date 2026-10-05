@@ -138,4 +138,19 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     expect(await useCase.audit(configuration, remote)).toEqual(expect.objectContaining({ status: 'blocked' }));
     expect(ports.showUpdatedLink).toHaveBeenCalledWith(expect.stringContaining('https://github.com/settings/personal-access-tokens/new?'), expect.any(Array));
   });
+
+  test('surfaces unconfirmed temporary cleanup and marks the session as possibly changed', async () => {
+    const { ports, useCase } = harness({ token: 'test-token' });
+    const onCleanupPending = jest.fn();
+    jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false, checks: [{
+      id: 'setup:repository:actions:write', role: 'setup', scope: 'repository', permission: 'Actions',
+      level: 'write', applicability: 'required', reason: 'fixture', probe: 'actions',
+      status: 'unverifiable', message: 'cleanup failed', cleanupPending: true,
+    }] });
+    expect(await useCase.audit(configuration, remote, onCleanupPending)).toEqual({
+      status: 'blocked', cleanupPending: true,
+      errors: [expect.stringContaining('could not be confirmed as deleted')],
+    });
+    expect(onCleanupPending).toHaveBeenCalledTimes(1);
+  });
 });

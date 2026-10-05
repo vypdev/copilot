@@ -48,12 +48,12 @@ agents running for read-only tasks.
    fixed provider command shape, and configured allowlists are validated.
 4. Event/command policy calculates active roles before runtime preparation.
 5. `ai-members-only` may prevent all requested agent runtime preparation for an unauthorized actor.
-6. Runtime preparation reuses an operator-owned executable for each active
-   provider. If the default executable is missing, the Action installs only
-   that provider through its official standalone source in a private job
-   directory, then verifies the resulting executable and nonempty version. It
-   never uses npm or pnpm for agent installation and never requires an exact
-   runtime version.
+6. Runtime preparation reuses an explicit operator-owned executable. For a
+   default-discovered executable, it reuses the present CLI unless a newer
+   official release is verified; a missing or verified older default may use
+   a private job installation without changing the operator's file. It then
+   verifies the resulting executable and nonempty version. It never uses npm
+   or pnpm for agent installation and never requires an exact runtime version.
 7. An exhaustive dispatcher selects one independent provider policy, and a
    preflight planner produces the complete admitted execution plan.
 8. A generic process adapter consumes only admitted plans; OpenCode JSON events
@@ -143,8 +143,10 @@ No legacy behavior is supported; the hardened runtime is the only contract.
 3. Enforce model-provider/model allowlists and installation policy.
 4. Reuse an operator-installed CLI, or install the missing default executable
    from the selected provider's official standalone source in a private job
-   directory. Never replace an explicit or available operator executable;
-   never require an exact runtime version.
+   directory. An explicitly selected executable is never replaced. A present
+   default-discovered executable may be superseded for this job only by a
+   verified newer official release in a private PATH overlay; its original
+   file is never modified. Never require an exact runtime version.
 5. Verify CLI identity and credential/login readiness.
 6. Invoke the generic process adapter with the admitted role plan.
 7. Bound/parse/validate output and return semantic result.
@@ -196,9 +198,11 @@ verifier ACL query identifies identity versus descriptor timeout by fixed code.
 
 - Different active roles in one workflow may use different runtimes/models.
 - Existing Codex login may satisfy an explicit credential alternative.
-- Default and explicit executables are operator-owned when present. Only a
-  missing default executable triggers the selected provider's official
-  installer; any failed or unverifiable installation fails closed.
+- Default and explicit executables are operator-owned when present. A missing
+  default executable triggers the selected provider's official installer; a
+  present default executable may receive the private, verified update below.
+  Explicit executables and original operator files are never replaced; failed
+  or unverifiable installation fails closed.
 - Optional effort maps to Codex reasoning, OpenCode variant, or provider-neutral context for Cursor.
 
 ### 6.3 State model
@@ -641,8 +645,10 @@ The installer source and generated provisioning workflow MUST advance together
 when the provider changes its installation contract. The
 `0.153.4` CLI rejects `gpt-6-luna`; the reviewed `0.156.1` CLI passes a local
 authenticated `codex exec` smoke. Repository Actions must still prove the same
-tuple with their own credential. An installed operator-owned CLI is never silently
-replaced; its version and model smoke remain an explicit operator responsibility.
+tuple with their own credential. An explicit operator-owned CLI is never silently
+replaced. A default-discovered CLI may use the private, verified update below;
+the operator-owned file remains untouched and the admitted CLI still requires
+version and model smoke.
 The PR #403 run on `apple-intel-runner-1` admitted an installed `0.149.1` CLI
 and then recorded repeated process exit 1 before Bugbot completed a partition.
 The older-version/model incompatibility is plausible from the `0.153.4`
@@ -729,8 +735,10 @@ errors and credential masking.
 7. Invalid/oversized structured output is rejected locally and not published.
 8. Runtime failure does not invoke a second provider/model.
 9. Adding a provider cannot pass without an exhaustive plan policy, security, workflow, docs, and smoke evidence.
-10. A non-empty operator-owned runtime version is recorded and executed without
-    replacement; a missing default CLI uses the official standalone source.
+10. A non-empty explicit runtime version is recorded and executed without
+    replacement; a default-discovered CLI is reused or privately updated only
+    after verified newer official metadata, and a missing default uses the
+    official standalone source.
 11. With no explicit model override, action/setup/generated workflows choose
     `gpt-6-luna` and the exact allowlist includes `openai/gpt-6-luna`; a
     configured model outside that allowlist fails before execution.

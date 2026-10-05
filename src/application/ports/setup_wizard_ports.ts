@@ -23,7 +23,8 @@ export interface SetupFinalPermissionAuditPort {
     audit(
         configuration: Readonly<SetupConfiguration>,
         remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
-    ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }>;
+        onCleanupPending?: () => void,
+    ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[]; cleanupPending?: true }>;
 }
 
 export interface SetupCredentialPromptPort {
