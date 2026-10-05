@@ -77,7 +77,9 @@ an unproved PAT grant exists cannot make the permission audit pass.
    cancelled, crashes, or loses the cleanup response, record only the bounded
    cleanup target and attempt id in a local, permission-restricted recovery
    journal; resume cleanup before a new probe. An unresolved cleanup blocks
-   setup and is shown to the operator. Never persist the PAT or a test secret.
+   setup and is shown to the operator. When a disposable label name changes,
+   recovery must still recognize journaled names from the earlier format.
+   Never persist the PAT or a test secret.
 6. Provider 401 and explicit permission-denial 403 are failures; rate limits,
    SSO, ambiguous 403/404, network errors, malformed success bodies, and 5xx
    remain indeterminate and block required work. A retry starts a new audit;
@@ -139,7 +141,7 @@ an unproved PAT grant exists cannot make the permission audit pass.
 |---|---|---|
 | Repository / organization Variables WRITE | create a unique variable, GET exact name, DELETE exact name | verify absence; no overwrite |
 | Repository / organization Secrets WRITE | fetch public key, preflight absence, upsert a 256-bit random-name encrypted secret, require 201, GET exact metadata, DELETE exact name | verify absence; a 204 update is a collision incident with no automatic deletion; provider has no atomic create-only endpoint |
-| Repository Issues WRITE | create unique label, GET label, DELETE label | verify absence |
+| Repository Issues WRITE | create a unique label with a name of at most 50 characters, GET label, DELETE label | verify absence; retain at least 128 bits of random name entropy |
 | Organization Issue Types WRITE | create unique disabled issue type, GET/list exact id, DELETE id | verify absence; org admin prerequisite reported separately |
 | Repository Contents WRITE | create unique disposable ref, GET exact ref, DELETE ref; use a file on that ref when needed to prove file writes | verify ref absence; no default-branch commit |
 | Repository Workflows WRITE | on the disposable ref, create a no-job workflow file, GET it, delete ref | verify ref absence; requires Contents WRITE too |
@@ -207,7 +209,7 @@ capability contract without relabelling its 42 open gates.
 | W04 | Organization Secret encrypted create/metadata/delete | Fixture W |
 | W05 | Secret upsert collision never deletes the unknown value | Fixture W |
 | W06 | Repository label is cleaned after readback mismatch | Fixture W |
-| W07 | Repository label name fits GitHub's 100-character API limit and succeeds on create/read/delete | Fixture W |
+| W07 | Repository label name stays within a conservative 50-character bound, retains 128 bits of random entropy, and succeeds on create/read/delete | Fixture W |
 | W08 | Disabled organization Issue Type is deleted by exact ID | Fixture W |
 | W09 | Contents WRITE disposable ref is removed | Fixture W |
 | W10 | Workflows WRITE disposable workflow ref is removed | Fixture W |

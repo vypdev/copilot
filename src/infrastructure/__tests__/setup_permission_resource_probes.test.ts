@@ -477,7 +477,8 @@ describe('temporary permission resource probes', () => {
             const method = options?.method ?? 'GET';
             if (path === root && method === 'POST') {
                 name = (JSON.parse(String(options?.body)) as { name: string }).name;
-                expect(name.length).toBeLessThanOrEqual(100);
+                expect(name).toMatch(/^copilot-probe-[a-f0-9]{32}$/u);
+                expect(name.length).toBeLessThanOrEqual(50);
                 return reply(201);
             }
             if (path.startsWith(`${root}/`) && method === 'GET') {
@@ -501,7 +502,8 @@ describe('temporary permission resource probes', () => {
             const method = options?.method ?? 'GET';
             if (path === root && method === 'POST') {
                 name = (JSON.parse(String(options?.body)) as { name: string }).name;
-                expect(name.length).toBeLessThanOrEqual(100);
+                expect(name).toMatch(/^copilot-probe-[a-f0-9]{32}$/u);
+                expect(name.length).toBeLessThanOrEqual(50);
                 return reply(201);
             }
             if (path.startsWith(`${root}/`) && method === 'GET') return name ? reply(200, { name }) : reply(404);
@@ -612,6 +614,26 @@ describe('temporary permission resource probes', () => {
             probe: 'pull-requests', name: `copilot-permission-test-${'a'.repeat(32)}` })).rejects.toThrow('unsafe target');
         await expect(journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository',
             probe: 'variables', name: 'EXISTING_PRODUCTION_VALUE' })).rejects.toThrow('unsafe target');
+        expect(await readdir(folder)).toEqual([]);
+    });
+
+    it('recovers both current and earlier temporary label journal names', async () => {
+        const journal = new SetupPermissionProbeJournal(folder);
+        const names = [`copilot-probe-${'a'.repeat(32)}`, `copilot-permission-test-${'b'.repeat(32)}`];
+        for (const name of names) {
+            await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'issues', name });
+        }
+        const readNames: string[] = [];
+        const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+            expect(options?.method).toBe('GET');
+            readNames.push(new URL(url).pathname);
+            return reply(404);
+        }) as unknown as typeof fetch;
+        await journal.recover('owner', 'repo', new SetupPermissionProbeHttp(fetcher, 'fixture-token', 1000));
+        expect(readNames).toHaveLength(4);
+        for (const name of names) {
+            expect(readNames.filter(path => path === `/repos/owner/repo/labels/${name}`)).toHaveLength(2);
+        }
         expect(await readdir(folder)).toEqual([]);
     });
 

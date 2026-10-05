@@ -200,8 +200,8 @@ function safeName(probe: SetupTokenPermissionProbe, name: string): boolean {
         ? /^Copilot permission test [a-f0-9]{24,32}$/u.test(name)
         : probe === 'contents' || probe === 'workflows' || probe === 'pull-requests' || probe === 'actions'
             ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
-            : probe === 'issues'
-                ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
+        : probe === 'issues'
+                ? /^(?:copilot-probe-|copilot-permission-test-)[a-f0-9]{32}$/u.test(name)
                 : probe === 'secrets'
                     ? /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}(?:[A-F0-9]{32})?$/u.test(name)
                     : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);

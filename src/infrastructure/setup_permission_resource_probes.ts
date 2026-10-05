@@ -89,7 +89,7 @@ async function probeSecret(context: ResourceProbeContext): Promise<void> {
 }
 
 async function probeIssueLabel(context: ResourceProbeContext): Promise<void> {
-    const name = resourceName().toLowerCase().replace(/_/gu, '-');
+    const name = `copilot-probe-${randomBytes(16).toString('hex')}`;
     const root = `${repoRoot(context)}/labels`;
     const exact = `${root}/${encodeURIComponent(name)}`;
     context.phase('creating');

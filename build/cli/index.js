@@ -87897,16 +87897,16 @@ async function probeActions(context) {
         || base.startsWith('/') || base.endsWith('/')) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
     }
-    const workflow = await findDispatchWorkflow(context, root, base);
-    if (!workflow) {
-        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
-    }
     const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
     const object = ref.object;
     const sha = object && typeof object === 'object' && !Array.isArray(object)
         ? object.sha : undefined;
     if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
+    }
+    const workflow = await findDispatchWorkflow(context, root, sha);
+    if (!workflow) {
+        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
     }
     const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
     const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
@@ -88001,7 +88001,7 @@ async function findAcceptedDispatchRun(context, root, branch, workflowId) {
     }
     throw new setup_permission_probe_http_1.ProbeFailure('GitHub accepted the temporary Actions dispatch but did not identify its run.');
 }
-async function findDispatchWorkflow(context, root, base) {
+async function findDispatchWorkflow(context, root, commitSha) {
     const candidates = [];
     let complete = false;
     for (let page = 1; page <= MAX_WORKFLOW_PAGES; page += 1) {
@@ -88037,7 +88037,7 @@ async function findDispatchWorkflow(context, root, base) {
         }
         checked += 1;
         const encodedPath = workflow.path.split('/').map(encodeURIComponent).join('/');
-        const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${encodeURIComponent(base)}`);
+        const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${commitSha}`);
         if (response.status !== 200)
             continue;
         const file = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
@@ -88406,7 +88406,7 @@ function safeName(probe, name) {
         : probe === 'contents' || probe === 'workflows' || probe === 'pull-requests' || probe === 'actions'
             ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
             : probe === 'issues'
-                ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
+                ? /^(?:copilot-probe-|copilot-permission-test-)[a-f0-9]{32}$/u.test(name)
                 : probe === 'secrets'
                     ? /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}(?:[A-F0-9]{32})?$/u.test(name)
                     : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
@@ -88894,7 +88894,7 @@ async function probeSecret(context) {
     });
 }
 async function probeIssueLabel(context) {
-    const name = resourceName().toLowerCase().replace(/_/gu, '-');
+    const name = `copilot-probe-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
     const root = `${repoRoot(context)}/labels`;
     const exact = `${root}/${encodeURIComponent(name)}`;
     context.phase('creating');
