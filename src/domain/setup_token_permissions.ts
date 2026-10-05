@@ -4,7 +4,7 @@ export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
 export type SetupTokenPermissionStatus = 'verified' | 'available' | 'missing' | 'unverifiable';
 export type SetupTokenPermissionProbePhase = 'checking' | 'creating' | 'reading' | 'deleting' | 'verified' | 'failed' | 'skipped';
-export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported' | `http-${number}` | `issue-residue-${number}`;
+export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported' | `http-${number}` | `issue-closed-${number}` | `issue-unresolved-${number}`;
 
 /** Secret-free, bounded progress for one permission. Never contains provider prose. */
 export interface SetupTokenPermissionProgress {

@@ -89911,7 +89911,11 @@ function probeDiagnostic(value) {
             return 'secret-collision';
         if (value.cleanupPending) {
             const parsed = Number(/^Temporary Issue #([1-9][0-9]*)\b/u.exec(value.message)?.[1]);
-            return Number.isSafeInteger(parsed) && parsed > 0 ? `issue-residue-${parsed}` : 'cleanup-pending';
+            if (Number.isSafeInteger(parsed) && parsed > 0) {
+                return value.message.startsWith(`Temporary Issue #${parsed} remains closed`)
+                    ? `issue-closed-${parsed}` : `issue-unresolved-${parsed}`;
+            }
+            return 'cleanup-pending';
         }
         if (value.httpStatus !== undefined)
             return `http-${value.httpStatus}`;

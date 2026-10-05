@@ -231,6 +231,38 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         } finally { await rm(folder, { recursive: true, force: true }); }
     });
 
+    it('publishes the closed Issue number when deletion is denied after Issues Write succeeds', async () => {
+        const folder = await mkdtemp(join(tmpdir(), 'copilot-issue-residue-'));
+        try {
+            const root = 'https://api.github.com/repos/owner/repo';
+            let title = '';
+            let state = 'open';
+            const fetcher = jest.fn(async (url: string, options?: RequestInit) => {
+                const path = new URL(url).pathname;
+                const method = options?.method ?? 'GET';
+                const issue = { number: 42, node_id: 'I_fixtureNode123', title, repository_url: root, state };
+                if (path === '/repos/owner/repo/issues' && method === 'POST') {
+                    title = (JSON.parse(String(options?.body)) as { title: string }).title;
+                    return response(true, 201, { payload: { ...issue, title } });
+                }
+                if (path === '/repos/owner/repo/issues/42' && method === 'GET') return response(true, 200, { payload: issue });
+                if (path === '/graphql' && method === 'POST') return response(false, 403);
+                if (path === '/repos/owner/repo/issues/42' && method === 'PATCH') {
+                    state = 'closed'; return response(true, 200, { payload: { ...issue, state } });
+                }
+                throw new Error(`Unexpected fixture request ${method} ${path}`);
+            }) as unknown as typeof fetch;
+            const progress: Array<{ phase: string; detail?: string }> = [];
+            const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+                journal: new SetupPermissionProbeJournal(folder) })
+                .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')], update => progress.push(update));
+            expect(check).toMatchObject({ status: 'unverifiable', cleanupPending: true,
+                message: expect.stringContaining('Issue #42 remains closed') });
+            expect(progress.at(-1)).toMatchObject({ phase: 'failed', detail: 'issue-closed-42' });
+            expect(await readdir(folder)).toHaveLength(1);
+        } finally { await rm(folder, { recursive: true, force: true }); }
+    });
+
     it('verifies Contents read when the commit-list probe identifies an empty repository', async () => {
         const fetcher = jest.fn()
             .mockResolvedValueOnce(response(true, 200, { payload: { private: true } }))
