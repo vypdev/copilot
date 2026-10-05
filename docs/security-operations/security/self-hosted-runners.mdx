@@ -25,8 +25,11 @@ PR approval observer also runs on a self-hosted Ubuntu `codex` runner. The
 automatic setup fixture matrix remains GitHub-hosted on Ubuntu, Windows and
 macOS. Its separate fixture matrix for persistent Windows, macOS and Ubuntu
 `codex` runners runs only through a manual workflow dispatch of a reviewed
-ref. Keep it out of automatic pull request execution, including fork pull
-requests. Each hosted and self-hosted platform job runs the full
+ref. An ordinary manual dispatch skips the hosted matrix to save hosted
+minutes; `upload_windows_coverage=true` also runs it to generate the coverage
+artifact needed by the opted-in upload job. Keep self-hosted fixtures out of
+automatic pull request execution, including fork pull requests. Each hosted
+and self-hosted platform job runs the full
 coverage, acceptance, package and validator paths with isolated fixtures.
 The hosted Windows job preserves its coverage report as a short-lived artifact.
 Exporting that report to Codecov requires a manual dispatch with the explicit

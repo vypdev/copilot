@@ -2095,6 +2095,13 @@ the three service-runner fixture jobs remain manual-only. Release and hotfix
 not support self-hosted runners. This scheduling decision changes no setup
 session behavior, PAT access, or acceptance-ledger result.
 
+An ordinary manual service-runner fixture dispatch MUST skip the three hosted
+platform jobs so it does not repeat the automatic PR matrix or consume hosted
+minutes. The hosted platform matrix MUST still run on PRs and on the explicit
+`upload_windows_coverage=true` dispatch, because that upload needs a Windows
+coverage artifact from the same run. Workflow-contract tests MUST reject an
+unconditional hosted matrix and a selector that omits either authorized path.
+
 Six additional workflow-contract cases, outside the 350 setup cases, MUST
 verify repository-owned versus fork PR routing and merge-group isolation for
 both CI and RepoWise;

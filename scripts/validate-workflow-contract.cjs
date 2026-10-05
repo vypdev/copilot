@@ -327,9 +327,10 @@ function assertRunner(file, workflow) {
       }
       if (jobId === 'setup-platform-smoke') {
         const platforms = job.strategy?.matrix?.os;
-        if (job['runs-on'] !== '${{ matrix.os }}'
+        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}"
+          || job['runs-on'] !== '${{ matrix.os }}'
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
-          throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
+          throw new Error(`${relativeFile} must use the PR or explicit Windows coverage Ubuntu, Windows and macOS setup fixture matrix.`);
         }
         assertPlatformCoverageAndValidators(relativeFile, job);
         const hostedCoverage = (job.steps ?? []).find(step => step?.name === 'Full platform coverage and acceptance budgets');

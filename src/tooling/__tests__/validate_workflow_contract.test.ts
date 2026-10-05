@@ -720,6 +720,27 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('Ubuntu, Windows and macOS setup fixture matrix');
   });
 
+  it('reserves hosted setup fixtures for PRs and explicit Windows coverage exports', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const hosted = workflow.jobs['setup-platform-smoke'];
+    const expression = hosted.if;
+    expect(expression).toBe("${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}");
+    for (const [eventName, uploadWindowsCoverage, expected] of [
+      ['pull_request', false, true],
+      ['workflow_dispatch', false, false],
+      ['workflow_dispatch', true, true],
+    ] as const) {
+      expect(runInNewContext(expression.slice(4, -3), {
+        github: { event_name: eventName }, inputs: { upload_windows_coverage: uploadWindowsCoverage },
+      })).toBe(expected);
+    }
+    delete hosted.if;
+    expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
+    hosted.if = "${{ github.event_name == 'pull_request' }}";
+    expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
+  });
+
   it('requires isolated fixtures on all three manually dispatched codex runner platforms', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

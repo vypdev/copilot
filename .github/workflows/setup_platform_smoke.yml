@@ -19,6 +19,7 @@ defaults:
 
 jobs:
   setup-platform-smoke:
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}
     name: Setup package and local session (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
