@@ -510,6 +510,9 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
    Actions, it must also equal the canonical `GITHUB_WORKSPACE` checkout path,
    so a nested repository cannot silently replace the intended checkout.
    A nested-repository fixture must fail before any agent process starts.
+   Windows runtime fixtures that intentionally execute in a temporary Git
+   checkout set `GITHUB_WORKSPACE` to that checkout for the planning call and
+   restore the runner environment afterward.
 5. A structured-output contract is untrusted until its native schema passes the
    strict preflight and returned bytes pass size, encoding, JSON/schema, and
    domain validation.

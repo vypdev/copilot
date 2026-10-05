@@ -80,11 +80,22 @@ function fakeRuntime(source: string) {
 }
 
 function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 5_000) {
-    return new AgentExecutionPlanner().prepare({
-        configuration: { provider: 'codex', modelProvider: 'openai', model: 'fixture-model' },
-        capability: 'findings', prompt: 'fixture prompt', timeoutMs,
-        cwd: workspace, environment,
-    });
+    const priorActions = process.env.GITHUB_ACTIONS;
+    const priorWorkspace = process.env.GITHUB_WORKSPACE;
+    process.env.GITHUB_ACTIONS = 'true';
+    process.env.GITHUB_WORKSPACE = workspace;
+    try {
+        return new AgentExecutionPlanner().prepare({
+            configuration: { provider: 'codex', modelProvider: 'openai', model: 'fixture-model' },
+            capability: 'findings', prompt: 'fixture prompt', timeoutMs,
+            cwd: workspace, environment,
+        });
+    } finally {
+        if (priorActions === undefined) delete process.env.GITHUB_ACTIONS;
+        else process.env.GITHUB_ACTIONS = priorActions;
+        if (priorWorkspace === undefined) delete process.env.GITHUB_WORKSPACE;
+        else process.env.GITHUB_WORKSPACE = priorWorkspace;
+    }
 }
 
 describe('isolated Windows agent runtime', () => {
