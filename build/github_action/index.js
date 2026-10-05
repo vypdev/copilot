@@ -79395,6 +79395,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
+exports.isSafeAgentRuntimeVersion = isSafeAgentRuntimeVersion;
 exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
@@ -79407,10 +79408,15 @@ function getAgentRuntimeManifestEntry(provider) {
 function normalizeAgentRuntimeVersion(output) {
     return output.trim().split(/\r?\n/, 1)[0].trim();
 }
+function isSafeAgentRuntimeVersion(version) {
+    return /^[\x20-\x7e]{1,128}$/u.test(version);
+}
 function readAgentRuntimeVersion(provider, output) {
     const actual = normalizeAgentRuntimeVersion(output);
     if (!actual)
         throw new Error(`${provider} CLI returned empty version output.`);
+    if (!isSafeAgentRuntimeVersion(actual))
+        throw new Error(`${provider} CLI returned an invalid version identity.`);
     return actual;
 }
 
@@ -82008,6 +82014,7 @@ function createLogReportAdapter() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerAgentExecutionObserverAdapter = void 0;
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const logger_1 = __nccwpck_require__(91151);
 class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
@@ -82024,7 +82031,8 @@ class LoggerAgentExecutionObserverAdapter {
             return;
         }
         if (observation.state === 'admitted') {
-            (0, logger_1.logDebugInfo)(`Agent execution admitted (${observation.provider} ${observation.version}).`, false, { agentExecution: observation });
+            const version = (0, agent_runtime_manifest_1.isSafeAgentRuntimeVersion)(observation.version) ? observation.version : 'invalid-version';
+            (0, logger_1.logDebugInfo)(`Agent execution admitted (${observation.provider} ${version}).`, false, { agentExecution: { ...observation, version } });
             return;
         }
         (0, logger_1.logDebugInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });

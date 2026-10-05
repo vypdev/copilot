@@ -2,6 +2,7 @@ import type {
     AgentExecutionObservation,
     AgentExecutionObserverPort,
 } from '../../application/ports/agent_execution_observation_ports';
+import { isSafeAgentRuntimeVersion } from '../agents/agent_runtime_manifest';
 import { logDebugInfo, logInfo } from '../../utils/logger';
 
 export class LoggerAgentExecutionObserverAdapter implements AgentExecutionObserverPort {
@@ -20,8 +21,9 @@ export class LoggerAgentExecutionObserverAdapter implements AgentExecutionObserv
             return;
         }
         if (observation.state === 'admitted') {
-            logDebugInfo(`Agent execution admitted (${observation.provider} ${observation.version}).`, false,
-                { agentExecution: observation });
+            const version = isSafeAgentRuntimeVersion(observation.version) ? observation.version : 'invalid-version';
+            logDebugInfo(`Agent execution admitted (${observation.provider} ${version}).`, false,
+                { agentExecution: { ...observation, version } });
             return;
         }
         logDebugInfo(`Agent execution ${observation.state}.`, false, { agentExecution: observation });

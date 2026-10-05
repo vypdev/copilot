@@ -321,6 +321,11 @@ credential-health workflow surface readiness per credential. Inactive roles
 produce no provisioning noise. Model/provider changes are operational changes
 that require smoke evidence.
 For an admitted CLI, the debug log MUST include the normalized first-line version identity.
+That identity MUST be at most 128 printable ASCII characters; control characters
+or an overlong first line fail preflight before admission. The log adapter MUST
+also replace an invalid version in both message and structured observation with
+a fixed diagnostic if it receives an unvalidated observation directly, so CLI
+output cannot forge a log line.
 On process failure it MUST expose the bounded numeric exit code and failure
 category, never raw stderr, prompts, environment values, or credentials. A
 provider availability label alone is insufficient to diagnose a CLI failure.

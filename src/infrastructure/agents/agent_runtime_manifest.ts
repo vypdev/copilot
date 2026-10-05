@@ -31,8 +31,13 @@ export function normalizeAgentRuntimeVersion(output: string): string {
     return output.trim().split(/\r?\n/, 1)[0].trim();
 }
 
+export function isSafeAgentRuntimeVersion(version: string): boolean {
+    return /^[\x20-\x7e]{1,128}$/u.test(version);
+}
+
 export function readAgentRuntimeVersion(provider: AgentProvider, output: string): string {
     const actual = normalizeAgentRuntimeVersion(output);
     if (!actual) throw new Error(`${provider} CLI returned empty version output.`);
+    if (!isSafeAgentRuntimeVersion(actual)) throw new Error(`${provider} CLI returned an invalid version identity.`);
     return actual;
 }

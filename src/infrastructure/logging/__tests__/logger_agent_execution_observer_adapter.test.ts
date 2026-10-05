@@ -74,6 +74,18 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
             { agentExecution: expect.not.objectContaining({ prompt: expect.anything(), environment: expect.anything() }) });
     });
 
+    it('does not interpolate or attach an unvalidated version from a direct observation', () => {
+        const observer = new LoggerAgentExecutionObserverAdapter();
+        observer.observe({
+            state: 'admitted', phase: 'preflight', provider: 'codex', capability: 'findings',
+            durationMilliseconds: 5, manifestRevision: 'fixture', version: '9.0\rFORGED\u001b[31m',
+            workspaceMode: 'read-only', outputContract: 'text', artifactHashes: [],
+        });
+        expect(logDebugInfo).toHaveBeenCalledWith('Agent execution admitted (codex invalid-version).', false,
+            { agentExecution: expect.objectContaining({ version: 'invalid-version' }) });
+        expect(JSON.stringify((logDebugInfo as jest.Mock).mock.calls)).not.toContain('FORGED');
+    });
+
     it('logs only the fixed diagnostic code after a failed CLI process', () => {
         const observer = new LoggerAgentExecutionObserverAdapter();
         observer.observe({

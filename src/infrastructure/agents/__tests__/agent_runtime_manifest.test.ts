@@ -25,9 +25,12 @@ describe('agent runtime manifest', () => {
         }
     });
 
-    it('accepts any nonempty runtime identity and rejects empty output', () => {
+    it('accepts a bounded first-line runtime identity and rejects log control characters', () => {
         expect(readAgentRuntimeVersion('codex', 'codex-cli 0.154.0\n')).toBe('codex-cli 0.154.0');
         expect(readAgentRuntimeVersion('cursor', 'future-release\n')).toBe('future-release');
         expect(() => readAgentRuntimeVersion('codex', '  \n')).toThrow('empty version output');
+        for (const output of ['codex-cli 9.0\rforged entry', 'codex-cli 9.0\u001b[31m', 'x'.repeat(129)]) {
+            expect(() => readAgentRuntimeVersion('codex', output)).toThrow('invalid version identity');
+        }
     });
 });
