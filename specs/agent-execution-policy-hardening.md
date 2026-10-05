@@ -254,6 +254,11 @@ argv/prompt bytes, suppress raw stderr, and record cancellation/timeout as a
 failed capability with no trusted result. Isolated Windows fixtures MUST prove
 ACL rejection, argv safety, descendant termination, and cleanup; a real runner
 review remains open until observed (issue #404).
+For timeout, cancellation, or output overflow, the first Windows tree request
+MUST omit `taskkill /F`; the force request after the five-second grace period
+MUST include `/F`. Both requests MUST use the startup-captured trusted system
+tool and target the complete tree. A fixture MUST assert the distinct command
+arguments and a native Windows fixture MUST still prove descendant cleanup.
 The executable, its interpreter and package-owned entrypoint require a
 read-only ACL preflight: trusted ownership and no untrusted write/delete/ACL
 control ACE. Existing installed files are never modified. An unreadable or

@@ -7,7 +7,7 @@ import type { AgentExecutionObserverPort } from '../../../application/ports/agen
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { AgentCliClient } from '../agent_cli_client';
 import { AgentCliError } from '../agent_cli_contracts';
-import { createAgentProcessLifecycle, decodeAgentCliOutput, verifyWindowsLauncherTrust } from '../agent_cli_execution';
+import { createAgentProcessLifecycle, decodeAgentCliOutput, verifyWindowsLauncherTrust, windowsTaskkillArguments } from '../agent_cli_execution';
 import { makeWindowsRuntimePathPrivate } from '../../../infrastructure/agents/windows_runtime_acl';
 
 // Multi-case fixtures run native ACL tools for every plan on Windows. This Jest
@@ -41,6 +41,10 @@ function client(executionPlan: AgentExecutionPlan, observer?: AgentExecutionObse
 }
 
 describe('AgentCliClient admitted process execution', () => {
+    it('reserves forced Windows tree termination for the delayed kill stage', () => {
+        expect(windowsTaskkillArguments(42, 'SIGTERM')).toEqual(['/PID', '42', '/T']);
+        expect(windowsTaskkillArguments(42, 'SIGKILL')).toEqual(['/PID', '42', '/T', '/F']);
+    });
     it('rechecks a canonical Windows interpreter and package entrypoint before spawn', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-launcher-trust-'));
         const executable = join(directory, 'node.exe');

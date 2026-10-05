@@ -835,18 +835,20 @@ describe('workflow contract validator', () => {
   );
 
   it.each([
-    ['ci_check.yml', 'ci-check', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
-    ['ci_check.yml', 'ci-check', 'outside/fork', '["ubuntu-latest"]'],
-    ['repowise.yml', 'code-health', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
-    ['repowise.yml', 'code-health', 'outside/fork', '["ubuntu-latest"]'],
-  ])('routes %s PR code from %s to %s', (fileName, jobId, headRepository, expectedRunner) => {
+    ['ci_check.yml', 'ci-check', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
+    ['ci_check.yml', 'ci-check', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
+    ['ci_check.yml', 'ci-check', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
+    ['repowise.yml', 'code-health', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
+    ['repowise.yml', 'code-health', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
+    ['repowise.yml', 'code-health', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
+  ])('routes %s %s code from %s to %s', (fileName, jobId, eventName, headRepository, expectedRunner) => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const expression = workflow.jobs[jobId]['runs-on'];
-    expect(expression).toBe('${{ fromJSON(github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}');
+    expect(expression).toBe('${{ fromJSON((github.event_name == \'merge_group\' || (github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository)) && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}');
     const selected = runInNewContext(expression.slice(4, -3), {
       github: {
-        event_name: 'pull_request',
+        event_name: eventName,
         event: { pull_request: { head: { repo: { full_name: headRepository } } } },
         repository: 'vypdev/copilot',
       },

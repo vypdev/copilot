@@ -510,6 +510,13 @@ containing directory must also reject untrusted `FILE_ADD_FILE` (`0x2`) and
 Windows may search that directory when loading a DLL. The distinction follows
 [Microsoft's directory access rights](https://learn.microsoft.com/en-us/windows/win32/wmisdk/file-and-directory-access-rights-constants)
 and [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order).
+The symbolic SDDL `LC` flag encodes access-mask bit `0x4`. On a file-system
+directory that bit is `FILE_ADD_SUBDIRECTORY`; read-only directory listing is
+bit `0x1`. Therefore a direct executable parent granting `LC` to an untrusted
+principal remains unsafe, while a higher ancestor with only that add right
+does not by itself replace an existing executable. Fixtures MUST retain both
+cases; a name-only reading of the directory-service SDDL alias must not
+weaken the file-system trust rule.
 Synthetic ACL fixtures MUST cover `GW`, `FW`, and numeric generic write on
 ancestors, plus add-only rights on the immediate parent versus a higher
 ancestor. Native Windows hosted and service fixtures MUST continue to admit a
@@ -658,6 +665,13 @@ latest-release metadata, and Cursor uses
 the version embedded in its official platform installer script. An update is
 installed into a private job directory and placed first on that job's PATH;
 the runner's executable, user files and persistent PATH MUST NOT be changed.
+The Action process keeps this private PATH overlay for the remainder of its
+run so later agent resolution executes the admitted replacement. This does not
+write the runner service, user, or machine PATH. Restoring the process PATH
+immediately after validation would make the subsequent task select the old or
+untrusted executable. A fixture MUST prove that the selected private command
+remains resolvable for execution and that failure restores the prior process
+PATH.
 An explicitly selected executable is always used as selected. Unavailable,
 malformed or incomparable update metadata leaves the existing CLI in use;
 it never selects an arbitrary version or a second provider. Installer failure

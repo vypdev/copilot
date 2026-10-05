@@ -17,9 +17,10 @@ A self-hosted runner that can access agent credentials MUST be dedicated or isol
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
 
 This repository runs `CI Check` and `RepoWise code health` on self-hosted
-Ubuntu `codex` runners for its own PRs, pushes and merge groups. Fork PRs keep
-the same quality checks on disposable GitHub-hosted Ubuntu runners; never
-route fork code to the persistent service runners. The trusted-default-branch
+Ubuntu `codex` runners for its own PRs and pushes. Fork PRs and all merge
+groups keep the same quality checks on disposable GitHub-hosted Ubuntu
+runners. A merge group can contain fork code without exposing its origin to
+the runner selector; never route it to a persistent service runner. The trusted-default-branch
 PR approval observer also runs on a self-hosted Ubuntu `codex` runner. The
 automatic setup fixture matrix remains GitHub-hosted on Ubuntu, Windows and
 macOS. Its separate fixture matrix for persistent Windows, macOS and Ubuntu

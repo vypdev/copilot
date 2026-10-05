@@ -24,7 +24,7 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
-const QUALITY_RUNNER_BY_TRUST = '${{ fromJSON(github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}';
+const QUALITY_RUNNER_BY_TRUST = '${{ fromJSON((github.event_name == \'merge_group\' || (github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository)) && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}';
 const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';

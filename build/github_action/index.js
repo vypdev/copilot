@@ -67686,6 +67686,7 @@ exports.runAgentCli = runAgentCli;
 exports.createAgentProcessLifecycle = createAgentProcessLifecycle;
 exports.decodeAgentCliOutput = decodeAgentCliOutput;
 exports.verifyWindowsLauncherTrust = verifyWindowsLauncherTrust;
+exports.windowsTaskkillArguments = windowsTaskkillArguments;
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
@@ -67959,10 +67960,16 @@ function verifyWindowsLauncherTrust(executable, launcher, validate = agent_execu
 function cleanupRuntimeDirectory(runtimeDirectory) {
     (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
 }
+function windowsTaskkillArguments(pid, signal) {
+    const args = ['/PID', String(pid), '/T'];
+    if (signal === 'SIGKILL')
+        args.push('/F');
+    return args;
+}
 function signalProcessTree(child, signal) {
     try {
         if (process.platform === 'win32' && child.pid) {
-            (0, node_child_process_1.execFileSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+            (0, node_child_process_1.execFileSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), windowsTaskkillArguments(child.pid, signal), {
                 stdio: 'ignore', timeout: 5000, windowsHide: true,
             });
         }

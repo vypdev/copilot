@@ -275,10 +275,16 @@ function cleanupRuntimeDirectory(runtimeDirectory: string): void {
     rmSync(runtimeDirectory, { recursive: true, force: true });
 }
 
+export function windowsTaskkillArguments(pid: number, signal: NodeJS.Signals): string[] {
+    const args = ['/PID', String(pid), '/T'];
+    if (signal === 'SIGKILL') args.push('/F');
+    return args;
+}
+
 function signalProcessTree(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {
     try {
         if (process.platform === 'win32' && child.pid) {
-            execFileSync(trustedWindowsSystemTool('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], {
+            execFileSync(trustedWindowsSystemTool('taskkill.exe'), windowsTaskkillArguments(child.pid, signal), {
                 stdio: 'ignore', timeout: 5_000, windowsHide: true,
             });
         } else if (child.pid) {

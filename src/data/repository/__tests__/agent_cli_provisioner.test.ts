@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { AgentProvider } from '../../../domain/agent';
 import { AgentCliError } from '../agent_cli_contracts';
 import { AgentCliProvisioner, agentExecutableExists, type AgentCliProvisioningSystem } from '../agent_cli_provisioner';
+import { resolveAgentExecutablePath } from '../../../infrastructure/agents/agent_executable_invocation';
 
 function fakeInstallation(provider: AgentProvider) {
     const root = mkdtempSync(join(tmpdir(), 'copilot-official-agent-'));
@@ -60,6 +61,7 @@ describe('AgentCliProvisioner', () => {
             expect(adapter.readLatestVersion).toHaveBeenCalledWith('codex');
             expect(adapter.installOfficial).toHaveBeenCalledTimes(1);
             expect(environment.PATH?.split(require('node:path').delimiter)[0]).toBe(updated.directory);
+            expect(resolveAgentExecutablePath('codex', environment)).toBe(updated.executable);
             expect(existsSync(old.executable)).toBe(true);
         } finally {
             rmSync(old.root, { recursive: true, force: true });

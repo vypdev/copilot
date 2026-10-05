@@ -2083,9 +2083,11 @@ is needed for these checks.
 The 2026-10-05 runner-cost decision supersedes only the blanket hosted-runner
 requirement for the repository's `CI Check` and `RepoWise code health` jobs.
 Both MUST use an Ubuntu self-hosted `codex` runner for repository-owned PRs,
-pushes, merge groups, and manual runs. A fork PR MUST instead use disposable
-`ubuntu-latest`, preserving its quality check without executing untrusted fork
-code on a persistent runner. The trusted-default-branch PR approval observer
+pushes, and manual runs. A fork PR or any merge-group event MUST instead use
+disposable `ubuntu-latest`: a merge group can contain fork code but its event
+does not expose the original PR trust classification to the runner selector.
+The quality checks still run without executing that code on a persistent
+runner. The trusted-default-branch PR approval observer
 MUST use a self-hosted `codex` runner. The automatic three-OS setup fixture
 matrix and its dependent Windows Codecov upload remain GitHub-hosted, while
 the three service-runner fixture jobs remain manual-only. Release and hotfix
@@ -2093,8 +2095,9 @@ the three service-runner fixture jobs remain manual-only. Release and hotfix
 not support self-hosted runners. This scheduling decision changes no setup
 session behavior, PAT access, or acceptance-ledger result.
 
-Four additional workflow-contract cases, outside the 350 setup cases, MUST
-verify repository-owned versus fork PR routing for both CI and RepoWise;
+Six additional workflow-contract cases, outside the 350 setup cases, MUST
+verify repository-owned versus fork PR routing and merge-group isolation for
+both CI and RepoWise;
 the existing contract validation MUST also reject hosted approval observers,
 self-hosted npm publication, and any loss of the six platform fixture paths.
 The operator documentation MUST state the fork exception and OIDC publishing

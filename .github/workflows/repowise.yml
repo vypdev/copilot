@@ -19,8 +19,8 @@ permissions:
 jobs:
   code-health:
     name: RepoWise code health
-    # Keep fork code off persistent runners while retaining its required check.
-    runs-on: ${{ fromJSON(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
+    # A merge group can contain fork code without exposing the originating PR here.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
     timeout-minutes: 30
     env:
       REPOWISE_VENV_NAME: repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health
