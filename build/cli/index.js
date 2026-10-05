@@ -87862,6 +87862,8 @@ exports.hasWorkflowDispatch = hasWorkflowDispatch;
 const node_crypto_1 = __nccwpck_require__(6005);
 const yaml = __importStar(__nccwpck_require__(783));
 const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const MAX_WORKFLOW_PAGES = 5;
+const MAX_WORKFLOW_FILE_CHECKS = 64;
 // Hash of the packaged credential-health workflow: every job is guarded by a
 // false-by-default input. A different remote file is never dispatched directly.
 const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa6979dfda71446a54f607b18d61';
@@ -87971,22 +87973,40 @@ async function findAcceptedDispatchRun(context, root, branch, workflowId) {
     throw new setup_permission_probe_http_1.ProbeFailure('GitHub accepted the temporary Actions dispatch but did not identify its run.');
 }
 async function findDispatchWorkflow(context, root, base) {
-    const list = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/workflows?per_page=100`, 'GET', [200]));
-    if (!Array.isArray(list.workflows))
-        throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid Actions workflow list.');
-    let fallback;
-    const candidates = [...list.workflows].filter(item => item && typeof item === 'object' && !Array.isArray(item))
-        .sort((a, b) => Number(b.path === '.github/workflows/copilot_credential_health.yml')
-        - Number(a.path === '.github/workflows/copilot_credential_health.yml'))
-        .slice(0, 8);
+    const candidates = [];
+    let complete = false;
+    for (let page = 1; page <= MAX_WORKFLOW_PAGES; page += 1) {
+        const list = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/actions/workflows?per_page=100&page=${page}`, 'GET', [200]));
+        if (!Array.isArray(list.workflows) || list.workflows.length > 100) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid Actions workflow list.');
+        }
+        const total = list.total_count;
+        if (total !== undefined && (!Number.isSafeInteger(total) || total < 0)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an invalid Actions workflow count.');
+        }
+        const pageCandidates = list.workflows.filter((item) => item && typeof item === 'object' && !Array.isArray(item));
+        candidates.push(...pageCandidates);
+        if (list.workflows.length < 100 || (total !== undefined && total <= page * 100)) {
+            if (total !== undefined && total > (page - 1) * 100 + list.workflows.length) {
+                throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned an incomplete Actions workflow page.');
+            }
+            complete = true;
+            break;
+        }
+    }
+    candidates.sort((a, b) => Number(b.path === '.github/workflows/copilot_credential_health.yml')
+        - Number(a.path === '.github/workflows/copilot_credential_health.yml'));
+    let checked = 0;
     for (const item of candidates) {
-        if (!item || typeof item !== 'object' || Array.isArray(item))
-            continue;
         const workflow = item;
         if (workflow.state !== 'active' || typeof workflow.path !== 'string'
             || !/^\.github\/workflows\/[A-Za-z0-9_.-]+\.ya?ml$/u.test(workflow.path)
             || !Number.isSafeInteger(workflow.id) || workflow.id <= 0)
             continue;
+        if (checked >= MAX_WORKFLOW_FILE_CHECKS) {
+            throw new setup_permission_probe_http_1.ProbeFailure('The bounded Actions workflow search could not inspect every candidate.');
+        }
+        checked += 1;
         const encodedPath = workflow.path.split('/').map(encodeURIComponent).join('/');
         const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${encodeURIComponent(base)}`);
         if (response.status !== 200)
@@ -87999,13 +88019,12 @@ async function findDispatchWorkflow(context, root, base) {
         if (hasWorkflowDispatch(content)) {
             const trustedNoOp = workflow.path === '.github/workflows/copilot_credential_health.yml'
                 && (0, node_crypto_1.createHash)('sha256').update(content).digest('hex') === TRUSTED_HEALTH_WORKFLOW_SHA256;
-            const candidate = { id: workflow.id, path: workflow.path, sha: file.sha, trustedNoOp };
-            if (trustedNoOp)
-                return candidate;
-            fallback ?? (fallback = candidate);
+            return { id: workflow.id, path: workflow.path, sha: file.sha, trustedNoOp };
         }
     }
-    return fallback;
+    if (!complete)
+        throw new setup_permission_probe_http_1.ProbeFailure('The bounded Actions workflow search could not inspect every index page.');
+    return undefined;
 }
 /** GitHub accepts scalar, event-list, and mapping forms of the top-level on key. */
 function hasWorkflowDispatch(content) {

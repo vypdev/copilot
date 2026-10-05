@@ -166,7 +166,13 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
-    it.each([false, true])('dispatches and deletes a no-job Actions run (trusted packaged workflow: %s)', async trusted => {
+    it.each([
+        { trusted: false, preceding: 0 },
+        { trusted: true, preceding: 0 },
+        { trusted: false, preceding: 9 },
+        { trusted: false, preceding: 100 },
+    ])('dispatches and deletes a no-job Actions run after $preceding preceding workflows (trusted: $trusted)',
+        async ({ trusted, preceding }) => {
         const root = '/repos/owner/repo';
         const sha = 'a'.repeat(40);
         const blobSha = 'b'.repeat(40);
@@ -178,14 +184,23 @@ describe('temporary permission resource probes', () => {
         let content: string | undefined;
         let run = false;
         let dispatched = false;
+        const listedPages: number[] = [];
+        const workflows = [
+            ...Array.from({ length: preceding }, (_, index) => ({
+                id: index + 1, path: `.github/workflows/inactive-${index}.yml`, state: 'disabled_manually',
+            })),
+            { id: 123, path: workflowPath, state: 'active' },
+        ];
         const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
             const parsed = new URL(url);
             const path = parsed.pathname;
             const method = options?.method ?? 'GET';
             if (path === root) return reply(200, { default_branch: 'main' });
-            if (path === `${root}/actions/workflows` && method === 'GET') return reply(200, {
-                workflows: [{ id: 123, path: workflowPath, state: 'active' }],
-            });
+            if (path === `${root}/actions/workflows` && method === 'GET') {
+                const page = Number(parsed.searchParams.get('page'));
+                listedPages.push(page);
+                return reply(200, { workflows: workflows.slice((page - 1) * 100, page * 100) });
+            }
             if (path === `${root}/contents/${workflowPath}` && method === 'GET') {
                 if (parsed.searchParams.get('ref') === 'main') {
                     return reply(200, { path: workflowPath, encoding: 'base64', sha: blobSha,
@@ -229,7 +244,39 @@ describe('temporary permission resource probes', () => {
         expect(Boolean(content)).toBe(!trusted);
         expect(run).toBe(false);
         expect(branch).toBeUndefined();
+        expect(listedPages).toEqual(preceding === 100 ? [1, 2] : [1]);
         expect(probe.phases).toEqual(['creating', 'reading', 'deleting']);
+        expect(await readdir(folder)).toEqual([]);
+    });
+
+    it.each([
+        { count: 65, state: 'active', failure: 'could not inspect every candidate' },
+        { count: 500, state: 'disabled_manually', failure: 'could not inspect every index page' },
+    ])('reports an incomplete Actions search after $count candidates without mutating', async ({ count, state, failure }) => {
+        const root = '/repos/owner/repo';
+        const calls: string[] = [];
+        const workflows = Array.from({ length: count }, (_, index) => ({
+            id: index + 1, path: `.github/workflows/check-${index}.yml`, state,
+        }));
+        const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+            const parsed = new URL(url);
+            const path = parsed.pathname;
+            const method = options?.method ?? 'GET';
+            calls.push(`${method} ${path}`);
+            if (path === root && method === 'GET') return reply(200, { default_branch: 'main' });
+            if (path === `${root}/actions/workflows` && method === 'GET') {
+                const page = Number(parsed.searchParams.get('page'));
+                return reply(200, { workflows: workflows.slice((page - 1) * 100, page * 100) });
+            }
+            if (path.startsWith(`${root}/contents/.github/workflows/`) && method === 'GET') {
+                return reply(200, { encoding: 'base64', sha: 'a'.repeat(40),
+                    content: Buffer.from('on: push\n').toString('base64') });
+            }
+            throw new Error(`Unexpected fixture request ${method} ${path}`);
+        }) as unknown as typeof fetch;
+        const probe = context('actions', 'repository', fetcher);
+        await expect(probeDisposableResource(probe.value)).rejects.toThrow(failure);
+        expect(calls.every(call => call.startsWith('GET '))).toBe(true);
         expect(await readdir(folder)).toEqual([]);
     });
 

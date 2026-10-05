@@ -91,6 +91,13 @@ an unproved PAT grant exists cannot make the permission audit pass.
    absence and branch cleanup are confirmed. Fixture tests assert the request
    body, 200 and 204 success paths, and rejection of ambiguous responses. This follows
    [GitHub's workflow dispatch API](https://docs.github.com/en/rest/actions/workflows).
+   Workflow discovery reads up to five bounded Actions-index pages of 100 and
+   checks up to 64 active candidate files, preferring the exact packaged
+   credential-health path. It must inspect candidates beyond the eighth and
+   on a later index page. If either limit is reached without a safe dispatch
+   candidate, the result is explicitly `Unverifiable` due to an incomplete
+   search, never a claim that no eligible workflow exists. Fixtures include
+   a ninth candidate and a second-page candidate.
 8. The final audit reports whether any disposable write has **unconfirmed
    cleanup**. A cleanly deleted probe does not count as a remaining setup
    mutation. If cancellation or expiration races with an audit that reports
