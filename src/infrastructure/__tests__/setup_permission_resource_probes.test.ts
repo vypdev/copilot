@@ -616,14 +616,22 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
-    it('finds a journaled Project by unique title after a simulated crash before its ID was saved', async () => {
+    it('finds a journaled Project by filtered unique title beyond 500 unrelated Projects after a crash', async () => {
         const title = 'Copilot permission test ' + 'a'.repeat(32);
         let project: { id: string; title: string } | undefined = { id: 'PVT_12345678', title };
+        const unrelated = Array.from({ length: 600 }, (_, index) => ({
+            id: `PVT_${String(index).padStart(8, '0')}`, title: `Other project ${index}`,
+        }));
         const fetcher = jest.fn(async (_url: string, options?: RequestOptions) => {
-            const body = JSON.parse(String(options?.body)) as { query: string };
-            if (body.query.includes('projectsV2(first:')) return reply(200, { data: { organization: { projectsV2: {
-                nodes: project ? [project] : [], pageInfo: { hasNextPage: false, endCursor: null },
-            } } } });
+            const body = JSON.parse(String(options?.body)) as { query: string; variables: { title?: string; after?: string | null } };
+            if (body.query.includes('projectsV2(first:')) {
+                const filtered = body.query.includes('query:$title') && body.variables.title === title;
+                const page = Number(body.variables.after ?? '0');
+                const nodes = filtered ? (project ? [project] : []) : unrelated.slice(page * 100, (page + 1) * 100);
+                return reply(200, { data: { organization: { projectsV2: {
+                    nodes, pageInfo: { hasNextPage: !filtered && page < 5, endCursor: !filtered ? String(page + 1) : null },
+                } } } });
+            }
             if (body.query.includes('deleteProjectV2')) {
                 const removed = project;
                 project = undefined;

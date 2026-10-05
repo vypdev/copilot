@@ -88431,7 +88431,7 @@ async function findProjectByTitle(http, owner, title) {
     let after = null;
     const matches = [];
     for (let page = 0; page < 5; page += 1) {
-        const data = await projectGraphQl(http, 'query($owner:String!,$after:String){organization(login:$owner){projectsV2(first:100,after:$after){nodes{id title} pageInfo{hasNextPage endCursor}}}}', { owner, after });
+        const data = await projectGraphQl(http, 'query($owner:String!,$title:String!,$after:String){organization(login:$owner){projectsV2(first:100,after:$after,query:$title){nodes{id title} pageInfo{hasNextPage endCursor}}}}', { owner, title, after });
         const organization = data.organization;
         if (!organization || typeof organization !== 'object' || Array.isArray(organization)) {
             throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return organization Projects for cleanup.');

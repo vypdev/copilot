@@ -93,6 +93,13 @@ an unproved PAT grant exists cannot make the permission audit pass.
    recovery succeeds. If cleanup was confirmed, cancellation remains
    `cancelled` and expiration remains `blocked`. The web and CLI show the
    affected permission and recovery action without raw provider data.
+9. If a process stops after creating an organization Project but before
+   journaling its ID, recovery queries `organization.projectsV2` with the
+   exact random Project title as GitHub's documented `query` filter. It still
+   checks every returned title and ID, rejects duplicate exact matches, and
+   keeps a bounded pagination limit. Recovery must find the temporary Project
+   even when the organization has more than 500 unrelated Projects; a full
+   unfiltered organization scan is not acceptable.
 
 ### Planned permission-specific operations
 
@@ -181,7 +188,7 @@ capability contract without relabelling its 42 open gates.
 | W17 | Rejected PR creation deletes only its temporary branch | Fixture W |
 | W18 | Crash after PR creation finds and closes the exact draft | Fixture W |
 | W19 | Organization Project create/read/delete never edits an existing item | Fixture W |
-| W20 | Project crash before ID journal update recovers by unique title | Fixture W |
+| W20 | Project crash before ID journal update recovers by filtered unique title even when more than 500 unrelated Projects exist | Fixture W |
 | W21 | Failed cleanup retains journal and blocks new setup | Fixture W |
 | W22 | Ambiguous create response recovers without deleting an unrelated resource | Fixture W |
 | W23 | An existing Secret at the generated name is never deleted | Fixture W |
