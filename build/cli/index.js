@@ -68751,7 +68751,7 @@ class SetupPlanConfirmationAdapter {
             : 'repository files';
         const groups = (0, setup_questionnaire_policy_1.setupEditableGroups)(plan.configuration);
         while (true) {
-            const result = await this.terminal.readText(`Approve temporary PAT permission probes, then apply this setup plan to ${target}? Tests may create and remove GitHub resources; Actions or PR tests may leave runs, notifications, or history. Type ? for details or :edit to change an answer. ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
+            const result = await this.terminal.readText(`Approve temporary PAT permission probes, then apply this setup plan to ${target}? Tests may create and remove GitHub resources; Issues, Actions, or PR tests may leave notifications or history. Type ? for details or :edit to change an answer. ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
             if (result.kind !== 'value')
                 return { kind: 'cancelled' };
             const value = result.value.normalize('NFKC').trim().toLowerCase();
@@ -68759,7 +68759,7 @@ class SetupPlanConfirmationAdapter {
                 console.log((0, setup_prompt_rendering_1.renderBox)([
                     `This is the final approval. The plan lists ${plan.selectedFiles.length} file(s), ${plan.variables.length} Variable(s), and ${plan.requiredSecrets.length} Secret name(s).`,
                     'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
-                    'Before setup changes, each selected write permission is tested with a temporary resource. Actions and PR tests can create visible runs, notifications, and history even after cleanup.',
+                    'Before setup changes, each selected write permission is tested with a temporary resource. The Issues test creates a visible Issue; if GitHub denies deletion, setup closes it, reports its number, and stops. Actions and PR tests can leave history or notifications.',
                     ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
                         ? ['GitHub Secret writes are upserts. A random private name and absence check reduce collision risk, but GitHub does not guarantee atomic create-only behavior. An unexpected update stops setup for inspection.'] : []),
                     'A failure after writes begin may leave partial changes; inspect the result and run copilot doctor --read-only before retrying.',
@@ -69410,7 +69410,8 @@ function renderSetupPlan(plan) {
         ...(plan.permissionProbes?.length
             ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
             : ['  (none)']),
-        '  Actions and Pull request checks may leave run history, PR history, or notifications after cleanup.', '',
+        '  Issues checks create a visible Issue. If GitHub denies deletion, setup closes it, reports its number, and stops.',
+        '  Actions, Issues, and Pull request checks may leave history or notifications after cleanup.', '',
         ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
             ? ['  GitHub Secret writes are upserts. A private random name and absence check reduce collision risk, but GitHub offers no atomic create-only guarantee; an unexpected update stops setup for inspection.', '']
             : []),
@@ -88078,6 +88079,137 @@ function hasWorkflowDispatch(content) {
 
 /***/ }),
 
+/***/ 63279:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cleanupIssue = cleanupIssue;
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+/** Delete only the exact temporary Issue; close and retain the journal if deletion is unavailable. */
+async function cleanupIssue(http, owner, repository, title, recordedNumber, recordedNodeId) {
+    const root = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
+    const identity = recordedNumber && recordedNodeId
+        ? { number: recordedNumber, nodeId: recordedNodeId }
+        : await findExactIssue(http, owner, repository, title, root);
+    const exact = `${root}/issues/${identity.number}`;
+    const lookup = await http.request(exact);
+    if ((lookup.status === 404 || lookup.status === 410) && recordedNumber && recordedNodeId)
+        return;
+    if (lookup.status !== 200)
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Issue lookup returned HTTP ${lookup.status}.`, lookup.status, true);
+    const before = await (0, setup_permission_probe_http_1.probeJsonRecord)(lookup);
+    assertExactIssue(before, identity, title, root);
+    let deletionConfirmed = false;
+    try {
+        const response = await (0, setup_permission_probe_http_1.probeJsonRecord)(await http.expect('https://api.github.com/graphql', 'POST', [200], {
+            query: 'mutation DeleteTemporaryIssue($id: ID!) { deleteIssue(input: { issueId: $id }) { repository { nameWithOwner } } }',
+            variables: { id: identity.nodeId },
+        }));
+        const data = response.data;
+        const result = data && typeof data === 'object' && !Array.isArray(data)
+            ? data.deleteIssue : undefined;
+        const returnedRepository = result && typeof result === 'object' && !Array.isArray(result)
+            ? result.repository : undefined;
+        const nameWithOwner = returnedRepository && typeof returnedRepository === 'object' && !Array.isArray(returnedRepository)
+            ? returnedRepository.nameWithOwner : undefined;
+        if (response.errors === undefined && nameWithOwner === `${owner}/${repository}`) {
+            const after = await http.request(exact);
+            deletionConfirmed = after.status === 404 || after.status === 410;
+        }
+    }
+    catch { /* A denied or ambiguous delete still needs exact Issue closure. */ }
+    if (deletionConfirmed)
+        return;
+    try {
+        await http.expect(exact, 'PATCH', [200], { state: 'closed', state_reason: 'not_planned' });
+        const closed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await http.expect(exact, 'GET', [200]));
+        assertExactIssue(closed, identity, title, root);
+        if (closed.state !== 'closed')
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue closure was not confirmed.');
+    }
+    catch {
+        throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Issue #${identity.number} could not be deleted or confirmed closed; inspect it in GitHub before retrying.`, undefined, true);
+    }
+    throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Issue #${identity.number} remains closed because GitHub did not confirm deletion; remove it in GitHub before retrying.`, undefined, true);
+}
+async function findExactIssue(http, owner, repository, title, root) {
+    if (!/^[A-Za-z0-9_.-]{1,100}$/u.test(owner) || !/^[A-Za-z0-9_.-]{1,100}$/u.test(repository)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue recovery rejected an unsafe repository identity.', undefined, true);
+    }
+    const query = `repo:${owner}/${repository} is:issue in:title "${title}"`;
+    const search = await (0, setup_permission_probe_http_1.probeJsonRecord)(await http.expect(`https://api.github.com/search/issues?q=${encodeURIComponent(query)}&per_page=100`, 'GET', [200]));
+    if (search.incomplete_results !== false || !Number.isSafeInteger(search.total_count)
+        || search.total_count > 100 || !Array.isArray(search.items)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue recovery search was incomplete.', undefined, true);
+    }
+    const matches = search.items.filter(item => item && typeof item === 'object' && !Array.isArray(item)
+        && item.title === title
+        && item.repository_url === root
+        && item.pull_request === undefined);
+    if (matches.length !== 1) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue recovery could not find one exact Issue; no Issue was deleted.', undefined, true);
+    }
+    const match = matches[0];
+    if (!Number.isSafeInteger(match.number) || match.number <= 0
+        || typeof match.node_id !== 'string' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(match.node_id)) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue recovery did not receive a safe Issue identity.', undefined, true);
+    }
+    return { number: match.number, nodeId: match.node_id };
+}
+function assertExactIssue(value, identity, title, root) {
+    if (value.number !== identity.number || value.node_id !== identity.nodeId
+        || value.title !== title || value.repository_url !== root || value.pull_request !== undefined) {
+        throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue identity changed; automatic deletion stopped.', undefined, true);
+    }
+}
+
+
+/***/ }),
+
+/***/ 85968:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.probeIssue = probeIssue;
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const setup_permission_probe_transaction_1 = __nccwpck_require__(38509);
+/** Creating an Issue, unlike a label, specifically requires Issues Write. */
+async function probeIssue(context) {
+    const title = `Copilot permission test ${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
+    const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
+    context.phase('creating');
+    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, title, async (owned, handle) => {
+        const response = await context.http.expect(`${root}/issues`, 'POST', [201], {
+            title,
+            body: 'Temporary PAT permission verification. This Issue will be deleted if GitHub permits it; otherwise it will be closed and reported.',
+        });
+        owned();
+        const created = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+        const number = created.number;
+        const nodeId = created.node_id;
+        if (!Number.isSafeInteger(number) || number <= 0
+            || typeof nodeId !== 'string' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(nodeId)
+            || created.title !== title || created.repository_url !== root || created.pull_request !== undefined) {
+            throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not identify the exact temporary Issue for cleanup.');
+        }
+        await handle.setIssueIdentity(number, nodeId);
+        context.phase('reading');
+        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/issues/${number}`, 'GET', [200]));
+        if (observed.number !== number || observed.node_id !== nodeId
+            || observed.title !== title || observed.repository_url !== root || observed.pull_request !== undefined) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue readback did not match the created Issue.');
+        }
+    });
+}
+
+
+/***/ }),
+
 /***/ 5110:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -88197,6 +88329,7 @@ const promises_1 = __nccwpck_require__(93977);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
 const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+const setup_permission_issue_cleanup_1 = __nccwpck_require__(63279);
 const supported = new Set(['variables', 'secrets', 'issues', 'issue-types', 'contents', 'workflows', 'projects', 'pull-requests', 'actions']);
 /** No token or test value is persisted. A file exists before the first remote mutation. */
 class SetupPermissionProbeJournal {
@@ -88271,6 +88404,13 @@ class ProbeJournalHandle {
             throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project ID cannot be journaled safely.');
         }
         await this.update({ remoteId });
+    }
+    async setIssueIdentity(issueNumber, issueNodeId) {
+        if (this.entry.probe !== 'issues' || !Number.isSafeInteger(issueNumber) || issueNumber <= 0
+            || !/^[A-Za-z0-9_=-]{8,128}$/u.test(issueNodeId)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue identity cannot be journaled safely.');
+        }
+        await this.update({ issueNumber, issueNodeId });
     }
     async markDispatchAttempted() {
         if (this.entry.probe !== 'actions')
@@ -88352,6 +88492,9 @@ class ProbeJournalHandle {
                 throw new setup_permission_probe_http_1.ProbeFailure('Temporary Issue Type cleanup could not be confirmed.');
             }
         }
+        else if (probe === 'issues' && name.startsWith('Copilot permission test ')) {
+            await (0, setup_permission_issue_cleanup_1.cleanupIssue)(http, owner, repository, name, this.entry.issueNumber, this.entry.issueNodeId);
+        }
         else {
             const resource = probe === 'issues' ? 'labels' : `actions/${probe}`;
             const exact = `${root}/${resource}/${encodeURIComponent(name)}`;
@@ -88394,6 +88537,10 @@ function validEntry(value) {
         && typeof entry.name === 'string' && safeName(entry.probe, entry.name)
         && (entry.remoteId === undefined || (entry.probe === 'projects'
             && typeof entry.remoteId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.remoteId)))
+        && (entry.issueNumber === undefined && entry.issueNodeId === undefined
+            || (entry.probe === 'issues' && /^Copilot permission test [a-f0-9]{32}$/u.test(entry.name)
+                && typeof entry.issueNumber === 'number' && Number.isSafeInteger(entry.issueNumber) && entry.issueNumber > 0
+                && typeof entry.issueNodeId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.issueNodeId)))
         && (entry.runId === undefined || (entry.probe === 'actions'
             && typeof entry.runId === 'number' && Number.isSafeInteger(entry.runId) && entry.runId > 0))
         && (entry.dispatchAttempted === undefined || (entry.probe === 'actions' && entry.dispatchAttempted === true))
@@ -88406,7 +88553,7 @@ function safeName(probe, name) {
         : probe === 'contents' || probe === 'workflows' || probe === 'pull-requests' || probe === 'actions'
             ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
             : probe === 'issues'
-                ? /^(?:copilot-probe-|copilot-permission-test-)[a-f0-9]{32}$/u.test(name)
+                ? /^(?:Copilot permission test |copilot-probe-|copilot-permission-test-)[a-f0-9]{32}$/u.test(name)
                 : probe === 'secrets'
                     ? /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}(?:[A-F0-9]{32})?$/u.test(name)
                     : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);
@@ -88644,7 +88791,9 @@ async function withProbeCleanup(context, name, operation) {
     try {
         await handle.cleanup(context.http);
     }
-    catch {
+    catch (error) {
+        if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.cleanupPending)
+            throw error;
         throw new setup_permission_probe_http_1.ProbeFailure(`Temporary ${context.probe} cleanup could not be confirmed; recovery is required before retrying.`, undefined, true);
     }
     if (operationError)
@@ -88804,6 +88953,7 @@ const setup_permission_project_probe_1 = __nccwpck_require__(36808);
 const setup_permission_pull_request_probe_1 = __nccwpck_require__(34801);
 const setup_permission_probe_transaction_1 = __nccwpck_require__(38509);
 const setup_permission_actions_probe_1 = __nccwpck_require__(66933);
+const setup_permission_issue_probe_1 = __nccwpck_require__(85968);
 /** Returns only after exact readback, deletion, and absence verification. */
 async function probeDisposableResource(context) {
     if (context.probe === 'variables')
@@ -88811,7 +88961,7 @@ async function probeDisposableResource(context) {
     if (context.probe === 'secrets')
         return probeSecret(context);
     if (context.probe === 'issues' && context.scope === 'repository')
-        return probeIssueLabel(context);
+        return (0, setup_permission_issue_probe_1.probeIssue)(context);
     if (context.probe === 'issue-types' && context.scope === 'organization')
         return probeIssueType(context);
     if (context.probe === 'contents' && context.scope === 'repository')
@@ -88891,21 +89041,6 @@ async function probeSecret(context) {
         const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(exact, 'GET', [200]));
         if (observed.name !== name)
             throw new setup_permission_probe_http_1.ProbeFailure('Temporary Secret metadata readback did not match the created name.');
-    });
-}
-async function probeIssueLabel(context) {
-    const name = `copilot-probe-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
-    const root = `${repoRoot(context)}/labels`;
-    const exact = `${root}/${encodeURIComponent(name)}`;
-    context.phase('creating');
-    await requireAbsent(context.http, exact);
-    await (0, setup_permission_probe_transaction_1.withProbeCleanup)(context, name, async (owned) => {
-        await context.http.expect(root, 'POST', [201], { name, color: 'ededed', description: 'Temporary permission verification; safe to remove.' });
-        owned();
-        context.phase('reading');
-        const observed = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(exact, 'GET', [200]));
-        if (observed.name !== name)
-            throw new setup_permission_probe_http_1.ProbeFailure('Temporary label readback did not match the created name.');
     });
 }
 async function probeIssueType(context) {
@@ -89774,8 +89909,10 @@ function probeDiagnostic(value) {
     if (value instanceof setup_permission_probe_http_1.ProbeFailure) {
         if (value instanceof setup_permission_probe_http_1.ProbeCollision)
             return 'secret-collision';
-        if (value.cleanupPending)
-            return 'cleanup-pending';
+        if (value.cleanupPending) {
+            const parsed = Number(/^Temporary Issue #([1-9][0-9]*)\b/u.exec(value.message)?.[1]);
+            return Number.isSafeInteger(parsed) && parsed > 0 ? `issue-residue-${parsed}` : 'cleanup-pending';
+        }
         if (value.httpStatus !== undefined)
             return `http-${value.httpStatus}`;
         if (value.message.startsWith('No isolated'))

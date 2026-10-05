@@ -22,7 +22,10 @@ export async function withProbeCleanup(
     }
     context.phase('deleting');
     try { await handle.cleanup(context.http); }
-    catch { throw new ProbeFailure(`Temporary ${context.probe} cleanup could not be confirmed; recovery is required before retrying.`,
-        undefined, true); }
+    catch (error) {
+        if (error instanceof ProbeFailure && error.cleanupPending) throw error;
+        throw new ProbeFailure(`Temporary ${context.probe} cleanup could not be confirmed; recovery is required before retrying.`,
+            undefined, true);
+    }
     if (operationError) throw operationError;
 }

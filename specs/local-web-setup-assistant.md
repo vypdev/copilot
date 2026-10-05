@@ -25,7 +25,7 @@ cleanup action. Neither a generic `Unverifiable` write row nor operator
 attestation is an accepted completion state. The same application audit and
 evidence rules apply to CLI. See
 [`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md#0-acceptance-correction-2026-10-05)
-for the normative transaction table and 60 additional test cases. §18–19
+for the normative transaction table and 63 additional test cases. §18–19
 remain open until fixture tests, packaged operation, four-locale and
 accessibility review, and explicitly authorized live cleanup evidence pass.
 If cancellation or expiry overlaps an audit, confirmed deletion of all

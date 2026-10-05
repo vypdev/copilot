@@ -21,7 +21,16 @@ const errors: Record<SetupLocale, Record<'unavailable' | 'cleanup-pending' | 'se
   pt: { unavailable: 'A verificação não terminou. Consulte o resultado no terminal.', 'cleanup-pending': 'A limpeza está pendente; é necessária recuperação antes de tentar novamente.', 'secret-collision': 'O GitHub encontrou um Secret existente com o nome aleatório de teste. A configuração parou; consulte o histórico do Secret.', unsupported: 'Ainda não existe um teste isolado para esta permissão.' },
 };
 
+const issueResidue: Record<SetupLocale, (number: string) => string> = {
+  en: number => `Temporary Issue #${number} could not be deleted. It was closed; remove it in GitHub before retrying.`,
+  es: number => `No se pudo borrar el Issue temporal #${number}. Se cerró; elimínalo en GitHub antes de reintentar.`,
+  fr: number => `L’Issue temporaire n° ${number} n’a pas pu être supprimée. Elle a été fermée ; supprimez-la dans GitHub avant de réessayer.`,
+  pt: number => `Não foi possível eliminar a Issue temporária n.º ${number}. Foi fechada; elimine-a no GitHub antes de tentar novamente.`,
+};
+
 export function permissionProgressError(locale: SetupLocale, detail: string): string {
+  const issueNumber = /^issue-residue-([1-9][0-9]*)$/u.exec(detail)?.[1];
+  if (issueNumber) return issueResidue[locale](issueNumber);
   if (/^http-[1-5][0-9]{2}$/u.test(detail)) return `GitHub HTTP ${detail.slice(5)}`;
   if (detail === 'unavailable' || detail === 'cleanup-pending' || detail === 'secret-collision' || detail === 'unsupported') return errors[locale][detail];
   return errors[locale].unavailable;

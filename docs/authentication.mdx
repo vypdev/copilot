@@ -165,8 +165,13 @@ an unknown row to verified.
 `ready` is true only when every required read succeeded or is positively usable
 and every required write completed its own temporary create/read/delete cycle.
 `--yes` approves the plan; it is not permission evidence. The old
-`--confirm-unverifiable-write-permissions` option is rejected. Actions and Pull
-request tests may leave GitHub history and notifications after cleanup; the
+`--confirm-unverifiable-write-permissions` option is rejected. Issues Write is
+tested by creating and reading an exact temporary Issue, then deleting it by
+its GitHub node ID and confirming absence. GitHub can deny Issue deletion even
+when the PAT has Issues Write. If so, setup closes the exact Issue, reports its
+number, retains the cleanup record and blocks further setup until deletion is
+confirmed. This test can leave notifications and audit history. Actions and Pull
+request tests may also leave GitHub history and notifications after cleanup; the
 plan discloses the selected tests before approval.
 If a temporary permission resource cannot be confirmed as deleted, the row
 shows pending cleanup and setup stops. Cancelling or losing the local session

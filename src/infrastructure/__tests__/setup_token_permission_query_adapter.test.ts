@@ -3,6 +3,9 @@ import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_p
 import { SetupTokenPermissionsUseCase } from '../../application/usecases/setup/setup_token_permissions_use_case';
 import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
 import { SetupPermissionProbeJournal } from '../setup_permission_probe_journal';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 function immediateJournal(): SetupPermissionProbeJournal {
     const journal = new SetupPermissionProbeJournal();
@@ -210,11 +213,22 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check.operationallyAvailable).toBeUndefined();
     });
 
-    it('does not accept an existing resource as a disposable write probe', async () => {
-        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(true, 200)) })
-            .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')]);
-        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('absence was not confirmed') });
-        expect(check.operationallyAvailable).toBeUndefined();
+    it('does not infer Issues Write from label access when exact Issue creation is denied', async () => {
+        const folder = await mkdtemp(join(tmpdir(), 'copilot-issue-grant-'));
+        try {
+            const calls: string[] = [];
+            const fetcher = jest.fn(async (url: string, options?: RequestInit) => {
+                calls.push(`${options?.method} ${new URL(url).pathname}`);
+                return response(false, 403);
+            }) as unknown as typeof fetch;
+            const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+                journal: new SetupPermissionProbeJournal(folder) })
+                .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')]);
+            expect(check).toMatchObject({ status: 'unverifiable', message: 'GitHub POST returned HTTP 403.' });
+            expect(check.writeProof).toBeUndefined();
+            expect(calls).toEqual(['POST /repos/owner/repo/issues']);
+            expect(await readdir(folder)).toEqual([]);
+        } finally { await rm(folder, { recursive: true, force: true }); }
     });
 
     it('verifies Contents read when the commit-list probe identifies an empty repository', async () => {

@@ -468,53 +468,72 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
-    it('cleans up a temporary label after a readback error', async () => {
-        let name: string | undefined;
-        let reads = 0;
-        const root = '/repos/owner/repo/labels';
+    it.each([
+        { mismatch: false, expectedFailure: false },
+        { mismatch: true, expectedFailure: true },
+    ])('creates, reads, and deletes an exact Issue (readback mismatch: $mismatch)', async ({ mismatch, expectedFailure }) => {
+        const root = 'https://api.github.com/repos/owner/repo';
+        let title: string | undefined;
+        let issueExists = false;
+        let issueReads = 0;
+        const calls: string[] = [];
+        const nodeId = 'I_fixtureNode123';
+        const issue = () => ({ number: 42, node_id: nodeId, title, repository_url: root });
         const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
             const path = new URL(url).pathname;
             const method = options?.method ?? 'GET';
-            if (path === root && method === 'POST') {
-                name = (JSON.parse(String(options?.body)) as { name: string }).name;
-                expect(name).toMatch(/^copilot-probe-[a-f0-9]{32}$/u);
-                expect(name.length).toBeLessThanOrEqual(50);
-                return reply(201);
+            calls.push(`${method} ${path}`);
+            if (path === '/repos/owner/repo/issues' && method === 'POST') {
+                title = (JSON.parse(String(options?.body)) as { title: string }).title;
+                expect(title).toMatch(/^Copilot permission test [a-f0-9]{32}$/u);
+                issueExists = true;
+                return reply(201, issue());
             }
-            if (path.startsWith(`${root}/`) && method === 'GET') {
-                reads += 1;
-                return name ? reply(200, { name: reads === 2 ? 'wrong' : name }) : reply(404);
+            if (path === '/repos/owner/repo/issues/42' && method === 'GET') {
+                issueReads += 1;
+                return issueExists ? reply(200, { ...issue(), title: mismatch && issueReads === 1 ? 'wrong' : title }) : reply(404);
             }
-            if (path.startsWith(`${root}/`) && method === 'DELETE') { name = undefined; return reply(204); }
+            if (path === '/graphql' && method === 'POST') {
+                expect((JSON.parse(String(options?.body)) as { variables: { id: string } }).variables.id).toBe(nodeId);
+                issueExists = false;
+                return reply(200, { data: { deleteIssue: { repository: { nameWithOwner: 'owner/repo' } } } });
+            }
             throw new Error(`Unexpected fixture request ${method} ${path}`);
         }) as unknown as typeof fetch;
         const probe = context('issues', 'repository', fetcher);
-        await expect(probeDisposableResource(probe.value)).rejects.toThrow('readback did not match');
-        expect(name).toBeUndefined();
+        if (expectedFailure) await expect(probeDisposableResource(probe.value)).rejects.toThrow('readback did not match');
+        else await probeDisposableResource(probe.value);
+        expect(probe.phases).toEqual(['creating', 'reading', 'deleting']);
+        expect(calls).toContain('POST /repos/owner/repo/issues');
+        expect(calls).not.toContain('POST /repos/owner/repo/labels');
+        expect(calls).toContain('POST /graphql');
+        expect(issueExists).toBe(false);
         expect(await readdir(folder)).toEqual([]);
     });
 
-    it('creates, reads and deletes an exact temporary repository label', async () => {
-        let name: string | undefined;
-        const root = '/repos/owner/repo/labels';
+    it('closes and reports the Issue number, then blocks when deletion is denied', async () => {
+        const root = 'https://api.github.com/repos/owner/repo';
+        let title = '';
+        let state = 'open';
         const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
             const path = new URL(url).pathname;
             const method = options?.method ?? 'GET';
-            if (path === root && method === 'POST') {
-                name = (JSON.parse(String(options?.body)) as { name: string }).name;
-                expect(name).toMatch(/^copilot-probe-[a-f0-9]{32}$/u);
-                expect(name.length).toBeLessThanOrEqual(50);
-                return reply(201);
+            const issue = () => ({ number: 42, node_id: 'I_fixtureNode123', title, repository_url: root, state });
+            if (path === '/repos/owner/repo/issues' && method === 'POST') {
+                title = (JSON.parse(String(options?.body)) as { title: string }).title;
+                return reply(201, issue());
             }
-            if (path.startsWith(`${root}/`) && method === 'GET') return name ? reply(200, { name }) : reply(404);
-            if (path.startsWith(`${root}/`) && method === 'DELETE') { name = undefined; return reply(204); }
+            if (path === '/repos/owner/repo/issues/42' && method === 'GET') return reply(200, issue());
+            if (path === '/graphql' && method === 'POST') return reply(403);
+            if (path === '/repos/owner/repo/issues/42' && method === 'PATCH') { state = 'closed'; return reply(200, issue()); }
             throw new Error(`Unexpected fixture request ${method} ${path}`);
         }) as unknown as typeof fetch;
         const probe = context('issues', 'repository', fetcher);
-        await probeDisposableResource(probe.value);
-        expect(probe.phases).toEqual(['creating', 'reading', 'deleting']);
-        expect(name).toBeUndefined();
-        expect(await readdir(folder)).toEqual([]);
+        let failure: unknown;
+        try { await probeDisposableResource(probe.value); } catch (error) { failure = error; }
+        expect(failure).toMatchObject({ message: expect.stringContaining('Issue #42 remains closed'), cleanupPending: true });
+        expect(state).toBe('closed');
+        expect(await readdir(folder)).toHaveLength(1);
     });
 
     it('creates a disabled Issue Type and deletes only the returned ID', async () => {
@@ -617,7 +636,7 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
-    it('recovers both current and earlier temporary label journal names', async () => {
+    it('recovers both earlier temporary label journal names without treating them as new Issues probes', async () => {
         const journal = new SetupPermissionProbeJournal(folder);
         const names = [`copilot-probe-${'a'.repeat(32)}`, `copilot-permission-test-${'b'.repeat(32)}`];
         for (const name of names) {
@@ -634,6 +653,72 @@ describe('temporary permission resource probes', () => {
         for (const name of names) {
             expect(readNames.filter(path => path === `/repos/owner/repo/labels/${name}`)).toHaveLength(2);
         }
+        expect(await readdir(folder)).toEqual([]);
+    });
+
+    it('recovers an Issue created before its number was journaled using one exact search result', async () => {
+        const title = `Copilot permission test ${'a'.repeat(32)}`;
+        const root = 'https://api.github.com/repos/owner/repo';
+        const journal = new SetupPermissionProbeJournal(folder);
+        await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'issues', name: title });
+        let exists = true;
+        const calls: string[] = [];
+        const issue = { number: 42, node_id: 'I_fixtureNode123', title, repository_url: root };
+        const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+            const path = new URL(url).pathname;
+            const method = options?.method ?? 'GET';
+            calls.push(`${method} ${path}`);
+            if (path === '/search/issues') {
+                expect(new URL(url).searchParams.get('q')).toBe(`repo:owner/repo is:issue in:title "${title}"`);
+                return reply(200, { incomplete_results: false, total_count: 1, items: [issue] });
+            }
+            if (path === '/repos/owner/repo/issues/42' && method === 'GET') return exists ? reply(200, issue) : reply(404);
+            if (path === '/graphql' && method === 'POST') {
+                exists = false;
+                return reply(200, { data: { deleteIssue: { repository: { nameWithOwner: 'owner/repo' } } } });
+            }
+            throw new Error(`Unexpected fixture request ${method} ${path}`);
+        }) as unknown as typeof fetch;
+        await journal.recover('owner', 'repo', new SetupPermissionProbeHttp(fetcher, 'fixture-token', 1000));
+        expect(calls).toContain('POST /graphql');
+        expect(exists).toBe(false);
+        expect(await readdir(folder)).toEqual([]);
+    });
+
+    it.each(['missing', 'duplicate', 'incomplete'] as const)(
+        'blocks recovery on a %s Issue search without deleting another Issue', async scenario => {
+            const title = `Copilot permission test ${'a'.repeat(32)}`;
+            const journal = new SetupPermissionProbeJournal(folder);
+            await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'issues', name: title });
+            const issue = { number: 42, node_id: 'I_fixtureNode123', title,
+                repository_url: 'https://api.github.com/repos/owner/repo' };
+            const calls: string[] = [];
+            const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+                const path = new URL(url).pathname;
+                calls.push(`${options?.method ?? 'GET'} ${path}`);
+                if (path !== '/search/issues') throw new Error(`Unexpected fixture request ${path}`);
+                return reply(200, { incomplete_results: scenario === 'incomplete',
+                    total_count: scenario === 'duplicate' ? 2 : scenario === 'missing' ? 0 : 1,
+                    items: scenario === 'duplicate' ? [issue, { ...issue, number: 43 }]
+                        : scenario === 'missing' ? [] : [issue] });
+            }) as unknown as typeof fetch;
+            await expect(journal.recover('owner', 'repo', new SetupPermissionProbeHttp(fetcher, 'fixture-token', 1000)))
+                .rejects.toThrow(/Temporary Issue recovery/u);
+            expect(calls).toEqual(['GET /search/issues']);
+            expect(await readdir(folder)).toHaveLength(1);
+        },
+    );
+
+    it('accepts an exact journaled Issue already removed by an administrator', async () => {
+        const journal = new SetupPermissionProbeJournal(folder);
+        const handle = await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'issues',
+            name: `Copilot permission test ${'a'.repeat(32)}` });
+        await handle.setIssueIdentity(42, 'I_fixtureNode123');
+        const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+            expect(new URL(url).pathname).toBe('/repos/owner/repo/issues/42');
+            return reply(404);
+        }) as unknown as typeof fetch;
+        await journal.recover('owner', 'repo', new SetupPermissionProbeHttp(fetcher, 'fixture-token', 1000));
         expect(await readdir(folder)).toEqual([]);
     });
 

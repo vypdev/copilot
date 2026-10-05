@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { SetupTokenPermissionProbe, SetupTokenPermissionScope } from '../domain/setup_token_permissions';
 import { ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord } from './setup_permission_probe_http';
+import { cleanupIssue } from './setup_permission_issue_cleanup';
 
 interface ProbeJournalEntry {
     readonly version: 1;
@@ -14,6 +15,8 @@ interface ProbeJournalEntry {
     readonly probe: SetupTokenPermissionProbe;
     readonly name: string;
     readonly remoteId?: string;
+    readonly issueNumber?: number;
+    readonly issueNodeId?: string;
     readonly runId?: number;
     readonly dispatchAttempted?: true;
     readonly pullAttempted?: true;
@@ -85,6 +88,14 @@ export class ProbeJournalHandle {
         await this.update({ remoteId });
     }
 
+    async setIssueIdentity(issueNumber: number, issueNodeId: string): Promise<void> {
+        if (this.entry.probe !== 'issues' || !Number.isSafeInteger(issueNumber) || issueNumber <= 0
+            || !/^[A-Za-z0-9_=-]{8,128}$/u.test(issueNodeId)) {
+            throw new ProbeFailure('Temporary Issue identity cannot be journaled safely.');
+        }
+        await this.update({ issueNumber, issueNodeId });
+    }
+
     async markDispatchAttempted(): Promise<void> {
         if (this.entry.probe !== 'actions') throw new ProbeFailure('Invalid temporary Actions journal update.');
         await this.update({ dispatchAttempted: true });
@@ -154,6 +165,8 @@ export class ProbeJournalHandle {
             if ((await matchingIssueTypeIds(http, list, name)).length !== 0) {
                 throw new ProbeFailure('Temporary Issue Type cleanup could not be confirmed.');
             }
+        } else if (probe === 'issues' && name.startsWith('Copilot permission test ')) {
+            await cleanupIssue(http, owner, repository, name, this.entry.issueNumber, this.entry.issueNodeId);
         } else {
             const resource = probe === 'issues' ? 'labels' : `actions/${probe}`;
             const exact = `${root}/${resource}/${encodeURIComponent(name)}`;
@@ -188,6 +201,10 @@ function validEntry(value: unknown): value is ProbeJournalEntry {
         && typeof entry.name === 'string' && safeName(entry.probe as SetupTokenPermissionProbe, entry.name)
         && (entry.remoteId === undefined || (entry.probe === 'projects'
             && typeof entry.remoteId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.remoteId)))
+        && (entry.issueNumber === undefined && entry.issueNodeId === undefined
+            || (entry.probe === 'issues' && /^Copilot permission test [a-f0-9]{32}$/u.test(entry.name)
+                && typeof entry.issueNumber === 'number' && Number.isSafeInteger(entry.issueNumber) && entry.issueNumber > 0
+                && typeof entry.issueNodeId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.issueNodeId)))
         && (entry.runId === undefined || (entry.probe === 'actions'
             && typeof entry.runId === 'number' && Number.isSafeInteger(entry.runId) && entry.runId > 0))
         && (entry.dispatchAttempted === undefined || (entry.probe === 'actions' && entry.dispatchAttempted === true))
@@ -201,7 +218,7 @@ function safeName(probe: SetupTokenPermissionProbe, name: string): boolean {
         : probe === 'contents' || probe === 'workflows' || probe === 'pull-requests' || probe === 'actions'
             ? /^copilot-permission-test-[a-f0-9]{32}$/u.test(name)
         : probe === 'issues'
-                ? /^(?:copilot-probe-|copilot-permission-test-)[a-f0-9]{32}$/u.test(name)
+                ? /^(?:Copilot permission test |copilot-probe-|copilot-permission-test-)[a-f0-9]{32}$/u.test(name)
                 : probe === 'secrets'
                     ? /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}(?:[A-F0-9]{32})?$/u.test(name)
                     : /^COPILOT_PERMISSION_TEST_[A-F0-9]{32}$/u.test(name);

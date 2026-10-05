@@ -49,7 +49,8 @@ export function renderSetupPlan(plan: SetupPlan): string {
     ...(plan.permissionProbes?.length
       ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
       : ['  (none)']),
-    '  Actions and Pull request checks may leave run history, PR history, or notifications after cleanup.', '',
+    '  Issues checks create a visible Issue. If GitHub denies deletion, setup closes it, reports its number, and stops.',
+    '  Actions, Issues, and Pull request checks may leave history or notifications after cleanup.', '',
     ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
       ? ['  GitHub Secret writes are upserts. A private random name and absence check reduce collision risk, but GitHub offers no atomic create-only guarantee; an unexpected update stops setup for inspection.', '']
       : []),

@@ -25,6 +25,7 @@ describe('web setup localization catalog', () => {
         expect(permissionProgressCopy(locale, phase).trim()).not.toBe('');
       }
       expect(permissionProgressError(locale, 'http-403')).toBe('GitHub HTTP 403');
+      expect(permissionProgressError(locale, 'issue-residue-42')).toContain('42');
       for (const detail of ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'] as const) {
         expect(permissionProgressError(locale, detail).trim()).not.toBe('');
       }

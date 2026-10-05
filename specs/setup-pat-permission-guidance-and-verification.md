@@ -9,7 +9,7 @@
 - Related issues/PRs: none recorded
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, CLI accessibility
-- Open decisions blocking readiness: complete coverage of every write capability, interruption recovery, and human review of live provider behavior
+- Open decisions blocking readiness: complete coverage of every write capability, interruption recovery, and human review of live provider behavior; issue deletion may require repository administration and organization enablement
 
 ## 0. Acceptance correction (2026-10-05)
 
@@ -77,8 +77,9 @@ an unproved PAT grant exists cannot make the permission audit pass.
    cancelled, crashes, or loses the cleanup response, record only the bounded
    cleanup target and attempt id in a local, permission-restricted recovery
    journal; resume cleanup before a new probe. An unresolved cleanup blocks
-   setup and is shown to the operator. When a disposable label name changes,
-   recovery must still recognize journaled names from the earlier format.
+   setup and is shown to the operator. When a disposable Issues probe changes
+   from labels to Issues, recovery must still recognize journaled label names
+   from the earlier format.
    Never persist the PAT or a test secret.
 6. Provider 401 and explicit permission-denial 403 are failures; rate limits,
    SSO, ambiguous 403/404, network errors, malformed success bodies, and 5xx
@@ -134,6 +135,23 @@ an unproved PAT grant exists cannot make the permission audit pass.
     must yield a bounded, sanitized failure; no permission becomes Verified.
     Fixture tests hold the body open beyond the deadline and prove that the
     probe exits without hanging or leaking provider content.
+11. Repository Issues WRITE cannot be established by creating a label or
+    milestone: GitHub also accepts Pull requests WRITE for those endpoints.
+    The probe creates an exact, randomly named Issue through the Issues-only
+    create endpoint, reads it by number, and attempts the GraphQL `deleteIssue`
+    mutation only after confirming its title, repository and node ID. It
+    verifies absence after deletion. The local journal records only the title,
+    bounded number and node ID, and searches for the exact title if the process
+    dies after creation but before it can record the number. An ambiguous or
+    duplicate search blocks automatic deletion. If GitHub denies deletion,
+    the probe closes the exact Issue, verifies its closed state, reports its
+    number and the residual audit trail, and blocks setup with pending cleanup.
+    It never treats closing as deletion or a verified grant. The reviewed plan
+    warns that Issue creation can notify watchers and that permanent deletion
+    requires repository administration and, for organizations, owner enablement.
+    This follows GitHub's [Issues REST permissions](https://docs.github.com/en/rest/issues/issues),
+    [GraphQL `deleteIssue`](https://docs.github.com/en/graphql/reference/issues),
+    and [deletion policy](https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue).
 
 ### Planned permission-specific operations
 
@@ -141,7 +159,7 @@ an unproved PAT grant exists cannot make the permission audit pass.
 |---|---|---|
 | Repository / organization Variables WRITE | create a unique variable, GET exact name, DELETE exact name | verify absence; no overwrite |
 | Repository / organization Secrets WRITE | fetch public key, preflight absence, upsert a 256-bit random-name encrypted secret, require 201, GET exact metadata, DELETE exact name | verify absence; a 204 update is a collision incident with no automatic deletion; provider has no atomic create-only endpoint |
-| Repository Issues WRITE | create a unique label with a name of at most 50 characters, GET label, DELETE label | verify absence; retain at least 128 bits of random name entropy |
+| Repository Issues WRITE | create a unique Issue, GET its exact number, GraphQL-delete its exact node ID | verify absence; if deletion is denied, close and verify the Issue, show the residue, retain cleanup journal, block setup; recognize earlier label journals for recovery |
 | Organization Issue Types WRITE | create unique disabled issue type, GET/list exact id, DELETE id | verify absence; org admin prerequisite reported separately |
 | Repository Contents WRITE | create unique disposable ref, GET exact ref, DELETE ref; use a file on that ref when needed to prove file writes | verify ref absence; no default-branch commit |
 | Repository Workflows WRITE | on the disposable ref, create a no-job workflow file, GET it, delete ref | verify ref absence; requires Contents WRITE too |
@@ -157,13 +175,13 @@ endpoint requirements rather than the current token's grants.
 
 ### New acceptance budget and executable gates
 
-The original 135 cases remain a historical baseline. Add **60 distinct
+The original 135 cases remain a historical baseline. Add **63 distinct
 cases**: 18 read outcomes (successful empty/nonempty, public/private,
-selected Project, denial/ambiguity), 24 write transactions (create/read/delete
-for each supported scope and rollback failure), 10 progress and session cases
+selected Project, denial/ambiguity), 27 write transactions (create/read/delete
+for each supported scope, rollback failure, and Issue-specific deletion/recovery), 10 progress and session cases
 (ordered concurrency, keyboard/screen reader, cancel, timeout, stale result),
 and 8 security/recovery cases (collision, ambiguous create, crash journal,
-redaction). Total target: **195** cases, traceable in the acceptance matrix.
+redaction). Total target: **198** cases, traceable in the acceptance matrix.
 All provider tests use local fixtures or doubles. A live PAT is never placed
 in source, test fixtures, logs, command arguments, CI, or screenshots. The
 human review gate remains open until provider behavior, localized web views,
@@ -208,8 +226,8 @@ capability contract without relabelling its 42 open gates.
 | W03 | Repository Secret encrypted create/metadata/delete | Fixture W |
 | W04 | Organization Secret encrypted create/metadata/delete | Fixture W |
 | W05 | Secret upsert collision never deletes the unknown value | Fixture W |
-| W06 | Repository label is cleaned after readback mismatch | Fixture W |
-| W07 | Repository label name stays within a conservative 50-character bound, retains 128 bits of random entropy, and succeeds on create/read/delete | Fixture W |
+| W06 | Temporary Issue is deleted after readback mismatch | Fixture W |
+| W07 | Issues-only create, exact read, node-ID deletion, and absence verification succeed | Fixture W |
 | W08 | Disabled organization Issue Type is deleted by exact ID | Fixture W |
 | W09 | Contents WRITE disposable ref is removed | Fixture W |
 | W10 | Workflows WRITE disposable workflow ref is removed | Fixture W |
@@ -227,6 +245,9 @@ capability contract without relabelling its 42 open gates.
 | W22 | Ambiguous create response recovers without deleting an unrelated resource | Fixture W |
 | W23 | An existing Secret at the generated name is never deleted | Fixture W |
 | W24 | Workflow PAT write set uses the same post-plan transaction rule | Fixture `src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts` |
+| W25 | Denied Issue deletion closes the exact Issue, reports its number, keeps a cleanup journal, and blocks setup | Fixture W |
+| W26 | Lost Issue create response recovers by one exact search result; missing or duplicate search results never delete a different Issue | Fixture W |
+| W27 | An old temporary-label journal still cleans the exact label; label success alone is not Issues WRITE proof | Fixture W |
 | P01 | At most four probes run concurrently | Fixture R |
 | P02 | Results retain requirement order under concurrency | Fixture R |
 | P03 | Browser bridge publishes each bounded phase for one permission | Fixture B |
@@ -246,7 +267,7 @@ capability contract without relabelling its 42 open gates.
 | S07 | Journal rejects forged scope/name combinations | Fixture W |
 | S08 | Windows journal ACL and service-account recovery are observed | Human |
 
-The matrix records 57 fixture assertions and three explicitly open human
+The matrix records 60 fixture assertions and three explicitly open human
 observations. Fixture coverage does not establish live GitHub behavior or close
 the separate 42 open web-assistant cases.
 

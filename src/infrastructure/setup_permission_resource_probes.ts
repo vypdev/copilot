@@ -6,12 +6,13 @@ import { probeOrganizationProject } from './setup_permission_project_probe';
 import { probePullRequest } from './setup_permission_pull_request_probe';
 import { withProbeCleanup } from './setup_permission_probe_transaction';
 import { probeActions } from './setup_permission_actions_probe';
+import { probeIssue } from './setup_permission_issue_probe';
 
 /** Returns only after exact readback, deletion, and absence verification. */
 export async function probeDisposableResource(context: ResourceProbeContext): Promise<void> {
     if (context.probe === 'variables') return probeVariable(context);
     if (context.probe === 'secrets') return probeSecret(context);
-    if (context.probe === 'issues' && context.scope === 'repository') return probeIssueLabel(context);
+    if (context.probe === 'issues' && context.scope === 'repository') return probeIssue(context);
     if (context.probe === 'issue-types' && context.scope === 'organization') return probeIssueType(context);
     if (context.probe === 'contents' && context.scope === 'repository') return probeReference(context);
     if (context.probe === 'workflows' && context.scope === 'repository') return probeWorkflowFile(context);
@@ -85,21 +86,6 @@ async function probeSecret(context: ResourceProbeContext): Promise<void> {
         context.phase('reading');
         const observed = await probeJsonRecord(await context.http.expect(exact, 'GET', [200]));
         if (observed.name !== name) throw new ProbeFailure('Temporary Secret metadata readback did not match the created name.');
-    });
-}
-
-async function probeIssueLabel(context: ResourceProbeContext): Promise<void> {
-    const name = `copilot-probe-${randomBytes(16).toString('hex')}`;
-    const root = `${repoRoot(context)}/labels`;
-    const exact = `${root}/${encodeURIComponent(name)}`;
-    context.phase('creating');
-    await requireAbsent(context.http, exact);
-    await withProbeCleanup(context, name, async owned => {
-        await context.http.expect(root, 'POST', [201], { name, color: 'ededed', description: 'Temporary permission verification; safe to remove.' });
-        owned();
-        context.phase('reading');
-        const observed = await probeJsonRecord(await context.http.expect(exact, 'GET', [200]));
-        if (observed.name !== name) throw new ProbeFailure('Temporary label readback did not match the created name.');
     });
 }
 
