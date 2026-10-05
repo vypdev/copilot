@@ -24,6 +24,9 @@ const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+const QUALITY_RUNNER_BY_TRUST = '${{ fromJSON(github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}';
+const ISOLATED_REPOWISE_VENV = '${{ runner.temp }}/repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+const ISOLATED_REPOWISE_REPORT = '${{ runner.temp }}/repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
@@ -208,12 +211,29 @@ function runnerLabels(value) {
 
 function assertIsolatedPnpm(relativeFile, jobId, job) {
   const labels = runnerLabels(job['runs-on']);
-  if (!labels.includes('self-hosted') || !labels.includes('codex')) return;
+  const selfHostedCodex = labels.includes('self-hosted') && labels.includes('codex');
+  const dynamicQualityRunner = relativeFile === '.github/workflows/ci_check.yml'
+    && labels.includes(QUALITY_RUNNER_BY_TRUST);
+  if (!selfHostedCodex && !dynamicQualityRunner) return;
   for (const step of job.steps ?? []) {
     if (typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@')
       && step.with?.dest !== ISOLATED_PNPM_DEST) {
       throw new Error(`${relativeFile} job ${jobId} must isolate pnpm/action-setup by runner, run, attempt and job.`);
     }
+  }
+}
+
+function assertRepoWiseTemporaryCleanup(relativeFile, job) {
+  if (relativeFile !== '.github/workflows/repowise.yml') return;
+  const cleanup = (job.steps ?? []).find(step => step?.name === 'Remove RepoWise temporary files');
+  const upload = (job.steps ?? []).find(step => step?.name === 'Upload RepoWise reports');
+  if (job.env?.REPOWISE_VENV !== ISOLATED_REPOWISE_VENV
+    || job.env?.REPOWISE_REPORT !== ISOLATED_REPOWISE_REPORT
+    || upload?.with?.path !== '${{ env.REPOWISE_REPORT }}/'
+    || cleanup?.if !== '${{ always() }}'
+    || cleanup?.run !== 'rm -rf -- "$REPOWISE_VENV" "$REPOWISE_REPORT"'
+    || job.steps.indexOf(cleanup) <= job.steps.indexOf(upload)) {
+    throw new Error(`${relativeFile} must isolate and remove RepoWise temporary files after artifact upload.`);
   }
 }
 
@@ -362,19 +382,29 @@ function assertRunner(file, workflow) {
       }
       continue;
     }
-    const expected = relativeFile.startsWith('setup/workflows/')
-      || relativeFile === '.github/workflows/copilot_pull_request_approval.yml'
-      || relativeFile === '.github/workflows/ci_check.yml'
-      || relativeFile === '.github/workflows/repowise.yml'
-      ? ['ubuntu-latest']
-      : /^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm'
-        ? ['ubuntu-latest']
-        : ['self-hosted', 'codex'];
+    let expected = ['self-hosted', 'codex'];
+    if (relativeFile.startsWith('setup/workflows/')
+      || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
+      expected = ['ubuntu-latest'];
+    } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
+      expected = ['self-hosted', 'codex', 'Linux'];
+    } else if (relativeFile === '.github/workflows/ci_check.yml'
+      || relativeFile === '.github/workflows/repowise.yml') {
+      expected = [QUALITY_RUNNER_BY_TRUST];
+    }
     const labels = runnerLabels(job['runs-on']);
     if (JSON.stringify(labels) !== JSON.stringify(expected)) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
+    assertRepoWiseTemporaryCleanup(relativeFile, job);
+    if (relativeFile === '.github/workflows/ci_check.yml'
+      || relativeFile === '.github/workflows/repowise.yml') {
+      const ubuntuCheck = (job.steps ?? []).find(step => step?.name === 'Verify Ubuntu runner');
+      if (ubuntuCheck?.run !== '. /etc/os-release && test "$ID" = ubuntu') {
+        throw new Error(`${relativeFile} must verify Ubuntu on the selected runner.`);
+      }
+    }
     if (relativeFile === '.github/workflows/ci_check.yml') {
       const diffStep = (job.steps ?? []).find(step => step?.name === 'Validate Git diff');
       if (!diffStep?.run?.includes(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`)) {

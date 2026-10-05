@@ -2,6 +2,7 @@ import path from 'node:path';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { runInNewContext } from 'node:vm';
 import * as yaml from 'js-yaml';
 import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
 
@@ -834,17 +835,42 @@ describe('workflow contract validator', () => {
   );
 
   it.each([
-    ['ci_check.yml', 'ci-check'],
-    ['repowise.yml', 'code-health'],
-  ])('keeps public PR quality code off persistent runners in %s', (fileName, jobId) => {
+    ['ci_check.yml', 'ci-check', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
+    ['ci_check.yml', 'ci-check', 'outside/fork', '["ubuntu-latest"]'],
+    ['repowise.yml', 'code-health', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
+    ['repowise.yml', 'code-health', 'outside/fork', '["ubuntu-latest"]'],
+  ])('routes %s PR code from %s to %s', (fileName, jobId, headRepository, expectedRunner) => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const expression = workflow.jobs[jobId]['runs-on'];
+    expect(expression).toBe('${{ fromJSON(github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}');
+    const selected = runInNewContext(expression.slice(4, -3), {
+      github: {
+        event_name: 'pull_request',
+        event: { pull_request: { head: { repo: { full_name: headRepository } } } },
+        repository: 'vypdev/copilot',
+      },
+      fromJSON: JSON.parse,
+    }, { timeout: 100 });
+    expect(JSON.stringify(selected)).toBe(expectedRunner);
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
     workflow.jobs[jobId]['runs-on'] = ['self-hosted', 'codex'];
-    expect(() => assertRunner(file, workflow)).toThrow('runs-on ubuntu-latest');
+    expect(() => assertRunner(file, workflow)).toThrow('must use runs-on');
+  });
+
+  it('isolates RepoWise files per run and removes them after artifact upload', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const job = workflow.jobs['code-health'];
+    job.env.REPOWISE_VENV = '${{ runner.temp }}/repowise-venv';
+    expect(() => assertRunner(file, workflow)).toThrow('isolate and remove RepoWise temporary files');
+    job.env.REPOWISE_VENV = '${{ runner.temp }}/repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+    job.steps = job.steps.filter((step: { name?: string }) => step.name !== 'Remove RepoWise temporary files');
+    expect(() => assertRunner(file, workflow)).toThrow('isolate and remove RepoWise temporary files');
   });
 
   it.each([
+    ['ci_check.yml', 'ci-check'],
     ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke'],
     ['release_workflow.yml', 'prepare-version-files'],
     ['hotfix_workflow.yml', 'prepare-version-files'],

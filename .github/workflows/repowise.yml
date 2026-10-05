@@ -19,9 +19,16 @@ permissions:
 jobs:
   code-health:
     name: RepoWise code health
-    runs-on: ubuntu-latest
+    # Keep fork code off persistent runners while retaining its required check.
+    runs-on: ${{ fromJSON(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
     timeout-minutes: 30
+    env:
+      REPOWISE_VENV: ${{ runner.temp }}/repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+      REPOWISE_REPORT: ${{ runner.temp }}/repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
     steps:
+      - name: Verify Ubuntu runner
+        shell: bash
+        run: . /etc/os-release && test "$ID" = ubuntu
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
@@ -50,10 +57,10 @@ jobs:
         env:
           PYTHON_BIN: "${{ steps.python.outputs.path }}"
         run: |
-          "$PYTHON_BIN" -m venv "$RUNNER_TEMP/repowise-venv"
+          "$PYTHON_BIN" -m venv "$REPOWISE_VENV"
       - name: Install RepoWise
         run: |
-          "$RUNNER_TEMP/repowise-venv/bin/python" -m pip install \
+          "$REPOWISE_VENV/bin/python" -m pip install \
             --disable-pip-version-check \
             --no-cache-dir \
             'repowise==0.45.0'
@@ -62,8 +69,8 @@ jobs:
           REPOWISE_SKIP_EDITOR_SETUP: '1'
         run: |
           set -euo pipefail
-          report_dir="$RUNNER_TEMP/repowise-report"
-          repowise_bin="$RUNNER_TEMP/repowise-venv/bin/repowise"
+          report_dir="$REPOWISE_REPORT"
+          repowise_bin="$REPOWISE_VENV/bin/repowise"
           mkdir -p "$report_dir"
           cleanup() {
             rm -rf .repowise .mcp.json
@@ -105,6 +112,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: repowise-code-health
-          path: ${{ runner.temp }}/repowise-report/
+          path: ${{ env.REPOWISE_REPORT }}/
           if-no-files-found: warn
           retention-days: 14
+      - name: Remove RepoWise temporary files
+        if: ${{ always() }}
+        run: rm -rf -- "$REPOWISE_VENV" "$REPOWISE_REPORT"

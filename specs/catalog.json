@@ -770,7 +770,8 @@
       "workflows": [
         ".github/workflows/ci_check.yml",
         ".github/workflows/repowise.yml",
-        ".github/workflows/setup_platform_smoke.yml"
+        ".github/workflows/setup_platform_smoke.yml",
+        ".github/workflows/copilot_pull_request_approval.yml"
       ],
       "entrypoints": [
         "src/cli/commands/setup.ts",
@@ -893,6 +894,7 @@
         "src/application/usecases/actions/__tests__/initial_setup_use_case.test.ts",
         "src/actions/__tests__/local_action.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/domain/__tests__/setup_approval_workflow.test.ts",
         "src/tooling/__tests__/documentation_checkout_text.test.ts",
         "src/application/policies/__tests__/setup_remote_facts_policy.test.ts",
         "src/application/usecases/setup/__tests__/verify_setup_pat_bootstrap_use_case.test.ts",
@@ -919,7 +921,9 @@
         "docs/configuration-checklist.mdx",
         "docs/development/architecture.mdx",
         "docs/development/setup-assistant-review.mdx",
+        "docs/development/testing.mdx",
         "docs/dependency-rules.md",
+        "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/troubleshooting.mdx",
         "docs/security-operations/operations/provisioning.mdx"
       ]

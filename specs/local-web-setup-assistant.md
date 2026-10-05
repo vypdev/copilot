@@ -2080,6 +2080,28 @@ self-hosted automatic PR job in those three quality workflows, missing hosted Wi
 the manual service-runner evidence path. No live setup, PAT, or agent request
 is needed for these checks.
 
+The 2026-10-05 runner-cost decision supersedes only the blanket hosted-runner
+requirement for the repository's `CI Check` and `RepoWise code health` jobs.
+Both MUST use an Ubuntu self-hosted `codex` runner for repository-owned PRs,
+pushes, merge groups, and manual runs. A fork PR MUST instead use disposable
+`ubuntu-latest`, preserving its quality check without executing untrusted fork
+code on a persistent runner. The trusted-default-branch PR approval observer
+MUST use a self-hosted `codex` runner. The automatic three-OS setup fixture
+matrix and its dependent Windows Codecov upload remain GitHub-hosted, while
+the three service-runner fixture jobs remain manual-only. Release and hotfix
+`publish-npm` MUST remain GitHub-hosted because npm Trusted Publishing does
+not support self-hosted runners. This scheduling decision changes no setup
+session behavior, PAT access, or acceptance-ledger result.
+
+Four additional workflow-contract cases, outside the 350 setup cases, MUST
+verify repository-owned versus fork PR routing for both CI and RepoWise;
+the existing contract validation MUST also reject hosted approval observers,
+self-hosted npm publication, and any loss of the six platform fixture paths.
+The operator documentation MUST state the fork exception and OIDC publishing
+exception. A fresh run on each selected runner type is required before calling
+the routing operationally verified; static workflow checks alone do not prove
+runner availability or the outcome of remote jobs.
+
 The [Codecov report for 67b81ab](https://app.codecov.io/gh/vypdev/copilot/pull/403)
 shows 83.64% patch coverage and 105 missing changed lines, including Windows
 ACL code that the Unix CI upload cannot exercise. The hosted Windows full
@@ -2214,8 +2236,10 @@ used to resolve the finding with exact code and test evidence.
       recovery, and PAT cleanup/renewal guidance are linked and validated.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
-- [ ] Automatic PR quality jobs run on hosted runners; the self-hosted Windows
-      macOS, Ubuntu and Windows fixture matrix is manual only. All six platform
+- [ ] Repository-owned CI and RepoWise run on self-hosted Ubuntu, fork PRs on
+      hosted Ubuntu, and the approval observer on self-hosted `codex`.
+      The self-hosted macOS, Ubuntu and Windows fixture matrix is manual only.
+      npm publication remains hosted for Trusted Publishing. All six platform
       jobs pass their full fixture, package, coverage and validator contracts;
       a skipped or queued service job remains open. The combined Codecov report
       is reviewed for the exact PR head.
