@@ -808,6 +808,20 @@ describe('workflow contract validator', () => {
     },
   );
 
+  it('limits Jest worker recycling to the Windows service-runner coverage step', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
+    const coverage = (jobId: string) => workflow.jobs[jobId].steps.find(
+      (step: { name?: string }) => step.name === 'Full platform coverage and acceptance budgets',
+    );
+    delete coverage('setup-self-hosted-codex-smoke').env;
+    expect(() => assertRunner(file, workflow)).toThrow('recycle Windows service-runner Jest workers');
+    coverage('setup-self-hosted-codex-smoke').env = { COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1' };
+    coverage('setup-platform-smoke').env = { COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1' };
+    expect(() => assertRunner(file, workflow)).toThrow('must not recycle hosted Windows Jest workers');
+  });
+
   it.each(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])(
     'keeps full history for acceptance budget tests in %s', (jobId) => {
       const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');

@@ -300,6 +300,10 @@ function assertRunner(file, workflow) {
           throw new Error(`${relativeFile} must use the Ubuntu, Windows and macOS setup fixture matrix.`);
         }
         assertPlatformCoverageAndValidators(relativeFile, job);
+        const hostedCoverage = (job.steps ?? []).find(step => step?.name === 'Full platform coverage and acceptance budgets');
+        if (hostedCoverage?.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== undefined) {
+          throw new Error(`${relativeFile} must not recycle hosted Windows Jest workers at the service-runner limit.`);
+        }
         assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
         const artifact = (job.steps ?? []).find(step => step?.name === 'Preserve hosted Windows coverage');
@@ -339,6 +343,10 @@ function assertRunner(file, workflow) {
           throw new Error(`${relativeFile} must isolate self-hosted pnpm installation by job.`);
         }
         assertPlatformCoverageAndValidators(relativeFile, job);
+        const serviceCoverage = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
+        if (serviceCoverage?.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== '1') {
+          throw new Error(`${relativeFile} must recycle Windows service-runner Jest workers before heap exhaustion.`);
+        }
         assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
         const guidanceStep = steps.find(step => step?.name === 'Validate generated guidance checkout on codex runner');

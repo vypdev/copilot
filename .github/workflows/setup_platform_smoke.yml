@@ -154,6 +154,8 @@ jobs:
       - name: Isolated npm package checks
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
       - name: Full platform coverage and acceptance budgets
+        env:
+          COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
         run: pnpm run test:coverage
       - name: Full platform documentation and contract validators
         run: |

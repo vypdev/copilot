@@ -41,8 +41,9 @@ module.exports = {
   verbose: true,
   ...(process.platform === 'win32' ? {
     maxWorkers: 2,
-    // The TypeScript architecture suites can push a reused worker to Node's
-    // heap ceiling on service runners. Recycle between suites before that.
-    workerIdleMemoryLimit: '512MB'
+    // Only Windows service runners need recycling. On hosted Windows this
+    // limit made the full suite exceed the job timeout.
+    ...(process.env.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE === '1'
+      ? { workerIdleMemoryLimit: '512MB' } : {})
   } : {})
 };

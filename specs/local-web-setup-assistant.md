@@ -2147,6 +2147,18 @@ workers recycle between suites; do not skip the architecture test, inflate
 the agent runtime memory budget, or infer a service pass from hosted Windows.
 Both hosted and self-hosted Windows MUST pass the same full 523-suite coverage,
 acceptance-budget and documentation sequence on the exact head.
+The [manual run on `c1e727cf`](https://github.com/vypdev/copilot/actions/runs/37248458601)
+proved the 512 MB Jest worker-idle limit completes those gates on the Windows
+service runner, while the hosted Windows job was cancelled at its 20-minute
+job limit after only 259 of 523 suites. The same cancellation affected the
+[automatic PR job](https://github.com/vypdev/copilot/actions/runs/37248454693).
+The earlier hosted Windows job on `a3748c54` completed all 523 suites without
+worker recycling. Apply the 512 MB recycle limit only to the Windows
+self-hosted coverage step via an explicit workflow environment setting; keep
+the two-worker Windows concurrency cap for both jobs. The workflow contract
+MUST reject a missing service-runner limit or a hosted-job limit. Repeat the
+exact-head six-platform fixture run and automatic hosted Windows PR check;
+both Windows coverage jobs MUST complete before the platform gate passes.
 Agent provisioning on macOS also remains open after the installed-file failure
 described in the agent runtime SDD.
 The [Bugbot review on `2319b41b`](https://github.com/vypdev/copilot/actions/runs/37244058136)
