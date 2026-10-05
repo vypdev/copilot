@@ -13,6 +13,12 @@ const reply = (status: number, payload?: unknown) => ({
     json: async () => payload,
 }) as Response;
 
+// GitHub's Contents API serves the committed blob. Windows may check out this
+// fixture with CRLF, while the committed workflow and its trusted hash use LF.
+const committedHealthWorkflow = async () =>
+    (await readFile(join(process.cwd(), 'setup/workflows/copilot_credential_health.yml'), 'utf8'))
+        .replace(/\r\n/gu, '\n');
+
 describe('temporary permission resource probes', () => {
     let folder: string;
     beforeEach(async () => { folder = await mkdtemp(join(tmpdir(), 'copilot-probe-test-')); });
@@ -143,7 +149,7 @@ describe('temporary permission resource probes', () => {
         const blobSha = 'b'.repeat(40);
         const workflowPath = trusted ? '.github/workflows/copilot_credential_health.yml' : '.github/workflows/health.yml';
         const defaultContent = trusted
-            ? await readFile(join(process.cwd(), 'setup/workflows/copilot_credential_health.yml'), 'utf8')
+            ? await committedHealthWorkflow()
             : 'on:\n  workflow_dispatch:\n';
         let branch: string | undefined;
         let content: string | undefined;
@@ -207,7 +213,7 @@ describe('temporary permission resource probes', () => {
     it('removes its branch when GitHub rejects an Actions dispatch without creating a run', async () => {
         const root = '/repos/owner/repo';
         const workflowPath = '.github/workflows/copilot_credential_health.yml';
-        const template = await readFile(join(process.cwd(), 'setup/workflows/copilot_credential_health.yml'), 'utf8');
+        const template = await committedHealthWorkflow();
         let branch: string | undefined;
         const methods: string[] = [];
         const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
