@@ -6,6 +6,7 @@ import { SetupPermissionProbeHttp, writeProbeFailure } from '../setup_permission
 import { probeDisposableResource } from '../setup_permission_resource_probes';
 import type { ResourceProbeContext } from '../setup_permission_probe_context';
 import { SetupTokenPermissionQueryAdapter } from '../setup_token_permission_query_adapter';
+import { hasWorkflowDispatch } from '../setup_permission_actions_probe';
 
 type RequestOptions = RequestInit & { method?: string };
 const reply = (status: number, payload?: unknown) => ({
@@ -20,6 +21,15 @@ const committedHealthWorkflow = async () =>
         .replace(/\r\n/gu, '\n');
 
 describe('temporary permission resource probes', () => {
+    it.each([
+        ['on: workflow_dispatch', true],
+        ['on: [push, workflow_dispatch]', true],
+        ['on:\n  push:\n  workflow_dispatch:', true],
+        ['on: [push]\n# workflow_dispatch:', false],
+        ['on: push\njobs:\n  example:\n    name: workflow_dispatch:', false],
+    ])('recognizes only a top-level GitHub dispatch trigger in %s', (source, expected) => {
+        expect(hasWorkflowDispatch(source)).toBe(expected);
+    });
     let folder: string;
     beforeEach(async () => { folder = await mkdtemp(join(tmpdir(), 'copilot-probe-test-')); });
     afterEach(async () => { await rm(folder, { recursive: true, force: true }); });
@@ -150,7 +160,7 @@ describe('temporary permission resource probes', () => {
         const workflowPath = trusted ? '.github/workflows/copilot_credential_health.yml' : '.github/workflows/health.yml';
         const defaultContent = trusted
             ? await committedHealthWorkflow()
-            : 'on:\n  workflow_dispatch:\n';
+            : 'on: [workflow_dispatch]\n';
         let branch: string | undefined;
         let content: string | undefined;
         let run = false;

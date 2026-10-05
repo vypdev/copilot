@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import * as yaml from 'js-yaml';
 import type { ResourceProbeContext } from './setup_permission_probe_context';
 import { ProbeFailure, probeJsonRecord } from './setup_permission_probe_http';
 
@@ -128,7 +129,7 @@ async function findDispatchWorkflow(
         if (file.encoding !== 'base64' || typeof file.content !== 'string'
             || typeof file.sha !== 'string' || !/^[a-f0-9]{40}$/u.test(file.sha)) continue;
         const content = Buffer.from(file.content, 'base64').toString('utf8');
-        if (/(?:^|\n)\s*workflow_dispatch\s*:/u.test(content)) {
+        if (hasWorkflowDispatch(content)) {
             const trustedNoOp = workflow.path === '.github/workflows/copilot_credential_health.yml'
                 && createHash('sha256').update(content).digest('hex') === TRUSTED_HEALTH_WORKFLOW_SHA256;
             const candidate = { id: workflow.id as number, path: workflow.path, sha: file.sha, trustedNoOp };
@@ -137,4 +138,17 @@ async function findDispatchWorkflow(
         }
     }
     return fallback;
+}
+
+/** GitHub accepts scalar, event-list, and mapping forms of the top-level on key. */
+export function hasWorkflowDispatch(content: string): boolean {
+    let document: unknown;
+    try { document = yaml.load(content); }
+    catch { return false; }
+    if (!document || typeof document !== 'object' || Array.isArray(document)) return false;
+    const triggers = (document as Record<string, unknown>).on;
+    if (typeof triggers === 'string') return triggers === 'workflow_dispatch';
+    if (Array.isArray(triggers)) return triggers.includes('workflow_dispatch');
+    return !!triggers && typeof triggers === 'object'
+        && Object.prototype.hasOwnProperty.call(triggers, 'workflow_dispatch');
 }

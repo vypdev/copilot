@@ -78,7 +78,13 @@ an unproved PAT grant exists cannot make the permission audit pass.
    browser or terminal.
 7. A workflow dispatch requests `return_run_details: true` in the **request
    body** and requires an exact run ID before it can claim Actions WRITE. A
-   `204` response is accepted only after the probe finds exactly one run for
+   candidate workflow is parsed as YAML and must declare `workflow_dispatch`
+   under its top-level `on`, whether that value is a scalar, an event array,
+   or an event mapping. Comments or nested strings do not establish a
+   dispatch trigger. The probe never dispatches an arbitrary uninspected
+   workflow; its existing no-job override and trusted packaged-file checks
+   still apply. See [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+   A `204` dispatch response is accepted only after the probe finds exactly one run for
    its private branch, `workflow_dispatch` event, and selected workflow ID,
    then reads that exact run before cleanup. If the run is not uniquely
    identifiable, the recovery journal retains the target until the run or its
@@ -179,7 +185,7 @@ capability contract without relabelling its 42 open gates.
 | W08 | Disabled organization Issue Type is deleted by exact ID | Fixture W |
 | W09 | Contents WRITE disposable ref is removed | Fixture W |
 | W10 | Workflows WRITE disposable workflow ref is removed | Fixture W |
-| W11 | Actions fallback dispatches verified no-job branch workflow and deletes run/ref | Fixture W |
+| W11 | Actions fallback recognizes scalar, array, and mapping `workflow_dispatch` triggers, dispatches the verified no-job branch workflow, and deletes run/ref | Fixture W |
 | W12 | Trusted packaged health workflow dispatch needs no workflow-file rewrite | Fixture W |
 | W13 | Rejected Actions dispatch cleans its branch without a false run claim | Fixture W |
 | W14 | Active Actions run is cancelled and deleted before branch cleanup | Fixture W |
