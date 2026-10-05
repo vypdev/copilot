@@ -83767,13 +83767,13 @@ const DEFAULT_SYSTEM = {
     readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = (0, node_fs_1.realpathSync)(cwd);
-        const topLevel = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
+        const prefix = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15000,
         }).trim();
-        if ((0, node_fs_1.realpathSync)(topLevel) !== requested) {
+        if (prefix !== '') {
             throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
         }
         if (process.env.GITHUB_ACTIONS === 'true') {

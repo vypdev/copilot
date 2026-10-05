@@ -504,8 +504,9 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
 3. Managed artifacts are mode 0600 in a unique temp directory, hashed before
    spawn, and deleted after the process exits.
 4. Workspace and executable use canonical real paths with symlink/ownership/
-   permission checks; no writable executable or wrapper is accepted. The Git
-   top-level path must equal the requested canonical workspace. In GitHub
+   permission checks; no writable executable or wrapper is accepted. Git must
+   report the requested canonical workspace as a repository root via its empty
+   `--show-prefix` result (portable across Git for Windows path formats). In GitHub
    Actions, it must also equal the canonical `GITHUB_WORKSPACE` checkout path,
    so a nested repository cannot silently replace the intended checkout.
    A nested-repository fixture must fail before any agent process starts.
