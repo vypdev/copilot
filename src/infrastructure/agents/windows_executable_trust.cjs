@@ -8,7 +8,7 @@ const { trustedWindowsSystemRoot } = require('./windows_system_root.cjs');
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
 const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
 const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO', 'LC', 'RP', 'CR', 'DT']);
-const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'FA', 'SD', 'DC', 'WD', 'WO', 'RP', 'CR', 'DT']);
+const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO', 'RP', 'CR', 'DT']);
 const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC', 'CC', 'SW', 'WP', 'LO']);
 const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
 
@@ -68,7 +68,7 @@ function installedExecutableDescriptors(paths) {
   return parseWindowsExecutableDescriptors(output, paths.length);
 }
 
-function grantsMutation(rights, directory = false) {
+function grantsMutation(rights, directory = false, directParent = false) {
   if (/^0x[0-9a-f]+$/iu.test(rights)) {
     const mask = Number.parseInt(rights.slice(2), 16);
     if (!Number.isSafeInteger(mask) || mask > 0xFFFF_FFFF) {
@@ -78,7 +78,10 @@ function grantsMutation(rights, directory = false) {
     const genericAll = 0x1000_0000;
     const fileMutation = 0x000D_0156;
     const directoryReplacement = 0x000D_0040;
-    return (mask & (directory ? genericAll | directoryReplacement : genericWrite | genericAll | fileMutation)) !== 0;
+    const directoryCreation = directParent ? 0x0000_0006 : 0;
+    return (mask & (directory
+      ? genericWrite | genericAll | directoryReplacement | directoryCreation
+      : genericWrite | genericAll | fileMutation)) !== 0;
   }
   const tokens = rights.match(/.{2}/gu) ?? [];
   const known = directory ? KNOWN_DIRECTORY_RIGHTS : KNOWN_RIGHTS;
@@ -86,10 +89,10 @@ function grantsMutation(rights, directory = false) {
     throw new Error(`Unrecognized executable ACL rights (${rights}).`);
   }
   const dangerous = directory ? DIRECTORY_REPLACEMENT_RIGHTS : MUTATING_RIGHTS;
-  return tokens.some(token => dangerous.has(token));
+  return tokens.some(token => dangerous.has(token) || (directory && directParent && token === 'LC'));
 }
 
-function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, directory = false) {
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, directory = false, directParent = false) {
   const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
   const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
   if (localAdministrator) trusted.add('LA');
@@ -112,15 +115,15 @@ function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, director
       throw new Error('Unrecognized executable ACL entry.');
     }
     if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5])) continue;
-    if (grantsMutation(fields[2], directory)) {
+    if (grantsMutation(fields[2], directory, directParent)) {
       // The public boundary wraps this detail; isolated diagnostics keep the ACE.
       throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
     }
   }
 }
 
-function assertWindowsExecutableParentDacl(sddl, userSid, localAdministrator) {
-  assertWindowsExecutableDacl(sddl, userSid, localAdministrator, true);
+function assertWindowsExecutableParentDacl(sddl, userSid, localAdministrator, directParent = false) {
+  assertWindowsExecutableDacl(sddl, userSid, localAdministrator, true, directParent);
 }
 
 function verifyWindowsAgentExecutableAcl(path) {
@@ -138,7 +141,7 @@ function verifyWindowsAgentExecutableAcl(path) {
   assertWindowsExecutableDacl(descriptors[0], identity.sid, identity.localAdministrator);
   for (let index = 1; index < paths.length; index += 1) {
     try {
-      assertWindowsExecutableParentDacl(descriptors[index], identity.sid, identity.localAdministrator);
+      assertWindowsExecutableParentDacl(descriptors[index], identity.sid, identity.localAdministrator, index === 1);
     } catch (error) {
       throw new Error(`Unsafe Windows executable ancestor ${paths[index]}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }

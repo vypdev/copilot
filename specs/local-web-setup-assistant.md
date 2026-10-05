@@ -2159,6 +2159,13 @@ the two-worker Windows concurrency cap for both jobs. The workflow contract
 MUST reject a missing service-runner limit or a hosted-job limit. Repeat the
 exact-head six-platform fixture run and automatic hosted Windows PR check;
 both Windows coverage jobs MUST complete before the platform gate passes.
+The [Bugbot review on `5232e286`](https://github.com/vypdev/copilot/actions/runs/37250096592)
+identified accepted Windows ancestor `GW`/`FW` grants. The agent runtime SDD
+requires rejecting these generic writes and file-creation rights on the
+executable's immediate directory while preserving narrow add-only rights on
+higher ancestors. Cover symbolic and numeric ACL forms, then rerun the hosted
+and service Windows fixtures on the corrected exact head before closing this
+security finding. A passing review check alone is insufficient evidence.
 Agent provisioning on macOS also remains open after the installed-file failure
 described in the agent runtime SDD.
 The [Bugbot review on `2319b41b`](https://github.com/vypdev/copilot/actions/runs/37244058136)

@@ -474,8 +474,20 @@ The preflight also reads the containing directory and its ancestors to the
 volume root. An untrusted principal must not own any path component or hold
 `DELETE_CHILD`, delete, DACL/owner mutation, or generic-all rights on an
 ancestor that could replace a previously checked executable. Add-only
-directory grants without replacement rights do not by themselves reject an
-otherwise safe installed path. This read-only check applies equally to native
+directory grants on higher ancestors without replacement rights do not by
+themselves reject an otherwise safe installed path. Reject `GW` and `FW`
+generic write grants on every untrusted ancestor: they include file creation
+authority and are not a narrow add-only exception. The executable's immediate
+containing directory must also reject untrusted `FILE_ADD_FILE` (`0x2`) and
+`FILE_ADD_SUBDIRECTORY` (`0x4`) rights, including symbolic `LC`, because
+Windows may search that directory when loading a DLL. The distinction follows
+[Microsoft's directory access rights](https://learn.microsoft.com/en-us/windows/win32/wmisdk/file-and-directory-access-rights-constants)
+and [DLL search order](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order).
+Synthetic ACL fixtures MUST cover `GW`, `FW`, and numeric generic write on
+ancestors, plus add-only rights on the immediate parent versus a higher
+ancestor. Native Windows hosted and service fixtures MUST continue to admit a
+safe installed executable and reject a writable containing directory. This
+read-only check applies equally to native
 CLIs, resolved npm shims, interpreters, and package bins; fixtures prove both
 safe shared-read parents and a parent with an untrusted delete-child grant.
 The known `NT SERVICE\TrustedInstaller` SID is trusted as a Windows ancestor
@@ -485,9 +497,9 @@ descriptors; it does not admit a foreign-owned executable. A fixture must
 verify the exact SID and continue rejecting another owner or mutation grant.
 The system volume may grant SDDL `LC` to another principal. On NTFS its bit
 allows adding a subdirectory, but does not allow replacing the existing path
-component without delete, owner, or DACL authority. Ancestor checks admit it;
-file checks reject it as append authority. The isolated Windows matrix must
-cover both cases.
+component without delete, owner, or DACL authority. Higher-ancestor checks
+admit it; executable-file and immediate-parent checks reject it. The isolated
+Windows matrix must cover all three cases.
 The file and ancestor descriptors MUST be collected by one bounded,
 read-only PowerShell process. A missing descriptor, changed count, malformed
 JSON response, or query failure blocks the run. The Windows timeout and

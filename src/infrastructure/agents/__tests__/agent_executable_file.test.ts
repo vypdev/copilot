@@ -121,4 +121,20 @@ describe('agent executable file trust', () => {
             rmSync(directory, { recursive: true, force: true });
         }
     });
+
+    (process.platform === 'win32' ? it : it.skip)('rejects a writable executable directory on native Windows', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-dll-parent-acl-'));
+        const executable = join(directory, 'agent.exe');
+        try {
+            writeFileSync(executable, 'fixture');
+            windowsRuntimeAcl.makeWindowsRuntimePathPrivate(directory, true);
+            windowsRuntimeAcl.makeWindowsRuntimePathPrivate(executable, false);
+            expect(() => validateAgentExecutableFile(executable)).not.toThrow();
+            execFileSync('icacls.exe', [directory, '/grant', '*S-1-1-0:W'], { stdio: 'ignore' });
+            expect(() => validateAgentExecutableFile(executable))
+                .toThrow('unsafe or unreadable Windows ACL');
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
 });
