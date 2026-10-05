@@ -2299,6 +2299,16 @@ and preserve a recorded journey outcome over either fallback. CI's event-base
 diff check MUST retain a full-history checkout; a workflow-contract mutation
 test MUST fail if `fetch-depth: 0` is removed, including for merge groups.
 
+The hosted Windows smoke on `4f498485` reached the isolated runtime fixtures
+and failed because the private PowerShell 5.1 `Get-FileHash` fixture exceeded
+its 30-second child-process deadline; `spawnSync` returned no exit status.
+The code-identical manual fixture on `e7f4b95e` passed that case in 25.8
+seconds and completed Windows coverage and documentation gates. The test
+must retain a finite deadline but allow 60 seconds for PowerShell module
+startup and a longer Jest case deadline, and report its bounded process error
+code on timeout. A fresh hosted Windows job on the amended exact head must
+pass; the prior manual result does not substitute for it.
+
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
 2. Extract the existing CLI orchestration into a frontend-neutral setup

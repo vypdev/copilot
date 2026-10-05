@@ -220,7 +220,8 @@ describe('isolated Windows agent runtime', () => {
             const result = spawnSync(join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), [
                 '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
                 Buffer.from(command, 'utf16le').toString('base64'),
-            ], { env: environment, encoding: 'utf8', timeout: 30_000, windowsHide: true });
+            ], { env: environment, encoding: 'utf8', timeout: 60_000, windowsHide: true });
+            expect((result.error as NodeJS.ErrnoException | undefined)?.code).toBeUndefined();
             expect(result.status).toBe(0);
             expect(result.stdout.trim().toLowerCase()).toBe(
                 createHash('sha256').update('isolated installer module fixture').digest('hex'),
@@ -228,7 +229,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(root, { recursive: true, force: true });
         }
-    }, 45_000);
+    }, 75_000);
 
     it('accepts the SDDL local administrator alias only for the verified local administrator', () => {
         const sid = 'S-1-5-21-100-200-300-500';
