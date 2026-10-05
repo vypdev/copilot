@@ -323,6 +323,13 @@ URLs, local paths, environment values, tokens, or command arguments.
 For installer-script failures it MAY add a closed reason inferred from stderr
 (`hash-module`, `network`, `access-denied`, `missing-command`, or `unknown`);
 the raw text MUST stay private even when debug logging is enabled.
+For an `installed-file` failure it MUST add a closed reason derived only from
+the local validation operation and known error codes: `missing-file`,
+`invalid-file`, `unsafe-link`, `acl-hardening`, `acl-ancestor`, `acl-file`,
+`acl-inspection`, `access-denied`, or `unknown`. The log MUST never interpolate
+an exception message, path, principal,
+installer output, or credential. Fixture tests MUST exercise each mapping and
+prove that arbitrary secret-bearing exception text never reaches the log.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
@@ -445,6 +452,13 @@ ACLs outside the private root. Windows hosted and self-hosted fixtures MUST
 replay the official junction layout and the escape cases with dummy files.
 A fresh Windows Action run MUST reach active agent roles before this gate closes;
 the setup smoke matrix alone is insufficient evidence for live provisioning.
+The [PR #403 Windows Action run on `3a5c22c4`](https://github.com/vypdev/copilot/actions/runs/37291440436)
+again stopped at `official-installed-file` on `windows-intel-runner-1`; its
+existing stage-only log cannot distinguish a missing visible file, an unsafe
+link, or the real ACL gate. A subsequent runner check MUST report one of the
+closed installed-file reasons and then pass provisioning and the active agent
+role after the specific cause is repaired. Until that evidence exists, Bugbot
+has not reviewed this head and Windows agent execution remains open.
 The Windows Codex installer checks the standard `OS=Windows_NT` service
 environment value before release work. The private installer environment MUST
 preserve that platform fact while still excluding all credentials. The PR #403

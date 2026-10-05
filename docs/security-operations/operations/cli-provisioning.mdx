@@ -27,6 +27,8 @@ No exact CLI version is pinned by the Action. The reviewed identities in the man
 
 Presence and `--version` do not prove the selected model or account works; operators must verify those separately with an authorized smoke run. A missing credential, unsafe executable, unsupported command surface, or failed installation stops the selected task without switching providers. Process exit diagnostics expose only fixed categories such as reported model or authentication failure; raw provider stderr remains suppressed because it may contain secrets.
 
+If an official installation finishes but its executable fails validation, the Action log includes the `official-installed-file` stage and a closed reason such as `missing-file`, `unsafe-link`, `acl-hardening`, `acl-ancestor`, `acl-file`, or `acl-inspection`. These identify the failed local check without printing installer output, paths, account names, ACL contents, or credentials. An ACL reason requires inspecting the runner configuration and a fresh Action check; it does not mean the agent task ran.
+
 Older setups may retain an `AGENT_PROVISIONING` repository Variable. The current Action ignores it; it can be removed during normal configuration cleanup. The setup assistant no longer offers that choice.
 
 ## Credential scope

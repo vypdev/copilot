@@ -8,7 +8,10 @@ import { delimiter, dirname, join } from 'node:path';
 import type { AgentProvider } from '../../domain/agent';
 import { getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
 import { trustedCurlPath, trustedSystemPath, trustedUnixShellPath, trustedWindowsSystemTool } from './agent_trusted_system_tools';
-import { createPrivateAgentInstallRoot, securePrivateInstalledAgent } from './agent_private_install_root';
+import {
+    createPrivateAgentInstallRoot, PrivateInstalledAgentValidationError, securePrivateInstalledAgent,
+    type PrivateInstalledAgentFailureReason,
+} from './agent_private_install_root';
 import { trustedWindowsSystemRoot } from './windows_system_root.cjs';
 
 const MAX_SCRIPT_BYTES = 1_048_576;
@@ -22,7 +25,8 @@ const windowsMachineDirectories = process.platform === 'win32' ? {
 } : undefined;
 
 export type OfficialAgentInstallationStage = 'private-root' | 'download' | 'installer-script' | 'installed-file';
-export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'access-denied' | 'missing-command' | 'unknown';
+export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'missing-command' | 'missing-file'
+    | PrivateInstalledAgentFailureReason | 'unknown';
 
 export class OfficialAgentInstallationError extends Error {
     constructor(
@@ -53,6 +57,15 @@ function installerScriptReason(error: unknown): OfficialAgentInstallationReason 
 function boundedExitCode(error: unknown): number | undefined {
     const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
     return Number.isInteger(status) && Number(status) >= 0 && Number(status) <= 255 ? Number(status) : undefined;
+}
+
+export function installedFileFailureReason(error: unknown): OfficialAgentInstallationReason {
+    if (error instanceof PrivateInstalledAgentValidationError) return error.reason;
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    if (code === 'ENOENT') return 'missing-file';
+    if (code === 'EACCES' || code === 'EPERM') return 'access-denied';
+    if (code === 'ELOOP') return 'unsafe-link';
+    return 'unknown';
 }
 
 export interface OfficialAgentInstallation {
@@ -285,13 +298,14 @@ export function installOfficialAgentCli(provider: AgentProvider): OfficialAgentI
                 : runScript(provider, root, environment);
         stage = 'installed-file';
         const executable = securePrivateInstalledAgent(root, path);
-        if (!statSync(executable).isFile()) throw new Error('Official agent installer did not create a file.');
+        if (!statSync(executable).isFile()) throw new PrivateInstalledAgentValidationError(
+            'invalid-file', 'Official agent installer did not create a file.');
         process.once('exit', () => rmSync(root, { recursive: true, force: true }));
         return { executable, directory: dirname(path), root };
     } catch (error) {
         rmSync(root, { recursive: true, force: true });
         if (error instanceof OfficialAgentInstallationError) throw error;
         throw new OfficialAgentInstallationError(stage, 'Official agent installation failed.',
-            boundedExitCode(error), error);
+            boundedExitCode(error), error, stage === 'installed-file' ? installedFileFailureReason(error) : undefined);
     }
 }

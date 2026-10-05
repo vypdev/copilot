@@ -111,4 +111,17 @@ describe('prepareGithubAgentRuntime', () => {
         expect(logInfo).toHaveBeenCalledWith('Agent runtime codex provisioning failed (official-installer-script-exit-1-hash-module).');
         expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('secret-bearing');
     });
+
+    it('logs the installed-file category without exposing its underlying ACL diagnostic', () => {
+        mockProvision.mockImplementation(() => {
+            throw new OfficialAgentInstallationError('installed-file', 'Official agent installation failed.',
+                undefined, new Error('secret-bearing runner path and principal'), 'acl-ancestor');
+        });
+
+        expect(() => prepareGithubAgentRuntime(tasks, ['findings'])).toThrow(
+            expect.objectContaining({ code: 'configuration.unsupported' }),
+        );
+        expect(logInfo).toHaveBeenCalledWith('Agent runtime codex provisioning failed (official-installed-file-acl-ancestor).');
+        expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('secret-bearing');
+    });
 });

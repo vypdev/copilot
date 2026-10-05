@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { trustedSystemPath } from '../agent_trusted_system_tools';
 import { trustedWindowsSystemRoot } from '../windows_system_root.cjs';
-import { securePrivateInstalledAgent } from '../agent_private_install_root';
+import { verifyWindowsAgentExecutableAcl } from '../windows_runtime_acl';
+import { PrivateInstalledAgentValidationError, securePrivateInstalledAgent } from '../agent_private_install_root';
 import {
-    installOfficialAgentCli, installerEnvironment, OfficialAgentInstallationError,
+    installOfficialAgentCli, installedFileFailureReason, installerEnvironment, OfficialAgentInstallationError,
     parseCursorWindowsInstaller, selectOpenCodeWindowsAsset,
 } from '../agent_official_installer';
 
@@ -19,6 +20,23 @@ const execute = execFileSync as jest.Mock;
 beforeEach(() => execute.mockReset());
 
 describe('official agent installer boundaries', () => {
+    it.each([
+        [new PrivateInstalledAgentValidationError('invalid-file', 'private marker'), 'invalid-file'],
+        [new PrivateInstalledAgentValidationError('unsafe-link', 'private marker'), 'unsafe-link'],
+        [new PrivateInstalledAgentValidationError('acl-hardening', 'private marker'), 'acl-hardening'],
+        [new PrivateInstalledAgentValidationError('acl-ancestor', 'private marker'), 'acl-ancestor'],
+        [new PrivateInstalledAgentValidationError('acl-file', 'private marker'), 'acl-file'],
+        [new PrivateInstalledAgentValidationError('acl-inspection', 'private marker'), 'acl-inspection'],
+        [new PrivateInstalledAgentValidationError('access-denied', 'private marker'), 'access-denied'],
+        [Object.assign(new Error('secret-bearing missing path'), { code: 'ENOENT' }), 'missing-file'],
+        [Object.assign(new Error('secret-bearing denied path'), { code: 'EPERM' }), 'access-denied'],
+        [Object.assign(new Error('secret-bearing link path'), { code: 'ELOOP' }), 'unsafe-link'],
+        [new Error('secret-bearing unclassified diagnostic'), 'unknown'],
+    ])('maps installed-file failure %# to a closed reason', (failure, reason) => {
+        expect(installedFileFailureReason(failure)).toBe(reason);
+        expect(installedFileFailureReason(failure)).not.toContain('secret-bearing');
+    });
+
     it('passes only toolchain variables into installers, never Action or model credentials', () => {
         const environment = installerEnvironment('/private/agent-job', {
             PATH: '/tmp/attacker:/usr/bin', SystemRoot: 'C:\\attacker', WINDIR: 'C:\\attacker',
@@ -276,6 +294,22 @@ describe('official agent installer boundaries', () => {
             } finally {
                 rmSync(installed.root, { recursive: true, force: true });
             }
+        }
+    });
+
+    (process.platform === 'win32' ? it : it.skip)('classifies a rejected private executable ancestor without publishing its path', () => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot-install-acl-'));
+        const binary = join(root, 'codex.exe');
+        writeFileSync(binary, 'native fixture');
+        (verifyWindowsAgentExecutableAcl as jest.Mock).mockImplementationOnce(() => {
+            throw new Error(`Unsafe Windows executable ancestor ${root}: secret-bearing ACL detail`);
+        });
+        try {
+            expect(() => securePrivateInstalledAgent(root, binary)).toThrow(
+                expect.objectContaining({ reason: 'acl-ancestor', message: 'Could not verify the installed agent ACL.' }),
+            );
+        } finally {
+            rmSync(root, { recursive: true, force: true });
         }
     });
 
