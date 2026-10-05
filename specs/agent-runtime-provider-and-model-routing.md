@@ -390,6 +390,16 @@ Deterministic tests MUST cover unsafe first candidate, safe fallback, no safe
 candidate, path escape, private executable repair, and cleanup. Hosted and
 service Windows fixtures MUST exercise the real ACL preflight using only
 local dummy files; a real Action job is required to verify provisioning.
+The [hosted Windows fixture on `0f4c9a5e`](https://github.com/vypdev/copilot/actions/runs/37293874266)
+spent 31 seconds exhausting both private-root candidates while other native
+ACL and installer fixtures passed. This timing is consistent with two bounded
+15-second ACL query timeouts, but the stage-only failure does not prove that
+cause. A private-root candidate MAY be recreated and preflighted once more
+only when its own ACL operation returns the explicit `ETIMEDOUT` code. Each
+failed candidate MUST be removed before retry, every child ACL query retains
+its 15-second limit, and owner/ACE/path rejection MUST NOT be retried. The
+hosted fixture budget MAY allow the total of these bounded attempts; tests
+MUST prove timeout-only retry, cleanup, and no retry for an unsafe ACL.
 The downloader and installer shell MUST resolve from trusted system locations,
 and every installer child uses a system-only `PATH`. A workflow-controlled
 directory cannot supply `curl`, `sh`, `bash`, or commands called by the official
@@ -456,9 +466,12 @@ The [PR #403 Windows Action run on `3a5c22c4`](https://github.com/vypdev/copilot
 again stopped at `official-installed-file` on `windows-intel-runner-1`; its
 existing stage-only log cannot distinguish a missing visible file, an unsafe
 link, or the real ACL gate. A subsequent runner check MUST report one of the
-closed installed-file reasons and then pass provisioning and the active agent
-role after the specific cause is repaired. Until that evidence exists, Bugbot
-has not reviewed this head and Windows agent execution remains open.
+closed installed-file reasons if that gate fails again. The
+[Action run on `0f4c9a5e`](https://github.com/vypdev/copilot/actions/runs/37293874115)
+passed provisioning and the active Bugbot review role on Windows, with zero
+active findings on that exact head. This confirms the Action path on that
+runner; the separate hosted Windows private-root fixture failed on the same
+head, and the human Windows runner review remains open.
 The Windows Codex installer checks the standard `OS=Windows_NT` service
 environment value before release work. The private installer environment MUST
 preserve that platform fact while still excluding all credentials. The PR #403

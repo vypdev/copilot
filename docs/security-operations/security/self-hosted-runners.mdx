@@ -27,8 +27,9 @@ macOS. Its separate fixture matrix for persistent Windows, macOS and Ubuntu
 ref. Keep it out of automatic pull request execution, including fork pull
 requests. Each hosted and self-hosted platform job runs the full
 coverage, acceptance, package and validator paths with isolated fixtures.
-The hosted Windows job uploads its report to Codecov for same-repository
-revisions. A green hosted run does not establish a service runner's local
+The hosted Windows job preserves its coverage report as a short-lived artifact.
+Exporting that report to Codecov requires a manual dispatch with the explicit
+`upload_windows_coverage=true` input. A green hosted run does not establish a service runner's local
 symlink or process behavior. A queued or skipped service job is unverified.
 
 Release and hotfix publication to npm remain GitHub-hosted because npm Trusted

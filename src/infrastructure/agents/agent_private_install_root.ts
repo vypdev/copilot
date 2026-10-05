@@ -16,6 +16,12 @@ export class PrivateInstalledAgentValidationError extends Error {
     }
 }
 
+class TransientWindowsAclTimeout extends Error {
+    constructor() {
+        super('Windows private installation ACL check timed out.');
+    }
+}
+
 /** Keep a failed candidate from preventing a safer profile-local fallback. */
 export function selectPrivateInstallRoot(
     parents: readonly string[],
@@ -39,18 +45,37 @@ export function prepareWindowsInstallRoot(
     parent: string,
     verify: (path: string) => void = verifyWindowsAgentExecutableAcl,
 ): string {
+    try {
+        return prepareWindowsInstallRootOnce(parent, verify);
+    } catch (error) {
+        // Cold Windows services can time out a read-only ACL query once.
+        // Every other failure remains final for this candidate.
+        if (!(error instanceof TransientWindowsAclTimeout)) throw error;
+        return prepareWindowsInstallRootOnce(parent, verify);
+    }
+}
+
+function prepareWindowsInstallRootOnce(parent: string, verify: (path: string) => void): string {
     const root = mkdtempSync(join(parent, INSTALL_PREFIX));
     const probe = join(root, '.acl-probe');
+    let checkingAcl = false;
     try {
         chmodSync(root, 0o700);
+        checkingAcl = true;
         makeWindowsRuntimePathPrivate(root, true);
+        checkingAcl = false;
         writeFileSync(probe, '', { flag: 'wx' });
+        checkingAcl = true;
         makeWindowsRuntimePathPrivate(probe, false);
         verify(probe);
+        checkingAcl = false;
         rmSync(probe);
         return root;
     } catch (error) {
         rmSync(root, { recursive: true, force: true });
+        if (checkingAcl && error && typeof error === 'object' && 'code' in error && error.code === 'ETIMEDOUT') {
+            throw new TransientWindowsAclTimeout();
+        }
         throw error;
     }
 }

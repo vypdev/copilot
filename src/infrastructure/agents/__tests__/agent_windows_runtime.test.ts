@@ -116,13 +116,35 @@ describe('isolated Windows agent runtime', () => {
     it('cleans a candidate whose ancestor check fails before trying another parent', () => {
         const parent = mkdtempSync(join(tmpdir(), 'copilot-install-parent-'));
         let candidate = '';
+        let checks = 0;
         try {
             expect(() => prepareWindowsInstallRoot(parent, probe => {
                 candidate = dirname(probe);
+                checks += 1;
                 throw new Error('unsafe ancestor fixture');
             })).toThrow('unsafe ancestor fixture');
             expect(candidate).not.toBe('');
+            expect(checks).toBe(1);
             expect(existsSync(candidate)).toBe(false);
+        } finally {
+            rmSync(parent, { recursive: true, force: true });
+        }
+    });
+
+    it('recreates a private root once after an explicit ACL timeout', () => {
+        const parent = mkdtempSync(join(tmpdir(), 'copilot-install-timeout-'));
+        const candidates: string[] = [];
+        try {
+            const prepared = prepareWindowsInstallRoot(parent, probe => {
+                candidates.push(dirname(probe));
+                if (candidates.length === 1) {
+                    throw Object.assign(new Error('fixture ACL timeout'), { code: 'ETIMEDOUT' });
+                }
+                expect(existsSync(candidates[0])).toBe(false);
+            });
+            expect(candidates).toHaveLength(2);
+            expect(prepared).toBe(candidates[1]);
+            expect(prepared).not.toBe(candidates[0]);
         } finally {
             rmSync(parent, { recursive: true, force: true });
         }
@@ -140,7 +162,7 @@ describe('isolated Windows agent runtime', () => {
         } finally {
             rmSync(root, { recursive: true, force: true });
         }
-    }, 45_000);
+    }, 90_000);
 
     windowsIt('accepts the official Codex Windows junction layout inside its private root', () => {
         const root = createPrivateAgentInstallRoot();

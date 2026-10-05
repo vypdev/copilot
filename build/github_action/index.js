@@ -79200,6 +79200,11 @@ class PrivateInstalledAgentValidationError extends Error {
     }
 }
 exports.PrivateInstalledAgentValidationError = PrivateInstalledAgentValidationError;
+class TransientWindowsAclTimeout extends Error {
+    constructor() {
+        super('Windows private installation ACL check timed out.');
+    }
+}
 /** Keep a failed candidate from preventing a safer profile-local fallback. */
 function selectPrivateInstallRoot(parents, prepare) {
     const tried = new Set();
@@ -79218,19 +79223,39 @@ function selectPrivateInstallRoot(parents, prepare) {
     throw new Error('No protected agent installation directory is available.');
 }
 function prepareWindowsInstallRoot(parent, verify = windows_runtime_acl_1.verifyWindowsAgentExecutableAcl) {
+    try {
+        return prepareWindowsInstallRootOnce(parent, verify);
+    }
+    catch (error) {
+        // Cold Windows services can time out a read-only ACL query once.
+        // Every other failure remains final for this candidate.
+        if (!(error instanceof TransientWindowsAclTimeout))
+            throw error;
+        return prepareWindowsInstallRootOnce(parent, verify);
+    }
+}
+function prepareWindowsInstallRootOnce(parent, verify) {
     const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(parent, INSTALL_PREFIX));
     const probe = (0, node_path_1.join)(root, '.acl-probe');
+    let checkingAcl = false;
     try {
         (0, node_fs_1.chmodSync)(root, 0o700);
+        checkingAcl = true;
         (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
+        checkingAcl = false;
         (0, node_fs_1.writeFileSync)(probe, '', { flag: 'wx' });
+        checkingAcl = true;
         (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(probe, false);
         verify(probe);
+        checkingAcl = false;
         (0, node_fs_1.rmSync)(probe);
         return root;
     }
     catch (error) {
         (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        if (checkingAcl && error && typeof error === 'object' && 'code' in error && error.code === 'ETIMEDOUT') {
+            throw new TransientWindowsAclTimeout();
+        }
         throw error;
     }
 }
