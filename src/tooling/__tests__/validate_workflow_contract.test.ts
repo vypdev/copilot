@@ -862,11 +862,18 @@ describe('workflow contract validator', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const job = workflow.jobs['code-health'];
-    job.env.REPOWISE_VENV = '${{ runner.temp }}/repowise-venv';
+    job.env.REPOWISE_VENV_NAME = 'repowise-venv';
     expect(() => assertRunner(file, workflow)).toThrow('isolate and remove RepoWise temporary files');
-    job.env.REPOWISE_VENV = '${{ runner.temp }}/repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+    job.env.REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
     job.steps = job.steps.filter((step: { name?: string }) => step.name !== 'Remove RepoWise temporary files');
     expect(() => assertRunner(file, workflow)).toThrow('isolate and remove RepoWise temporary files');
+  });
+
+  it('rejects runner context before a job has been assigned to a runner', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['code-health'].env.REPOWISE_TEMP = '${{ runner.temp }}/repowise';
+    expect(() => assertRunner(file, workflow)).toThrow('cannot use runner context in job-level env');
   });
 
   it.each([

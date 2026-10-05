@@ -2102,6 +2102,15 @@ exception. A fresh run on each selected runner type is required before calling
 the routing operationally verified; static workflow checks alone do not prove
 runner availability or the outcome of remote jobs.
 
+The first [RepoWise run on `e197cb0c`](https://github.com/vypdev/copilot/actions/runs/37289899480)
+failed workflow validation before any job started. Its job-level `env` used
+`runner.temp`, which GitHub's [context availability table](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability)
+does not permit at that key. Keep only run/attempt identifiers in the job
+environment, resolve the runner temporary root inside steps, and make the
+workflow contract reject `runner.*` in job-level `env`. A new remote RepoWise
+run MUST actually start on a self-hosted Ubuntu runner and finish before this
+routing gate can close.
+
 The [Codecov report for 67b81ab](https://app.codecov.io/gh/vypdev/copilot/pull/403)
 shows 83.64% patch coverage and 105 missing changed lines, including Windows
 ACL code that the Unix CI upload cannot exercise. The hosted Windows full

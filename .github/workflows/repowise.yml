@@ -23,8 +23,8 @@ jobs:
     runs-on: ${{ fromJSON(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
     timeout-minutes: 30
     env:
-      REPOWISE_VENV: ${{ runner.temp }}/repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-      REPOWISE_REPORT: ${{ runner.temp }}/repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+      REPOWISE_VENV_NAME: repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health
+      REPOWISE_REPORT_NAME: repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health
     steps:
       - name: Verify Ubuntu runner
         shell: bash
@@ -57,10 +57,10 @@ jobs:
         env:
           PYTHON_BIN: "${{ steps.python.outputs.path }}"
         run: |
-          "$PYTHON_BIN" -m venv "$REPOWISE_VENV"
+          "$PYTHON_BIN" -m venv "$RUNNER_TEMP/$REPOWISE_VENV_NAME"
       - name: Install RepoWise
         run: |
-          "$REPOWISE_VENV/bin/python" -m pip install \
+          "$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/python" -m pip install \
             --disable-pip-version-check \
             --no-cache-dir \
             'repowise==0.45.0'
@@ -69,8 +69,8 @@ jobs:
           REPOWISE_SKIP_EDITOR_SETUP: '1'
         run: |
           set -euo pipefail
-          report_dir="$REPOWISE_REPORT"
-          repowise_bin="$REPOWISE_VENV/bin/repowise"
+          report_dir="$RUNNER_TEMP/$REPOWISE_REPORT_NAME"
+          repowise_bin="$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/repowise"
           mkdir -p "$report_dir"
           cleanup() {
             rm -rf .repowise .mcp.json
@@ -112,9 +112,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: repowise-code-health
-          path: ${{ env.REPOWISE_REPORT }}/
+          path: ${{ runner.temp }}/${{ env.REPOWISE_REPORT_NAME }}/
           if-no-files-found: warn
           retention-days: 14
       - name: Remove RepoWise temporary files
         if: ${{ always() }}
-        run: rm -rf -- "$REPOWISE_VENV" "$REPOWISE_REPORT"
+        run: rm -rf -- "$RUNNER_TEMP/$REPOWISE_VENV_NAME" "$RUNNER_TEMP/$REPOWISE_REPORT_NAME"

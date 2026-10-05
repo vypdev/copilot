@@ -25,8 +25,8 @@ const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const ISOLATED_PNPM_DEST = '${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
 const QUALITY_RUNNER_BY_TRUST = '${{ fromJSON(github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}';
-const ISOLATED_REPOWISE_VENV = '${{ runner.temp }}/repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
-const ISOLATED_REPOWISE_REPORT = '${{ runner.temp }}/repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}';
+const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
+const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
@@ -227,11 +227,11 @@ function assertRepoWiseTemporaryCleanup(relativeFile, job) {
   if (relativeFile !== '.github/workflows/repowise.yml') return;
   const cleanup = (job.steps ?? []).find(step => step?.name === 'Remove RepoWise temporary files');
   const upload = (job.steps ?? []).find(step => step?.name === 'Upload RepoWise reports');
-  if (job.env?.REPOWISE_VENV !== ISOLATED_REPOWISE_VENV
-    || job.env?.REPOWISE_REPORT !== ISOLATED_REPOWISE_REPORT
-    || upload?.with?.path !== '${{ env.REPOWISE_REPORT }}/'
+  if (job.env?.REPOWISE_VENV_NAME !== ISOLATED_REPOWISE_VENV_NAME
+    || job.env?.REPOWISE_REPORT_NAME !== ISOLATED_REPOWISE_REPORT_NAME
+    || upload?.with?.path !== '${{ runner.temp }}/${{ env.REPOWISE_REPORT_NAME }}/'
     || cleanup?.if !== '${{ always() }}'
-    || cleanup?.run !== 'rm -rf -- "$REPOWISE_VENV" "$REPOWISE_REPORT"'
+    || cleanup?.run !== 'rm -rf -- "$RUNNER_TEMP/$REPOWISE_VENV_NAME" "$RUNNER_TEMP/$REPOWISE_REPORT_NAME"'
     || job.steps.indexOf(cleanup) <= job.steps.indexOf(upload)) {
     throw new Error(`${relativeFile} must isolate and remove RepoWise temporary files after artifact upload.`);
   }
@@ -292,6 +292,9 @@ function assertRunner(file, workflow) {
     }
   }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if (Object.values(job.env ?? {}).some(value => typeof value === 'string' && /\$\{\{\s*runner\./u.test(value))) {
+      throw new Error(`${relativeFile} job ${jobId} cannot use runner context in job-level env.`);
+    }
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
       if (jobId === 'upload-windows-coverage') {
         const steps = job.steps ?? [];
