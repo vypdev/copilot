@@ -87343,15 +87343,29 @@ function pathExists(target) {
 function writeSpecFile(target, content, exists) {
     if (process.platform === 'win32') {
         // Windows rejects O_NOFOLLOW. Replace the directory entry instead of
-        // opening the destination, so a file symlink is never followed for writes.
+        // opening an existing destination, so a file symlink is never followed.
         const temporary = path.join(path.dirname(target), `.copilot-sdd-${(0, node_crypto_1.randomUUID)()}.tmp`);
         fs.writeFileSync(temporary, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
         try {
-            if (exists)
+            if (exists) {
                 assertRegularSpecFile(target);
-            else if (pathExists(target))
-                throw new Error('The new SDD path is already occupied.');
-            fs.renameSync(temporary, target);
+                fs.renameSync(temporary, target);
+            }
+            else {
+                if (pathExists(target))
+                    throw new Error('The new SDD path is already occupied.');
+                // A sibling hard link is an atomic no-replace create on NTFS. Rename
+                // could overwrite a file created after the preceding absence check.
+                try {
+                    fs.linkSync(temporary, target);
+                }
+                catch (error) {
+                    if (error.code === 'EEXIST') {
+                        throw Object.assign(new Error('The new SDD path is already occupied.'), { cause: error });
+                    }
+                    throw error;
+                }
+            }
         }
         finally {
             fs.rmSync(temporary, { force: true });

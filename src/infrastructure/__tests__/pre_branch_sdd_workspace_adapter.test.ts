@@ -1,4 +1,4 @@
-import * as fs from 'node:fs';
+import fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -8,6 +8,7 @@ import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 
 jest.setTimeout(30_000);
 const fileSymlinkIt = canCreateFileSymlink() ? it : it.skip;
+const windowsIt = process.platform === 'win32' ? it : it.skip;
 
 const plan: SddPlan = {
   action: 'update', path: 'specs/payments.md', capabilityId: 'payments',
@@ -143,6 +144,34 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const commitSha = await workspace.publish('feature/42-change', prepared);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', commitSha).split('\n').sort()).toEqual(prepared.changedPaths);
     expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
+  });
+
+  windowsIt('does not replace a competing new SDD created at the atomic link boundary', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const companion: SddPlan = { ...plan, action: 'companion', path: 'specs/payments-extension.md' };
+    const nativeLink = fs.linkSync;
+    let temporary = '';
+    let detachedRoot = '';
+    let competingBytes = '';
+    const link = jest.spyOn(fs, 'linkSync').mockImplementation((source, destination) => {
+      temporary = String(source);
+      detachedRoot = path.dirname(path.dirname(temporary));
+      fs.writeFileSync(destination, 'competing SDD bytes', { flag: 'wx' });
+      try { nativeLink(source, destination); } finally {
+        competingBytes = fs.readFileSync(destination, 'utf8');
+      }
+    });
+    try {
+      await expect(workspace.validateDraft(snapshot, companion, draft())).rejects.toThrow('already occupied');
+    } finally {
+      link.mockRestore();
+    }
+    expect(competingBytes).toBe('competing SDD bytes');
+    expect(temporary).not.toBe('');
+    expect(fs.existsSync(temporary)).toBe(false);
+    expect(fs.existsSync(detachedRoot)).toBe(false);
+    expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
   });
 
   it('registers a new proposed capability and recovers its validated first commit', async () => {

@@ -494,6 +494,13 @@ or status update failed. A retry reads the exact remote SHA before writing.
    unrelated branch cleanup is permitted.
 5. Cross-repository, stale, forged marker, bot-authored answer, and webhook
    replay attempts fail closed with bounded public detail.
+6. On Windows, creation of a new SDD in the detached worktree MUST use an
+   atomic no-replace operation after writing a private sibling temporary file.
+   A competing file that appears after the initial absence check MUST remain
+   unchanged; the writer fails, removes its temporary file, and publishes no
+   branch commit. Existing SDD and generated catalog replacements retain their
+   separate regular-file checks. This closes the race found by [Bugbot on PR
+   #403](https://github.com/vypdev/copilot/pull/403).
 
 ## 12. Observability and operational UX
 
@@ -538,6 +545,12 @@ ownership/validation.
 | UX/localization/accessibility/sanitization | 6 | Five states, links, notification budget |
 | Integration/security/recovery | 8 | First commit, partial effects, abuse |
 | **Total** | **60** | No case counted twice |
+
+The Windows adapter fixture MUST inject a destination creation immediately
+before the no-replace operation, assert that the operation fails with the
+competing bytes intact, and verify scratch cleanup. The normal new-SDD publish
+fixture MUST still pass on Windows. This fixture uses a local bare Git remote
+and no repository credentials.
 
 Global Jest thresholds and existing specialized budgets remain mandatory.
 New pure eligibility/freshness policy SHOULD reach at least 95% branch
