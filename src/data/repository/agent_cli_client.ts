@@ -77,8 +77,14 @@ function failureObservation(
         provider: request.configuration.provider, capability: request.capability,
         durationMilliseconds: Date.now() - startedAt,
         failureCategory: category,
+        ...(phase === 'preflight' && error instanceof AgentCliError && error.preflightStage
+            ? { preflightStage: error.preflightStage } : {}),
+        ...(phase === 'preflight' && error instanceof AgentCliError && error.preflightDiagnostic
+            ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof AgentCliError && error.retryable,
+        exitCode: error instanceof AgentCliError ? error.exitCode : undefined,
+        exitDiagnostic: error instanceof AgentCliError ? error.exitDiagnostic : undefined,
     };
 }
 

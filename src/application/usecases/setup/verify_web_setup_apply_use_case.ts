@@ -27,6 +27,7 @@ export interface VerifyWebSetupApplyPorts {
   fileSnapshotMatches(root: string, files: readonly string[], snapshot: Readonly<Record<string, string>>): boolean;
   remote: SetupRemoteConfigurationReadPort;
   permissionAudit: SetupFinalPermissionAuditPort;
+  onPermissionCleanupPending?: () => void;
   sessionState(): 'active' | 'cancelled' | 'ended';
 }
 
@@ -54,7 +55,13 @@ export class VerifyWebSetupApplyUseCase {
     if (!sameSetupRemoteFacts(remote, request.approvedRemote)) {
       throw new ApplicationError('configuration.invalid', 'GitHub repository facts changed since plan review. No mutation started; restart and review a new plan.');
     }
-    const audit = await this.ports.permissionAudit.audit(request.configuration, remote);
+    const audit = this.ports.onPermissionCleanupPending
+      ? await this.ports.permissionAudit.audit(
+        request.configuration, remote, this.ports.onPermissionCleanupPending)
+      : await this.ports.permissionAudit.audit(request.configuration, remote);
+    if (audit.status === 'blocked' && audit.cleanupPending) {
+      throw new ApplicationError('authorization.credential-invalid', audit.errors.join(' '));
+    }
     this.assertActive();
     if (audit.status === 'blocked') {
       throw new ApplicationError('authorization.credential-invalid', 'Setup PAT access changed since plan review. No mutation started; correct the PAT and review a new plan.');

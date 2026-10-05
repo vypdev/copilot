@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { runNpmPack } = require('./npm-pack-command.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const packagePath = path.join(repositoryRoot, 'package.json');
@@ -87,10 +87,8 @@ if (fs.existsSync(cliPath)) {
 
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-npm-pack-'));
 try {
-  const output = execFileSync(
-    'npm',
+  const output = runNpmPack(
     [
-      'pack',
       '--dry-run',
       '--json',
       '--ignore-scripts',
@@ -114,6 +112,11 @@ try {
   if (referencedAssets.length < 2) error('local web setup index must reference packaged JS and CSS assets.');
   for (const asset of referencedAssets) {
     if (!packageFiles.has(asset)) error(`npm package is missing referenced web asset ${asset}.`);
+  }
+  const packagedWebAssets = [...packageFiles].filter(file => file.startsWith('build/web/assets/'));
+  if (packagedWebAssets.length !== referencedAssets.length
+    || packagedWebAssets.some(asset => !referencedAssets.includes(asset))) {
+    error('npm package web assets must match exactly the JS/CSS files referenced by the web index.');
   }
   if ([...packageFiles].some(file => file.startsWith('build/web/') && file.endsWith('.map'))) {
     error('npm package must not include web source maps.');

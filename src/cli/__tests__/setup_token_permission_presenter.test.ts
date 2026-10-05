@@ -73,7 +73,7 @@ describe('setup token permission presenter', () => {
             checks: [{ ...metadata, status: 'verified', message: 'available' }],
         }, 80);
         expect(output).not.toContain('github_pat_');
-        expect(output).toContain('All safely verifiable required permissions are available.');
+        expect(output).toContain('All required capability checks passed.');
     });
 
     it('explains an unverifiable-only report without presenting it as a pass', () => {
@@ -83,8 +83,8 @@ describe('setup token permission presenter', () => {
         }, 120);
 
         expect(output).toContain('? Unverifiable');
-        expect(output).toContain('Confirmation required');
-        expect(output).not.toContain('All safely verifiable required permissions are available.');
+        expect(output).toContain('Some capabilities could not be proven');
+        expect(output).not.toContain('All required capability checks passed.');
     });
 
     it('blocks an unverifiable required read without offering write confirmation', () => {
@@ -100,10 +100,10 @@ describe('setup token permission presenter', () => {
     it('shows a usable public read as unverifiable PAT evidence without asking to retry it', () => {
         const output = renderSetupTokenPermissionReport({
             role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false,
-            checks: [{ ...metadata, status: 'unverifiable', operationallyAvailable: true,
+            checks: [{ ...metadata, status: 'available', operationallyAvailable: true,
                 message: 'The public read is usable but does not prove the PAT grant.' }],
         }, 80);
-        expect(output).toContain('? Unverifiable');
+        expect(output).toContain('Read available');
         expect(output).toContain('Public repository reads are usable for setup');
         expect(output).not.toContain('Action required: retry the unverifiable read checks');
     });
@@ -114,7 +114,7 @@ describe('setup token permission presenter', () => {
             checks: [{ ...secrets, status: 'unverifiable', message: 'not selected by the approved plan' }],
         }, 100);
 
-        expect(output).toContain('Some access is unverifiable because GitHub offers no safe read-only proof.');
+        expect(output).toContain('Some capabilities could not be proven.');
         expect(output).not.toContain('Confirmation required:');
     });
 });

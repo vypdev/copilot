@@ -100,6 +100,7 @@ export class WebSetupPermissionPresenter implements SetupTokenPermissionPresente
   showRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void { this.bridge.requirements(role, requirements); }
   showDetailedRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void { this.bridge.requirements(role, requirements); }
   showReport(report: SetupTokenPermissionReport): void { this.bridge.report(report); }
+  showProgress(progress: import('../domain/setup_token_permissions').SetupTokenPermissionProgress): void { this.bridge.permissionProgress(progress); }
 }
 
 export class WebSetupJourneyPresenter implements SetupJourneyPresenterPort {
@@ -150,9 +151,12 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
     if (this.guidedSetup) this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens', 'setupPat.cleanup');
   }
   async confirmUnverifiableTokenPermissions(report: SetupTokenPermissionReport): Promise<boolean> {
-    const writes = report.checks.filter(item => item.applicability === 'required' && item.level === 'write' && item.status === 'unverifiable');
-    if (!report.confirmationRequired || writes.length === 0) return false;
-    return await this.choice('GitHub cannot safely prove these write grants without a mutation. Confirm they are configured exactly as shown.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmWrites') === 'Yes, I checked them';
+    const access = report.checks.filter(item => item.applicability === 'required'
+      && item.status === 'unverifiable'
+      && (item.level === 'write' || (item.scope === 'organization' && item.permission === 'Projects'
+        && item.level === 'read' && item.publicReadEvidence === 'public-organization-projects')));
+    if (!report.confirmationRequired || access.length === 0) return false;
+    return await this.choice('Check every required PAT grant marked Unverifiable against GitHub PAT settings. Verified rows need no action.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
   }
   configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>, requirements?: readonly SetupTokenPermissionRequirement[]): void {
     this.workflowGuide = url; this.resolveBot = resolveIdentity; this.workflowRequirements = requirements;

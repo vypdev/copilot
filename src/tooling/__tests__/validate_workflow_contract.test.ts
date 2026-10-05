@@ -1,12 +1,18 @@
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { runInNewContext } from 'node:vm';
 import * as yaml from 'js-yaml';
 import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
+
+const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 
 interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
+  assertPortableRunShell(file: string, workflow: Record<string, unknown>): void;
   assertMajorActionReferences(file: string, workflow: Record<string, unknown>): void;
   assertCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
@@ -32,6 +38,7 @@ const {
   assertQueueWorkflow,
   assertDirectEventTriggers,
   assertRunner,
+  assertPortableRunShell,
   assertMajorActionReferences,
   assertCopilotActionInputs,
   assertNoJobLevelSecrets,
@@ -310,6 +317,28 @@ describe('workflow contract validator', () => {
     );
 
     expect(() => validateWorkflow(file, workflow)).toThrow('must materialize and verify the exact GitHub before/after review range');
+  });
+
+  it.each([
+    ['.github/workflows', 'copilot_commit.yml', 'copilot-commits'],
+    ['.github/workflows', 'release_workflow.yml', 'prepare-compiled-files'],
+    ['setup/workflows', 'copilot_commit.yml', 'copilot-commits'],
+    ['setup/workflows', 'copilot_pull_request.yml', 'copilot-pull-requests'],
+  ])('requires portable Bash for run steps in %s/%s', (directory, fileName, jobId) => {
+    const file = path.join(process.cwd(), directory, fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => assertPortableRunShell(file, workflow)).not.toThrow();
+    delete workflow.defaults;
+    delete workflow.jobs[jobId].defaults;
+    for (const step of workflow.jobs[jobId].steps) delete step.shell;
+    expect(() => assertPortableRunShell(file, workflow)).toThrow('must select shell: bash');
+  });
+
+  it('rejects a platform-specific shell override on a Codex runner', () => {
+    const file = path.join(process.cwd(), '.github/workflows/copilot_commit.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['copilot-commits'].steps.find((step: { run?: string }) => step.run).shell = 'pwsh';
+    expect(() => assertPortableRunShell(file, workflow)).toThrow('must select shell: bash');
   });
 
   it.each(['.github/workflows', 'setup/workflows'])('requires a full checkout for push review ranges in %s', (directory) => {
@@ -678,6 +707,337 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(queueFile, {
       jobs: { 'copilot-issues': { 'runs-on': 'ubuntu-latest' } },
     })).toThrow('runs-on self-hosted, codex');
+    expect(() => assertRunner(queueFile, {
+      jobs: { 'copilot-issues': { 'runs-on': ['self-hosted', 'codex', 'macOS'] } },
+    })).toThrow('runs-on self-hosted, codex');
+  });
+
+  it('requires the Ubuntu, Windows and macOS setup fixture matrix', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs['setup-platform-smoke'].strategy.matrix.os = ['ubuntu-latest', 'windows-latest'];
+    expect(() => assertRunner(file, workflow)).toThrow('Ubuntu, Windows and macOS setup fixture matrix');
+  });
+
+  it('reserves hosted setup fixtures for PRs and explicit Windows coverage exports', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const hosted = workflow.jobs['setup-platform-smoke'];
+    const expression = hosted.if;
+    expect(expression).toBe("${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}");
+    for (const [eventName, uploadWindowsCoverage, expected] of [
+      ['pull_request', false, true],
+      ['workflow_dispatch', false, false],
+      ['workflow_dispatch', true, true],
+    ] as const) {
+      expect(runInNewContext(expression.slice(4, -3), {
+        github: { event_name: eventName }, inputs: { upload_windows_coverage: uploadWindowsCoverage },
+      })).toBe(expected);
+    }
+    delete hosted.if;
+    expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
+    hosted.if = "${{ github.event_name == 'pull_request' }}";
+    expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
+  });
+
+  it('requires isolated fixtures on all three manually dispatched codex runner platforms', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    const dispatchGuard = workflow.jobs['setup-self-hosted-codex-smoke'].if;
+    for (const [eventName, ref, expected] of [
+      ['workflow_dispatch', 'refs/heads/master', true],
+      ['workflow_dispatch', 'refs/heads/develop', false],
+      ['workflow_dispatch', 'refs/heads/codex/unreviewed', false],
+      ['workflow_dispatch', 'refs/tags/unreviewed', false],
+      ['pull_request', 'refs/heads/master', false],
+    ] as const) {
+      expect(runInNewContext(dispatchGuard.slice(4, -3), {
+        github: { event_name: eventName, ref },
+      })).toBe(expected);
+    }
+    workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
+    expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows, macOS and Ubuntu');
+    workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = '${{ matrix.labels }}';
+    workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.pop();
+    expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows, macOS and Ubuntu');
+    workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include =
+      (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow).jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include;
+    delete workflow.jobs['setup-self-hosted-codex-smoke'].if;
+    expect(() => assertRunner(file, workflow)).toThrow('manual dispatch from protected master');
+    workflow.jobs['setup-self-hosted-codex-smoke'].if = "github.event_name == 'workflow_dispatch'";
+    expect(() => assertRunner(file, workflow)).toThrow('manual dispatch from protected master');
+    workflow.jobs['setup-self-hosted-codex-smoke'].if =
+      "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}";
+    workflow.jobs['setup-self-hosted-codex-smoke'].steps = workflow.jobs['setup-self-hosted-codex-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full platform coverage and acceptance budgets');
+    expect(() => assertRunner(file, workflow)).toThrow('full platform coverage and acceptance budgets');
+    workflow.jobs['setup-self-hosted-codex-smoke'].steps = (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow)
+      .jobs['setup-self-hosted-codex-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Validate generated guidance checkout on codex runner');
+    expect(() => assertRunner(file, workflow)).toThrow('verify generated guidance at self-hosted checkout');
+    workflow.jobs['setup-self-hosted-codex-smoke'].steps = (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow)
+      .jobs['setup-self-hosted-codex-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full platform documentation and contract validators');
+    expect(() => assertRunner(file, workflow)).toThrow('full platform documentation and contract validators');
+    workflow.jobs['setup-self-hosted-codex-smoke'].steps = (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow)
+      .jobs['setup-self-hosted-codex-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Verify Ubuntu distribution');
+    expect(() => assertRunner(file, workflow)).toThrow('verify Ubuntu and Windows Bash');
+    delete workflow.jobs['setup-self-hosted-codex-smoke'];
+    expect(() => assertRunner(file, workflow)).toThrow('must retain hosted and manually dispatched self-hosted');
+  });
+
+  it('requires full hosted platform coverage and an explicitly opted-in Windows Codecov upload', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
+    workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full platform coverage and acceptance budgets');
+    expect(() => assertRunner(file, workflow)).toThrow('full platform coverage and acceptance budgets');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Full platform documentation and contract validators');
+    expect(() => assertRunner(file, workflow)).toThrow('full platform documentation and contract validators');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    workflow.jobs['setup-platform-smoke'].steps = workflow.jobs['setup-platform-smoke'].steps
+      .filter((step: { name?: string }) => step.name !== 'Preserve hosted Windows coverage');
+    expect(() => assertRunner(file, workflow)).toThrow('preserve hosted Windows coverage');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    const artifact = workflow.jobs['setup-platform-smoke'].steps.find((step: { name?: string }) =>
+      step.name === 'Preserve hosted Windows coverage');
+    artifact.if = "runner.os == 'Linux'";
+    expect(() => assertRunner(file, workflow)).toThrow('preserve hosted Windows coverage');
+
+    workflow.jobs['setup-platform-smoke'].steps = JSON.parse(JSON.stringify(original.jobs['setup-platform-smoke'].steps));
+    delete workflow.jobs['upload-windows-coverage'];
+    expect(() => assertRunner(file, workflow)).toThrow('Windows coverage upload');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.jobs['upload-windows-coverage'].needs = undefined;
+    expect(() => assertRunner(file, workflow)).toThrow('dependent Ubuntu job');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.jobs['upload-windows-coverage'].if = undefined;
+    expect(() => assertRunner(file, workflow)).toThrow('explicit manual opt-in');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.jobs['upload-windows-coverage'].steps[2].with.fail_ci_if_error = false;
+    expect(() => assertRunner(file, workflow)).toThrow('dependent Ubuntu job');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.on.workflow_dispatch.inputs.upload_windows_coverage.default = true;
+    expect(() => assertRunner(file, workflow)).toThrow('default Windows Codecov export to disabled');
+  });
+
+  it.each(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])(
+    'requires the real Windows job Node npm preflight in %s', (jobId) => {
+      const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      workflow.jobs[jobId].steps = workflow.jobs[jobId].steps.filter(
+        (step: { name?: string }) => step.name !== 'Verify Windows job Node npm CLI',
+      );
+      expect(() => assertRunner(file, workflow)).toThrow('verify the Windows job Node npm CLI');
+    },
+  );
+
+  it('limits Jest worker recycling to the Windows service-runner coverage step', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
+    const coverage = (jobId: string) => workflow.jobs[jobId].steps.find(
+      (step: { name?: string }) => step.name === 'Full platform coverage and acceptance budgets',
+    );
+    delete coverage('setup-self-hosted-codex-smoke').env;
+    expect(() => assertRunner(file, workflow)).toThrow('recycle Windows service-runner Jest workers');
+    coverage('setup-self-hosted-codex-smoke').env = { COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1' };
+    coverage('setup-platform-smoke').env = { COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1' };
+    expect(() => assertRunner(file, workflow)).toThrow('must not recycle hosted Windows Jest workers');
+  });
+
+  it.each(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])(
+    'keeps full history for acceptance budget tests in %s', (jobId) => {
+      const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      const checkout = workflow.jobs[jobId].steps.find((step: { uses?: string }) =>
+        step.uses === 'actions/checkout@v5');
+      checkout.with['fetch-depth'] = 1;
+      expect(() => assertRunner(file, workflow)).toThrow('fetch full platform-test history');
+    },
+  );
+
+  it.each([
+    ['ci_check.yml', 'ci-check', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
+    ['ci_check.yml', 'ci-check', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
+    ['ci_check.yml', 'ci-check', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
+    ['repowise.yml', 'code-health', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
+    ['repowise.yml', 'code-health', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
+    ['repowise.yml', 'code-health', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
+  ])('routes %s %s code from %s to %s', (fileName, jobId, eventName, headRepository, expectedRunner) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const expression = workflow.jobs[jobId]['runs-on'];
+    expect(expression).toBe('${{ fromJSON((github.event_name == \'merge_group\' || (github.event_name == \'pull_request\' && github.event.pull_request.head.repo.full_name != github.repository)) && \'["ubuntu-latest"]\' || \'["self-hosted","codex","Linux"]\') }}');
+    const selected = runInNewContext(expression.slice(4, -3), {
+      github: {
+        event_name: eventName,
+        event: { pull_request: { head: { repo: { full_name: headRepository } } } },
+        repository: 'vypdev/copilot',
+      },
+      fromJSON: JSON.parse,
+    }, { timeout: 100 });
+    expect(JSON.stringify(selected)).toBe(expectedRunner);
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs[jobId]['runs-on'] = ['self-hosted', 'codex'];
+    expect(() => assertRunner(file, workflow)).toThrow('must use runs-on');
+  });
+
+  it('isolates RepoWise files per run and removes them after artifact upload', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const job = workflow.jobs['code-health'];
+    job.env.REPOWISE_VENV_NAME = 'repowise-venv';
+    expect(() => assertRunner(file, workflow)).toThrow('select complete Python, isolate RepoWise files');
+    job.env.REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
+    job.steps = job.steps.filter((step: { name?: string }) => step.name !== 'Remove RepoWise temporary files');
+    expect(() => assertRunner(file, workflow)).toThrow('select complete Python, isolate RepoWise files');
+  });
+
+  it('requires a complete Python distribution before RepoWise creates its venv', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['code-health'].steps = workflow.jobs['code-health'].steps
+      .filter((step: { name?: string }) => step.name !== 'Set up Python 3.12 for RepoWise');
+    expect(() => assertRunner(file, workflow)).toThrow('select complete Python, isolate RepoWise files');
+  });
+
+  it('rejects runner context before a job has been assigned to a runner', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['code-health'].env.REPOWISE_TEMP = '${{ runner.temp }}/repowise';
+    expect(() => assertRunner(file, workflow)).toThrow('cannot use runner context in job-level env');
+  });
+
+  it.each([
+    ['ci_check.yml', 'ci-check'],
+    ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke'],
+    ['release_workflow.yml', 'prepare-version-files'],
+    ['hotfix_workflow.yml', 'prepare-version-files'],
+  ])('requires an isolated pnpm destination in %s', (fileName, jobId) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    const setup = workflow.jobs[jobId].steps.find((step: { uses?: string }) => step.uses === 'pnpm/action-setup@v5');
+    delete setup.with.dest;
+    expect(() => assertRunner(file, workflow)).toThrow('must isolate');
+  });
+
+  it('checks generated guidance before and after CI tests', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const steps = workflow.jobs['ci-check'].steps;
+    const install = steps.findIndex((step: { name?: string }) => step.name === 'Install dependencies');
+    const coverage = steps.findIndex((step: { name?: string }) => step.name === 'Run tests with coverage');
+    const checks = steps.flatMap((step: { run?: string }, index: number) =>
+      step.run?.includes('pnpm run validate:agent-docs') ? [index] : []);
+    expect(checks).toHaveLength(2);
+    expect(install).toBeLessThan(checks[0]);
+    expect(checks[0]).toBeLessThan(coverage);
+    expect(coverage).toBeLessThan(checks[1]);
+    expect(steps[checks[0]].run).toContain('git ls-files --eol');
+  });
+
+  it.each([
+    ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full platform documentation and contract validators'],
+    ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke', 'Full platform documentation and contract validators'],
+  ])('treats CRLF as a line ending in the %s diff check', (fileName, jobId, stepName) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
+    expect(step?.run).toContain(`git -c ${CRLF_WHITESPACE} diff --check -- . ':(exclude)build/**'`);
+  });
+
+  it('checks committed PR, merge-queue, and push changes against their event base', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['ci-check'].steps.find((item: { name?: string }) => item.name === 'Validate Git diff');
+    expect(step?.run).toContain('pull_request) base="$PR_BASE_SHA"');
+    expect(step?.run).toContain('merge_group) base="$MERGE_BASE_SHA"');
+    expect(step?.run).toContain('push) base="$PUSH_BEFORE_SHA"');
+    expect(step?.run).toContain('"$base" =~ ^0{40}$');
+    expect(step?.run).toContain('base="$(git hash-object -t tree --stdin </dev/null)"');
+    expect(step?.run).toContain(`git -c ${CRLF_WHITESPACE} diff --check "$base" HEAD -- . ':(exclude)build/**'`);
+  });
+
+  it('retains full history for the CI event-base diff check', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const checkout = workflow.jobs['ci-check'].steps.find((step: { uses?: string }) => step.uses === 'actions/checkout@v5');
+    expect(checkout.with).toMatchObject({ 'fetch-depth': 0, 'persist-credentials': false });
+    delete checkout.with['fetch-depth'];
+    expect(() => assertRunner(file, workflow)).toThrow('fetch full history');
+  });
+
+  it.each([
+    ['setup_platform_smoke.yml', 'setup-platform-smoke', 'Full platform documentation and contract validators'],
+    ['setup_platform_smoke.yml', 'setup-self-hosted-codex-smoke', 'Full platform documentation and contract validators'],
+    ['ci_check.yml', 'ci-check', 'Validate Git diff'],
+  ])('rejects weakened whitespace rules in %s %s', (fileName, jobId, stepName) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs[jobId].steps.find((item: { name?: string }) => item.name === stepName);
+    step.run = step.run.replace('blank-at-eol,', '');
+    expect(() => assertRunner(file, workflow)).toThrow('default whitespace checks');
+  });
+
+  it('retains whitespace errors while accepting CRLF line endings', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'copilot-git-whitespace-'));
+    const git = (...args: string[]) => spawnSync('git', args, {
+      cwd: directory, encoding: 'utf8', input: '',
+    });
+    try {
+      expect(git('init', '-q').status).toBe(0);
+      expect(git('config', 'core.autocrlf', 'false').status).toBe(0);
+      writeFileSync(path.join(directory, 'fixture.txt'), 'clean\n');
+      expect(git('add', 'fixture.txt').status).toBe(0);
+      expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+        'commit', '-qm', 'baseline').status).toBe(0);
+
+      for (const changed of ['trailing space \n', 'blank line with spaces\n  \n', 'space before tab\n \tindent\n']) {
+        writeFileSync(path.join(directory, 'fixture.txt'), changed);
+        expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', '--', '.').status).not.toBe(0);
+        expect(git('add', 'fixture.txt').status).toBe(0);
+        expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+          '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'changed').status).toBe(0);
+        expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).not.toBe(0);
+        const emptyTree = git('hash-object', '-t', 'tree', '--stdin').stdout.trim();
+        expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', emptyTree, 'HEAD', '--', '.').status).not.toBe(0);
+      }
+      writeFileSync(path.join(directory, 'fixture.txt'), 'clean\r\n');
+      expect(git('add', 'fixture.txt').status).toBe(0);
+      expect(git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+        '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'clean-crlf').status).toBe(0);
+      expect(git('-c', CRLF_WHITESPACE, 'diff', '--check', 'HEAD^', 'HEAD', '--', '.').status).toBe(0);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('bounds RepoWise advisory scans and preserves required health artifacts', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const steps = workflow.jobs['code-health'].steps;
+    const reports = steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
+    const upload = steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
+    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format md');
+    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format json');
+    expect(reports.run).toContain('ulimit -v 2097152; timeout --kill-after=10s 90s');
+    expect(reports.run).toContain('incomplete (exit %s)');
+    expect(upload.if).toBe('${{ always() }}');
   });
 
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
@@ -786,7 +1146,7 @@ describe('workflow contract validator', () => {
     );
   });
 
-  it('requires Node.js 24 before every workflow path that may install a pinned agent CLI', () => {
+  it('keeps every agent workflow free of Node/package-manager installation steps', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of [
         'copilot_commit.yml',
@@ -803,10 +1163,8 @@ describe('workflow contract validator', () => {
 
     const file = path.join(process.cwd(), 'setup/workflows/copilot_issue_comment.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    workflow.jobs['copilot-issues'].steps = workflow.jobs['copilot-issues'].steps.filter(
-      (step: { uses?: string }) => step.uses !== 'actions/setup-node@v7',
-    );
-    expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('must set up Node.js 24');
+    workflow.jobs['copilot-issues'].steps.splice(1, 0, { uses: 'actions/setup-node@v7' });
+    expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('standalone official agent installation');
   });
 
   it('rejects Secrets exposed to every step in a job', () => {

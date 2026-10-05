@@ -1,7 +1,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SetupJourneyView } from '../application/policies/setup_journey_policy';
-import type { SetupPlan } from '../domain/setup';
-import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../domain/setup_token_permissions';
+import type { SetupPlan, SetupOperationEffect } from '../domain/setup';
+import type { SetupTokenPermissionProgress, SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../domain/setup_token_permissions';
 import type { WebSetupPlan, WebSetupPrompt, WebSetupView } from '../application/contracts/web_setup_view';
 import type { WebSetupMessageCopyId } from '../application/contracts/web_setup_view';
 
@@ -135,7 +135,7 @@ export class WebSetupBridge {
     this.pending = undefined;
     this.publish({ prompt: undefined, promptRevision: undefined, outcome: 'cancelled', resultDetail: {
       reasonCode: 'cancelled', stoppedStage: this.view.journey?.current ?? 'Preparation', mutationStarted: false,
-    }, message: { tone: 'warning', text: 'Setup cancelled before applying further changes. Any PAT created at GitHub still exists until you delete it there.', copyId: 'session.cancelled' } });
+    }, message: { tone: 'warning', text: 'Setup cancellation requested. Temporary permission checks already started will finish cleanup before the process exits. Any PAT created at GitHub still exists until you delete it there.', copyId: 'session.cancelled' } });
     pending?.resolve(undefined);
     return true;
   }
@@ -145,10 +145,24 @@ export class WebSetupBridge {
     this.publish({ message: { tone, text, ...(link ? { link } : {}), copyId, copyValues, credentialChecks } });
   }
   requirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
-    this.publish({ permissions: { role, requirements, report: undefined } });
+    this.publish({ permissions: { role, requirements, report: undefined, progress: [] } });
   }
   report(report: SetupTokenPermissionReport): void {
-    this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements, report } });
+    this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements,
+      progress: this.view.permissions?.progress, report } });
+  }
+  permissionProgress(progress: SetupTokenPermissionProgress): void {
+    if (this.view.outcome || this.view.permissions?.role !== progress.role
+      || !this.view.permissions.requirements?.some(item => item.id === progress.requirementId)) return;
+    const previous = this.view.permissions.progress ?? [];
+    const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
+      || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'].includes(progress.detail))
+      ? progress.detail : undefined;
+    this.publish({ permissions: { ...this.view.permissions, progress: [
+      ...previous.filter(item => item.requirementId !== progress.requirementId),
+      { role: progress.role, requirementId: progress.requirementId, phase: progress.phase,
+        ...(detail ? { detail } : {}) },
+    ] } });
   }
   resultReason(reasonCode: NonNullable<WebSetupView['resultDetail']>['reasonCode'], diagnosticRef?: string): void {
     if (this.view.outcome) return;
@@ -167,11 +181,22 @@ export class WebSetupBridge {
       mutationStarted: this.view.journey?.mutationStarted === true, effects,
       ...(this.view.resultDetail?.diagnosticRef ? { diagnosticRef: this.view.resultDetail.diagnosticRef } : {}) } });
   }
+  progress(effect: SetupOperationEffect): void {
+    if (this.view.outcome) return;
+    const previous = this.view.resultDetail?.effects ?? [];
+    const effects = previous.some(item => item.id === effect.id)
+      ? previous.map(item => item.id === effect.id ? { ...effect } : item)
+      : [...previous, { ...effect }];
+    this.effects(effects);
+  }
   finish(outcome: NonNullable<WebSetupView['outcome']>, text: string): void {
     if (this.view.outcome) return;
     this.pending?.resolve(undefined);
     this.pending = undefined;
+    const effects = this.view.resultDetail?.effects?.map(effect => effect.state === 'in-progress'
+      ? { ...effect, state: 'needs-inspection' as const } : effect);
     this.publish({ prompt: undefined, promptRevision: undefined, outcome, message: { tone: outcome === 'complete' || outcome === 'dry-run' ? 'success' : 'warning', text },
+      ...(this.view.resultDetail && effects ? { resultDetail: { ...this.view.resultDetail, effects } } : {}),
       ...(this.view.resultDetail ? {} : { resultDetail: {
         reasonCode: outcome === 'cancelled' ? 'cancelled' : outcome === 'blocked' ? 'unknown' : 'unknown',
         stoppedStage: this.view.journey?.current ?? 'Preparation',
@@ -198,6 +223,7 @@ function sameCapability(provided: string, expected: string): boolean {
 export function toWebSetupPlan(plan: SetupPlan): WebSetupPlan {
   return {
     presentationDefaults: plan.presentationDefaults ?? [],
+    permissionProbes: plan.permissionProbes ?? [],
     decisions: {
       enabledCapabilities: Object.entries(plan.configuration.features).filter(([, enabled]) => enabled).map(([name]) => name),
       agentRouting: Object.entries(plan.configuration.agents).map(([role, agent]) => ({ role,

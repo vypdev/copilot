@@ -3,12 +3,37 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-09-29 (source/build tests and screenshot review; no live GitHub setup or dogfooding)
+- Last verified: 2026-10-05 (PR #402 merge baseline and fixture-only follow-up evidence are recorded below; the operator incident is external evidence, not agent dogfooding)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
-- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402) carries this implementation alongside the earlier guided PAT work; no test issue or Action is created
+- Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
 - Required review gates: product UX, Clean Architecture, browser/loopback security, credential handling, packaging, cross-platform operation, accessibility, testing, documentation
-- Open decisions blocking readiness: none at the product-contract level; implementation MUST still pass the security and packaged-install review gates below
+- Open decisions blocking readiness: active PAT capability probes, incremental permission feedback, cleanup recovery, and live provider review described in the permission SDD remain open
+
+### 2026-10-05 permission-audit correction
+
+The web assistant MUST show live, localized progress for each permission after
+PAT submission. At PAT entry, identity and READ rows run; WRITE rows clearly
+wait for approval of the reviewed plan. After approval and before application,
+the final audit runs the selected temporary WRITE probes with live progress.
+The plan warns about temporary resources and any visible GitHub audit trail.
+Each READ row performs the named read and accepts an empty
+successful response; each required WRITE row performs a resource-specific
+temporary create/read/delete probe with exact-target cleanup. The session
+shows the current phase, result, bounded HTTP category in the selected web
+locale, and any unresolved
+cleanup action. Neither a generic `Unverifiable` write row nor operator
+attestation is an accepted completion state. The same application audit and
+evidence rules apply to CLI. See
+[`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md#0-acceptance-correction-2026-10-05)
+for the normative transaction table and 63 additional test cases. §18–19
+remain open until fixture tests, packaged operation, four-locale and
+accessibility review, and explicitly authorized live cleanup evidence pass.
+If cancellation or expiry overlaps an audit, confirmed deletion of all
+temporary resources retains the ordinary cancelled or blocked result. An
+unconfirmed cleanup produces a partial result and preserves the permission
+failure and local recovery journal, including during the final pre-Apply
+recheck. The browser must show the affected row and recovery action.
 
 ## 1. Executive summary
 
@@ -233,6 +258,9 @@ exactly what completed and what remains.
    canonical repository root and tells the operator to change directory and
    rerun. Canonical path comparison permits a symlink spelling of that same
    root, but never a nested directory.
+   The root predicate MUST require Git to report a work tree as well as an
+   empty relative prefix. A bare repository is not a checkout and MUST be
+   rejected by setup and doctor; local bare Git fixtures prove this boundary.
 2. Bind `127.0.0.1:0`, record the assigned port, create an unpredictable
    one-run session key, a separate 16-hex-character pairing code, and first
    controller lease in process memory. Print the pairing code only to the
@@ -311,7 +339,10 @@ exactly what completed and what remains.
 - `copilot setup` without `--web` is unchanged. `--dry-run --web` MAY display
   a local-only plan with explicit **No changes** outcome, no required PAT
   creation, and no Apply action; any remote facts unavailable without a PAT
-  are labeled unknown. It does not become a credential-health proof.
+  are labeled unknown. A supplied PAT permits read-only inspection, but the
+  final disposable WRITE permission audit is skipped for every dry-run path.
+  No temporary GitHub object or Action run is created. It does not become a
+  credential-health proof.
 - A detected `PERSONAL_ACCESS_TOKEN` is **not silently consumed** in web
   mode. Offer `Use existing environment setup PAT` with no displayed value,
   or choose guided/manual web input; the chosen credential follows the same
@@ -442,6 +473,20 @@ single-flight and cannot be entered if the approval use case did not return an
 approved result. Deterministic fake-port tests cover every drift category,
 cancel/expiry interleavings, and audit outcomes.
 
+The follow-up extraction MUST introduce a frontend-neutral application session
+coordinator that owns the order and terminal classification of repository
+confirmation, choice collection, operator PAT verification, plan review,
+credential collection, final authorization, Apply, and result recording.
+Its ports express these semantic operations and emit immutable progress facts;
+CLI and web composition supply existing use cases and presentation adapters.
+The coordinator MUST own cancellation checks before every external operation,
+the single-flight Apply transition, and the distinction between a failure
+before any possible write and an ambiguous or confirmed partial write. Moving
+the command body into a different infrastructure file without these decisions
+in application is not an acceptable extraction. The CLI command retains flag
+parsing, dependency composition, exit-code adaptation, and terminal cleanup.
+The browser retains HTTP/capability validation and redacted rendering.
+
 The pre-PAT permission-intent review is likewise an application use case:
 it owns questionnaire transitions, owner-kind conflict checks, provisional
 grant calculation, review passes, and guided-link eligibility. Terminal and
@@ -537,6 +582,18 @@ Both terminal and web routes use the same questionnaire parser for this choice.
   browser uses bounded polling or server events for **read-only** progress;
   reconnecting to the same live process retrieves redacted current state,
   not secret values or an implicit retry.
+- Progress is an ordered, append-only sequence of semantic stage and resource
+  transitions. A resource receipt has a stable ID, scope, and one of
+  `not-started`, `in-progress`, `completed`, `skipped`, or `needs-inspection`.
+  `needs-inspection` covers a request whose remote effect cannot be proven,
+  including process exit during an in-flight write; it MUST never be presented
+  as rollback. A bounded public view may project this ledger but may not
+  infer completion from an attempted call. Cancellation before Apply records
+  no resource writes. Cancellation after mutation begins is rejected and the
+  running operation reports its eventual receipt. Expiry and process exit
+  dispose in-memory authority; after process exit a new invocation begins a
+  fresh review, never a resumed approval. The operator uses existing GitHub
+  and local evidence to inspect ambiguous effects before retrying.
 
 ### 8.3 Executable architecture and packaging constraints
 
@@ -598,6 +655,16 @@ specific repository, and knows no setup mutation has begun. The link is an
 explicit user action to the fixed official GitHub host; it never contains a
 credential. The `Bot PAT` screen repeats the checklist under a visibly
 different account/role and states that its token remains needed by Actions.
+
+The setup-PAT confirmation view MUST distinguish an evidence limit from a
+missing grant. For each reported permission, show the required scope and level,
+status, and a short localized reason. A public repository read can be usable
+while its PAT grant remains `Unverifiable`; a read-only check cannot prove
+Write. `Projects · organization · Read — Verified` MUST remain visibly
+verified when a non-public Project supplied positive evidence. The prompt
+MUST ask the operator to compare only required `Unverifiable` rows with the
+GitHub PAT settings and MUST say that already `Verified` rows need no action.
+The confirmation is explicit and does not convert any status to `Verified`.
 
 | Primary state | Representative visible copy | Primary action |
 |---|---|---|
@@ -673,8 +740,11 @@ architecture guide documents these boundaries for future steps.
   changing repository/issue locale, modifying answers, or replaying an Apply.
   Unsupported locale falls back atomically to English. Account/repo names
   and remote messages are escaped as text, never injected as HTML or Markdown.
-- No issue/PR/check/comment is added by the web surface, so notification
-  budget is zero. Progress updates in the page are coalesced and do not
+- The questionnaire and local browser session add no GitHub issue, PR, check,
+  or comment. After the reviewed plan is approved, permission probes may
+  create a temporary Issue, PR, or Actions run and leave notifications or
+  history even after cleanup; the plan discloses that budget. Progress updates
+  in the page are coalesced and do not
   repeatedly steal focus or announce the same state. GitHub-side account
   switching and 2FA are explained, not reproduced in the local UI.
 
@@ -759,7 +829,7 @@ and explain why they matter. In particular:
 | Provider reasoning | Do not offer a misleading toggle while the current string-only CLI adapter cannot return separate reasoning parts | If a future adapter supports it, disclose actual text/retention behavior; never promise concision or metadata-only output without a bounded contract. |
 | Bugbot dry-run | `Publish Bugbot findings` (recommended) versus persistent `Analyze without publishing` | Not the same as `copilot setup --dry-run`; suppresses review publication/SCM effects and is incompatible with approval evidence. |
 | Organization Bugbot rules | Optional multiline rule editor, one rule per line | These rules take precedence over repository rules; their storage scope is shown separately. Never call a repository Variable an organization-wide policy. |
-| Agent CLI provisioning | `Automatic` (recommended) / `Use installed only` / advanced `Reinstall reviewed version` | Explain runner ownership, pinned Codex/OpenCode installs, Cursor's manual prerequisite, and explicit-path exemption. |
+| Agent CLI provisioning | No setup choice | Reuse an available selected CLI; install the missing default from its official standalone source without an exact version pin. Explicit executable paths are never replaced. Agent workflows use no setup-node, npm, or pnpm installation step. |
 
 Examples in the card must be clearly illustrative, not a real detected value.
 The reviewer can always see the current stored value, source (default/config/
@@ -915,6 +985,27 @@ Projects. `Empty` means the bounded API returned no *accessible* Projects; the
 API does not prove there are none, so neither web nor CLI may assert a
 genuinely empty organization. Show the applicable GitHub Project link and a
 specific recovery action for each discovery state.
+
+The setup-PAT audit MUST NOT treat an empty or public-only organization
+Projects response as proof of `Projects: read` or as an automatically usable
+required read. It remains `Unverifiable`.
+
+The permission probe's single deadline covers both bounded Projects pages,
+including each page request and response inspection. Its abort controller
+remains active until pagination finishes; a stalled later page returns
+`Unverifiable` without retaining public-read evidence or hanging the setup.
+An isolated fetch double must prove this second-page timeout behavior.
+
+Because Project numbers are selected
+only after this audit, the operator may explicitly attest that the displayed
+`Projects: read` grant is present, alongside any unverifiable writes. This
+attestation is never labelled GitHub verification and is not defaulted; a
+denial, malformed response, or unavailable identity remains blocking. Later
+discovery and selected-Project Status inspection retain their own checks and
+recovery states. Web and CLI must identify the exact unconfirmed grant, with
+English CLI copy and equivalent wording in all four advertised web locales.
+Fixture acceptance includes empty/public-only lists, explicit yes/no,
+unconfirmed denial, and later selected-Project inspection without a live PAT.
 
 ```text
 Want Projects? → audit setup PAT → list owner's Projects or explain why
@@ -1325,6 +1416,63 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | Security/abuse | 28 | forged links, stale revisions/controller takeover, PAT exclusion, permissions and least-privilege fallback |
 | **Total** | **350** | No double counting |
 
+The acceptance ledger is [`local-web-setup-assistant-acceptance.json`](./local-web-setup-assistant-acceptance.json).
+It MUST contain one row per ID below with an observable assertion, the
+automated test or explicit human evidence, and `pass`/`open` status. Ranges
+partition the 350 cases; a Jest count alone cannot close an ID. A human row
+remains open until a reviewer records browser/OS, viewport or zoom, assistive
+technology where relevant, locale, date, and observed result. Each automated
+row must identify a focused assertion or table case; one test cannot be used
+as evidence for unrelated rows.
+The isolated npm package smoke MUST open its packed archive from an absolute
+path before extracting into a separate temporary directory, then inspect the
+extracted CLI, web assets, and API. This keeps archive lookup independent of
+`tar -C` interpretation across platforms; the existing package smoke is the
+acceptance test.
+It MUST also start the extracted `setup --web` CLI in a disposable Git fixture
+with an inert example remote and no credentials. A test-only browser
+opener MUST fail harmlessly. The smoke MUST fetch the packaged page and asset,
+reject an unpaired state request, pair with the ephemeral fixture code, read
+the fixture repository state, cancel and close the session, then verify that
+the fixture checkout is unchanged. Passing this automated path supports but
+does not close the six human packaged-launch and fallback observations.
+
+| IDs | Cases | Acceptance family |
+|---|---:|---|
+| P001–P012 | 12 | choice normalization and bounded configuration |
+| P013–P022 | 10 | dependent invalidation and revision |
+| P023–P032 | 10 | grant/role derivation and final audit |
+| P033–P042 | 10 | plan and resource projection |
+| P043–P048 | 6 | Project Status compatibility |
+| S001–S010 | 10 | stage order and terminal outcomes |
+| S011–S020 | 10 | edit, replay, revision and controller ownership |
+| S021–S028 | 8 | PAT identity and permission transitions |
+| S029–S038 | 10 | concurrent Apply and stale authorization |
+| S039–S046 | 8 | cancellation, idle expiry and process exit |
+| S047–S054 | 8 | resource progress, partial receipt and retry guidance |
+| A001–A010 | 10 | bounded GitHub discovery |
+| A011–A018 | 8 | resource inventory and scope |
+| A019–A030 | 12 | HTTP status, provider errors and retry |
+| A031–A040 | 10 | checkout and remote drift |
+| C001–C009 | 9 | CLI flags, help and unattended compatibility |
+| C010–C017 | 8 | CLI progress and result wording |
+| C018–C027 | 10 | packaged npm install and asset parity |
+| C028–C037 | 10 | workflow/bundle/architecture isolation |
+| U001–U040 | 40 | four-language semantic copy and options |
+| U041–U054 | 14 | seven terminal views in light and dark |
+| U055–U074 | 20 | prompt, progress, input and focus interaction |
+| U075–U094 | 20 | keyboard, screen reader, 200% zoom and responsive review |
+| U095–U101 | 7 | untrusted text/link rendering |
+| I001–I012 | 12 | CLI/web parity on the same semantic fixtures |
+| I013–I020 | 8 | reconnect and answer replay |
+| I021–I028 | 8 | partial recovery and doctor isolation |
+| I029–I036 | 8 | config and package compatibility |
+| I037–I042 | 6 | macOS, Linux and Windows launch/fallback |
+| X001–X008 | 8 | pairing, Host, Origin and cooldown |
+| X009–X016 | 8 | controller, CSRF, revision and idempotency |
+| X017–X022 | 6 | PAT redaction, lifetime and role separation |
+| X023–X028 | 6 | path, symlink, asset and local-only boundaries |
+
 Within the 101 UI cases, cover at least one render/interaction for each prompt
 presenter, one revision-change form reset, secret clearing before dispatch,
 read-only disabling, all outcome variants, and both theme palettes. Static
@@ -1483,6 +1631,26 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
     every high-risk question identifies source, recommendation and consequence,
     errors identify the exact field and correction, and progress/result
     changes are announced without relying on color or a terminal window.
+29. Given setup stops at the PAT audit, the browser result retains the last
+    redacted permission report and shows each required missing or unverifiable
+    grant with its scope and access level in the selected locale. If identity
+    itself failed, the result says so separately and still lists the required
+    grants as not checked, without presenting an identity-wide rejection as
+    an individual missing permission. The lead and recovery action describe
+    the rows actually shown in all four web locales. A completed or unrelated
+    blocked result must not attribute an earlier PAT report as its cause.
+    A required read that was operationally accessible but whose PAT grant was
+    unverified still appears as `unverifiable`; operational availability never
+    hides it or triggers the "No required grant failed" fallback. The
+    four-locale result fixture MUST cover this distinction without exposing
+    provider diagnostics or a token.
+30. Given the operator reaches setup-PAT confirmation with verified
+    organization Projects read and unverifiable public repository reads and
+    required writes, the context explains why each row has that status in all
+    four web locales. The prompt asks only for manual inspection of required
+    `Unverifiable` grants. A verified Projects row is not named as a failure;
+    confirmation does not upgrade unknown evidence, and declining starts no
+    setup mutation. Local fixtures, not a live PAT, verify this contract.
 
 ## 17. Requirements traceability
 
@@ -1492,11 +1660,14 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 | Shared setup engine/parity (§4.1, §8) | application coordinator + existing policies | scenarios 3, 5, 15; import/schema checks | architecture |
 | Bounded config/compatibility (§6.2–7) | CLI parser + config policy | scenarios 3–4, 15–16 | configuration |
 | Separate PAT roles/evidence (§4.3, §6) | permission/identity/credential use cases | scenarios 6–7, 11, 13, 16 | authentication, credentials |
+| Mixed PAT evidence clarity (§9.1) | web context evidence presenter + localized confirmation prompt | scenario 30; four-locale mixed-report fixture, prompt and explicit decline/confirm tests | authentication, troubleshooting |
 | Revision-bound Apply/recovery (§6.1, §6.3, §10) | CLI root precondition + session coordinator + execution boundary | scenarios 1, 8–11; nested-path launch regression | troubleshooting, provisioning |
 | Browser security/privacy (§4.3, §11) | loopback HTTP/asset adapters + redacted presenter | scenarios 9, 12–13 | authentication, architecture |
 | Accessible truthful UX (§9) | Svelte presenter + message catalog | scenarios 5–7, 10–11, 13–14 | how-to-use, troubleshooting |
 | Complete question help and links (§9.3–9.5) | application semantic help catalog + English CLI renderer + four-language web presenter | scenarios 17–20; exhaustive ID/link/locale gates | how-to-use, configuration, authentication, agents |
 | First-run completion (§9.6) | pure questionnaire/evidence policies, application session/edit/receipt use cases, read-only provider ports, CLI/web presenters | scenarios 21–28; 76 added risk-derived cases plus human first-use review | how-to-use, authentication, troubleshooting, configuration |
+| Actionable PAT failure result (§9, §10) | redacted web permission report and result presenter | scenario 29; four-locale semantic fixture, unrelated-result exclusion, missing-report fallback | authentication, troubleshooting |
+| Human acceptance review | [`docs/development/setup-assistant-review.mdx`](../docs/development/setup-assistant-review.mdx) | fixture-only seven-state, four-language, accessibility and platform checklist | acceptance ledger `U041–U054`, `U075–U094`, `I037–I042` |
 
 ## 18. Implementation sequence and current evidence
 
@@ -1523,8 +1694,8 @@ answer normalization, allowlisted links, and revision/capability transport.
 This decomposition is an implementation slice, not evidence of the still-open
 application coordinator and full UI/accessibility acceptance gates.
 
-These facts are **not** release acceptance. The orchestration in
-`src/cli/commands/setup.ts` still needs extraction into the prescribed
+These 2026-09-29 facts are **not** release acceptance. The orchestration in
+`src/cli/commands/setup.ts` still needed extraction into the prescribed
       application-level session coordinator; the revised 350-case budget, full human
 cross-platform/accessibility review, exact per-resource progress/partial
 evidence, and adversarial concurrency/idle/crash suite remain open. The
@@ -1620,8 +1791,9 @@ These measurements do **not** close independent linguistic, keyboard/screen-
 reader, 200%-zoom, dark/light, real-browser/cross-platform, or full 350-case
 acceptance review. A disk-persisted resume remains a separately specified
 future capability; this slice supports reconnecting to a live session only.
-The CLI orchestration has not yet been extracted into the prescribed
-frontend-neutral coordinator. Until these gates are evidenced, the catalog
+At the 2026-09-29 baseline, the CLI orchestration had not yet been extracted
+into the prescribed frontend-neutral coordinator. Until the remaining gates
+are evidenced, the catalog
 remains `proposed` and the non-English browser notice remains a translation
 preview, not an unconditional release-quality claim.
 
@@ -1642,6 +1814,504 @@ A final pairing follow-up shares one client-side validity predicate between
 button state and form submission, so Enter cannot consume invalid attempts or
 bypass a busy state. Structural tests cover accepted hex input, incomplete and
 non-hex input, and the busy state. Server-side rate limiting remains authoritative.
+
+The 2026-09-30 follow-up adds `SetupSessionCoordinator` in the application
+layer and has both CLI and web invocation use the same ordered semantic
+phase ports. The command now registers flags and delegates execution;
+separate composition modules handle pre-PAT presentation, web Apply adapters,
+and terminal outcome wording. Fake-port tests cover once-only execution,
+ordered stages, stale/cancelled/expired approval, concurrent calls, and
+partial classification after a possible write. The provisioning workflow
+emits value-free `in-progress` and terminal resource transitions; the browser
+displays them while Apply runs and conservatively changes an interrupted
+in-progress state to `needs-inspection`. The final structured receipt remains
+the result authority. Empty action results no longer count as success.
+
+The 350-row acceptance ledger records distinct assertions and exact test
+names or an explicit human checklist. The ledger validator checks the ID
+partition, uniqueness, evidence paths, exact passing Jest titles from the
+coverage run, and prevents an unevidenced human `pass`. The 2026-09-30 local
+run passed 510 suites and 5,734 tests. Overall coverage was 96.19%
+statements, 91.36% branches, 96.88% functions, and 97.49% lines; all
+configured module budgets passed. The ledger records **310 passed and 40
+open**, with every open row requiring direct human observation. Production
+build, Svelte check, typecheck, lint, workflow, documentation and catalog
+validators passed; an isolated npm tarball passed content and executable/API
+smoke checks. Browser inspection of the pending and partial fixtures caught
+and corrected four-language result copy that falsely said Apply had not
+started despite an uncertain Secret receipt. The four-language regression
+passed, but this limited inspection does not certify the full UI review.
+The prior Linux and Windows CI fixture jobs exercised build, typecheck, local
+server, session guard, snapshot, and coordinator behavior; Linux also checked
+the isolated npm package. These jobs are coverage opportunities, not evidence
+of a real-browser or global-install review until their checks run. Human
+keyboard/screen-reader, 200%-zoom, light/dark, linguistic, and cross-platform
+launch/fallback observations remain explicitly open. The catalog remains
+`proposed`; neither source tests nor an unreviewed CI configuration imply
+release readiness.
+
+The 2026-10-02 operator report exposed a blocked PAT result that hid the
+permission report while instructing the operator to check it. The terminal
+showed only the aggregate rejection, so the diagnostic reference alone could
+not identify the grant. This follow-up requires the blocked browser result to
+retain and display safe, localized permission evidence; it must never display
+the PAT or pairing code. The incident also selected organization Projects,
+which exposed a missing read-only probe described in the permission SDD.
+Fixture tests add this regression to the existing acceptance budget; they do
+not close the human visual/accessibility or live-provider gates. The local
+coverage run passed 511 suites / 5,752 tests, with 96.19% statements, 91.37%
+branches, 96.88% functions, and 97.49% lines overall. The acceptance ledger
+was 310/350 passed with 40 human-review rows open before the Windows service
+file-symlink capability gap was observed. X026 is now also open, yielding
+309/350 passed and 41 open cases: 40 human-review rows and one host-specific
+security fixture. Hosted platforms passing X026 cannot close its service-runner
+gate by inference. A later full service-runner run also skipped X023, which
+checks an asset replaced by an escaping file symlink. The current ledger is
+308/350 passed and 42 open: the same 40 human rows and both file-symlink
+security cases.
+
+The same PR exposed a runner-routing risk: `codex` now selects self-hosted
+Windows as well as macOS and will also select Ubuntu. A push-review `run`
+step inherited PowerShell on Windows and was stopped by the host's signed
+script policy before the Action ran. Every installed `codex` workflow with a
+`run` step MUST select Bash explicitly, including CI, review, merge-queue and
+release preparation; distributed push/PR templates MUST retain Bash for their
+POSIX review-range scripts. Workflow validation MUST reject a new `run` step
+that silently inherits a platform-dependent shell. The isolated setup fixture
+workflow MUST run build, typecheck, session fixtures and npm-pack smoke on
+Ubuntu, Windows and macOS. The npm validation scripts MUST invoke npm without
+depending on Windows `.cmd` direct-execution behavior or privileged symlink
+creation. A green fixture job proves only its tested path; Action execution,
+child-process cancellation, and release
+preparation on each self-hosted platform remain open until direct runner
+evidence exists. No live setup or credential-bearing test dispatch is allowed
+to close those gates.
+
+The first three-platform fixture run passed macOS and Ubuntu. Windows built the
+package but failed the exact checked-in bundle comparison: the Windows `ncc`
+CLI/Action output and generated HTML differ from the Unix-built checked-in
+artifacts. This comparison is a canonical Unix build drift gate, not a Windows
+runtime compatibility assertion. CI and the fixture matrix MUST run the build
+on Windows, skip only that byte-for-byte comparison there, and continue to
+typecheck, isolated session tests and npm package validation/smoke. A passing
+Windows fixture after this change is required before counting those paths as
+verified; it does not prove all Action jobs or Windows cancellation behavior.
+
+The isolated [2026-10-02 three-platform fixture run](https://github.com/vypdev/copilot/actions/runs/36955416020)
+passed on hosted Windows, Ubuntu and macOS. Each job built and typechecked,
+exercised local setup/session fixtures, validated the npm package, and extracted
+and smoked its packaged CLI/API without a PAT or live setup. The Windows job
+also passed 20 fake-agent runtime cases, including ACL rejection, literal
+arguments, timeout, descendant cancellation and cleanup. This closes the
+automatable fixture path only. A global installation and browser/terminal
+review on each target platform, actual self-hosted `codex` runner behavior,
+and the human UX/security gates in §19 remain open.
+
+The later [hosted Windows run on `9eefc89a`](https://github.com/vypdev/copilot/actions/runs/37068310921)
+passed the isolated agent runtime after its ACL repair, then failed the npm
+package smoke because GNU tar interpreted a native `C:\...` archive path as a
+remote tar source. The smoke MUST pass the packed archive through stdin while
+retaining its extracted CLI, web asset, and typed API assertions. Repeat the
+full hosted Windows job before treating this compatibility path as verified.
+
+The platform fixture workflow MUST additionally target a self-hosted runner
+labelled `codex` and `Windows` through an authorized manual dispatch only,
+without invoking a real setup or agent request. That job MUST prove dependency
+installation, build, typecheck, local session fixtures, fake-agent runtime
+fixtures, and packaged npm validation/smoke on the actual service runner.
+A green hosted Windows job cannot substitute for this service-specific evidence.
+A green self-hosted fixture still does not close a real Action execution or
+reboot-persistence review gate. Architecture metrics that require
+an external model provider remain unverified when no provider is available;
+dependency-boundary tests and a successful graph update are separate evidence,
+not a substitute for the missing metric report.
+
+The first self-hosted Windows fixture attempt reached `windows-intel-runner-1`
+and passed Git Bash, dependency installation, build, and typecheck, then
+failed while creating test symlinks with `EPERM`. The fixture suite MUST use a
+Windows directory junction for the checkout-escape case. File-symlink cases
+MAY be reported as skipped only after an isolated capability probe confirms
+that this service account cannot create them; any other probe error fails the
+suite. Such skips leave file-symlink protection on that runner unverified and
+must remain visible in CI and reviewer evidence. Hosted Windows still runs
+those cases where its runner permits symlinks.
+
+The [self-hosted fixture attempt on `windows-intel-runner-2`](https://github.com/vypdev/copilot/actions/runs/36972025378)
+passed Git Bash, build, typecheck, 69 local-session tests, 20 fake-agent
+runtime tests, and isolated npm package checks. Three file-symlink tests were
+reported as skipped because the service account lacks symlink creation rights;
+the directory-junction escape test passed. This verifies those tested paths
+on that runner, without proving real agent execution or file-symlink defense
+on the service host. The overall workflow was red because the canonical Unix
+bundles changed with the ACL implementation but were omitted from the commit;
+the generated artifacts must be committed and the full matrix rerun before
+counting its four-job check as green.
+
+The subsequent [four-job fixture matrix](https://github.com/vypdev/copilot/actions/runs/36972606620)
+passed on hosted Ubuntu, macOS, Windows, and `windows-intel-runner-3` after
+the canonical bundles were committed. A full manually dispatched
+[`CI Check` on `windows-intel-runner-1`](https://github.com/vypdev/copilot/actions/runs/36973236784)
+then exposed additional Windows incompatibilities in the broader repository
+test suite: path spelling and separators, generated catalog comparison,
+unprivileged symlink creation, and a slow process fixture. Its full-suite,
+coverage, Codecov, and architecture gates remain open until a passing Windows
+run verifies the repairs. The short green matrix is evidence for only its
+listed fixture paths.
+
+Three local pre-commit attempts exhausted a 4 GiB Jest worker in
+`cli.test.ts`. Isolation showed the test's Git mock did not answer the new
+`rev-parse --show-prefix` query; repeated setup flows then accumulated work.
+The mock now supplies explicit root and child-prefix responses, and the
+isolated 117-case CLI suite passes. A full-suite run still MUST pass before
+counting this repair; increasing the heap or ignoring that suite is not
+acceptance evidence.
+
+The later [Windows fixture run](https://github.com/vypdev/copilot/actions/runs/36976422911)
+failed before fixtures: `pnpm/action-setup` attempted to remove a shared
+`~/setup-pnpm` directory while another service runner was installing there.
+Every `pnpm/action-setup` step on a self-hosted `codex` runner MUST use a
+destination isolated by runner temporary directory, workflow run, attempt and
+job. This applies to setup fixtures, CI, release and hotfix preparation so
+concurrent jobs cannot race in the same service account. Workflow contract
+tests MUST reject a shared destination. A new concurrent platform run MUST
+reach and pass its fixture steps; this earlier failure is not product test
+evidence.
+
+The next [full Windows CI run](https://github.com/vypdev/copilot/actions/runs/36976403499)
+passed 512 of 513 suites; the remaining repository-agent artifact comparison
+displayed the same content on every line but failed raw string equality on
+Windows. The fixture MUST compare the renderer to checkout text after
+normalizing CRLF to LF on Windows only, while keeping byte equality on Unix.
+Any non-line-ending drift MUST still fail. A subsequent Windows CI run MUST
+pass before counting coverage or this compatibility repair as verified.
+
+That [subsequent Windows CI run](https://github.com/vypdev/copilot/actions/runs/36977406692)
+passed 512 of 513 suites. Its sole remaining failure was the analogous raw
+string comparison of generated `specs/CATALOG.md` against catalog metadata;
+the displayed lines matched while Windows checkout line endings differed.
+The catalog validator and its test MUST apply the same Windows-only CRLF to LF
+normalization before comparing, preserving exact content comparison on Unix.
+The complete CI workflow must pass on a new HEAD before this gate closes.
+
+On the [next full Windows CI run](https://github.com/vypdev/copilot/actions/runs/36978641396),
+all 513 suites and 5,783 tests passed, but the independent agent-execution
+coverage budget failed for `agent_execution_planner.ts` (93.90% lines, 94.32%
+statements, 84.78% branches versus 95/95/90). The existing default-system
+preflight fixtures run only on Unix. Add a Windows-only reviewed `.cmd` and
+local Node fixture that exercises real planner PATH resolution, direct shim
+invocation, version reading, canonical workspace, absolute selection and
+missing PATH rejection. The 95/95/90 budget MUST remain in force, and a new
+Windows coverage run MUST prove it passes without a real agent or credentials.
+
+The [first expanded fixture matrix](https://github.com/vypdev/copilot/actions/runs/36979702107)
+exposed two fixture assumptions. The Windows PATH case passed, but explicit
+`codex.cmd` selection was rejected by the basename policy before the reviewed
+shim resolver could inspect it. On Ubuntu the planner test used a hosted Node
+binary whose group/world write mode violated the existing executable safety
+rule. The later Windows execution review found that an explicitly selected
+`.cmd` passes this basename policy but cannot run through the no-shell
+execution boundary. Explicit Windows selections MUST accept only the
+provider's exact native `.exe` basename; `.cmd`, `.bat`, `.ps1`, arguments and
+unrelated wrappers are rejected before planning. The reviewed `.cmd` fixture
+remains valid only for internal package-shim resolution to a trusted native
+interpreter, never as an admitted execution plan. Planner tests on Unix MUST use a private
+local fixture file with mode 0700, without changing runner binaries or the
+runtime ownership and mode checks. The application basename policy MUST remain
+runtime-neutral: identify drive-absolute Windows selections from path syntax,
+and leave actual executable, package and OS checks to infrastructure. Repeat
+the matrix and full Windows coverage after these repairs.
+
+The [full Windows CI after the fixture repair](https://github.com/vypdev/copilot/actions/runs/36980809204)
+passed all 513 suites and 5,794 tests. Planner lines and statements crossed
+95%, but branch coverage stayed at 84.78%; the only uncovered source lines in
+the report were Unix file-mode and owner checks. Keep those security checks,
+move executable-file metadata validation into a focused infrastructure module,
+and test its Unix and Windows decisions with explicit facts on every host.
+Both the planner and the new module MUST independently meet the same 95%
+lines/statements and 90% branches/functions budget in full Windows CI. A
+passing platform fixture alone does not close this coverage gate.
+
+The generic `CI Check` could previously be assigned to macOS even while Windows
+runners were available. The hosted Windows setup platform job MUST run the full
+existing `test:coverage` command, including acceptance and agent coverage
+budgets, after its short isolated fixtures. The manually dispatched self-hosted
+Windows job MUST retain the same suite for service-specific evidence. Workflow
+contract tests MUST reject removal of either full suite. This makes Windows
+coverage evidence repeatable without a live agent or PAT and leaves review
+state as a separate gate.
+The platform workflow MUST fetch full Git history because the shared
+communication test-budget validator reads an older baseline commit. Tests
+that exercise Action admission MUST provide fake agent credentials explicitly
+so hosted CI and platform jobs never depend on credentials or local CLI login
+left on a persistent runner.
+
+The next platform expansion MUST keep automatic PR jobs on disposable
+GitHub-hosted Ubuntu, Windows and macOS runners. An explicitly dispatched,
+credential-free fixture matrix MUST additionally cover the `self-hosted,
+codex` service runners on Windows, macOS and Ubuntu. Its Linux job MUST verify
+Ubuntu from `/etc/os-release` before counting a result. Each self-hosted job
+MUST use a job-private pnpm directory, build and typecheck, run the isolated
+session and fake-agent fixtures, verify the npm tarball and packaged local
+session, run the full coverage and acceptance budgets, and run the same
+documentation/workflow/specification validators. Tests MUST reject removal of
+an OS, full suite, package check, checkout-history requirement, manual-only
+gate, or private pnpm destination. A workflow-dispatch run MUST record the
+runner name, OS and per-job result; a queued or skipped runner is explicitly
+unverified. No fixture may create a PAT, mutate GitHub setup state, or invoke a
+real agent. Human browser, assistive-technology and real-provider review remain
+separate gates even after all six platform jobs pass.
+
+The 40 open human rows in the 350-case ledger cover seven result states in
+light/dark, four-language keyboard/screen-reader/zoom/responsive review, and
+three-platform packaged launch/fallback observation. These MUST retain named
+reviewer, date, platform, browser, assistive technology and observed result;
+automated assertions or screenshots may support but cannot silently close a
+human row. X023 and X026 remain open until the self-hosted Windows service
+account can create file symlinks and runs their exact assertions. Hosted
+Windows passing those tests cannot be substituted for that service evidence.
+
+The [first deterministic Windows coverage run](https://github.com/vypdev/copilot/actions/runs/36982636134)
+passed all 514 suites and the agent-execution budget at its unchanged
+thresholds. `test:coverage` then rejected X023 because the service account
+skipped its file-symlink assertion. X023 MUST be marked open with this explicit
+reason, as X026 already is. The Windows workflow MUST complete with the two
+cases open, while a reviewer with actual symlink capability must rerun both
+before either can be marked passed on the service platform.
+
+The [full Windows CI on the canonical-guidance fix](https://github.com/vypdev/copilot/actions/runs/37003674978)
+passed 515 suites, the coverage budgets, package checks, and generated-guidance
+validation, then failed the independent documentation contract. Windows
+`readdirSync` paths use backslashes, and its checkout MDX uses CRLF; the
+validator interpreted registered routes and required document excerpts as
+missing. Canonicalize only relative path separators and CRLF text at the
+documentation validator's read boundary. Keep the same route, snippet,
+template, and required-copy assertions, and test that normalization preserves
+ordinary content drift. A fresh full Windows CI run MUST pass the complete
+documentation contract before the platform gate is considered verified.
+The hosted Windows setup job MUST also execute the documentation, workflow,
+specification, and acceptance validators after its full coverage suite; the
+manually dispatched service-runner job MUST retain them as well. Workflow
+contract tests MUST reject removal of either validator step. A passing Unix CI
+run alone cannot close the Windows validator gate.
+The [first deterministic Windows validator run](https://github.com/vypdev/copilot/actions/runs/37005913771)
+passed documentation, workflow, specification, and acceptance validation after
+full coverage. Its final `git diff --check` flagged CRLF in regenerated Windows
+bundles as trailing whitespace. CI and the dedicated Windows job MUST use
+Git's `cr-at-eol` whitespace setting alongside explicit `blank-at-eol`,
+`blank-at-eof` and `space-before-tab` checks; actual trailing spaces before
+the line ending MUST still fail. Repeat the Windows job after this
+change before closing the platform gate.
+The [next Windows validator run](https://github.com/vypdev/copilot/actions/runs/37007422803)
+passed every validator except the diff check, which reported one whitespace
+line in regenerated `build/web/index.html`. `build/` is generated and differs
+across platforms; Unix `validate:build` and all-platform npm package checks
+cover those artifacts. The diff whitespace gate MUST exclude only `build/`,
+while retaining all four whitespace rules and checking source, workflows,
+specs, and docs.
+A fixture MUST show that a trailing space in source is still rejected. The CI
+gate MUST compare committed changes from the event base to HEAD; an unmodified
+checkout diff does not verify the PR or push contents. A push event with an
+all-zero `before` SHA (new ref) MUST compare HEAD with Git's empty tree so
+that the first committed contents are checked too.
+
+The [PR #403 Bugbot review on 67b81ab](https://github.com/vypdev/copilot/actions/runs/37013601183)
+reported that the automatic `pull_request` setup job executed PR-controlled
+build and test code on a persistent self-hosted Windows runner. This repository
+is public. The existing generic CI and RepoWise jobs also use persistent
+self-hosted runners on PR events. GitHub's [secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use)
+warns that a public fork PR can compromise such a runner despite a read-only
+workflow token. The next workflow change MUST route automatic PR CI and
+RepoWise checks to GitHub-hosted runners; the service-specific Windows job
+MUST run only under maintainer-controlled `workflow_dispatch`. Hosted Windows
+MUST execute the full coverage and contract suite before the manual job is
+removed from automatic PR checks. Contract mutation tests MUST reject a
+self-hosted automatic PR job in those three quality workflows, missing hosted Windows full coverage, or loss of
+the manual service-runner evidence path. No live setup, PAT, or agent request
+is needed for these checks.
+
+A manual dispatch is not itself proof that the selected Git ref was reviewed.
+The persistent-runner setup matrix MUST accept only dispatches from the
+protected default `master` ref; a `develop`, PR branch, or tag dispatch MUST skip every self-hosted
+job before checkout or dependency installation. The workflow contract MUST
+reject removal or weakening of that ref guard and test both accepted and
+rejected ref expressions. This means a PR-head service-runner result cannot be
+claimed from this workflow until a separate, reviewed execution mechanism is
+available; hosted PR checks continue on the exact head. Maintain the human
+service-runner acceptance gate as open for the changed PR head, rather than
+inferring a pass from an earlier commit or a protected-branch run. GitHub's
+active `Master Push Check` ruleset applies to `~DEFAULT_BRANCH` (`master`),
+whereas `Develop Push Check` is disabled; the classic branch-protection API
+also reports `develop` unprotected on 2026-10-05. Workflow-level conditions
+cannot prevent a separately modified branch workflow from targeting an
+unrestricted runner group. The organization runner-group settings could not
+be audited with the available GitHub permission (`403`). A repository/org
+administrator MUST [restrict the runner group to reviewed workflow refs](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/manage-access) or
+provide an equivalent approval boundary before PR-head service runs can be
+called secure. That external policy review remains an open security gate.
+
+The 2026-10-05 runner-cost decision supersedes only the blanket hosted-runner
+requirement for the repository's `CI Check` and `RepoWise code health` jobs.
+Both MUST use an Ubuntu self-hosted `codex` runner for repository-owned PRs,
+pushes, and manual runs. A fork PR or any merge-group event MUST instead use
+disposable `ubuntu-latest`: a merge group can contain fork code but its event
+does not expose the original PR trust classification to the runner selector.
+The quality checks still run without executing that code on a persistent
+runner. The trusted-default-branch PR approval observer
+MUST use a self-hosted `codex` runner. The automatic three-OS setup fixture
+matrix and its dependent Windows Codecov upload remain GitHub-hosted, while
+the three service-runner fixture jobs remain manual-only. Release and hotfix
+`publish-npm` MUST remain GitHub-hosted because npm Trusted Publishing does
+not support self-hosted runners. This scheduling decision changes no setup
+session behavior, PAT access, or acceptance-ledger result.
+
+An ordinary manual service-runner fixture dispatch MUST skip the three hosted
+platform jobs so it does not repeat the automatic PR matrix or consume hosted
+minutes. The hosted platform matrix MUST still run on PRs and on the explicit
+`upload_windows_coverage=true` dispatch, because that upload needs a Windows
+coverage artifact from the same run. Workflow-contract tests MUST reject an
+unconditional hosted matrix and a selector that omits either authorized path.
+
+Six additional workflow-contract cases, outside the 350 setup cases, MUST
+verify repository-owned versus fork PR routing and merge-group isolation for
+both CI and RepoWise;
+the existing contract validation MUST also reject hosted approval observers,
+self-hosted npm publication, and any loss of the six platform fixture paths.
+The operator documentation MUST state the fork exception and OIDC publishing
+exception. A fresh run on each selected runner type is required before calling
+the routing operationally verified; static workflow checks alone do not prove
+runner availability or the outcome of remote jobs.
+
+The first [RepoWise run on `e197cb0c`](https://github.com/vypdev/copilot/actions/runs/37289899480)
+failed workflow validation before any job started. Its job-level `env` used
+`runner.temp`, which GitHub's [context availability table](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability)
+does not permit at that key. Keep only run/attempt identifiers in the job
+environment, resolve the runner temporary root inside steps, and make the
+workflow contract reject `runner.*` in job-level `env`. A new remote RepoWise
+run MUST actually start on a self-hosted Ubuntu runner and finish before this
+routing gate can close.
+
+The [next RepoWise run on `8ac43b0a`](https://github.com/vypdev/copilot/actions/runs/37290766093)
+reached `ubuntu-runner-3` but failed while creating a virtual environment:
+its system Python 3.14 lacks Ubuntu's `ensurepip`/`python3.14-venv` package.
+The workflow MUST select a complete Python distribution using the official
+`actions/setup-python` action before creating its private virtual environment;
+it MUST NOT install OS packages into the persistent runner. Workflow contracts
+MUST reject removal of that setup step, and a subsequent actual RepoWise run
+MUST complete report generation and upload on an Ubuntu self-hosted runner.
+
+The [Codecov report for 67b81ab](https://app.codecov.io/gh/vypdev/copilot/pull/403)
+shows 83.64% patch coverage and 105 missing changed lines, including Windows
+ACL code that the Unix CI upload cannot exercise. The hosted Windows full
+suite MUST upload its coverage report for the same exact commit; Codecov
+[merges reports from separate jobs](https://docs.codecov.com/docs/merging-reports).
+The PR's processed combined report, not a successful upload step alone, is
+the patch-coverage evidence. Any remaining missing lines or stale base report
+MUST remain explicit reviewer work. The previous Windows run also exposed
+three Jest five-second test-budget failures while preparing multiple native
+ACL fixtures; the multi-case Jest budget may be extended separately from each
+child process's five-second functional timeout. A fresh hosted Windows suite
+and a manual service-runner suite MUST both pass after the change.
+The [Windows hosted job on `f4703dc4`](https://github.com/vypdev/copilot/actions/runs/37245776836)
+passed its isolated runtime fixtures, 523 full-coverage suites, and acceptance
+budgets, then failed when Codecov's Windows uploader could not download its
+signature file. Keep the coverage measurement on hosted Windows. Transfer only
+its generated `lcov.info` through a same-run Actions artifact to a dependent
+GitHub-hosted Ubuntu job, and run the Codecov uploader there with the `windows`
+flag. The [automatic PR run on `457811a2`](https://github.com/vypdev/copilot/actions/runs/37246539383)
+confirmed all hosted platform tests and the artifact transfer, but Codecov's
+Linux uploader failed its TLS handshake before verification. Automatic approval
+review then rejected a manually dispatched six-platform run because the new
+job would export private-source-derived Windows coverage to Codecov without
+specific authorization. Until that authorization is granted, the dependent
+Codecov upload job MUST run only on a manual dispatch with the explicit
+`upload_windows_coverage=true` input. The input defaults to `false`, so
+ordinary manual fixture runs and automatic PR checks retain the Windows
+coverage artifact without exporting it through this new job. The job MUST use checkout without stored credentials,
+fail on a missing artifact or uploader error, and never mask a failed platform
+test job. Workflow contract mutation tests MUST enforce this boundary.
+A processed Codecov report for the exact PR head remains required; an artifact
+or successful uploader step alone does not satisfy patch coverage.
+
+The [Bugbot review of `8aa335da`](https://github.com/vypdev/copilot/actions/runs/37114090732)
+found that cancellation used a live environment variable to locate
+`taskkill.exe` and that the official installer assumed Windows was installed
+on `C:`. The agent runtime SDD defines the repair: capture and validate the
+runner's system root once, then use that root for every system executable and
+for the isolated installer environment. Deterministic cases MUST reject
+tampered roots and demonstrate non-`C:` path selection. Hosted and service
+Windows fixture runs MUST pass after the repair; a real Windows Action agent
+run is still required to close the provider-runtime gate.
+The [Windows Action run on `8e4978e9`](https://github.com/vypdev/copilot/actions/runs/37115583847)
+rejected the private Codex replacement for a writable ACL before any agent
+execution. The agent runtime SDD now requires preflighting private install
+roots, falling back to a safe profile-local directory, and securing the
+installed files without changing an operator CLI. The manual Windows setup
+smoke on the same commit failed during checkout, before the fixtures ran; it
+does not close any Windows service gate.
+The [manual six-platform smoke on `9adcd05c`](https://github.com/vypdev/copilot/actions/runs/37182449153)
+passed hosted Ubuntu, macOS and Windows plus self-hosted macOS and Ubuntu.
+The self-hosted Windows job reached the full coverage step and passed 522 of
+523 suites, but a Jest worker ran out of memory in the architecture import
+ratchet suite. This is a resource failure, not an assertion pass or evidence
+for X023/X026. Windows coverage MUST bound Jest worker concurrency and rerun
+the same coverage, acceptance budget and documentation gates on hosted and
+self-hosted Windows. The other five jobs do not substitute for that run.
+The [manual six-platform run on `a3748c54`](https://github.com/vypdev/copilot/actions/runs/37247387180)
+again passed five jobs and all isolated Windows runtime fixtures. Its Windows
+service job then passed 522 of 523 full-coverage suites but the architecture
+import ratchet worker reached the Node heap limit at roughly 2 GiB. Capping
+Windows at two workers alone did not prevent accumulation across suites.
+Set a fixed Jest worker-idle memory limit well below that heap ceiling so
+workers recycle between suites; do not skip the architecture test, inflate
+the agent runtime memory budget, or infer a service pass from hosted Windows.
+Both hosted and self-hosted Windows MUST pass the same full 523-suite coverage,
+acceptance-budget and documentation sequence on the exact head.
+The [manual run on `c1e727cf`](https://github.com/vypdev/copilot/actions/runs/37248458601)
+proved the 512 MB Jest worker-idle limit completes those gates on the Windows
+service runner, while the hosted Windows job was cancelled at its 20-minute
+job limit after only 259 of 523 suites. The same cancellation affected the
+[automatic PR job](https://github.com/vypdev/copilot/actions/runs/37248454693).
+The earlier hosted Windows job on `a3748c54` completed all 523 suites without
+worker recycling. Apply the 512 MB recycle limit only to the Windows
+self-hosted coverage step via an explicit workflow environment setting; keep
+the two-worker Windows concurrency cap for both jobs. The workflow contract
+MUST reject a missing service-runner limit or a hosted-job limit. Repeat the
+exact-head six-platform fixture run and automatic hosted Windows PR check;
+both Windows coverage jobs MUST complete before the platform gate passes.
+The [Bugbot review on `5232e286`](https://github.com/vypdev/copilot/actions/runs/37250096592)
+identified accepted Windows ancestor `GW`/`FW` grants. The agent runtime SDD
+requires rejecting these generic writes and file-creation rights on the
+executable's immediate directory while preserving narrow add-only rights on
+higher ancestors. Cover symbolic and numeric ACL forms, then rerun the hosted
+and service Windows fixtures on the corrected exact head before closing this
+security finding. A passing review check alone is insufficient evidence.
+Agent provisioning on macOS also remains open after the installed-file failure
+described in the agent runtime SDD.
+The [Bugbot review on `2319b41b`](https://github.com/vypdev/copilot/actions/runs/37244058136)
+reported that the web journey could end as cancelled after a successful
+session. The command currently creates the journey during the repository stage
+and the shared coordinator publishes its outcome before the browser bridge
+finishes, so this diagnosis requires end-to-end evidence rather than a status
+assumption. Fake-port CLI/web tests MUST assert both the journey outcome and
+the final browser outcome for complete, dry-run, partial, cancelled and
+blocked runs. A mismatch is a correctness defect; a matching result can be
+used to resolve the finding with exact code and test evidence.
+When an unexpected finalization has no journey outcome, numeric and textual
+zero exit codes MUST use the same cancelled fallback; a nonzero or malformed
+exit code MUST use blocked. An adapter fixture MUST cover both representations
+and preserve a recorded journey outcome over either fallback. CI's event-base
+diff check MUST retain a full-history checkout; a workflow-contract mutation
+test MUST fail if `fetch-depth: 0` is removed, including for merge groups.
+
+The hosted Windows smoke on `4f498485` reached the isolated runtime fixtures
+and failed because the private PowerShell 5.1 `Get-FileHash` fixture exceeded
+its 30-second child-process deadline; `spawnSync` returned no exit status.
+The code-identical manual fixture on `e7f4b95e` passed that case in 25.8
+seconds and completed Windows coverage and documentation gates. The test
+must retain a finite deadline but allow 60 seconds for PowerShell module
+startup and a longer Jest case deadline, and report its bounded process error
+code on timeout. A fresh hosted Windows job on the amended exact head must
+pass; the prior manual result does not substitute for it.
 
 1. Review this threat model and UI prototype with product/security/accessibility;
    freeze semantic transport schemas, redacted views, and error taxonomy.
@@ -1679,8 +2349,16 @@ non-hex input, and the busy state. Server-side rate limiting remains authoritati
       recovery, and PAT cleanup/renewal guidance are linked and validated.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
-- [ ] No readiness-blocking decision remains unresolved; no GitHub issue,
-      Action run, or test PAT is created while validating this implementation.
+- [ ] Repository-owned CI and RepoWise run on self-hosted Ubuntu, fork PRs on
+      hosted Ubuntu, and the approval observer on self-hosted `codex`.
+      The self-hosted macOS, Ubuntu and Windows fixture matrix is manual only.
+      npm publication remains hosted for Trusted Publishing. All six platform
+      jobs pass their full fixture, package, coverage and validator contracts;
+      a skipped or queued service job remains open. The combined Codecov report
+      is reviewed for the exact PR head.
+- [ ] No readiness-blocking decision remains unresolved; no test GitHub issue,
+      credential-bearing setup Action run, or test PAT is created while
+      validating this implementation.
 
 ## 20. References and decisions
 

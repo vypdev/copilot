@@ -2,7 +2,7 @@ import type { WebSetupMessageCopyId } from '../../../../src/application/contract
 
 export const messageCopyPt: Readonly<Record<WebSetupMessageCopyId, string>> = {
   'session.controlMoved': 'O controlo passou para este separador. O separador anterior é agora apenas de leitura.',
-  'session.cancelled': 'A configuração parou antes de novas alterações. Os PAT criados no GitHub continuam a existir até os eliminar lá.',
+  'session.cancelled': 'Cancelamento solicitado. Os testes temporários já iniciados concluirão a limpeza antes de o processo terminar. Os PAT criados no GitHub permanecem até serem eliminados.',
   'plan.ready': 'Plano pronto: {files} ficheiros, {variables} Variables e {secrets} nomes de Secrets. Reveja-o antes de continuar.',
   'permission.preview': 'Pré-visualização das permissões: fluxos de issues {issues}; aprovação de PR {approval}; Secrets {secrets}; Variables {variables}; Projects {projects}. Reveja as permissões exatas antes de criar o PAT de configuração.',
   'setupPat.corrected.bootstrap': 'O PAT de configuração não conseguiu aceder ao repositório. Não começaram alterações. Permissões necessárias: {grants}. Crie um PAT corrigido com a ligação GitHub atualizada.',

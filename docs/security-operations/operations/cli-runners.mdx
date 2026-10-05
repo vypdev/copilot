@@ -37,23 +37,7 @@ For OpenCode, Copilot validates and passes `openai/gpt-6-luna` explicitly. Repos
 
 ## Provisioning contract
 
-The runner must provide the selected executable and credential reference before
-the Action invokes it. An available executable is operator-owned: Copilot
-records its non-empty version identity and does not replace it. When a default
-Codex or OpenCode executable is missing, Copilot installs the exact manifest
-package and verifies that installation against the reviewed identity. Cursor
-must be preinstalled because it has no reviewed automatic installer.
-
-Required checks:
-
-1. install or reuse only the selected runtime;
-2. record a non-empty runtime identity and exactly verify Copilot-owned installations;
-3. verify the headless help command;
-4. verify the credential reference without printing its value;
-5. run a harmless, non-production smoke test when authorized;
-6. fail before Copilot starts when a prerequisite is missing (except Codex authentication, which may be resolved by a preinitialized local CLI session).
-
-Do not put secrets in action inputs, YAML literals, command arguments, prompts, or logs. Do not copy local OAuth files into GitHub-hosted CI.
+The Action checks an installed default CLI against the provider's current official release and uses a confirmed newer release in a private job directory. If the check is unavailable, it reuses the installed CLI. If the default command is missing, it installs only that provider's official standalone CLI privately. An explicit executable is never replaced. A non-empty version, trusted file, supported headless command, and credential reference are required. No exact version is pinned, and no npm, pnpm, or `actions/setup-node` step is required in the distributed agent workflows. Do not put secrets in action inputs, YAML literals, command arguments, prompts, or logs. Do not copy local OAuth files into GitHub-hosted CI.
 
 ## Verification command
 
@@ -63,7 +47,20 @@ From the repository root:
 node scripts/verify-agent-clis.cjs
 ```
 
-The verifier reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
+The verifier checks the selected launcher, interpreter, and package entry point before invoking help, version, or login status. It rejects files with unsafe ownership or write access, including Windows ACLs that grant modification to another principal. It reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
+
+The Setup Platform Smoke workflow runs fixture and package tests on hosted
+Ubuntu, macOS, and Windows for pull requests. Its persistent self-hosted
+matrix runs only when manually dispatched from the protected `master` branch;
+dispatching a PR branch, `develop`, or tag skips that matrix. A result from `master` or an
+older PR commit does not verify the current PR head on those service runners.
+Do not dispatch this fixture workflow to run a live setup or use a PAT.
+An organization administrator must also [restrict the runner group to reviewed workflow refs](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/manage-access);
+this setting could not be verified with the repository token.
+
+On Windows, the Action captures the runner service's `SystemRoot`, `WINDIR`, and `SystemDrive` when it starts. They must identify the same canonical Windows installation; the drive may be other than `C:`. The Action uses that captured directory for PowerShell, curl, and process-tree termination, even if a later child environment changes those variables. If the variables disagree or the directory is redirected, repair the runner service environment and start a new job. The Action fails before installing an agent in that case. The setup platform smoke checks the isolated PowerShell module path with a local fixture; an authenticated agent run remains separate evidence.
+
+For an absent or untrusted default CLI, Windows installs the official replacement only inside a private job directory. The Action checks that directory and its ancestors before download, tries the account's profile-local temporary directory if the runner job temporary directory is unsafe, then restricts the installed executable's ACL before version or agent execution. If both locations fail the ACL check, repair the runner account or directory ACLs and retry the job. The Action never rewrites an operator-installed CLI.
 
 ## Provider notes
 

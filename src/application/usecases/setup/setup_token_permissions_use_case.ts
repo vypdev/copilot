@@ -6,17 +6,16 @@ import type {
 import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
+    SetupTokenPermissionProgress,
 } from '../../../domain/setup_token_permissions';
-import {
-    isOperationallyAvailableSetupRead,
-    reconcileSetupTokenPermissionEvidence,
-} from '../../policies/setup_token_permission_evidence_policy';
+import { isOperationallyAvailableSetupRead, reconcileSetupTokenPermissionEvidence } from '../../policies/setup_token_permission_evidence_policy';
 
-/** Validates PAT identity first, then runs only read-only permission probes. */
+/** Validates PAT identity first, then runs scoped capability probes. */
 export class SetupTokenPermissionsUseCase {
     constructor(
         private readonly credentials: Pick<SetupCredentialValidationPort, 'validateSetupPat'>,
         private readonly permissions: SetupTokenPermissionQueryPort,
+        private readonly onProgress?: (progress: SetupTokenPermissionProgress) => void,
     ) {}
 
     async inspect(request: SetupTokenPermissionsRequest): Promise<SetupTokenPermissionReport> {
@@ -40,25 +39,23 @@ export class SetupTokenPermissionsUseCase {
             };
         }
 
-        const evidence = await this.permissions.inspect(
-            request.owner,
-            request.repository,
-            request.token,
-            request.requirements,
-        );
+        const evidence = this.onProgress
+            ? await this.permissions.inspect(request.owner, request.repository, request.token,
+                request.requirements, this.onProgress, request.selectedProjectNumbers)
+            : await this.permissions.inspect(request.owner, request.repository, request.token,
+                request.requirements, undefined, request.selectedProjectNumbers);
         const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');
         const requiredWrites = requiredChecks.filter(check => check.level === 'write');
         const readUsable = (check: SetupTokenPermissionCheck) => (check.status === 'verified' && check.level === 'read')
-            || (check.status === 'unverifiable' && check.level === 'read'
+            || (check.status === 'available' && check.level === 'read'
                 && isOperationallyAvailableSetupRead(check, check.publicReadEvidence)
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
-        const ready = readsUsable && requiredWrites.length === 0;
-        const confirmationRequired = readsUsable
-            && requiredWrites.length > 0
-            && requiredWrites.every(check => check.status === 'unverifiable');
+        const ready = readsUsable && requiredWrites.every(check => check.status === 'verified'
+            && check.writeProof === 'transaction');
+        const confirmationRequired = false;
         return {
             role: request.role,
             ...(identity.account ? { account: identity.account } : {}),

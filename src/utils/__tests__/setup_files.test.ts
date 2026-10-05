@@ -125,12 +125,62 @@ describe('setup_files', () => {
     expect(fs.readFileSync(manifestPath, 'utf8')).toBe(manifestBefore);
   });
 
-  it('keeps this repository dogfood artifacts byte-identical to the default renderer', () => {
+  it('treats CRLF-only checkout guidance as owned, current, and unchanged on rerun', () => {
+    const setupDir = path.resolve(__dirname, '../../../setup');
+    const configuration = createDefaultSetupConfiguration();
+    ensureGitHubDirs(tmpDir);
+    copySetupFiles(tmpDir, setupDir, configuration.features, { setupConfiguration: configuration });
+    const managed = [
+      '.copilot/repository-profile.json', '.copilot/AGENT_GUIDE.md',
+      '.agents/skills/copilot-repository-workflow/SKILL.md', 'AGENTS.md',
+      '.copilot/setup-manifest.json',
+    ];
+    for (const relative of managed) {
+      const file = path.join(tmpDir, relative);
+      fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/\n/g, '\r\n'));
+    }
+
+    expect(inspectRepositoryAgentGuidance(tmpDir, configuration).filter(check => check.status === 'fail')).toEqual([]);
+    const rerun = copySetupFiles(tmpDir, setupDir, configuration.features, { setupConfiguration: configuration });
+    expect(rerun.copied).toBe(0);
+    for (const relative of managed) {
+      expect(fs.readFileSync(path.join(tmpDir, relative), 'utf8')).toContain('\r\n');
+    }
+
+    const guidePath = path.join(tmpDir, '.copilot/AGENT_GUIDE.md');
+    fs.appendFileSync(guidePath, 'maintainer edit\r\n');
+    expect(inspectRepositoryAgentGuidance(tmpDir, configuration))
+      .toContainEqual(expect.objectContaining({ id: 'agent-guide-digest', status: 'fail' }));
+  });
+
+  it('retires manifest-owned guidance with CRLF-only checkout representation', () => {
+    const setupDir = path.resolve(__dirname, '../../../setup');
+    const configuration = createDefaultSetupConfiguration();
+    ensureGitHubDirs(tmpDir);
+    copySetupFiles(tmpDir, setupDir, configuration.features, { setupConfiguration: configuration });
+    for (const relative of [
+      '.copilot/repository-profile.json', '.copilot/AGENT_GUIDE.md',
+      '.agents/skills/copilot-repository-workflow/SKILL.md', 'AGENTS.md',
+    ]) {
+      const file = path.join(tmpDir, relative);
+      fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/\n/g, '\r\n'));
+    }
+
+    configuration.repositoryAgentGuidance.enabled = false;
+    const result = reconcileRepositoryAgentGuidance(tmpDir, configuration);
+    expect(result.skipped).toBe(0);
+    expect(fs.existsSync(path.join(tmpDir, '.copilot/repository-profile.json'))).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, '.copilot/setup-manifest.json'))).toBe(false);
+  });
+
+  it('keeps this repository agent artifacts equivalent to the default renderer', () => {
     const repositoryRoot = path.resolve(__dirname, '../../..');
     const configuration = createDefaultSetupConfiguration();
 
     for (const artifact of renderRepositoryAgentArtifacts(configuration)) {
-      expect(fs.readFileSync(path.join(repositoryRoot, artifact.path), 'utf8')).toBe(artifact.content);
+      const checkedOut = fs.readFileSync(path.join(repositoryRoot, artifact.path), 'utf8');
+      expect(process.platform === 'win32' ? checkedOut.replace(/\r\n/g, '\n') : checkedOut)
+        .toBe(artifact.content);
     }
   });
 

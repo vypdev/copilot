@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { setupQuestionPresentation } from '../../application/policies/setup_question_guidance_policy';
+import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
 import type { SetupQuestion } from '../../domain/setup_questionnaire';
 
 function markup(name: string, props: Record<string, unknown>, locale = 'en'): string {
@@ -12,6 +13,38 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test('bootstrap Contents read progress leaves the conditional write row pending', () => {
+    const requirements = buildSetupPatPermissionRequirements().filter(item => item.permission === 'Contents');
+    const html = markup('PermissionProgressPanel', { permissions: { requirements, progress: [
+      { role: 'setup', requirementId: requirements[0].id, phase: 'verified' },
+    ] } });
+    expect((html.match(/permission-progress-done/gu) ?? []).length).toBe(1);
+    expect((html.match(/permission-progress-state/gu) ?? []).length).toBe(2);
+    expect(html).toContain('Waiting');
+  });
+
+  test('permission progress displays each grant’s latest outcome and a bounded HTTP failure', () => {
+    const html = markup('PermissionProgressPanel', { permissions: {
+      requirements: [
+        { id: 'setup.repository.contents', role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', applicability: 'required' },
+        { id: 'setup.organization.projects', role: 'setup', scope: 'organization', permission: 'Projects', level: 'read', applicability: 'required' },
+      ],
+      progress: [
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'checking' },
+        { role: 'setup', requirementId: 'setup.organization.projects', phase: 'checking' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'creating' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'reading' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'deleting' },
+        { role: 'setup', requirementId: 'setup.repository.contents', phase: 'verified' },
+        { role: 'setup', requirementId: 'setup.organization.projects', phase: 'failed', detail: 'http-403' },
+      ],
+    } }, 'es');
+    expect(html).toContain('Contenido');
+    expect(html).toContain('Proyectos');
+    expect(html).toContain('HTTP 403');
+    expect(html).toContain('permission-progress-done');
+    expect(html).toContain('permission-progress-failed');
+  });
   test('pairing screen explains terminal code without exposing a key in the URL', () => {
     const html = markup('PairingPanel', { busy: false });
     expect(html).toContain('Pair this browser');
@@ -70,6 +103,93 @@ describe('web setup component semantics', () => {
     expect(html).toContain('No se iniciaron cambios');
   });
 
+  test('blocked permission result exposes unfinished temporary-resource cleanup', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.repository.secrets', role: 'setup',
+          permission: 'Secrets', scope: 'repository', level: 'write', applicability: 'required',
+          reason: 'Provision Secrets', probe: 'secrets', status: 'unverifiable',
+          cleanupPending: true, message: 'bounded failure' }] } });
+    expect(html).toContain('temporary permission-test resource may still exist');
+    expect(html).toContain('cleanup');
+    expect(html).toContain('Secrets');
+    expect(html).not.toContain('No repository or GitHub setup changes');
+  });
+
+  test('a Secret collision is displayed as a possible partial change with a specific action', () => {
+    const html = markup('ResultPanel', { outcome: 'partial', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: true },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.repository.secrets', role: 'setup',
+          permission: 'Secrets', scope: 'repository', level: 'write', applicability: 'required',
+          reason: 'Provision Secrets', probe: 'secrets', status: 'unverifiable',
+          cleanupPending: true, incident: 'secret-collision', message: 'bounded failure' }] } });
+    expect(html).toContain('A concurrent Secret value may have changed');
+    expect(html).toContain('Inspect the GitHub Secret audit trail');
+    expect(html).not.toContain('No repository or GitHub setup changes');
+  });
+
+  test.each([
+    ['en', 'PAT permission evidence', 'Projects', 'Unverifiable'],
+    ['es', 'Comprobación de permisos del PAT', 'Proyectos', 'No verificable'],
+    ['fr', 'Vérification des droits du PAT', 'Projets', 'Non vérifiable'],
+    ['pt', 'Verificação das permissões do PAT', 'Projetos', 'Não verificável'],
+  ])('%s blocked PAT result preserves the exact failed grant without a credential', (locale, title, name, status) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', identityMessage: 'ok', ready: false,
+        confirmationRequired: false, checks: [{ id: 'setup.organization.projects', role: 'setup',
+          permission: 'Projects', scope: 'organization', level: 'read', applicability: 'required',
+          reason: 'Inspect Projects', probe: 'projects', status: 'unverifiable',
+          operationallyAvailable: true,
+          message: 'private diagnostic secret-token' }] } }, locale);
+    expect(html).toContain(title);
+    expect(html).toContain(name);
+    expect(html).toContain(status);
+    expect(html).not.toContain('No required grant failed this check');
+    if (locale !== 'en') expect(html).toContain('GitHub · Projects');
+    expect(html).not.toContain('private diagnostic');
+    expect(html).not.toContain('secret-token');
+  });
+
+  test.each([
+    ['en', 'Rejected', 'Not checked'],
+    ['es', 'Rechazados', 'Sin comprobar'],
+    ['fr', 'Refusés', 'Non vérifié'],
+    ['pt', 'Recusados', 'Não verificada'],
+  ])('%s invalid identity lists required grants without claiming individual denial', (locale, identity, status) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'invalid', identityMessage: 'rejected',
+        ready: false, confirmationRequired: false, checks: [{ permission: 'Projects',
+          scope: 'organization', level: 'read', applicability: 'required', status: 'missing' }] } }, locale);
+    expect(html).toContain(identity);
+    expect(html).toContain('Projects');
+    expect(html).toContain(status);
+    expect(html).not.toContain('private diagnostic');
+  });
+
+  test('unverifiable identity lists grants as not checked', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Setup PAT', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'unverifiable', identityMessage: 'private diagnostic',
+        ready: false, confirmationRequired: false, checks: [{ permission: 'Secrets',
+          scope: 'organization', level: 'write', applicability: 'required', status: 'unverifiable' }] } });
+    expect(html).toContain('Secrets');
+    expect(html).toContain('Not checked');
+    expect(html).not.toContain('private diagnostic');
+  });
+
+  test('unrelated blocked outcome does not attribute stale permission evidence to its cause', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'storage', stoppedStage: 'Plan', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', checks: [{ permission: 'Projects',
+        scope: 'organization', level: 'read', applicability: 'required', status: 'unverifiable' }] } });
+    expect(html).not.toContain('PAT permission evidence');
+    expect(html).not.toContain('Projects');
+  });
+
   test('partial result shows structured cause, safe effects, and diagnostic reference', () => {
     const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
       detail: { reasonCode: 'provider', stoppedStage: 'Apply', mutationStarted: true,
@@ -79,6 +199,19 @@ describe('web setup component semantics', () => {
     expect(html).toContain('Reported completed');
     expect(html).toContain('Outcome needs inspection');
     expect(html).toContain('12345678-1234-4123-8123-123456789abc');
+  });
+
+  test.each([
+    ['en', 'which changes completed', 'before Apply'],
+    ['es', 'qué cambios se completaron', 'antes de aplicar cambios'],
+    ['fr', 'modifications effectuées', 'avant l’application'],
+    ['pt', 'quais alterações foram concluídas', 'antes de aplicar'],
+  ])('%s partial result with unknown cause does not claim Apply never started', (locale, expected, falseClaim) => {
+    const html = markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
+      detail: { reasonCode: 'unknown', stoppedStage: 'Apply', mutationStarted: true,
+        effects: [{ id: 'secrets', state: 'needs-inspection', scope: 'repository' }] } }, locale);
+    expect(html).toContain(expected);
+    expect(html).not.toContain(falseClaim);
   });
 
   test('French technical question guidance is complete, not a mixed-language preview', () => {
@@ -210,12 +343,12 @@ describe('web setup component semantics', () => {
 
   test('choice recommendations translate their display label without changing the option value', () => {
     const html = markup('QuestionPrompt', { prompt: {
-      kind: 'question', title: 'Provisioning', phase: 'full', pass: 1,
-      question: { stateId: 'provisioning', id: 'ai.provisioningMode', label: 'Provisioning mode',
-        kind: 'choice', defaultValue: 'always', choices: ['auto', 'always', 'disabled'] },
+      kind: 'question', title: 'Bugbot', phase: 'full', pass: 1,
+      question: { stateId: 'bugbot', id: 'ai.bugbotEffort', label: 'Bugbot effort',
+        kind: 'choice', defaultValue: 'smart', choices: ['smart', 'low', 'default', 'high'] },
     }, controller: true, busy: false }, 'es');
-    expect(html).toContain('Respuesta sugerida: Reinstalar siempre');
-    expect(html).toContain('value="always"');
+    expect(html).toContain('Respuesta sugerida: Adaptativa');
+    expect(html).toContain('value="smart"');
   });
 
   test('read-only result cannot show its close control', () => {
@@ -275,12 +408,14 @@ describe('web setup component semantics', () => {
           coverageMode: 'check', coverageCheck: 'Tests', projectNumbers: ['12'],
           projectStatuses: [{ transition: 'issueCreated', value: 'Todo' }],
           variableScope: 'repository', secretScope: 'repository', initialTag: false },
-        files: ['AGENTS.md'], workflows: ['copilot.yml'], variables: ['MAIN_BRANCH'], secrets: ['PAT'], warnings: [],
+        files: ['AGENTS.md'], workflows: ['copilot.yml'], variables: ['MAIN_BRANCH'], secrets: ['PAT'],
+        permissionProbes: [{ scope: 'organization', permission: 'Secrets' }], warnings: [],
       } }, controller: true, busy: false, onSubmit: noOp,
     });
     for (const item of ['AGENTS.md', 'copilot.yml', 'MAIN_BRANCH', 'PAT']) expect(html).toContain(item);
     expect(html).toContain('main');
     for (const item of ['Planner', 'o3', 'Tests', '15368', 'Todo', '#12']) expect(html).toContain(item);
+    expect(html).toContain('GitHub cannot guarantee atomic create-only behavior');
     expect(html).toContain('Approve');
   });
 
@@ -333,6 +468,35 @@ describe('web setup component semantics', () => {
     expect(html).toContain('Required');
     expect(html).toContain('Missing');
     expect(html).toContain('Provision Actions Secret');
+  });
+
+  test.each([
+    ['en', 'A non-public organization Project', 'read succeeded', 'temporary write check did not finish'],
+    ['es', 'Un Project no público', 'lectura funcionó', 'comprobación temporal de escritura no terminó'],
+    ['fr', 'Un Project non public', 'lecture a réussi', 'vérification temporaire en écriture n’a pas abouti'],
+    ['pt', 'Um Project não público', 'leitura foi bem-sucedida', 'verificação temporária de escrita não terminou'],
+  ])('%s explains mixed PAT evidence without leaking provider details', (locale, projectReason, publicReason, writeReason) => {
+    const checks = [
+      { id: 'metadata', role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read',
+        applicability: 'required', reason: 'Resolve repository identity and visibility.', probe: 'metadata',
+        status: 'available', publicReadEvidence: 'public-repository', operationallyAvailable: true,
+        message: 'private diagnostic token-marker' },
+      { id: 'secrets', role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write',
+        applicability: 'required', reason: 'Inspect and provision selected organization Actions Secrets.', probe: 'secrets',
+        status: 'unverifiable', message: 'private diagnostic token-marker' },
+      { id: 'projects', role: 'setup', scope: 'organization', permission: 'Projects', level: 'read',
+        applicability: 'required', reason: 'Inspect selected Projects and their Status options; setup does not edit Project items.',
+        probe: 'projects', status: 'verified', message: 'private diagnostic token-marker' },
+    ];
+    const html = markup('ContextPanel', { view: { revision: 1, repository: 'owner/repo', permissions: {
+      role: 'setup', report: { role: 'setup', identityStatus: 'valid', identityMessage: 'checked',
+        ready: false, confirmationRequired: true, checks },
+    } } }, locale);
+    expect(html).toContain(projectReason);
+    expect(html).toContain(publicReason);
+    expect(html).toContain(writeReason);
+    expect(html).not.toContain('private diagnostic');
+    expect(html).not.toContain('token-marker');
   });
 
   test.each([

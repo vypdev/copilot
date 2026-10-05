@@ -33,7 +33,8 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
   async audit(
     configuration: Readonly<SetupConfiguration>,
     remote?: Readonly<SetupRemoteConfiguration>,
-  ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }> {
+    onCleanupPending?: () => void,
+  ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[]; cleanupPending?: true }> {
     const required = buildConfiguredSetupPatPermissionRequirements(configuration, remote);
     this.ports.presenter.showRequirements('setup', required);
     if (this.context.token && (!remote || remote.ownerType === 'Unknown')) {
@@ -55,14 +56,19 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
     const report = await this.ports.permissions.inspect({
       role: 'setup', owner: this.context.owner, repository: this.context.repository,
       token: this.context.token, requirements: required,
+      ...(configuration.projects.ids ? { selectedProjectNumbers: configuration.projects.ids } : {}),
     });
+    const cleanupPending = report.checks.some(check => check.cleanupPending === true);
+    if (cleanupPending) onCleanupPending?.();
     this.ports.presenter.showReport(report);
-    const accepted = report.ready || (report.confirmationRequired && await this.ports.confirmUnverifiable(report));
+    const accepted = report.ready && !cleanupPending;
     if (!accepted || report.identityStatus !== 'valid') {
       if (this.context.guided) this.showCorrectedLink(required);
       return { status: 'blocked', errors: [
-        'The setup PAT has missing or unconfirmed access required by the approved setup plan. Grant or explicitly confirm the permissions shown above and retry.',
-      ] };
+        cleanupPending
+          ? 'A temporary permission check may have left a resource or changed a concurrent Secret. Review the failed permission, GitHub audit trail, and any local recovery journal before retrying.'
+          : 'The setup PAT did not pass every capability check required by the approved setup plan. Review the failed permission and cleanup result, then retry.',
+      ], ...(cleanupPending ? { cleanupPending: true } : {}) };
     }
     return { status: 'accepted' };
   }

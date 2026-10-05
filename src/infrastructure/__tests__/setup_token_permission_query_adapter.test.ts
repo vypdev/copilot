@@ -1,5 +1,17 @@
 import { SetupTokenPermissionQueryAdapter } from '../setup_token_permission_query_adapter';
 import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_permissions';
+import { SetupTokenPermissionsUseCase } from '../../application/usecases/setup/setup_token_permissions_use_case';
+import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
+import { SetupPermissionProbeJournal } from '../setup_permission_probe_journal';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+function immediateJournal(): SetupPermissionProbeJournal {
+    const journal = new SetupPermissionProbeJournal();
+    jest.spyOn(journal, 'recover').mockResolvedValue();
+    return journal;
+}
 
 const requirement = (
     level: 'read' | 'write' = 'read',
@@ -9,7 +21,8 @@ const requirement = (
     id: `setup.${scope}.${probe}`,
     role: 'setup',
     scope,
-    permission: probe === 'members' ? 'Members' : probe === 'issue-types' ? 'Issue Types' : probe,
+    permission: probe === 'members' ? 'Members' : probe === 'issue-types' ? 'Issue Types'
+        : probe === 'projects' && scope === 'organization' ? 'Projects' : probe,
     level, applicability: 'required', reason: 'test', probe,
 });
 
@@ -41,6 +54,27 @@ const ambiguousForbiddenResponses: ReadonlyArray<{
 ];
 
 describe('SetupTokenPermissionQueryAdapter', () => {
+    it('accepts a successful empty organization Projects read without claiming private access', async () => {
+        const requirements = buildSetupPatPermissionRequirements()
+            .filter(item => item.permission === 'Metadata'
+                || (item.permission === 'Contents' && item.level === 'read') || item.permission === 'Projects')
+            .map(item => ({ ...item, applicability: 'required' as const }));
+        const fetcher = jest.fn(async (url: string) => url.endsWith('/projectsV2?per_page=100')
+            ? response(true, 200, { payload: [] })
+            : response(true, 200, { payload: { private: true, default_branch: 'main' } }));
+        const audit = new SetupTokenPermissionsUseCase({
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+        }, new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }));
+        const report = await audit.inspect({ role: 'setup', owner: 'owner', repository: 'repo',
+            token: 'secret-token', requirements });
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report.checks.find(check => check.permission === 'Projects')).toMatchObject({
+            status: 'available',
+            publicReadEvidence: 'public-organization-projects',
+        });
+        expect(report.checks.find(check => check.permission === 'Projects')?.operationallyAvailable).toBe(true);
+        expect(fetcher.mock.calls.map(call => call[0])).toContain('https://api.github.com/orgs/owner/projectsV2?per_page=100');
+    });
     it('can be constructed with the production defaults', () => {
         expect(new SetupTokenPermissionQueryAdapter()).toBeInstanceOf(SetupTokenPermissionQueryAdapter);
     });
@@ -61,7 +95,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             id: `requirement-${index}`,
         }));
 
-        const inspection = new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+        const inspection = new SetupTokenPermissionQueryAdapter({ fetcher, journal: immediateJournal() }).inspect(
             'owner', 'repo', 'secret-token', requirements,
         );
 
@@ -90,7 +124,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     it.each([
         'metadata', 'contents', 'administration', 'issues', 'actions', 'checks',
         'pull-requests', 'workflows',
-    ] as const)('keeps a successful public repository %s probe unverifiable', async probe => {
+    ] as const)('reports a successful public repository %s read as available', async probe => {
         const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
             payload: { private: false, default_branch: 'main' },
         }));
@@ -101,8 +135,8 @@ describe('SetupTokenPermissionQueryAdapter', () => {
 
         expect(fetcher).toHaveBeenCalledTimes(probe === 'metadata' ? 1 : 2);
         expect(check).toMatchObject({
-            status: 'unverifiable',
-            message: expect.stringContaining('publicly readable'),
+            status: 'available',
+            message: expect.stringContaining('public repository'),
             operationallyAvailable: true,
             publicReadEvidence: 'public-repository',
         });
@@ -179,11 +213,54 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check.operationallyAvailable).toBeUndefined();
     });
 
-    it('keeps a write level unverifiable after a successful read probe', async () => {
-        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(true, 200)) })
-            .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')]);
-        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('no safe proof of write') });
-        expect(check.operationallyAvailable).toBeUndefined();
+    it('does not infer Issues Write from label access when exact Issue creation is denied', async () => {
+        const folder = await mkdtemp(join(tmpdir(), 'copilot-issue-grant-'));
+        try {
+            const calls: string[] = [];
+            const fetcher = jest.fn(async (url: string, options?: RequestInit) => {
+                calls.push(`${options?.method} ${new URL(url).pathname}`);
+                return response(false, 403);
+            }) as unknown as typeof fetch;
+            const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+                journal: new SetupPermissionProbeJournal(folder) })
+                .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')]);
+            expect(check).toMatchObject({ status: 'unverifiable', message: 'GitHub POST returned HTTP 403.' });
+            expect(check.writeProof).toBeUndefined();
+            expect(calls).toEqual(['POST /repos/owner/repo/issues']);
+            expect(await readdir(folder)).toEqual([]);
+        } finally { await rm(folder, { recursive: true, force: true }); }
+    });
+
+    it('publishes the closed Issue number when deletion is denied after Issues Write succeeds', async () => {
+        const folder = await mkdtemp(join(tmpdir(), 'copilot-issue-residue-'));
+        try {
+            const root = 'https://api.github.com/repos/owner/repo';
+            let title = '';
+            let state = 'open';
+            const fetcher = jest.fn(async (url: string, options?: RequestInit) => {
+                const path = new URL(url).pathname;
+                const method = options?.method ?? 'GET';
+                const issue = { number: 42, node_id: 'I_fixtureNode123', title, repository_url: root, state };
+                if (path === '/repos/owner/repo/issues' && method === 'POST') {
+                    title = (JSON.parse(String(options?.body)) as { title: string }).title;
+                    return response(true, 201, { payload: { ...issue, title } });
+                }
+                if (path === '/repos/owner/repo/issues/42' && method === 'GET') return response(true, 200, { payload: issue });
+                if (path === '/graphql' && method === 'POST') return response(false, 403);
+                if (path === '/repos/owner/repo/issues/42' && method === 'PATCH') {
+                    state = 'closed'; return response(true, 200, { payload: { ...issue, state } });
+                }
+                throw new Error(`Unexpected fixture request ${method} ${path}`);
+            }) as unknown as typeof fetch;
+            const progress: Array<{ phase: string; detail?: string }> = [];
+            const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+                journal: new SetupPermissionProbeJournal(folder) })
+                .inspect('owner', 'repo', 'secret', [requirement('write', 'issues')], update => progress.push(update));
+            expect(check).toMatchObject({ status: 'unverifiable', cleanupPending: true,
+                message: expect.stringContaining('Issue #42 remains closed') });
+            expect(progress.at(-1)).toMatchObject({ phase: 'failed', detail: 'issue-closed-42' });
+            expect(await readdir(folder)).toHaveLength(1);
+        } finally { await rm(folder, { recursive: true, force: true }); }
     });
 
     it('verifies Contents read when the commit-list probe identifies an empty repository', async () => {
@@ -200,7 +277,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         expect(check).toMatchObject({ status: 'verified', message: expect.stringContaining('repository is empty') });
     });
 
-    it('keeps an empty public repository response unverifiable', async () => {
+    it('reports an empty public repository read as available', async () => {
         const fetcher = jest.fn()
             .mockResolvedValueOnce(response(true, 200, { payload: { private: false } }))
             .mockResolvedValueOnce(response(false, 409));
@@ -209,7 +286,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             .inspect('owner', 'repo', 'secret', [requirement('read', 'contents')]);
 
         expect(check).toMatchObject({
-            status: 'unverifiable',
+            status: 'available',
             operationallyAvailable: true,
             publicReadEvidence: 'public-repository',
             message: expect.stringContaining('does not prove'),
@@ -220,7 +297,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: jest.fn().mockResolvedValue(response(false, 409)) })
             .inspect('owner', 'repo', 'secret', [requirement('write', 'contents')]);
 
-        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('does not prove') });
+        expect(check).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('HTTP 409') });
     });
 
     it('keeps a non-Contents 409 unverifiable', async () => {
@@ -387,7 +464,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             ) => new Promise<Response>((_resolve, reject) => {
                 options?.signal?.addEventListener('abort', () => reject(new Error('aborted provider request')), { once: true });
             }));
-            const inspection = new SetupTokenPermissionQueryAdapter({ fetcher, timeoutMs: 5 })
+            const inspection = new SetupTokenPermissionQueryAdapter({ fetcher, timeoutMs: 5, journal: immediateJournal() })
                 .inspect('owner', 'repo', 'secret-token', [requirement()]);
 
             await jest.advanceTimersByTimeAsync(5);
@@ -400,10 +477,10 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         }
     });
 
-    it('does not make a request when GitHub has no safe read-only probe', async () => {
+    it('does not make a request when a write probe has no isolated transaction', async () => {
         const fetcher = jest.fn();
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
-            'owner', 'repo', 'secret', [requirement('write', 'projects', 'organization')],
+            'owner', 'repo', 'secret', [requirement('write', 'workflows', 'organization')],
         );
         expect(fetcher).not.toHaveBeenCalled();
         expect(check).toMatchObject({ status: 'unverifiable' });
@@ -414,7 +491,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
             'my org', 'repo', 'secret-token', [requirement('write', 'variables', 'organization')],
         );
-        expect(fetcher.mock.calls[0][0]).toBe('https://api.github.com/orgs/my%20org/actions/variables?per_page=1');
+        expect(fetcher.mock.calls[0][0]).toBe('https://api.github.com/repos/my%20org/repo');
         expect(fetcher.mock.calls[0][0]).not.toContain('secret-token');
     });
 
@@ -446,7 +523,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         ]));
     });
 
-    it('maps every supported organization probe and leaves Projects unsupported', async () => {
+    it('maps every supported organization probe including read-only Projects discovery', async () => {
         const fetcher = jest.fn().mockResolvedValue(response(true, 200));
         const probes: SetupTokenPermissionRequirement['probe'][] = ['secrets', 'variables', 'members', 'issue-types', 'projects'];
 
@@ -457,14 +534,166 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             probes.map(probe => requirement('read', probe, 'organization')),
         );
 
-        expect(fetcher).toHaveBeenCalledTimes(4);
+        expect(fetcher).toHaveBeenCalledTimes(5);
         expect(fetcher.mock.calls.map(call => call[0])).toEqual(expect.arrayContaining([
             'https://api.github.com/orgs/owner/actions/secrets?per_page=1',
             'https://api.github.com/orgs/owner/actions/variables?per_page=1',
             'https://api.github.com/user/memberships/orgs/owner',
             'https://api.github.com/orgs/owner/issue-types?per_page=1',
+            'https://api.github.com/orgs/owner/projectsV2?per_page=100',
         ]));
         expect(checks.at(-1)).toMatchObject({ probe: 'projects', status: 'unverifiable' });
+    });
+
+    it('verifies organization Projects read only from a non-public result', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: [{ number: 3, public: false }] }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check).toMatchObject({ status: 'verified' });
+        expect(fetcher).toHaveBeenCalledWith('https://api.github.com/orgs/owner/projectsV2?per_page=100',
+            expect.objectContaining({ method: 'GET', headers: expect.objectContaining({ 'X-GitHub-Api-Version': '2026-03-10' }) }));
+        expect(JSON.stringify(check)).not.toContain('secret-token');
+    });
+
+    it('reads each selected Project by exact number and verifies a private result', async () => {
+        const fetcher = jest.fn(async (url: string) => response(true, 200, {
+            payload: { number: Number(url.split('/').at(-1)), public: url.endsWith('/7'), owner: { login: 'owner' } },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch,
+            journal: immediateJournal() }).inspect('owner', 'repo', 'secret-token',
+            [requirement('read', 'projects', 'organization')], undefined, '7,9');
+        expect(check).toMatchObject({ status: 'verified' });
+        expect(fetcher.mock.calls.map(call => call[0])).toEqual([
+            'https://api.github.com/orgs/owner/projectsV2/7',
+            'https://api.github.com/orgs/owner/projectsV2/9',
+        ]);
+        expect(JSON.stringify(check)).not.toContain('secret-token');
+    });
+
+    it('accepts exact public Project reads without claiming a PAT grant', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
+            payload: { number: 7, public: true, owner: { login: 'owner' } },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+            journal: immediateJournal() }).inspect('owner', 'repo', 'secret-token',
+            [requirement('read', 'projects', 'organization')], undefined, '7');
+        expect(check).toMatchObject({ status: 'available', publicReadEvidence: 'public-organization-projects' });
+    });
+
+    it.each([404, 403])('blocks when an exact selected Project read returns HTTP %s', async status => {
+        const fetcher = jest.fn().mockResolvedValue(response(false, status));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+            journal: immediateJournal() }).inspect('owner', 'repo', 'secret-token',
+            [requirement('read', 'projects', 'organization')], undefined, '7');
+        expect(check.status).toBe('unverifiable');
+        expect(check.operationallyAvailable).toBeUndefined();
+    });
+
+    it('rejects a successful selected Project read for a different owner', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
+            payload: { number: 7, public: false, owner: { login: 'other' } },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher,
+            journal: immediateJournal() }).inspect('owner', 'repo', 'secret-token',
+            [requirement('read', 'projects', 'organization')], undefined, '7');
+        expect(check.status).toBe('unverifiable');
+    });
+
+    it('finds a non-public Project on the second bounded organization page', async () => {
+        const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
+        const next = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
+        const fetcher = jest.fn(async (url: string) => url === root
+            ? response(true, 200, { payload: [{ number: 1, public: true }],
+                headers: { link: '<' + next + '>; rel="next"' } })
+            : response(true, 200, { payload: [{ number: 2, public: false }] }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check.status).toBe('verified');
+        expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, next]);
+    });
+
+    it('keeps the permission deadline active while a second Projects page stalls', async () => {
+        jest.useFakeTimers();
+        try {
+            const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
+            const next = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
+            let secondSignal: AbortSignal | undefined;
+            const fetcher = jest.fn((url: string, options?: RequestInit) => url === root
+                ? Promise.resolve(response(true, 200, {
+                    payload: [{ number: 1, public: true }],
+                    headers: { link: '<' + next + '>; rel="next"' },
+                }))
+                : new Promise<Response>((_resolve, reject) => {
+                    secondSignal = options?.signal ?? undefined;
+                    secondSignal?.addEventListener('abort', () => reject(new Error('stalled second page')), { once: true });
+                }));
+            const inspection = new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch, timeoutMs: 5, journal: immediateJournal() })
+                .inspect('owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')]);
+            await jest.advanceTimersByTimeAsync(0);
+            expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, next]);
+            await jest.advanceTimersByTimeAsync(5);
+            const [check] = await inspection;
+            expect(check.status).toBe('unverifiable');
+            expect(check.publicReadEvidence).toBeUndefined();
+            expect(secondSignal?.aborted).toBe(true);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    it('reports a bounded public Projects list read as available after two pages', async () => {
+        const root = 'https://api.github.com/orgs/owner/projectsV2?per_page=100';
+        const second = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=2';
+        const third = 'https://api.github.com/orgs/owner/projectsV2?per_page=100&page=3';
+        const fetcher = jest.fn(async (url: string) => response(true, 200, {
+            payload: [{ number: url === root ? 1 : 2, public: true }],
+            headers: { link: '<' + (url === root ? second : third) + '>; rel="next"' },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check).toMatchObject({ status: 'available', publicReadEvidence: 'public-organization-projects' });
+        expect(fetcher.mock.calls.map(call => call[0])).toEqual([root, second]);
+    });
+
+    it('does not follow a cross-origin Projects pagination link with the PAT', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
+            payload: [{ number: 1, public: true }],
+            headers: { link: '<https://example.invalid/orgs/owner/projectsV2?per_page=100&page=2>; rel="next"' },
+        }));
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
+            'owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')],
+        );
+        expect(check.status).toBe('unverifiable');
+        expect(check.publicReadEvidence).toBeUndefined();
+        expect(fetcher).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        { label: 'empty', payload: [] },
+        { label: 'public-only', payload: [{ number: 2, public: true }] },
+    ])('reports $label Projects access as a successful read', async ({ payload }) => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(response(true, 200, { payload })),
+        }).inspect('owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')]);
+        expect(check).toMatchObject({ status: 'available',
+            publicReadEvidence: 'public-organization-projects' });
+        expect(check.operationallyAvailable).toBe(true);
+    });
+
+    it.each([
+        ['malformed', response(true, 200, { payload: [{ number: 1 }] })],
+        ['non-list', response(true, 200, { payload: { public: false } })],
+        ['denied', response(false, 403, { message: 'Resource not accessible by personal access token' })],
+        ['missing', response(false, 404)],
+    ])('does not accept %s organization Projects evidence', async (_case, providerResponse) => {
+        const [check] = await new SetupTokenPermissionQueryAdapter({
+            fetcher: jest.fn().mockResolvedValue(providerResponse),
+        }).inspect('owner', 'repo', 'secret-token', [requirement('read', 'projects', 'organization')]);
+        expect(check.operationallyAvailable).toBeUndefined();
+        expect(check.status).not.toBe('verified');
     });
 
     it('leaves an unsupported repository probe unverifiable without a request', async () => {

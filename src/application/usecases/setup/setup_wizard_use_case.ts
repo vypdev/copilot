@@ -39,6 +39,7 @@ import type { SetupApprovalReadinessPort } from '../../ports/setup_approval_read
 import type { SetupApprovalCheckDiscoveryPort } from '../../ports/setup_approval_check_discovery_port';
 import type { SetupProjectDiscoveryPort } from '../../ports/setup_project_discovery_port';
 import { validateDiscoveredProjectStatuses } from '../../policies/setup_project_selection_policy';
+import { buildConfiguredSetupPatPermissionRequirements } from '../../policies/setup_token_permission_policy';
 import type { DoctorCheck } from '../../../domain/setup';
 
 export interface SetupWizardRequest {
@@ -103,6 +104,8 @@ export interface SetupWizardDependencies {
   approvalReadiness?: SetupApprovalReadinessPort;
   approvalCheckDiscovery?: SetupApprovalCheckDiscoveryPort;
   projectDiscovery?: SetupProjectDiscoveryPort;
+  sessionLiveness?: () => 'active' | 'cancelled' | 'expired';
+  onPermissionCleanupPending?: () => void;
 }
 
 export class SetupWizardUseCase {
@@ -242,17 +245,6 @@ export class SetupWizardUseCase {
       }
       remoteConfiguration = { ...remoteConfiguration, credentialHealthWorkflow: selectedWorkflowState };
     }
-    const audit = await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
-    if (audit.status === 'blocked') {
-      return {
-        status: 'blocked',
-        reason: 'setup-permissions-unavailable',
-        exitCode: 1,
-        configuration: cloneSetupConfiguration(configuration),
-        errors: audit.errors,
-        ...(remoteConfiguration ? { remoteConfiguration } : {}),
-      };
-    }
     if (remoteConfiguration) {
       const remoteStorageErrors = [
         ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration),
@@ -326,6 +318,9 @@ export class SetupWizardUseCase {
       }
     }
     const plan = buildSetupPlan(configuration, readiness, approvalReadiness);
+    plan.permissionProbes = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration)
+      .filter(item => item.applicability === 'required' && item.level === 'write')
+      .map(item => ({ scope: item.scope, permission: item.permission }));
     if (basicSkippedQuestionIds.length) {
       const byGroup = new Map<string, number>();
       for (const item of setupQuestionContentInventory()) {
@@ -354,6 +349,47 @@ export class SetupWizardUseCase {
         status: 'cancelled',
         reason: decision.kind === 'cancelled' ? 'confirmation-cancelled' : 'confirmation-declined',
         exitCode: decision.kind === 'cancelled' ? 130 : 0,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}),
+      };
+    }
+    if (this.dependencies.sessionLiveness?.() === 'cancelled') {
+      return { status: 'cancelled', reason: 'confirmation-cancelled', exitCode: 130,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    if (this.dependencies.sessionLiveness?.() === 'expired') {
+      return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration), errors: ['The local setup session expired before permission checks began.'],
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    if (request.previewOnly) {
+      return { status: 'completed', exitCode: 0, configuration: cloneSetupConfiguration(configuration), plan,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    const audit = this.dependencies.onPermissionCleanupPending
+      ? await this.dependencies.finalPermissionAudit.audit(
+        configuration, remoteConfiguration, this.dependencies.onPermissionCleanupPending)
+      : await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration);
+    if (audit.status === 'blocked' && audit.cleanupPending) {
+      return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration), errors: audit.errors,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    if (this.dependencies.sessionLiveness?.() === 'cancelled') {
+      return { status: 'cancelled', reason: 'confirmation-cancelled', exitCode: 130,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    if (this.dependencies.sessionLiveness?.() === 'expired') {
+      return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration), errors: ['The local setup session expired during permission checks.'],
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    if (audit.status === 'blocked') {
+      return {
+        status: 'blocked',
+        reason: 'setup-permissions-unavailable',
+        exitCode: 1,
+        configuration: cloneSetupConfiguration(configuration),
+        errors: audit.errors,
         ...(remoteConfiguration ? { remoteConfiguration } : {}),
       };
     }

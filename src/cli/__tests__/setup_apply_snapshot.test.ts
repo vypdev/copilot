@@ -26,7 +26,7 @@ describe('web setup apply snapshot', () => {
   test('rejects traversal and symlinked paths', () => {
     expect(() => captureSetupApplySnapshot(root, ['../outside'])).toThrow('outside');
     mkdirSync(join(root, '.github'));
-    symlinkSync(tmpdir(), join(root, '.github', 'workflows'));
+    symlinkSync(tmpdir(), join(root, '.github', 'workflows'), process.platform === 'win32' ? 'junction' : 'dir');
     expect(() => captureSetupApplySnapshot(root, ['.github/workflows/copilot.yml'])).toThrow('symbolic link');
   });
 

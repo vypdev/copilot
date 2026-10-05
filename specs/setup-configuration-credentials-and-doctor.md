@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-28
+- Last updated: 2026-09-30
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-28 (automated journey/presentation gates; live GitHub path remains external)
+- Last verified: 2026-09-30 (shared-session and resource-progress fixture evidence; live GitHub path remains external)
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -239,10 +239,10 @@ rules, secret serialization, backups, and confirmation are not configurable.
 |---|---|---|
 | Domain | setup plan/check/value types | prompts/Octokit/fs |
 | Policies | defaults, immutable clone/questionnaire, validation, storage, plans, typed message catalogs, doctor report | terminal I/O or language/provider selection |
-| Use cases | drive questionnaire, credential decisions, provision, doctor probes, resolve one complete doctor catalog | provider DTOs or feature-local language branches |
+| Use cases | drive one frontend-neutral setup session (repository through result), questionnaire, credential decisions, provision, doctor probes, resolve one complete doctor catalog | provider DTOs, terminal/browser objects, feature-local language branches |
 | Ports | raw terminal, render/present/confirm, workspace, narrow remote queries/commands, health | provider implementation |
 | Adapters | terminal mechanics, presenters, filesystem, narrow Octokit reads/writes, health query/bootstrap | product defaults/question order |
-| CLI composition | command flags and concrete wiring | duplicated validation |
+| CLI composition | command flags, concrete wiring, exit-code adaptation and terminal cleanup | duplicated validation, stage ordering, mutation classification |
 
 ```mermaid
 flowchart LR
@@ -256,6 +256,16 @@ Config objects contain names and policies, never secret values. The workspace
 adapter owns backups and writes; GitHub adapters own remote error mapping.
 Architecture tests and workflow/catalog validators enforce dependencies and
 asset parity.
+
+The shared coordinator is the authority for stage order, cancellation before
+mutation, single-flight Apply, and the conservative partial outcome once a
+write may have started. Terminal and browser ports use the existing
+questionnaire, PAT, plan, credential, and provider use cases; neither adapter
+may substitute its own setup policy. An in-memory resource receipt records
+`not-started`, `in-progress`, `completed`, `skipped`, or
+`needs-inspection`; a crash or unknown remote response is not rollback
+evidence. The browser exposes only a redacted projection. See the acceptance
+ledger in [local web setup assistant](./local-web-setup-assistant.md#14-testing-strategy-and-numeric-budget).
 
 ## 9. UI/UX and content contract
 

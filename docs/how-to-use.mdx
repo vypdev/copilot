@@ -31,12 +31,15 @@ For local development or when testing an unreleased checkout, install from the r
 ```bash
 git clone https://github.com/vypdev/copilot.git
 cd copilot
-corepack pnpm install . --global
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
-If the checkout does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
+If the checkout does not include the compiled `build/` folder, run `corepack pnpm install` and `corepack pnpm run build` before packing. The tarball can be removed after installation. Packing the checkout avoids silently retaining a different global package with the same version.
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
+
+The target must be a working checkout. A bare Git repository has no files for setup or doctor to inspect and is rejected.
 
 Prefer a visual walkthrough? Run `copilot setup --web` from the repository
 root on an attached Git branch. A detached HEAD is rejected before credentials
@@ -68,6 +71,11 @@ already deleted the setup PAT in GitHub, run `copilot doctor --read-only`
 with a valid setup PAT instead. A failed or partial Apply does
 not offer this button: inspect the itemized result and use the CLI command
 after resolving the uncertain resources.
+While Apply runs, the page reports each resource as in progress and then as
+completed, skipped, or needing inspection. If the process stops mid-write,
+the operation may already have reached GitHub; inspect that resource before
+starting a new setup session. A new process always requires a fresh review
+and approval.
 The language selector starts in English and offers Spanish, French, and
 Portuguese. Switching language does not change the repository locale or reset
 your answers. Question headings, explanations, options, permission details,
@@ -120,7 +128,8 @@ closing Copilot cannot unset the parent shell variable. `--web` cannot be
 combined with `--non-interactive`, `--yes`, `--token`, `--workflow-pat`,
 `--secret`, or `--confirm-unverifiable-write-permissions`: provide those
 decisions in the browser or use the terminal setup instead. `--dry-run --web`
-shows a no-change preview.
+shows a no-change preview. A PAT supplied to either dry-run mode is used only
+for read-only inspection; disposable Write checks and setup changes are skipped.
 
 Before its final Apply approval, the web mode performs read-only GitHub
 inspection and PAT checks; it does not dispatch or temporarily install a
@@ -274,7 +283,8 @@ For an unreleased checkout, update the checkout and reinstall the local package 
 ```bash
 cd /path/to/copilot
 git pull --ff-only origin master
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 After installation, confirm the executable and installed package:
@@ -312,9 +322,9 @@ The complete command reference, including every supported option, is in [Workflo
     # or: copilot setup --token your_setup_pat
     ```
 
-    The wizard shows a reviewable plan and asks for confirmation. During either questionnaire, use `:back` in the terminal or **Previous question** in the browser to correct an answer; the final plan also offers **Change section** (terminal: `:edit`) without discarding other answers. Revisions recompute dependent questions and PAT grants, and a newly required grant must pass another audit before Apply. The web plan lists agent/model routes, issue workflows, exact trusted check/App/workflow identities, coverage evidence, Project Status transitions, scopes, files, Variables, and Secret names. Declining the plan makes no setup changes. The web assistant does not start writes before final Apply, but terminal credential-health verification can attempt a temporary workflow before then; heed any partial-change warning. `Ctrl-C` or end-of-input exits 130, while declining the final plan exits 0. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
+    The wizard shows a reviewable plan and asks for confirmation. During either questionnaire, use `:back` in the terminal or **Previous question** in the browser to correct an answer; the final plan also offers **Change section** (terminal: `:edit`) without discarding other answers. Revisions recompute dependent questions and PAT grants. The web plan lists agent/model routes, issue workflows, exact trusted check/App/workflow identities, coverage evidence, Project Status transitions, scopes, files, Variables, Secret names, and the temporary PAT write checks selected for this plan. Declining the plan starts no temporary write tests or setup changes. After approval in a normal setup run, each required Write permission is tested with a disposable resource before setup applies changes. Actions and Pull request tests may leave history or notifications after cleanup. `Ctrl-C` or end-of-input exits 130, while declining the final plan exits 0. Use `copilot setup --dry-run` to inspect the plan without changes, whether or not you supply a PAT.
 
-    In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, organization prerequisite, or permission acknowledgement. If every required read is verified or positively operationally usable but safe probes cannot prove required writes, inspect the PAT settings first and pass the separate `--confirm-unverifiable-write-permissions` flag. It never bypasses missing or unusable unverifiable read access.
+    In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing PAT, credential, target, or organization prerequisite. Required Write permissions are tested after plan approval and block setup if their disposable checks fail. The former `--confirm-unverifiable-write-permissions` flag is rejected.
 
     Repository agent guidance remains enabled by default in automation, but the root pointer uses the safe `create-if-missing` policy unless `--agent-guidance prompt` (or the equivalent config value) explicitly authorizes a bounded update to an existing `AGENTS.md`.
 
@@ -341,7 +351,7 @@ The complete command reference, including every supported option, is in [Workflo
     - **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
     - **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
 
-    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. Change every agent workflow, including `agent-cli-provisioning.yml`, to the same runner labels used by your infrastructure. This repository's active dogfooding workflows use `runs-on: [self-hosted, codex]` because its Codex runner is pre-initialized; that is an internal optimization, not a requirement for consumers.
+    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. Change every agent workflow, including `agent-cli-provisioning.yml`, to the same runner labels used by your infrastructure. This repository's Action workflows use `runs-on: [self-hosted, codex]`; the Windows agent runtime gate remains open until an assigned run passes the executable ACL and isolated runtime checks. These labels are an internal runner policy, not a requirement for consumers.
 
     **Optional but keep coherence:**
     - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
@@ -552,7 +562,7 @@ package.
 
 The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
 reported identities, and non-interactive help commands without making a paid model request. Runtime
-installation itself validates the pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
+installation checks the selected CLI from its official source without pinning an exact version. The `copilot_credential_health.yml` workflow is
 read-only with respect to repository configuration: it executes provider-specific
 health checks and reports only whether each requested credential is usable. GitHub
 does not expose Secret values through its API, so `copilot doctor` dispatches this

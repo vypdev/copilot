@@ -1,21 +1,19 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {
-    accessSync,
-    constants,
     existsSync,
     mkdirSync,
     mkdtempSync,
+    readFileSync,
     realpathSync,
     rmSync,
-    statSync,
     writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, isAbsolute, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildProviderExecutionPolicy } from '../../application/policies/agent_execution/agent_execution_policy_dispatcher';
 import type { AgentArtifactTemplate } from '../../application/policies/agent_execution/provider_execution_policy';
-import type { AgentCapability, AgentConfiguration } from '../../domain/agent';
+import type { AgentCapability, AgentConfiguration, AgentProvider } from '../../domain/agent';
 import {
     AGENT_EXECUTION_TIMEOUT_MAX_MS,
     AGENT_OUTPUT_MAX_BYTES,
@@ -24,9 +22,12 @@ import {
     type AgentManagedArtifact,
 } from '../../domain/agent_execution_plan';
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
+import type { AgentExecutionPreflightStage } from '../../application/ports/agent_execution_observation_ports';
 import { validateAgentExecutableSelection } from '../../application/policies/agent_executable_policy';
 import { buildAgentCliEnvironment } from '../../data/repository/agent_authentication';
 import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
+import { readAgentExecutableVersion, resolveAgentExecutablePath, validateResolvedAgentInvocation } from './agent_executable_invocation';
+import { makeWindowsRuntimePathPrivate } from './windows_runtime_acl';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -42,30 +43,37 @@ export interface AgentExecutionPlanningRequest {
 
 export interface AgentExecutionPlanningSystem {
     resolveExecutable(executable: string, environment: NodeJS.ProcessEnv): string;
-    readVersion(executable: string, environment: NodeJS.ProcessEnv): string;
+    readVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): string;
     resolveWorkspace(cwd: string): string;
 }
 
 const DEFAULT_SYSTEM: AgentExecutionPlanningSystem = {
-    resolveExecutable: resolveExecutablePath,
-    readVersion(executable, environment) {
-        return execFileSync(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15_000,
-        });
+    resolveExecutable(executable, environment) {
+        try {
+            return resolveAgentExecutablePath(executable, environment);
+        } catch {
+            throw new AgentCliError(`Agent executable "${executable}" was not found on PATH.`, 'configuration');
+        }
     },
+    readVersion: readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = realpathSync(cwd);
-        const root = realpathSync(execFileSync('git', ['rev-parse', '--show-toplevel'], {
+        const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15_000,
-        }).trim());
-        if (requested !== root) throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
-        return root;
+        }).trim();
+        if (prefix !== '') {
+            throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        }
+        if (process.env.GITHUB_ACTIONS === 'true') {
+            const checkout = process.env.GITHUB_WORKSPACE;
+            if (!checkout || realpathSync(checkout) !== requested) {
+                throw new AgentCliError('Agent cwd must be the canonical GitHub checkout root.', 'configuration');
+            }
+        }
+        return requested;
     },
 };
 
@@ -76,29 +84,40 @@ export class AgentExecutionPlanner {
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
         let runtimeDirectory: string | undefined;
+        let stage: AgentExecutionPreflightStage = 'workspace';
         try {
             const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            stage = 'manifest';
             const manifest = getAgentRuntimeManifest();
             const runtime = getAgentRuntimeManifestEntry(request.configuration.provider);
             const requestedExecutable = request.configuration.executable?.trim() || runtime.executable;
+            stage = 'selection';
             validateAgentExecutableSelection({
                 provider: request.configuration.provider,
                 executable: requestedExecutable,
             });
+            stage = 'resolution';
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            validateExecutableFile(executable);
+            stage = 'invocation-trust';
+            const invocation = validateResolvedAgentInvocation(executable, request.configuration.provider, sourceEnvironment);
+            stage = 'environment';
             const safeEnvironment = buildAgentCliEnvironment(
                 request.configuration.provider,
                 sourceEnvironment,
                 request.configuration.modelProvider,
             );
+            stage = 'version';
             const version = readAgentRuntimeVersion(
                 request.configuration.provider,
-                this.system.readVersion(executable, safeEnvironment),
+                this.system.readVersion(executable, request.configuration.provider, safeEnvironment),
             );
+            stage = 'artifacts';
             runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
+            makeWindowsRuntimePathPrivate(runtimeDirectory, true);
             const gitConfigPath = join(runtimeDirectory, 'gitconfig');
+            stage = 'policy';
             const providerPolicy = buildProviderExecutionPolicy({
                 configuration: request.configuration,
                 capability: request.capability,
@@ -106,6 +125,7 @@ export class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
             });
+            stage = 'artifacts';
             const artifacts = materializeArtifacts([
                 { path: gitConfigPath, contents: '', purpose: 'git-config' },
                 ...providerPolicy.artifacts,
@@ -120,7 +140,11 @@ export class AgentExecutionPlanner {
             return {
                 provider: request.configuration.provider,
                 capability: request.capability,
-                executable,
+                executable: invocation.executable,
+                launcherArgv: invocation.prefixArgs,
+                ...(invocation.prefixArgs.length > 0 ? {
+                    launcherSha256: createHash('sha256').update(readFileSync(invocation.prefixArgs[0])).digest('hex'),
+                } : {}),
                 argv: providerPolicy.argv,
                 promptMode: providerPolicy.promptMode,
                 outputProtocol: providerPolicy.outputProtocol,
@@ -144,11 +168,16 @@ export class AgentExecutionPlanner {
             };
         } catch (error) {
             if (runtimeDirectory) rmSync(runtimeDirectory, { recursive: true, force: true });
-            if (error instanceof AgentCliError) throw error;
-            throw new AgentCliError(
+            if (error instanceof AgentCliError) {
+                error.preflightStage = stage;
+                throw error;
+            }
+            const rejected = new AgentCliError(
                 'Agent execution plan rejected because its local runtime contract could not be validated.',
                 'configuration',
             );
+            rejected.preflightStage = stage;
+            throw rejected;
         }
     }
 }
@@ -172,49 +201,11 @@ function assertBoundedLimit(name: string, value: number, maximum: number): void 
     }
 }
 
-function resolveExecutablePath(selected: string, environment: NodeJS.ProcessEnv): string {
-    if (isAbsolute(selected)) return realpathSync(selected);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    for (const directory of (environment.PATH || '').split(delimiter).filter(Boolean)) {
-        for (const extension of extensions) {
-            const candidate = join(directory, `${selected}${extension}`);
-            try {
-                accessSync(candidate, constants.X_OK);
-                return realpathSync(candidate);
-            } catch {
-                // Continue through the trusted PATH candidates.
-            }
-        }
-    }
-    throw new AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
-}
-
-function validateExecutableFile(path: string): void {
-    let stats;
-    try {
-        stats = statSync(path);
-        accessSync(path, constants.X_OK);
-    } catch {
-        throw new AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
-    }
-    if (!stats.isFile()) throw new AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if ((stats.mode & 0o022) !== 0) {
-        throw new AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
-    }
-    if (typeof process.getuid === 'function') {
-        const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0) {
-            throw new AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
-        }
-    }
-}
-
 function materializeArtifacts(templates: readonly AgentArtifactTemplate[]): AgentManagedArtifact[] {
     return templates.map((template) => {
         mkdirSync(dirname(template.path), { recursive: true, mode: 0o700 });
         writeFileSync(template.path, template.contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        makeWindowsRuntimePathPrivate(template.path, false);
         return {
             path: template.path,
             sha256: createHash('sha256').update(template.contents).digest('hex'),

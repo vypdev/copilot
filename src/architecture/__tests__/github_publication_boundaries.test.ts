@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 
 interface BaselineEntry {
   readonly file: string;
@@ -34,10 +34,11 @@ function inventory(): BaselineEntry[] {
       [...source.matchAll(new RegExp(`\\.${method}\\s*\\(`, 'gu'))].length,
     ]));
     if (Object.values(counts).every(count => count === 0)) return [];
+    const file = relative(root, path).split(sep).join('/');
     return [{
-      file: relative(root, path),
+      file,
       ...Object.fromEntries(Object.entries(counts).filter(([, count]) => count > 0)),
-      reason: baseline.entries.find(entry => entry.file === relative(root, path))?.reason ?? '',
+      reason: baseline.entries.find(entry => entry.file === file)?.reason ?? '',
     } as BaselineEntry];
   }).sort((left, right) => left.file.localeCompare(right.file));
 }

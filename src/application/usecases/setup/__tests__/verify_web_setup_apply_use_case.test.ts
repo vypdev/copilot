@@ -19,7 +19,7 @@ const request: VerifyWebSetupApplyRequest = {
   approvedRemote, configuration: createDefaultSetupConfiguration(), setupToken: 'test-token',
 };
 
-function harness() {
+function harness(onPermissionCleanupPending?: () => void) {
   let session: 'active' | 'cancelled' | 'ended' = 'active';
   const ports: VerifyWebSetupApplyPorts = {
     confirm: jest.fn(async () => 'apply' as const),
@@ -30,6 +30,7 @@ function harness() {
       inspectCredentialHealthWorkflow: jest.fn(async () => 'installed' as const),
     },
     permissionAudit: { audit: jest.fn(async () => ({ status: 'accepted' as const })) },
+    ...(onPermissionCleanupPending ? { onPermissionCleanupPending } : {}),
     sessionState: () => session,
   };
   return { ports, useCase: new VerifyWebSetupApplyUseCase(ports), setSession: (next: typeof session) => { session = next; } };
@@ -160,6 +161,19 @@ describe('VerifyWebSetupApplyUseCase', () => {
     const { ports, useCase } = harness();
     jest.spyOn(ports.permissionAudit, 'audit').mockResolvedValue({ status: 'blocked', errors: ['missing'] });
     await expect(useCase.execute(request)).rejects.toThrow('Setup PAT access changed');
+  });
+
+  test('retains cleanup failure ahead of cancellation in the pre-Apply audit', async () => {
+    const onPermissionCleanupPending = jest.fn();
+    const { ports, useCase, setSession } = harness(onPermissionCleanupPending);
+    jest.spyOn(ports.permissionAudit, 'audit').mockImplementation(async (_configuration, _remote, notify) => {
+      setSession('cancelled');
+      notify?.();
+      return { status: 'blocked', cleanupPending: true,
+        errors: ['Temporary Actions cleanup pending.'] };
+    });
+    await expect(useCase.execute(request)).rejects.toThrow('Temporary Actions cleanup pending.');
+    expect(onPermissionCleanupPending).toHaveBeenCalledTimes(1);
   });
 
   test.each(['cancelled', 'ended'] as const)('stops before facts are read when session is %s', async state => {

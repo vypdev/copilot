@@ -111,7 +111,6 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_EXECUTABLE', base.executable);
-    add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
     for (const task of SETUP_AGENT_TASKS) {
@@ -297,9 +296,6 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
-    if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
-    }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
@@ -307,7 +303,7 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
         warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if (setupAgentTasksForFeatures(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.');
     }
     if (usesOrganizationStorage(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');

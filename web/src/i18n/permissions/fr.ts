@@ -16,6 +16,9 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Provision and assign configured issue types.': 'Créer et attribuer les types de ticket configurés.',
   'Inspect selected Projects and their Status options; setup does not edit Project items.': 'Consulter les Projects sélectionnés et leurs options Status ; la configuration ne modifie aucun élément de Project.',
   'Create the initial repository tag when no version tag exists.': 'Créer le tag initial si le dépôt ne possède encore aucun tag de version.',
+  'Create an isolated branch for the Actions permission check.': 'Créer une branche isolée pour vérifier l’autorisation Actions.',
+  'Create the initial tag and an isolated branch for the Actions permission check.': 'Créer le tag initial et une branche isolée pour vérifier l’autorisation Actions.',
+  'Create the initial tag or an isolated branch for the Actions permission check.': 'Créer le tag initial ou une branche isolée pour vérifier l’autorisation Actions.',
   'Inspect and provision selected repository Actions Secrets.': 'Examiner et configurer les Secrets Actions choisis dans le dépôt.',
   'Inspect and provision selected repository Actions Variables.': 'Examiner et configurer les Variables Actions choisies dans le dépôt.',
   'Provision labels for the selected issue workflows.': 'Créer les étiquettes des workflows de ticket choisis.',
@@ -42,6 +45,7 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Variable provisioning enabled': 'Configuration des Variables activée',
   'Issue workflows enabled': 'Workflows de ticket activés',
   'Credential health enabled': 'Vérification des identifiants activée',
+  'Initial tag or credential-health check enabled': 'Tag initial ou vérification des identifiants activés',
   'Pull-request approval enabled': 'Approbation des pull requests activée',
   'Release, hotfix, or guarded approval enabled': 'Version, correctif urgent ou approbation encadrée activés',
   'Temporary health workflow required': 'Workflow temporaire de vérification requis',
@@ -49,4 +53,5 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Organization Variable storage selected': 'Stockage des Variables dans l’organisation choisi',
   'Issue type automation enabled': 'Automatisation des types de ticket activée',
   'Organization Projects selected': 'Projets de l’organisation choisis',
+  'After setup plan approval': 'Après approbation du plan de configuration',
 };

@@ -2,8 +2,18 @@ export type SetupTokenRole = 'setup' | 'workflow';
 export type SetupTokenPermissionScope = 'repository' | 'organization';
 export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
-export type SetupTokenPermissionStatus = 'verified' | 'missing' | 'unverifiable';
-export type SetupTokenPublicReadEvidence = 'public-repository';
+export type SetupTokenPermissionStatus = 'verified' | 'available' | 'missing' | 'unverifiable';
+export type SetupTokenPermissionProbePhase = 'checking' | 'creating' | 'reading' | 'deleting' | 'verified' | 'failed' | 'skipped';
+export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported' | `http-${number}` | `issue-closed-${number}` | `issue-unresolved-${number}`;
+
+/** Secret-free, bounded progress for one permission. Never contains provider prose. */
+export interface SetupTokenPermissionProgress {
+    readonly role: SetupTokenRole;
+    readonly requirementId: string;
+    readonly phase: SetupTokenPermissionProbePhase;
+    readonly detail?: SetupTokenPermissionProgressDetail;
+}
+export type SetupTokenPublicReadEvidence = 'public-repository' | 'public-organization-projects';
 
 export type SetupTokenPermissionProbe =
     | 'metadata'
@@ -40,6 +50,12 @@ export interface SetupTokenPermissionCheck extends SetupTokenPermissionRequireme
     operationallyAvailable?: true;
     /** Adapter-derived public-read provenance, never a PAT permission claim. */
     publicReadEvidence?: SetupTokenPublicReadEvidence;
+    /** Set only after a matching temporary create/read/delete cycle completed. */
+    writeProof?: 'transaction';
+    /** A disposable resource may remain or a concurrent Secret may have changed. */
+    cleanupPending?: true;
+    /** GitHub's upsert-only Secret endpoint reported an existing object. */
+    incident?: 'secret-collision';
 }
 
 export interface SetupTokenPermissionReport {

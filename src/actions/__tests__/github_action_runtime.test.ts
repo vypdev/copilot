@@ -1,5 +1,7 @@
 import { prepareGithubAgentRuntime } from '../github_action_runtime';
 import type { AgentTaskConfiguration } from '../../domain/agent';
+import { OfficialAgentInstallationError } from '../../infrastructure/agents/agent_official_installer';
+import { logInfo } from '../../utils/logger';
 
 const mockPreflight = jest.fn();
 const mockProvision = jest.fn();
@@ -43,6 +45,7 @@ describe('prepareGithubAgentRuntime', () => {
         expect(mockPreflight).toHaveBeenCalledWith(tasks.planner);
         expect(mockProvision).toHaveBeenCalledTimes(1);
         expect(mockProvision).toHaveBeenCalledWith(tasks.planner);
+        expect(mockPreflight.mock.invocationCallOrder[0]).toBeLessThan(mockProvision.mock.invocationCallOrder[0]);
     });
 
     it('does no provider work for an event without agent capabilities', () => {
@@ -72,6 +75,7 @@ describe('prepareGithubAgentRuntime', () => {
                 message: 'Authentication is unavailable for the active planner agent role using opencode.',
             }),
         );
+        expect(mockProvision).not.toHaveBeenCalled();
         try {
             prepareGithubAgentRuntime(tasks, ['planner']);
         } catch (error) {
@@ -87,7 +91,7 @@ describe('prepareGithubAgentRuntime', () => {
         expect(() => prepareGithubAgentRuntime(tasks, ['planner'])).toThrow(
             expect.objectContaining({
                 code: 'configuration.unsupported',
-                message: 'The opencode runtime is unavailable and could not satisfy the selected provisioning mode.',
+                message: 'The opencode runtime is unavailable or its official installation failed.',
             }),
         );
         try {
@@ -95,5 +99,31 @@ describe('prepareGithubAgentRuntime', () => {
         } catch (error) {
             expect(JSON.stringify(error)).not.toContain('secret-bearing provisioning diagnostic');
         }
+    });
+
+    it('logs only the closed installer stage and exit code', () => {
+        mockProvision.mockImplementation(() => {
+            throw new OfficialAgentInstallationError('installer-script', 'Official agent installer script failed.',
+                1, new Error('secret-bearing installer stderr'), 'hash-module');
+        });
+
+        expect(() => prepareGithubAgentRuntime(tasks, ['findings'])).toThrow(
+            expect.objectContaining({ code: 'configuration.unsupported' }),
+        );
+        expect(logInfo).toHaveBeenCalledWith('Agent runtime codex provisioning failed (official-installer-script-exit-1-hash-module).');
+        expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('secret-bearing');
+    });
+
+    it('logs the installed-file category without exposing its underlying ACL diagnostic', () => {
+        mockProvision.mockImplementation(() => {
+            throw new OfficialAgentInstallationError('installed-file', 'Official agent installation failed.',
+                undefined, new Error('secret-bearing runner path and principal'), 'acl-ancestor');
+        });
+
+        expect(() => prepareGithubAgentRuntime(tasks, ['findings'])).toThrow(
+            expect.objectContaining({ code: 'configuration.unsupported' }),
+        );
+        expect(logInfo).toHaveBeenCalledWith('Agent runtime codex provisioning failed (official-installed-file-acl-ancestor).');
+        expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('secret-bearing');
     });
 });

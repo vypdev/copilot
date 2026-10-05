@@ -3,12 +3,17 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
-const { publicPatDocumentationSources, findUnsafePatShellExamples } = require('./documentation_pat_exception_policy.cjs');
+const { publicPatDocumentationSources, findShellExamples } = require('./documentation_pat_exception_policy.cjs');
+const { normalizeDocumentationPath, normalizeDocumentationText } = require('./documentation_checkout_text.cjs');
+
+function readText(file) {
+  return normalizeDocumentationText(fs.readFileSync(file, 'utf8'));
+}
 
 const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
-const navigation = JSON.parse(fs.readFileSync(path.join(root, 'docs.json'), 'utf8'));
-const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
+const navigation = JSON.parse(readText(path.join(root, 'docs.json')));
+const action = yaml.load(readText(path.join(root, 'action.yml')));
 const COPILOT_ACTION_REFERENCE = 'v3';
 const DISTRIBUTED_COPILOT_ACTION = `vypdev/copilot@${COPILOT_ACTION_REFERENCE}`;
 const CHECKOUT_ACTION = 'actions/checkout@v5';
@@ -17,10 +22,10 @@ const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
 const errors = [];
 const docsFiles = fs.readdirSync(docsRoot, { recursive: true })
   .filter(file => file.endsWith('.mdx'))
-  .map(file => String(file));
-const docsContent = docsFiles.map(file => fs.readFileSync(path.join(docsRoot, file), 'utf8'));
+  .map(normalizeDocumentationPath);
+const docsContent = docsFiles.map(file => readText(path.join(docsRoot, file)));
 const docsByFile = new Map(docsFiles.map((file, index) => [file, docsContent[index]]));
-const readmeContent = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+const readmeContent = readText(path.join(root, 'README.md'));
 const allDocumentation = [
   readmeContent,
   ...docsContent,
@@ -34,7 +39,7 @@ const internalDocumentationFiles = [
     .map(file => path.join(root, '.cursor', 'rules', file)),
 ];
 const internalDocumentation = internalDocumentationFiles
-  .map(file => fs.readFileSync(file, 'utf8'))
+  .map(readText)
   .join('\n');
 
 const routes = new Set();
@@ -180,10 +185,10 @@ if (missingWorkflowInventory.length) {
   errors.push(`how-to-use.mdx: setup workflow inventory is missing: ${missingWorkflowInventory.join(', ')}`);
 }
 
-const actionTypesSource = fs.readFileSync(path.join(root, 'src', 'data', 'model', 'action_types.ts'), 'utf8');
+const actionTypesSource = readText(path.join(root, 'src', 'data', 'model', 'action_types.ts'));
 const actionValues = [...actionTypesSource.matchAll(/:\s*'([^']+)'/g)].map(match => match[1]);
 const availableActions = docsByFile.get('single-actions/available-actions.mdx') ?? '';
-const internalUseCaseFlows = fs.readFileSync(path.join(root, '_agent', 'docs', 'usecase-flows.md'), 'utf8');
+const internalUseCaseFlows = readText(path.join(root, '_agent', 'docs', 'usecase-flows.md'));
 const missingActions = actionValues.filter(value => !availableActions.includes(`\`${value}\``));
 if (missingActions.length) {
   errors.push(`single-actions/available-actions.mdx: single-action catalog is missing: ${missingActions.join(', ')}`);
@@ -229,7 +234,7 @@ const issueTemplatePairs = [
 ];
 for (const [documentationFile, templateFile] of issueTemplatePairs) {
   const documented = documentedIssueTemplate(documentationFile);
-  const actual = yaml.load(fs.readFileSync(path.join(root, 'setup', 'ISSUE_TEMPLATE', templateFile), 'utf8'));
+  const actual = yaml.load(readText(path.join(root, 'setup', 'ISSUE_TEMPLATE', templateFile)));
   if (!documented) {
     errors.push(`${documentationFile}: missing complete embedded issue template`);
   } else if (JSON.stringify(documented) !== JSON.stringify(actual)) {
@@ -245,31 +250,24 @@ const setupCliDocumentation = docsByFile.get('single-actions/workflow-and-cli.md
 const setupAutomationSection = setupCliDocumentation
   .split('For automation, use the same defaults without prompts:')[1]
   ?.split('Without an explicit `--agent-guidance`')[0] ?? '';
-const genericSetupAutomation = setupAutomationSection
-  .split('Run these commands without a permission exception first.')[0] ?? '';
-const inspectedPatRecovery = setupAutomationSection
-  .split('Run these commands without a permission exception first.')[1] ?? '';
-const normalizedInspectedPatRecovery = inspectedPatRecovery.replace(/\s+/g, ' ');
 const unattendedCredentialProvisioning = setupCliDocumentation
   .split('For unattended credential provisioning')[1]
   ?.split('The explicit `--workflow-pat`')[0] ?? '';
 const unverifiableWriteAcknowledgement = '--confirm-unverifiable-write-permissions';
-if (!genericSetupAutomation || genericSetupAutomation.includes(unverifiableWriteAcknowledgement)) {
-  errors.push('single-actions/workflow-and-cli.mdx: generic automation commands must omit unverifiable-write acknowledgement');
+if (!setupAutomationSection.includes('temporary create/read/delete')
+  || !setupAutomationSection.includes('review those effects in the plan before approving it')) {
+  errors.push('single-actions/workflow-and-cli.mdx: automation setup must disclose temporary write tests and GitHub history');
 }
 if (!unattendedCredentialProvisioning || unattendedCredentialProvisioning.includes(unverifiableWriteAcknowledgement)) {
   errors.push('single-actions/workflow-and-cli.mdx: generic credential-provisioning command must omit unverifiable-write acknowledgement');
 }
-if (!normalizedInspectedPatRecovery.includes('inspect the displayed requirements against both PATs\' settings')
-  || !normalizedInspectedPatRecovery.includes('Repeat the same selections')
-  || !normalizedInspectedPatRecovery.includes('same configuration file, flags, and credentials')
-  || !normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex ${unverifiableWriteAcknowledgement}`)
-  || normalizedInspectedPatRecovery.includes(`copilot setup --non-interactive --yes ${unverifiableWriteAcknowledgement}`)) {
-  errors.push('single-actions/workflow-and-cli.mdx: inspected-PAT recovery must preserve the original setup plan and be adjacent to the exceptional command');
-}
 const publicShellDocumentation = publicPatDocumentationSources(readmeContent, docsByFile);
-for (const { file, line } of findUnsafePatShellExamples(publicShellDocumentation, unverifiableWriteAcknowledgement)) {
-  errors.push(`${file}:${line}: shell example may acknowledge unverifiable writes only after an adjacent inspected-PAT prerequisite`);
+for (const [file, source] of publicShellDocumentation) {
+  for (const example of findShellExamples(source)) {
+    if (example.body.includes(unverifiableWriteAcknowledgement)) {
+      errors.push(`${file}:${source.slice(0, example.start).split('\n').length}: shell example must not use the rejected write-permission bypass`);
+    }
+  }
 }
 
 requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');
@@ -305,7 +303,8 @@ requireText('authentication.mdx', 'Workflows write and Contents write appear onl
 requireText('authentication.mdx', 'setup repeats both Contents', 'selected-ref workflow inspection before final audit');
 requireText('authentication.mdx', 'reports a bounded blocked result with the', 'final PAT audit structured denial');
 requireText('authentication.mdx', 'on an independently available agent-backed single action', 'members-only standalone action permission');
-requireText('authentication.mdx', 'all required reads are verified or usable', 'public-read operational acknowledgement');
+requireText('authentication.mdx', 'every required read succeeded or is positively usable', 'public-read operational acknowledgement');
+requireText('authentication.mdx', 'every required write completed its own temporary create/read/delete cycle', 'required write transaction acknowledgement');
 requireText('security-operations/operations/troubleshooting.mdx', 'never authorizes bootstrap', 'unavailable workflow non-mutation');
 requireText('security-operations/operations/troubleshooting.mdx', 'For the repository Contents row in the PAT permission table, setup probes', 'PAT Contents permission probe distinction');
 requireText('security-operations/operations/troubleshooting.mdx', "repository root (`path: ''`)", 'workflow-presence Contents root probe');
@@ -331,10 +330,10 @@ for (const variable of [
 }
 
 const publicContractText = [
-  fs.readFileSync(path.join(root, 'action.yml'), 'utf8'),
+  readText(path.join(root, 'action.yml')),
   allDocumentation,
-  ...setupWorkflowFiles.map(file => fs.readFileSync(path.join(root, 'setup', 'workflows', file), 'utf8')),
-  fs.readFileSync(path.join(root, 'setup', 'pull_request_template.md'), 'utf8'),
+  ...setupWorkflowFiles.map(file => readText(path.join(root, 'setup', 'workflows', file))),
+  readText(path.join(root, 'setup', 'pull_request_template.md')),
 ].join('\n');
 const maintainedContractText = `${publicContractText}\n${internalDocumentation}`;
 const retiredContracts = [
@@ -372,7 +371,7 @@ const obsoleteDocumentation = [
   ['authentication.mdx', 'or its availability cannot be established safely, because setup may need to install', 'unsafe ambiguous bootstrap grant'],
   ['authentication.mdx', 'Contents/Workflows read', 'unsupported setup Workflows read grant'],
 ];
-const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+const readme = readText(path.join(root, 'README.md'));
 for (const [file, phrase, contract] of obsoleteDocumentation) {
   const source = file === 'README.md' ? readme : (docsByFile.get(file) ?? '');
   if (source.toLowerCase().includes(phrase.toLowerCase())) errors.push(`${file}: contains ${contract}: ${phrase}`);

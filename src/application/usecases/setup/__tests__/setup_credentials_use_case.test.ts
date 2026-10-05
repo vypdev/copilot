@@ -722,7 +722,7 @@ describe('SetupCredentialsUseCase', () => {
         })).rejects.toThrow('PAT validation failed');
     });
 
-    it('accepts a workflow PAT only after explicit acknowledgement of unverifiable required writes', async () => {
+    it('blocks a workflow PAT whose required write was not transaction-verified', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
             requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
@@ -745,7 +745,7 @@ describe('SetupCredentialsUseCase', () => {
             checks: [{ ...permission, status: 'unverifiable' as const, message: 'no safe write proof' }],
         };
 
-        const result = await new SetupCredentialsUseCase(
+        const collection = new SetupCredentialsUseCase(
             prompt,
             validation,
             secrets,
@@ -758,13 +758,8 @@ describe('SetupCredentialsUseCase', () => {
             workflowTokenPermissions: [permission],
         });
 
-        expect(prompt.confirmUnverifiableTokenPermissions).toHaveBeenCalledWith(report);
-        expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
-        expect(result.checks).toContainEqual(expect.objectContaining({
-            name: 'PAT',
-            status: 'valid',
-            message: expect.stringContaining('explicitly acknowledged'),
-        }));
+        await expect(collection).rejects.toThrow('did not pass every required GitHub capability check');
+        expect(prompt.confirmUnverifiableTokenPermissions).not.toHaveBeenCalled();
     });
 
     it('preserves legacy credential validation when no permission plan is supplied', async () => {

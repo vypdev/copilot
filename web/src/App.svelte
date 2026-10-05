@@ -9,6 +9,7 @@
   import ContextPanel from './components/ContextPanel.svelte';
   import ResultPanel from './components/ResultPanel.svelte';
   import WaitingPanel from './components/WaitingPanel.svelte';
+  import PermissionProgressPanel from './components/PermissionProgressPanel.svelte';
   import PairingPanel from './components/PairingPanel.svelte';
   import { tr } from './i18n/catalog';
   import { setupLocale } from './i18n/localeStore';
@@ -69,15 +70,17 @@
       {#if !$session.paired}
         <PairingPanel busy={$session.busy} onPair={session.pair} />
       {:else if $session.view?.outcome}
-        <ResultPanel outcome={$session.view.outcome} detail={$session.view.resultDetail} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
+        <ResultPanel outcome={$session.view.outcome} detail={$session.view.resultDetail} permissionReport={$session.view.permissions?.report} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
       {:else if $session.view?.prompt}
         <div class="workspace-grid">
           <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} promptRevision={$session.view.promptRevision!} controller={$session.controller} busy={$session.busy} onSubmit={submit} onRetryDiscovery={retryDiscovery} onBack={back} />
           <ContextPanel view={$session.view} />
         </div>
         {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>{tr('cancelSetup', $setupLocale)}</button>{/if}
+      {:else if $session.view?.permissions?.progress?.length && !$session.view.permissions.report}
+        <PermissionProgressPanel permissions={$session.view.permissions} />
       {:else}
-        <WaitingPanel />
+        <WaitingPanel effects={$session.view?.resultDetail?.effects} />
       {/if}
       <footer>{tr('footerLocal', $setupLocale)} <span aria-hidden="true">·</span> {tr('footerCloud', $setupLocale)} <span aria-hidden="true">·</span> {tr('footerGithub', $setupLocale)}</footer>
     </div>

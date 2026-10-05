@@ -312,6 +312,22 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('does not let the write-only CLI flag auto-confirm an unverified Projects read', async () => {
+    const report = {
+      role: 'setup' as const, identityStatus: 'valid' as const, identityMessage: 'checked',
+      ready: false, confirmationRequired: true,
+      checks: [{ id: 'setup.organization.projects', role: 'setup' as const,
+        scope: 'organization' as const, permission: 'Projects', level: 'read' as const,
+        applicability: 'required' as const, reason: 'Inspect Projects', probe: 'projects' as const,
+        status: 'unverifiable' as const, publicReadEvidence: 'public-organization-projects' as const,
+        message: 'Public list does not prove the grant' }],
+    };
+    await expect(new SetupCredentialPromptAdapter(undefined, {}, true)
+      .confirmUnverifiableTokenPermissions(report)).resolves.toBe(false);
+    await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: 'yes' }]), {}, true)
+      .confirmUnverifiableTokenPermissions(report)).resolves.toBe(true);
+  });
+
   it('collects hidden setup and runtime credentials without rendering their values', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     const setupInput = terminal([{ kind: 'value', value: 'setup-token' }]);

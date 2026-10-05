@@ -16,6 +16,9 @@ export const permissionCopyEs: Readonly<Record<PermissionText, string>> = {
   'Provision and assign configured issue types.': 'Crear y asignar los tipos de issue configurados.',
   'Inspect selected Projects and their Status options; setup does not edit Project items.': 'Consultar los Projects seleccionados y sus opciones de Status; el setup no modifica los elementos de los Projects.',
   'Create the initial repository tag when no version tag exists.': 'Crear el tag inicial si el repositorio aún no tiene ninguno de versión.',
+  'Create an isolated branch for the Actions permission check.': 'Crear una rama aislada para comprobar el permiso de Actions.',
+  'Create the initial tag and an isolated branch for the Actions permission check.': 'Crear el tag inicial y una rama aislada para comprobar el permiso de Actions.',
+  'Create the initial tag or an isolated branch for the Actions permission check.': 'Crear el tag inicial o una rama aislada para comprobar el permiso de Actions.',
   'Inspect and provision selected repository Actions Secrets.': 'Examinar y configurar los Secrets de Actions seleccionados en el repositorio.',
   'Inspect and provision selected repository Actions Variables.': 'Examinar y configurar las Variables de Actions seleccionadas en el repositorio.',
   'Provision labels for the selected issue workflows.': 'Crear las etiquetas de los flujos de issues seleccionados.',
@@ -42,6 +45,7 @@ export const permissionCopyEs: Readonly<Record<PermissionText, string>> = {
   'Variable provisioning enabled': 'Configuración de Variables activada',
   'Issue workflows enabled': 'Flujos de issues activados',
   'Credential health enabled': 'Comprobación de credenciales activada',
+  'Initial tag or credential-health check enabled': 'Tag inicial o comprobación de credenciales activados',
   'Pull-request approval enabled': 'Aprobación de pull requests activada',
   'Release, hotfix, or guarded approval enabled': 'Release, hotfix o aprobación protegida activados',
   'Temporary health workflow required': 'Hace falta un workflow temporal de comprobación',
@@ -49,4 +53,5 @@ export const permissionCopyEs: Readonly<Record<PermissionText, string>> = {
   'Organization Variable storage selected': 'Se eligió guardar Variables en la organización',
   'Issue type automation enabled': 'Automatización de tipos de issue activada',
   'Organization Projects selected': 'Se seleccionaron Projects de la organización',
+  'After setup plan approval': 'Después de aprobar el plan de configuración',
 };

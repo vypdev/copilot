@@ -76,7 +76,7 @@ function findExecutionConsumers(
             visit(source);
             return consumesExecution;
         })
-        .map(source => source.fileName)
+        .map(source => resolve(source.fileName))
         .sort();
 }
 
@@ -137,7 +137,7 @@ describe('Execution import ratchet', () => {
             expect(findExecutionConsumers(
                 fixtureProgram,
                 executionFile,
-                source => source.fileName === barrelFile || source.fileName === fixtureFile,
+                source => resolve(source.fileName) === barrelFile || resolve(source.fileName) === fixtureFile,
             )).toEqual([barrelFile, fixtureFile]);
         } finally {
             rmSync(fixtureDirectory, { recursive: true, force: true });

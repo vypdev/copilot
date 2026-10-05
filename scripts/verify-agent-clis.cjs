@@ -1,15 +1,94 @@
 #!/usr/bin/env node
 /* Verify provider CLIs without printing credentials or executing agent work. */
 const { execFileSync } = require('node:child_process');
-const { existsSync, readFileSync } = require('node:fs');
+const { accessSync, constants, existsSync, readFileSync, realpathSync, statSync } = require('node:fs');
 const { homedir } = require('node:os');
-const { join } = require('node:path');
+const { basename, delimiter, dirname, extname, isAbsolute, join, relative, resolve, sep, win32 } = require('node:path');
+const { verifyWindowsAgentExecutableAcl } = require('../src/infrastructure/agents/windows_executable_trust.cjs');
 
 const checksByProvider = {
-  opencode: { name: 'opencode', command: 'opencode', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
-  codex: { name: 'codex', command: 'codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY'], localSession: true },
+  opencode: { name: 'opencode', command: 'opencode', package: 'opencode-ai', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
+  codex: { name: 'codex', command: 'codex', package: '@openai/codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY'], localSession: true },
   cursor: { name: 'cursor', command: 'agent', args: ['--help'], credential: ['CURSOR_API_KEY'] },
 };
+
+function resolveOnPath(command) {
+  const extensions = process.platform === 'win32'
+    ? (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';') : [''];
+  for (const directory of (process.env.PATH || process.env.Path || '').split(delimiter).filter(Boolean)) {
+    for (const extension of extensions) {
+      const candidate = join(directory, `${command}${extension}`);
+      try {
+        accessSync(candidate, constants.X_OK);
+        return realpathSync(candidate);
+      } catch {
+        // Continue through configured PATH candidates without running a lookup command.
+      }
+    }
+  }
+  throw new Error('Agent executable not found.');
+}
+
+function resolveCommand(check) {
+  const path = resolveOnPath(check.command);
+  if (process.platform !== 'win32') return { path, executable: path, prefix: [] };
+  if (/\.bat$/iu.test(path)) throw new Error('Batch agent wrappers are unsupported.');
+  if (!/\.cmd$/iu.test(path)) return { path, executable: path, prefix: [] };
+  if (!check.package || basename(path).toLowerCase() !== `${check.command}.cmd`) {
+    throw new Error('Unrecognized npm agent shim.');
+  }
+  const shimDirectory = dirname(path);
+  const localBin = basename(shimDirectory).toLowerCase() === '.bin'
+    && basename(dirname(shimDirectory)).toLowerCase() === 'node_modules';
+  const modulesDirectory = localBin ? dirname(shimDirectory) : join(shimDirectory, 'node_modules');
+  const packageRoot = realpathSync(join(modulesDirectory, ...check.package.split('/')));
+  const metadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+  if (metadata.name !== check.package) throw new Error('Mismatched npm agent package.');
+  const bin = typeof metadata.bin === 'string' ? metadata.bin : metadata.bin?.[check.command];
+  if (typeof bin !== 'string' || !bin || isAbsolute(bin) || win32.isAbsolute(bin)) {
+    throw new Error('Unsafe npm agent bin.');
+  }
+  const target = realpathSync(resolve(packageRoot, bin));
+  const relation = relative(packageRoot, target);
+  if (!relation || relation === '..' || relation.startsWith(`..${sep}`) || isAbsolute(relation) || !statSync(target).isFile()) {
+    throw new Error('Npm agent bin escaped its package.');
+  }
+  if (extname(target).toLowerCase() === '.js') return { path, executable: resolveOnPath('node'), prefix: [target] };
+  if (extname(target).toLowerCase() === '.exe') return { path, executable: target, prefix: [] };
+  throw new Error('Unsupported npm agent bin.');
+}
+
+function assertCommandTrust(command, reportTarget = () => undefined) {
+  const targets = [
+    ['selected', command.path],
+    ['interpreter', command.executable],
+    ...command.prefix.map((path) => ['launcher', path]),
+  ];
+  const checked = new Set();
+  for (const [role, path] of targets) {
+    if (checked.has(path)) continue;
+    checked.add(path);
+    reportTarget(role);
+    const stats = statSync(path);
+    if (!stats.isFile()) throw new Error('Agent executable must be a regular file.');
+    accessSync(path, constants.X_OK);
+    if (process.platform === 'win32') {
+      try {
+        verifyWindowsAgentExecutableAcl(path);
+      } catch (error) {
+        if (error?.code !== 'ETIMEDOUT') throw error;
+        verifyWindowsAgentExecutableAcl(path);
+      }
+    } else if ((stats.mode & 0o022) !== 0
+      || (typeof process.getuid === 'function' && stats.uid !== process.getuid() && stats.uid !== 0)) {
+      throw new Error('Agent executable owner or permissions are unsafe.');
+    }
+  }
+}
+
+function invokeCommand(command, args, options) {
+  return execFileSync(command.executable, [...command.prefix, ...args], options);
+}
 
 function hasLocalCodexSession() {
   const authPath = join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'auth.json');
@@ -42,11 +121,11 @@ function hasLocalOpenCodeSession() {
   }
 }
 
-function hasLocalSession(check) {
+function hasLocalSession(check, command) {
   if (check.name === 'codex') {
     if (hasLocalCodexSession()) return true;
     try {
-      execFileSync(check.command, ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
+      invokeCommand(command, ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
       return true;
     } catch {
       return false;
@@ -87,6 +166,21 @@ function credentialNames(check) {
   return providerVariable ? [providerVariable, 'OPENCODE_API_KEY'] : [];
 }
 
+function safeFailureCode(error) {
+  if (Number.isInteger(error?.status) && error.status >= 0 && error.status <= 255) return error.status;
+  if (error?.code === 'ETIMEDOUT' && ['identity', 'descriptor'].includes(error.aclProbeStage)) {
+    return `acl-${error.aclProbeStage}-timeout`;
+  }
+  if (['EACCES', 'ENOENT', 'EPERM', 'ETIMEDOUT'].includes(error?.code)) return error.code.toLowerCase();
+  const message = typeof error?.message === 'string' ? error.message : '';
+  if (message.startsWith('Agent executable is writable by another principal')) return 'acl-writable';
+  if (message.startsWith('Unsafe executable ACL owner') || message.includes(': Unsafe executable ACL owner')) return 'acl-owner';
+  if (message.startsWith('Unrecognized executable ACL')) return 'acl-format';
+  if (message.startsWith('Could not identify the Windows runtime owner')) return 'identity';
+  if (message.startsWith('Agent executable owner or permissions are unsafe')) return 'unsafe-permissions';
+  return 'unavailable';
+}
+
 const selectedProvider = (process.env.AGENT_PROVIDER || 'codex').toLowerCase();
 const verifyAll = process.env.VERIFY_ALL_AGENT_CLIS === 'true';
 const checks = verifyAll ? Object.values(checksByProvider) : [checksByProvider[selectedProvider]];
@@ -97,27 +191,32 @@ if (!checks[0]) {
 
 let failed = false;
 for (const check of checks) {
+  let phase = 'resolve';
   try {
-    const output = execFileSync('which', [check.command], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    execFileSync(check.command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
-    const version = execFileSync(check.command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 })
+    const command = resolveCommand(check);
+    assertCommandTrust(command, (role) => { phase = `help-trust-${role}`; });
+    phase = 'help-execute';
+    invokeCommand(command, check.args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 });
+    phase = 'version-execute';
+    const version = invokeCommand(command, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 })
       .trim()
       .replace(/\s+/g, ' ')
       .slice(0, 200);
+    phase = 'credential';
     const credentialNamesForCheck = credentialNames(check);
     const credentialState = credentialNamesForCheck.length === 0
       ? 'credential-resolution-deferred-to-cli'
-      : check.localSession && hasLocalSession(check)
+      : check.localSession && hasLocalSession(check, command)
       ? 'local-session-present'
         : credentialNamesForCheck.some((name) => Boolean(process.env[name]))
         ? 'credential-reference-present'
         : 'credential-reference-missing';
-    console.log(`${check.name}: available (${output}); version: ${version || 'unknown'}; headless-help: pass; ${credentialState}`);
+    console.log(`${check.name}: available (${command.path}); version: ${version || 'unknown'}; headless-help: pass; ${credentialState}`);
     if (credentialState === 'credential-reference-missing' && authIsRequired()) failed = true;
   } catch (error) {
     failed = true;
-    const code = error?.status ?? 'unavailable';
-    console.log(`${check.name}: NOT_READY (${code}); install the official CLI and configure credentials by environment reference`);
+    const code = safeFailureCode(error);
+    console.log(`${check.name}: NOT_READY (${phase}/${code}); install the official CLI and configure credentials by environment reference`);
   }
 }
 

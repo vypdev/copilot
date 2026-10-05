@@ -15,6 +15,9 @@ export const permissionTexts = [
   'Provision and assign configured issue types.',
   'Inspect selected Projects and their Status options; setup does not edit Project items.',
   'Create the initial repository tag when no version tag exists.',
+  'Create an isolated branch for the Actions permission check.',
+  'Create the initial tag and an isolated branch for the Actions permission check.',
+  'Create the initial tag or an isolated branch for the Actions permission check.',
   'Inspect and provision selected repository Actions Secrets.',
   'Inspect and provision selected repository Actions Variables.',
   'Provision labels for the selected issue workflows.',
@@ -41,6 +44,7 @@ export const permissionTexts = [
   'Variable provisioning enabled',
   'Issue workflows enabled',
   'Credential health enabled',
+  'Initial tag or credential-health check enabled',
   'Pull-request approval enabled',
   'Release, hotfix, or guarded approval enabled',
   'Temporary health workflow required',
@@ -48,6 +52,7 @@ export const permissionTexts = [
   'Organization Variable storage selected',
   'Issue type automation enabled',
   'Organization Projects selected',
+  'After setup plan approval',
 ] as const;
 
 export type PermissionText = typeof permissionTexts[number];

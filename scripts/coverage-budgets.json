@@ -131,6 +131,7 @@
           "files": [
             "src/data/repository/agent_cli_execution.ts",
             "src/data/repository/agent_cli_provisioner.ts",
+            "src/infrastructure/agents/agent_executable_file.ts",
             "src/infrastructure/agents/agent_execution_planner.ts"
           ],
           "mode": "each",

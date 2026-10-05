@@ -143,7 +143,9 @@ describe('CLI', () => {
     process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
     (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
-      command === 'git rev-parse HEAD'
+      command === 'git rev-parse --is-inside-work-tree' ? 'true'
+        : command === 'git rev-parse --show-prefix' ? ''
+        : command === 'git rev-parse HEAD'
         ? 'a'.repeat(40)
         : 'https://github.com/test-owner/test-repo.git',
     ));
@@ -497,11 +499,13 @@ describe('CLI', () => {
       for (const option of setupCommand.options) {
         setupCommand.setOptionValue(option.attributeName(), option.defaultValue);
       }
+      (runLocalAction as jest.Mock).mockResolvedValue([{ id: 'InitialSetupUseCase', success: true, executed: true, errors: [] }]);
     });
 
     describe('local web command handoff', () => {
       let ask: jest.SpyInstance;
       let collect: jest.SpyInstance;
+      const webView = () => ((startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge).snapshot();
 
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
@@ -517,7 +521,9 @@ describe('CLI', () => {
       beforeEach(() => {
         (setupApplySnapshotMatches as jest.Mock).mockReturnValue(true);
         (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
-          command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          command === 'git rev-parse --is-inside-work-tree' ? 'true'
+            : command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : command === 'git rev-parse --abbrev-ref HEAD' || command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : 'https://github.com/test-owner/test-repo.git',
@@ -544,6 +550,8 @@ describe('CLI', () => {
         expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(2);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBeUndefined();
+        expect(webView().journey?.outcome).toBe('complete');
+        expect(webView().outcome).toBe('complete');
         const bridge = (startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge;
         expect(await bridge.runReadOnlyDoctor()).toBe('complete');
         expect(mockDoctorExecute).toHaveBeenCalledWith(expect.objectContaining({
@@ -571,6 +579,8 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web']);
         expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
         expect(runLocalAction).not.toHaveBeenCalled();
+        expect(webView().journey?.outcome).toBe('cancelled');
+        expect(webView().outcome).toBe('cancelled');
       });
 
       it('treats a dismissed repository confirmation as cancellation', async () => {
@@ -584,7 +594,9 @@ describe('CLI', () => {
       it('rejects detached HEAD before opening the browser or collecting a PAT', async () => {
         (execSync as jest.Mock).mockImplementation((command: string) => {
           if (command === 'git symbolic-ref --quiet --short HEAD') throw new Error('detached HEAD');
-          return Buffer.from(command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          return Buffer.from(command === 'git rev-parse --is-inside-work-tree' ? 'true'
+            : command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : 'https://github.com/test-owner/test-repo.git');
         });
@@ -694,6 +706,8 @@ describe('CLI', () => {
         expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBeUndefined();
+        expect(webView().journey?.outcome).toBe('dry-run');
+        expect(webView().outcome).toBe('dry-run');
       });
 
       it('requires explicit selection before using an environment PAT', async () => {
@@ -733,6 +747,8 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
+        expect(webView().journey?.outcome).toBe('blocked');
+        expect(webView().outcome).toBe('blocked');
       });
 
       it('does not enter the mutation boundary when final Apply is declined', async () => {
@@ -770,8 +786,16 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBe(1);
+        expect(webView().journey?.outcome).toBe('partial');
+        expect(webView().outcome).toBe('partial');
         const { logInfo } = require('../utils/logger');
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('partial completion'));
+      });
+
+      it('does not call an empty mutation result complete', async () => {
+        (runLocalAction as jest.Mock).mockResolvedValueOnce([]);
+        await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
+        expect(process.exitCode).toBe(1);
       });
 
       it('passes only explicitly approved changed workflows to the mutation boundary', async () => {
@@ -784,7 +808,8 @@ describe('CLI', () => {
           ? 'Update setup-managed workflows' : answerWebPrompt(prompt));
         try {
           await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets']);
-          expect(runLocalAction).toHaveBeenCalledWith(expect.objectContaining({ setupWorkflowUpdates: ['copilot_issue.yml'] }));
+          expect(runLocalAction).toHaveBeenCalledWith(expect.objectContaining({ setupWorkflowUpdates: ['copilot_issue.yml'] }),
+            expect.objectContaining({ onSetupProgress: expect.any(Function) }));
         } finally { comparison.mockRestore(); }
       });
 
@@ -821,7 +846,9 @@ describe('CLI', () => {
       it('fails closed when the GitHub remote becomes unresolvable just before Apply', async () => {
         let remoteReads = 0;
         (execSync as jest.Mock).mockImplementation((command: string) => Buffer.from(
-          command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          command === 'git rev-parse --is-inside-work-tree' ? 'true'
+            : command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : command === 'git config --get remote.origin.url' && ++remoteReads > 1
@@ -837,7 +864,9 @@ describe('CLI', () => {
         let branchReads = 0;
         (execSync as jest.Mock).mockImplementation((command: string) => {
           if (command === 'git symbolic-ref --quiet --short HEAD' && ++branchReads > 1) throw new Error('detached HEAD');
-          return Buffer.from(command === 'git rev-parse HEAD' ? 'a'.repeat(40)
+          return Buffer.from(command === 'git rev-parse --is-inside-work-tree' ? 'true'
+            : command === 'git rev-parse --show-prefix' ? ''
+            : command === 'git rev-parse HEAD' ? 'a'.repeat(40)
             : command === 'git rev-parse --show-toplevel' ? process.cwd()
               : command === 'git symbolic-ref --quiet --short HEAD' ? 'develop'
                 : 'https://github.com/test-owner/test-repo.git');
@@ -894,6 +923,9 @@ describe('CLI', () => {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
         expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
         expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
+          expect.objectContaining({ scope: 'repository', permission: 'Contents', level: 'write', applicability: 'conditional' }),
+        ]));
+        expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
           expect.objectContaining({ scope: 'repository', permission: 'Contents', level: 'write', applicability: 'required' }),
         ]));
         expect(botGuide).toHaveBeenCalledTimes(1);
@@ -1549,7 +1581,7 @@ describe('CLI', () => {
         '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
       const { logInfo } = require('../utils/logger');
-      expect(logInfo.mock.calls.flat().join('\n')).toContain('temporary credential-health workflow create was attempted before Apply');
+      expect(logInfo.mock.calls.flat().join('\n')).toContain('A temporary GitHub resource may remain before Apply');
       expect(logInfo.mock.calls.flat().join('\n')).not.toContain('No changes were applied');
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
@@ -1589,7 +1621,7 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
         const { logInfo } = require('../utils/logger');
-        expect(logInfo.mock.calls.flat().join('\n')).toContain('Setup stopped after a possible credential-health workflow change');
+        expect(logInfo.mock.calls.flat().join('\n')).toContain('Setup stopped after a possible temporary GitHub change');
         expect(logInfo.mock.calls.flat().join('\n')).not.toContain('Setup cancelled. No changes were applied.');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Partial: changes may exist');
         expect(process.exitCode).toBe(130);
@@ -1638,58 +1670,23 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
     });
 
-    it('accepts the dedicated non-interactive acknowledgement for required writes', async () => {
-      const requiredWrite: SetupTokenPermissionRequirement = {
-        id: 'setup.repository.contents', role: 'setup', scope: 'repository', permission: 'Contents',
-        level: 'write', applicability: 'required', reason: 'Create repository content.', probe: 'contents',
-      };
-      mockTokenPermissionInspect.mockResolvedValueOnce({
-        role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
-        ready: false, confirmationRequired: true,
-        checks: [{ ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' }],
-      });
-
+    it('rejects the legacy flag before starting any permission audit', async () => {
       await program.parseAsync([
         'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
         '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
         '--confirm-unverifiable-write-permissions',
       ]);
 
-      expect(runLocalAction).toHaveBeenCalledTimes(1);
-      expect(process.exitCode).toBeUndefined();
-    });
-
-    it('requires acknowledgement again when only the final permission audit is unverifiable', async () => {
-      const requiredWrite: SetupTokenPermissionRequirement = {
-        id: 'setup.repository.variables', role: 'setup', scope: 'repository', permission: 'Variables',
-        level: 'write', applicability: 'required', reason: 'Provision repository variables.', probe: 'variables',
-      };
-      mockTokenPermissionInspect
-        .mockResolvedValueOnce({
-          role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
-          ready: true, confirmationRequired: false, checks: [],
-        })
-        .mockResolvedValueOnce({
-          role: 'setup', identityStatus: 'valid', identityMessage: 'verified',
-          ready: false, confirmationRequired: true,
-          checks: [{ ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' }],
-        });
-
-      await program.parseAsync([
-        'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
-        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
-        '--confirm-unverifiable-write-permissions',
-      ]);
-
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
-      expect(runLocalAction).toHaveBeenCalledTimes(1);
-      expect(process.exitCode).toBeUndefined();
+      expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
     });
 
     it.each([
       { ready: false, identityStatus: 'valid' as const },
       { ready: true, identityStatus: 'invalid' as const },
     ])('stops after planning when the configured setup PAT report is $identityStatus/$ready', async (report) => {
+      mockRemoteConfigurationInspect.mockResolvedValueOnce({ ...defaultRemoteConfiguration, repositoryId: 42 });
       mockTokenPermissionInspect
         .mockResolvedValueOnce({
           role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false, checks: [],
@@ -1705,7 +1702,7 @@ describe('CLI', () => {
 
       await program.parseAsync([
         'node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
-        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
+        '--skip-secrets', '--skip-variables', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
       expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
@@ -1760,7 +1757,7 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
     });
 
-    it('shows the final permission report before blocking unavailable managed inventory', async () => {
+    it('blocks unavailable managed inventory before starting temporary write probes', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'User',
         repositoryVisibility: 'private',
@@ -1780,7 +1777,7 @@ describe('CLI', () => {
         '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
@@ -1789,7 +1786,7 @@ describe('CLI', () => {
       }));
     });
 
-    it('shows the final permission report before surfacing organization storage validation', async () => {
+    it('blocks unavailable organization storage before temporary write probes', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'Organization',
         repositoryId: 42,
@@ -1811,19 +1808,16 @@ describe('CLI', () => {
         '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
-      expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
-        expect.objectContaining({ scope: 'organization', permission: 'Variables' }),
-      ]));
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
       expect(logError).toHaveBeenCalledWith(expect.objectContaining({
-        message: expect.stringContaining('organization variables'),
+        message: expect.stringContaining('Organization Variable inventory is unavailable'),
       }));
     });
 
-    it('surfaces a blocked setup plan after completing its final permission and inventory audits', async () => {
+    it('surfaces a blocked setup plan before starting temporary write probes', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'Organization',
         repositoryVisibility: 'private',
@@ -1844,7 +1838,7 @@ describe('CLI', () => {
         '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');

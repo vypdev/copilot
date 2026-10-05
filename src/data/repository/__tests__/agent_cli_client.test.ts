@@ -1,24 +1,35 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join, sep } from 'node:path';
 import type { AgentExecutionObserverPort } from '../../../application/ports/agent_execution_observation_ports';
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
 import { AgentCliClient } from '../agent_cli_client';
 import { AgentCliError } from '../agent_cli_contracts';
-import { createAgentProcessLifecycle, decodeAgentCliOutput } from '../agent_cli_execution';
+import { createAgentProcessLifecycle, decodeAgentCliOutput, verifyWindowsLauncherTrust, windowsTaskkillArguments } from '../agent_cli_execution';
+import { makeWindowsRuntimePathPrivate } from '../../../infrastructure/agents/windows_runtime_acl';
+
+// Multi-case fixtures run native ACL tools for every plan on Windows. This Jest
+// budget includes that setup; each admitted child keeps its own 5-second limit.
+const MULTI_CASE_TEST_TIMEOUT_MS = process.platform === 'win32' ? 30_000 : 20_000;
 
 function plan(script: string, overrides: Partial<AgentExecutionPlan> = {}): AgentExecutionPlan {
     const runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
+    makeWindowsRuntimePathPrivate(runtimeDirectory, true);
     const artifactPath = join(runtimeDirectory, 'gitconfig');
     writeFileSync(artifactPath, '', { mode: 0o600 });
+    makeWindowsRuntimePathPrivate(artifactPath, false);
     return {
         provider: 'codex', capability: 'findings', executable: process.execPath,
         argv: ['-e', script], promptMode: 'final-argv', outputProtocol: 'plain-text', workspace: process.cwd(),
         workspaceMode: 'read-only', childNetwork: 'deny', approval: 'never',
         sessionPersistence: false, output: 'text', timeoutMs: 5_000,
         maxPromptBytes: 512 * 1024, maxOutputBytes: 4 * 1024 * 1024,
-        environment: { PATH: process.env.PATH || '' }, runtimeDirectory,
+        environment: {
+            PATH: process.env.PATH || '',
+            ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot || 'C:\\Windows' } : {}),
+        }, runtimeDirectory,
         artifacts: [{ path: artifactPath, sha256: createHash('sha256').update('').digest('hex'), purpose: 'git-config' }],
         runtimeContract: { provider: 'codex', version: 'codex-cli 0.156.1', manifestRevision: 'test' },
         ...overrides,
@@ -30,12 +41,109 @@ function client(executionPlan: AgentExecutionPlan, observer?: AgentExecutionObse
 }
 
 describe('AgentCliClient admitted process execution', () => {
+    it('reserves forced Windows tree termination for the delayed kill stage', () => {
+        expect(windowsTaskkillArguments(42, 'SIGTERM')).toEqual(['/PID', '42', '/T']);
+        expect(windowsTaskkillArguments(42, 'SIGKILL')).toEqual(['/PID', '42', '/T', '/F']);
+    });
+    it('rechecks a canonical Windows interpreter and package entrypoint before spawn', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-launcher-trust-'));
+        const executable = join(directory, 'node.exe');
+        const alias = join(directory, 'alias.exe');
+        const launcher = join(directory, 'codex.js');
+        writeFileSync(executable, 'fixture');
+        writeFileSync(launcher, 'fixture');
+        const validate = jest.fn();
+        try {
+            verifyWindowsLauncherTrust(realpathSync(executable), launcher, validate);
+            expect(validate.mock.calls).toEqual([[realpathSync(executable)], [launcher]]);
+            if (process.platform !== 'win32') {
+                symlinkSync(executable, alias);
+                expect(() => verifyWindowsLauncherTrust(alias, launcher, validate)).toThrow('interpreter changed');
+            } else {
+                const changed = `${directory}${sep}..${sep}${basename(directory)}${sep}node.exe`;
+                expect(() => verifyWindowsLauncherTrust(changed, launcher, validate)).toThrow('interpreter changed');
+            }
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it.skip : it)('rejects a runtime directory owned by a different user', async () => {
+        const executionPlan = plan('process.stdout.write("unexpected")');
+        if (typeof process.getuid !== 'function') return;
+        const current = process.getuid();
+        const spy = jest.spyOn(process, 'getuid').mockReturnValue(current + 1);
+        try {
+            await expect(client(executionPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'fixture', timeoutMs: 5_000,
+            })).rejects.toMatchObject({ category: 'configuration' });
+        } finally {
+            spy.mockRestore();
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     it('passes final-argv prompts literally without shell evaluation', async () => {
         const executionPlan = plan('process.stdout.write(process.argv[1])');
         await expect(client(executionPlan).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
             prompt: '$(touch should-not-run); literal', timeoutMs: 5_000,
         })).resolves.toBe('$(touch should-not-run); literal');
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+    });
+
+    it('executes a verified Node package launcher and rejects a changed launcher', async () => {
+        const packageDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-package-'));
+        const launcher = join(packageDirectory, 'codex.js');
+        const source = 'process.stdout.write(process.argv[3])';
+        writeFileSync(launcher, source);
+        const executable = process.platform === 'win32' ? join(packageDirectory, 'node.exe') : process.execPath;
+        if (process.platform === 'win32') {
+            copyFileSync(process.execPath, executable);
+            makeWindowsRuntimePathPrivate(executable, false);
+            makeWindowsRuntimePathPrivate(launcher, false);
+        }
+        const canonicalLauncher = realpathSync(launcher);
+        try {
+            const executionPlan = plan('unused', {
+                executable: process.platform === 'win32' ? realpathSync(executable) : process.execPath,
+                launcherArgv: [canonicalLauncher],
+                launcherSha256: createHash('sha256').update(source).digest('hex'),
+                argv: ['exec'],
+            });
+            await expect(client(executionPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'literal & $(ignored) "quoted"', timeoutMs: 5_000,
+            })).resolves.toBe('literal & $(ignored) "quoted"');
+
+            const changedPlan = plan('unused', {
+                executable: process.platform === 'win32' ? realpathSync(executable) : process.execPath,
+                launcherArgv: [canonicalLauncher],
+                launcherSha256: createHash('sha256').update(source).digest('hex'),
+            });
+            writeFileSync(launcher, 'process.stdout.write("tampered")');
+            await expect(client(changedPlan).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'secret', timeoutMs: 5_000,
+            })).rejects.toMatchObject({ category: 'configuration' });
+            expect(existsSync(changedPlan.runtimeDirectory)).toBe(false);
+        } finally {
+            rmSync(packageDirectory, { recursive: true, force: true });
+        }
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it.each([
+        { name: 'extra launcher arguments', launcherArgv: ['/fixture/a.js', '/fixture/b.js'], launcherSha256: 'hash' },
+        { name: 'relative launcher', launcherArgv: ['a.js'], launcherSha256: 'hash' },
+        { name: 'missing launcher hash', launcherArgv: ['/fixture/a.js'] },
+        { name: 'hash without a launcher', launcherSha256: 'hash' },
+    ])('rejects $name before a process starts', async (override) => {
+        const executionPlan = plan('process.stdout.write("unexpected")', override);
+        await expect(client(executionPlan).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'secret', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'configuration' });
         expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
     });
 
@@ -68,24 +176,30 @@ describe('AgentCliClient admitted process execution', () => {
             prompt: 'p', timeoutMs: 5_000,
         };
         const planningFailure = new AgentCliClient({
-            prepare: () => { throw new AgentCliError('rejected', 'configuration'); },
+            prepare: () => {
+                const error = new AgentCliError('rejected', 'configuration');
+                error.preflightStage = 'invocation-trust';
+                error.preflightDiagnostic = 'acl-ancestor-owner';
+                throw error;
+            },
         }, { observe });
         await expect(planningFailure.execute(request)).rejects.toMatchObject({ category: 'configuration' });
         expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
             state: 'failed', phase: 'preflight', failureCategory: 'configuration',
-            semanticCode: 'agent.policy-rejected', retryable: false,
+            semanticCode: 'agent.policy-rejected', retryable: false, preflightStage: 'invocation-trust',
+            preflightDiagnostic: 'acl-ancestor-owner',
         }));
 
         await expect(client(plan('process.exit(75)'), { observe }).execute(request))
             .rejects.toMatchObject({ category: 'process', retryable: true });
         expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
             state: 'failed', phase: 'run', failureCategory: 'process',
-            semanticCode: 'agent.failed', retryable: true,
+            semanticCode: 'agent.failed', retryable: true, exitCode: 75,
         }));
 
         const throwingObserver = { observe: () => { throw new Error('telemetry unavailable'); } };
         await expect(client(plan('process.stdout.write("READY")'), throwingObserver).execute(request)).resolves.toBe('READY');
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('supports the admitted stdin prompt protocol', async () => {
         const executionPlan = plan('process.stdin.pipe(process.stdout)', { promptMode: 'stdin' });
@@ -117,7 +231,7 @@ describe('AgentCliClient admitted process execution', () => {
             configuration: { provider: 'opencode', model: 'model' }, capability: 'findings',
             prompt: 'p', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'output' });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects invalid JSON event values and unsupported admitted protocols', () => {
         for (const value of ['null', '[]', '"text"']) {
@@ -142,7 +256,7 @@ describe('AgentCliClient admitted process execution', () => {
         });
         controller.abort();
         await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects nonzero, empty, and oversized process output', async () => {
         await expect(client(plan('process.exit(2)')).execute({
@@ -157,7 +271,7 @@ describe('AgentCliClient admitted process execution', () => {
         await expect(client(plan('process.stdout.write("large")', { maxOutputBytes: 4 })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'output' });
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('suppresses stderr and marks only the designated provider exit as retryable', async () => {
         const request = {
@@ -165,18 +279,71 @@ describe('AgentCliClient admitted process execution', () => {
             prompt: 'p', timeoutMs: 5_000,
         };
         await expect(client(plan('process.stderr.write("secret diagnostic"); process.exit(2)')).execute(request))
-            .rejects.toMatchObject({ category: 'process', retryable: false, message: expect.not.stringContaining('secret diagnostic') });
+            .rejects.toMatchObject({ category: 'process', retryable: false, exitCode: 2,
+                exitDiagnostic: 'unclassified', message: expect.not.stringContaining('secret diagnostic') });
         await expect(client(plan('process.exit(75)')).execute(request))
             .rejects.toMatchObject({ category: 'process', retryable: true });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it('reports a bounded provider diagnostic without exposing stderr in errors or observations', async () => {
+        const observe = jest.fn();
+        const secret = 'fixture-private-key';
+        const script = `process.stderr.write('model gpt-6-luna is not available; token=${secret}'); process.exit(1)`;
+        const request = {
+            configuration: { provider: 'codex' as const, model: 'gpt-6-luna' }, capability: 'findings' as const,
+            prompt: 'private prompt', timeoutMs: 5_000,
+        };
+        await expect(client(plan(script), { observe }).execute(request)).rejects.toMatchObject({
+            category: 'process', exitCode: 1, exitDiagnostic: 'reported-model-unavailable',
+            message: expect.not.stringContaining(secret),
+        });
+        expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
+            state: 'failed', exitDiagnostic: 'reported-model-unavailable', exitCode: 1,
+        }));
+        expect(JSON.stringify(observe.mock.calls)).not.toMatch(/fixture-private-key|private prompt|gpt-6-luna/);
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it('bounds stderr classification to the first 8 KiB', () => {
+        jest.useFakeTimers();
+        const executionPlan = plan('unused');
+        try {
+            const reject = jest.fn();
+            const lifecycle = createAgentProcessLifecycle({ exitCode: 1 } as never, executionPlan,
+                undefined, jest.fn(), reject);
+            lifecycle.appendStderr(Buffer.from('x'.repeat(8 * 1024)));
+            lifecycle.appendStderr(Buffer.from('model gpt-6-luna is not available'));
+            lifecycle.onClose(1);
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ exitDiagnostic: 'unclassified' }));
+        } finally {
+            jest.useRealTimers();
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+        }
     });
 
     it('rejects process start failures without exposing raw configuration', async () => {
-        await expect(client(plan('unused', { executable: '/missing/copilot-agent' })).execute({
+        await expect(client(plan('unused', { executable: process.platform === 'win32'
+            ? 'C:\\missing\\copilot-agent.exe' : '/missing/copilot-agent' })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'process' });
         await expect(client(plan('unused', { executable: null as never })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'secret', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: process.platform === 'win32' ? 'configuration' : 'process' });
+
+        const malformed = plan('unused', { argv: ['\u0000'] });
+        await expect(client(malformed).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'secret', timeoutMs: 5_000,
         })).rejects.toMatchObject({ category: 'process' });
+        expect(existsSync(malformed.runtimeDirectory)).toBe(false);
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    (process.platform === 'win32' ? it : it.skip)('rejects a Windows command wrapper before spawn', async () => {
+        const executionPlan = plan('unused', { executable: join(tmpdir(), 'agent.cmd') });
+        await expect(client(executionPlan).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'fixture', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'configuration' });
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
     });
 
     it('rejects a prompt beyond the admitted byte limit before spawn', async () => {
@@ -218,15 +385,64 @@ describe('AgentCliClient admitted process execution', () => {
             resolved.appendStdout(Buffer.from('READY'));
             resolved.onClose(0);
             resolved.onClose(0);
+            resolved.abort();
             expect(resolve).toHaveBeenCalledTimes(1);
+
+            const exitedChild = { exitCode: 0, pid: undefined, kill: jest.fn() } as never;
+            const exited = createAgentProcessLifecycle(exitedChild, executionPlan, undefined, resolve, reject);
+            exited.abort();
+            jest.advanceTimersByTime(5_000);
+            expect((exitedChild as { kill: jest.Mock }).kill).toHaveBeenCalledTimes(1);
+            exited.onClose(0);
 
             const stdinFailure = createAgentProcessLifecycle(child, executionPlan, undefined, resolve, reject);
             stdinFailure.onStdinError();
             stdinFailure.onClose(null);
-            expect(reject).toHaveBeenCalledTimes(2);
+            expect(reject).toHaveBeenCalledTimes(3);
         } finally {
             rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
             jest.useRealTimers();
+        }
+    });
+
+    it('handles a signal-only child exit and a process termination race without stderr', () => {
+        jest.useFakeTimers();
+        const executionPlan = plan('unused');
+        const child = { exitCode: null, pid: undefined, kill: jest.fn(() => { throw new Error('already exited'); }) } as never;
+        const reject = jest.fn();
+        try {
+            const aborted = createAgentProcessLifecycle(child, executionPlan, undefined, jest.fn(), reject);
+            aborted.abort();
+            expect((child as { kill: jest.Mock }).kill).toHaveBeenCalledTimes(2);
+            aborted.onClose(null);
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ category: 'cancelled' }));
+
+            const signalOnly = createAgentProcessLifecycle(child, executionPlan, undefined, jest.fn(), reject);
+            signalOnly.onClose(null);
+            expect(reject).toHaveBeenLastCalledWith(expect.objectContaining({
+                category: 'process', exitCode: undefined, retryable: false,
+            }));
+        } finally {
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+            jest.useRealTimers();
+        }
+    });
+
+    it('maps an unexpected decoder failure to a bounded output error', () => {
+        const executionPlan = plan('unused');
+        const malformedPlan = Object.defineProperty({ ...executionPlan }, 'outputProtocol', {
+            get: () => { throw new Error('unsafe decoder detail'); },
+        }) as AgentExecutionPlan;
+        const reject = jest.fn();
+        try {
+            const lifecycle = createAgentProcessLifecycle({ exitCode: 0 } as never, malformedPlan,
+                undefined, jest.fn(), reject);
+            lifecycle.onClose(0);
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({
+                category: 'output', message: expect.not.stringContaining('unsafe decoder detail'),
+            }));
+        } finally {
+            rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
         }
     });
 
@@ -265,6 +481,23 @@ describe('AgentCliClient admitted process execution', () => {
         }
     });
 
+    it('rejects a runtime path that has the managed name but is a file', async () => {
+        const file = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
+        rmSync(file, { recursive: true, force: true });
+        writeFileSync(file, 'fixture');
+        const admittedPlan = plan('process.stdout.write("unexpected")');
+        try {
+            await expect(client({ ...admittedPlan, runtimeDirectory: file }).execute({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'p', timeoutMs: 5_000,
+            })).rejects.toMatchObject({ category: 'configuration' });
+            expect(existsSync(file)).toBe(true);
+        } finally {
+            rmSync(file, { force: true });
+            rmSync(admittedPlan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     it('rejects escaped, non-file, and permission-broadened artifacts', async () => {
         const outsideDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-outside-artifact-'));
         const outsidePath = join(outsideDirectory, 'artifact');
@@ -286,12 +519,16 @@ describe('AgentCliClient admitted process execution', () => {
             })).rejects.toMatchObject({ category: 'configuration' });
 
             const permissionPlan = plan('process.stdout.write("unexpected")');
-            chmodSync(permissionPlan.artifacts[0].path, 0o644);
+            if (process.platform === 'win32') {
+                execFileSync('icacls.exe', [permissionPlan.artifacts[0].path, '/grant', '*S-1-1-0:R'], { stdio: 'ignore' });
+            } else {
+                chmodSync(permissionPlan.artifacts[0].path, 0o644);
+            }
             await expect(client(permissionPlan).execute({
                 configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
             })).rejects.toMatchObject({ category: 'configuration' });
         } finally {
             rmSync(outsideDirectory, { recursive: true, force: true });
         }
-    });
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 });

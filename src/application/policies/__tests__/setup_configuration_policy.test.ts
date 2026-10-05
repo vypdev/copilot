@@ -36,6 +36,7 @@ describe('setup configuration policy', () => {
             { name: 'MERGE_QUEUE_CHECK_ATTESTATIONS', value: '[]' },
         ]));
         expect(plan.mergeQueueReadiness).toEqual([]);
+        expect(plan.variables.some(variable => variable.name === 'AGENT_PROVISIONING')).toBe(false);
         expect(buildSetupActionInputs(configuration)['bugbot-fail-on-unresolved']).toBe('false');
         expect(buildSetupActionInputs(configuration)['merge-queue-check-attestations']).toBe('[]');
         expect(plan.requiredSecrets).toEqual(['PAT']);
@@ -563,19 +564,17 @@ describe('setup configuration policy', () => {
         );
     });
 
-    it('adds warnings for organization storage, projects, and always-provision mode', () => {
+    it('adds warnings for organization storage, projects, and Cursor readiness', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.features.release = false;
         configuration.features.hotfix = false;
         configuration.projects.ids = 'PVT_example';
-        configuration.ai.provisioningMode = 'always';
         configuration.storage.variables.defaultScope = 'organization';
         configuration.agents.findings.provider = 'cursor';
 
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
             expect.stringContaining('Selected Project numbers'),
-            expect.stringContaining('Always-provision mode reinstalls only default Codex/OpenCode runtimes'),
-            expect.stringContaining('no automatic Cursor installer'),
+            expect.stringContaining('Action installs the official CLI when the default executable is absent'),
             expect.stringContaining('Organization-level'),
         ]));
     });

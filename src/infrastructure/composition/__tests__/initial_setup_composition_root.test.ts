@@ -50,7 +50,8 @@ describe('initial setup composition root', () => {
     );
     expect(mockComposeInitialSetupUseCase).toHaveBeenCalledTimes(1);
     const dependencies = mockComposeInitialSetupUseCase.mock.calls[0];
-    expect(dependencies).toHaveLength(10);
+    expect(dependencies).toHaveLength(11);
+    expect(dependencies[10]).toBeUndefined();
     const labels = dependencies[1] as { ensureInitialLabels(value: unknown): Promise<unknown> };
     await labels.ensureInitialLabels({ lifecycle: {} });
     expect(mockLabelProvisioning.ensureInitialLabels).toHaveBeenCalledWith(

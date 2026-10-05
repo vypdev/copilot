@@ -38898,7 +38898,7 @@ const main_run_lifecycle_1 = __nccwpck_require__(916);
 const issue_workflow_runtime_policy_1 = __nccwpck_require__(77734);
 const application_error_1 = __nccwpck_require__(75999);
 const issue_start_policy_1 = __nccwpck_require__(90332);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase, prepareRuntime, setupProgress) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -38935,7 +38935,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message)];
     }
     await prepareRuntime?.(execution);
-    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface);
+    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress);
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
@@ -40061,10 +40061,20 @@ function readGithubActionProjectInputs(getInput, projects) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareGithubAgentRuntime = prepareGithubAgentRuntime;
 const agent_cli_provisioner_1 = __nccwpck_require__(3115);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_official_installer_1 = __nccwpck_require__(28520);
 const agent_authentication_preflight_1 = __nccwpck_require__(67766);
 const logger_1 = __nccwpck_require__(91151);
 const application_error_1 = __nccwpck_require__(75999);
-/** Validates and, when requested by the runtime, provisions the selected agent CLIs. */
+function logProvisioningFailure(provider, failure) {
+    const diagnostic = failure instanceof agent_official_installer_1.OfficialAgentInstallationError
+        ? `official-${failure.stage}${failure.exitCode === undefined ? '' : `-exit-${failure.exitCode}`}`
+            + `${failure.reason === undefined ? '' : `-${failure.reason}`}`
+        : failure instanceof agent_cli_contracts_1.AgentCliError && failure.preflightDiagnostic
+            ? `replacement-trust-${failure.preflightDiagnostic}` : 'unavailable';
+    (0, logger_1.logInfo)(`Agent runtime ${provider} provisioning failed (${diagnostic}).`);
+}
+/** Reuses selected agent CLIs, installing missing default CLIs from official sources. */
 function prepareGithubAgentRuntime(agentTasks, activeTasks) {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
     for (const [task, configuration] of configurations) {
@@ -40083,7 +40093,8 @@ function prepareGithubAgentRuntime(agentTasks, activeTasks) {
                 provisioner.provision(configuration);
             }
             catch (cause) {
-                throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime is unavailable and could not satisfy the selected provisioning mode.`, { cause });
+                logProvisioningFailure(configuration.provider, cause);
+                throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime is unavailable or its official installation failed.`, { cause });
             }
         }
     }
@@ -41868,9 +41879,11 @@ function validateAgentExecutableSelection(configuration) {
         return;
     const expected = agent_1.AGENT_EXECUTABLE_BASENAMES[configuration.provider];
     const isExpectedBareName = selected === expected;
-    const isAbsolutePath = selected.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(selected);
+    const isWindowsAbsolutePath = /^[a-zA-Z]:[\\/]/.test(selected);
+    const isAbsolutePath = selected.startsWith('/') || isWindowsAbsolutePath;
     const selectedBasename = selected.split(/[\\/]/).at(-1);
-    const isExpectedAbsolutePath = isAbsolutePath && selectedBasename === expected;
+    const isExpectedAbsolutePath = isAbsolutePath && (selectedBasename === expected
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`));
     if (!isExpectedBareName && !isExpectedAbsolutePath) {
         throw new application_error_1.ApplicationError('agent.policy-rejected', `Agent executable must be the bare name "${expected}" or an absolute path with that basename.`);
     }
@@ -49189,7 +49202,6 @@ function buildSetupRepositoryVariables(configuration) {
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_EXECUTABLE', base.executable);
-    add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
@@ -49365,9 +49377,6 @@ function buildSetupWarnings(configuration) {
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
-    if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
-    }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
@@ -49375,7 +49384,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
@@ -52068,7 +52077,7 @@ exports.InitialSetupUseCase = void 0;
 const initial_setup_workflow_1 = __nccwpck_require__(18079);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
-    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
+    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort, progress) {
         this.authenticatedUserPort = authenticatedUserPort;
         this.initialLabelProvisioningPort = initialLabelProvisioningPort;
         this.issueTypeProvisioningPort = issueTypeProvisioningPort;
@@ -52079,6 +52088,7 @@ class InitialSetupUseCase {
         this.setupRepositoryVariablesPort = setupRepositoryVariablesPort;
         this.setupRepositorySecretsPort = setupRepositorySecretsPort;
         this.setupRemoteConfigurationReadPort = setupRemoteConfigurationReadPort;
+        this.progress = progress;
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
@@ -52093,6 +52103,7 @@ class InitialSetupUseCase {
             setupRepositoryVariablesPort: this.setupRepositoryVariablesPort,
             setupRepositorySecretsPort: this.setupRepositorySecretsPort,
             setupRemoteConfigurationReadPort: this.setupRemoteConfigurationReadPort,
+            progress: this.progress,
         });
     }
 }
@@ -52134,8 +52145,13 @@ async function runInitialSetupWorkflow(request, dependencies) {
     const mark = (id, state) => {
         const index = effects.findIndex(effect => effect.id === id);
         effects[index] = { ...effects[index], state };
+        try {
+            dependencies.progress?.(Object.freeze({ ...effects[index] }));
+        }
+        catch { /* Presentation observers cannot abort provisioning. */ }
     };
-    const receipt = () => buildResult(errors, steps, effects);
+    const receipt = () => buildResult(errors, steps, effects.map(effect => effect.state === 'in-progress'
+        ? { ...effect, state: 'needs-inspection' } : effect));
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken()) {
@@ -52193,12 +52209,12 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
-        mark('files', 'needs-inspection');
+        mark('files', 'in-progress');
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
-            mark('secrets', 'needs-inspection');
+            mark('secrets', 'in-progress');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('secrets', secrets.errors.length ? 'needs-inspection' : secrets.writes > 0 ? 'completed' : 'skipped');
         if (secrets.step)
@@ -52206,7 +52222,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (secrets.errors.length > 0)
             errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
-        mark('labels', 'needs-inspection');
+        mark('labels', 'in-progress');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort, setupConfiguration);
         mark('labels', !labels.completed || labels.configured.errors.length || labels.progress.errors.length
             ? 'needs-inspection' : labels.configured.created + labels.progress.created > 0 ? 'completed' : 'skipped');
@@ -52218,7 +52234,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             appendLabelSummary(steps, errors, labels.progress, 'Progress labels');
         }
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
-        mark('issue-types', 'needs-inspection');
+        mark('issue-types', 'in-progress');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort, setupConfiguration);
         mark('issue-types', !issueTypes.success ? 'needs-inspection' : issueTypes.created > 0 ? 'completed' : 'skipped');
         if (!issueTypes.success) {
@@ -52228,7 +52244,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
         if (setupConfiguration?.manageRepositoryVariables)
-            mark('variables', 'needs-inspection');
+            mark('variables', 'in-progress');
         const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
@@ -52236,7 +52252,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (variables.errors.length > 0)
             errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
         if (setupConfiguration?.createInitialTag !== false)
-            mark('initial-tag', 'needs-inspection');
+            mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
             : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
@@ -65468,8 +65484,7 @@ function getCurrentHeadSha() {
 }
 function isInsideGitRepo(cwd) {
     try {
-        (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
-        return true;
+        return (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' }).toString().trim() === 'true';
     }
     catch {
         return false;
@@ -65482,7 +65497,8 @@ function getGitRepositoryRoot(cwd) {
 }
 function isGitRepositoryRoot(cwd) {
     try {
-        return getGitRepositoryRoot(cwd) === (0, node_fs_1.realpathSync)(cwd);
+        return isInsideGitRepo(cwd)
+            && (0, child_process_1.execSync)('git rev-parse --show-prefix', { cwd, stdio: 'pipe' }).toString().trim() === '';
     }
     catch {
         return false;
@@ -67394,10 +67410,13 @@ const node_path_1 = __nccwpck_require__(49411);
 const node_child_process_1 = __nccwpck_require__(17718);
 const agent_credential_policy_1 = __nccwpck_require__(36529);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
 const DEFAULT_AUTHENTICATION_SYSTEM = {
     hasOperationalCodexLogin(executable, environment) {
         try {
-            (0, node_child_process_1.execFileSync)(executable, ['login', 'status'], {
+            const selected = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(selected, 'codex', environment);
+            (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, 'login', 'status'], {
                 env: environment,
                 stdio: 'ignore',
                 timeout: 15000,
@@ -67602,8 +67621,14 @@ function failureObservation(request, error, phase, startedAt) {
         provider: request.configuration.provider, capability: request.capability,
         durationMilliseconds: Date.now() - startedAt,
         failureCategory: category,
+        ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightStage
+            ? { preflightStage: error.preflightStage } : {}),
+        ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightDiagnostic
+            ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
         semanticCode: semanticCodeForFailure(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
+        exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
+        exitDiagnostic: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitDiagnostic : undefined,
     };
 }
 function semanticCodeForFailure(category) {
@@ -67637,10 +67662,12 @@ function observeSafely(observer, observation) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliError = void 0;
 class AgentCliError extends Error {
-    constructor(message, category, retryable = false) {
+    constructor(message, category, retryable = false, exitCode, exitDiagnostic) {
         super(message);
         this.category = category;
         this.retryable = retryable;
+        this.exitCode = exitCode;
+        this.exitDiagnostic = exitDiagnostic;
         this.name = 'AgentCliError';
     }
 }
@@ -67658,12 +67685,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAgentCli = runAgentCli;
 exports.createAgentProcessLifecycle = createAgentProcessLifecycle;
 exports.decodeAgentCliOutput = decodeAgentCliOutput;
+exports.verifyWindowsLauncherTrust = verifyWindowsLauncherTrust;
+exports.windowsTaskkillArguments = windowsTaskkillArguments;
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const node_os_1 = __nccwpck_require__(70612);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_cli_exit_diagnostic_1 = __nccwpck_require__(86654);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const agent_executable_file_1 = __nccwpck_require__(87997);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(plan, prompt, signal) {
     return new Promise((resolve, reject) => {
@@ -67681,16 +67714,14 @@ function runAgentCli(plan, prompt, signal) {
             reject(error instanceof agent_cli_contracts_1.AgentCliError ? error : new agent_cli_contracts_1.AgentCliError('Agent execution plan integrity check failed.', 'configuration'));
             return;
         }
-        let cleaned = false;
-        const cleanup = () => {
-            if (cleaned)
-                return;
-            cleaned = true;
-            cleanupRuntimeDirectory(runtimeDirectory);
-        };
+        const cleanup = () => cleanupRuntimeDirectory(runtimeDirectory);
         const child = (() => {
             try {
-                return (0, node_child_process_1.spawn)(plan.executable, plan.promptMode === 'final-argv' ? [...plan.argv, prompt] : plan.argv, {
+                return (0, node_child_process_1.spawn)(plan.executable, [
+                    ...(plan.launcherArgv || []),
+                    ...plan.argv,
+                    ...(plan.promptMode === 'final-argv' ? [prompt] : []),
+                ], {
                     cwd: plan.workspace,
                     env: plan.environment,
                     stdio: ['pipe', 'pipe', 'pipe'],
@@ -67721,6 +67752,7 @@ function runAgentCli(plan, prompt, signal) {
 function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
     const stdoutChunks = [];
     let stderrBytes = 0;
+    const stderrChunks = [];
     let outputBytes = 0;
     let settled = false;
     let terminationError;
@@ -67781,7 +67813,11 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
-        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
+        if (stderrBytes < MAX_STDERR_BYTES) {
+            const retained = chunk.subarray(0, MAX_STDERR_BYTES - stderrBytes);
+            stderrChunks.push(retained);
+            stderrBytes += retained.byteLength;
+        }
     };
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
@@ -67792,7 +67828,10 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
+            const exitDiagnostic = stderrBytes > 0
+                ? (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'))
+                : undefined;
+            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
         }
         try {
@@ -67859,15 +67898,38 @@ function verifyOwnedRuntimeDirectory(requestedPath) {
         || (0, node_path_1.dirname)(runtimeDirectory) !== expectedParent
         || !/^copilot-agent-runtime-[A-Za-z0-9_-]{6}$/u.test(name)
         || !stats.isDirectory()
-        || (stats.mode & 0o077) !== 0) {
+        || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
         throw new Error('Managed runtime directory is not an owned private execution directory.');
     }
     if (typeof process.getuid === 'function' && stats.uid !== process.getuid()) {
         throw new Error('Managed runtime directory has an unexpected owner.');
     }
+    (0, windows_runtime_acl_1.verifyWindowsRuntimePathPrivate)(runtimeDirectory, true);
     return runtimeDirectory;
 }
 function verifyAdmittedPlan(plan, runtimeDirectory) {
+    if (process.platform === 'win32' && !/\.exe$/iu.test(plan.executable)) {
+        throw new Error('Windows command wrappers cannot execute an admitted agent plan.');
+    }
+    if (plan.launcherArgv?.length) {
+        if (plan.launcherArgv.length !== 1
+            || (process.platform !== 'win32' && plan.executable !== process.execPath)
+            || !(0, node_path_1.isAbsolute)(plan.executable)
+            || !(0, node_path_1.isAbsolute)(plan.launcherArgv[0]) || !plan.launcherSha256) {
+            throw new Error('Managed agent launcher is invalid.');
+        }
+        if (process.platform === 'win32')
+            verifyWindowsLauncherTrust(plan.executable, plan.launcherArgv[0]);
+        const launcher = (0, node_fs_1.realpathSync)(plan.launcherArgv[0]);
+        if (launcher !== plan.launcherArgv[0]
+            || !(0, node_fs_1.statSync)(launcher).isFile()
+            || (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(launcher)).digest('hex') !== plan.launcherSha256) {
+            throw new Error('Managed agent launcher changed after preflight.');
+        }
+    }
+    else if (plan.launcherSha256) {
+        throw new Error('Managed agent launcher hash has no launcher.');
+    }
     for (const artifact of plan.artifacts) {
         const path = (0, node_fs_1.realpathSync)(artifact.path);
         const relation = (0, node_path_1.relative)(runtimeDirectory, path);
@@ -67878,19 +67940,40 @@ function verifyAdmittedPlan(plan, runtimeDirectory) {
             throw new Error('Managed artifact escaped its runtime directory.');
         }
         const stats = (0, node_fs_1.statSync)(path);
-        if (!stats.isFile() || (stats.mode & 0o077) !== 0)
+        if (!stats.isFile() || (process.platform !== 'win32' && (stats.mode & 0o077) !== 0)) {
             throw new Error('Managed artifact permissions changed.');
+        }
+        (0, windows_runtime_acl_1.verifyWindowsRuntimePathPrivate)(path, false);
         const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(path)).digest('hex');
         if (actual !== artifact.sha256)
             throw new Error('Managed artifact hash changed.');
     }
 }
+/** Recheck a separate Windows interpreter and package entrypoint immediately before spawn. */
+function verifyWindowsLauncherTrust(executable, launcher, validate = agent_executable_file_1.validateAgentExecutableFile) {
+    if ((0, node_fs_1.realpathSync)(executable) !== executable) {
+        throw new Error('Managed agent interpreter changed after preflight.');
+    }
+    validate(executable);
+    validate(launcher);
+}
 function cleanupRuntimeDirectory(runtimeDirectory) {
     (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
 }
+function windowsTaskkillArguments(pid, signal) {
+    const args = ['/PID', String(pid), '/T'];
+    if (signal === 'SIGKILL')
+        args.push('/F');
+    return args;
+}
 function signalProcessTree(child, signal) {
     try {
-        if (process.platform !== 'win32' && child.pid) {
+        if (process.platform === 'win32' && child.pid) {
+            (0, node_child_process_1.execFileSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), windowsTaskkillArguments(child.pid, signal), {
+                stdio: 'ignore', timeout: 5000, windowsHide: true,
+            });
+        }
+        else if (child.pid) {
             process.kill(-child.pid, signal);
         }
         else {
@@ -67899,7 +67982,41 @@ function signalProcessTree(child, signal) {
     }
     catch {
         // The process may have exited between the lifecycle check and signal.
+        try {
+            child.kill(signal);
+        }
+        catch { /* Already exited. */ }
     }
+}
+
+
+/***/ }),
+
+/***/ 86654:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
+function classifyAgentCliExitDiagnostic(stderr) {
+    if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
+        return 'reported-authentication';
+    }
+    if (/\b(?:unknown model|unsupported model|model[^\r\n]{0,100}(?:not found|not available|unsupported|does not exist|invalid))\b/iu.test(stderr)) {
+        return 'reported-model-unavailable';
+    }
+    if (/\b(?:unexpected argument|unknown option|unrecognized option|unsupported option|invalid option)\b/iu.test(stderr)) {
+        return 'reported-unsupported-option';
+    }
+    if (/\b(?:unknown (?:config(?:uration)? )?(?:field|key)|unrecognized config(?:uration)?|unsupported config(?:uration)?|error parsing configuration)\b/iu.test(stderr)) {
+        return 'reported-unsupported-configuration';
+    }
+    if (/\b(?:connection (?:refused|failed|reset)|network error|timed out|rate limit|too many requests|http 429|503 service unavailable)\b/iu.test(stderr)) {
+        return 'reported-transport-or-rate-limit';
+    }
+    return 'unclassified';
 }
 
 
@@ -67913,136 +68030,117 @@ function signalProcessTree(child, signal) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliProvisioner = void 0;
 exports.agentExecutableExists = agentExecutableExists;
-const node_child_process_1 = __nccwpck_require__(17718);
-const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const node_fs_1 = __nccwpck_require__(87561);
+const agent_1 = __nccwpck_require__(79937);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
+const agent_official_installer_1 = __nccwpck_require__(28520);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
-const agent_cli_provisioning_policy_1 = __nccwpck_require__(11959);
+const agent_official_version_1 = __nccwpck_require__(99619);
 function agentExecutableExists(executable, environment) {
-    if ((0, node_path_1.isAbsolute)(executable) || executable.includes('/')) {
-        try {
-            (0, node_fs_1.accessSync)(executable, node_fs_1.constants.X_OK);
-            return true;
-        }
-        catch {
-            return false;
-        }
+    try {
+        (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+        return true;
     }
-    const pathEntries = (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    return pathEntries.some((directory) => extensions.some((extension) => {
-        try {
-            (0, node_fs_1.accessSync)((0, node_path_1.join)(directory, `${executable}${extension}`), node_fs_1.constants.X_OK);
-            return true;
-        }
-        catch {
-            return false;
-        }
-    }));
-}
-function installPackageGlobally(packageName, version) {
-    // npm uses the runner's system Node directly and avoids the Intel macOS
-    // SEA binary issue that can affect Corepack-managed pnpm installations.
-    (0, node_child_process_1.execFileSync)('npm', ['install', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+    catch {
+        return false;
+    }
 }
 const DEFAULT_SYSTEM = {
     executableExists: agentExecutableExists,
-    readVersion(executable, environment) {
-        return (0, node_child_process_1.execFileSync)(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15000,
-        });
-    },
-    installPackage: installPackageGlobally,
+    readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
+    readLatestVersion: agent_official_version_1.readOfficialLatestAgentVersion,
+    installOfficial: agent_official_installer_1.installOfficialAgentCli,
 };
+/** Prepare only active provider CLIs; installation never modifies an operator executable. */
 class AgentCliProvisioner {
     constructor(system = DEFAULT_SYSTEM) {
         this.system = system;
-        this.provisionedExecutables = new Set();
+        this.preparedExecutables = new Set();
     }
     provision(target, environment = process.env) {
         const provider = typeof target === 'string' ? target : target.provider;
         const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim() || undefined;
-        const executable = typeof target === 'string'
-            ? agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider]
-            : selectedExecutable || agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider];
-        const mode = (0, agent_cli_provisioning_policy_1.resolveAgentProvisioningMode)(environment.AGENT_PROVISIONING);
-        if (this.provisionedExecutables.has(executable))
+        const executable = selectedExecutable || agent_1.AGENT_EXECUTABLE_BASENAMES[provider];
+        const key = `${provider}:${executable}`;
+        if (this.preparedExecutables.has(key))
             return;
-        const executableAvailable = this.system.executableExists(executable, environment);
-        if (selectedExecutable !== undefined) {
-            if (!executableAvailable) {
-                throw new Error(`The explicitly selected ${provider} executable "${executable}" is not available; explicit executables are never installed or replaced.`);
+        if (this.system.executableExists(executable, environment)) {
+            if (selectedExecutable) {
+                this.preparedExecutables.add(key);
+                return;
             }
-            this.provisionedExecutables.add(executable);
+            let installedVersion;
+            try {
+                installedVersion = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(executable, provider, environment));
+            }
+            catch (error) {
+                if (error instanceof agent_cli_contracts_1.AgentCliError && error.category === 'configuration') {
+                    // A discovered but untrusted default is not an available runtime.
+                    this.installPrivate(provider, executable, environment, key);
+                    return;
+                }
+                // A version probe failure does not authorize replacing an existing CLI.
+                this.preparedExecutables.add(key);
+                return;
+            }
+            let latestVersion;
+            try {
+                latestVersion = this.system.readLatestVersion(provider);
+            }
+            catch {
+                // Update metadata is advisory when a trusted executable is available.
+                this.preparedExecutables.add(key);
+                return;
+            }
+            if ((0, agent_official_version_1.compareOfficialAgentVersion)(provider, installedVersion, latestVersion) !== 'older') {
+                this.preparedExecutables.add(key);
+                return;
+            }
+            this.installPrivate(provider, executable, environment, key, installedVersion, latestVersion);
             return;
         }
-        if (executableAvailable && mode !== 'always') {
-            this.provisionedExecutables.add(executable);
-            return;
+        if (selectedExecutable) {
+            throw new Error(`The explicitly selected ${provider} executable is unavailable; operator executables are never installed or replaced.`);
         }
-        if (mode === 'disabled') {
-            throw (0, agent_cli_provisioning_policy_1.provisioningDisabledError)(provider, executable);
-        }
-        this.installProvider(provider);
-        this.assertInstalled(executable, provider, environment);
-        this.assertInstalledVersion(executable, provider, environment);
-        this.provisionedExecutables.add(executable);
+        this.installPrivate(provider, executable, environment, key);
     }
-    installProvider(provider) {
-        const installation = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
-        if (!installation) {
-            throw new Error(`The ${provider} CLI must be preinstalled because Copilot has no reviewed automatic installer for it.`);
-        }
-        this.system.installPackage(installation.package, installation.version);
-    }
-    assertInstalled(executable, provider, environment) {
-        if (!this.system.executableExists(executable, environment)) {
-            throw new Error(`The ${provider} CLI was provisioned but executable "${executable}" is not available on PATH.`);
-        }
-    }
-    assertInstalledVersion(executable, provider, environment) {
+    installPrivate(provider, executable, environment, key, previousVersion, latestVersion) {
+        const installed = this.system.installOfficial(provider);
+        const previousPath = environment.PATH;
+        // The Action keeps this process-local overlay for later agent resolution.
+        // It does not change the runner service, user or machine PATH.
+        environment.PATH = `${installed.directory}${node_path_1.delimiter}${environment.PATH || environment.Path || ''}`;
         try {
-            (0, agent_runtime_manifest_1.assertInstalledAgentRuntimeVersion)(provider, this.system.readVersion(executable, environment));
+            if (!this.system.executableExists(executable, environment)) {
+                throw new Error(`The official ${provider} installer did not expose its executable.`);
+            }
+            const actual = (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+            const sameExecutable = process.platform === 'win32'
+                ? actual.toLowerCase() === installed.executable.toLowerCase()
+                : actual === installed.executable;
+            if (!sameExecutable) {
+                throw new Error(`The official ${provider} installer resolved to another executable.`);
+            }
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(provider, this.system.readVersion(actual, provider, environment));
+            if (previousVersion && latestVersion && ((0, agent_official_version_1.compareOfficialAgentVersion)(provider, previousVersion, version) !== 'older'
+                || (0, agent_official_version_1.compareOfficialAgentVersion)(provider, version, latestVersion) === 'older')) {
+                throw new Error(`The official ${provider} installer did not provide the newer release.`);
+            }
+            this.preparedExecutables.add(key);
         }
         catch (error) {
-            throw Object.assign(new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification.`), { cause: error });
+            if (previousPath === undefined)
+                delete environment.PATH;
+            else
+                environment.PATH = previousPath;
+            (0, node_fs_1.rmSync)(installed.root, { recursive: true, force: true });
+            throw error;
         }
     }
 }
 exports.AgentCliProvisioner = AgentCliProvisioner;
-
-
-/***/ }),
-
-/***/ 11959:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEFAULT_AGENT_EXECUTABLES = void 0;
-exports.resolveAgentProvisioningMode = resolveAgentProvisioningMode;
-exports.shouldSkipProvisioning = shouldSkipProvisioning;
-exports.provisioningDisabledError = provisioningDisabledError;
-const agent_1 = __nccwpck_require__(79937);
-exports.DEFAULT_AGENT_EXECUTABLES = agent_1.AGENT_EXECUTABLE_BASENAMES;
-function resolveAgentProvisioningMode(value) {
-    const mode = value?.trim().toLowerCase() || 'auto';
-    if (mode === 'auto' || mode === 'always' || mode === 'disabled')
-        return mode;
-    throw new Error('AGENT_PROVISIONING must be one of: auto, always, disabled.');
-}
-function shouldSkipProvisioning(mode, executable, alreadyProvisioned, executableAvailable) {
-    return alreadyProvisioned.has(executable) || (mode !== 'always' && executableAvailable);
-}
-function provisioningDisabledError(provider, executable) {
-    return new Error(`Agent provisioning is disabled and the ${provider} CLI executable "${executable}" is not available.`);
-}
 
 
 /***/ }),
@@ -68239,6 +68337,12 @@ const SAFE_AGENT_RUNTIME_VARIABLES = [
     'XDG_CACHE_HOME',
     'OPENCODE_DATA_DIR',
     'OPENCODE_AUTH_FILE',
+    'SystemRoot',
+    'WINDIR',
+    'USERPROFILE',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'PATHEXT',
 ];
 function selectSafeAgentRuntimeEnvironment(environment) {
     return Object.fromEntries(SAFE_AGENT_RUNTIME_VARIABLES.flatMap((variable) => (environment[variable] === undefined ? [] : [[variable, environment[variable]]])));
@@ -78295,6 +78399,191 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
+/***/ 87997:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyWindowsExecutableAclFailure = classifyWindowsExecutableAclFailure;
+exports.assertAgentExecutableMetadata = assertAgentExecutableMetadata;
+exports.validateAgentExecutableFile = validateAgentExecutableFile;
+const node_fs_1 = __nccwpck_require__(87561);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+function classifyWindowsExecutableAclFailure(error) {
+    if (!(error instanceof Error))
+        return 'acl-unavailable';
+    if ('code' in error && error.code === 'ETIMEDOUT')
+        return 'acl-query-timeout';
+    const message = error.message;
+    if (message.includes('Could not identify the Windows runtime owner'))
+        return 'acl-identity';
+    if (message.includes('Unsafe executable ACL owner')) {
+        return message.includes('Unsafe Windows executable ancestor') ? 'acl-ancestor-owner' : 'acl-file-owner';
+    }
+    if (message.includes('Agent executable is writable by another principal'))
+        return 'acl-writable';
+    if (message.includes('Incomplete Windows executable ACL'))
+        return 'acl-format-batch';
+    if (message.includes('Missing executable ACL'))
+        return 'acl-format-dacl';
+    if (message.includes('Unrecognized executable ACL rights'))
+        return 'acl-format-rights';
+    if (message.includes('Unrecognized executable ACL entries')
+        || message.includes('Unrecognized executable ACL entry'))
+        return 'acl-format-ace';
+    if (message.includes('Unrecognized executable ACL'))
+        return 'acl-format-flags';
+    if ('code' in error || 'status' in error)
+        return 'acl-query-failed';
+    return 'acl-unavailable';
+}
+function assertAgentExecutableMetadata(metadata, platform, currentUid) {
+    if (!metadata.isFile)
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
+    if (platform !== 'win32' && (metadata.mode & 0o022) !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
+    }
+    if (currentUid !== undefined && metadata.ownerUid !== currentUid && metadata.ownerUid !== 0) {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
+    }
+}
+function validateAgentExecutableFile(path) {
+    let stats;
+    try {
+        stats = (0, node_fs_1.statSync)(path);
+        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
+    }
+    catch {
+        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
+    }
+    assertAgentExecutableMetadata({
+        isFile: stats.isFile(),
+        mode: stats.mode,
+        ownerUid: stats.uid,
+    }, process.platform, process.getuid?.());
+    if (process.platform === 'win32') {
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(path);
+        }
+        catch (error) {
+            const rejected = new agent_cli_contracts_1.AgentCliError('Agent executable has an unsafe or unreadable Windows ACL.', 'configuration');
+            rejected.preflightDiagnostic = classifyWindowsExecutableAclFailure(error);
+            throw rejected;
+        }
+    }
+}
+
+
+/***/ }),
+
+/***/ 16608:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveAgentExecutablePath = resolveAgentExecutablePath;
+exports.resolveAgentExecutableInvocation = resolveAgentExecutableInvocation;
+exports.validateResolvedAgentInvocation = validateResolvedAgentInvocation;
+exports.readAgentExecutableVersion = readAgentExecutableVersion;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_file_1 = __nccwpck_require__(87997);
+function resolveAgentExecutablePath(selected, environment, platform = process.platform) {
+    if ((0, node_path_1.isAbsolute)(selected))
+        return (0, node_fs_1.realpathSync)(selected);
+    const extensions = platform === 'win32'
+        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+        : [''];
+    for (const directory of (environment.PATH || environment.Path || '').split(node_path_1.delimiter).filter(Boolean)) {
+        for (const extension of extensions) {
+            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
+            try {
+                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
+                return (0, node_fs_1.realpathSync)(candidate);
+            }
+            catch {
+                // Continue through the trusted PATH candidates.
+            }
+        }
+    }
+    throw new Error(`Agent executable "${selected}" was not found on PATH.`);
+}
+/** Resolve npm's Windows command shim without ever passing agent argv to cmd.exe. */
+function resolveAgentExecutableInvocation(selected, provider, platform = process.platform, environment = process.env) {
+    if (platform === 'win32' && !/\.(exe|cmd)$/iu.test(selected)) {
+        throw new Error('Windows agent executable must be a native executable or a reviewed npm command shim.');
+    }
+    if (platform !== 'win32' || !/\.cmd$/iu.test(selected)) {
+        return { executable: selected, prefixArgs: [] };
+    }
+    const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider);
+    const legacyPackage = manifest.legacyNpmPackage;
+    if (!legacyPackage || (0, node_path_1.basename)(selected).toLowerCase() !== `${manifest.executable}.cmd`) {
+        throw new Error('Windows agent command shim does not match a reviewed npm runtime.');
+    }
+    const packageRoot = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)(selected), 'node_modules', ...legacyPackage.split('/')));
+    const packageJson = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(packageRoot, 'package.json'), 'utf8'));
+    if (packageJson.name !== legacyPackage) {
+        throw new Error('Windows agent command shim resolves to an unexpected package.');
+    }
+    const bin = typeof packageJson.bin === 'string'
+        ? packageJson.bin
+        : packageJson.bin && typeof packageJson.bin === 'object'
+            ? packageJson.bin[manifest.executable]
+            : undefined;
+    if (typeof bin !== 'string' || !bin || (0, node_path_1.isAbsolute)(bin) || node_path_1.win32.isAbsolute(bin)) {
+        throw new Error('Windows agent package has no safe executable bin.');
+    }
+    const target = (0, node_fs_1.realpathSync)((0, node_path_1.resolve)(packageRoot, bin));
+    const relation = (0, node_path_1.relative)(packageRoot, target);
+    if (!relation || relation === '..' || relation.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(relation)) {
+        throw new Error('Windows agent package bin escaped its package directory.');
+    }
+    if (!(0, node_fs_1.statSync)(target).isFile())
+        throw new Error('Windows agent package bin is not a file.');
+    switch ((0, node_path_1.extname)(target).toLowerCase()) {
+        case '.js': return { executable: resolveAgentExecutablePath('node', environment, platform), prefixArgs: [target] };
+        case '.exe': return { executable: target, prefixArgs: [] };
+        default: throw new Error('Windows agent package bin is not a supported direct executable.');
+    }
+}
+/** Verify every file that may execute before a version or login probe starts. */
+function validateResolvedAgentInvocation(selected, provider, environment = process.env) {
+    (0, agent_executable_file_1.validateAgentExecutableFile)(selected);
+    const invocation = resolveAgentExecutableInvocation(selected, provider, process.platform, environment);
+    if (invocation.executable !== selected)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(invocation.executable);
+    for (const prefixArg of invocation.prefixArgs)
+        (0, agent_executable_file_1.validateAgentExecutableFile)(prefixArg);
+    return invocation;
+}
+function readAgentExecutableVersion(selected, provider, environment) {
+    const path = resolveAgentExecutablePath(selected, environment);
+    const invocation = validateResolvedAgentInvocation(path, provider, environment);
+    const probeEnvironment = {};
+    for (const key of [
+        'PATH', 'Path', 'PATHEXT', 'SystemRoot', 'WINDIR', 'HOME', 'USERPROFILE',
+        'LOCALAPPDATA', 'APPDATA', 'XDG_CONFIG_HOME', 'TMP', 'TEMP', 'TMPDIR', 'LANG', 'LC_ALL',
+    ]) {
+        if (environment[key])
+            probeEnvironment[key] = environment[key];
+    }
+    return (0, node_child_process_1.execFileSync)(invocation.executable, [...invocation.prefixArgs, '--version'], {
+        env: probeEnvironment,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 15000,
+    });
+}
+
+
+/***/ }),
+
 /***/ 11800:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -78313,27 +78602,36 @@ const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_executable_policy_1 = __nccwpck_require__(12570);
 const agent_authentication_1 = __nccwpck_require__(51371);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_executable_invocation_1 = __nccwpck_require__(16608);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const DEFAULT_SYSTEM = {
-    resolveExecutable: resolveExecutablePath,
-    readVersion(executable, environment) {
-        return (0, node_child_process_1.execFileSync)(executable, ['--version'], {
-            env: environment,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: 15000,
-        });
+    resolveExecutable(executable, environment) {
+        try {
+            return (0, agent_executable_invocation_1.resolveAgentExecutablePath)(executable, environment);
+        }
+        catch {
+            throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${executable}" was not found on PATH.`, 'configuration');
+        }
     },
+    readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = (0, node_fs_1.realpathSync)(cwd);
-        const root = (0, node_fs_1.realpathSync)((0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
+        const prefix = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15000,
-        }).trim());
-        if (requested !== root)
+        }).trim();
+        if (prefix !== '') {
             throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
-        return root;
+        }
+        if (process.env.GITHUB_ACTIONS === 'true') {
+            const checkout = process.env.GITHUB_WORKSPACE;
+            if (!checkout || (0, node_fs_1.realpathSync)(checkout) !== requested) {
+                throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical GitHub checkout root.', 'configuration');
+            }
+        }
+        return requested;
     },
 };
 class AgentExecutionPlanner {
@@ -78344,22 +78642,33 @@ class AgentExecutionPlanner {
         const limits = validateLimits(request);
         const sourceEnvironment = request.environment ?? process.env;
         let runtimeDirectory;
+        let stage = 'workspace';
         try {
             const workspace = this.system.resolveWorkspace(request.cwd ?? process.cwd());
+            stage = 'ambient-configuration';
             rejectAmbientProviderConfiguration(request.configuration.provider, workspace);
+            stage = 'manifest';
             const manifest = (0, agent_runtime_manifest_1.getAgentRuntimeManifest)();
             const runtime = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(request.configuration.provider);
             const requestedExecutable = request.configuration.executable?.trim() || runtime.executable;
+            stage = 'selection';
             (0, agent_executable_policy_1.validateAgentExecutableSelection)({
                 provider: request.configuration.provider,
                 executable: requestedExecutable,
             });
+            stage = 'resolution';
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
-            validateExecutableFile(executable);
+            stage = 'invocation-trust';
+            const invocation = (0, agent_executable_invocation_1.validateResolvedAgentInvocation)(executable, request.configuration.provider, sourceEnvironment);
+            stage = 'environment';
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
-            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
+            stage = 'version';
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, request.configuration.provider, safeEnvironment));
+            stage = 'artifacts';
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(runtimeDirectory, true);
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
+            stage = 'policy';
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
                 configuration: request.configuration,
                 capability: request.capability,
@@ -78367,6 +78676,7 @@ class AgentExecutionPlanner {
                 runtimeDirectory,
                 ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
             });
+            stage = 'artifacts';
             const artifacts = materializeArtifacts([
                 { path: gitConfigPath, contents: '', purpose: 'git-config' },
                 ...providerPolicy.artifacts,
@@ -78381,7 +78691,11 @@ class AgentExecutionPlanner {
             return {
                 provider: request.configuration.provider,
                 capability: request.capability,
-                executable,
+                executable: invocation.executable,
+                launcherArgv: invocation.prefixArgs,
+                ...(invocation.prefixArgs.length > 0 ? {
+                    launcherSha256: (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(invocation.prefixArgs[0])).digest('hex'),
+                } : {}),
                 argv: providerPolicy.argv,
                 promptMode: providerPolicy.promptMode,
                 outputProtocol: providerPolicy.outputProtocol,
@@ -78407,9 +78721,13 @@ class AgentExecutionPlanner {
         catch (error) {
             if (runtimeDirectory)
                 (0, node_fs_1.rmSync)(runtimeDirectory, { recursive: true, force: true });
-            if (error instanceof agent_cli_contracts_1.AgentCliError)
+            if (error instanceof agent_cli_contracts_1.AgentCliError) {
+                error.preflightStage = stage;
                 throw error;
-            throw new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
+            }
+            const rejected = new agent_cli_contracts_1.AgentCliError('Agent execution plan rejected because its local runtime contract could not be validated.', 'configuration');
+            rejected.preflightStage = stage;
+            throw rejected;
         }
     }
 }
@@ -78431,51 +78749,11 @@ function assertBoundedLimit(name, value, maximum) {
         throw new agent_cli_contracts_1.AgentCliError(`Agent CLI ${name} must be a finite positive number no greater than ${maximum}.`, 'configuration');
     }
 }
-function resolveExecutablePath(selected, environment) {
-    if ((0, node_path_1.isAbsolute)(selected))
-        return (0, node_fs_1.realpathSync)(selected);
-    const extensions = process.platform === 'win32'
-        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
-        : [''];
-    for (const directory of (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean)) {
-        for (const extension of extensions) {
-            const candidate = (0, node_path_1.join)(directory, `${selected}${extension}`);
-            try {
-                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
-                return (0, node_fs_1.realpathSync)(candidate);
-            }
-            catch {
-                // Continue through the trusted PATH candidates.
-            }
-        }
-    }
-    throw new agent_cli_contracts_1.AgentCliError(`Agent executable "${selected}" was not found on PATH.`, 'configuration');
-}
-function validateExecutableFile(path) {
-    let stats;
-    try {
-        stats = (0, node_fs_1.statSync)(path);
-        (0, node_fs_1.accessSync)(path, node_fs_1.constants.X_OK);
-    }
-    catch {
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must be an accessible executable file.', 'configuration');
-    }
-    if (!stats.isFile())
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must resolve to a regular file.', 'configuration');
-    if ((stats.mode & 0o022) !== 0) {
-        throw new agent_cli_contracts_1.AgentCliError('Agent executable must not be group- or world-writable.', 'configuration');
-    }
-    if (typeof process.getuid === 'function') {
-        const uid = process.getuid();
-        if (stats.uid !== uid && stats.uid !== 0) {
-            throw new agent_cli_contracts_1.AgentCliError('Agent executable must be owned by the runner user or root.', 'configuration');
-        }
-    }
-}
 function materializeArtifacts(templates) {
     return templates.map((template) => {
         (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(template.path), { recursive: true, mode: 0o700 });
         (0, node_fs_1.writeFileSync)(template.path, template.contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(template.path, false);
         return {
             path: template.path,
             sha256: (0, node_crypto_1.createHash)('sha256').update(template.contents).digest('hex'),
@@ -78501,6 +78779,610 @@ function definedEnvironment(environment) {
 
 /***/ }),
 
+/***/ 28520:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OfficialAgentInstallationError = void 0;
+exports.installedFileFailureReason = installedFileFailureReason;
+exports.installerEnvironment = installerEnvironment;
+exports.parseCursorWindowsInstaller = parseCursorWindowsInstaller;
+exports.selectOpenCodeWindowsAsset = selectOpenCodeWindowsAsset;
+exports.installOfficialAgentCli = installOfficialAgentCli;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
+const MAX_SCRIPT_BYTES = 1048576;
+const MAX_METADATA_BYTES = 2097152;
+const MAX_ARCHIVE_BYTES = 268435456;
+class OfficialAgentInstallationError extends Error {
+    constructor(stage, message, exitCode, cause, reason) {
+        super(message);
+        this.stage = stage;
+        this.exitCode = exitCode;
+        this.reason = reason;
+        this.name = 'OfficialAgentInstallationError';
+        if (cause !== undefined)
+            Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+exports.OfficialAgentInstallationError = OfficialAgentInstallationError;
+function installerScriptReason(error) {
+    const raw = error && typeof error === 'object' && 'stderr' in error ? error.stderr : undefined;
+    const stderr = Buffer.isBuffer(raw) ? raw.toString('utf8') : typeof raw === 'string' ? raw : '';
+    if (/Get-FileHash|Get-AuthenticodeSignature/iu.test(stderr))
+        return 'hash-module';
+    if (/Invoke-WebRequest|Invoke-RestMethod|Could not resolve host|Unable to resolve|TLS|SSL|HTTP (?:403|404|429|5\d\d)/iu.test(stderr)) {
+        return 'network';
+    }
+    if (/Access (?:is )?denied|UnauthorizedAccess/iu.test(stderr))
+        return 'access-denied';
+    if (/is not recognized as the name of a cmdlet|command not found/iu.test(stderr))
+        return 'missing-command';
+    return 'unknown';
+}
+function boundedExitCode(error) {
+    const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+    return Number.isInteger(status) && Number(status) >= 0 && Number(status) <= 255 ? Number(status) : undefined;
+}
+function installedFileFailureReason(error) {
+    if (error instanceof agent_private_install_root_1.PrivateInstalledAgentValidationError)
+        return error.reason;
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    if (code === 'ENOENT')
+        return 'missing-file';
+    if (code === 'EACCES' || code === 'EPERM')
+        return 'access-denied';
+    if (code === 'ELOOP')
+        return 'unsafe-link';
+    return 'unknown';
+}
+/** No Action inputs, GitHub tokens, provider keys, or user auth stores enter an installer. */
+function installerEnvironment(root, source) {
+    const allowed = [
+        'PATHEXT', 'OS', 'COMSPEC',
+        'TEMP', 'TMP', 'TMPDIR', 'HOMEDRIVE', 'HOMEPATH', 'SHELL',
+        'PROCESSOR_ARCHITECTURE', 'NUMBER_OF_PROCESSORS', 'USERDOMAIN', 'USERNAME', 'LOGONSERVER',
+    ];
+    const environment = {};
+    for (const name of allowed) {
+        if (source[name])
+            environment[name] = source[name];
+    }
+    environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
+    if (process.platform === 'win32') {
+        const systemRoot = (0, windows_system_root_cjs_1.trustedWindowsSystemRoot)();
+        const drive = systemRoot.slice(0, 2);
+        const programFiles = `${drive}\\Program Files`;
+        const programData = `${drive}\\ProgramData`;
+        environment.SystemRoot = systemRoot;
+        environment.WINDIR = systemRoot;
+        environment.SystemDrive = drive;
+        environment.COMSPEC = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('cmd.exe');
+        environment.ProgramFiles = programFiles;
+        environment['ProgramFiles(x86)'] = `${drive}\\Program Files (x86)`;
+        environment.ProgramData = programData;
+        environment.CommonProgramFiles = (0, node_path_1.join)(programFiles, 'Common Files');
+        environment.ALLUSERSPROFILE = programData;
+        environment.PSModulePath = [
+            (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+        ].join(node_path_1.delimiter);
+    }
+    environment.HOME = root;
+    environment.USERPROFILE = root;
+    if (process.platform === 'win32')
+        environment.APPDATA = (0, node_path_1.join)(root, 'roaming');
+    environment.LOCALAPPDATA = (0, node_path_1.join)(root, 'local');
+    environment.XDG_CONFIG_HOME = (0, node_path_1.join)(root, '.config');
+    environment.CODEX_HOME = (0, node_path_1.join)(root, '.codex');
+    environment.CODEX_INSTALL_DIR = (0, node_path_1.join)(root, 'bin');
+    environment.CODEX_NON_INTERACTIVE = '1';
+    environment.NO_COLOR = '1';
+    return environment;
+}
+function download(url, destination, environment, maxBytes) {
+    if (!url.startsWith('https://'))
+        throw new Error('Official agent source must use HTTPS.');
+    const curl = (0, agent_trusted_system_tools_1.trustedCurlPath)();
+    try {
+        const contents = (0, node_child_process_1.execFileSync)(curl, [
+            '--fail', '--location', '--silent', '--show-error', '--max-time', '120',
+            '--max-filesize', String(maxBytes), '--proto', '=https', '--proto-redir', '=https', url,
+        ], { env: environment, stdio: ['ignore', 'pipe', 'pipe'], timeout: 130000, maxBuffer: maxBytes + 1 });
+        if (contents.length === 0 || contents.length > maxBytes) {
+            throw new Error('Official agent download size is invalid.');
+        }
+        (0, node_fs_1.writeFileSync)(destination, contents, { flag: 'wx' });
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(destination, { force: true });
+        throw new OfficialAgentInstallationError('download', 'Official agent download failed or exceeded its size limit.', boundedExitCode(error), error);
+    }
+}
+function downloadScript(url, destination, environment) {
+    download(url, destination, environment, MAX_SCRIPT_BYTES);
+    const contents = (0, node_fs_1.readFileSync)(destination);
+    if (contents.length === 0 || contents.length > MAX_SCRIPT_BYTES) {
+        throw new Error('Official agent installer size is invalid.');
+    }
+    return contents.toString('utf8');
+}
+function runScript(provider, root, environment) {
+    const source = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
+    const windows = process.platform === 'win32';
+    const url = windows ? source.windowsScript : source.unixScript;
+    if (!url)
+        throw new Error(`No official ${provider} installer supports this platform.`);
+    const script = (0, node_path_1.join)(root, windows ? 'install.ps1' : 'install.sh');
+    downloadScript(url, script, environment);
+    if (windows) {
+        const powershell = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)((0, node_path_1.join)('WindowsPowerShell', 'v1.0', 'powershell.exe'));
+        try {
+            (0, node_child_process_1.execFileSync)(powershell, [
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
+            ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+        }
+        catch (error) {
+            throw new OfficialAgentInstallationError('installer-script', 'Official agent installer script failed.', boundedExitCode(error), error, installerScriptReason(error));
+        }
+        return (0, node_path_1.join)(root, 'bin', 'codex.exe');
+    }
+    const shell = (0, agent_trusted_system_tools_1.trustedUnixShellPath)(provider === 'codex' ? 'sh' : 'bash');
+    const args = provider === 'opencode' ? [script, '--no-modify-path'] : [script];
+    try {
+        (0, node_child_process_1.execFileSync)(shell, args, { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 300000 });
+    }
+    catch (error) {
+        throw new OfficialAgentInstallationError('installer-script', 'Official agent installer script failed.', boundedExitCode(error), error, installerScriptReason(error));
+    }
+    return provider === 'codex'
+        ? (0, node_path_1.join)(root, 'bin', 'codex')
+        : provider === 'opencode'
+            ? (0, node_path_1.join)(root, '.opencode', 'bin', 'opencode')
+            : (0, node_path_1.join)(root, '.local', 'bin', 'agent');
+}
+function extractWindowsArchive(archive, destination, environment) {
+    (0, node_fs_1.mkdirSync)(destination, { recursive: true });
+    const quote = (value) => value.replace(/'/gu, "''");
+    const command = `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${quote(archive)}' -DestinationPath '${quote(destination)}' -Force`;
+    const powershell = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)((0, node_path_1.join)('WindowsPowerShell', 'v1.0', 'powershell.exe'));
+    (0, node_child_process_1.execFileSync)(powershell, [
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
+        Buffer.from(command, 'utf16le').toString('base64'),
+    ], { env: environment, stdio: ['ignore', 'ignore', 'pipe'], timeout: 120000 });
+}
+function parseCursorWindowsInstaller(script, arch) {
+    const url = /^\$downloadUrl = '(https:\/\/downloads\.cursor\.com\/lab\/([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[a-f0-9]+)\/)'/mu.exec(script);
+    const version = /^\$version = '([^']+)'/mu.exec(script)?.[1];
+    if (!url || version !== url[2])
+        throw new Error('Official Cursor release metadata changed unexpectedly.');
+    return `${url[1]}windows/${arch}/agent-cli-package.zip`;
+}
+function installWindowsCursor(root, environment) {
+    const source = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)('cursor').installation.windowsScript;
+    if (!source)
+        throw new Error('Official Cursor Windows installer source is absent.');
+    const script = downloadScript(source, (0, node_path_1.join)(root, 'cursor-install.ps1'), environment);
+    const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'x64' ? 'x64' : undefined;
+    if (!arch)
+        throw new Error('Unsupported Cursor Windows architecture.');
+    const archive = (0, node_path_1.join)(root, 'cursor.zip');
+    download(parseCursorWindowsInstaller(script, arch), archive, environment, MAX_ARCHIVE_BYTES);
+    const extracted = (0, node_path_1.join)(root, 'extracted');
+    extractWindowsArchive(archive, extracted, environment);
+    const packageRoot = (0, node_path_1.join)(extracted, 'dist-package');
+    if (!(0, node_fs_1.statSync)((0, node_path_1.join)(packageRoot, 'cursor-agent.exe')).isFile()) {
+        throw new Error('Official Cursor archive lacks its native executable.');
+    }
+    const bin = (0, node_path_1.join)(root, 'bin');
+    (0, node_fs_1.cpSync)(packageRoot, bin, { recursive: true });
+    (0, node_fs_1.copyFileSync)((0, node_path_1.join)(bin, 'cursor-agent.exe'), (0, node_path_1.join)(bin, 'agent.exe'));
+    (0, node_fs_1.rmSync)(archive, { force: true });
+    (0, node_fs_1.rmSync)(extracted, { recursive: true, force: true });
+    return (0, node_path_1.join)(bin, 'agent.exe');
+}
+function findFile(directory, fileName) {
+    for (const entry of (0, node_fs_1.readdirSync)(directory, { withFileTypes: true })) {
+        const path = (0, node_path_1.join)(directory, entry.name);
+        if (entry.isFile() && entry.name.toLowerCase() === fileName)
+            return path;
+        if (entry.isDirectory()) {
+            const found = findFile(path, fileName);
+            if (found)
+                return found;
+        }
+    }
+    return undefined;
+}
+function selectOpenCodeWindowsAsset(metadata, arch) {
+    const tag = metadata.tag_name;
+    if (!tag || !/^v\d+\.\d+\.\d+$/u.test(tag))
+        throw new Error('Official OpenCode release tag is invalid.');
+    const asset = metadata.assets?.find(candidate => candidate.name === `opencode-windows-${arch}-baseline.zip`)
+        || metadata.assets?.find(candidate => candidate.name === `opencode-windows-${arch}.zip`);
+    const expectedUrl = `https://github.com/anomalyco/opencode/releases/download/${tag}/${asset?.name}`;
+    if (!asset?.name || asset.browser_download_url !== expectedUrl) {
+        throw new Error('Official OpenCode release asset is unavailable.');
+    }
+    return { url: expectedUrl, digest: asset.digest };
+}
+function installWindowsOpenCode(root, environment) {
+    const api = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)('opencode').installation.windowsReleaseApi;
+    if (!api)
+        throw new Error('Official OpenCode Windows release source is absent.');
+    const metadataFile = (0, node_path_1.join)(root, 'opencode-release.json');
+    download(api, metadataFile, environment, MAX_METADATA_BYTES);
+    const metadataBytes = (0, node_fs_1.readFileSync)(metadataFile);
+    if (metadataBytes.length === 0 || metadataBytes.length > MAX_METADATA_BYTES) {
+        throw new Error('Official OpenCode release metadata size is invalid.');
+    }
+    const metadata = JSON.parse(metadataBytes.toString('utf8'));
+    const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'x64' ? 'x64' : undefined;
+    if (!arch)
+        throw new Error('Unsupported OpenCode Windows architecture.');
+    const asset = selectOpenCodeWindowsAsset(metadata, arch);
+    const archive = (0, node_path_1.join)(root, 'opencode.zip');
+    download(asset.url, archive, environment, MAX_ARCHIVE_BYTES);
+    if (asset.digest) {
+        const actual = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(archive)).digest('hex');
+        if (asset.digest !== `sha256:${actual}`)
+            throw new Error('Official OpenCode archive digest mismatch.');
+    }
+    const extracted = (0, node_path_1.join)(root, 'extracted');
+    extractWindowsArchive(archive, extracted, environment);
+    const source = findFile(extracted, 'opencode.exe');
+    if (!source)
+        throw new Error('Official OpenCode archive lacks its native executable.');
+    const bin = (0, node_path_1.join)(root, 'bin');
+    (0, node_fs_1.cpSync)((0, node_path_1.dirname)(source), bin, { recursive: true });
+    (0, node_fs_1.rmSync)(archive, { force: true });
+    (0, node_fs_1.rmSync)(extracted, { recursive: true, force: true });
+    return (0, node_path_1.join)(bin, 'opencode.exe');
+}
+function installOfficialAgentCli(provider) {
+    let root;
+    try {
+        root = (0, agent_private_install_root_1.createPrivateAgentInstallRoot)();
+    }
+    catch (error) {
+        throw new OfficialAgentInstallationError('private-root', 'No protected agent installation directory is available.', undefined, error);
+    }
+    let stage = 'private-root';
+    try {
+        const environment = installerEnvironment(root, process.env);
+        stage = 'installer-script';
+        const path = process.platform === 'win32' && provider === 'cursor'
+            ? installWindowsCursor(root, environment)
+            : process.platform === 'win32' && provider === 'opencode'
+                ? installWindowsOpenCode(root, environment)
+                : runScript(provider, root, environment);
+        stage = 'installed-file';
+        const executable = (0, agent_private_install_root_1.securePrivateInstalledAgent)(root, path);
+        if (!(0, node_fs_1.statSync)(executable).isFile())
+            throw new agent_private_install_root_1.PrivateInstalledAgentValidationError('invalid-file', 'Official agent installer did not create a file.');
+        process.once('exit', () => (0, node_fs_1.rmSync)(root, { recursive: true, force: true }));
+        return { executable, directory: (0, node_path_1.dirname)(path), root };
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        if (error instanceof OfficialAgentInstallationError)
+            throw error;
+        throw new OfficialAgentInstallationError(stage, 'Official agent installation failed.', boundedExitCode(error), error, stage === 'installed-file' ? installedFileFailureReason(error) : undefined);
+    }
+}
+
+
+/***/ }),
+
+/***/ 99619:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseOfficialLatestAgentVersion = parseOfficialLatestAgentVersion;
+exports.readOfficialLatestAgentVersion = readOfficialLatestAgentVersion;
+exports.compareOfficialAgentVersion = compareOfficialAgentVersion;
+const node_child_process_1 = __nccwpck_require__(17718);
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
+const MAX_METADATA_BYTES = 1024 * 1024;
+const CODEX_RELEASE_CHANNEL = 'https://releases.openai.com/codex/channels/latest';
+function readOfficialText(url) {
+    if (!url.startsWith('https://'))
+        throw new Error('Official version source must use HTTPS.');
+    const curl = (0, agent_trusted_system_tools_1.trustedCurlPath)();
+    const environment = {};
+    for (const name of ['TEMP', 'TMP', 'TMPDIR', 'PATHEXT', 'COMSPEC', 'OS']) {
+        if (process.env[name])
+            environment[name] = process.env[name];
+    }
+    environment.PATH = (0, agent_trusted_system_tools_1.trustedSystemPath)();
+    if (process.platform === 'win32') {
+        environment.SystemRoot = (0, windows_system_root_cjs_1.trustedWindowsSystemRoot)();
+        environment.WINDIR = environment.SystemRoot;
+    }
+    return (0, node_child_process_1.execFileSync)(curl, [
+        '--fail', '--location', '--silent', '--show-error', '--max-time', '15',
+        '--proto', '=https', '--proto-redir', '=https', url,
+    ], {
+        env: environment, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 20000, maxBuffer: MAX_METADATA_BYTES,
+    });
+}
+function parseOfficialLatestAgentVersion(provider, metadata) {
+    if (!metadata || Buffer.byteLength(metadata, 'utf8') > MAX_METADATA_BYTES) {
+        throw new Error('Official version metadata has an invalid size.');
+    }
+    if (provider === 'cursor') {
+        const source = process.platform === 'win32'
+            ? /^\$version = '([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[a-f0-9]+)'/mu.exec(metadata)?.[1]
+            : /DOWNLOAD_URL="https:\/\/downloads\.cursor\.com\/lab\/([0-9]{4}\.[0-9]{2}\.[0-9]{2}-[a-f0-9]+)\//u.exec(metadata)?.[1];
+        if (!source)
+            throw new Error('Official Cursor version metadata is invalid.');
+        return source;
+    }
+    const parsed = JSON.parse(metadata);
+    const tag = parsed.tag_name;
+    const pattern = provider === 'codex' ? /^rust-v(\d+\.\d+\.\d+)$/u : /^v(\d+\.\d+\.\d+)$/u;
+    const version = typeof tag === 'string' ? pattern.exec(tag)?.[1] : undefined;
+    if (!version)
+        throw new Error(`Official ${provider} release metadata is invalid.`);
+    return version;
+}
+function readOfficialLatestAgentVersion(provider) {
+    const installation = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
+    const url = provider === 'codex' ? CODEX_RELEASE_CHANNEL
+        : provider === 'opencode' ? installation.windowsReleaseApi
+            : process.platform === 'win32' ? installation.windowsScript : installation.unixScript;
+    if (!url)
+        throw new Error(`Official ${provider} version source is unavailable.`);
+    return parseOfficialLatestAgentVersion(provider, readOfficialText(url));
+}
+function compareOfficialAgentVersion(provider, installedOutput, latestVersion) {
+    const installed = installedOutput.trim();
+    if (provider === 'cursor') {
+        const current = /^([0-9]{4}\.[0-9]{2}\.[0-9]{2})-([a-f0-9]+)$/u.exec(installed);
+        const latest = /^([0-9]{4}\.[0-9]{2}\.[0-9]{2})-([a-f0-9]+)$/u.exec(latestVersion);
+        if (!current || !latest)
+            return 'unknown';
+        if (installed === latestVersion)
+            return 'current-or-newer';
+        if (current[1] === latest[1])
+            return 'unknown';
+        return current[1] < latest[1] ? 'older' : 'current-or-newer';
+    }
+    const current = provider === 'codex'
+        ? /^codex-cli (\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/u.exec(installed)
+        : /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/u.exec(installed);
+    const latest = (provider === 'codex'
+        ? /^(?:codex-cli )?(\d+)\.(\d+)\.(\d+)$/u
+        : /^(\d+)\.(\d+)\.(\d+)$/u).exec(latestVersion);
+    if (!current || !latest)
+        return 'unknown';
+    for (let index = 1; index <= 3; index += 1) {
+        const left = Number(current[index]);
+        const right = Number(latest[index]);
+        if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right))
+            return 'unknown';
+        if (left !== right)
+            return left < right ? 'older' : 'current-or-newer';
+    }
+    return current[4] ? 'older' : 'current-or-newer';
+}
+
+
+/***/ }),
+
+/***/ 44640:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrivateInstalledAgentValidationError = void 0;
+exports.selectPrivateInstallRoot = selectPrivateInstallRoot;
+exports.prepareWindowsInstallRoot = prepareWindowsInstallRoot;
+exports.createPrivateAgentInstallRoot = createPrivateAgentInstallRoot;
+exports.securePrivateInstalledAgent = securePrivateInstalledAgent;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const INSTALL_PREFIX = 'copilot-agent-install-';
+class PrivateInstalledAgentValidationError extends Error {
+    constructor(reason, message, cause) {
+        super(message);
+        this.reason = reason;
+        this.name = 'PrivateInstalledAgentValidationError';
+        if (cause !== undefined)
+            Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+exports.PrivateInstalledAgentValidationError = PrivateInstalledAgentValidationError;
+class TransientWindowsAclTimeout extends Error {
+    constructor() {
+        super('Windows private installation ACL check timed out.');
+    }
+}
+/** Keep a failed candidate from preventing a safer profile-local fallback. */
+function selectPrivateInstallRoot(parents, prepare) {
+    const tried = new Set();
+    for (const parent of parents) {
+        const key = parent.toLowerCase();
+        if (tried.has(key))
+            continue;
+        tried.add(key);
+        try {
+            return prepare(parent);
+        }
+        catch {
+            // The candidate is cleaned by prepare before another parent is tried.
+        }
+    }
+    throw new Error('No protected agent installation directory is available.');
+}
+function prepareWindowsInstallRoot(parent, verify = windows_runtime_acl_1.verifyWindowsAgentExecutableAcl) {
+    try {
+        return prepareWindowsInstallRootOnce(parent, verify);
+    }
+    catch (error) {
+        // Cold Windows services can time out a read-only ACL query once.
+        // Every other failure remains final for this candidate.
+        if (!(error instanceof TransientWindowsAclTimeout))
+            throw error;
+        return prepareWindowsInstallRootOnce(parent, verify);
+    }
+}
+function prepareWindowsInstallRootOnce(parent, verify) {
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(parent, INSTALL_PREFIX));
+    const probe = (0, node_path_1.join)(root, '.acl-probe');
+    let checkingAcl = false;
+    try {
+        (0, node_fs_1.chmodSync)(root, 0o700);
+        checkingAcl = true;
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
+        checkingAcl = false;
+        (0, node_fs_1.writeFileSync)(probe, '', { flag: 'wx' });
+        checkingAcl = true;
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(probe, false);
+        verify(probe);
+        checkingAcl = false;
+        (0, node_fs_1.rmSync)(probe);
+        return root;
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        if (checkingAcl && error && typeof error === 'object' && 'code' in error && error.code === 'ETIMEDOUT') {
+            throw new TransientWindowsAclTimeout();
+        }
+        throw error;
+    }
+}
+function createPrivateAgentInstallRoot() {
+    if (process.platform === 'win32') {
+        return selectPrivateInstallRoot([
+            process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(),
+            (0, node_path_1.join)((0, node_os_1.homedir)(), 'AppData', 'Local', 'Temp'),
+        ], prepareWindowsInstallRoot);
+    }
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), INSTALL_PREFIX));
+    (0, node_fs_1.chmodSync)(root, 0o700);
+    return root;
+}
+/** This may change ACLs only for a newly installed file contained in our root. */
+function securePrivateInstalledAgent(root, path) {
+    const canonicalRoot = (0, node_fs_1.realpathSync)(root);
+    const relation = (0, node_path_1.relative)(root, path);
+    if (!isWithinPrivateRoot(relation))
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+    const canonicalPath = resolvePrivateInstalledFile(root, canonicalRoot, relation);
+    if (process.platform === 'win32' && (0, node_fs_1.lstatSync)(path).isSymbolicLink()) {
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
+    }
+    if (process.platform === 'win32') {
+        const directories = [];
+        let parent = (0, node_path_1.dirname)(canonicalPath);
+        while (parent !== canonicalRoot) {
+            const parentRelation = (0, node_path_1.relative)(canonicalRoot, parent);
+            if (!parentRelation || parentRelation.startsWith('..') || (0, node_path_1.isAbsolute)(parentRelation)) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+            }
+            directories.unshift(parent);
+            parent = (0, node_path_1.dirname)(parent);
+        }
+        try {
+            for (const directory of directories)
+                (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(directory, true);
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(canonicalPath, false);
+        }
+        catch (error) {
+            throw new PrivateInstalledAgentValidationError('acl-hardening', 'Could not protect the installed agent ACL.', error);
+        }
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(canonicalPath);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            const reason = message.startsWith('Unsafe Windows executable ancestor ')
+                ? 'acl-ancestor' : /^(?:Unsafe executable ACL owner|Agent executable is writable)/u.test(message)
+                ? 'acl-file' : 'acl-inspection';
+            throw new PrivateInstalledAgentValidationError(reason, 'Could not verify the installed agent ACL.', error);
+        }
+    }
+    try {
+        (0, node_fs_1.accessSync)(canonicalPath, node_fs_1.constants.X_OK);
+    }
+    catch (error) {
+        throw new PrivateInstalledAgentValidationError('access-denied', 'Installed agent is not executable.', error);
+    }
+    return canonicalPath;
+}
+function isWithinPrivateRoot(relation) {
+    return Boolean(relation) && relation !== '..' && !relation.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(relation);
+}
+/** Follow installer launch links only while each hop stays under our private root. */
+function resolvePrivateInstalledFile(root, canonicalRoot, relation) {
+    let current = canonicalRoot;
+    let pending = relation.split(node_path_1.sep).filter(Boolean);
+    let links = 0;
+    while (pending.length > 0) {
+        const next = (0, node_path_1.resolve)(current, pending.shift());
+        if (!isWithinPrivateRoot((0, node_path_1.relative)(canonicalRoot, next))) {
+            throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+        }
+        const entry = (0, node_fs_1.lstatSync)(next);
+        if (entry.isSymbolicLink()) {
+            // The official Windows Codex installer publishes bin and current as
+            // directory junctions. Never admit a linked executable itself.
+            if (process.platform === 'win32' && pending.length === 0) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
+            }
+            if (++links > 32)
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output has too many links.');
+            const target = (0, node_path_1.resolve)((0, node_path_1.dirname)(next), normalizedLinkTarget((0, node_fs_1.readlinkSync)(next)));
+            const canonicalRelation = (0, node_path_1.relative)(canonicalRoot, target);
+            const targetRelation = isWithinPrivateRoot(canonicalRelation)
+                ? canonicalRelation : (0, node_path_1.relative)(root, target);
+            if (!isWithinPrivateRoot(targetRelation)) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+            }
+            pending = [...targetRelation.split(node_path_1.sep).filter(Boolean), ...pending];
+            current = canonicalRoot;
+        }
+        else if (pending.length > 0 && !entry.isDirectory()) {
+            throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output has a non-directory ancestor.');
+        }
+        else {
+            current = next;
+            if (pending.length === 0 && !entry.isFile()) {
+                throw new PrivateInstalledAgentValidationError('invalid-file', 'Official agent installer did not create a file.');
+            }
+        }
+    }
+    return current;
+}
+function normalizedLinkTarget(target) {
+    if (process.platform !== 'win32')
+        return target;
+    // Node may return the NT namespaced form of a junction target. Compare its
+    // ordinary drive path with the private root before following any next hop.
+    const namespaced = target.startsWith('\\\\?\\') || target.startsWith('\\??\\');
+    const ordinary = namespaced ? target.slice(4) : target;
+    return /^[A-Za-z]:\\/u.test(ordinary) ? ordinary : target;
+}
+
+
+/***/ }),
+
 /***/ 57104:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -78513,8 +79395,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
+exports.isSafeAgentRuntimeVersion = isSafeAgentRuntimeVersion;
 exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
-exports.assertInstalledAgentRuntimeVersion = assertInstalledAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
 function getAgentRuntimeManifest() {
@@ -78526,20 +79408,154 @@ function getAgentRuntimeManifestEntry(provider) {
 function normalizeAgentRuntimeVersion(output) {
     return output.trim().split(/\r?\n/, 1)[0].trim();
 }
+function isSafeAgentRuntimeVersion(version) {
+    return /^[\x20-\x7e]{1,128}$/u.test(version);
+}
 function readAgentRuntimeVersion(provider, output) {
     const actual = normalizeAgentRuntimeVersion(output);
     if (!actual)
         throw new Error(`${provider} CLI returned empty version output.`);
+    if (!isSafeAgentRuntimeVersion(actual))
+        throw new Error(`${provider} CLI returned an invalid version identity.`);
     return actual;
 }
-/** Exact matching applies only to a package installed by Copilot itself. */
-function assertInstalledAgentRuntimeVersion(provider, output) {
-    const actual = readAgentRuntimeVersion(provider, output);
-    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
-    if (actual !== expected) {
-        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
+
+
+/***/ }),
+
+/***/ 76049:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.trustedSystemPath = trustedSystemPath;
+exports.windowsSystemPath = windowsSystemPath;
+exports.trustedCurlPath = trustedCurlPath;
+exports.trustedWindowsSystemTool = trustedWindowsSystemTool;
+exports.windowsSystemTool = windowsSystemTool;
+exports.trustedUnixShellPath = trustedUnixShellPath;
+const node_path_1 = __nccwpck_require__(49411);
+const windows_system_root_cjs_1 = __nccwpck_require__(48176);
+function trustedSystemPath() {
+    if (process.platform !== 'win32')
+        return ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(node_path_1.delimiter);
+    return windowsSystemPath((0, windows_system_root_cjs_1.trustedWindowsSystemRoot)());
+}
+function windowsSystemPath(systemRoot) {
+    return [(0, node_path_1.join)(systemRoot, 'System32'), systemRoot,
+        (0, node_path_1.join)(systemRoot, 'System32', 'Wbem'),
+        (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0')].join(node_path_1.delimiter);
+}
+function trustedCurlPath() {
+    return process.platform === 'win32'
+        ? trustedWindowsSystemTool('curl.exe') : '/usr/bin/curl';
+}
+function trustedWindowsSystemTool(name) {
+    return windowsSystemTool((0, windows_system_root_cjs_1.trustedWindowsSystemRoot)(), name);
+}
+function windowsSystemTool(systemRoot, name) {
+    return (0, node_path_1.join)(systemRoot, 'System32', name);
+}
+function trustedUnixShellPath(name) {
+    return `/bin/${name}`;
+}
+
+
+/***/ }),
+
+/***/ 55362:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isLocalWindowsAdministrator = void 0;
+exports.matchesWindowsRuntimePrincipal = matchesWindowsRuntimePrincipal;
+exports.makeWindowsRuntimePathPrivate = makeWindowsRuntimePathPrivate;
+exports.verifyWindowsRuntimePathPrivate = verifyWindowsRuntimePathPrivate;
+exports.verifyWindowsAgentExecutableAcl = verifyWindowsAgentExecutableAcl;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const windows_executable_trust_cjs_1 = __nccwpck_require__(37631);
+var windows_executable_trust_cjs_2 = __nccwpck_require__(37631);
+Object.defineProperty(exports, "isLocalWindowsAdministrator", ({ enumerable: true, get: function () { return windows_executable_trust_cjs_2.isLocalWindowsAdministrator; } }));
+function runIcacls(args, cwd) {
+    (0, node_child_process_1.execFileSync)((0, windows_executable_trust_cjs_1.systemTool)('icacls.exe'), args, {
+        cwd,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: 15000,
+        windowsHide: true,
+    });
+}
+function matchesWindowsRuntimePrincipal(principal, identity) {
+    return principal === identity.sid || (principal === 'LA' && identity.localAdministrator);
+}
+function savedDacl(path) {
+    const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-acl-inspect-'));
+    const snapshot = (0, node_path_1.join)(directory, 'acl.txt');
+    try {
+        runIcacls([(0, node_path_1.basename)(path), '/save', snapshot], (0, node_path_1.dirname)(path));
+        const data = (0, node_fs_1.readFileSync)(snapshot);
+        const contents = data.includes(0) ? data.toString('utf16le') : data.toString('utf8');
+        const lines = contents.replace(/^\uFEFF/, '').split(/\r?\n/);
+        if (!lines[0] || !lines[1])
+            throw new Error('Could not read the Windows runtime ACL.');
+        return lines[1].trim();
     }
-    return actual;
+    finally {
+        (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
+    }
+}
+function assertOwnerOnlyDacl(sddl, identity, directory) {
+    const isCurrentUser = (principal) => matchesWindowsRuntimePrincipal(principal, identity);
+    const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/.exec(sddl)?.[1];
+    const dacl = /D:.*?(?=S:|$)/.exec(sddl)?.[0] ?? '';
+    const firstAce = dacl.indexOf('(');
+    const flags = firstAce < 0 ? '' : dacl.slice(0, firstAce);
+    const entries = firstAce < 0 ? '' : dacl.slice(firstAce);
+    const aces = [...entries.matchAll(/\(([^()]*)\)/g)].map(match => match[1].split(';'));
+    const noUnparsedEntries = entries.replace(/\([^()]*\)/g, '') === '';
+    const validOwnerAce = (fields) => fields.length === 6
+        && fields[0] === 'A' && fields[2] === 'FA'
+        && fields[3] === '' && fields[4] === '' && isCurrentUser(fields[5]);
+    const appliesToPath = (fields) => !fields[1].includes('IO');
+    const inheritsToChildren = (fields) => fields[1].includes('OI') && fields[1].includes('CI');
+    if ((owner !== undefined && !isCurrentUser(owner)) || !flags.startsWith('D:') || !flags.slice(2).includes('P')
+        || !noUnparsedEntries || aces.length === 0 || !aces.every(validOwnerAce)
+        || !aces.some(appliesToPath)
+        || (directory && !aces.some(inheritsToChildren))
+        || (!directory && !aces.every(fields => fields[1] === ''))) {
+        throw new Error('Unsafe managed runtime ACL.');
+    }
+}
+function makeWindowsRuntimePathPrivate(path, directory) {
+    if (process.platform !== 'win32')
+        return;
+    const { sid } = (0, windows_executable_trust_cjs_1.currentWindowsUserIdentity)();
+    runIcacls([path, '/setowner', `*${sid}`]);
+    // The owner can replace its DACL without the restore privilege required by
+    // icacls /restore on an unprivileged Windows runner service account.
+    runIcacls([path, '/reset']);
+    runIcacls([path, '/inheritance:r']);
+    runIcacls([path, '/grant:r', `*${sid}:${directory ? '(OI)(CI)F' : 'F'}`]);
+    verifyWindowsRuntimePathPrivate(path, directory);
+}
+function verifyWindowsRuntimePathPrivate(path, directory) {
+    if (process.platform !== 'win32')
+        return;
+    const identity = (0, windows_executable_trust_cjs_1.currentWindowsUserIdentity)();
+    const { sid } = identity;
+    // Reassert ownership before reading the DACL: an owner can rewrite its ACL.
+    runIcacls([path, '/setowner', `*${sid}`]);
+    assertOwnerOnlyDacl(savedDacl(path), identity, directory);
+}
+function verifyWindowsAgentExecutableAcl(path) {
+    if (process.platform !== 'win32')
+        return;
+    (0, windows_executable_trust_cjs_1.verifyWindowsAgentExecutableAcl)(path);
 }
 
 
@@ -79261,10 +80277,10 @@ const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_2 = __nccwpck_require__(93081);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
-function createInitialSetupCompositionRoot(binding) {
+function createInitialSetupCompositionRoot(binding, progress) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding));
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
 }
 
 
@@ -79695,7 +80711,7 @@ function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()));
 }
-function createSingleActionUseCaseCompositionRoot(surface, binding) {
+function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgress) {
     const catalogResolver = new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const repositoryTagPort = surface === "github-workflow"
@@ -79709,7 +80725,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -79762,7 +80778,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress) {
     let singleAction;
     let issueComment;
     let issue;
@@ -79771,7 +80787,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
     let push;
     return {
         "single-action": async (execution) => {
-            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
+            singleAction ?? (singleAction = createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution), setupProgress));
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
@@ -80998,11 +82014,25 @@ function createLogReportAdapter() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerAgentExecutionObserverAdapter = void 0;
+const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const logger_1 = __nccwpck_require__(91151);
 class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
-        if (observation.state === 'completed' || observation.state === 'failed') {
-            (0, logger_1.logInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
+        if (observation.state === 'failed') {
+            const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
+            const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
+            const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
+            const preflightDiagnostic = observation.preflightDiagnostic ? `, ${observation.preflightDiagnostic}` : '';
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}).`, false, { agentExecution: observation });
+            return;
+        }
+        if (observation.state === 'completed') {
+            (0, logger_1.logInfo)('Agent execution completed.', false, { agentExecution: observation });
+            return;
+        }
+        if (observation.state === 'admitted') {
+            const version = (0, agent_runtime_manifest_1.isSafeAgentRuntimeVersion)(observation.version) ? observation.version : 'invalid-version';
+            (0, logger_1.logDebugInfo)(`Agent execution admitted (${observation.provider} ${version}).`, false, { agentExecution: { ...observation, version } });
             return;
         }
         (0, logger_1.logDebugInfo)(`Agent execution ${observation.state}.`, false, { agentExecution: observation });
@@ -81105,6 +82135,7 @@ exports.PreBranchSddWorkspaceAdapter = void 0;
 const fs = __importStar(__nccwpck_require__(87561));
 const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
+const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_util_1 = __nccwpck_require__(47261);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
@@ -81395,6 +82426,37 @@ function pathExists(target) {
     }
 }
 function writeSpecFile(target, content, exists) {
+    if (process.platform === 'win32') {
+        // Windows rejects O_NOFOLLOW. Replace the directory entry instead of
+        // opening an existing destination, so a file symlink is never followed.
+        const temporary = path.join(path.dirname(target), `.copilot-sdd-${(0, node_crypto_1.randomUUID)()}.tmp`);
+        fs.writeFileSync(temporary, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+        try {
+            if (exists) {
+                assertRegularSpecFile(target);
+                fs.renameSync(temporary, target);
+            }
+            else {
+                if (pathExists(target))
+                    throw new Error('The new SDD path is already occupied.');
+                // A sibling hard link is an atomic no-replace create on NTFS. Rename
+                // could overwrite a file created after the preceding absence check.
+                try {
+                    fs.linkSync(temporary, target);
+                }
+                catch (error) {
+                    if (error.code === 'EEXIST') {
+                        throw Object.assign(new Error('The new SDD path is already occupied.'), { cause: error });
+                    }
+                    throw error;
+                }
+            }
+        }
+        finally {
+            fs.rmSync(temporary, { force: true });
+        }
+        return;
+    }
     const flags = fs.constants.O_WRONLY | fs.constants.O_NOFOLLOW
         | (exists ? fs.constants.O_TRUNC : fs.constants.O_CREAT | fs.constants.O_EXCL);
     const descriptor = fs.openSync(target, flags, 0o644);
@@ -82886,7 +83948,8 @@ function reconcileRepositoryAgentGuidance(cwd, configuration) {
         artifacts: Object.fromEntries(Object.entries(records).sort(([left], [right]) => left.localeCompare(right))),
     };
     const manifestContent = `${JSON.stringify(manifest, null, 2)}\n`;
-    if (!fs.existsSync(manifestDestination) || fs.readFileSync(manifestDestination, 'utf8') !== manifestContent) {
+    if (!fs.existsSync(manifestDestination)
+        || canonicalGuidanceText(fs.readFileSync(manifestDestination, 'utf8')) !== manifestContent) {
         atomicWrite(manifestDestination, manifestContent);
         copied++;
     }
@@ -82920,7 +83983,8 @@ function inspectRepositoryAgentGuidance(cwd, configuration) {
         const content = fs.readFileSync(file, 'utf8');
         const actual = record.role === 'pointer' ? pointerBlock(content) : content;
         const matchesManifest = actual !== undefined && sha256(actual) === record.sha256;
-        const matchesDesired = record.role === 'pointer' || !desired || desired.get(relativePath) === content;
+        const matchesDesired = record.role === 'pointer' || !desired
+            || desired.get(relativePath) === canonicalGuidanceText(content);
         const semantic = record.role !== 'profile' || validRepositoryAgentProfile(content);
         checks.push(matchesManifest && matchesDesired && semantic
             ? { id: checkId(record.role), status: 'pass', summary: `${relativePath} matches the setup manifest.`, path: relativePath }
@@ -82945,7 +84009,7 @@ function inspectRepositoryAgentGuidance(cwd, configuration) {
     const profile = path.join(cwd, repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH);
     const profileContent = fs.existsSync(profile) ? fs.readFileSync(profile, 'utf8') : undefined;
     if (!profileContent || sha256(profileContent) !== manifest.profileDigest
-        || (desired && desired.get(repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH) !== profileContent)) {
+        || (desired && desired.get(repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH) !== canonicalGuidanceText(profileContent))) {
         checks.push({ id: 'agent-profile-runtime-parity', status: 'fail', summary: 'Repository profile digest does not match the setup manifest.', path: repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH });
     }
     else {
@@ -82965,7 +84029,7 @@ function reconcileManagedArtifact(cwd, artifact, prior) {
         return { applied: true, changed: true };
     }
     const current = fs.readFileSync(destination, 'utf8');
-    if (current === artifact.content)
+    if (canonicalGuidanceText(current) === artifact.content)
         return { applied: true, changed: false };
     if (!prior || prior.role !== artifact.role || sha256(current) !== prior.sha256)
         return { applied: false, changed: false };
@@ -82984,8 +84048,9 @@ function reconcilePointer(cwd, policy, prior) {
     }
     const current = fs.readFileSync(destination, 'utf8');
     const existingBlock = pointerBlock(current);
-    if (existingBlock === block)
+    if (existingBlock !== undefined && canonicalGuidanceText(existingBlock) === block) {
         return { changed: false, skipped: false, hash: sha256(block) };
+    }
     if (existingBlock !== undefined) {
         if (prior?.role === 'pointer' && sha256(existingBlock) !== prior.sha256) {
             (0, logger_1.logInfo)('⚠️  The managed AGENTS.md pointer has drifted; preserving it for explicit reconciliation.');
@@ -83127,7 +84192,10 @@ function backupDestination(cwd, relativePath, operation) {
     return destination;
 }
 function sha256(content) {
-    return (0, node_crypto_1.createHash)('sha256').update(content, 'utf8').digest('hex');
+    return (0, node_crypto_1.createHash)('sha256').update(canonicalGuidanceText(content), 'utf8').digest('hex');
+}
+function canonicalGuidanceText(content) {
+    return content.replace(/\r\n/gu, '\n');
 }
 function containsSensitiveGuidance(content) {
     return /(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\/(?:Users|home)\/[^/\s]+\/)/u.test(content);
@@ -84087,6 +85155,221 @@ module.exports = require("util");
 
 /***/ }),
 
+/***/ 37631:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { execFileSync } = __nccwpck_require__(17718);
+const { Buffer } = __nccwpck_require__(72254);
+const { realpathSync } = __nccwpck_require__(87561);
+const { hostname } = __nccwpck_require__(70612);
+const { dirname, join } = __nccwpck_require__(49411);
+const { trustedWindowsSystemRoot } = __nccwpck_require__(48176);
+
+const SID_PATTERN = /S-\d+(?:-\d+)+/u;
+const TRUSTED_INSTALLER_SID = 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464';
+const MUTATING_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO', 'RP', 'CR', 'DT']);
+const DIRECTORY_REPLACEMENT_RIGHTS = new Set(['GA', 'GW', 'FA', 'FW', 'SD', 'DC', 'WD', 'WO', 'RP', 'CR', 'DT']);
+const KNOWN_RIGHTS = new Set([...MUTATING_RIGHTS, 'GR', 'GX', 'FR', 'FX', 'RC', 'CC', 'SW', 'WP', 'LO']);
+const KNOWN_DIRECTORY_RIGHTS = new Set([...KNOWN_RIGHTS, 'LC']);
+
+function systemTool(name) {
+  return join(trustedWindowsSystemRoot(), 'System32', name);
+}
+
+function isLocalWindowsAdministrator(sid, accountDomain, computerName) {
+  return sid.endsWith('-500') && accountDomain?.toLowerCase() === computerName.toLowerCase();
+}
+
+function currentWindowsUserIdentity() {
+  let identity;
+  try {
+    identity = execFileSync(systemTool('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, windowsHide: true,
+    });
+  } catch (error) {
+    if (error && error.code === 'ETIMEDOUT') error.aclProbeStage = 'identity';
+    throw error;
+  }
+  const sid = identity.match(SID_PATTERN)?.[0];
+  if (!sid) throw new Error('Could not identify the Windows runtime owner.');
+  const account = /^\uFEFF?"([^"\r\n]+)"\s*,/u.exec(identity)?.[1];
+  const accountDomain = account?.split('\\')[0];
+  return { sid, localAdministrator: isLocalWindowsAdministrator(sid, accountDomain, hostname()) };
+}
+
+function parseWindowsExecutableDescriptors(output, expectedCount) {
+  const descriptors = JSON.parse(output);
+  if (!Array.isArray(descriptors) || descriptors.length !== expectedCount
+    || descriptors.some(descriptor => typeof descriptor !== 'string' || !descriptor)) {
+    throw new Error('Incomplete Windows executable ACL descriptor batch.');
+  }
+  return descriptors;
+}
+
+function installedExecutableDescriptors(paths) {
+  // icacls /save omits the owner; read full descriptors in one bounded process.
+  const literals = paths.map(path => `'${path.replace(/'/gu, "''")}'`).join(',');
+  const command = "$ErrorActionPreference='Stop'; $paths=@(" + literals + "); "
+    + '$sections=[System.Security.AccessControl.AccessControlSections]::All; $descriptors=@(); '
+    + '$descriptors += [System.IO.File]::GetAccessControl($paths[0]).GetSecurityDescriptorSddlForm($sections); '
+    + 'for($i=1;$i -lt $paths.Length;$i++){ '
+    + '$descriptors += [System.IO.Directory]::GetAccessControl($paths[$i]).GetSecurityDescriptorSddlForm($sections) }; '
+    + 'ConvertTo-Json -Compress -InputObject $descriptors';
+  let output;
+  try {
+    output = execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
+      ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+        encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, maxBuffer: 1_048_576, windowsHide: true,
+      }).replace(/^\uFEFF/u, '').trim();
+  } catch (error) {
+    if (error && error.code === 'ETIMEDOUT') error.aclProbeStage = 'descriptor';
+    throw error;
+  }
+  return parseWindowsExecutableDescriptors(output, paths.length);
+}
+
+function grantsMutation(rights, directory = false, directParent = false) {
+  if (/^0x[0-9a-f]+$/iu.test(rights)) {
+    const mask = Number.parseInt(rights.slice(2), 16);
+    if (!Number.isSafeInteger(mask) || mask > 0xFFFF_FFFF) {
+      throw new Error('Unrecognized executable ACL rights.');
+    }
+    const genericWrite = 0x4000_0000;
+    const genericAll = 0x1000_0000;
+    const fileMutation = 0x000D_0156;
+    const directoryReplacement = 0x000D_0040;
+    const directoryCreation = directParent ? 0x0000_0006 : 0;
+    return (mask & (directory
+      ? genericWrite | genericAll | directoryReplacement | directoryCreation
+      : genericWrite | genericAll | fileMutation)) !== 0;
+  }
+  const tokens = rights.match(/.{2}/gu) ?? [];
+  const known = directory ? KNOWN_DIRECTORY_RIGHTS : KNOWN_RIGHTS;
+  if (tokens.length * 2 !== rights.length || tokens.some(token => !known.has(token))) {
+    throw new Error(`Unrecognized executable ACL rights (${rights}).`);
+  }
+  const dangerous = directory ? DIRECTORY_REPLACEMENT_RIGHTS : MUTATING_RIGHTS;
+  return tokens.some(token => dangerous.has(token));
+}
+
+function assertWindowsExecutableDacl(sddl, userSid, localAdministrator, directory = false, directParent = false) {
+  const owner = /^O:([^:]+?)(?=G:|D:|S:|$)/u.exec(sddl)?.[1];
+  const trusted = new Set([userSid, 'SY', 'S-1-5-18', 'BA', 'S-1-5-32-544']);
+  if (localAdministrator) trusted.add('LA');
+  if (directory) trusted.add(TRUSTED_INSTALLER_SID);
+  const section = /D:.*?(?=S:|$)/u.exec(sddl)?.[0];
+  if (!owner || !trusted.has(owner)) throw new Error(`Unsafe executable ACL owner (${owner || 'missing'}).`);
+  if (!section) throw new Error('Missing executable ACL DACL.');
+  const firstAce = section.indexOf('(');
+  if (firstAce < 0 || !/^D:(?:P|AI|AR)*$/u.test(section.slice(0, firstAce))) {
+    throw new Error('Unrecognized executable ACL.');
+  }
+  const entries = section.slice(firstAce);
+  const aces = [...entries.matchAll(/\(([^()]*)\)/gu)].map(match => match[1].split(';'));
+  if (aces.length === 0 || entries.replace(/\([^()]*\)/gu, '') !== '') {
+    throw new Error('Unrecognized executable ACL entries.');
+  }
+  for (const fields of aces) {
+    if (fields.length !== 6 || !['A', 'D'].includes(fields[0]) || fields[3] || fields[4]
+      || !/^(?:(?:OI|CI|NP|IO|ID))*$/u.test(fields[1])) {
+      throw new Error('Unrecognized executable ACL entry.');
+    }
+    if (fields[0] === 'D' || fields[1].includes('IO') || trusted.has(fields[5])) continue;
+    if (grantsMutation(fields[2], directory, directParent)) {
+      // The public boundary wraps this detail; isolated diagnostics keep the ACE.
+      throw new Error(`Agent executable is writable by another principal (${fields[5]}:${fields[2]}).`);
+    }
+  }
+}
+
+function assertWindowsExecutableParentDacl(sddl, userSid, localAdministrator, directParent = false) {
+  assertWindowsExecutableDacl(sddl, userSid, localAdministrator, true, directParent);
+}
+
+function verifyWindowsAgentExecutableAcl(path) {
+  const identity = currentWindowsUserIdentity();
+  const canonical = realpathSync(path);
+  const paths = [canonical];
+  let parent = dirname(canonical);
+  while (true) {
+    paths.push(parent);
+    const next = dirname(parent);
+    if (next === parent) break;
+    parent = next;
+  }
+  const descriptors = installedExecutableDescriptors(paths);
+  assertWindowsExecutableDacl(descriptors[0], identity.sid, identity.localAdministrator);
+  for (let index = 1; index < paths.length; index += 1) {
+    try {
+      assertWindowsExecutableParentDacl(descriptors[index], identity.sid, identity.localAdministrator, index === 1);
+    } catch (error) {
+      throw new Error(`Unsafe Windows executable ancestor ${paths[index]}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
+  }
+}
+
+module.exports = {
+  assertWindowsExecutableDacl,
+  assertWindowsExecutableParentDacl,
+  currentWindowsUserIdentity,
+  isLocalWindowsAdministrator,
+  parseWindowsExecutableDescriptors,
+  systemTool,
+  verifyWindowsAgentExecutableAcl,
+};
+
+
+/***/ }),
+
+/***/ 48176:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { lstatSync, realpathSync } = __nccwpck_require__(87561);
+const { win32 } = __nccwpck_require__(49411);
+
+/** Parse machine facts without consulting a mutable search path or child environment. */
+function resolveWindowsSystemRoot(source) {
+  const root = source.SystemRoot;
+  const windir = source.WINDIR;
+  if (typeof root !== 'string' || typeof windir !== 'string'
+    || !/^[a-z]:\\[^\\/]+$/iu.test(root)
+    || win32.normalize(root).toLowerCase() !== win32.normalize(windir).toLowerCase()
+    || win32.basename(root).toLowerCase() !== 'windows') {
+    throw new Error('Windows runner system directory is invalid or inconsistent.');
+  }
+  const drive = win32.parse(root).root.slice(0, 2);
+  if (typeof source.SystemDrive !== 'string'
+    || source.SystemDrive.toLowerCase() !== drive.toLowerCase()) {
+    throw new Error('Windows runner system drive does not match its system directory.');
+  }
+  return win32.normalize(root);
+}
+
+function captureWindowsSystemRoot(source) {
+  const root = resolveWindowsSystemRoot(source);
+  for (const directory of [root, win32.join(root, 'System32')]) {
+    if (!lstatSync(directory).isDirectory()
+      || win32.normalize(realpathSync.native(directory)).toLowerCase() !== directory.toLowerCase()) {
+      throw new Error('Windows runner system directory is not a canonical directory.');
+    }
+  }
+  return root;
+}
+
+// The Action's startup environment comes from its runner. Capture it before
+// workflow data or provider subprocesses can mutate process.env.
+const systemRoot = process.platform === 'win32' ? captureWindowsSystemRoot(process.env) : undefined;
+
+function trustedWindowsSystemRoot() {
+  if (!systemRoot) throw new Error('Windows system tools are unavailable on this platform.');
+  return systemRoot;
+}
+
+module.exports = { resolveWindowsSystemRoot, trustedWindowsSystemRoot };
+
+
+/***/ }),
+
 /***/ 29617:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -84332,6 +85615,10 @@ function renderCatalog(catalog) {
   ].join('\n');
 }
 
+function normalizeCheckoutLineEndings(content, platform = process.platform) {
+  return platform === 'win32' ? content.replace(/\r\n/g, '\n') : content;
+}
+
 function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
   return paths.map(relativePath => {
@@ -84362,7 +85649,7 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
-  if (current !== rendered) {
+  if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;
     return;
@@ -84382,6 +85669,7 @@ module.exports = {
   main,
   readCatalog,
   renderCatalog,
+  normalizeCheckoutLineEndings,
   validateAsBuiltSpecification,
   validateCatalog,
 };
@@ -91158,7 +92446,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-24.p1-c.3","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","installation":{"package":"@openai/codex","version":"0.156.1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-10-02.standalone.1","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
 
 /***/ })
 

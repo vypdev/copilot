@@ -38,5 +38,12 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },
-  verbose: true
+  verbose: true,
+  ...(process.platform === 'win32' ? {
+    maxWorkers: 2,
+    // Both Windows jobs cap concurrency. Only service runners recycle workers:
+    // recycling also slowed hosted Windows beyond its job timeout.
+    ...(process.env.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE === '1'
+      ? { workerIdleMemoryLimit: '512MB' } : {})
+  } : {})
 };

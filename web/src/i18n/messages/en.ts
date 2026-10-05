@@ -2,7 +2,7 @@ import type { WebSetupMessageCopyId } from '../../../../src/application/contract
 
 export const messageCopyEn: Readonly<Record<WebSetupMessageCopyId, string>> = {
   'session.controlMoved': 'Control moved to this tab. The previous tab is now read-only.',
-  'session.cancelled': 'Setup stopped before applying further changes. Any PAT created on GitHub still exists until you delete it there.',
+  'session.cancelled': 'Cancellation requested. Temporary permission checks already started will finish cleanup before the process exits. PATs created on GitHub remain until you delete them there.',
   'plan.ready': 'Plan ready: {files} files, {variables} Variables and {secrets} Secret names. Review it before continuing.',
   'permission.preview': 'Permission preview: issue workflows {issues}; PR approval {approval}; Secrets {secrets}; Variables {variables}; Projects {projects}. Review the exact grants before creating the setup PAT.',
   'setupPat.corrected.bootstrap': 'The setup PAT could not access the repository. No setup changes started. Required grants: {grants}. Create a corrected PAT using the updated GitHub link.',

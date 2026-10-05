@@ -1,0 +1,169 @@
+name: Setup Platform Smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      upload_windows_coverage:
+        description: Export hosted Windows coverage to Codecov
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  setup-platform-smoke:
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}
+    name: Setup package and local session (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10.12.4
+          standalone: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          cache: pnpm
+      - name: Verify Windows job Node npm CLI
+        if: runner.os == 'Windows'
+        run: node scripts/verify-windows-job-npm.cjs
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      # Checked-in ncc bundles are generated on Unix; Windows output differs.
+      - if: runner.os != 'Windows'
+        run: pnpm run validate:build
+      - run: pnpm run typecheck
+      - name: Local setup fixtures only
+        run: pnpm exec jest src/application/usecases/setup/__tests__/setup_session_coordinator.test.ts src/cli/__tests__/web_setup_server.test.ts src/cli/__tests__/setup_session_guard.test.ts src/cli/__tests__/setup_apply_snapshot.test.ts src/tooling/__tests__/setup_acceptance_path.test.ts --runInBand --silent
+      - name: Isolated agent runtime fixtures
+        run: pnpm exec jest src/infrastructure/agents/__tests__/agent_executable_file.test.ts src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts src/infrastructure/agents/__tests__/agent_execution_planner.test.ts src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts src/infrastructure/agents/__tests__/agent_official_installer.test.ts --runInBand --silent
+      - name: Isolated npm package checks
+        run: pnpm run validate:npm-package && pnpm run smoke:npm-package
+      - name: Full platform coverage and acceptance budgets
+        run: pnpm run test:coverage
+      - name: Preserve hosted Windows coverage
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-windows-lcov
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
+      - name: Full platform documentation and contract validators
+        run: |
+          pnpm run validate:agent-docs
+          pnpm run validate:docs-page
+          pnpm run validate:documentation
+          pnpm run validate:workflows
+          pnpm run validate:specifications
+          pnpm run validate:setup-acceptance
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check -- . ':(exclude)build/**'
+
+  upload-windows-coverage:
+    name: Upload hosted Windows coverage to Codecov
+    needs: setup-platform-smoke
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download hosted Windows coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: hosted-windows-lcov
+          path: coverage-windows
+      - name: Upload Windows coverage to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage-windows/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+          flags: windows
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  setup-self-hosted-codex-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
+    runs-on: ${{ matrix.labels }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows
+            labels: [self-hosted, codex, Windows]
+          - platform: macOS
+            labels: [self-hosted, codex, macOS]
+          - platform: Ubuntu
+            labels: [self-hosted, codex, Linux]
+    steps:
+      - name: Identify service runner
+        run: echo "Runner $RUNNER_NAME on $RUNNER_OS"
+      - name: Verify Ubuntu distribution
+        if: runner.os == 'Linux'
+        run: . /etc/os-release && test "$ID" = ubuntu
+      - name: Git Bash in runner service PATH
+        if: runner.os == 'Windows'
+        run: where.exe bash && bash --version
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 10.12.4
+          standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          cache: pnpm
+      - name: Verify Windows job Node npm CLI
+        if: runner.os == 'Windows'
+        run: node scripts/verify-windows-job-npm.cjs
+      - run: pnpm install --frozen-lockfile
+      - name: Validate generated guidance checkout on codex runner
+        run: |
+          git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
+          pnpm run validate:agent-docs
+      - run: pnpm run build
+      - if: runner.os != 'Windows'
+        run: pnpm run validate:build
+      - run: pnpm run typecheck
+      - name: Local setup fixtures only
+        run: pnpm exec jest src/application/usecases/setup/__tests__/setup_session_coordinator.test.ts src/cli/__tests__/web_setup_server.test.ts src/cli/__tests__/setup_session_guard.test.ts src/cli/__tests__/setup_apply_snapshot.test.ts src/tooling/__tests__/setup_acceptance_path.test.ts --runInBand --silent
+      - name: Isolated agent runtime fixtures
+        run: pnpm exec jest src/infrastructure/agents/__tests__/agent_executable_file.test.ts src/infrastructure/agents/__tests__/agent_executable_invocation.test.ts src/infrastructure/agents/__tests__/agent_execution_planner.test.ts src/infrastructure/agents/__tests__/agent_windows_runtime.test.ts src/infrastructure/agents/__tests__/agent_official_installer.test.ts --runInBand --silent
+      - name: Isolated npm package checks
+        run: pnpm run validate:npm-package && pnpm run smoke:npm-package
+      - name: Full platform coverage and acceptance budgets
+        env:
+          COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
+        run: pnpm run test:coverage
+      - name: Full platform documentation and contract validators
+        run: |
+          pnpm run validate:agent-docs
+          pnpm run validate:docs-page
+          pnpm run validate:documentation
+          pnpm run validate:workflows
+          pnpm run validate:specifications
+          pnpm run validate:setup-acceptance
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check -- . ':(exclude)build/**'
