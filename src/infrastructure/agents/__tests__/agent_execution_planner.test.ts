@@ -1,4 +1,5 @@
 import { chmodSync, chownSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentProvider } from '../../../domain/agent';
@@ -141,6 +142,30 @@ describe('AgentExecutionPlanner', () => {
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
             prompt: 'prompt', timeoutMs: 1_000, cwd: join(process.cwd(), 'src'), environment: { PATH: '' },
         })).toThrow('canonical repository root');
+    });
+
+    it('rejects a nested repository in GitHub Actions outside the intended checkout root', () => {
+        const checkout = mkdtempSync(join(tmpdir(), 'copilot-agent-checkout-'));
+        const nested = join(checkout, 'nested');
+        mkdirSync(nested);
+        execFileSync('git', ['init', '-q', checkout]);
+        execFileSync('git', ['init', '-q', nested]);
+        const priorActions = process.env.GITHUB_ACTIONS;
+        const priorWorkspace = process.env.GITHUB_WORKSPACE;
+        process.env.GITHUB_ACTIONS = 'true';
+        process.env.GITHUB_WORKSPACE = checkout;
+        try {
+            expect(() => new AgentExecutionPlanner().prepare({
+                configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+                prompt: 'prompt', timeoutMs: 1_000, cwd: nested, environment: { PATH: '' },
+            })).toThrow('canonical GitHub checkout root');
+        } finally {
+            if (priorActions === undefined) delete process.env.GITHUB_ACTIONS;
+            else process.env.GITHUB_ACTIONS = priorActions;
+            if (priorWorkspace === undefined) delete process.env.GITHUB_WORKSPACE;
+            else process.env.GITHUB_WORKSPACE = priorWorkspace;
+            rmSync(checkout, { recursive: true, force: true });
+        }
     });
 
     it.each(['codex', 'opencode', 'cursor'] as const)('admits a complete %s plan after runtime identity preflight', (provider) => {

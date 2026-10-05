@@ -58,14 +58,20 @@ const DEFAULT_SYSTEM: AgentExecutionPlanningSystem = {
     readVersion: readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = realpathSync(cwd);
-        const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], {
+        const topLevel = execFileSync('git', ['rev-parse', '--show-toplevel'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15_000,
         }).trim();
-        if (prefix !== '') {
+        if (realpathSync(topLevel) !== requested) {
             throw new AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        }
+        if (process.env.GITHUB_ACTIONS === 'true') {
+            const checkout = process.env.GITHUB_WORKSPACE;
+            if (!checkout || realpathSync(checkout) !== requested) {
+                throw new AgentCliError('Agent cwd must be the canonical GitHub checkout root.', 'configuration');
+            }
         }
         return requested;
     },

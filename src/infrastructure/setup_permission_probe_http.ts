@@ -13,25 +13,45 @@ export class SetupPermissionProbeHttp {
     async request(url: string, method: ProbeMethod = 'GET', body?: unknown): Promise<Response> {
         if (!url.startsWith('https://api.github.com/')) throw new ProbeFailure('Invalid GitHub probe target.');
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const deadline = new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => {
+                controller.abort();
+                reject(new Error('Probe request timeout.'));
+            }, this.timeoutMs);
+        });
         try {
-            return await this.fetcher(url, {
-                method,
-                headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    Accept: 'application/vnd.github+json',
-                    'X-GitHub-Api-Version': '2026-03-10',
-                    ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-                },
-                ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-                signal: controller.signal,
-                redirect: 'error',
-            });
+            return await Promise.race([this.fetchAndRead(url, method, body, controller.signal), deadline]);
         } catch {
             throw new ProbeFailure(`GitHub ${method} did not complete or timed out.`);
         } finally {
-            clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
         }
+    }
+
+    private async fetchAndRead(url: string, method: ProbeMethod, body: unknown, signal: AbortSignal): Promise<Response> {
+        const response = await this.fetcher(url, {
+            method,
+            headers: {
+                Authorization: `Bearer ${this.token}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2026-03-10',
+                ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+            signal,
+            redirect: 'error',
+        });
+        if (response.status >= 300 || response.status === 204 || response.status === 205) return response;
+        // Consume the complete body while the request deadline and abort signal
+        // are still active. A fixture response may expose json() but no text().
+        const payload = typeof response.text === 'function' ? await response.text() : await response.json();
+        return {
+            status: response.status,
+            ok: response.ok,
+            headers: response.headers,
+            json: async () => typeof payload === 'string' ? JSON.parse(payload) as unknown : payload,
+        } as Response;
     }
 
     async expect(url: string, method: ProbeMethod, statuses: readonly number[], body?: unknown): Promise<Response> {

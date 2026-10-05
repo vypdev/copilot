@@ -106,6 +106,11 @@ an unproved PAT grant exists cannot make the permission audit pass.
    keeps a bounded pagination limit. Recovery must find the temporary Project
    even when the organization has more than 500 unrelated Projects; a full
    unfiltered organization scan is not acceptable.
+10. The per-request timeout covers response headers **and complete body
+    consumption**. A provider that sends headers and then stalls its JSON body
+    must yield a bounded, sanitized failure; no permission becomes Verified.
+    Fixture tests hold the body open beyond the deadline and prove that the
+    probe exits without hanging or leaking provider content.
 
 ### Planned permission-specific operations
 

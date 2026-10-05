@@ -83767,14 +83767,20 @@ const DEFAULT_SYSTEM = {
     readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = (0, node_fs_1.realpathSync)(cwd);
-        const prefix = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], {
+        const topLevel = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15000,
         }).trim();
-        if (prefix !== '') {
+        if ((0, node_fs_1.realpathSync)(topLevel) !== requested) {
             throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        }
+        if (process.env.GITHUB_ACTIONS === 'true') {
+            const checkout = process.env.GITHUB_WORKSPACE;
+            if (!checkout || (0, node_fs_1.realpathSync)(checkout) !== requested) {
+                throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical GitHub checkout root.', 'configuration');
+            }
         }
         return requested;
     },
@@ -88044,27 +88050,48 @@ class SetupPermissionProbeHttp {
         if (!url.startsWith('https://api.github.com/'))
             throw new ProbeFailure('Invalid GitHub probe target.');
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+        let timeout;
+        const deadline = new Promise((_, reject) => {
+            timeout = setTimeout(() => {
+                controller.abort();
+                reject(new Error('Probe request timeout.'));
+            }, this.timeoutMs);
+        });
         try {
-            return await this.fetcher(url, {
-                method,
-                headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    Accept: 'application/vnd.github+json',
-                    'X-GitHub-Api-Version': '2026-03-10',
-                    ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-                },
-                ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-                signal: controller.signal,
-                redirect: 'error',
-            });
+            return await Promise.race([this.fetchAndRead(url, method, body, controller.signal), deadline]);
         }
         catch {
             throw new ProbeFailure(`GitHub ${method} did not complete or timed out.`);
         }
         finally {
-            clearTimeout(timeout);
+            if (timeout)
+                clearTimeout(timeout);
         }
+    }
+    async fetchAndRead(url, method, body, signal) {
+        const response = await this.fetcher(url, {
+            method,
+            headers: {
+                Authorization: `Bearer ${this.token}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2026-03-10',
+                ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+            signal,
+            redirect: 'error',
+        });
+        if (response.status >= 300 || response.status === 204 || response.status === 205)
+            return response;
+        // Consume the complete body while the request deadline and abort signal
+        // are still active. A fixture response may expose json() but no text().
+        const payload = typeof response.text === 'function' ? await response.text() : await response.json();
+        return {
+            status: response.status,
+            ok: response.ok,
+            headers: response.headers,
+            json: async () => typeof payload === 'string' ? JSON.parse(payload) : payload,
+        };
     }
     async expect(url, method, statuses, body) {
         const response = await this.request(url, method, body);

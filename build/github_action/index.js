@@ -40077,6 +40077,15 @@ function logProvisioningFailure(provider, failure) {
 /** Reuses selected agent CLIs, installing missing default CLIs from official sources. */
 function prepareGithubAgentRuntime(agentTasks, activeTasks) {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
+    for (const [task, configuration] of configurations) {
+        const preflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
+        if (preflight.check.status === 'missing' && preflight.shouldFail) {
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`);
+        }
+        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
+            (0, logger_1.logInfo)(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
+        }
+    }
     if (process.env.GITHUB_ACTIONS === 'true') {
         const provisioner = new agent_cli_provisioner_1.AgentCliProvisioner();
         for (const configuration of uniqueAgentConfigurations(configurations)) {
@@ -40087,15 +40096,6 @@ function prepareGithubAgentRuntime(agentTasks, activeTasks) {
                 logProvisioningFailure(configuration.provider, cause);
                 throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime is unavailable or its official installation failed.`, { cause });
             }
-        }
-    }
-    for (const [task, configuration] of configurations) {
-        const preflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
-        if (preflight.check.status === 'missing' && preflight.shouldFail) {
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`);
-        }
-        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
-            (0, logger_1.logInfo)(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
         }
     }
     (0, logger_1.logDebugInfo)(configurations.length === 0
@@ -78616,14 +78616,20 @@ const DEFAULT_SYSTEM = {
     readVersion: agent_executable_invocation_1.readAgentExecutableVersion,
     resolveWorkspace(cwd) {
         const requested = (0, node_fs_1.realpathSync)(cwd);
-        const prefix = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-prefix'], {
+        const topLevel = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], {
             cwd: requested,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'ignore'],
             timeout: 15000,
         }).trim();
-        if (prefix !== '') {
+        if ((0, node_fs_1.realpathSync)(topLevel) !== requested) {
             throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical repository root.', 'configuration');
+        }
+        if (process.env.GITHUB_ACTIONS === 'true') {
+            const checkout = process.env.GITHUB_WORKSPACE;
+            if (!checkout || (0, node_fs_1.realpathSync)(checkout) !== requested) {
+                throw new agent_cli_contracts_1.AgentCliError('Agent cwd must be the canonical GitHub checkout root.', 'configuration');
+            }
         }
         return requested;
     },

@@ -45,6 +45,7 @@ describe('prepareGithubAgentRuntime', () => {
         expect(mockPreflight).toHaveBeenCalledWith(tasks.planner);
         expect(mockProvision).toHaveBeenCalledTimes(1);
         expect(mockProvision).toHaveBeenCalledWith(tasks.planner);
+        expect(mockPreflight.mock.invocationCallOrder[0]).toBeLessThan(mockProvision.mock.invocationCallOrder[0]);
     });
 
     it('does no provider work for an event without agent capabilities', () => {
@@ -74,6 +75,7 @@ describe('prepareGithubAgentRuntime', () => {
                 message: 'Authentication is unavailable for the active planner agent role using opencode.',
             }),
         );
+        expect(mockProvision).not.toHaveBeenCalled();
         try {
             prepareGithubAgentRuntime(tasks, ['planner']);
         } catch (error) {

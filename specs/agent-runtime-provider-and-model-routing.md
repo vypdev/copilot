@@ -140,7 +140,11 @@ No legacy behavior is supported; the hardened runtime is the only contract.
 
 1. Determine active roles from event/command/single action.
 2. Merge common tuple with complete role overrides and validate.
-3. Enforce model-provider/model allowlists and installation policy.
+3. Enforce model-provider/model allowlists and installation policy. Preflight
+   credentials for every active role before provisioning any CLI; a required
+   missing credential fails with the authentication error and causes zero
+   installer calls. Warning-only authentication remains visible and does not
+   prevent provisioning. Fixtures must prove this order.
 4. Reuse an operator-installed CLI, or install the missing default executable
    from the selected provider's official standalone source in a private job
    directory. An explicitly selected executable is never replaced. A present

@@ -21,6 +21,19 @@ const committedHealthWorkflow = async () =>
         .replace(/\r\n/gu, '\n');
 
 describe('temporary permission resource probes', () => {
+    it('bounds a GitHub response that sends headers but never finishes its body', async () => {
+        let signal: AbortSignal | undefined;
+        const fetcher = jest.fn(async (_url: string, options?: RequestInit) => {
+            signal = options?.signal as AbortSignal;
+            return { status: 200, text: () => new Promise<string>(() => undefined) } as Response;
+        }) as unknown as typeof fetch;
+        const http = new SetupPermissionProbeHttp(fetcher, 'fixture-token', 20);
+
+        await expect(http.expect('https://api.github.com/repos/owner/repo', 'GET', [200]))
+            .rejects.toThrow('GitHub GET did not complete or timed out.');
+        expect(signal?.aborted).toBe(true);
+    });
+
     it.each([
         ['on: workflow_dispatch', true],
         ['on: [push, workflow_dispatch]', true],

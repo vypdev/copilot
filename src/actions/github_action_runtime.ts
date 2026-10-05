@@ -21,6 +21,18 @@ export function prepareGithubAgentRuntime(
     activeTasks?: readonly AgentTask[],
 ): void {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
+    for (const [task, configuration] of configurations) {
+        const preflight = runAgentAuthenticationPreflight(configuration);
+        if (preflight.check.status === 'missing' && preflight.shouldFail) {
+            throw new ApplicationError(
+                'authorization.credential-invalid',
+                `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`,
+            );
+        }
+        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
+            logInfo(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
+        }
+    }
     if (process.env.GITHUB_ACTIONS === 'true') {
         const provisioner = new AgentCliProvisioner();
         for (const configuration of uniqueAgentConfigurations(configurations)) {
@@ -34,19 +46,6 @@ export function prepareGithubAgentRuntime(
                     { cause },
                 );
             }
-        }
-    }
-
-    for (const [task, configuration] of configurations) {
-        const preflight = runAgentAuthenticationPreflight(configuration);
-        if (preflight.check.status === 'missing' && preflight.shouldFail) {
-            throw new ApplicationError(
-                'authorization.credential-invalid',
-                `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`,
-            );
-        }
-        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
-            logInfo(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
         }
     }
 

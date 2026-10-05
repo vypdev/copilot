@@ -96,8 +96,8 @@ directory. The lock contains no PAT or other credential.
     enforcement, or had a transient/rate-limit failure. A `403` becomes
     `Missing` only when bounded provider metadata explicitly identifies a
     permission denial without rate-limit, retry, or SSO headers.
-    Malformed provider JSON or unreadable response headers also remain
-    `Unverifiable`.
+    Malformed provider JSON, unreadable response headers, or a response body
+    that stalls until the probe deadline also remain `Unverifiable`.
     A successful public read is also not token evidence: public repository
     metadata, commits, rulesets, labels, workflows, checks, pull requests, and
     workflow files remain `Unverifiable` unless repository metadata proves the
