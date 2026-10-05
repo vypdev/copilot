@@ -50033,6 +50033,9 @@ function buildSetupPatPermissionRequirements() {
     return [
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', applicability: 'conditional',
+            condition: 'Initial tag or credential-health check enabled',
+            reason: 'Create the initial tag or an isolated branch for the Actions permission check.', probe: 'contents' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Secret provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Secrets.', probe: 'secrets' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Variables', level: 'write', applicability: 'conditional', condition: 'Variable provisioning enabled', reason: 'Inspect and provision selected GitHub Actions Variables.', probe: 'variables' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Issues', level: 'write', applicability: 'conditional', condition: 'Issue workflows enabled', reason: 'Provision labels and issue resources.', probe: 'issues' }),
@@ -50064,7 +50067,7 @@ function buildSetupPatIntentPermissionRequirements(configuration, ownerKind, pro
 function buildSetupPatIntentUncertainty(configuration, ownerKind) {
     const unknown = [];
     if (configuration.manageRepositorySecrets) {
-        unknown.push('Existing managed Secrets may require repository Actions write for credential-health checks. A confirmed missing health workflow may also require repository Contents write and Workflows write.');
+        unknown.push('Existing managed Secrets may require repository Actions write and Contents write for an isolated credential-health check. A confirmed missing health workflow may also require repository Workflows write.');
     }
     if (ownerKind === 'Organization') {
         for (const kind of ['secrets', 'variables']) {
@@ -50110,9 +50113,13 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
-        ...(configuration.createInitialTag ? [requirement({
+        ...(configuration.createInitialTag || needsCredentialHealth ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
-                reason: 'Create the initial repository tag when no version tag exists.', probe: 'contents',
+                reason: configuration.createInitialTag && needsCredentialHealth
+                    ? 'Create the initial tag and an isolated branch for the Actions permission check.'
+                    : configuration.createInitialTag
+                        ? 'Create the initial repository tag when no version tag exists.'
+                        : 'Create an isolated branch for the Actions permission check.', probe: 'contents',
             })] : []),
         ...(secretScopes.has('repository') ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Secrets', level: 'write',
@@ -50135,7 +50142,6 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
             requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
         ] : []),
         ...(needsCredentialHealthBootstrap ? [
-            requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'contents' }),
             requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
         ] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
@@ -57999,6 +58005,10 @@ class SetupWizardUseCase {
         if (this.dependencies.sessionLiveness?.() === 'expired') {
             return { status: 'blocked', reason: 'setup-permissions-unavailable', exitCode: 1,
                 configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), errors: ['The local setup session expired before permission checks began.'],
+                ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
+        if (request.previewOnly) {
+            return { status: 'completed', exitCode: 0, configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), plan,
                 ...(remoteConfiguration ? { remoteConfiguration } : {}) };
         }
         const audit = this.dependencies.onPermissionCleanupPending
@@ -70710,7 +70720,7 @@ class WebSetupBridge {
             return;
         const previous = this.view.permissions.progress ?? [];
         const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
-            || ['unavailable', 'cleanup-pending', 'unsupported'].includes(progress.detail))
+            || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'].includes(progress.detail))
             ? progress.detail : undefined;
         this.publish({ permissions: { ...this.view.permissions, progress: [
                     ...previous.filter(item => item.requirementId !== progress.requirementId),
@@ -87897,7 +87907,15 @@ async function probeActions(context) {
     const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
     context.phase('creating');
     try {
-        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        try {
+            await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        }
+        catch (error) {
+            if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.httpStatus === 403) {
+                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403);
+            }
+            throw error;
+        }
         if (!workflow.trustedNoOp) {
             const file = `${root}/contents/${workflow.path}`;
             try {

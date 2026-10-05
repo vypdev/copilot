@@ -317,6 +317,33 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
+    it('names Contents Write when branch creation is denied before the Actions dispatch', async () => {
+        const root = '/repos/owner/repo';
+        const workflowPath = '.github/workflows/copilot_credential_health.yml';
+        const methods: string[] = [];
+        const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
+            const path = new URL(url).pathname;
+            const method = options?.method ?? 'GET';
+            methods.push(`${method} ${path}`);
+            if (path === root) return reply(200, { default_branch: 'main' });
+            if (path === `${root}/actions/workflows`) return reply(200, {
+                workflows: [{ id: 123, path: workflowPath, state: 'active' }],
+            });
+            if (path === `${root}/contents/${workflowPath}`) return reply(200, {
+                path: workflowPath, encoding: 'base64', sha: 'b'.repeat(40),
+                content: Buffer.from(await committedHealthWorkflow()).toString('base64'),
+            });
+            if (path === `${root}/git/ref/heads/main`) return reply(200, { object: { sha: 'a'.repeat(40) } });
+            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return reply(404);
+            if (path === `${root}/git/refs` && method === 'POST') return reply(403);
+            throw new Error(`Unexpected fixture request ${method} ${path}`);
+        }) as unknown as typeof fetch;
+        const probe = context('actions', 'repository', fetcher);
+        await expect(probeDisposableResource(probe.value)).rejects.toThrow('confirm repository Contents Write');
+        expect(methods.some(call => call.includes('/dispatches'))).toBe(false);
+        expect(await readdir(folder)).toEqual([]);
+    });
+
     it('verifies a 204 Actions dispatch only after a unique exact run readback and cleanup', async () => {
         const root = '/repos/owner/repo';
         const workflowPath = '.github/workflows/copilot_credential_health.yml';

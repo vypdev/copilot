@@ -369,7 +369,10 @@ headless command surface, without enforcing an exact version.
 On Windows the official installer runs under Windows PowerShell 5.1 with fixed
 system tool directories, a private profile, and only non-secret native process
 variables. Its `PSModulePath` contains only Windows PowerShell 5.1 system module
-directories; inherited PowerShell 7 module entries cannot reach it. A fixture
+directories derived from the validated system root. `ProgramFiles` and related
+installer variables also derive from that root; ambient or workflow-supplied
+Program Files paths cannot add PowerShell module locations. Inherited
+PowerShell 7 module entries cannot reach it. A fixture
 MUST assert the closed environment and failure-stage telemetry.
 The Windows platform smoke MUST also start the native Windows PowerShell 5.1
 under that exact installer environment and hash a local fixture file with

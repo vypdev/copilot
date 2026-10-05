@@ -48,12 +48,16 @@ an unproved PAT grant exists cannot make the permission audit pass.
    disposable operation, setup blocks with a concrete explanation until an
    equivalent operation is implemented; neither a generic confirmation prompt
    nor `--confirm-unverifiable-write-permissions` constitutes evidence.
+   Preview-only and `--dry-run` paths stop after the reviewed plan and never
+   execute the final disposable WRITE audit, even if a PAT was supplied.
 4. The web and CLI show ordered, live events for identity validation and each
    permission: pending, checking READ or creating/reading/deleting a temporary
    resource, verified, failed, or interrupted. Concurrency is at most four
    independent checks. The web publishes incremental revisions with an
    accessible live region; every row contains text and an actionable,
-   sanitized result. Locale coverage is en/es/fr/pt; CLI remains English.
+   sanitized result. The `secret-collision` diagnostic survives the web bridge
+   allowlist and selects the existing localized audit-trail guidance. Locale
+   coverage is en/es/fr/pt; CLI remains English.
 5. A probe uses a random, namespaced resource name and create-only semantics
    where GitHub provides them. It reads back the exact resource and deletes
    only the exact object it created. Upsert-only Secret endpoints require a
@@ -129,7 +133,7 @@ an unproved PAT grant exists cannot make the permission audit pass.
 | Organization Issue Types WRITE | create unique disabled issue type, GET/list exact id, DELETE id | verify absence; org admin prerequisite reported separately |
 | Repository Contents WRITE | create unique disposable ref, GET exact ref, DELETE ref; use a file on that ref when needed to prove file writes | verify ref absence; no default-branch commit |
 | Repository Workflows WRITE | on the disposable ref, create a no-job workflow file, GET it, delete ref | verify ref absence; requires Contents WRITE too |
-| Repository Actions WRITE | after explicit plan approval, create a disposable ref, dispatch a registered workflow on that ref, GET the exact returned run ID, cancel if needed, DELETE the run, then delete the ref. The packaged credential-health workflow may run unchanged only when its remote bytes match the trusted packaged template and all job inputs default false; otherwise write a verified no-job override on the disposable ref before dispatch | report unavoidable run/audit trail; fallback requires Contents and Workflows WRITE; block if the isolated dispatch cannot be proved |
+| Repository Actions WRITE | after explicit plan approval, create a disposable ref, dispatch a registered workflow on that ref, GET the exact returned run ID, cancel if needed, DELETE the run, then delete the ref. The packaged credential-health workflow may run unchanged only when its remote bytes match the trusted packaged template and all job inputs default false; otherwise write a verified no-job override on the disposable ref before dispatch | report unavoidable run/audit trail; Contents WRITE is always required to create the disposable ref, and the fallback also requires Workflows WRITE; a Contents denial must be named as that prerequisite rather than evidence against Actions WRITE |
 | Repository Pull requests WRITE | open a draft PR from a disposable changed ref, GET exact PR, close PR and delete ref | report unavoidable PR audit trail and notifications |
 | Organization Projects WRITE | create a disposable Project, GET exact Project, delete it | verify absence; never edit an existing item |
 
@@ -485,10 +489,11 @@ read-only GitHub queries and presents ordered permission outcomes.
 8. Remote setup inspection records whether `copilot_credential_health.yml` is
    installed, confirmed missing, unavailable, or unknown without mutating the
    repository. When existing Secrets require health validation, Actions write
-   is always required for dispatch. Contents write and Workflows write are
-   required only when the workflow is independently confirmed missing;
-   installed, unavailable, or unknown states MUST NOT trigger those
-   bootstrap-only grants because ambiguous absence never authorizes mutation.
+   is required for dispatch and Contents write is required for its isolated
+   disposable branch. Workflows write is required only when the workflow is
+   independently confirmed missing; installed, unavailable, or unknown states
+   MUST NOT trigger that bootstrap grant because ambiguous absence never
+   authorizes workflow mutation.
    Workflow-file inspection requires Contents read, not a separate Workflows
    read permission; the Workflows grant is write-only and bootstrap-specific.
    The remote-configuration summary renders the bounded workflow state.
@@ -853,8 +858,9 @@ allows only the already specified, narrowly scoped continuation.
 
 The real table is derived from the selected features and remote state; disabled
 Secret/Variable provisioning or absent credential-health validation omits the
-corresponding rows. A confirmed missing health workflow may additionally need
-Contents and Workflows write for temporary bootstrap, never by default.
+corresponding rows. An Actions write check needs Contents write for its isolated
+branch; a confirmed missing health workflow additionally needs Workflows write
+for temporary bootstrap.
 
 The workflow-PAT view uses the same structure and the title `Workflow PAT`.
 Tables MUST use status text as well as symbols, fit terminal widths 40/80/120,

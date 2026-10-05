@@ -40,7 +40,7 @@ describe('setup token permission policy', () => {
     it('describes the complete setup PAT permission catalog before the prompt', () => {
         const requirements = buildSetupPatPermissionRequirements();
         expect(requirements.map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
-            'repository:Metadata:read', 'repository:Contents:read', 'repository:Secrets:write',
+            'repository:Metadata:read', 'repository:Contents:read', 'repository:Contents:write', 'repository:Secrets:write',
             'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write', 'repository:Actions:read',
             'repository:Checks:read',
             'repository:Administration:read', 'repository:Workflows:write',
@@ -168,7 +168,7 @@ describe('setup token permission policy', () => {
             .map(item => `${item.permission}:${item.level}`);
 
         expect(permissions).toContain('Actions:write');
-        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).toContain('Contents:write');
         expect(permissions).not.toContain('Workflows:write');
     });
 
@@ -179,7 +179,7 @@ describe('setup token permission policy', () => {
             ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: state,
         }).map(item => `${item.permission}:${item.level}`);
         expect(permissions).toContain('Actions:write');
-        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).toContain('Contents:write');
         expect(permissions).not.toContain('Workflows:write');
     });
 

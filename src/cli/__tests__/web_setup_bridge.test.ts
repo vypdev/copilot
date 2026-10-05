@@ -264,6 +264,19 @@ describe('WebSetupBridge', () => {
     expect(JSON.stringify(bridge.snapshot())).not.toContain('private provider body');
   });
 
+  test('retains the redacted Secret collision progress diagnostic', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const requirement = { id: 'setup.repository.secrets', role: 'setup' as const,
+      scope: 'repository' as const, permission: 'Secrets', level: 'write' as const,
+      applicability: 'required' as const, reason: 'temporary test', probe: 'secrets' as const };
+    bridge.requirements('setup', [requirement]);
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id,
+      phase: 'failed', detail: 'secret-collision' });
+    expect(bridge.snapshot().permissions?.progress).toEqual([
+      { role: 'setup', requirementId: requirement.id, phase: 'failed', detail: 'secret-collision' },
+    ]);
+  });
+
   test('blocked PAT result retains its redacted permission report after the prompt closes', () => {
     const bridge = new WebSetupBridge('owner/repo');
     bridge.report({ role: 'setup', identityStatus: 'valid', identityMessage: 'checked',

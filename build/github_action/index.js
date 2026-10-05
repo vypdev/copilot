@@ -78802,12 +78802,6 @@ const windows_system_root_cjs_1 = __nccwpck_require__(48176);
 const MAX_SCRIPT_BYTES = 1048576;
 const MAX_METADATA_BYTES = 2097152;
 const MAX_ARCHIVE_BYTES = 268435456;
-const windowsMachineDirectories = process.platform === 'win32' ? {
-    ProgramFiles: process.env.ProgramFiles,
-    ProgramFilesX86: process.env['ProgramFiles(x86)'],
-    ProgramData: process.env.ProgramData,
-    CommonProgramFiles: process.env.CommonProgramFiles,
-} : undefined;
 class OfficialAgentInstallationError extends Error {
     constructor(stage, message, exitCode, cause, reason) {
         super(message);
@@ -78866,20 +78860,19 @@ function installerEnvironment(root, source) {
     if (process.platform === 'win32') {
         const systemRoot = (0, windows_system_root_cjs_1.trustedWindowsSystemRoot)();
         const drive = systemRoot.slice(0, 2);
-        const programFiles = windowsMachineDirectories?.ProgramFiles || `${drive}\\Program Files`;
-        const programData = windowsMachineDirectories?.ProgramData || `${drive}\\ProgramData`;
+        const programFiles = `${drive}\\Program Files`;
+        const programData = `${drive}\\ProgramData`;
         environment.SystemRoot = systemRoot;
         environment.WINDIR = systemRoot;
         environment.SystemDrive = drive;
         environment.COMSPEC = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('cmd.exe');
         environment.ProgramFiles = programFiles;
-        environment['ProgramFiles(x86)'] = windowsMachineDirectories?.ProgramFilesX86 || `${drive}\\Program Files (x86)`;
+        environment['ProgramFiles(x86)'] = `${drive}\\Program Files (x86)`;
         environment.ProgramData = programData;
-        environment.CommonProgramFiles = windowsMachineDirectories?.CommonProgramFiles || (0, node_path_1.join)(programFiles, 'Common Files');
+        environment.CommonProgramFiles = (0, node_path_1.join)(programFiles, 'Common Files');
         environment.ALLUSERSPROFILE = programData;
         environment.PSModulePath = [
             (0, node_path_1.join)(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
-            (0, node_path_1.join)(programFiles, 'WindowsPowerShell', 'Modules'),
         ].join(node_path_1.delimiter);
     }
     environment.HOME = root;

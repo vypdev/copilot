@@ -44,6 +44,7 @@ describe('official agent installer boundaries', () => {
             CODEX_API_KEY: 'secret', OPENAI_API_KEY: 'secret', CURSOR_API_KEY: 'secret',
             NPM_TOKEN: 'secret', HOME: '/operator/home', CODEX_HOME: '/operator/codex',
             PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
+            ProgramFiles: 'C:\\attacker', 'ProgramFiles(x86)': 'C:\\attacker-x86', ProgramData: 'C:\\attacker-data',
         });
         expect(environment.PATH).toBe(trustedSystemPath());
         expect(environment.PATH).not.toContain('/tmp/attacker');
@@ -53,6 +54,10 @@ describe('official agent installer boundaries', () => {
             expect(environment.COMSPEC).toBe(join(trustedWindowsSystemRoot(), 'System32', 'cmd.exe'));
             expect(environment.PSModulePath).toContain('WindowsPowerShell\\v1.0\\Modules');
             expect(environment.PSModulePath).not.toContain('PowerShell\\7');
+            expect(environment.PSModulePath).not.toContain('attacker');
+            expect(environment.ProgramFiles).toBe(`${trustedWindowsSystemRoot().slice(0, 2)}\\Program Files`);
+            expect(environment.ProgramData).toBe(`${trustedWindowsSystemRoot().slice(0, 2)}\\ProgramData`);
+            expect(environment.PSModulePath).toBe(join(trustedWindowsSystemRoot(), 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'));
             expect(environment.APPDATA).toBe(join('/private/agent-job', 'roaming'));
         }
         expect(environment.OS).toBe('Windows_NT');

@@ -41,7 +41,14 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
     const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
     context.phase('creating');
     try {
-        await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        try {
+            await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+        } catch (error) {
+            if (error instanceof ProbeFailure && error.httpStatus === 403) {
+                throw new ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403);
+            }
+            throw error;
+        }
         if (!workflow.trustedNoOp) {
             const file = `${root}/contents/${workflow.path}`;
             try {

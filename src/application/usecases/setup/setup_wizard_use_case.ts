@@ -361,6 +361,10 @@ export class SetupWizardUseCase {
         configuration: cloneSetupConfiguration(configuration), errors: ['The local setup session expired before permission checks began.'],
         ...(remoteConfiguration ? { remoteConfiguration } : {}) };
     }
+    if (request.previewOnly) {
+      return { status: 'completed', exitCode: 0, configuration: cloneSetupConfiguration(configuration), plan,
+        ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
     const audit = this.dependencies.onPermissionCleanupPending
       ? await this.dependencies.finalPermissionAudit.audit(
         configuration, remoteConfiguration, this.dependencies.onPermissionCleanupPending)

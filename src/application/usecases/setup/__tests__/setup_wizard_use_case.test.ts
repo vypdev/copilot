@@ -125,6 +125,22 @@ describe('SetupWizardUseCase', () => {
     }
   });
 
+  it('never starts the disposable write audit in a PAT-backed dry run', async () => {
+    const deps = dependencies({
+      remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) },
+      finalPermissionAudit: { audit: jest.fn(() => { throw new Error('write probe must not run'); }) },
+    });
+    const result = await new SetupWizardUseCase(deps).execute({
+      mode: 'non-interactive', previewOnly: true,
+      remoteTarget: { owner: 'acme', repository: 'repo', token: 'fixture-token' },
+      overrides: { pullRequestApproval: { mode: 'off' } },
+    });
+
+    expect(result.status).toBe('completed');
+    expect(deps.planPresenter.present).toHaveBeenCalledTimes(1);
+    expect(deps.finalPermissionAudit.audit).not.toHaveBeenCalled();
+  });
+
   it('honors an explicit non-interactive pointer policy', async () => {
     const result = await new SetupWizardUseCase(dependencies()).execute({
       mode: 'non-interactive',

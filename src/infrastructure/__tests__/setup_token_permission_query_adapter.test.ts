@@ -53,7 +53,8 @@ const ambiguousForbiddenResponses: ReadonlyArray<{
 describe('SetupTokenPermissionQueryAdapter', () => {
     it('accepts a successful empty organization Projects read without claiming private access', async () => {
         const requirements = buildSetupPatPermissionRequirements()
-            .filter(item => item.permission === 'Metadata' || item.permission === 'Contents' || item.permission === 'Projects')
+            .filter(item => item.permission === 'Metadata'
+                || (item.permission === 'Contents' && item.level === 'read') || item.permission === 'Projects')
             .map(item => ({ ...item, applicability: 'required' as const }));
         const fetcher = jest.fn(async (url: string) => url.endsWith('/projectsV2?per_page=100')
             ? response(true, 200, { payload: [] })

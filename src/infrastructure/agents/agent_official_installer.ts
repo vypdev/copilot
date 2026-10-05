@@ -17,12 +17,6 @@ import { trustedWindowsSystemRoot } from './windows_system_root.cjs';
 const MAX_SCRIPT_BYTES = 1_048_576;
 const MAX_METADATA_BYTES = 2_097_152;
 const MAX_ARCHIVE_BYTES = 268_435_456;
-const windowsMachineDirectories = process.platform === 'win32' ? {
-    ProgramFiles: process.env.ProgramFiles,
-    ProgramFilesX86: process.env['ProgramFiles(x86)'],
-    ProgramData: process.env.ProgramData,
-    CommonProgramFiles: process.env.CommonProgramFiles,
-} : undefined;
 
 export type OfficialAgentInstallationStage = 'private-root' | 'download' | 'installer-script' | 'installed-file';
 export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'missing-command' | 'missing-file'
@@ -89,20 +83,19 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
     if (process.platform === 'win32') {
         const systemRoot = trustedWindowsSystemRoot();
         const drive = systemRoot.slice(0, 2);
-        const programFiles = windowsMachineDirectories?.ProgramFiles || `${drive}\\Program Files`;
-        const programData = windowsMachineDirectories?.ProgramData || `${drive}\\ProgramData`;
+        const programFiles = `${drive}\\Program Files`;
+        const programData = `${drive}\\ProgramData`;
         environment.SystemRoot = systemRoot;
         environment.WINDIR = systemRoot;
         environment.SystemDrive = drive;
         environment.COMSPEC = trustedWindowsSystemTool('cmd.exe');
         environment.ProgramFiles = programFiles;
-        environment['ProgramFiles(x86)'] = windowsMachineDirectories?.ProgramFilesX86 || `${drive}\\Program Files (x86)`;
+        environment['ProgramFiles(x86)'] = `${drive}\\Program Files (x86)`;
         environment.ProgramData = programData;
-        environment.CommonProgramFiles = windowsMachineDirectories?.CommonProgramFiles || join(programFiles, 'Common Files');
+        environment.CommonProgramFiles = join(programFiles, 'Common Files');
         environment.ALLUSERSPROFILE = programData;
         environment.PSModulePath = [
             join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
-            join(programFiles, 'WindowsPowerShell', 'Modules'),
         ].join(delimiter);
     }
     environment.HOME = root;

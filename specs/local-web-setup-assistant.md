@@ -338,7 +338,10 @@ exactly what completed and what remains.
 - `copilot setup` without `--web` is unchanged. `--dry-run --web` MAY display
   a local-only plan with explicit **No changes** outcome, no required PAT
   creation, and no Apply action; any remote facts unavailable without a PAT
-  are labeled unknown. It does not become a credential-health proof.
+  are labeled unknown. A supplied PAT permits read-only inspection, but the
+  final disposable WRITE permission audit is skipped for every dry-run path.
+  No temporary GitHub object or Action run is created. It does not become a
+  credential-health proof.
 - A detected `PERSONAL_ACCESS_TOKEN` is **not silently consumed** in web
   mode. Offer `Use existing environment setup PAT` with no displayed value,
   or choose guided/manual web input; the chosen credential follows the same
