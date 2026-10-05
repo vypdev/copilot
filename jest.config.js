@@ -39,5 +39,10 @@ module.exports = {
     '^.+\\.ts$': 'ts-jest'
   },
   verbose: true,
-  ...(process.platform === 'win32' ? { maxWorkers: 2 } : {})
+  ...(process.platform === 'win32' ? {
+    maxWorkers: 2,
+    // The TypeScript architecture suites can push a reused worker to Node's
+    // heap ceiling on service runners. Recycle between suites before that.
+    workerIdleMemoryLimit: '512MB'
+  } : {})
 };

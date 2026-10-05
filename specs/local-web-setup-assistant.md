@@ -2137,6 +2137,16 @@ ratchet suite. This is a resource failure, not an assertion pass or evidence
 for X023/X026. Windows coverage MUST bound Jest worker concurrency and rerun
 the same coverage, acceptance budget and documentation gates on hosted and
 self-hosted Windows. The other five jobs do not substitute for that run.
+The [manual six-platform run on `a3748c54`](https://github.com/vypdev/copilot/actions/runs/37247387180)
+again passed five jobs and all isolated Windows runtime fixtures. Its Windows
+service job then passed 522 of 523 full-coverage suites but the architecture
+import ratchet worker reached the Node heap limit at roughly 2 GiB. Capping
+Windows at two workers alone did not prevent accumulation across suites.
+Set a fixed Jest worker-idle memory limit well below that heap ceiling so
+workers recycle between suites; do not skip the architecture test, inflate
+the agent runtime memory budget, or infer a service pass from hosted Windows.
+Both hosted and self-hosted Windows MUST pass the same full 523-suite coverage,
+acceptance-budget and documentation sequence on the exact head.
 Agent provisioning on macOS also remains open after the installed-file failure
 described in the agent runtime SDD.
 The [Bugbot review on `2319b41b`](https://github.com/vypdev/copilot/actions/runs/37244058136)
