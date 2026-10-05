@@ -167,14 +167,16 @@ describe('temporary permission resource probes', () => {
     });
 
     it.each([
-        { trusted: false, preceding: 0 },
-        { trusted: true, preceding: 0 },
-        { trusted: false, preceding: 9 },
-        { trusted: false, preceding: 100 },
-    ])('dispatches and deletes a no-job Actions run after $preceding preceding workflows (trusted: $trusted)',
-        async ({ trusted, preceding }) => {
+        { trusted: false, preceding: 0, advanceDefault: false },
+        { trusted: true, preceding: 0, advanceDefault: false },
+        { trusted: true, preceding: 0, advanceDefault: true },
+        { trusted: false, preceding: 9, advanceDefault: false },
+        { trusted: false, preceding: 100, advanceDefault: false },
+    ])('dispatches and deletes a no-job Actions run after $preceding preceding workflows (trusted: $trusted, advancing default: $advanceDefault)',
+        async ({ trusted, preceding, advanceDefault }) => {
         const root = '/repos/owner/repo';
         const sha = 'a'.repeat(40);
+        const laterSha = 'c'.repeat(40);
         const blobSha = 'b'.repeat(40);
         const workflowPath = trusted ? '.github/workflows/copilot_credential_health.yml' : '.github/workflows/health.yml';
         const defaultContent = trusted
@@ -184,6 +186,8 @@ describe('temporary permission resource probes', () => {
         let content: string | undefined;
         let run = false;
         let dispatched = false;
+        let mutableWorkflowRead = false;
+        let mutableDefaultSha = sha;
         const listedPages: number[] = [];
         const workflows = [
             ...Array.from({ length: preceding }, (_, index) => ({
@@ -202,18 +206,32 @@ describe('temporary permission resource probes', () => {
                 return reply(200, { workflows: workflows.slice((page - 1) * 100, page * 100) });
             }
             if (path === `${root}/contents/${workflowPath}` && method === 'GET') {
-                if (parsed.searchParams.get('ref') === 'main') {
+                const sourceRef = parsed.searchParams.get('ref');
+                if (sourceRef === 'main') {
+                    mutableWorkflowRead = true;
+                    const contentAtRead = mutableDefaultSha === sha ? defaultContent : 'on: workflow_dispatch\njobs:\n  unsafe:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+                    if (advanceDefault) mutableDefaultSha = laterSha;
                     return reply(200, { path: workflowPath, encoding: 'base64', sha: blobSha,
-                        content: Buffer.from(defaultContent).toString('base64') });
+                        content: Buffer.from(contentAtRead).toString('base64') });
                 }
+                if (sourceRef === sha) return reply(200, { path: workflowPath, encoding: 'base64', sha: blobSha,
+                    content: Buffer.from(defaultContent).toString('base64') });
+                if (sourceRef === laterSha) return reply(200, { path: workflowPath, encoding: 'base64', sha: blobSha,
+                    content: Buffer.from('on: workflow_dispatch\njobs:\n  unsafe:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n').toString('base64') });
                 return reply(200, { path: workflowPath, encoding: 'base64', content });
             }
-            if (path === `${root}/git/ref/heads/main`) return reply(200, { object: { sha } });
+            if (path === `${root}/git/ref/heads/main`) {
+                const current = mutableDefaultSha;
+                if (advanceDefault) mutableDefaultSha = laterSha;
+                return reply(200, { object: { sha: current } });
+            }
             if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`) && method === 'GET') {
                 return branch ? reply(200, { ref: `refs/heads/${branch}` }) : reply(404);
             }
             if (path === `${root}/git/refs` && method === 'POST') {
-                branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.slice('refs/heads/'.length);
+                const body = JSON.parse(String(options?.body)) as { ref: string; sha: string };
+                expect(body.sha).toBe(sha);
+                branch = body.ref.slice('refs/heads/'.length);
                 return reply(201);
             }
             if (path === `${root}/contents/${workflowPath}` && method === 'PUT') {
@@ -241,6 +259,7 @@ describe('temporary permission resource probes', () => {
         const probe = context('actions', 'repository', fetcher);
         await probeDisposableResource(probe.value);
         expect(dispatched).toBe(true);
+        if (advanceDefault) expect(mutableWorkflowRead).toBe(false);
         expect(Boolean(content)).toBe(!trusted);
         expect(run).toBe(false);
         expect(branch).toBeUndefined();
@@ -264,6 +283,9 @@ describe('temporary permission resource probes', () => {
             const method = options?.method ?? 'GET';
             calls.push(`${method} ${path}`);
             if (path === root && method === 'GET') return reply(200, { default_branch: 'main' });
+            if (path === `${root}/git/ref/heads/main` && method === 'GET') return reply(200, {
+                object: { sha: 'a'.repeat(40) },
+            });
             if (path === `${root}/actions/workflows` && method === 'GET') {
                 const page = Number(parsed.searchParams.get('page'));
                 return reply(200, { workflows: workflows.slice((page - 1) * 100, page * 100) });
@@ -455,6 +477,7 @@ describe('temporary permission resource probes', () => {
             const method = options?.method ?? 'GET';
             if (path === root && method === 'POST') {
                 name = (JSON.parse(String(options?.body)) as { name: string }).name;
+                expect(name.length).toBeLessThanOrEqual(100);
                 return reply(201);
             }
             if (path.startsWith(`${root}/`) && method === 'GET') {
@@ -478,6 +501,7 @@ describe('temporary permission resource probes', () => {
             const method = options?.method ?? 'GET';
             if (path === root && method === 'POST') {
                 name = (JSON.parse(String(options?.body)) as { name: string }).name;
+                expect(name.length).toBeLessThanOrEqual(100);
                 return reply(201);
             }
             if (path.startsWith(`${root}/`) && method === 'GET') return name ? reply(200, { name }) : reply(404);

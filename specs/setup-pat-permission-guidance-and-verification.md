@@ -89,9 +89,15 @@ an unproved PAT grant exists cannot make the permission audit pass.
    candidate workflow is parsed as YAML and must declare `workflow_dispatch`
    under its top-level `on`, whether that value is a scalar, an event array,
    or an event mapping. Comments or nested strings do not establish a
-   dispatch trigger. The probe never dispatches an arbitrary uninspected
-   workflow; its existing no-job override and trusted packaged-file checks
-   still apply. See [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+   dispatch trigger. The probe resolves the default branch to one immutable
+   commit SHA **before** reading candidate workflow bytes. It reads those bytes
+   with `ref=<that SHA>` and creates the temporary branch from the same SHA;
+   a default-branch advance between those operations cannot substitute a
+   different workflow for the trusted packaged-file hash. The probe never
+   dispatches an arbitrary uninspected workflow; its existing no-job override
+   and trusted packaged-file checks still apply. A fixture MUST advance the
+   mutable default branch between requests and prove that the inspection and
+   branch creation remain pinned to the same commit. See [GitHub workflow syntax](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
    A `204` dispatch response is accepted only after the probe finds exactly one run for
    its private branch, `workflow_dispatch` event, and selected workflow ID,
    then reads that exact run before cleanup. If the run is not uniquely
@@ -201,12 +207,12 @@ capability contract without relabelling its 42 open gates.
 | W04 | Organization Secret encrypted create/metadata/delete | Fixture W |
 | W05 | Secret upsert collision never deletes the unknown value | Fixture W |
 | W06 | Repository label is cleaned after readback mismatch | Fixture W |
-| W07 | Repository label succeeds on create/read/delete | Fixture W |
+| W07 | Repository label name fits GitHub's 100-character API limit and succeeds on create/read/delete | Fixture W |
 | W08 | Disabled organization Issue Type is deleted by exact ID | Fixture W |
 | W09 | Contents WRITE disposable ref is removed | Fixture W |
 | W10 | Workflows WRITE disposable workflow ref is removed | Fixture W |
 | W11 | Actions fallback recognizes scalar, array, and mapping `workflow_dispatch` triggers, dispatches the verified no-job branch workflow, and deletes run/ref | Fixture W |
-| W12 | Trusted packaged health workflow dispatch needs no workflow-file rewrite | Fixture W |
+| W12 | Trusted packaged health workflow dispatch needs no workflow-file rewrite; workflow bytes and temporary branch use the same immutable commit even if default advances | Fixture W |
 | W13 | Rejected Actions dispatch cleans its branch without a false run claim | Fixture W |
 | W14 | Active Actions run is cancelled and deleted before branch cleanup | Fixture W |
 | W15 | Crash after accepted Actions dispatch recovers exact run/ref | Fixture W |

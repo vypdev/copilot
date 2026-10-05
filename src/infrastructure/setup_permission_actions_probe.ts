@@ -20,10 +20,6 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
         || base.startsWith('/') || base.endsWith('/')) {
         throw new ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
     }
-    const workflow = await findDispatchWorkflow(context, root, base);
-    if (!workflow) {
-        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
-    }
     const ref = await probeJsonRecord(await context.http.expect(
         `${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
     const object = ref.object;
@@ -31,6 +27,10 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
         ? (object as Record<string, unknown>).sha : undefined;
     if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
         throw new ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
+    }
+    const workflow = await findDispatchWorkflow(context, root, sha);
+    if (!workflow) {
+        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
     }
     const name = `copilot-permission-test-${randomBytes(16).toString('hex')}`;
     const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
@@ -116,7 +116,7 @@ async function findAcceptedDispatchRun(
 }
 
 async function findDispatchWorkflow(
-    context: ResourceProbeContext, root: string, base: string,
+    context: ResourceProbeContext, root: string, commitSha: string,
 ): Promise<DispatchWorkflow | undefined> {
     const candidates: Record<string, unknown>[] = [];
     let complete = false;
@@ -154,7 +154,7 @@ async function findDispatchWorkflow(
         }
         checked += 1;
         const encodedPath = workflow.path.split('/').map(encodeURIComponent).join('/');
-        const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${encodeURIComponent(base)}`);
+        const response = await context.http.request(`${root}/contents/${encodedPath}?ref=${commitSha}`);
         if (response.status !== 200) continue;
         const file = await probeJsonRecord(response);
         if (file.encoding !== 'base64' || typeof file.content !== 'string'
