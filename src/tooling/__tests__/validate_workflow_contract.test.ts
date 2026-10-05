@@ -752,7 +752,7 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted and manually dispatched self-hosted');
   });
 
-  it('requires full hosted platform coverage and a dependent same-repository Windows Codecov upload', () => {
+  it('requires full hosted platform coverage and an explicitly opted-in Windows Codecov upload', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
@@ -786,11 +786,15 @@ describe('workflow contract validator', () => {
 
     workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
     workflow.jobs['upload-windows-coverage'].if = undefined;
-    expect(() => assertRunner(file, workflow)).toThrow('same-repository revisions');
+    expect(() => assertRunner(file, workflow)).toThrow('explicit manual opt-in');
 
     workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
     workflow.jobs['upload-windows-coverage'].steps[2].with.fail_ci_if_error = false;
     expect(() => assertRunner(file, workflow)).toThrow('dependent Ubuntu job');
+
+    workflow.jobs['upload-windows-coverage'] = JSON.parse(JSON.stringify(original.jobs['upload-windows-coverage']));
+    workflow.on.workflow_dispatch.inputs.upload_windows_coverage.default = true;
+    expect(() => assertRunner(file, workflow)).toThrow('default Windows Codecov export to disabled');
   });
 
   it.each(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])(

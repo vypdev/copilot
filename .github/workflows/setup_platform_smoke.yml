@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize]
   workflow_dispatch:
+    inputs:
+      upload_windows_coverage:
+        description: Export hosted Windows coverage to Codecov
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -72,7 +77,7 @@ jobs:
   upload-windows-coverage:
     name: Upload hosted Windows coverage to Codecov
     needs: setup-platform-smoke
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

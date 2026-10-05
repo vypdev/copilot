@@ -266,6 +266,10 @@ function assertRunner(file, workflow) {
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage'])) {
       throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs and Windows coverage upload.`);
     }
+    const uploadInput = workflow.on?.workflow_dispatch?.inputs?.upload_windows_coverage;
+    if (uploadInput?.type !== 'boolean' || uploadInput.default !== false) {
+      throw new Error(`${relativeFile} must default Windows Codecov export to disabled on manual fixture runs.`);
+    }
   }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
@@ -275,7 +279,7 @@ function assertRunner(file, workflow) {
         const download = steps[1];
         const upload = steps[2];
         if (job['runs-on'] !== 'ubuntu-latest' || job.needs !== 'setup-platform-smoke'
-          || job.if !== "${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}"
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true }}"
           || steps.length !== 3
           || checkout?.uses !== 'actions/checkout@v5'
           || checkout.with?.['persist-credentials'] !== false || checkout.with?.['fetch-depth'] !== 0
@@ -285,7 +289,7 @@ function assertRunner(file, workflow) {
           || upload.with?.files !== './coverage-windows/lcov.info'
           || upload.with?.disable_search !== true || upload.with?.fail_ci_if_error !== true
           || upload.with?.flags !== 'windows' || upload.with?.token !== '${{ secrets.CODECOV_TOKEN }}') {
-          throw new Error(`${relativeFile} must upload hosted Windows coverage from a dependent Ubuntu job only for same-repository revisions.`);
+          throw new Error(`${relativeFile} must upload hosted Windows coverage from a dependent Ubuntu job only after explicit manual opt-in.`);
         }
         continue;
       }

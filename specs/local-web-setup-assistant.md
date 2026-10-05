@@ -2098,12 +2098,20 @@ budgets, then failed when Codecov's Windows uploader could not download its
 signature file. Keep the coverage measurement on hosted Windows. Transfer only
 its generated `lcov.info` through a same-run Actions artifact to a dependent
 GitHub-hosted Ubuntu job, and run the Codecov uploader there with the `windows`
-flag. The upload job MUST be skipped for fork PRs, use checkout without stored
-credentials, fail on a missing artifact or uploader error, and never mask a
-failed platform test job. Workflow contract mutation tests MUST enforce the
-Windows artifact and the dependent upload boundary. A processed Codecov report
-for the exact PR head remains required; an artifact or successful uploader step
-alone does not satisfy patch coverage.
+flag. The [automatic PR run on `457811a2`](https://github.com/vypdev/copilot/actions/runs/37246539383)
+confirmed all hosted platform tests and the artifact transfer, but Codecov's
+Linux uploader failed its TLS handshake before verification. Automatic approval
+review then rejected a manually dispatched six-platform run because the new
+job would export private-source-derived Windows coverage to Codecov without
+specific authorization. Until that authorization is granted, the dependent
+Codecov upload job MUST run only on a manual dispatch with the explicit
+`upload_windows_coverage=true` input. The input defaults to `false`, so
+ordinary manual fixture runs and automatic PR checks retain the Windows
+coverage artifact without exporting it through this new job. The job MUST use checkout without stored credentials,
+fail on a missing artifact or uploader error, and never mask a failed platform
+test job. Workflow contract mutation tests MUST enforce this boundary.
+A processed Codecov report for the exact PR head remains required; an artifact
+or successful uploader step alone does not satisfy patch coverage.
 
 The [Bugbot review of `8aa335da`](https://github.com/vypdev/copilot/actions/runs/37114090732)
 found that cancellation used a live environment variable to locate
