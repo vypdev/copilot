@@ -5,7 +5,7 @@ import { delimiter, dirname, join, resolve } from 'node:path';
 
 const verifier = resolve(__dirname, '../../../scripts/verify-agent-clis.cjs');
 
-function runVerifier(binDirectory: string, home: string) {
+function runVerifier(binDirectory: string, home: string, authRequired = true) {
     const windows = process.platform === 'win32';
     const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
     const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
@@ -43,7 +43,7 @@ function runVerifier(binDirectory: string, home: string) {
             LOGONSERVER: process.env.LOGONSERVER,
             AGENT_PROVIDER: 'codex',
             VERIFY_ALL_AGENT_CLIS: 'false',
-            AGENT_AUTH_PREFLIGHT: 'required',
+            AGENT_AUTH_PREFLIGHT: authRequired ? 'required' : 'optional',
         },
     });
 }
@@ -95,4 +95,28 @@ describe('standalone agent CLI verifier trust', () => {
             rmSync(directory, { recursive: true, force: true });
         }
     }, 60_000);
+
+    (process.platform === 'win32' ? it : it.skip)('resolves a private project-local npm shim to its sibling package', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-cli-verifier-local-'));
+        const binDirectory = join(directory, 'node_modules', '.bin');
+        const packageRoot = join(directory, 'node_modules', '@openai', 'codex');
+        const marker = join(directory, 'started');
+        try {
+            mkdirSync(binDirectory, { recursive: true });
+            mkdirSync(join(packageRoot, 'bin'), { recursive: true });
+            writeFileSync(join(binDirectory, 'codex.cmd'), '@echo off\r\n');
+            writeFileSync(join(packageRoot, 'package.json'), JSON.stringify({
+                name: '@openai/codex', bin: { codex: 'bin/codex.js' },
+            }));
+            writeFileSync(join(packageRoot, 'bin', 'codex.js'),
+                `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ran');\n` +
+                `if (process.argv.includes('--version')) console.log('codex-local-fixture');\n` +
+                `if (process.argv.includes('login')) process.exit(1);\n`);
+            const result = runVerifier(binDirectory, directory, false);
+            expect(result.status).toBe(0);
+            expect(result.stdout).toContain('codex: available');
+            expect(result.stdout).toContain('codex-local-fixture');
+            expect(existsSync(marker)).toBe(true);
+        } finally { rmSync(directory, { recursive: true, force: true }); }
+    }, 75_000);
 });

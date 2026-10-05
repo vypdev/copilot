@@ -24,7 +24,9 @@ describe('web setup localization catalog', () => {
       for (const phase of ['pending', 'checking', 'creating', 'reading', 'deleting', 'verified', 'failed', 'skipped'] as const) {
         expect(permissionProgressCopy(locale, phase).trim()).not.toBe('');
       }
-      expect(permissionProgressError(locale, 'http-403')).toBe('GitHub HTTP 403');
+      expect(permissionProgressError(locale, 'http-403')).toBe({ en: 'GitHub HTTP 403',
+        es: 'Error HTTP 403 de GitHub', fr: 'Erreur HTTP 403 de GitHub',
+        pt: 'Erro HTTP 403 do GitHub' }[locale]);
       expect(permissionProgressError(locale, 'issue-closed-42')).toContain('42');
       expect(permissionProgressError(locale, 'issue-unresolved-42')).toContain('42');
       for (const detail of ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'] as const) {

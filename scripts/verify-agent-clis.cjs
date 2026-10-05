@@ -37,7 +37,11 @@ function resolveCommand(check) {
   if (!check.package || basename(path).toLowerCase() !== `${check.command}.cmd`) {
     throw new Error('Unrecognized npm agent shim.');
   }
-  const packageRoot = realpathSync(join(dirname(path), 'node_modules', ...check.package.split('/')));
+  const shimDirectory = dirname(path);
+  const localBin = basename(shimDirectory).toLowerCase() === '.bin'
+    && basename(dirname(shimDirectory)).toLowerCase() === 'node_modules';
+  const modulesDirectory = localBin ? dirname(shimDirectory) : join(shimDirectory, 'node_modules');
+  const packageRoot = realpathSync(join(modulesDirectory, ...check.package.split('/')));
   const metadata = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
   if (metadata.name !== check.package) throw new Error('Mismatched npm agent package.');
   const bin = typeof metadata.bin === 'string' ? metadata.bin : metadata.bin?.[check.command];

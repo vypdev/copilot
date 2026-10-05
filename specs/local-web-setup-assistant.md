@@ -20,7 +20,8 @@ The plan warns about temporary resources and any visible GitHub audit trail.
 Each READ row performs the named read and accepts an empty
 successful response; each required WRITE row performs a resource-specific
 temporary create/read/delete probe with exact-target cleanup. The session
-shows the current phase, result, bounded HTTP category, and any unresolved
+shows the current phase, result, bounded HTTP category in the selected web
+locale, and any unresolved
 cleanup action. Neither a generic `Unverifiable` write row nor operator
 attestation is an accepted completion state. The same application audit and
 evidence rules apply to CLI. See
@@ -739,8 +740,11 @@ architecture guide documents these boundaries for future steps.
   changing repository/issue locale, modifying answers, or replaying an Apply.
   Unsupported locale falls back atomically to English. Account/repo names
   and remote messages are escaped as text, never injected as HTML or Markdown.
-- No issue/PR/check/comment is added by the web surface, so notification
-  budget is zero. Progress updates in the page are coalesced and do not
+- The questionnaire and local browser session add no GitHub issue, PR, check,
+  or comment. After the reviewed plan is approved, permission probes may
+  create a temporary Issue, PR, or Actions run and leave notifications or
+  history even after cleanup; the plan discloses that budget. Progress updates
+  in the page are coalesced and do not
   repeatedly steal focus or announce the same state. GitHub-side account
   switching and 2FA are explained, not reproduced in the local UI.
 

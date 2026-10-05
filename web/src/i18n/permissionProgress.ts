@@ -28,10 +28,17 @@ const issueResidue: Record<SetupLocale, { closed: (number: string) => string; un
   pt: { closed: number => `A Issue temporária n.º ${number} foi fechada, mas não pôde ser eliminada. Elimine-a no GitHub antes de tentar novamente.`, unresolved: number => `Não foi possível eliminar nem confirmar o fecho da Issue temporária n.º ${number}. Verifique-a no GitHub antes de tentar novamente.` },
 };
 
+const httpError: Record<SetupLocale, (status: string) => string> = {
+  en: status => `GitHub HTTP ${status}`,
+  es: status => `Error HTTP ${status} de GitHub`,
+  fr: status => `Erreur HTTP ${status} de GitHub`,
+  pt: status => `Erro HTTP ${status} do GitHub`,
+};
+
 export function permissionProgressError(locale: SetupLocale, detail: string): string {
   const issue = /^issue-(closed|unresolved)-([1-9][0-9]*)$/u.exec(detail);
   if (issue) return issueResidue[locale][issue[1] as 'closed' | 'unresolved'](issue[2]);
-  if (/^http-[1-5][0-9]{2}$/u.test(detail)) return `GitHub HTTP ${detail.slice(5)}`;
+  if (/^http-[1-5][0-9]{2}$/u.test(detail)) return httpError[locale](detail.slice(5));
   if (detail === 'unavailable' || detail === 'cleanup-pending' || detail === 'secret-collision' || detail === 'unsupported') return errors[locale][detail];
   return errors[locale].unavailable;
 }
