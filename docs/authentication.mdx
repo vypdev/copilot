@@ -154,6 +154,16 @@ fine-grained PAT. Copilot never creates a temporary label, branch, file,
 Variable, Secret, comment, project item, or workflow run merely to turn that
 unknown into a checkmark.
 
+In the web setup assistant, `Projects · organization · Read — Verified` may
+appear alongside `Metadata · repository · Read — Unverifiable` and several
+`Write — Unverifiable` rows. That combination does not mean GitHub ignored the
+PAT form: a public repository can be read without proving a PAT grant, while
+read-only requests cannot prove Write. Compare only **required** rows marked
+`Unverifiable` with the PAT settings before explicitly confirming. A verified
+Projects row needs no extra confirmation. A row marked `Missing` or an
+inconclusive required read without positive operational evidence still stops
+setup; confirmation does not turn an unknown row into a verified one.
+
 `ready` is true only when every required row is read-level and each read is
 verified or positively usable; the read-only audit never accepts a provider
 claim that a write row is verified. A public read remains visibly

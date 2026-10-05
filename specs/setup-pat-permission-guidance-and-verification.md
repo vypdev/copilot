@@ -3,7 +3,7 @@
 - Status: Implemented — permission UX, deterministic provider mapping, scope-sensitive gating, coverage, and documentation gates complete
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-02
+- Last verified: 2026-10-05
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then report evidence-based permission checks without exposing or mutating credentials
 - Related issues/PRs: none recorded
@@ -133,6 +133,16 @@ transient response.
    that a write requirement is verified.
 4. `Unverifiable` MUST NOT be rendered as `Verified` or `Missing`.
 5. No permission-check configuration may enable mutating probes.
+
+For a public repository, a successful Metadata or Contents read can be
+`Unverifiable` as PAT-grant evidence because the same resource is available
+without that grant. Organization `Projects: read` MAY be `Verified` when a
+non-public Project is returned, while required write rows remain
+`Unverifiable`. The browser MUST explain these mixed states beside the rows:
+`Unverifiable` is an evidence limit, not a claim that the PAT form omitted the
+grant. The confirmation prompt MUST direct the operator to inspect only
+required `Unverifiable` rows, including Projects read only if that row itself
+is `Unverifiable`; already `Verified` rows need no manual confirmation.
 
 ## 5. Current versus proposed product journey
 
@@ -607,6 +617,15 @@ Status            Permission              Access
 Action required: inspect the displayed write levels in your PAT settings and
 explicitly confirm them before setup proceeds. Unverifiable is not a pass:
 GitHub offers no safe read-only proof of those write levels.
+
+Browser example for a public repository: `Projects · organization · Read —
+Verified` can coexist with `Metadata · repository · Read — Unverifiable` and
+`Secrets · organization · Write — Unverifiable`. The browser explains that a
+public repository read does not prove the PAT grant and a read-only check
+cannot prove Write. Its prompt says to compare only the required
+`Unverifiable` grants with GitHub PAT settings. A user who declines stops
+before mutation; an explicit confirmation leaves the rows `Unverifiable` and
+allows only the already specified, narrowly scoped continuation.
 ```
 
 The real table is derived from the selected features and remote state; disabled
@@ -975,6 +994,14 @@ at widths 40/80/120 and `NO_COLOR`.
     readiness is calculated, even if all other row fields match.
     The audit performs no test mutation and does not require a live Project in
     test fixtures.
+53. Given a public repository and a non-public organization Project, when the
+    setup PAT report contains a verified `Projects: read` row alongside
+    unverifiable repository reads and required writes, the web context explains
+    each evidence limit in English, Spanish, French, and Portuguese. The
+    confirmation prompt names only required `Unverifiable` rows as needing
+    manual inspection and does not suggest that verified Projects read failed.
+    Declining stops before setup mutation; confirming does not upgrade any row
+    to `Verified`. CLI status semantics and English CLI output stay unchanged.
 
 ## 17. Requirements traceability
 
@@ -992,6 +1019,7 @@ at widths 40/80/120 and `NO_COLOR`.
 | all-provisioning fail-closed boundary | initial setup workflow + storage policy | no local file copy or label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
 | public-read and Members evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository provenance; protected active self-membership success; public-list, malformed, pending, denied, Issue-Types and write fixtures | authentication/troubleshooting |
 | organization Projects read evidence | permission query adapter + evidence policy + bootstrap use case | scenario 52; private/public/empty/malformed/denied local GET fixtures | authentication/troubleshooting |
+| mixed PAT evidence explanation | web confirmation prompt + context evidence presenter | scenario 53; four-locale component/prompt fixtures and acknowledgement tests | authentication/troubleshooting |
 | safe bootstrap 404 | credential health bootstrap adapter | exact path/visibility proof, create-only SHA ownership, conditional cleanup and no-mutation ambiguous/race fixtures | authentication |
 | no write probes | semantic query port/architecture rule | method/transport tests | architecture |
 | secret safety | all contracts/presenter | redaction fixtures | credentials |

@@ -628,6 +628,16 @@ explicit user action to the fixed official GitHub host; it never contains a
 credential. The `Bot PAT` screen repeats the checklist under a visibly
 different account/role and states that its token remains needed by Actions.
 
+The setup-PAT confirmation view MUST distinguish an evidence limit from a
+missing grant. For each reported permission, show the required scope and level,
+status, and a short localized reason. A public repository read can be usable
+while its PAT grant remains `Unverifiable`; a read-only check cannot prove
+Write. `Projects · organization · Read — Verified` MUST remain visibly
+verified when a non-public Project supplied positive evidence. The prompt
+MUST ask the operator to compare only required `Unverifiable` rows with the
+GitHub PAT settings and MUST say that already `Verified` rows need no action.
+The confirmation is explicit and does not convert any status to `Verified`.
+
 | Primary state | Representative visible copy | Primary action |
 |---|---|---|
 | Pending | `Inspecting existing resources for vypdev/copilot. No setup changes have started.` | Wait; `View details` is secondary |
@@ -1603,6 +1613,13 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
     hides it or triggers the "No required grant failed" fallback. The
     four-locale result fixture MUST cover this distinction without exposing
     provider diagnostics or a token.
+30. Given the operator reaches setup-PAT confirmation with verified
+    organization Projects read and unverifiable public repository reads and
+    required writes, the context explains why each row has that status in all
+    four web locales. The prompt asks only for manual inspection of required
+    `Unverifiable` grants. A verified Projects row is not named as a failure;
+    confirmation does not upgrade unknown evidence, and declining starts no
+    setup mutation. Local fixtures, not a live PAT, verify this contract.
 
 ## 17. Requirements traceability
 
@@ -1612,6 +1629,7 @@ help for `--web` explains local-only scope and the `--non-interactive` conflict.
 | Shared setup engine/parity (§4.1, §8) | application coordinator + existing policies | scenarios 3, 5, 15; import/schema checks | architecture |
 | Bounded config/compatibility (§6.2–7) | CLI parser + config policy | scenarios 3–4, 15–16 | configuration |
 | Separate PAT roles/evidence (§4.3, §6) | permission/identity/credential use cases | scenarios 6–7, 11, 13, 16 | authentication, credentials |
+| Mixed PAT evidence clarity (§9.1) | web context evidence presenter + localized confirmation prompt | scenario 30; four-locale mixed-report fixture, prompt and explicit decline/confirm tests | authentication, troubleshooting |
 | Revision-bound Apply/recovery (§6.1, §6.3, §10) | CLI root precondition + session coordinator + execution boundary | scenarios 1, 8–11; nested-path launch regression | troubleshooting, provisioning |
 | Browser security/privacy (§4.3, §11) | loopback HTTP/asset adapters + redacted presenter | scenarios 9, 12–13 | authentication, architecture |
 | Accessible truthful UX (§9) | Svelte presenter + message catalog | scenarios 5–7, 10–11, 13–14 | how-to-use, troubleshooting |

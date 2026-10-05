@@ -644,7 +644,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-03",
+      "lastVerified": "2026-10-05",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -785,6 +785,7 @@
         "web/src/components/PairingPanel.svelte",
         "web/src/lib/pairingCode.ts",
         "web/src/components/ContextPanel.svelte",
+        "web/src/i18n/permissionEvidence.ts",
         "web/src/components/PromptCard.svelte",
         "web/src/components/ResultPanel.svelte",
         "web/src/components/ResourceProgress.svelte",

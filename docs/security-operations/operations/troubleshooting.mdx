@@ -125,6 +125,10 @@ directory. The lock contains no PAT or other credential.
     `--confirm-unverifiable-write-permissions` only after that inspection;
     `--yes` alone does not acknowledge permissions. Copilot deliberately does
     not create disposable GitHub resources to test write access.
+    In the web assistant, inspect only required rows marked `Unverifiable`;
+    a `Verified` organization Projects read row already passed. Public
+    repository reads can remain `Unverifiable` as PAT-grant evidence even when
+    setup can use them. The browser explains each status beside its row.
 
     When required repository or organization inventory validation fails after
     the questionnaire, setup first runs the configured setup-PAT audit inside

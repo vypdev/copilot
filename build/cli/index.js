@@ -70376,7 +70376,7 @@ class WebSetupCredentialPrompt {
                 && item.level === 'read' && item.publicReadEvidence === 'public-organization-projects')));
         if (!report.confirmationRequired || access.length === 0)
             return false;
-        return await this.choice('GitHub could not prove every required PAT grant. Check the displayed grants in GitHub, then explicitly confirm them.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
+        return await this.choice('Check every required PAT grant marked Unverifiable against GitHub PAT settings. Verified rows need no action.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
     }
     configureWorkflowPatGuide(url, resolveIdentity, requirements) {
         this.workflowGuide = url;

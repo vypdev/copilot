@@ -3,6 +3,7 @@ import { permissionName, permissionStatus, permissionTerm, permissionTermCatalog
 import { isQuestionOptionLocalized, optionCatalogs, questionOptionLabel } from '../../../web/src/i18n/questionOptions';
 import { setupQuestionContentInventory } from '../../application/policies/setup_questionnaire_policy';
 import { permissionCopy, permissionCopyCatalogs, isKnownPermissionCopy } from '../../../web/src/i18n/permissionCopy';
+import { permissionEvidence } from '../../../web/src/i18n/permissionEvidence';
 import { permissionTexts } from '../../../web/src/i18n/permissions/en';
 import * as ts from 'typescript';
 import { readFileSync } from 'node:fs';
@@ -66,6 +67,42 @@ describe('web setup localization catalog', () => {
       copyValues: { status: 'provider-specific' } }, 'es')?.title).toContain('provider-specific');
     expect(localizedPromptChoice({ kind: 'choice', title: 'raw', choices: ['Fallback'], copyId: 'credential.apiKey' }, 'es', 0))
       .toBe('Fallback');
+  });
+
+  test('PAT confirmation targets only unverified required grants in all web locales', () => {
+    for (const locale of setupLocales) {
+      const copy = localizedPromptCopy({ kind: 'choice', title: 'raw', choices: ['No, stop', 'Yes, I checked them'],
+        copyId: 'setupPat.confirmUnverifiedAccess' }, locale);
+      expect(copy?.title.trim()).not.toBe('');
+      expect(copy?.description).toMatch(/Projects/u);
+      expect(copy?.description).toMatch(locale === 'en' ? /Verified rows already passed/u
+        : locale === 'es' ? /Verificados ya pasaron/u
+        : locale === 'fr' ? /Vérifiées ont déjà passé/u : /Verificadas já passaram/u);
+      expect(copy?.description).toMatch(locale === 'en' ? /only if that row is Unverifiable/u
+        : locale === 'es' ? /solo si esa fila aparece como No verificable/u
+        : locale === 'fr' ? /seulement si cette ligne est Non vérifiable/u
+        : /apenas se essa linha estiver Não verificável/u);
+    }
+  });
+
+  test('permission evidence never turns an inconclusive read or write into a verified claim', () => {
+    const base = { scope: 'organization' as const, permission: 'Projects', level: 'read' as const };
+    for (const locale of setupLocales) {
+      expect(permissionEvidence({ ...base, status: 'verified' }, locale))
+        .toBe(tr('permissionEvidencePrivateProject', locale));
+      expect(permissionEvidence({ ...base, permission: 'Members', status: 'verified' }, locale))
+        .toBe(tr('permissionEvidenceVerified', locale));
+      expect(permissionEvidence({ ...base, status: 'missing' }, locale))
+        .toBe(tr('permissionEvidenceMissing', locale));
+      expect(permissionEvidence({ ...base, level: 'write', status: 'unverifiable' }, locale))
+        .toBe(tr('permissionEvidenceWrite', locale));
+      expect(permissionEvidence({ ...base, status: 'unverifiable', publicReadEvidence: 'public-organization-projects' }, locale))
+        .toBe(tr('permissionEvidencePublicProjects', locale));
+      expect(permissionEvidence({ ...base, status: 'unverifiable', publicReadEvidence: 'public-repository' }, locale))
+        .toBe(tr('permissionEvidencePublic', locale));
+      expect(permissionEvidence({ ...base, status: 'unverifiable' }, locale))
+        .toBe(tr('permissionEvidenceUnknownRead', locale));
+    }
   });
 
   test('every known questionnaire validation has localized copy and unknown text cannot leak English into other locales', () => {

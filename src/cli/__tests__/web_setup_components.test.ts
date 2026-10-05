@@ -409,6 +409,35 @@ describe('web setup component semantics', () => {
   });
 
   test.each([
+    ['en', 'A non-public organization Project', 'public resource can be read', 'Read-only checks cannot prove Write'],
+    ['es', 'Un Project no público', 'recurso público se puede leer', 'consultas de solo lectura no demuestran Escritura'],
+    ['fr', 'Un Project non public', 'ressource publique est lisible', 'lectures seules ne prouvent pas'],
+    ['pt', 'Um Project não público', 'recurso público pode ser lido', 'consultas só de leitura não provam Escrita'],
+  ])('%s explains mixed PAT evidence without leaking provider details', (locale, projectReason, publicReason, writeReason) => {
+    const checks = [
+      { id: 'metadata', role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read',
+        applicability: 'required', reason: 'Resolve repository identity and visibility.', probe: 'metadata',
+        status: 'unverifiable', publicReadEvidence: 'public-repository', operationallyAvailable: true,
+        message: 'private diagnostic token-marker' },
+      { id: 'secrets', role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write',
+        applicability: 'required', reason: 'Inspect and provision selected organization Actions Secrets.', probe: 'secrets',
+        status: 'unverifiable', message: 'private diagnostic token-marker' },
+      { id: 'projects', role: 'setup', scope: 'organization', permission: 'Projects', level: 'read',
+        applicability: 'required', reason: 'Inspect selected Projects and their Status options; setup does not edit Project items.',
+        probe: 'projects', status: 'verified', message: 'private diagnostic token-marker' },
+    ];
+    const html = markup('ContextPanel', { view: { revision: 1, repository: 'owner/repo', permissions: {
+      role: 'setup', report: { role: 'setup', identityStatus: 'valid', identityMessage: 'checked',
+        ready: false, confirmationRequired: true, checks },
+    } } }, locale);
+    expect(html).toContain(projectReason);
+    expect(html).toContain(publicReason);
+    expect(html).toContain(writeReason);
+    expect(html).not.toContain('private diagnostic');
+    expect(html).not.toContain('token-marker');
+  });
+
+  test.each([
     ['boolean', 'aria-pressed', 'yes'],
     ['choice', '<select', 'alpha'],
     ['multi-select', 'type="checkbox"', 'alpha'],

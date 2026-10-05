@@ -227,6 +227,37 @@ describe('semantic web setup adapters', () => {
     expect(await confirmed).toBe(true);
   });
 
+  test('verified Projects read stays verified when other required grants need confirmation', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const prompt = new WebSetupCredentialPrompt(bridge);
+    const report: SetupTokenPermissionReport = {
+      role: 'setup', identityStatus: 'valid', identityMessage: 'checked', ready: false,
+      confirmationRequired: true,
+      checks: [
+        { id: 'setup.organization.projects', role: 'setup', scope: 'organization', permission: 'Projects',
+          level: 'read', applicability: 'required', reason: 'Inspect Projects', probe: 'projects',
+          status: 'verified', message: 'Non-public Project returned' },
+        { id: 'metadata', role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read',
+          applicability: 'required', reason: 'Inspect repository', probe: 'metadata',
+          status: 'unverifiable', operationallyAvailable: true, publicReadEvidence: 'public-repository',
+          message: 'Public repository read' },
+        { id: 'secrets', role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write',
+          applicability: 'required', reason: 'Provision Secret', probe: 'secrets',
+          status: 'unverifiable', message: 'No safe write probe' },
+      ],
+    };
+    new WebSetupPermissionPresenter(bridge).showReport(report);
+    const declined = prompt.confirmUnverifiableTokenPermissions(report);
+    expect(bridge.snapshot().prompt?.copyId).toBe('setupPat.confirmUnverifiedAccess');
+    answer(bridge, 'No, stop');
+    expect(await declined).toBe(false);
+    const confirmed = prompt.confirmUnverifiableTokenPermissions(report);
+    answer(bridge, 'Yes, I checked them');
+    expect(await confirmed).toBe(true);
+    expect(bridge.snapshot().permissions?.report?.checks.map(check => check.status))
+      .toEqual(['verified', 'unverifiable', 'unverifiable']);
+  });
+
   test('workflow update decision is explicit and never inferred from a changed file', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const prompt = new WebSetupWorkflowUpdatePrompt(bridge);

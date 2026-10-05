@@ -155,7 +155,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
       && (item.level === 'write' || (item.scope === 'organization' && item.permission === 'Projects'
         && item.level === 'read' && item.publicReadEvidence === 'public-organization-projects')));
     if (!report.confirmationRequired || access.length === 0) return false;
-    return await this.choice('GitHub could not prove every required PAT grant. Check the displayed grants in GitHub, then explicitly confirm them.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
+    return await this.choice('Check every required PAT grant marked Unverifiable against GitHub PAT settings. Verified rows need no action.', ['No, stop', 'Yes, I checked them'], undefined, 'setupPat.confirmUnverifiedAccess') === 'Yes, I checked them';
   }
   configureWorkflowPatGuide(url: string, resolveIdentity: (login: string) => Promise<SetupGithubIdentity>, requirements?: readonly SetupTokenPermissionRequirement[]): void {
     this.workflowGuide = url; this.resolveBot = resolveIdentity; this.workflowRequirements = requirements;
