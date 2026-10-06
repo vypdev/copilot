@@ -23,6 +23,12 @@ function fixture(overrides: Partial<SetupSessionPorts> = {}) {
 }
 
 describe('shared setup session coordinator', () => {
+  test('initial PAT cleanup failure reports partial and prevents planning', async () => {
+    const { coordinator, calls } = fixture({ setupPat: async pending => { pending(); return 'blocked'; } });
+    expect(await coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true });
+    expect(calls).not.toContain('plan');
+    expect(calls).not.toContain('apply');
+  });
   test('runs semantic stages in order and returns an immutable resource receipt', async () => {
     const { coordinator, calls } = fixture();
     const result = await coordinator.execute();

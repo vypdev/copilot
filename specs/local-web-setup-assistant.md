@@ -507,9 +507,12 @@ silent override. Web validation and pre-answer guidance are localized in all
 four supported languages; CLI explains the same constraints in English.
 
 The initial setup-PAT identity/access gate is an application use case shared by
-both presentations; it checks identity and required reads while writes
-remain deferred until plan approval. The authenticated operator account is
-confirmed before planning. The configured setup-PAT audit is another application use case. It compares
+both presentations; it checks identity and required reads, confirms the guided
+operator account, then tests every displayed Write with isolated temporary
+create/read/delete transactions before planning. Conditional rows are tested too;
+applicability governs installation requirements, not verification timing. PAT-entry
+and environment-PAT selection disclose these tests and possible history or
+pending cleanup. Preview/dry-run performs no writes, including recovery. The configured setup-PAT audit is another application use case. It compares
 provisional and final required grants, verifies the authenticated identity and
 effective access through the semantic permission inspection port, including
 approved temporary write transactions, and returns a blocked

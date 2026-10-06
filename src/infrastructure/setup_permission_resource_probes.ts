@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { encryptSecret } from '../data/repository/repository_variables_repository';
+import { encryptSecret } from './github_secret_encryption';
 import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord, probeResponseFailure } from './setup_permission_probe_http';
 import type { ResourceProbeContext } from './setup_permission_probe_context';
 import { probeOrganizationProject } from './setup_permission_project_probe';
@@ -72,7 +72,7 @@ async function probeSecret(context: ResourceProbeContext): Promise<void> {
     const exact = `${root}/${name}`;
     const key = await probeJsonRecord(await context.http.expect(`${root}/public-key`, 'GET', [200]));
     if (typeof key.key !== 'string' || typeof key.key_id !== 'string') throw new ProbeFailure('GitHub returned an invalid Secret public key.');
-    const encrypted = encryptSecret(randomBytes(24).toString('hex'), key.key);
+    const encrypted = await encryptSecret(randomBytes(24).toString('hex'), key.key);
     const body = context.scope === 'organization'
         ? { encrypted_value: encrypted, key_id: key.key_id, visibility: 'selected', selected_repository_ids: [await repositoryId(context)] }
         : { encrypted_value: encrypted, key_id: key.key_id };

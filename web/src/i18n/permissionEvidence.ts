@@ -15,7 +15,6 @@ export function permissionEvidence(
         ? 'permissionEvidencePrivateProject' : 'permissionEvidenceVerified', locale);
   }
   if (check.status === 'missing') return tr('permissionEvidenceMissing', locale);
-  if (check.applicability === 'conditional' && check.level === 'write') return tr('permissionEvidenceConditional', locale);
   if (check.status === 'available') return tr(check.publicReadEvidence === 'public-organization-projects'
     ? 'permissionEvidencePublicProjects' : 'permissionEvidencePublic', locale);
   if (check.level === 'write') return tr('permissionEvidenceWrite', locale);

@@ -57,7 +57,6 @@ export const en = {
   conditionalGrants: 'Conditional grants depend on the choices and GitHub facts. A final audit runs before setup changes.',
   permissionEvidenceVerified: 'A GitHub read confirmed this access.',
   permissionEvidenceVerifiedWrite: 'A temporary resource was created, read, and removed.',
-  permissionEvidenceConditional: 'This write is conditional. It is tested if your final plan requires it.',
   permissionEvidencePrivateProject: 'A non-public organization Project confirmed Projects read access.',
   permissionEvidenceMissing: 'GitHub rejected the required access. Check the PAT settings.',
   permissionEvidenceWrite: 'The temporary write check did not finish successfully. Review the failed phase and retry.',

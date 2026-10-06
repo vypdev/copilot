@@ -150,12 +150,12 @@ describe('PAT identity and evidence regressions', () => {
             .inspect('OWNER', 'Repo', 'second', [metadata]);
         expect(second[0].status).toBe('unverifiable');
         expect(second[0].message).toContain('in progress');
-        expect(recover).toHaveBeenCalledTimes(1);
+        expect(recover).not.toHaveBeenCalled();
         release(json({ private: true }));
         await expect(first).resolves.toEqual([expect.objectContaining({ status: 'verified' })]);
         fetcher.mockResolvedValue(json({ private: true }));
         await adapter.inspect('owner', 'repo', 'retry', [metadata]);
-        expect(recover).toHaveBeenCalledTimes(2);
+        expect(recover).not.toHaveBeenCalled();
     });
 
     it('blocks a selected Project role denial before creating any disposable Project', async () => {

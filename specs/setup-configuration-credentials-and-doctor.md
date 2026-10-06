@@ -14,7 +14,9 @@
 
 The [PAT capability SDD](./setup-pat-permission-guidance-and-verification.md)
 is authoritative for the audited operator/runtime credential contract. Identity
-and reads precede planning; disposable write checks run only after approval and
+and reads precede temporary create/read/delete checks during initial PAT
+verification, including conditional writes. Preview/dry-run remains read-only,
+including recovery; persistent installation requires approval and
 require confirmed cleanup. Scope-sensitive inventory failures block before that
 approval. Guided bot identity is bound before its capability transactions, and
 the selected Project role is checked in addition to the disposable grant proof.
@@ -181,7 +183,8 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   successful, because the create/delete commits remain in history. A failed
   create request is conservatively classified as possible mutation when its
   remote outcome is uncertain. The browser path does not bootstrap a workflow
-  before Apply and retains its no-mutation pre-approval guarantee.
+  before Apply. Initial PAT verification may already have completed and cleaned
+  isolated temporary resources; persistent installation retains its approval boundary.
 - A missing remote resource snapshot is never an empty inventory. Selected
   Secret/Variable management MUST stop before all remote resource, label,
   issue-type, and tag calls when inspection fails, its port is absent, or a

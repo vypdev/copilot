@@ -477,7 +477,9 @@
             "src/infrastructure/setup_permission_resource_probes.ts",
             "src/infrastructure/setup_permission_issue_probe.ts",
             "src/infrastructure/setup_permission_issue_cleanup.ts",
-            "src/infrastructure/setup_permission_project_probe.ts"
+            "src/infrastructure/setup_permission_project_probe.ts",
+            "src/infrastructure/github_secret_encryption.ts",
+            "src/infrastructure/setup_permission_organization_owner.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"

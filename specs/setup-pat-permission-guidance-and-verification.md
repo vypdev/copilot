@@ -3,7 +3,7 @@
 - Status: Implemented fixture baseline; live provider, accessibility, and Windows ACL gates remain open
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-06 (local automated evidence only)
+- Last verified: 2026-10-06 (automated fixtures and isolated live provider transactions)
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then prove each selected read or write capability with bounded, visible operations
 - Related issues/PRs: none recorded
@@ -17,7 +17,9 @@ This is the canonical active-probe contract. The superseded acknowledgement
 implementation is available in Git history and is not a supported continuation
 path. This audit starts from the develop merge of
 [PR #403](https://github.com/vypdev/copilot/pull/403). It uses deterministic
-fixtures and repository checks; it performs no dogfooding or live PAT probes.
+fixtures and repository checks, supplemented by explicitly authorized isolated
+live PAT transactions. No setup plan was applied or dogfooding performed.
+See [bounded provider evidence](../docs/development/setup-pat-provider-audit-2026-10-06.md).
 
 ### Capability evidence and result rules
 
@@ -35,21 +37,25 @@ fixtures and repository checks; it performs no dogfooding or live PAT probes.
    in for another. A successful create with failed read or cleanup is **not**
    Verified. The row names the failed phase and a bounded HTTP category,
    without raw provider body, headers, token, or secret value.
-3. The bootstrap preview may display conditional requirements. After PAT entry,
-   bootstrap validates identity and required READ capabilities only; all WRITE
-   rows are marked deferred even when the provisional intent needs them. The
-   final capability audit runs **after** the operator approves the reviewed
-   plan and **before** any setup application or credential provisioning. The
-   plan must explicitly warn that temporary resources, organization objects,
-   workflow runs, or pull-request notifications may result from permission
-   checks and identify the exact probes selected. A revision or decline does
-   not start those probes. The workflow PAT
+3. PAT entry and environment-PAT selection MUST disclose isolated temporary
+   create/read/delete checks before planning, including displayed conditional
+   writes, notifications/audit history, and cleanup requirements. Bootstrap
+   first validates identity and required reads, confirms the intended guided
+   operator account, and then executes the displayed write transactions.
+   Conditional applicability describes whether installation needs that grant;
+   it MUST NOT defer its initial permission test. Organization writes require
+   metadata proving the exact selected repository's organization owner.
+   Final review still approves persistent setup application and provisioning;
+   its fresh configured audit runs before those operations. A revision or
+   decline cannot undo already cleaned permission tests or their audit history.
+   The workflow PAT
    receives the same evidence standard. Where a capability has no isolated
    disposable operation, setup blocks with a concrete explanation until an
    equivalent operation is implemented; neither a generic confirmation prompt
    nor `--confirm-unverifiable-write-permissions` constitutes evidence.
    Preview-only and `--dry-run` paths stop after the reviewed plan and never
-   execute the final disposable WRITE audit, even if a PAT was supplied.
+   execute any disposable WRITE audit or journal recovery writes, even if a
+   PAT was supplied. Read-only inspection never performs cleanup mutations.
 4. The web and CLI show ordered, live events for identity validation and each
    permission: pending, checking READ or creating/reading/deleting a temporary
    resource, verified, failed, or interrupted. Concurrency is at most four
@@ -115,7 +121,7 @@ fixtures and repository checks; it performs no dogfooding or live PAT probes.
    candidate, the result is explicitly `Unverifiable` due to an incomplete
    search, never a claim that no eligible workflow exists. Fixtures include
    a ninth candidate and a second-page candidate.
-8. The final audit reports whether any disposable write has **unconfirmed
+8. Initial and final audits report whether any disposable write has **unconfirmed
    cleanup**. A cleanly deleted probe does not count as a remaining setup
    mutation. If cancellation or expiration races with an audit that reports
    pending cleanup, the session reports `partial`, retains the bounded
@@ -163,7 +169,7 @@ fixtures and repository checks; it performs no dogfooding or live PAT probes.
 | Organization Issue Types WRITE | create unique disabled issue type, GET/list exact id, DELETE id | verify absence; org admin prerequisite reported separately |
 | Repository Contents WRITE | create unique disposable ref, GET exact ref, DELETE ref; use a file on that ref when needed to prove file writes | verify ref absence; no default-branch commit |
 | Repository Workflows WRITE | on the disposable ref, create a no-job workflow file, GET it, delete ref | verify ref absence; requires Contents WRITE too |
-| Repository Actions WRITE | after explicit plan approval, create a disposable ref, dispatch a registered workflow on that ref, GET the exact returned run ID, cancel if needed, DELETE the run, then delete the ref. The packaged credential-health workflow may run unchanged only when its remote bytes match the trusted packaged template and all job inputs default false; otherwise write a verified no-job override on the disposable ref before dispatch | report unavoidable run/audit trail; Contents WRITE is always required to create the disposable ref, and the fallback also requires Workflows WRITE; a Contents denial must be named as that prerequisite rather than evidence against Actions WRITE |
+| Repository Actions WRITE | during PAT verification, create a disposable ref, dispatch a registered workflow on that ref, GET the exact returned run ID, cancel if needed, DELETE the run, then delete the ref. The packaged credential-health workflow may run unchanged only when its remote bytes match the trusted packaged template and all job inputs default false; otherwise write a verified no-job override on the disposable ref before dispatch | report unavoidable run/audit trail; Contents WRITE is always required to create the disposable ref, and the fallback also requires Workflows WRITE; a Contents denial must be named as that prerequisite rather than evidence against Actions WRITE |
 | Repository Pull requests WRITE | open a draft PR from a disposable changed ref, GET exact PR, close PR and delete ref | report unavoidable PR audit trail and notifications |
 | Organization Projects WRITE | create a disposable Project, GET exact Project, delete it | verify absence; never edit an existing item |
 
@@ -280,8 +286,8 @@ evidence. A write needs its own approved temporary transaction and confirmed
 cleanup. No confirmation or response header can substitute for that evidence.
 
 ```text
-Intent → setup PAT identity and reads → remote inventory → reviewed plan
-→ approval → setup PAT transactions → workflow PAT identity and transactions
+Intent → setup PAT identity and reads → account confirmation → setup PAT transactions
+→ remote inventory → reviewed plan → approval → final audit → workflow PAT transactions
 → credential provisioning → installation receipt → user revokes setup PAT
 ```
 
@@ -300,11 +306,13 @@ can also omit Contents read for routes that inspect commits and branches.
    must resolve the exact owner/repository and positive ID. Guided bot lookup
    additionally matches the requested login case-insensitively and binds the
    entered PAT to that immutable account ID before Secret installation.
-2. Bootstrap reads and conditional rows precede the plan. Configuration and
-   scope-sensitive inventory blocks return before approval or disposable writes.
-3. Approval authorizes only the displayed plan. Required writes then run the
-   family-specific probes in section 0. Preview, revision, decline and dry-run
-   do not execute them. Existing PAT Secrets must be re-entered for auditing;
+2. Bootstrap confirms identity/account and tests displayed writes before the
+   plan. Scope-sensitive inventory failures prevent subsequent installation;
+   initial temporary tests can already have completed and been cleaned.
+3. Approval authorizes only the displayed persistent installation plan. A fresh
+   configured audit runs the family-specific probes in section 0. Preview and
+   dry-run never write. Revising or declining a plan does not repeat its final
+   audit. Existing PAT Secrets must be re-entered for auditing;
    credential-health success cannot reveal their grants.
 4. Both transports share the application use cases and canonical evidence
    reconciliation. Malformed, duplicate, forged or contradictory evidence
@@ -355,7 +363,11 @@ write evidence to avoid a blocked provider prerequisite are outside this audit.
 ### 4.3 Invariants
 
 - The setup PAT is never installed as the bot PAT implicitly or persisted locally.
-- No disposable write before plan approval; no setup application on failed audit.
+- Initial write tests follow identity/account checks and PAT-entry disclosure;
+  no persistent setup application before plan approval or on failed audit.
+- Secret encryption uses libsodium `crypto_box_seal` after `sodium.ready` in a
+  small shared infrastructure module. A truncated BLAKE2b-512 digest is not a
+  valid sealed-box nonce and MUST NOT be substituted for libsodium encryption.
 - Scope, role, row ID, level and provenance are immutable application facts.
 - Default branch commits, existing Project items and unknown Secrets are never
   edited by probes. Upsert collisions disclose the unavoidable provider race.
@@ -373,17 +385,21 @@ write evidence to avoid a blocked provider prerequisite are outside this audit.
 | Selected Projects | Disposable creation only | Every selected Project also confirms `viewerCanUpdate` |
 
 ```mermaid
-flowchart LR
-  A[Identity and reads] --> B[Review plan]
-  B --> C{Approve}
-  C -->|Yes| D[Disposable capability checks]
-  C -->|No or preview| E[No writes]
+flowchart TD
+  A[PAT entry disclosure] --> B[Identity and reads]
+  B --> C{Intended account}
+  C -->|Yes| D[Temporary create/read/delete tests]
+  C -->|No or dry-run| E[No writes]
   D --> F{Evidence and cleanup complete}
-  F -->|Yes| G[Provision and install]
+  F -->|Yes| G[Inventory and plan review]
   F -->|No| H[Blocked or partial with recovery]
+  G --> I{Approve installation}
+  I -->|Yes| J[Fresh final audit and installation]
+  I -->|No| K[Installation cancelled; tests already cleaned]
 ```
 
-Text equivalent: reads → review → approval → capability checks → installation,
+Text equivalent: identity/reads → account confirmation → temporary checks → review
+→ approval → final checks → installation,
 or a blocked/partial result with the named failed phase and recovery action.
 
 ## 6. Functional behavior and state model
@@ -587,8 +603,8 @@ This PR targets develop; no deployment or dogfooding is part of acceptance.
 
 ## 14. Testing strategy and numeric budget
 
-The retained 198-case baseline in section 0 is extended by a minimum **160**
-distinct regression cases (total minimum **358**, with three baseline human
+The retained 198-case baseline in section 0 is extended by a minimum **192**
+distinct regression cases (total minimum **390**, with three baseline human
 observations still open). Cases are counted once by their primary risk.
 
 | Audit area | Additional minimum | Evidence/risk |
@@ -599,7 +615,8 @@ observations still open). Cases are counted once by their primary risk.
 | Application evidence/readiness | 5 | Pending conditional, duplicate/contradictory cleanup, forged public evidence |
 | Recovery/concurrency/architecture | 48 | Changed/legacy ref, workflow identity, collision persistence, malformed cleanup, bounded recovery, concurrent audit, observational progress and small pure modules |
 | Write rejection and response failure phases | 64 | Invalid/foreign bases, files, PR/run/Project identities; deferred dispatch discovery; rejected or ambiguous creation; cleanup failure; malformed selected reads and bounded credential diagnostics |
-| **Total additional** | **160** | No live services or tokens |
+| Initial PAT ordering, organization scope and sealed-box interoperability | 32 | Account/preview/conditional sequencing, real adapter transactions, pending cleanup, exact organization ownership, recipient decryption and wrong-key rejection |
+| **Total additional** | **192** | Automated fixtures need no live services or tokens; live provider evidence is separately recorded |
 
 Repository coverage keeps Jest's committed thresholds; changed pure matrices
 and evidence policy target 100% branch/line/function/statement coverage. HTTP and
@@ -634,8 +651,10 @@ promoting any of its 42 open cases.
 4. Malformed success, stalled body, rate limit and SSO remain indeterminate;
    late completion never emits verified progress or starts a dependent request.
 5. Every enabled runtime route requests Contents read or its stronger write.
-6. Approved family writes need create, exact readback and confirmed cleanup;
-   preview/decline/revision/dry-run cannot start them.
+6. Initial displayed writes need create, exact readback and confirmed cleanup
+   after identity/account checks, including conditional writes. Preview/dry-run
+   cannot start them or mutate recovery resources. Decline/revision does not
+   start a final audit or persistent installation.
 7. Changed/legacy ref is retained; exact name and recorded SHA may be deleted.
 8. Selected workflow Projects all match organization/number and allow update;
    a denial blocks before temporary Project creation.

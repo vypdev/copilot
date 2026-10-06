@@ -14,6 +14,8 @@ export interface SetupTokenPermissionsRequest {
     requirements: readonly SetupTokenPermissionRequirement[];
     /** Canonical comma-separated Project numbers from the approved setup plan. */
     selectedProjectNumbers?: string;
+    /** Initial PAT verification tests displayed conditional writes as well as required writes. */
+    includeConditionalWrites?: boolean;
 }
 
 /** Capability boundary. Writes use isolated, cleanup-verified transactions. */
@@ -25,6 +27,7 @@ export interface SetupTokenPermissionInspectionPort {
         requirements: readonly SetupTokenPermissionRequirement[],
         onProgress?: (progress: SetupTokenPermissionProgress) => void,
         selectedProjectNumbers?: string,
+        includeConditionalWrites?: boolean,
     ): Promise<readonly SetupTokenPermissionCheck[]>;
 }
 

@@ -729,7 +729,9 @@
         "src/infrastructure/setup_permission_pull_request_probe.ts",
         "src/infrastructure/git_authentication_environment.ts",
         "src/actions/github_action_input.ts",
-        "src/infrastructure/setup_github_identity_query_adapter.ts"
+        "src/infrastructure/setup_github_identity_query_adapter.ts",
+        "src/infrastructure/github_secret_encryption.ts",
+        "src/infrastructure/setup_permission_organization_owner.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -774,7 +776,10 @@
         "src/infrastructure/__tests__/setup_permission_audit_transactions.test.ts",
         "src/infrastructure/__tests__/setup_permission_write_failures.test.ts",
         "src/infrastructure/__tests__/setup_permission_resource_failures.test.ts",
-        "src/infrastructure/__tests__/setup_permission_boundary_failures.test.ts"
+        "src/infrastructure/__tests__/setup_permission_boundary_failures.test.ts",
+        "src/infrastructure/__tests__/github_secret_encryption.test.ts",
+        "src/infrastructure/__tests__/setup_permission_organization_owner.test.ts",
+        "src/infrastructure/__tests__/setup_pat_bootstrap_transactions.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -787,7 +792,8 @@
         "docs/security-operations/operations/troubleshooting.mdx",
         "docs/security-operations/security/credentials.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
-        "docs/security-operations/operations/verification.mdx"
+        "docs/security-operations/operations/verification.mdx",
+        "docs/development/setup-pat-provider-audit-2026-10-06.md"
       ]
     },
     {

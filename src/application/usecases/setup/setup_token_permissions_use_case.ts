@@ -41,9 +41,11 @@ export class SetupTokenPermissionsUseCase {
 
         const evidence = this.onProgress
             ? await this.permissions.inspect(request.owner, request.repository, request.token,
-                request.requirements, this.onProgress, request.selectedProjectNumbers)
+                request.requirements, this.onProgress, request.selectedProjectNumbers,
+                ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]))
             : await this.permissions.inspect(request.owner, request.repository, request.token,
-                request.requirements, undefined, request.selectedProjectNumbers);
+                request.requirements, undefined, request.selectedProjectNumbers,
+                ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]));
         const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');

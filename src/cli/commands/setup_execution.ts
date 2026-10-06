@@ -92,7 +92,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
       try {
         if (options.confirmUnverifiableWritePermissions) {
           throw new ApplicationError('configuration.invalid',
-            '--confirm-unverifiable-write-permissions is no longer accepted. Setup now tests each required Write capability with a temporary resource after plan approval.');
+            '--confirm-unverifiable-write-permissions is no longer accepted. Setup tests Write capabilities with temporary resources during PAT verification.');
         }
         const session = new SetupSessionCoordinator({
           repository: async (): Promise<SetupSessionDecision> => {
@@ -163,7 +163,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
         token = getSetupToken(cwd, options.token);
         if (webBridge && token) {
           const choice = await webBridge.ask({ kind: 'choice', title: 'An environment setup PAT is available', copyId: 'setup.environmentPat',
-            description: 'Its value stays in the CLI process and is never sent to this page. Exiting Copilot cannot unset your parent shell variable.',
+            description: 'Its value stays in the CLI process. Continuing starts identity checks and temporary create/read/delete permission tests before planning. Installation requires final approval. Exiting Copilot cannot unset your parent shell variable.',
             choices: ['Use the environment PAT', 'Create or enter a different PAT'] });
           if (choice === undefined) throw new SetupTerminalCancelledError();
           if (choice !== 'Use the environment PAT') token = undefined;
@@ -184,7 +184,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
         }
         return 'continue';
           },
-          setupPat: async (): Promise<SetupSessionDecision> => {
+          setupPat: async (cleanupPending): Promise<SetupSessionDecision> => {
         if (!token && !options.nonInteractive && !options.dryRun) token = await credentialPrompt.requestSetupPat();
         if (!token && !options.dryRun) {
           logError('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
@@ -202,7 +202,9 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             confirmAccount: account => credentialPrompt.confirmGuidedSetupAccount(account),
             showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
           }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
-            requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat });
+            requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat,
+            previewOnly: Boolean(options.dryRun),
+            onCleanupPending: () => { setupMutationStarted = true; cleanupPending(); } });
         }
         return 'continue';
           },

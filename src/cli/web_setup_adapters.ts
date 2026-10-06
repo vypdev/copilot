@@ -136,7 +136,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
   }
   async requestSetupPat(): Promise<string | undefined> {
     return this.secret('Temporary setup PAT',
-      'Use the operator account in GitHub. Complete 2FA there, switch to Only select repositories, select this repository, and copy the generated token here. This token is for this run only; delete it in GitHub afterwards.',
+      'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.',
       this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
   }
   async confirmGuidedSetupAccount(account?: string): Promise<boolean> {
@@ -145,7 +145,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
     return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop'], undefined, 'setupPat.confirmAccount', { account }) === 'Yes, continue';
   }
   showUpdatedSetupPatLink(url: string, stage: 'bootstrap' | 'final', delta?: readonly string[]): void {
-    this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. No setup mutation started. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
+    this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. Installation has not started. Resolve failed permission tests and any pending cleanup before retrying. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
   }
   showSetupPatCleanupReminder(): void {
     if (this.guidedSetup) this.bridge.message('Delete the temporary setup PAT in GitHub Settings after this run. Closing Copilot does not revoke it.', 'warning', 'https://github.com/settings/personal-access-tokens', 'setupPat.cleanup');

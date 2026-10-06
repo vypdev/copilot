@@ -40,7 +40,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     if (!this.terminal) return 'custom';
     const choice = await this.readChoice('How much configuration detail would you like to review now?',
       ['Basic guided setup', 'Customize every setting'], 'Basic guided setup',
-      'Basic keeps every permission, security, branch-role, Projects, approval, and storage decision visible. It uses existing defaults for selected advanced agent, branch-prefix, and Bugbot settings. The final plan shows their consequences and lets you edit any section before Apply. Customize asks every applicable question. Neither path changes GitHub before your final approval.');
+      'Basic keeps every permission, security, branch-role, Projects, approval, and storage decision visible. It uses existing defaults for selected advanced agent, branch-prefix, and Bugbot settings. The final plan shows their consequences and lets you edit any section before Apply. Customize asks every applicable question. PAT verification creates and cleans temporary permission resources; installation requires final approval.');
     return choice === 'Basic guided setup' ? 'basic' : 'custom';
   }
   async chooseSetupPatMethod(): Promise<'guided' | 'manual'> {
@@ -131,7 +131,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
       console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
     }
     console.log(renderBox(
-      'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored. The workflow PAT is a different bot-account token and is requested separately.',
+      'Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.',
       'Setup PAT',
       33,
     ));

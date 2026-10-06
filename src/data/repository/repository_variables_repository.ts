@@ -14,8 +14,7 @@ import type {
     GithubOrganizationResource,
     GithubRepositoryVariablesClient,
 } from '../../infrastructure/github/ports/github_repository_variables_protocol';
-import nacl from 'tweetnacl';
-import { createHash } from 'node:crypto';
+import { encryptSecret } from '../../infrastructure/github_secret_encryption';
 import { isSafeBranchTree } from '../../domain/deployment_configuration';
 
 class GithubActionsResourceTransport {
@@ -146,7 +145,7 @@ class GithubActionsResourceTransport {
                     owner,
                     repo: repository,
                     secret_name: credential.name,
-                    encrypted_value: encryptSecret(credential.value, publicKey.data.key),
+                    encrypted_value: await encryptSecret(credential.value, publicKey.data.key),
                     key_id: publicKey.data.key_id,
                 });
                 if (existing.has(credential.name)) updated += 1;
@@ -187,7 +186,7 @@ class GithubActionsResourceTransport {
                 await secrets.createOrUpdateOrgSecret({
                     org: owner,
                     secret_name: credential.name,
-                    encrypted_value: encryptSecret(credential.value, publicKey.data.key),
+                    encrypted_value: await encryptSecret(credential.value, publicKey.data.key),
                     key_id: publicKey.data.key_id,
                     visibility,
                     ...(visibility === 'selected' && target.repositoryId !== undefined && !current
@@ -441,17 +440,4 @@ function combineOrganizationAccess(
     if (secrets === 'available' || variables === 'available') return 'available';
     if (secrets === 'unavailable' || variables === 'unavailable') return 'unavailable';
     return 'unknown';
-}
-
-/** GitHub requires a sealed box: ephemeral public key + crypto_box ciphertext. */
-export function encryptSecret(value: string, base64PublicKey: string): string {
-    const publicKey = Buffer.from(base64PublicKey, 'base64');
-    if (publicKey.length !== nacl.box.publicKeyLength) throw new Error('GitHub returned an invalid repository public key.');
-    const keyPair = nacl.box.keyPair();
-    const nonce = createHash('blake2b512')
-        .update(Buffer.concat([Buffer.from(keyPair.publicKey), publicKey]))
-        .digest()
-        .subarray(0, nacl.box.nonceLength);
-    const ciphertext = nacl.box(Buffer.from(value, 'utf8'), nonce, publicKey, keyPair.secretKey);
-    return Buffer.from(Buffer.concat([Buffer.from(keyPair.publicKey), Buffer.from(ciphertext)])).toString('base64');
 }

@@ -9,6 +9,8 @@ export interface VerifySetupPatBootstrapRequest {
   readonly token: string;
   readonly requirements: readonly SetupTokenPermissionRequirement[];
   readonly guided: boolean;
+  readonly previewOnly?: boolean;
+  readonly onCleanupPending?: () => void;
 }
 
 export interface VerifySetupPatBootstrapPorts {
@@ -19,22 +21,35 @@ export interface VerifySetupPatBootstrapPorts {
   showCorrectedLink(url: string): void;
 }
 
-/** Initial identity and read gate. Temporary writes wait for plan approval. */
+/** Verify identity/account first, then complete displayed write transactions before planning. */
 export class VerifySetupPatBootstrapUseCase {
   constructor(private readonly ports: VerifySetupPatBootstrapPorts) {}
 
   async execute(request: VerifySetupPatBootstrapRequest): Promise<string | undefined> {
-    const bootstrapRequirements = request.requirements.map(requirement =>
-      requirement.level === 'write'
-        ? { ...requirement, applicability: 'conditional' as const, condition: 'After setup plan approval' }
-        : requirement);
+    const identityReport = await this.ports.permissions.inspect({
+      role: 'setup', owner: request.owner, repository: request.repository,
+      token: request.token, requirements: request.requirements.filter(requirement => requirement.level === 'read'),
+    });
+    this.ports.presenter.showReport(identityReport);
+    this.requireReady(request, identityReport);
+    if (!await this.ports.confirmAccount(identityReport.account)) {
+      throw new ApplicationError('authorization.credential-invalid',
+        'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
+    }
+    if (request.previewOnly || !request.requirements.some(requirement => requirement.level === 'write')) return identityReport.account;
+    this.ports.presenter.showRequirements('setup', request.requirements);
     const report = await this.ports.permissions.inspect({
       role: 'setup', owner: request.owner, repository: request.repository,
-      token: request.token, requirements: bootstrapRequirements,
+      token: request.token, requirements: request.requirements, includeConditionalWrites: true,
     });
+    if (report.checks.some(check => check.cleanupPending || check.incident)) request.onCleanupPending?.();
     this.ports.presenter.showReport(report);
-    const accepted = report.ready;
-    if (!accepted || report.identityStatus !== 'valid') {
+    this.requireReady(request, report);
+    return report.account ?? identityReport.account;
+  }
+
+  private requireReady(request: VerifySetupPatBootstrapRequest, report: SetupTokenPermissionReport): void {
+    if (!report.ready || report.identityStatus !== 'valid' || report.checks.some(check => check.cleanupPending || check.incident)) {
       if (request.guided) this.ports.showCorrectedLink(buildSetupPatCreationUrl({
         role: 'setup', owner: request.owner, repository: request.repository,
         expiresIn: 1, requirements: request.requirements,
@@ -42,10 +57,5 @@ export class VerifySetupPatBootstrapUseCase {
       throw new ApplicationError('authorization.credential-invalid',
         'The setup PAT did not pass every required capability check. Review the failed permission and cleanup result, correct access, and retry.');
     }
-    if (!await this.ports.confirmAccount(report.account)) {
-      throw new ApplicationError('authorization.credential-invalid',
-        'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
-    }
-    return report.account;
   }
 }

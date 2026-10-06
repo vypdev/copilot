@@ -13,6 +13,7 @@ import { probeDisposableResource } from './setup_permission_resource_probes';
 import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, writeProbeFailure } from './setup_permission_probe_http';
 import { SetupPermissionProbeJournal } from './setup_permission_probe_journal';
 import { requireSelectedProjectsWriteAccess } from './setup_permission_projects_access';
+import { requireRepositoryOrganizationOwner } from './setup_permission_organization_owner';
 
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
 const activeInspections = new Set<string>();
@@ -42,6 +43,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         requirements: readonly SetupTokenPermissionRequirement[],
         onProgress?: (progress: SetupTokenPermissionProgress) => void,
         selectedProjectNumbers?: string,
+        includeConditionalWrites = false,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
         const target = `${owner.toLowerCase()}/${repository.toLowerCase()}`;
         if (activeInspections.has(target)) {
@@ -50,7 +52,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         }
         activeInspections.add(target);
         try {
-            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers);
+            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites);
         } finally { activeInspections.delete(target); }
     }
 
@@ -58,10 +60,15 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         requirements: readonly SetupTokenPermissionRequirement[],
         onProgress?: (progress: SetupTokenPermissionProgress) => void,
         selectedProjectNumbers?: string,
+        includeConditionalWrites = false,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
         try {
-            await this.journal.recover(owner, repository,
-                new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+            // Read-only identity checks and previews must never perform recovery writes.
+            if (requirements.some(item => item.level === 'write'
+                && (item.applicability === 'required' || includeConditionalWrites))) {
+                await this.journal.recover(owner, repository,
+                    new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+            }
         } catch (error) {
             return requirements.map(requirement => {
                 notifyProgress(onProgress, { role: requirement.role, requirementId: requirement.id, phase: 'failed',
@@ -77,7 +84,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         }
         return runWithConcurrencyLimit(
             requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress,
-                selectedProjectNumbers)),
+                selectedProjectNumbers, includeConditionalWrites)),
             SETUP_PERMISSION_PROBE_CONCURRENCY,
         );
     }
@@ -89,12 +96,13 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         requirement: SetupTokenPermissionRequirement,
         onProgress?: (progress: SetupTokenPermissionProgress) => void,
         selectedProjectNumbers?: string,
+        includeConditionalWrites = false,
     ): Promise<SetupTokenPermissionCheck> {
         let acceptingProgress = true;
         const emit = (phase: SetupTokenPermissionProgress['phase'], detail?: SetupTokenPermissionProgress['detail']) => {
             if (acceptingProgress) notifyProgress(onProgress, { role: requirement.role, requirementId: requirement.id, phase, ...(detail ? { detail } : {}) });
         };
-        if (requirement.level === 'write' && requirement.applicability === 'conditional') {
+        if (requirement.level === 'write' && requirement.applicability === 'conditional' && !includeConditionalWrites) {
             const check = outcome(requirement, 'unverifiable', 'Conditional write access will be tested if the selected plan requires it.');
             emit('skipped');
             return check;
@@ -103,6 +111,9 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         if (requirement.level === 'write') {
             try {
                 const http = new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs);
+                if (includeConditionalWrites && requirement.scope === 'organization') {
+                    await requireRepositoryOrganizationOwner(owner, repository, http);
+                }
                 if (requirement.probe === 'projects' && requirement.scope === 'organization' && selectedProjectNumbers) {
                     await requireSelectedProjectsWriteAccess(owner, selectedProjectNumbers, http);
                 }

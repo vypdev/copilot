@@ -134,6 +134,7 @@ describe('CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRemoteConfigurationInspect.mockReset().mockResolvedValue(defaultRemoteConfiguration);
     mockSetupCredentialsCollect.mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] });
     process.exitCode = undefined;
     process.env.AGENT_PROVIDER = 'opencode';
@@ -545,7 +546,7 @@ describe('CLI', () => {
           'Confirm this repository', 'How will you provide your setup PAT?', 'Temporary setup PAT',
           'Review your setup plan', 'Apply this setup now?',
         ]));
-        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(4);
         expect(captureSetupApplySnapshot).toHaveBeenCalledTimes(1);
         expect(setupApplySnapshotMatches).toHaveBeenCalledTimes(2);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
@@ -921,13 +922,15 @@ describe('CLI', () => {
       mockTokenPermissionInspect.mockResolvedValueOnce(acceptedSetupPatReport());
       try {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
-        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
-        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
-          expect.objectContaining({ scope: 'repository', permission: 'Contents', level: 'write', applicability: 'conditional' }),
-        ]));
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
         expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
           expect.objectContaining({ scope: 'repository', permission: 'Contents', level: 'write', applicability: 'required' }),
         ]));
+        expect(mockTokenPermissionInspect.mock.calls[2][0].requirements).toEqual(expect.arrayContaining([
+          expect.objectContaining({ scope: 'repository', permission: 'Contents', level: 'write', applicability: 'required' }),
+        ]));
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements.every((item: SetupTokenPermissionRequirement) => item.level === 'read')).toBe(true);
+        expect(mockTokenPermissionInspect.mock.calls[1][0]).toMatchObject({ includeConditionalWrites: true });
         expect(botGuide).toHaveBeenCalledTimes(1);
         expect(runLocalAction).toHaveBeenCalledTimes(1);
         expect(process.exitCode).toBeUndefined();
@@ -1266,7 +1269,7 @@ describe('CLI', () => {
         const { logInfo } = require('../utils/logger');
         expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('GitHub reports User'));
         expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Setup PAT permissions changed');
-        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
       } finally { createTerminal.mockRestore(); }
@@ -1279,10 +1282,11 @@ describe('CLI', () => {
         .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
       mockTokenPermissionInspect
         .mockResolvedValueOnce(acceptedSetupPatReport())
+        .mockResolvedValueOnce(acceptedSetupPatReport())
         .mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
       try {
         await program.parseAsync(['node', 'cli', 'setup', '--yes', '--pr-approval-mode', 'off', '--skip-secrets']);
-        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+        expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
         expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Setup PAT permissions changed');
         expect(runLocalAction).not.toHaveBeenCalled();
         expect(process.exitCode).toBe(1);
@@ -1299,6 +1303,7 @@ describe('CLI', () => {
         repositorySecrets: ['PAT'],
       });
       mockTokenPermissionInspect
+        .mockResolvedValueOnce(acceptedSetupPatReport())
         .mockResolvedValueOnce(acceptedSetupPatReport())
         .mockResolvedValueOnce({ ...acceptedSetupPatReport(), ready: false });
       try {
@@ -1542,8 +1547,8 @@ describe('CLI', () => {
       expect(params[INPUT_KEYS.SINGLE_ACTION]).toBe(ACTIONS.INITIAL_SETUP);
       expect(params[INPUT_KEYS.TOKEN]).toBe('ghp_setup_test_token_xxxxxxxxxxxxxxxxxxxx');
       expect(params[INPUT_KEYS.WELCOME_TITLE]).toContain('Initial Setup');
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
-      expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
+      expect(mockTokenPermissionInspect.mock.calls[2][0].requirements).toEqual(expect.arrayContaining([
         expect.objectContaining({ role: 'setup', permission: 'Metadata', applicability: 'required' }),
         expect.objectContaining({ role: 'setup', permission: 'Variables', applicability: 'required' }),
       ]));
@@ -1723,6 +1728,7 @@ describe('CLI', () => {
         probe: 'variables',
       };
       mockTokenPermissionInspect
+        .mockResolvedValueOnce(acceptedSetupPatReport())
         .mockResolvedValueOnce({
           role: 'setup',
           identityStatus: 'valid',
@@ -1749,15 +1755,15 @@ describe('CLI', () => {
         '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
-      expect(mockTokenPermissionInspect.mock.calls[1][0].requirements).toEqual(expect.arrayContaining([
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(3);
+      expect(mockTokenPermissionInspect.mock.calls[2][0].requirements).toEqual(expect.arrayContaining([
         expect.objectContaining({ permission: 'Variables', applicability: 'required' }),
       ]));
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
     });
 
-    it('blocks unavailable managed inventory before starting temporary write probes', async () => {
+    it('blocks unavailable managed inventory before the final configured write audit', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'User',
         repositoryVisibility: 'private',
@@ -1777,7 +1783,7 @@ describe('CLI', () => {
         '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
@@ -1786,7 +1792,7 @@ describe('CLI', () => {
       }));
     });
 
-    it('blocks unavailable organization storage before temporary write probes', async () => {
+    it('blocks unavailable organization storage before the final configured write audit', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'Organization',
         repositoryId: 42,
@@ -1808,7 +1814,7 @@ describe('CLI', () => {
         '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
@@ -1817,7 +1823,7 @@ describe('CLI', () => {
       }));
     });
 
-    it('surfaces a blocked setup plan before starting temporary write probes', async () => {
+    it('surfaces a blocked setup plan after cleaned initial permission tests', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'Organization',
         repositoryVisibility: 'private',
@@ -1838,7 +1844,7 @@ describe('CLI', () => {
         '--non-interactive', '--pr-approval-mode', 'off', '--yes',
       ]);
 
-      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(1);
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');

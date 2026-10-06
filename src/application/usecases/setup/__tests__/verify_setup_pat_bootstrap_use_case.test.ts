@@ -25,11 +25,13 @@ describe('VerifySetupPatBootstrapUseCase', () => {
   test('audits capabilities and returns the authenticated operator account', async () => {
     const { ports, useCase } = harness();
     expect(await useCase.execute(request)).toBe('operator');
-    expect(ports.permissions.inspect).toHaveBeenCalledWith({
+    expect(ports.permissions.inspect).toHaveBeenNthCalledWith(1, {
       role: 'setup', owner: 'owner', repository: 'repo', token: 'test-token',
-      requirements: request.requirements.map(requirement => requirement.level === 'write'
-        ? { ...requirement, applicability: 'conditional', condition: 'After setup plan approval' }
-        : requirement),
+      requirements: request.requirements.filter(requirement => requirement.level === 'read'),
+    });
+    expect(ports.permissions.inspect).toHaveBeenNthCalledWith(2, {
+      role: 'setup', owner: 'owner', repository: 'repo', token: 'test-token',
+      requirements: request.requirements, includeConditionalWrites: true,
     });
     expect(ports.presenter.showReport).toHaveBeenCalledWith(report);
     expect(ports.confirmAccount).toHaveBeenCalledWith('operator');
@@ -71,5 +73,52 @@ describe('VerifySetupPatBootstrapUseCase', () => {
     jest.spyOn(ports, 'confirmAccount').mockResolvedValue(false);
     await expect(useCase.execute(request)).rejects.toThrow('unintended account');
     expect(ports.showCorrectedLink).not.toHaveBeenCalled();
+    expect(ports.permissions.inspect).toHaveBeenCalledTimes(1);
+  });
+
+  test('confirms the account before any write inspection', async () => {
+    const { ports, useCase } = harness();
+    jest.spyOn(ports.permissions, 'inspect').mockImplementation(async input => {
+      if (input.includeConditionalWrites) {
+        expect(ports.confirmAccount).toHaveBeenCalledWith('operator');
+        expect(ports.presenter.showRequirements).toHaveBeenCalledWith('setup', request.requirements);
+      }
+      return report;
+    });
+    await useCase.execute(request);
+  });
+
+  test.each([true, false])('preview=%s preserves original requirements without write deferral', async previewOnly => {
+    const { ports, useCase } = harness();
+    const original = JSON.stringify(request.requirements);
+    await useCase.execute({ ...request, previewOnly });
+    expect(ports.permissions.inspect).toHaveBeenCalledTimes(previewOnly ? 1 : 2);
+    expect(JSON.stringify(request.requirements)).toBe(original);
+  });
+
+  test('a read-only request needs only one inspection', async () => {
+    const { ports, useCase } = harness();
+    await useCase.execute({ ...request, requirements: request.requirements.filter(item => item.level === 'read') });
+    expect(ports.permissions.inspect).toHaveBeenCalledTimes(1);
+  });
+
+  test('failed required writes block during initial PAT verification', async () => {
+    const { ports, useCase } = harness();
+    jest.spyOn(ports.permissions, 'inspect').mockResolvedValueOnce(report).mockResolvedValueOnce({ ...report, ready: false });
+    await expect(useCase.execute(request)).rejects.toThrow('did not pass every required capability check');
+    expect(ports.confirmAccount).toHaveBeenCalled();
+    expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
+  });
+
+  test.each(['cleanup', 'collision'] as const)('pending %s in a conditional write blocks and marks partial effects', async kind => {
+    const { ports, useCase } = harness();
+    const onCleanupPending = jest.fn();
+    const requirement = request.requirements.find(item => item.probe === 'secrets')!;
+    jest.spyOn(ports.permissions, 'inspect').mockResolvedValueOnce(report).mockResolvedValueOnce({ ...report,
+      checks: [{ ...requirement, status: 'unverifiable', message: 'pending', cleanupPending: true,
+        ...(kind === 'collision' ? { incident: 'secret-collision' as const } : {}) }],
+    });
+    await expect(useCase.execute({ ...request, onCleanupPending })).rejects.toThrow('did not pass');
+    expect(onCleanupPending).toHaveBeenCalledTimes(1);
   });
 });

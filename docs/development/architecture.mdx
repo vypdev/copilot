@@ -240,7 +240,11 @@ PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow
 `SetupTokenPermissionInspectionPort`; the infrastructure adapter performs targeted
 GitHub reads at PAT entry and temporary create/read/delete transactions for
-required writes after plan approval. It maps provider outcomes to `verified`,
+displayed writes during initial PAT verification, after identity and guided account
+confirmation. Dry-run never writes or recovers temporary resources; installation
+requires plan approval. A small shared libsodium adapter encrypts both probe and
+provisioned Secrets with provider-compatible sealed boxes. The permission adapter
+maps provider outcomes to `verified`,
 `available`, `missing`, or `unverifiable`, with a bounded concurrency limit of
 four and original requirement order preserved. Write access is never inferred
 from a successful read. The CLI and web presenters render the same application

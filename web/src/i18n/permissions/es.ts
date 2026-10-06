@@ -54,5 +54,4 @@ export const permissionCopyEs: Readonly<Record<PermissionText, string>> = {
   'Organization Variable storage selected': 'Se eligió guardar Variables en la organización',
   'Issue type automation enabled': 'Automatización de tipos de issue activada',
   'Organization Projects selected': 'Se seleccionaron Projects de la organización',
-  'After setup plan approval': 'Después de aprobar el plan de configuración',
 };

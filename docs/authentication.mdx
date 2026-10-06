@@ -117,7 +117,7 @@ these states:
 | `✅ Verified` | An authentication-bound read or completed temporary write transaction proved the requested capability. | Continue. |
 | `Read available` | An exact public read succeeded without independently proving the PAT grant. | Use that read; protected operations and writes are checked separately. |
 | `❌ Missing` | GitHub deterministically rejected a required capability after identity and repository access were established. | Stop before the dependent mutation and name the permission to grant. |
-| `? Unverifiable` | A read did not prove the PAT grant, or its response was ambiguous/transient. | Required reads block unless an exact successful public-repository read or organization Projects list has separate operational evidence. Required writes must pass a temporary create/read/delete test after plan approval. |
+| `? Unverifiable` | A read did not prove the PAT grant, or its response was ambiguous/transient. | Required reads block unless an exact successful public-repository read or organization Projects list has separate operational evidence. Required writes must pass a temporary create/read/delete test during initial PAT verification. |
 
 A `403` is not automatically a missing-permission result. Copilot reports it as
 `Missing` only when bounded GitHub metadata explicitly identifies a permission
@@ -134,7 +134,7 @@ marks those reads `Verified` only when the same bounded probe establishes that
 the repository is private; on a public repository, or when visibility is
 unknown, setup cannot claim the grant: public success is `Read available`, while unknown visibility remains `Unverifiable`. Administration uses the protected Actions-permissions endpoint, which requires Administration read; listing rulesets alone cannot prove that grant. Secret and Variable inventory
 reads are permission-bound; their corresponding write grants wait for
-temporary create/read/delete tests after plan approval. Public
+temporary create/read/delete tests during initial PAT verification. Public
 organization Issue Types reads remain `Unverifiable` as PAT evidence.
 After valid token identity, a successful public repository read can be used
 for that exact operation while its row says `Read available`.
@@ -156,11 +156,16 @@ visibility-unknown probe, organization Issue Types, or any write.
 The distinction between an available public read and a verified grant is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
 requires; it does not enumerate every effective grant of the presented
-fine-grained PAT. After plan approval, Copilot tests each required Write
+fine-grained PAT. During initial PAT verification, Copilot tests each displayed Write
 capability with a disposable resource and requires confirmed cleanup.
 
-At PAT entry, the assistant checks identity and required reads. Required writes
-wait until the reviewed plan is approved. A public read can be usable without
+At PAT entry, the assistant checks identity and required reads, confirms the
+guided operator account, then tests every displayed Write with isolated temporary
+resources, including conditional rows. Conditional means installation may not
+need that grant; it does not postpone its verification. PAT-entry and environment
+selection explain these tests before they start. `--dry-run` performs reads only,
+including leaving pending recovery records untouched. Installation still needs
+plan approval. A public read can be usable without
 independently proving the PAT grant; the UI labels it accordingly. Failed
 required reads or writes stop setup, and operator confirmation cannot promote
 an unknown row to verified.
@@ -175,7 +180,7 @@ when the PAT has Issues Write. If so, setup closes the exact Issue, reports its
 number, retains the cleanup record and blocks further setup until deletion is
 confirmed. This test can leave notifications and audit history. Actions and Pull
 request tests may also leave GitHub history and notifications after cleanup; the
-plan discloses the selected tests before approval.
+PAT-entry guidance discloses these tests before they start.
 If a temporary permission resource cannot be confirmed as deleted, the row
 shows pending cleanup and setup stops. Cancelling or losing the local session
 during that failed cleanup is reported as partial; the local recovery journal
@@ -318,7 +323,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     corrected before setup can continue. An ambiguous required
     `? Unverifiable` read blocks unless a successful public-repository read or
     organization Projects list has separate operational evidence. A required
-    write row waits for plan approval, then must pass its own temporary
+    write row must pass its own temporary
     create/read/cleanup transaction; an assertion about the PAT settings cannot
     make it pass.
   </Step>

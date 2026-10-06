@@ -119,8 +119,8 @@ directory. The lock contains no PAT or other credential.
     ambiguous because it can also mean the token cannot see the repository, so
     setup never upgrades it to `Verified`.
     A required unverifiable read without positive public-repository operational
-    evidence blocks and must be retried. Required writes are checked after plan
-    approval by creating, reading and deleting a temporary resource for each
+    evidence blocks and must be retried. Displayed writes, including conditional rows, are checked during initial PAT
+    verification by creating, reading and deleting a temporary resource for each
     permission. Inspect the failed phase and HTTP category. An unresolved
     cleanup blocks retries until the recovery journal can finish it. The old
     `--confirm-unverifiable-write-permissions` flag is rejected.
@@ -131,7 +131,7 @@ directory. The lock contains no PAT or other credential.
 
     When required repository or organization inventory validation fails after
     the questionnaire, the wizard returns a structured inventory block before
-    plan approval or disposable permission tests. The CLI then
+    plan approval or further configured permission tests. The CLI then
     handles the structured block immediately and exits with the bounded inventory
     error without starting another audit or inventory validator. It does not run
     plan confirmation,
@@ -218,7 +218,7 @@ directory. The lock contains no PAT or other credential.
     provisioning or bot Secret write should begin from that blocked audit.
     Expected missing or unconfirmed final PAT permissions return a blocked
     result with the chosen configuration and stop before storage validation or
-    setup application. After plan approval, permission checks can create
+    setup application. Initial PAT verification can already create
     temporary GitHub resources. If a row says cleanup is pending, retain the
     local recovery journal and retry only after its exact resource is cleaned;
     cancellation or expiration during unconfirmed cleanup is a partial result.
