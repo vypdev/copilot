@@ -210,12 +210,17 @@ values supplied through `INPUT_VARS_JSON`; a required empty JSON value fails
 before execution. Git credentials are scoped to `https://github.com/` in the
 child process environment, and are not written to repository URLs or Git config.
 
-Permission checks use at most four concurrent GitHub probes. Before plan
-approval, they only read. After approval, each required Write grant is checked
-with a temporary resource that is read back and cleaned up. Disposable branches
+Permission checks use at most four concurrent GitHub probes. At PAT entry,
+identity and required reads run first; after guided account confirmation,
+every displayed Write grant is tested with a temporary resource that is read
+back and cleaned up, including conditional rows. Plan approval remains required
+for installation; dry-run performs no writes or recovery. Disposable branches
 are deleted only after their exact ref and journaled commit match. Actions run
 cleanup also matches the journaled workflow ID, run ID, branch and event; an
-older record without the workflow identity requires manual inspection. A branch
+older dispatched record without the workflow identity stops recovery before
+requests and gives a manual cleanup path. Verify the exact dispatch run and
+recorded branch commit, confirm their cleanup, then remove only its matching
+journal file and retry; see [troubleshooting](/security-operations/operations/troubleshooting). A branch
 advanced by another actor, or a legacy journal without its commit, requires
 manual inspection; GitHub has no atomic compare-and-delete ref endpoint. Two
 audits for the same repository cannot recover each other’s active resources. Secret writes use

@@ -37,3 +37,36 @@ validate the public-key length. This evidence supplements fixtures; it does
 not establish absent-grant behavior, Windows ACLs, PAT-form UX, Actions Write,
 Workflows Write, Pull requests Write or Projects Write. Those retain their
 existing fixture and human/provider acceptance requirements.
+
+## SDK and web regression review
+
+A later operator run completed the permission transactions but stopped during
+Plan because Secrets and Variables inventories were unavailable. The separate
+Octokit adapter used a nonexistent `rest.secrets` namespace, supplied repository
+IDs to organization inventory routes that require `owner`/`repo`, and expected
+an organization Variable upsert method absent from the installed SDK. The
+permission-probe transport itself used correct HTTP routes, which explains
+why its success did not establish inventory interoperability.
+
+The corrected adapter is split into inventory, commands, and collection
+decoding. A child-process fixture loads the installed SDK with an intercepted
+transport and validates both effective organization inventory routes, sealed-box
+Secret writes, separate organization Variable create/update methods, and
+preservation of visibility and selected repository grants. This later review
+used no live PAT or setup mutation.
+
+The complete local run passes **540 suites, 6,380 tests, 26 skipped**, all
+coverage budgets, and the retained **308/350** acceptance ledger with **42**
+explicit human/provider cases open. The local diff has no missing executable
+statements or partial changed branches. Overall coverage is 95.66% statements,
+91.27% branches, 96.61% functions, and 96.88% lines. All three extracted Actions
+resource modules join the per-module PAT coverage budget. Fresh Codecov and
+platform jobs are checked on the pushed PR head separately.
+
+A credential-free local browser fixture verifies CI cards/manual fields,
+Project titles/manual input, and release strategy. Desktop 1280×900 and narrow
+390×844 layouts were inspected in light/dark themes. Names and metadata render
+on separate lines; controls retain their labels and spacing; the narrow page
+width matches the 390-pixel viewport after header wrapping. The packaged CLI,
+typed API, and isolated local web-session smoke tests pass. These observations
+leave independent accessibility and native platform acceptance gates open.

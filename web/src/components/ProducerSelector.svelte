@@ -32,8 +32,10 @@
           disabled={!controller || (selected.length >= 8 && !selected.includes(identity))} />
         <span><strong><bdi>{candidate.name}</bdi></strong><small><bdi>{candidate.workflowName} · {candidate.sourceAppName ?? 'GitHub App'} {candidate.sourceAppId} · {checkConclusionLabel(candidate.conclusion, $setupLocale)} · {candidate.headSha.slice(0, 7)} · {candidate.observedAt ?? tr('observationTimeUnknown', $setupLocale)}</bdi></small><small>{candidate.requiredByRuleset ? tr('branchRequirementObserved', $setupLocale, { branch: candidate.requiredByRuleset.branch }) : tr('branchRequirementUnknown', $setupLocale)}</small></span>
       </label>
-      {#if safeGithubRunLink(candidate.runUrl)}<a href={safeGithubRunLink(candidate.runUrl)} target="_blank" rel="noopener noreferrer">{tr('ciRun', $setupLocale)}</a>{/if}
-      {#if safeGithubRulesetLink(candidate.requiredByRuleset?.sourceUrl)}<a href={safeGithubRulesetLink(candidate.requiredByRuleset?.sourceUrl)} target="_blank" rel="noopener noreferrer">{tr('ciRule', $setupLocale)}</a>{/if}
+      <div class="producer-links">
+        {#if safeGithubRunLink(candidate.runUrl)}<a href={safeGithubRunLink(candidate.runUrl)} target="_blank" rel="noopener noreferrer">{tr('ciRun', $setupLocale)}</a>{/if}
+        {#if safeGithubRulesetLink(candidate.requiredByRuleset?.sourceUrl)}<a href={safeGithubRulesetLink(candidate.requiredByRuleset?.sourceUrl)} target="_blank" rel="noopener noreferrer">{tr('ciRule', $setupLocale)}</a>{/if}
+      </div>
     </div>
   {/each}
 </div>
@@ -44,5 +46,5 @@
   <label for="producer-app-id">{tr('producerAppId', $setupLocale)}<input id="producer-app-id" type="text" inputmode="numeric" pattern="[1-9][0-9]*" bind:value={appId} disabled={!controller} autocomplete="off" /></label>
   <label for="producer-workflow">{tr('producerWorkflow', $setupLocale)}<input id="producer-workflow" type="text" bind:value={workflowName} disabled={!controller} autocomplete="off" /></label>
 </div>
-<button type="button" onclick={add} disabled={!controller}>{tr('producerAdd', $setupLocale)}</button>
+<button class="secondary-button producer-add" type="button" onclick={add} disabled={!controller}>{tr('producerAdd', $setupLocale)}</button>
 {#if error}<p class="field-error" role="alert">{tr('producerManualInvalid', $setupLocale)}</p>{/if}

@@ -1290,6 +1290,24 @@ Primary design references: [W3C multi-page forms](https://www.w3.org/WAI/tutoria
 [GOV.UK check answers](https://design-system.service.gov.uk/patterns/check-answers/),
 and [GitHub PAT management](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
+### 9.7 Selector spacing regression (2026-10-06)
+
+Observed CI producer and Project cards place their name, metadata, and branch
+rule evidence on separate lines. Checkbox labels retain an explicit gap and
+links occupy a separate column, moving below the label at narrow widths.
+Manual inputs use visible label/control spacing and the shared secondary
+button styling. Scrollable candidate lists reserve room for focus outlines;
+long names wrap within the card. This is presentation-only: selected producer
+identities, Project numbers, validation, and permission policy are unchanged.
+
+Review the three fixture states (producer list/manual fields, Project
+list/manual input, and release strategy) at desktop and narrow widths without
+credentials or live setup. Retain the existing **350-case** acceptance ledger;
+this visual review does not close outstanding screen-reader, platform, or
+human/provider gates. PAT transaction success followed by unavailable storage
+must remain a Plan failure until the separate inventory adapter can read the
+required scopes; it must not start applying setup changes.
+
 ## 10. Failure, recovery, and cleanup
 
 | Condition | Impact and retained facts | Automatic retry | Operator action / cleanup |

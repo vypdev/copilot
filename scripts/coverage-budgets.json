@@ -479,7 +479,10 @@
             "src/infrastructure/setup_permission_issue_cleanup.ts",
             "src/infrastructure/setup_permission_project_probe.ts",
             "src/infrastructure/github_secret_encryption.ts",
-            "src/infrastructure/setup_permission_organization_owner.ts"
+            "src/infrastructure/setup_permission_organization_owner.ts",
+            "src/data/repository/github/github_actions_resource_inspector.ts",
+            "src/data/repository/github/github_actions_resource_commands.ts",
+            "src/data/repository/github/github_actions_resource_collection.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"

@@ -263,6 +263,15 @@ the same structured block; the CLI consumes that result without duplicating
 inventory validation before credential decisions or resource grouping.
 An architecture test rejects mutation methods on the query port and non-GET
 methods in its adapter.
+The GitHub Actions resource facades delegate to separate inventory and command
+adapters with a small shared collection decoder. Secrets and Variables use
+Octokit's `rest.actions` namespace. Effective organization resources are queried
+through repository routes with `owner` and `repo`; organization Variable
+creation and updates use separate SDK endpoints. An isolated transport test
+loads the installed SDK itself, so invented mock namespaces or parameters
+cannot satisfy this contract. Malformed collections remain unavailable and
+never permit provisioning as if no resource existed.
+
 
 There are no installed users or persisted setup state to migrate, so this is a
 greenfield contract: no legacy prompt facade, compatibility overload, dual

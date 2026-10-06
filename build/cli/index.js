@@ -74061,6 +74061,351 @@ async function inspectCredentialHealthWorkflowAtRef(getContent, owner, repositor
 
 /***/ }),
 
+/***/ 81189:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.listCollection = listCollection;
+async function listCollection(client, method, parameters, key) {
+    let resources;
+    if (client.paginate)
+        resources = await client.paginate(method, parameters);
+    else {
+        const response = await method(parameters);
+        resources = Array.isArray(response.data) ? response.data : response.data?.[key];
+    }
+    if (!Array.isArray(resources) || resources.some(item => !item || typeof item !== 'object'
+        || Array.isArray(item) || typeof item.name !== 'string' || !item.name)) {
+        throw new Error('GitHub Actions resource inventory returned invalid data.');
+    }
+    return resources;
+}
+
+
+/***/ }),
+
+/***/ 71301:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubActionsResourceCommands = void 0;
+const github_secret_encryption_1 = __nccwpck_require__(83725);
+const github_actions_resource_collection_1 = __nccwpck_require__(81189);
+/** GitHub Actions Secret encryption and scope-preserving resource writes. */
+class GithubActionsResourceCommands {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+    }
+    async upsertSecrets(owner, repository, token, credentials) {
+        const client = this.githubClient.getClient(token);
+        const actions = client.rest.actions;
+        if (!actions.listRepoSecrets || !actions.getRepoPublicKey || !actions.createOrUpdateRepoSecret) {
+            throw new Error('GitHub repository Secret API is unavailable.');
+        }
+        const existing = new Set((await (0, github_actions_resource_collection_1.listCollection)(client, actions.listRepoSecrets, { owner, repo: repository, per_page: 100 }, 'secrets')).map(secret => secret.name));
+        const publicKey = await actions.getRepoPublicKey({ owner, repo: repository });
+        let created = 0;
+        let updated = 0;
+        const skipped = 0;
+        const errors = [];
+        for (const credential of credentials) {
+            try {
+                await actions.createOrUpdateRepoSecret({
+                    owner,
+                    repo: repository,
+                    secret_name: credential.name,
+                    encrypted_value: await (0, github_secret_encryption_1.encryptSecret)(credential.value, publicKey.data.key),
+                    key_id: publicKey.data.key_id,
+                });
+                if (existing.has(credential.name))
+                    updated += 1;
+                else
+                    created += 1;
+            }
+            catch {
+                errors.push(`Unable to configure repository Secret ${credential.name}.`);
+            }
+        }
+        return { created, updated, skipped, errors };
+    }
+    async upsertScopedSecrets(owner, repository, token, target, credentials) {
+        if (target.scope === 'repository')
+            return this.upsertSecrets(owner, repository, token, credentials);
+        const client = this.githubClient.getClient(token);
+        const secrets = client.rest.actions;
+        if (!secrets?.getOrgPublicKey || !secrets.createOrUpdateOrgSecret || !secrets.listOrgSecrets) {
+            throw new Error('GitHub organization Secret API is unavailable or the setup PAT lacks organization Secret permissions.');
+        }
+        if (target.organizationVisibility === 'selected' && target.repositoryId === undefined) {
+            throw new Error('The repository ID is required for selected organization Secret access.');
+        }
+        const existing = new Map((await (0, github_actions_resource_collection_1.listCollection)(client, secrets.listOrgSecrets, { org: owner, per_page: 30 }, 'secrets'))
+            .map(secret => [secret.name, secret]));
+        const publicKey = await secrets.getOrgPublicKey({ org: owner });
+        let created = 0;
+        let updated = 0;
+        const errors = [];
+        for (const credential of credentials) {
+            try {
+                const current = existing.get(credential.name);
+                const visibility = current?.visibility ?? target.organizationVisibility;
+                await secrets.createOrUpdateOrgSecret({
+                    org: owner,
+                    secret_name: credential.name,
+                    encrypted_value: await (0, github_secret_encryption_1.encryptSecret)(credential.value, publicKey.data.key),
+                    key_id: publicKey.data.key_id,
+                    visibility,
+                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
+                        ? { selected_repository_ids: [target.repositoryId] }
+                        : {}),
+                });
+                if (visibility === 'selected' && target.repositoryId !== undefined && secrets.addSelectedRepoToOrgSecret) {
+                    await secrets.addSelectedRepoToOrgSecret({ org: owner, secret_name: credential.name, repository_id: target.repositoryId });
+                }
+                if (current)
+                    updated += 1;
+                else
+                    created += 1;
+            }
+            catch {
+                errors.push(`Unable to configure organization Secret ${credential.name}.`);
+            }
+        }
+        return { created, updated, skipped: 0, errors };
+    }
+    async upsert(owner, repository, token, variables) {
+        const client = this.githubClient.getClient(token);
+        const existingVariables = await (0, github_actions_resource_collection_1.listCollection)(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
+        const existingValues = new Map(existingVariables.map(variable => [variable.name, variable.value]));
+        let created = 0;
+        let updated = 0;
+        const errors = [];
+        for (const variable of variables) {
+            try {
+                if (existingValues.has(variable.name)) {
+                    if (existingValues.get(variable.name) === variable.value)
+                        continue;
+                    await client.rest.actions.updateRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
+                    updated += 1;
+                }
+                else {
+                    await client.rest.actions.createRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
+                    created += 1;
+                }
+            }
+            catch {
+                errors.push(`Unable to configure repository Variable ${variable.name}.`);
+            }
+        }
+        return { created, updated, errors };
+    }
+    async upsertScopedVariables(owner, repository, token, target, variables) {
+        if (target.scope === 'repository')
+            return this.upsert(owner, repository, token, variables);
+        const client = this.githubClient.getClient(token);
+        const actions = client.rest.actions;
+        if (!actions.listOrgVariables || !actions.createOrgVariable || !actions.updateOrgVariable) {
+            throw new Error('GitHub organization Variable API is unavailable or the setup PAT lacks organization Variable permissions.');
+        }
+        if (target.organizationVisibility === 'selected' && target.repositoryId === undefined) {
+            throw new Error('The repository ID is required for selected organization Variable access.');
+        }
+        const existing = new Map((await (0, github_actions_resource_collection_1.listCollection)(client, actions.listOrgVariables, { org: owner, per_page: 30 }, 'variables'))
+            .map(variable => [variable.name, variable]));
+        let created = 0;
+        let updated = 0;
+        const errors = [];
+        for (const variable of variables) {
+            try {
+                const current = existing.get(variable.name);
+                const visibility = current?.visibility ?? target.organizationVisibility;
+                const write = current ? actions.updateOrgVariable : actions.createOrgVariable;
+                await write({
+                    org: owner,
+                    name: variable.name,
+                    value: variable.value,
+                    visibility,
+                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
+                        ? { selected_repository_ids: [target.repositoryId] }
+                        : {}),
+                });
+                if (visibility === 'selected' && target.repositoryId !== undefined && actions.addSelectedRepoToOrgVariable) {
+                    await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
+                }
+                if (current)
+                    updated += 1;
+                else
+                    created += 1;
+            }
+            catch {
+                errors.push(`Unable to configure organization Variable ${variable.name}.`);
+            }
+        }
+        return { created, updated, errors };
+    }
+}
+exports.GithubActionsResourceCommands = GithubActionsResourceCommands;
+
+
+/***/ }),
+
+/***/ 96558:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubActionsResourceInspector = void 0;
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
+const github_actions_resource_collection_1 = __nccwpck_require__(81189);
+/** Read-only GitHub Actions metadata and effective repository inventory. */
+class GithubActionsResourceInspector {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+    }
+    inspectCredentialHealthWorkflow(owner, repository, token, ref) {
+        const client = this.githubClient.getClient(token);
+        return (0, credential_health_workflow_visibility_1.inspectCredentialHealthWorkflowAtRef)(client.rest.repos?.getContent, owner, repository, ref);
+    }
+    async list(owner, repository, token) {
+        const client = this.githubClient.getClient(token);
+        if (!client.rest.actions.listRepoSecrets)
+            throw new Error('GitHub repository Secret API is unavailable.');
+        const secrets = await (0, github_actions_resource_collection_1.listCollection)(client, client.rest.actions.listRepoSecrets, { owner, repo: repository, per_page: 100 }, 'secrets');
+        return secrets.map(secret => secret.name);
+    }
+    async listVariables(owner, repository, token) {
+        const client = this.githubClient.getClient(token);
+        const variables = await (0, github_actions_resource_collection_1.listCollection)(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
+        return variables.map(variable => ({ name: variable.name, ...(variable.value !== undefined ? { value: variable.value } : {}) }));
+    }
+    async inspect(owner, repository, token) {
+        const client = this.githubClient.getClient(token);
+        if (!client.rest.repos?.get)
+            throw new Error('GitHub repository metadata API is unavailable.');
+        const repositoryResponse = await client.rest.repos.get({ owner, repo: repository });
+        const metadata = repositoryResponse.data;
+        const ownerType = normalizeOwnerType(metadata.owner?.type);
+        const repositoryVisibility = normalizeRepositoryVisibility(metadata.visibility);
+        const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
+        const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
+        const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
+        const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
+        const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
+        return {
+            ownerType,
+            ...(typeof metadata.default_branch === 'string' && (0, deployment_configuration_1.isSafeBranchTree)(metadata.default_branch)
+                ? { defaultBranch: metadata.default_branch } : {}),
+            repositoryId: metadata.id,
+            repositoryVisibility,
+            repositorySecrets: repositorySecretsResult.resources,
+            repositorySecretsAccess: repositorySecretsResult.access,
+            organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            repositoryVariables: repositoryVariablesResult.resources,
+            repositoryVariablesAccess: repositoryVariablesResult.access,
+            organizationVariables: organizationVariablesResult.resources
+                .filter((resource) => resource.value !== undefined)
+                .map(resource => ({ name: resource.name, value: resource.value })),
+            organizationAccess: combineOrganizationAccess(organizationSecretsResult.access, organizationVariablesResult.access),
+            organizationSecretsAccess: organizationSecretsResult.access,
+            organizationVariablesAccess: organizationVariablesResult.access,
+            credentialHealthWorkflow,
+        };
+    }
+    async inspectDefaultCredentialHealthWorkflow(client, owner, repository) {
+        if (!client.rest.actions.getWorkflow)
+            return 'unknown';
+        try {
+            await client.rest.actions.getWorkflow({
+                owner,
+                repo: repository,
+                workflow_id: setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE,
+            });
+            return 'installed';
+        }
+        catch (error) {
+            if (!(0, github_error_policy_1.isGithubNotFound)(error))
+                return 'unavailable';
+            return (0, credential_health_workflow_visibility_1.inspectMissingCredentialHealthWorkflow)(client.rest.repos?.getContent, owner, repository);
+        }
+    }
+    async listRepositorySecretsForInspection(client, owner, repository) {
+        const list = client.rest.actions.listRepoSecrets;
+        if (!list)
+            return { resources: [], access: 'unknown' };
+        try {
+            const resources = await (0, github_actions_resource_collection_1.listCollection)(client, list, { owner, repo: repository, per_page: 100 }, 'secrets');
+            return { resources: resources.map(secret => secret.name), access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+    async listRepositoryVariablesForInspection(client, owner, repository) {
+        try {
+            const resources = (await (0, github_actions_resource_collection_1.listCollection)(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables'))
+                .filter((variable) => variable.value !== undefined)
+                .map(variable => ({ name: variable.name, value: variable.value }));
+            return { resources, access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+    async listOrganizationSecrets(client, owner, repository, ownerType) {
+        if (ownerType !== 'Organization')
+            return { resources: [], access: 'not_applicable' };
+        const list = client.rest.actions.listRepoOrganizationSecrets;
+        if (!list)
+            return { resources: [], access: 'unknown' };
+        try {
+            return { resources: await (0, github_actions_resource_collection_1.listCollection)(client, list, { owner, repo: repository, per_page: 30 }, 'secrets'), access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+    async listOrganizationVariables(client, owner, repository, ownerType) {
+        if (ownerType !== 'Organization')
+            return { resources: [], access: 'not_applicable' };
+        const list = client.rest.actions.listRepoOrganizationVariables;
+        if (!list)
+            return { resources: [], access: 'unknown' };
+        try {
+            return { resources: await (0, github_actions_resource_collection_1.listCollection)(client, list, { owner, repo: repository, per_page: 30 }, 'variables'), access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+}
+exports.GithubActionsResourceInspector = GithubActionsResourceInspector;
+function normalizeOwnerType(value) {
+    return value === 'Organization' ? 'Organization' : value === 'User' ? 'User' : 'Unknown';
+}
+function normalizeRepositoryVisibility(value) {
+    return value === 'public' || value === 'private' || value === 'internal' ? value : 'unknown';
+}
+function combineOrganizationAccess(secrets, variables) {
+    if (secrets === 'not_applicable' && variables === 'not_applicable')
+        return 'not_applicable';
+    if (secrets === 'available' || variables === 'available')
+        return 'available';
+    if (secrets === 'unavailable' || variables === 'unavailable')
+        return 'unavailable';
+    return 'unknown';
+}
+
+
+/***/ }),
+
 /***/ 58791:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -77545,283 +77890,12 @@ function releaseIdAsString(id) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandRepository = exports.SetupRemoteConfigurationQueryRepository = exports.RepositoryVariablesQueryRepository = exports.RepositorySecretNamesQueryRepository = void 0;
-const setup_workflow_catalog_1 = __nccwpck_require__(24596);
-const github_error_policy_1 = __nccwpck_require__(58791);
-const credential_health_workflow_visibility_1 = __nccwpck_require__(57628);
-const github_secret_encryption_1 = __nccwpck_require__(83725);
-const deployment_configuration_1 = __nccwpck_require__(22495);
-class GithubActionsResourceTransport {
-    constructor(githubClient) {
-        this.githubClient = githubClient;
-    }
-    inspectCredentialHealthWorkflow(owner, repository, token, ref) {
-        const client = this.githubClient.getClient(token);
-        return (0, credential_health_workflow_visibility_1.inspectCredentialHealthWorkflowAtRef)(client.rest.repos?.getContent, owner, repository, ref);
-    }
-    async list(owner, repository, token) {
-        const client = this.githubClient.getClient(token);
-        if (!client.rest.secrets)
-            throw new Error('GitHub repository Secret API is unavailable.');
-        const secrets = await listCollection(client, client.rest.secrets.listRepoSecrets, { owner, repo: repository, per_page: 100 }, 'secrets');
-        return secrets.map(secret => secret.name);
-    }
-    async listVariables(owner, repository, token) {
-        const client = this.githubClient.getClient(token);
-        const variables = await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
-        return variables.map(variable => ({ name: variable.name, ...(variable.value !== undefined ? { value: variable.value } : {}) }));
-    }
-    async inspect(owner, repository, token) {
-        const client = this.githubClient.getClient(token);
-        if (!client.rest.repos?.get)
-            throw new Error('GitHub repository metadata API is unavailable.');
-        const repositoryResponse = await client.rest.repos.get({ owner, repo: repository });
-        const metadata = repositoryResponse.data;
-        const ownerType = normalizeOwnerType(metadata.owner?.type);
-        const repositoryVisibility = normalizeRepositoryVisibility(metadata.visibility);
-        const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
-        const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
-        const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
-        const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
-        const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
-        return {
-            ownerType,
-            ...(typeof metadata.default_branch === 'string' && (0, deployment_configuration_1.isSafeBranchTree)(metadata.default_branch)
-                ? { defaultBranch: metadata.default_branch } : {}),
-            repositoryId: metadata.id,
-            repositoryVisibility,
-            repositorySecrets: repositorySecretsResult.resources,
-            repositorySecretsAccess: repositorySecretsResult.access,
-            organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
-            repositoryVariables: repositoryVariablesResult.resources,
-            repositoryVariablesAccess: repositoryVariablesResult.access,
-            organizationVariables: organizationVariablesResult.resources
-                .filter((resource) => resource.value !== undefined)
-                .map(resource => ({ name: resource.name, value: resource.value })),
-            organizationAccess: combineOrganizationAccess(organizationSecretsResult.access, organizationVariablesResult.access),
-            organizationSecretsAccess: organizationSecretsResult.access,
-            organizationVariablesAccess: organizationVariablesResult.access,
-            credentialHealthWorkflow,
-        };
-    }
-    async inspectDefaultCredentialHealthWorkflow(client, owner, repository) {
-        if (!client.rest.actions.getWorkflow)
-            return 'unknown';
-        try {
-            await client.rest.actions.getWorkflow({
-                owner,
-                repo: repository,
-                workflow_id: setup_workflow_catalog_1.SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE,
-            });
-            return 'installed';
-        }
-        catch (error) {
-            if (!(0, github_error_policy_1.isGithubNotFound)(error))
-                return 'unavailable';
-            return (0, credential_health_workflow_visibility_1.inspectMissingCredentialHealthWorkflow)(client.rest.repos?.getContent, owner, repository);
-        }
-    }
-    async listRepositorySecretsForInspection(client, owner, repository) {
-        const list = client.rest.secrets?.listRepoSecrets;
-        if (!list)
-            return { resources: [], access: 'unknown' };
-        try {
-            const resources = await listCollection(client, list, { owner, repo: repository, per_page: 100 }, 'secrets');
-            return { resources: resources.map(secret => secret.name), access: 'available' };
-        }
-        catch {
-            return { resources: [], access: 'unavailable' };
-        }
-    }
-    async listRepositoryVariablesForInspection(client, owner, repository) {
-        try {
-            const resources = (await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables'))
-                .filter((variable) => variable.value !== undefined)
-                .map(variable => ({ name: variable.name, value: variable.value }));
-            return { resources, access: 'available' };
-        }
-        catch {
-            return { resources: [], access: 'unavailable' };
-        }
-    }
-    async upsertSecrets(owner, repository, token, credentials) {
-        const client = this.githubClient.getClient(token);
-        if (!client.rest.secrets)
-            throw new Error('GitHub repository Secret API is unavailable.');
-        const existing = new Set(await this.list(owner, repository, token));
-        const publicKey = await client.rest.secrets.getRepoPublicKey({ owner, repo: repository });
-        let created = 0;
-        let updated = 0;
-        const skipped = 0;
-        const errors = [];
-        for (const credential of credentials) {
-            try {
-                await client.rest.secrets.createOrUpdateRepoSecret({
-                    owner,
-                    repo: repository,
-                    secret_name: credential.name,
-                    encrypted_value: await (0, github_secret_encryption_1.encryptSecret)(credential.value, publicKey.data.key),
-                    key_id: publicKey.data.key_id,
-                });
-                if (existing.has(credential.name))
-                    updated += 1;
-                else
-                    created += 1;
-            }
-            catch {
-                errors.push(`Unable to configure repository Secret ${credential.name}.`);
-            }
-        }
-        return { created, updated, skipped, errors };
-    }
-    async upsertScopedSecrets(owner, repository, token, target, credentials) {
-        if (target.scope === 'repository')
-            return this.upsertSecrets(owner, repository, token, credentials);
-        const client = this.githubClient.getClient(token);
-        const secrets = client.rest.secrets;
-        if (!secrets?.getOrgPublicKey || !secrets.createOrUpdateOrgSecret || !secrets.listOrgSecrets) {
-            throw new Error('GitHub organization Secret API is unavailable or the setup PAT lacks organization Secret permissions.');
-        }
-        if (target.organizationVisibility === 'selected' && target.repositoryId === undefined) {
-            throw new Error('The repository ID is required for selected organization Secret access.');
-        }
-        const existing = new Map((await listCollection(client, secrets.listOrgSecrets, { org: owner, per_page: 30 }, 'secrets'))
-            .map(secret => [secret.name, secret]));
-        const publicKey = await secrets.getOrgPublicKey({ org: owner });
-        let created = 0;
-        let updated = 0;
-        const errors = [];
-        for (const credential of credentials) {
-            try {
-                const current = existing.get(credential.name);
-                const visibility = current?.visibility ?? target.organizationVisibility;
-                await secrets.createOrUpdateOrgSecret({
-                    org: owner,
-                    secret_name: credential.name,
-                    encrypted_value: await (0, github_secret_encryption_1.encryptSecret)(credential.value, publicKey.data.key),
-                    key_id: publicKey.data.key_id,
-                    visibility,
-                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
-                        ? { selected_repository_ids: [target.repositoryId] }
-                        : {}),
-                });
-                if (visibility === 'selected' && target.repositoryId !== undefined && secrets.addSelectedRepoToOrgSecret) {
-                    await secrets.addSelectedRepoToOrgSecret({ org: owner, secret_name: credential.name, repository_id: target.repositoryId });
-                }
-                if (current)
-                    updated += 1;
-                else
-                    created += 1;
-            }
-            catch {
-                errors.push(`Unable to configure organization Secret ${credential.name}.`);
-            }
-        }
-        return { created, updated, skipped: 0, errors };
-    }
-    async upsert(owner, repository, token, variables) {
-        const client = this.githubClient.getClient(token);
-        const existingVariables = await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
-        const existingValues = new Map(existingVariables.map(variable => [variable.name, variable.value]));
-        let created = 0;
-        let updated = 0;
-        const errors = [];
-        for (const variable of variables) {
-            try {
-                if (existingValues.has(variable.name)) {
-                    if (existingValues.get(variable.name) === variable.value)
-                        continue;
-                    await client.rest.actions.updateRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
-                    updated += 1;
-                }
-                else {
-                    await client.rest.actions.createRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
-                    created += 1;
-                }
-            }
-            catch {
-                errors.push(`Unable to configure repository Variable ${variable.name}.`);
-            }
-        }
-        return { created, updated, errors };
-    }
-    async upsertScopedVariables(owner, repository, token, target, variables) {
-        if (target.scope === 'repository')
-            return this.upsert(owner, repository, token, variables);
-        const client = this.githubClient.getClient(token);
-        const actions = client.rest.actions;
-        if (!actions.listOrgVariables || !actions.createOrUpdateOrgVariable) {
-            throw new Error('GitHub organization Variable API is unavailable or the setup PAT lacks organization Variable permissions.');
-        }
-        if (target.organizationVisibility === 'selected' && target.repositoryId === undefined) {
-            throw new Error('The repository ID is required for selected organization Variable access.');
-        }
-        const existing = new Map((await listCollection(client, actions.listOrgVariables, { org: owner, per_page: 30 }, 'variables'))
-            .map(variable => [variable.name, variable]));
-        let created = 0;
-        let updated = 0;
-        const errors = [];
-        for (const variable of variables) {
-            try {
-                const current = existing.get(variable.name);
-                const visibility = current?.visibility ?? target.organizationVisibility;
-                await actions.createOrUpdateOrgVariable({
-                    org: owner,
-                    name: variable.name,
-                    value: variable.value,
-                    visibility,
-                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
-                        ? { selected_repository_ids: [target.repositoryId] }
-                        : {}),
-                });
-                if (visibility === 'selected' && target.repositoryId !== undefined && actions.addSelectedRepoToOrgVariable) {
-                    await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
-                }
-                if (current)
-                    updated += 1;
-                else
-                    created += 1;
-            }
-            catch {
-                errors.push(`Unable to configure organization Variable ${variable.name}.`);
-            }
-        }
-        return { created, updated, errors };
-    }
-    async listOrganizationSecrets(client, repositoryId, ownerType) {
-        if (ownerType !== 'Organization')
-            return { resources: [], access: 'not_applicable' };
-        if (repositoryId === undefined)
-            return { resources: [], access: 'unknown' };
-        const list = client.rest.secrets?.listRepoOrganizationSecrets;
-        if (!list)
-            return { resources: [], access: 'unknown' };
-        try {
-            return { resources: await listCollection(client, list, { repository_id: repositoryId, per_page: 30 }, 'secrets'), access: 'available' };
-        }
-        catch {
-            return { resources: [], access: 'unavailable' };
-        }
-    }
-    async listOrganizationVariables(client, repositoryId, ownerType) {
-        if (ownerType !== 'Organization')
-            return { resources: [], access: 'not_applicable' };
-        if (repositoryId === undefined)
-            return { resources: [], access: 'unknown' };
-        const list = client.rest.actions.listRepoOrganizationVariables;
-        if (!list)
-            return { resources: [], access: 'unknown' };
-        try {
-            return { resources: await listCollection(client, list, { repository_id: repositoryId, per_page: 30 }, 'variables'), access: 'available' };
-        }
-        catch {
-            return { resources: [], access: 'unavailable' };
-        }
-    }
-}
+const github_actions_resource_inspector_1 = __nccwpck_require__(96558);
+const github_actions_resource_commands_1 = __nccwpck_require__(71301);
 /** Read-only repository Secret metadata boundary. Secret values are never available. */
 class RepositorySecretNamesQueryRepository {
     constructor(githubClient) {
-        this.transport = new GithubActionsResourceTransport(githubClient);
+        this.transport = new github_actions_resource_inspector_1.GithubActionsResourceInspector(githubClient);
     }
     list(owner, repository, token) {
         return this.transport.list(owner, repository, token);
@@ -77831,7 +77905,7 @@ exports.RepositorySecretNamesQueryRepository = RepositorySecretNamesQueryReposit
 /** Read-only repository Variable metadata boundary. */
 class RepositoryVariablesQueryRepository {
     constructor(githubClient) {
-        this.transport = new GithubActionsResourceTransport(githubClient);
+        this.transport = new github_actions_resource_inspector_1.GithubActionsResourceInspector(githubClient);
     }
     listVariables(owner, repository, token) {
         return this.transport.listVariables(owner, repository, token);
@@ -77841,7 +77915,7 @@ exports.RepositoryVariablesQueryRepository = RepositoryVariablesQueryRepository;
 /** Read-only aggregate of GitHub Actions resource facts used by setup and doctor policy. */
 class SetupRemoteConfigurationQueryRepository {
     constructor(githubClient) {
-        this.transport = new GithubActionsResourceTransport(githubClient);
+        this.transport = new github_actions_resource_inspector_1.GithubActionsResourceInspector(githubClient);
     }
     inspect(owner, repository, token) {
         return this.transport.inspect(owner, repository, token);
@@ -77854,7 +77928,7 @@ exports.SetupRemoteConfigurationQueryRepository = SetupRemoteConfigurationQueryR
 /** Variable mutation boundary used only by setup application. */
 class RepositoryVariablesCommandRepository {
     constructor(githubClient) {
-        this.transport = new GithubActionsResourceTransport(githubClient);
+        this.transport = new github_actions_resource_commands_1.GithubActionsResourceCommands(githubClient);
     }
     upsert(owner, repository, token, variables) {
         return this.transport.upsert(owner, repository, token, variables);
@@ -77867,7 +77941,7 @@ exports.RepositoryVariablesCommandRepository = RepositoryVariablesCommandReposit
 /** Secret mutation boundary used only by setup application. */
 class RepositorySecretsCommandRepository {
     constructor(githubClient) {
-        this.transport = new GithubActionsResourceTransport(githubClient);
+        this.transport = new github_actions_resource_commands_1.GithubActionsResourceCommands(githubClient);
     }
     upsertSecrets(owner, repository, token, credentials) {
         return this.transport.upsertSecrets(owner, repository, token, credentials);
@@ -77877,27 +77951,6 @@ class RepositorySecretsCommandRepository {
     }
 }
 exports.RepositorySecretsCommandRepository = RepositorySecretsCommandRepository;
-async function listCollection(client, method, parameters, key) {
-    if (client.paginate)
-        return client.paginate(method, parameters);
-    const response = await method(parameters);
-    return Array.isArray(response.data) ? response.data : response.data[key] ?? [];
-}
-function normalizeOwnerType(value) {
-    return value === 'Organization' ? 'Organization' : value === 'User' ? 'User' : 'Unknown';
-}
-function normalizeRepositoryVisibility(value) {
-    return value === 'public' || value === 'private' || value === 'internal' ? value : 'unknown';
-}
-function combineOrganizationAccess(secrets, variables) {
-    if (secrets === 'not_applicable' && variables === 'not_applicable')
-        return 'not_applicable';
-    if (secrets === 'available' || variables === 'available')
-        return 'available';
-    if (secrets === 'unavailable' || variables === 'unavailable')
-        return 'unavailable';
-    return 'unknown';
-}
 
 
 /***/ }),
@@ -86118,7 +86171,7 @@ function writeProbeFailure(requirement, error) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProbeJournalHandle = exports.SetupPermissionProbeJournal = void 0;
+exports.ProbeJournalHandle = exports.SetupPermissionProbeJournal = exports.LegacyActionsRecoveryRequired = void 0;
 const setup_permission_workflow_cleanup_1 = __nccwpck_require__(72221);
 const setup_permission_project_cleanup_1 = __nccwpck_require__(43660);
 const node_crypto_1 = __nccwpck_require__(6005);
@@ -86129,6 +86182,10 @@ const node_path_1 = __nccwpck_require__(49411);
 const setup_permission_probe_http_1 = __nccwpck_require__(5110);
 const setup_permission_issue_cleanup_1 = __nccwpck_require__(63279);
 const supported = new Set(['variables', 'secrets', 'issues', 'issue-types', 'contents', 'workflows', 'projects', 'pull-requests', 'actions']);
+/** Legacy dispatched runs cannot be deleted without an independently verified workflow identity. */
+class LegacyActionsRecoveryRequired extends setup_permission_probe_http_1.ProbeFailure {
+}
+exports.LegacyActionsRecoveryRequired = LegacyActionsRecoveryRequired;
 /** No token or test value is persisted. A file exists before the first remote mutation. */
 class SetupPermissionProbeJournal {
     constructor(root = (0, node_path_1.join)((0, node_os_1.homedir)(), '.copilot', 'setup-permission-probes')) {
@@ -86289,6 +86346,10 @@ class ProbeJournalHandle {
             await (0, setup_permission_project_cleanup_1.cleanupProject)(http, owner, name, this.entry.remoteId);
         }
         else if (probe === 'actions') {
+            if (this.entry.version === 1 && this.entry.workflowId === undefined
+                && (this.entry.dispatchAttempted || this.entry.runId !== undefined)) {
+                throw new LegacyActionsRecoveryRequired(`Legacy Actions cleanup record has no workflow identity. Inspect workflow_dispatch runs for ${owner}/${repository} on temporary branch ${name}, cancel and delete only the verified temporary run, then remove that branch only after checking its recorded commit. Once GitHub cleanup is confirmed, remove only the journal file ${this.path} and retry setup.`);
+            }
             await (0, setup_permission_workflow_cleanup_1.cleanupActionRun)(http, root, name, this.entry.runId, this.entry.dispatchAttempted === true, this.entry.workflowId);
             await cleanupReference(http, root, name, this.entry.referenceSha);
         }
@@ -87807,7 +87868,7 @@ class SetupTokenPermissionQueryAdapter {
             activeInspections.delete(target);
         }
     }
-    async inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites = false) {
+    async inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites) {
         try {
             // Read-only identity checks and previews must never perform recovery writes.
             if (requirements.some(item => item.level === 'write'
@@ -87821,7 +87882,9 @@ class SetupTokenPermissionQueryAdapter {
                     detail: error instanceof setup_permission_probe_http_1.ProbeCollision ? 'secret-collision' : 'cleanup-pending' });
                 const check = (0, setup_permission_read_evidence_1.outcome)(requirement, 'unverifiable', error instanceof setup_permission_probe_http_1.ProbeCollision
                     ? 'An earlier Secret collision requires GitHub audit-trail review and reconciliation of its local incident record before retrying.'
-                    : 'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
+                    : error instanceof setup_permission_probe_journal_1.LegacyActionsRecoveryRequired
+                        ? 'A legacy Actions recovery record has no workflow identity. Inspect the temporary branch and recorded commit in the local recovery journal; manually cancel and delete only its verified workflow_dispatch run, then remove the verified branch. Remove only that journal file after confirming GitHub cleanup, and retry setup.'
+                        : 'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
                 return requirement.level === 'write' ? { ...check, cleanupPending: true,
                     ...(error instanceof setup_permission_probe_http_1.ProbeCollision && requirement.probe === 'secrets'
                         ? { incident: 'secret-collision' } : {}) } : check;
@@ -87829,7 +87892,7 @@ class SetupTokenPermissionQueryAdapter {
         }
         return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites)), SETUP_PERMISSION_PROBE_CONCURRENCY);
     }
-    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites = false) {
+    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites) {
         let acceptingProgress = true;
         const emit = (phase, detail) => {
             if (acceptingProgress)
@@ -87886,7 +87949,7 @@ class SetupTokenPermissionQueryAdapter {
                 }
                 const target = await (0, setup_permission_read_probe_1.resolveProbeTarget)(owner, repository, requirement, request);
                 if (target.status === 'complete') {
-                    emit(target.check.status === 'verified' || target.check.status === 'available' ? 'verified' : 'failed', target.check.status === 'verified' || target.check.status === 'available' ? undefined : probeDiagnostic(target.check.message));
+                    emit('failed', probeDiagnostic(target.check.message));
                     return target.check;
                 }
                 const response = target.response ?? await request(target.url);

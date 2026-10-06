@@ -30,6 +30,9 @@ interface ProbeJournalEntry {
 
 const supported = new Set<SetupTokenPermissionProbe>(['variables', 'secrets', 'issues', 'issue-types', 'contents', 'workflows', 'projects', 'pull-requests', 'actions']);
 
+/** Legacy dispatched runs cannot be deleted without an independently verified workflow identity. */
+export class LegacyActionsRecoveryRequired extends ProbeFailure {}
+
 /** No token or test value is persisted. A file exists before the first remote mutation. */
 export class SetupPermissionProbeJournal {
     constructor(private readonly root = join(homedir(), '.copilot', 'setup-permission-probes')) {}
@@ -178,6 +181,10 @@ export class ProbeJournalHandle {
         if (probe === 'projects') {
             await cleanupProject(http, owner, name, this.entry.remoteId);
         } else if (probe === 'actions') {
+            if (this.entry.version === 1 && this.entry.workflowId === undefined
+                && (this.entry.dispatchAttempted || this.entry.runId !== undefined)) {
+                throw new LegacyActionsRecoveryRequired(`Legacy Actions cleanup record has no workflow identity. Inspect workflow_dispatch runs for ${owner}/${repository} on temporary branch ${name}, cancel and delete only the verified temporary run, then remove that branch only after checking its recorded commit. Once GitHub cleanup is confirmed, remove only the journal file ${this.path} and retry setup.`);
+            }
             await cleanupActionRun(http, root, name, this.entry.runId, this.entry.dispatchAttempted === true, this.entry.workflowId);
             await cleanupReference(http, root, name, this.entry.referenceSha);
         } else if (probe === 'pull-requests') {

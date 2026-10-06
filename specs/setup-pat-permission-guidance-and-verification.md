@@ -554,7 +554,14 @@ readable for conservative recovery, including old label probes. New branch
 entries record `referenceSha` before creation and after any successful file
 commit. Actions entries also record the selected workflow ID before dispatch;
 run cleanup requires that ID as well as run ID, event and branch. A present
-legacy run without its workflow identity is retained. Secret collisions keep a
+legacy dispatched record without its workflow identity is rejected before
+network recovery, whether or not it contains a run ID. The CLI reports a safe
+manual path: inspect the matching journal, verify/cancel/delete the exact
+`workflow_dispatch` run, verify the recorded branch commit before deleting its
+ref, confirm remote absence, then remove only that journal file and retry.
+No workflow identity is inferred from an untrusted run-list match. A legacy
+record with neither attempted dispatch nor run ID can still recover its branch
+under the existing commit/absence rules. Secret collisions keep a
 version-two incident record that blocks another audit without deleting the
 unknown Secret; only manual reconciliation can remove that marker. A present legacy ref without a SHA is retained, never deleted blindly;
 an already-absent one can be resolved. POSIX root/files are private; Windows
@@ -627,6 +634,20 @@ individually. Existing
 family write, session replay, four-locale UI and cross-platform workflow-contract
 suites remain required. No fake-timer test relies on real waits. Human provider,
 Windows ACL, responsive and accessibility observations remain separately open.
+
+### 14.1 SDK, recovery and patch-coverage regression slice (2026-10-06)
+
+Add at least **31 distinct automated cases** to the retained budget: one real
+installed-SDK transport scenario, 14 inventory/provisioning boundary cases,
+10 read-evidence and legacy-recovery cases, four CLI/application propagation
+cases, and two in-process signal-handler cases. This raises the minimum audit
+extension to **223** and the combined baseline minimum to **421**; human gates
+remain open. Mock-only success cannot establish SDK interoperability. The
+patch must have no uncovered executable changed lines or partial changed
+branches in the local merged coverage, followed by a fresh Codecov report.
+
+Provider references: [repository organization Secrets](https://docs.github.com/en/rest/actions/secrets#list-repository-organization-secrets)
+and [repository organization Variables](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables).
 
 ## 15. Documentation and discoverability
 

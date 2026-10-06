@@ -11,7 +11,7 @@ import type {
 import { runWithConcurrencyLimit } from '../application/policies/bounded_concurrency_policy';
 import { probeDisposableResource } from './setup_permission_resource_probes';
 import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, writeProbeFailure } from './setup_permission_probe_http';
-import { SetupPermissionProbeJournal } from './setup_permission_probe_journal';
+import { LegacyActionsRecoveryRequired, SetupPermissionProbeJournal } from './setup_permission_probe_journal';
 import { requireSelectedProjectsWriteAccess } from './setup_permission_projects_access';
 import { requireRepositoryOrganizationOwner } from './setup_permission_organization_owner';
 
@@ -58,9 +58,9 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
 
     private async inspectExclusive(owner: string, repository: string, token: string,
         requirements: readonly SetupTokenPermissionRequirement[],
-        onProgress?: (progress: SetupTokenPermissionProgress) => void,
-        selectedProjectNumbers?: string,
-        includeConditionalWrites = false,
+        onProgress: ((progress: SetupTokenPermissionProgress) => void) | undefined,
+        selectedProjectNumbers: string | undefined,
+        includeConditionalWrites: boolean,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
         try {
             // Read-only identity checks and previews must never perform recovery writes.
@@ -76,7 +76,9 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
                 const check = outcome(requirement, 'unverifiable',
                     error instanceof ProbeCollision
                         ? 'An earlier Secret collision requires GitHub audit-trail review and reconciliation of its local incident record before retrying.'
-                        : 'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
+                        : error instanceof LegacyActionsRecoveryRequired
+                            ? 'A legacy Actions recovery record has no workflow identity. Inspect the temporary branch and recorded commit in the local recovery journal; manually cancel and delete only its verified workflow_dispatch run, then remove the verified branch. Remove only that journal file after confirming GitHub cleanup, and retry setup.'
+                            : 'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
                 return requirement.level === 'write' ? { ...check, cleanupPending: true,
                     ...(error instanceof ProbeCollision && requirement.probe === 'secrets'
                         ? { incident: 'secret-collision' as const } : {}) } : check;
@@ -94,9 +96,9 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         repository: string,
         token: string,
         requirement: SetupTokenPermissionRequirement,
-        onProgress?: (progress: SetupTokenPermissionProgress) => void,
-        selectedProjectNumbers?: string,
-        includeConditionalWrites = false,
+        onProgress: ((progress: SetupTokenPermissionProgress) => void) | undefined,
+        selectedProjectNumbers: string | undefined,
+        includeConditionalWrites: boolean,
     ): Promise<SetupTokenPermissionCheck> {
         let acceptingProgress = true;
         const emit = (phase: SetupTokenPermissionProgress['phase'], detail?: SetupTokenPermissionProgress['detail']) => {
@@ -154,8 +156,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
                 }
                 const target = await resolveProbeTarget(owner, repository, requirement, request);
                 if (target.status === 'complete') {
-                    emit(target.check.status === 'verified' || target.check.status === 'available' ? 'verified' : 'failed',
-                        target.check.status === 'verified' || target.check.status === 'available' ? undefined : probeDiagnostic(target.check.message));
+                    emit('failed', probeDiagnostic(target.check.message));
                     return target.check;
                 }
                 const response = target.response ?? await request(target.url);

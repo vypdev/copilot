@@ -129,6 +129,19 @@ describe('setup session guard', () => {
     }
   });
 
+  test.each([['SIGINT', 130], ['SIGTERM', 143]] as const)('installs %s handler only while the session owns its lock', (signal, code) => {
+    const originalListeners = process.listeners(signal);
+    const release = acquireSetupSessionGuard(root);
+    const exit = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    try {
+      process.emit(signal);
+      expect(exit).toHaveBeenCalledWith(code);
+      release();
+      expect(process.listeners(signal)).toEqual(originalListeners);
+      expect(existsSync(lockPath())).toBe(false);
+    } finally { release(); exit.mockRestore(); }
+  });
+
   test('propagates a filesystem error instead of treating it as a competing session', () => {
     const open = jest.spyOn(require('node:fs'), 'openSync').mockImplementationOnce(() => { throw Object.assign(new Error('Permission denied'), { code: 'EACCES' }); });
     try {

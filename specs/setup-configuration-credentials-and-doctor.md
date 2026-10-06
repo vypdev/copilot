@@ -269,6 +269,16 @@ Config objects contain names and policies, never secret values. The workspace
 adapter owns backups and writes; GitHub adapters own remote error mapping.
 Architecture tests and workflow/catalog validators enforce dependencies and
 asset parity.
+The Actions resource facade delegates inventory reads to
+`GithubActionsResourceInspector` and scope-preserving mutations to
+`GithubActionsResourceCommands`, sharing only collection decoding. Provider
+protocols must match the installed Octokit: Secrets belong to `rest.actions`,
+effective organization inventory accepts `owner`/`repo`, and organization
+Variables use distinct create/update methods. Missing methods or malformed
+collections cannot masquerade as empty inventory. The SDK integration test
+uses an intercepted fixture transport, exercises organization inventory and
+Secret/Variable provisioning, and makes no live provider request.
+
 
 The shared coordinator is the authority for stage order, cancellation before
 mutation, single-flight Apply, and the conservative partial outcome once a

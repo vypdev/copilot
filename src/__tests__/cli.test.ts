@@ -1763,6 +1763,33 @@ describe('CLI', () => {
       expect(process.exitCode).toBe(1);
     });
 
+    it('reports partial cleanup when the initial write audit leaves a temporary resource', async () => {
+      const inspect = mockTokenPermissionInspect.getMockImplementation()!;
+      mockTokenPermissionInspect.mockImplementationOnce(inspect).mockImplementationOnce(async request => {
+        const report = await inspect(request);
+        return { ...report, ready: false, checks: report.checks.map(check => check.level === 'write'
+          ? { ...check, status: 'unverifiable' as const, cleanupPending: true } : check) };
+      });
+      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12',
+        '--skip-secrets', '--non-interactive', '--pr-approval-mode', 'off', '--yes']);
+      expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+      expect(mockSetupCredentialsCollect).not.toHaveBeenCalled();
+      expect(runLocalAction).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(1);
+    });
+
+    it('forwards configured Project numbers to the workflow PAT capability audit', async () => {
+      const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
+      const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides').mockReturnValue({ projects: { ids: '2' } });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--config', 'project-fixture.yml',
+          '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12', '--skip-secrets', '--skip-variables',
+          '--non-interactive', '--pr-approval-mode', 'off', '--yes']);
+        expect(mockSetupCredentialsCollect).toHaveBeenCalledWith(expect.objectContaining({ selectedProjectNumbers: '2' }));
+        expect(process.exitCode).toBeUndefined();
+      } finally { loadConfig.mockRestore(); }
+    });
+
     it('blocks unavailable managed inventory before the final configured write audit', async () => {
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ownerType: 'User',

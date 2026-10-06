@@ -731,7 +731,10 @@
         "src/actions/github_action_input.ts",
         "src/infrastructure/setup_github_identity_query_adapter.ts",
         "src/infrastructure/github_secret_encryption.ts",
-        "src/infrastructure/setup_permission_organization_owner.ts"
+        "src/infrastructure/setup_permission_organization_owner.ts",
+        "src/data/repository/github/github_actions_resource_inspector.ts",
+        "src/data/repository/github/github_actions_resource_commands.ts",
+        "src/data/repository/github/github_actions_resource_collection.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -779,7 +782,10 @@
         "src/infrastructure/__tests__/setup_permission_boundary_failures.test.ts",
         "src/infrastructure/__tests__/github_secret_encryption.test.ts",
         "src/infrastructure/__tests__/setup_permission_organization_owner.test.ts",
-        "src/infrastructure/__tests__/setup_pat_bootstrap_transactions.test.ts"
+        "src/infrastructure/__tests__/setup_pat_bootstrap_transactions.test.ts",
+        "src/data/repository/__tests__/repository_actions_sdk_contract.integration.test.ts",
+        "src/data/repository/__tests__/repository_actions_resource_edge_cases.test.ts",
+        "src/infrastructure/__tests__/setup_permission_read_contract.test.ts"
       ],
       "documentation": [
         "README.md",

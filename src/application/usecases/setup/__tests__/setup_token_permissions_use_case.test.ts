@@ -17,6 +17,15 @@ const requiredWrite: SetupTokenPermissionRequirement = {
 };
 
 describe('SetupTokenPermissionsUseCase', () => {
+    it.each([true, false])('forwards explicit conditional-write intent with optional progress (%s)', async includeConditionalWrites => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const inspect = jest.fn().mockResolvedValue([{ ...required, status: 'verified', message: 'ok' }]);
+        const progress = includeConditionalWrites ? jest.fn() : undefined;
+        await new SetupTokenPermissionsUseCase(validation, { inspect }, progress).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [required], includeConditionalWrites,
+        });
+        expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'fixture', [required], progress, undefined, includeConditionalWrites);
+    });
     it('forwards live progress only after identity validation and preserves the selected Project context', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
         const progress = jest.fn();

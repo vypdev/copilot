@@ -147,12 +147,29 @@ directory. The lock contains no PAT or other credential.
     repository-scope default. Restore inventory access
     and rerun setup; an absent snapshot is never treated as an empty repository.
 
+    If PAT transactions pass but Plan reports organization Secrets or Variables
+    as unavailable, the failure is a separate inventory read. Upgrade the local
+    installation and restart the session: older adapters used incompatible SDK
+    methods or repository parameters for these inventories. A valid PAT does
+    not make that adapter error a missing grant. If the problem persists, check
+    the selected scopes, repository selection, organization policy, and the
+    named inventory errors in the terminal; setup must preserve unknown
+    inventory rather than treating it as empty.
+
     A Secret collision keeps a version-two incident marker under
     `~/.copilot/setup-permission-probes/`. Review the GitHub audit trail and
     reconcile the potentially replaced value before removing that marker
     manually; retries never delete the unknown Secret. Older releases reject
     new journal records, so complete recovery before rolling back. A legacy
-    Actions run lacking its workflow ID also requires manual inspection.
+    Actions record lacking its workflow ID blocks automatic recovery before
+    any GitHub request. Open the matching journal and inspect its repository,
+    temporary branch, recorded commit, and optional run ID. In GitHub Actions,
+    identify the exact `workflow_dispatch` run on that branch; cancel it if
+    active and delete it only after verifying its ownership. Delete the branch
+    only after verifying its recorded commit. If the run or branch is already
+    absent, confirm that independently. Remove only that matching journal file
+    after GitHub cleanup is confirmed, then retry setup. Never delete the whole
+    journal directory to bypass a pending resource.
 
     If cleanup reports that a temporary branch changed, inspect its exact ref
     and the local journal before deleting it manually. Copilot refuses to delete
