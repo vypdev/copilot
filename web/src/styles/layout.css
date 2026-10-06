@@ -1,4 +1,4 @@
-.shell { min-min-height: 100vh; display: grid; grid-template-columns: minmax(250px, 288px) minmax(0, 1fr); }
+.shell { min-height: 100vh; display: grid; grid-template-columns: minmax(250px, 288px) minmax(0, 1fr); }
 .sidebar { background: var(--side); color: var(--side-text); padding: 34px 28px; display: flex; flex-direction: column; position: sticky; top: 0; min-height: 100vh; }
 .brand { display: flex; align-items: center; gap: 13px; letter-spacing: -.035em; }
 .brand-mark { width: 37px; height: 37px; display: grid; place-items: center; border-radius: 11px; background: #75d9a0; color: #0c3021; font-size: 26px; line-height: 1; }
