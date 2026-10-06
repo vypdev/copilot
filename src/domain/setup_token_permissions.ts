@@ -64,8 +64,8 @@ export interface SetupTokenPermissionReport {
     identityStatus: 'valid' | 'invalid' | 'unverifiable';
     identityMessage: string;
     checks: readonly SetupTokenPermissionCheck[];
-    /** True only when every required row is a verified or positively usable read. */
+    /** All required reads are usable, writes have transaction proof, and no cleanup or incident remains. */
     ready: boolean;
-    /** True only when required reads are verified/usable and writes need explicit acknowledgement. */
+    /** Compatibility field; permission assertions cannot replace transaction proof and this stays false. */
     confirmationRequired: boolean;
 }

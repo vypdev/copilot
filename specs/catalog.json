@@ -771,7 +771,10 @@
         "src/actions/__tests__/github_action_input.test.ts",
         "src/infrastructure/__tests__/setup_permission_cleanup_contract.test.ts",
         "src/infrastructure/__tests__/setup_permission_journal_contract.test.ts",
-        "src/infrastructure/__tests__/setup_permission_audit_transactions.test.ts"
+        "src/infrastructure/__tests__/setup_permission_audit_transactions.test.ts",
+        "src/infrastructure/__tests__/setup_permission_write_failures.test.ts",
+        "src/infrastructure/__tests__/setup_permission_resource_failures.test.ts",
+        "src/infrastructure/__tests__/setup_permission_boundary_failures.test.ts"
       ],
       "documentation": [
         "README.md",

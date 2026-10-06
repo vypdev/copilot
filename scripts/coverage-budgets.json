@@ -466,13 +466,24 @@
             "src/infrastructure/setup_permission_projects_access.ts",
             "src/infrastructure/setup_permission_workflow_cleanup.ts",
             "src/infrastructure/setup_permission_project_cleanup.ts",
-            "src/infrastructure/setup_token_permission_query_adapter.ts"
+            "src/infrastructure/setup_token_permission_query_adapter.ts",
+            "src/infrastructure/setup_credential_validation_adapter.ts",
+            "src/infrastructure/setup_github_identity_query_adapter.ts",
+            "src/infrastructure/setup_permission_probe_http.ts",
+            "src/infrastructure/setup_permission_probe_journal.ts",
+            "src/infrastructure/setup_permission_probe_transaction.ts",
+            "src/infrastructure/setup_permission_actions_probe.ts",
+            "src/infrastructure/setup_permission_pull_request_probe.ts",
+            "src/infrastructure/setup_permission_resource_probes.ts",
+            "src/infrastructure/setup_permission_issue_probe.ts",
+            "src/infrastructure/setup_permission_issue_cleanup.ts",
+            "src/infrastructure/setup_permission_project_probe.ts"
           ],
-          "mode": "aggregate",
+          "mode": "each",
           "thresholdProfile": "default"
         }
       ],
-      "successMessage": "PAT capability audit coverage: PASS (pure permission policies 100%; critical HTTP/read/access/cleanup path 95% lines/statements, 90% branches/functions)"
+      "successMessage": "PAT capability audit coverage: PASS (pure permission policies 100%; each credential/HTTP/read/write/cleanup module 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

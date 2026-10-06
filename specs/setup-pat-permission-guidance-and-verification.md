@@ -587,8 +587,8 @@ This PR targets develop; no deployment or dogfooding is part of acceptance.
 
 ## 14. Testing strategy and numeric budget
 
-The retained 198-case baseline in section 0 is extended by a minimum **96**
-distinct regression cases (total minimum **294**, with three baseline human
+The retained 198-case baseline in section 0 is extended by a minimum **160**
+distinct regression cases (total minimum **358**, with three baseline human
 observations still open). Cases are counted once by their primary risk.
 
 | Audit area | Additional minimum | Evidence/risk |
@@ -598,13 +598,15 @@ observations still open). Cases are counted once by their primary risk.
 | Runtime credential boundary | 6 | Masked environment/JSON source, empty override, safe fallback, non-secret input |
 | Application evidence/readiness | 5 | Pending conditional, duplicate/contradictory cleanup, forged public evidence |
 | Recovery/concurrency/architecture | 48 | Changed/legacy ref, workflow identity, collision persistence, malformed cleanup, bounded recovery, concurrent audit, observational progress and small pure modules |
-| **Total additional** | **96** | No live services or tokens |
+| Write rejection and response failure phases | 64 | Invalid/foreign bases, files, PR/run/Project identities; deferred dispatch discovery; rejected or ambiguous creation; cleanup failure; malformed selected reads and bounded credential diagnostics |
+| **Total additional** | **160** | No live services or tokens |
 
 Repository coverage keeps Jest's committed thresholds; changed pure matrices
 and evidence policy target 100% branch/line/function/statement coverage. HTTP and
-transaction paths use fixtures for failure phases and ownership/races. Critical new/shared HTTP,
-read, selected-role and cleanup boundaries must pass an aggregate 95%
-line/statement and 90% branch/function budget. Existing
+transaction paths use fixtures for failure phases and ownership/races. Every
+credential, shared HTTP, read, selected-role, write-family and cleanup module
+in the PAT budget must pass 95% line/statement and 90% branch/function coverage
+individually. Existing
 family write, session replay, four-locale UI and cross-platform workflow-contract
 suites remain required. No fake-timer test relies on real waits. Human provider,
 Windows ACL, responsive and accessibility observations remain separately open.
