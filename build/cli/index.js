@@ -67466,6 +67466,7 @@ const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
+const application_error_1 = __nccwpck_require__(75999);
 /** One cooperative setup process per canonical checkout; no credential is stored in the lock. */
 function acquireSetupSessionGuard(cwd) {
     const top = (0, node_child_process_1.execFileSync)('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
@@ -67497,10 +67498,11 @@ function acquireSetupSessionGuard(cwd) {
         try {
             existing = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
         }
-        catch {
-            throw new Error('A setup lock exists but cannot be verified. Inspect it before retrying.');
+        catch (cause) {
+            throw setupLockError('A setup lock exists but cannot be verified. Inspect it before retrying.', cause);
         }
-        if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository || !existing.nonce) {
+        if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository
+            || typeof existing.nonce !== 'string' || !existing.nonce) {
             throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', collision);
         }
         try {
@@ -67514,7 +67516,12 @@ function acquireSetupSessionGuard(cwd) {
         // Filesystem reads and unlink are not atomic. Never remove a dead owner's lock here.
         throw setupLockError(`A setup lock for a stopped process (${existing.pid}) remains at ${lockPath}. Verify no setup is running, remove only that file manually, then retry.`, collision);
     }
-    return () => {
+    const interrupt = () => process.exit(130);
+    const terminate = () => process.exit(143);
+    const release = () => {
+        process.removeListener('exit', release);
+        process.removeListener('SIGINT', interrupt);
+        process.removeListener('SIGTERM', terminate);
         try {
             const current = JSON.parse((0, node_fs_1.readFileSync)(lockPath, 'utf8'));
             if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository)
@@ -67522,6 +67529,13 @@ function acquireSetupSessionGuard(cwd) {
         }
         catch { /* Missing or replaced lock is not ours to remove. */ }
     };
+    // A default Node signal exit does not run the command's asynchronous finally.
+    // Synchronous exit cleanup releases only our exact record; remote probe
+    // journals remain available to recover any interrupted GitHub transaction.
+    process.once('exit', release);
+    process.once('SIGINT', interrupt);
+    process.once('SIGTERM', terminate);
+    return release;
 }
 function writeStagedLock(path, record) {
     const fd = (0, node_fs_1.openSync)(path, 'wx', 0o600);
@@ -67542,7 +67556,7 @@ function writeStagedLock(path, record) {
     }
 }
 function setupLockError(message, cause) {
-    return Object.assign(new Error(message), { cause });
+    return new application_error_1.ApplicationError('configuration.invalid', message, { cause });
 }
 
 

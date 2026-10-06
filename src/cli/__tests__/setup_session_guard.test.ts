@@ -1,9 +1,12 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { acquireSetupSessionGuard } from '../setup_session_guard';
+import { ApplicationError } from '../../application/errors/application_error';
+import { reportSetupFailure } from '../setup_outcome_adapter';
+import * as logger from '../../utils/logger';
 
 describe('setup session guard', () => {
   let root: string;
@@ -38,12 +41,28 @@ describe('setup session guard', () => {
   test('fails closed on a verified dead owner until the operator removes its exact lock', () => {
     const oldRecord = JSON.stringify({ pid: 99999999, nonce: 'old-owner', repository: canonicalRepository });
     writeFileSync(lockPath(), oldRecord);
+    expect(() => acquireSetupSessionGuard(root)).toThrow(ApplicationError);
     expect(() => acquireSetupSessionGuard(root)).toThrow(`remove only that file manually`);
     expect(readFileSync(lockPath(), 'utf8')).toBe(oldRecord);
     unlinkSync(lockPath()); // Simulates explicit operator recovery after verifying no setup is running.
     const release = acquireSetupSessionGuard(root);
     expect(JSON.parse(readFileSync(lockPath(), 'utf8')).pid).toBe(process.pid);
     release();
+  });
+
+  test('a stale-lock diagnostic survives setup failure reporting without exposing lock contents', () => {
+    writeFileSync(lockPath(), JSON.stringify({ pid: 99999999, nonce: 'private-marker', repository: canonicalRepository }));
+    let error: unknown;
+    try { acquireSetupSessionGuard(root); } catch (failure) { error = failure; }
+    const log = jest.spyOn(logger, 'logError').mockImplementation();
+    try {
+      expect(reportSetupFailure(error, { mutationStarted: false, applyStarted: false, guidedBotIdentity: false })).toBe(1);
+      expect(log).toHaveBeenCalledWith(expect.objectContaining({ code: 'configuration.invalid',
+        message: expect.stringContaining(lockPath()) }));
+      expect(log.mock.calls[0][0]).toMatchObject({ message: expect.stringContaining('stopped process (99999999)') });
+      expect((log.mock.calls[0][0] as ApplicationError).message).not.toContain('private-marker');
+      expect(existsSync(lockPath())).toBe(true);
+    } finally { log.mockRestore(); }
   });
 
   test('a replacement lock is never unlinked after a stale-owner probe', () => {
@@ -66,7 +85,48 @@ describe('setup session guard', () => {
   ])('fails closed for an unverifiable lock %s', content => {
     writeFileSync(lockPath(), content);
     expect(() => acquireSetupSessionGuard(root)).toThrow('lock');
+    expect(() => acquireSetupSessionGuard(root)).toThrow(ApplicationError);
     expect(readFileSync(lockPath(), 'utf8')).toBe(content);
+  });
+
+  test.each([
+    ['SIGINT', 130, false], ['SIGTERM', 143, false], ['SIGINT', 130, true],
+  ] as const)('%s exit=%i preserves replacement=%s', async (signal, exitCode, replace) => {
+    const script = `
+      const ts = require(${JSON.stringify(require.resolve('typescript'))});
+      const fs = require('node:fs');
+      require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true }
+      }).outputText, filename);
+      require(${JSON.stringify(require.resolve('../setup_session_guard'))}).acquireSetupSessionGuard(process.argv[1]);
+      process.on('message', signal => process.emit(signal));
+      console.log('locked');
+      setInterval(() => {}, 1000);
+    `;
+    const child = spawn(process.execPath, ['-e', script, root], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+    const exited = new Promise<number | null>((resolve, reject) => {
+      child.once('error', reject);
+      child.once('close', resolve);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        child.stdout!.once('data', () => resolve());
+        child.once('error', reject);
+        child.once('close', () => reject(new Error('Child exited before acquiring guard')));
+      });
+      const replacement = JSON.stringify({ pid: process.pid, nonce: 'replacement', repository: canonicalRepository });
+      if (replace) writeFileSync(lockPath(), replacement);
+      // Windows child.kill forcibly terminates without invoking Node signal handlers.
+      // Exercise the cooperative console-signal path there; POSIX uses real signals.
+      if (process.platform === 'win32') child.send(signal);
+      else child.kill(signal);
+      expect(await exited).toBe(exitCode);
+      if (replace) expect(readFileSync(lockPath(), 'utf8')).toBe(replacement);
+      else expect(existsSync(lockPath())).toBe(false);
+    } finally {
+      child.kill('SIGKILL');
+      await exited;
+    }
   });
 
   test('propagates a filesystem error instead of treating it as a competing session', () => {

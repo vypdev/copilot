@@ -234,10 +234,18 @@ exactly what completed and what remains.
    ambiguous/missing remotes block rather than guessing. Acquire a per-checkout
    local setup-session guard shared by terminal and web modes so a second
    setup process cannot apply to the same checkout concurrently. A lock has
-   no credentials and is released on normal exit. If the recorded owner is
+   no credentials and is released on normal exit or cooperative SIGINT/SIGTERM
+   only when
+   its PID, nonce and canonical checkout still match. Signal handlers exit
+   with 130/143 and are removed on ordinary release. Pending remote-probe
+   journals remain available for interrupted-transaction recovery. Windows
+   forceful process termination bypasses these handlers; console Ctrl+C uses
+   the cooperative SIGINT path. If the recorded owner is
    dead, the CLI MUST fail closed, print the exact lock path, and require an
    operator to verify no setup process is running before removing that one
-   file manually. It MUST NOT unlink a stale lock automatically: another
+   file manually. These bounded local diagnostics MUST survive the application
+   error boundary and terminal presentation; raw filesystem/provider failures
+   remain redacted. It MUST NOT unlink a stale lock automatically: another
    process can replace it between a read and an unlink. Publish a fully
    written lock record atomically; failed writes MUST NOT leave a blocking
    empty lock. Web
@@ -1420,6 +1428,15 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | Integration/compatibility/recovery | 42 | live reconnect, preserved answers, incompatible-Project blocking and complete beginner replay in CLI/web |
 | Security/abuse | 28 | forged links, stale revisions/controller takeover, PAT exclusion, permissions and least-privilege fallback |
 | **Total** | **350** | No double counting |
+
+Four additional session-lock regressions, outside that ledger, are required
+in `src/cli/__tests__/setup_session_guard.test.ts`: stale-owner diagnostics
+reach the terminal without exposing the nonce, SIGINT exits with 130 and
+releases the owned lock, SIGTERM exits with 143 and releases the owned lock,
+and interruption preserves a replacement owner's lock. Child-process tests
+use real OS signals on macOS/Linux and IPC-delivered Node signal events on
+Windows, where `child.kill` is forceful termination. The Windows simulation
+does not close native console or human-review acceptance gates.
 
 The acceptance ledger is [`local-web-setup-assistant-acceptance.json`](./local-web-setup-assistant-acceptance.json).
 It MUST contain one row per ID below with an observable assertion, the

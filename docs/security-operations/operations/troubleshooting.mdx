@@ -44,6 +44,11 @@ previous approval and secrets are not restored by a new process. Completed
 local or remote writes are not rolled back. No local session shutdown revokes
 a PAT in GitHub.
 
+Ctrl+C releases the exiting setup process's own session lock when delivered
+as a Node console signal; SIGTERM does the same on macOS and Linux.
+An abrupt crash, forceful termination or older version can leave an orphaned
+lock. Startup reports the owner's PID and exact path in the terminal, rather
+than replacing that actionable local diagnostic with `Setup failed`.
 If setup reports a lock belonging to a stopped process, it will not delete
 that lock automatically: another setup could have acquired the same path in
 the meantime. Verify that no setup process for this checkout is running,
