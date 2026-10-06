@@ -441,6 +441,38 @@
         }
       ],
       "successMessage": "issue workflow and repository guidance coverage: PASS (domain/setup/rendering policies 100%; ownership reconciler 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "PAT capability audit",
+      "missingEntryLabel": "PAT capability audit",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_token_permission_policy.ts",
+            "src/application/policies/setup_token_permission_evidence_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/actions/github_action_input.ts",
+            "src/infrastructure/http_deadline.ts",
+            "src/infrastructure/setup_permission_denial.ts",
+            "src/infrastructure/setup_permission_read_probe.ts",
+            "src/infrastructure/setup_permission_read_evidence.ts",
+            "src/infrastructure/setup_permission_read_shape.ts",
+            "src/infrastructure/setup_permission_projects_read.ts",
+            "src/infrastructure/setup_permission_projects_access.ts",
+            "src/infrastructure/setup_permission_workflow_cleanup.ts",
+            "src/infrastructure/setup_permission_project_cleanup.ts",
+            "src/infrastructure/setup_token_permission_query_adapter.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "PAT capability audit coverage: PASS (pure permission policies 100%; critical HTTP/read/access/cleanup path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

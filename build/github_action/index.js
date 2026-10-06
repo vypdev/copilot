@@ -39924,17 +39924,20 @@ const action_input_source_1 = __nccwpck_require__(98143);
 const logger_1 = __nccwpck_require__(91151);
 const application_error_1 = __nccwpck_require__(75999);
 function getGithubActionInput(key, options) {
+    let value;
     try {
         const inputVarsJson = process.env.INPUT_VARS_JSON;
-        const value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
-        if (value !== undefined) {
-            return value;
-        }
+        value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
     }
     catch (error) {
         (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
     }
-    return core.getInput(key, options);
+    value = (value ?? core.getInput(key, options)).trim();
+    if (options?.required && value.length === 0)
+        throw new Error(`Input required and not supplied: ${key}`);
+    if (key.toLowerCase() === 'token' && value)
+        core.setSecret(value);
+    return value;
 }
 
 
@@ -81446,7 +81449,7 @@ function buildGitAuthenticationEnvironment(token, environment = process.env) {
     return {
         ...Object.fromEntries(Object.entries(environment).filter((entry) => entry[1] !== undefined)),
         GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: 'http.extraheader',
+        GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
         GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${authorization}`,
     };
 }

@@ -4,13 +4,23 @@
 - Date: 2026-09-11
 - Last updated: 2026-09-30
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-30 (shared-session and resource-progress fixture evidence; live GitHub path remains external)
+- Last verified: 2026-10-06 (local automated audit evidence) (shared-session and resource-progress fixture evidence; live GitHub path remains external)
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
   scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
+
+The [PAT capability SDD](./setup-pat-permission-guidance-and-verification.md)
+is authoritative for the audited operator/runtime credential contract. Identity
+and reads precede planning; disposable write checks run only after approval and
+require confirmed cleanup. Scope-sensitive inventory failures block before that
+approval. Guided bot identity is bound before its capability transactions, and
+the selected Project role is checked in addition to the disposable grant proof.
+Runtime routes include Contents read where they inspect branches/commits without
+writing. Local fixtures do not close live provider, accessibility or Windows ACL
+gates; this revision includes no dogfooding.
 
 ## 1. Executive summary
 

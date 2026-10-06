@@ -73,7 +73,7 @@ directory. The lock contains no PAT or other credential.
     session. If GitHub identity itself was rejected, fix account, repository
     selection, token expiry, or organization approval before reviewing grants.
 
-    **`❌ Missing`:** GitHub rejected a safe read-only capability probe after
+    **`❌ Missing`:** GitHub rejected a capability probe after
     setup confirmed the token identity and repository selection. Grant the named
     repository or organization permission to the correct resource owner, ensure
     the repository is included in the fine-grained PAT selection, and rerun
@@ -91,7 +91,7 @@ directory. The lock contains no PAT or other credential.
     and does not block on unrelated repository inventory.
 
     **`? Unverifiable`:** this is not a pass. GitHub either does not expose a
-    safe read-only proof for the requested write level, returned an ambiguous
+    completed temporary transaction for the requested write level, returned an ambiguous
     `403`/`404` (including the generic message `Forbidden`), reported SSO
     enforcement, or had a transient/rate-limit failure. A `403` becomes
     `Missing` only when bounded provider metadata explicitly identifies a
@@ -99,13 +99,13 @@ directory. The lock contains no PAT or other credential.
     Malformed provider JSON, unreadable response headers, or a response body
     that stalls until the probe deadline also remain `Unverifiable`.
     A successful public read is also not token evidence: public repository
-    metadata, commits, rulesets, labels, workflows, checks, pull requests, and
-    workflow files remain `Unverifiable` unless repository metadata proves the
-    repository is private. Public organization member and issue-type responses
+    metadata, commits, labels, workflows, checks, pull requests, and
+    workflow files show `Read available` when public. Unknown repository
+    visibility remains `Unverifiable`. Administration is tested through the
+    protected Actions-permissions endpoint; ruleset listing only requires Metadata. Public organization member and issue-type responses
     are likewise inconclusive as PAT evidence or full-membership readiness.
     An organization Projects list with only public Projects, or no Projects,
-    can support discovery only after you explicitly confirm the `Projects: read`
-    grant in GitHub; it remains `Unverifiable`. A non-public Project proves that
+    can support discovery as `Read available`; it does not prove the PAT grant. A non-public Project proves that
     read access. A denied or
     malformed list still blocks and must be corrected or retried.
     Members read is verified only by a valid active self-membership response
@@ -126,12 +126,12 @@ directory. The lock contains no PAT or other credential.
     `--confirm-unverifiable-write-permissions` flag is rejected.
     In the web assistant, inspect only required rows marked `Unverifiable`;
     a `Verified` organization Projects read row already passed. Public
-    repository reads can remain `Unverifiable` as PAT-grant evidence even when
-    setup can use them. The browser explains each status beside its row.
+    repository reads say `Read available` when setup can use them without
+    proving the PAT grant. The browser explains each status beside its row.
 
     When required repository or organization inventory validation fails after
-    the questionnaire, setup first runs the configured setup-PAT audit inside
-    the wizard, before its final scope-sensitive storage validation. The CLI then
+    the questionnaire, the wizard returns a structured inventory block before
+    plan approval or disposable permission tests. The CLI then
     handles the structured block immediately and exits with the bounded inventory
     error without starting another audit or inventory validator. It does not run
     plan confirmation,
@@ -141,6 +141,22 @@ directory. The lock contains no PAT or other credential.
     Secrets, Variables, labels, issue types, and tags, even for a
     repository-scope default. Restore inventory access
     and rerun setup; an absent snapshot is never treated as an empty repository.
+
+    A Secret collision keeps a version-two incident marker under
+    `~/.copilot/setup-permission-probes/`. Review the GitHub audit trail and
+    reconcile the potentially replaced value before removing that marker
+    manually; retries never delete the unknown Secret. Older releases reject
+    new journal records, so complete recovery before rolling back. A legacy
+    Actions run lacking its workflow ID also requires manual inspection.
+
+    If cleanup reports that a temporary branch changed, inspect its exact ref
+    and the local journal before deleting it manually. Copilot refuses to delete
+    an advanced commit or a legacy ref without a recorded commit. Retry only
+    after the matching cleanup is complete. If the workflow PAT can update some
+    Projects but cannot update a selected one, grant that account access to the
+    named Project; an organization permission alone is insufficient. See the
+    [audit prerequisites](/authentication) for Issue deletion, temporary PR
+    branches, and no-job Actions checks.
 
     Permission probes use a fixed maximum concurrency of four and preserve the
     table's requirement order. A large permission plan therefore does not launch

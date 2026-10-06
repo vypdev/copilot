@@ -7,8 +7,8 @@ function response(body: unknown, ok = true, status = 200): Response {
 describe('SetupCredentialValidationAdapter', () => {
     it('validates setup identity and repository access without logging the token', async () => {
         const fetcher = jest.fn()
-            .mockResolvedValueOnce(response({ login: 'operator' }))
-            .mockResolvedValueOnce(response({ full_name: 'repo' }));
+            .mockResolvedValueOnce(response({ id: 1, login: 'operator' }))
+            .mockResolvedValueOnce(response({ id: 2, full_name: 'owner/repo' }));
         const check = await new SetupCredentialValidationAdapter({ fetcher }).validateSetupPat('owner', 'repo', 'secret-token');
 
         expect(check).toMatchObject({ name: 'SETUP_PAT', status: 'valid', account: 'operator' });

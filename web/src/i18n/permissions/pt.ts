@@ -30,6 +30,7 @@ export const permissionCopyPt: Readonly<Record<PermissionText, string>> = {
   'Inspect and provision selected organization Actions Variables.': 'Inspecionar e configurar as Variables de Actions selecionadas na organização.',
   'Provision native issue types for the selected workflows.': 'Criar tipos de questão nativos para os fluxos selecionados.',
   'Resolve repository and collaborator metadata.': 'Consultar os metadados do repositório e dos colaboradores.',
+  'Read repository branches, commits, and files for enabled runtime routes.': 'Ler branches, commits e arquivos do repositório para os fluxos de execução habilitados.',
   'Dispatch selected release or hotfix workflows and check previous runs.': 'Executar os fluxos de release ou hotfix selecionados e verificar execuções anteriores.',
   'Check previous workflow runs before executing an enabled route.': 'Verificar execuções anteriores antes de iniciar um percurso ativo.',
   'Create managed branches, edit files, or merge selected release/hotfix changes.': 'Criar ramos geridos, editar ficheiros ou integrar alterações de release e hotfix.',

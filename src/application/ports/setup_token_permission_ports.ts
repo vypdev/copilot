@@ -17,7 +17,7 @@ export interface SetupTokenPermissionsRequest {
 }
 
 /** Capability boundary. Writes use isolated, cleanup-verified transactions. */
-export interface SetupTokenPermissionQueryPort {
+export interface SetupTokenPermissionInspectionPort {
     inspect(
         owner: string,
         repository: string,

@@ -24,6 +24,11 @@ function disabledRuntimeConfiguration() {
 }
 
 describe('setup token permission policy', () => {
+    it('preserves required applicability and strongest access when a duplicate weaker row follows', () => {
+        const read = buildSetupPatPermissionRequirements().find(row => row.permission === 'Contents' && row.level === 'read')!;
+        const write = { ...read, level: 'write' as const };
+        expect(normalizePermissionRequirements([write, read, write])).toEqual([write]);
+    });
     it('reports only newly required or upgraded grants after guided review', () => {
         const baseline = buildSetupPatPermissionRequirements();
         const metadata = baseline.find(item => item.permission === 'Metadata')!;
@@ -279,11 +284,11 @@ describe('setup token permission policy', () => {
     it.each([
         ['managed issues', 'issues', ['Metadata', 'Actions', 'Contents', 'Issues']],
         ['issue comments', 'issueComments', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests']],
-        ['pull requests', 'pullRequests', ['Metadata', 'Actions', 'Pull requests']],
+        ['pull requests', 'pullRequests', ['Metadata', 'Actions', 'Contents', 'Pull requests']],
         ['PR comments', 'pullRequestComments', ['Metadata', 'Actions', 'Contents', 'Pull requests']],
-        ['commit progress and Bugbot', 'commits', ['Metadata', 'Actions', 'Issues', 'Pull requests']],
+        ['commit progress and Bugbot', 'commits', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests']],
         ['release dispatch', 'release', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests', 'Administration']],
-        ['inactive issue closure', 'inactiveIssueClosure', ['Metadata', 'Actions', 'Issues']],
+        ['inactive issue closure', 'inactiveIssueClosure', ['Metadata', 'Actions', 'Contents', 'Issues']],
     ] as const)('projects only the writes consumed by %s', (_label, feature, expected) => {
         const configuration = disabledRuntimeConfiguration();
         configuration.issueWorkflows.enabled = ['help'];
@@ -300,7 +305,7 @@ describe('setup token permission policy', () => {
         configuration.repository.issueManagedBranches = false;
         configuration.issueWorkflows.enabled = ['help'];
         expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
-            'Metadata', 'Actions', 'Issues',
+            'Metadata', 'Actions', 'Contents', 'Issues',
         ]);
     });
 
@@ -332,7 +337,7 @@ describe('setup token permission policy', () => {
         const configuration = disabledRuntimeConfiguration();
         configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
         expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
-            'Metadata', 'Actions', 'Pull requests', 'Administration', 'Checks', 'Variables',
+            'Metadata', 'Actions', 'Contents', 'Pull requests', 'Administration', 'Checks', 'Variables',
         ]);
     });
 

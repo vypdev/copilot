@@ -21,6 +21,13 @@ describe('SetupGithubIdentityQueryAdapter', () => {
         expect(fetcher).not.toHaveBeenCalled();
     });
 
+    it('rejects a valid identity for a different requested bot and accepts casing differences', async () => {
+        const fetcher = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 42, login: 'vypbot' }) });
+        const adapter = new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch);
+        await expect(adapter.resolve('other-bot', 'setup-token')).rejects.toThrow('different bot');
+        await expect(adapter.resolve('Vypbot', 'setup-token')).resolves.toEqual({ id: 42, login: 'vypbot' });
+    });
+
     it('rejects an unverified or malformed response without returning provider text', async () => {
         const fetcher = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: '42', login: 'vypbot' }) });
         await expect(new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch)
@@ -37,12 +44,14 @@ describe('SetupGithubIdentityQueryAdapter', () => {
             .identify('workflow-token')).rejects.toThrow('No Secret was written');
     });
 
-    it('wraps network failures while preserving the cause privately', async () => {
-        const failure = new Error('sensitive provider text');
+    it.each(['sensitive provider text', 'sensitive provider text. No Secret was written.'])(
+        'drops raw network failures at the credential boundary: %s', async message => {
+        const failure = new Error(message);
         const fetcher = jest.fn().mockRejectedValue(failure);
-        await expect(new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch)
-            .identify('workflow-token')).rejects.toMatchObject({
-                message: expect.stringContaining('network access'), cause: failure,
-            });
+        const error = await new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch)
+            .identify('workflow-token').catch(error => error as Error);
+        expect((error as Error).message).toContain('network access');
+        expect(error).not.toHaveProperty('cause');
+        expect(String(error)).not.toContain('sensitive provider text');
     });
 });

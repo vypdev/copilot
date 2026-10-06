@@ -1,5 +1,5 @@
 import { SetupTokenPermissionsUseCase } from '../setup_token_permissions_use_case';
-import type { SetupTokenPermissionRequirement } from '../../../../domain/setup_token_permissions';
+import type { SetupTokenPermissionRequirement, SetupTokenPermissionProgress } from '../../../../domain/setup_token_permissions';
 
 const required: SetupTokenPermissionRequirement = {
     id: 'setup.repository.metadata', role: 'setup', scope: 'repository', permission: 'Metadata',
@@ -17,6 +17,62 @@ const requiredWrite: SetupTokenPermissionRequirement = {
 };
 
 describe('SetupTokenPermissionsUseCase', () => {
+    it('forwards live progress only after identity validation and preserves the selected Project context', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const progress = jest.fn();
+        const inspect = jest.fn(async (_owner: string, _repository: string, _token: string,
+            _requirements: readonly SetupTokenPermissionRequirement[], emit?: (progress: SetupTokenPermissionProgress) => void) => {
+            emit?.({ role: 'setup', requirementId: required.id, phase: 'checking' });
+            return [{ ...required, status: 'verified' as const, message: 'Read succeeded.' }];
+        });
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect }, progress).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [required], selectedProjectNumbers: '7',
+        });
+        expect(report.ready).toBe(true);
+        expect(progress).toHaveBeenCalledWith({ role: 'setup', requirementId: required.id, phase: 'checking' });
+        expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'fixture', [required], progress, '7');
+        expect(validation.validateSetupPat.mock.invocationCallOrder[0]).toBeLessThan(inspect.mock.invocationCallOrder[0]);
+    });
+    it.each([false, true])('preserves a Secret collision as a blocking incident even on a conditional row (duplicate: %s)', async duplicate => {
+        const requirement = { ...conditional, permission: 'Secrets', probe: 'secrets' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const evidence = { ...requirement, status: 'unverifiable', cleanupPending: true, incident: 'secret-collision', message: 'Collision reported.' };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue(
+            duplicate ? [evidence, evidence] : [evidence],
+        ) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ cleanupPending: true, incident: 'secret-collision' });
+    });
+
+    it.each(['duplicate', 'contradictory'] as const)('retains cleanup facts when %s write evidence is rejected', async kind => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const evidence = { ...conditional, status: kind === 'duplicate' ? 'unverifiable' : 'verified',
+            cleanupPending: true, message: 'Cleanup pending.' };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue(
+            kind === 'duplicate' ? [evidence, evidence] : [evidence],
+        ) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [conditional] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', cleanupPending: true });
+    });
+
+    it('rejects public-read provenance for the protected Administration probe', async () => {
+        const requirement = { ...required, permission: 'Administration', probe: 'administration' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requirement, status: 'available', publicReadEvidence: 'public-repository', operationallyAvailable: true, message: 'Forged usability.' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+    });
+    it('retains a matching collision incident when contradictory evidence omits its cleanup flag', async () => {
+        const requirement = { ...conditional, permission: 'Secrets', probe: 'secrets' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requirement, status: 'verified', incident: 'secret-collision', message: 'Contradictory success.' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', cleanupPending: true, incident: 'secret-collision' });
+    });
     it('keeps report order even when the query returns reversed checks', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok', account: 'operator' }) };
         const query = { inspect: jest.fn().mockResolvedValue([

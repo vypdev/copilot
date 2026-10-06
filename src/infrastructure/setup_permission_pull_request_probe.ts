@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { ResourceProbeContext } from './setup_permission_probe_context';
-import { ProbeFailure, probeJsonRecord } from './setup_permission_probe_http';
+import { ProbeFailure, probeJsonRecord, probeResponseFailure } from './setup_permission_probe_http';
 import { withProbeCleanup } from './setup_permission_probe_transaction';
 
 /** A draft PR with a one-file branch. It is closed, never merged. */
@@ -25,13 +25,15 @@ export async function probePullRequest(context: ResourceProbeContext): Promise<v
     if (prior.status !== 404) throw new ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
     context.phase('creating');
     await withProbeCleanup(context, name, async (owned, handle) => {
+        await handle.setReferenceSha(sha);
         await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         owned();
-        await context.http.expect(`${root}/contents/.copilot-permission-test/${name}.txt`, 'PUT', [201], {
+        const written = await probeJsonRecord(await context.http.expect(`${root}/contents/.copilot-permission-test/${name}.txt`, 'PUT', [201], {
             message: 'chore: verify temporary pull request access [skip ci]',
             content: Buffer.from('Temporary PAT permission test. This branch is removed automatically.\n', 'utf8').toString('base64'),
             branch: name,
-        });
+        }));
+        await handle.setReferenceSha((written.commit as Record<string, unknown> | undefined)?.sha);
         const title = `Copilot permission test ${name.slice('copilot-permission-test-'.length)}`;
         await handle.markPullAttempted();
         const response = await context.http.request(`${root}/pulls`, 'POST', {
@@ -40,7 +42,7 @@ export async function probePullRequest(context: ResourceProbeContext): Promise<v
         });
         if (response.status !== 201) {
             if (response.status >= 400 && response.status < 500) await handle.clearRejectedPull();
-            throw new ProbeFailure(`GitHub pull-request creation returned HTTP ${response.status}.`, response.status);
+            throw await probeResponseFailure(response, `GitHub pull-request creation returned HTTP ${response.status}.`);
         }
         const created = await probeJsonRecord(response);
         const number = created.number;

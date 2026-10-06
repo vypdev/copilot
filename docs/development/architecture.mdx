@@ -227,9 +227,18 @@ these dependencies and file-size budgets. The application-level setup-session
 coordinator extraction and full web acceptance budget remain open per the
 [web setup SDD](../../specs/local-web-setup-assistant.md).
 
+PAT inspection delegates read targets, response-shape/evidence mapping, Projects
+access, HTTP deadlines, transactions, and family cleanup to separate adapters.
+The application binds guided bot identity before any PAT transaction and keeps
+readiness false while any matching cleanup or collision is unresolved. Native
+fetch bodies are buffered once under the deadline. Branch cleanup requires the
+exact journaled commit; the Action masks the resolved PAT, and Git credentials
+are scoped to GitHub in a copied child environment. The permission boundary is
+an inspection capability because approved writes use disposable transactions.
+
 PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow
-`SetupTokenPermissionQueryPort`; the infrastructure adapter performs targeted
+`SetupTokenPermissionInspectionPort`; the infrastructure adapter performs targeted
 GitHub reads at PAT entry and temporary create/read/delete transactions for
 required writes after plan approval. It maps provider outcomes to `verified`,
 `available`, `missing`, or `unverifiable`, with a bounded concurrency limit of

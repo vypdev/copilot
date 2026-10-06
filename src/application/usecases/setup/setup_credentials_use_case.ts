@@ -18,6 +18,7 @@ import type {
     SetupResourceStoragePolicy,
 } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
+import type { VerifyGuidedWorkflowPatIdentityUseCase } from './verify_guided_workflow_pat_identity_use_case';
 import {
     canKeepExistingSetupResource,
     findSetupOrganizationShadows,
@@ -35,6 +36,7 @@ export interface SetupCredentialsRequest {
     ref?: string;
     remoteConfiguration?: SetupRemoteConfiguration;
     workflowTokenPermissions?: readonly SetupTokenPermissionRequirement[];
+    selectedProjectNumbers?: string;
 }
 
 export interface SetupCredentialsResult {
@@ -52,6 +54,7 @@ export class SetupCredentialsUseCase {
         private readonly remoteHealth?: SetupRemoteCredentialHealthPort,
         private readonly tokenPermissions?: SetupTokenPermissionAuditPort,
         private readonly permissionPresenter?: SetupTokenPermissionPresenterPort,
+        private readonly workflowIdentity?: Pick<VerifyGuidedWorkflowPatIdentityUseCase, 'execute'>,
     ) {}
 
     async collect(request: SetupCredentialsRequest): Promise<SetupCredentialsResult> {
@@ -191,6 +194,11 @@ export class SetupCredentialsUseCase {
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check: SetupCredentialCheck;
+            if (requirement.kind === 'workflowPat' && this.prompt.guidedWorkflowBotIdentity) {
+                if (!this.workflowIdentity) throw new ApplicationError('configuration.unsupported',
+                    'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
+                await this.workflowIdentity.execute(this.prompt.guidedWorkflowBotIdentity, value.value);
+            }
             if (workflowPermissionAuditRequired) {
                 if (!this.tokenPermissions) {
                     throw new ApplicationError(
@@ -204,6 +212,7 @@ export class SetupCredentialsUseCase {
                     repository: request.repository,
                     token: value.value,
                     requirements: workflowTokenPermissions,
+                    ...(request.selectedProjectNumbers ? { selectedProjectNumbers: request.selectedProjectNumbers } : {}),
                 });
                 this.permissionPresenter?.showReport(report);
                 const permissionAccepted = report.ready;

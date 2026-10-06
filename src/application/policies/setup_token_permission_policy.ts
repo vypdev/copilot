@@ -5,7 +5,6 @@ import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import {
     getSetupResourceStoragePolicy,
     requiresSetupOrganizationInventory,
-    requiresSetupRepositoryInventory,
     resolveSetupResourceTarget,
 } from './setup_configuration_storage_policy';
 import type {
@@ -240,6 +239,7 @@ export function buildWorkflowPatPermissionRequirements(
     return normalizePermissionRequirements([
         requirement({ role: 'workflow', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository and collaborator metadata.', probe: 'metadata' }),
         ...(hasRuntimeRoute ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Actions', level: releaseOrHotfix ? 'write' : 'read', reason: releaseOrHotfix ? 'Dispatch selected release or hotfix workflows and check previous runs.' : 'Check previous workflow runs before executing an enabled route.', probe: 'actions' })] : []),
+        ...(hasRuntimeRoute && !writesContents ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Read repository branches, commits, and files for enabled runtime routes.', probe: 'contents' })] : []),
         ...(writesContents ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Create managed branches, edit files, or merge selected release/hotfix changes.', probe: 'contents' })] : []),
         ...(writesIssues ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Issues', level: 'write', reason: 'Manage selected issue lifecycles, comments, and progress.', probe: 'issues' })] : []),
         ...(writesPullRequests ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Pull requests', level: 'write', reason: 'Manage selected pull request workflows, reviews, or autofix.', probe: 'pull-requests' })] : []),
@@ -303,9 +303,9 @@ function selectedResourceScopes(
         name,
         remote,
     ).scope));
-    if (requiresSetupRepositoryInventory(names)) {
-        scopes.add('repository');
-    }
+    // Managed plans always contain core Variables or PAT credentials, so repository
+    // inventory is required to detect shadows even with an organization-only target.
+    scopes.add('repository');
     if (remote?.ownerType === 'Organization' && requiresSetupOrganizationInventory(
         getSetupResourceStoragePolicy(configuration, kind),
         names,

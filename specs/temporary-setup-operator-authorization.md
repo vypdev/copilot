@@ -10,6 +10,14 @@
 - Required review gates: product UX, architecture, testing, documentation, security, GitHub form compatibility
 - Open decisions blocking readiness: controlled browser UX and full test-budget evidence; remote-only facts cannot be known before authenticated inspection, so the link discloses residual uncertainty
 
+The canonical [PAT capability SDD](./setup-pat-permission-guidance-and-verification.md)
+owns permission evidence: identity and required reads precede planning; approved
+writes require isolated transactions with confirmed cleanup. No operator
+assertion or legacy confirmation flag promotes an unknown grant. Administration
+uses a protected endpoint, all response bodies are bounded by deadlines, and
+legacy/advanced temporary refs are retained for safe recovery. Human provider
+and Windows ACL observations remain open; this audit performs no dogfooding.
+
 ## 1. Executive summary
 
 Interactive `copilot setup` will offer **Create with GitHub guidance** (the

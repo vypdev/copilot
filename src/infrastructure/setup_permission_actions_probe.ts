@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import * as yaml from 'js-yaml';
 import type { ResourceProbeContext } from './setup_permission_probe_context';
-import { ProbeFailure, probeJsonRecord } from './setup_permission_probe_http';
+import { ProbeFailure, probeJsonRecord, probeResponseFailure } from './setup_permission_probe_http';
 
 interface DispatchWorkflow { readonly id: number; readonly path: string; readonly sha: string; readonly trustedNoOp: boolean; }
 const MAX_WORKFLOW_PAGES = 5;
@@ -41,6 +41,7 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
     const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
     context.phase('creating');
     try {
+        await handle.setReferenceSha(sha);
         try {
             await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         } catch (error) {
@@ -52,10 +53,11 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
         if (!workflow.trustedNoOp) {
             const file = `${root}/contents/${workflow.path}`;
             try {
-                await context.http.expect(file, 'PUT', [200], {
+                const written = await probeJsonRecord(await context.http.expect(file, 'PUT', [200], {
                     message: 'chore: verify temporary Actions permission [skip ci]',
                     content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
-                });
+                }));
+                await handle.setReferenceSha((written.commit as Record<string, unknown> | undefined)?.sha);
             } catch {
                 throw new ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
             }
@@ -66,12 +68,13 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
                 throw new ProbeFailure('The temporary no-job workflow was not confirmed on the isolated branch.');
             }
         }
+        await handle.setDispatchWorkflowId(workflow.id);
         await handle.markDispatchAttempted();
         const dispatched = await context.http.request(`${root}/actions/workflows/${workflow.id}/dispatches`, 'POST',
             { ref: name, return_run_details: true });
         if (dispatched.status !== 200 && dispatched.status !== 204) {
             if (dispatched.status >= 400 && dispatched.status < 500) await handle.clearRejectedDispatch();
-            throw new ProbeFailure(`GitHub Actions dispatch returned HTTP ${dispatched.status}.`, dispatched.status);
+            throw await probeResponseFailure(dispatched, `GitHub Actions dispatch returned HTTP ${dispatched.status}.`);
         }
         const runId = dispatched.status === 200
             ? (await probeJsonRecord(dispatched)).workflow_run_id

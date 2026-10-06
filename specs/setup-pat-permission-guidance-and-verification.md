@@ -1,23 +1,23 @@
 # Setup PAT Permission Guidance and Verification
 
-- Status: Revision in progress — active capability probes and live progress are required before this gate can pass
+- Status: Implemented fixture baseline; live provider, accessibility, and Windows ACL gates remain open
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-05
+- Last verified: 2026-10-06 (local automated evidence only)
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then prove each selected read or write capability with bounded, visible operations
 - Related issues/PRs: none recorded
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, CLI accessibility
-- Open decisions blocking readiness: complete coverage of every write capability, interruption recovery, and human review of live provider behavior; issue deletion may require repository administration and organization enablement
+- Open decisions blocking readiness: none for the fixture baseline. Release evidence still requires the explicitly open human/provider gates; strict disposable probes have prerequisites beyond some runtime grants.
 
-## 0. Acceptance correction (2026-10-05)
+## 0. Capability contract and provider limits
 
-This section supersedes the earlier read-only/write-acknowledgement design in
-sections 1, 4–7, 9–12, 14, and 16 wherever they conflict. The previous design
-is retained as implementation history until the active probes replace it. It
-does **not** describe an acceptable release gate: an operator's assertion that
-an unproved PAT grant exists cannot make the permission audit pass.
+This is the canonical active-probe contract. The superseded acknowledgement
+implementation is available in Git history and is not a supported continuation
+path. This audit starts from the develop merge of
+[PR #403](https://github.com/vypdev/copilot/pull/403). It uses deterministic
+fixtures and repository checks; it performs no dogfooding or live PAT probes.
 
 ### Capability evidence and result rules
 
@@ -153,7 +153,7 @@ an unproved PAT grant exists cannot make the permission audit pass.
     [GraphQL `deleteIssue`](https://docs.github.com/en/graphql/reference/issues),
     and [deletion policy](https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue).
 
-### Planned permission-specific operations
+### Implemented permission-specific operations
 
 | Requirement | Disposable capability operation | Required cleanup |
 |---|---|---|
@@ -175,7 +175,7 @@ endpoint requirements rather than the current token's grants.
 
 ### New acceptance budget and executable gates
 
-The original 135 cases remain a historical baseline. Add **63 distinct
+The original 135 cases remain a historical baseline. The active-probe increment requires **63 distinct
 cases**: 18 read outcomes (successful empty/nonempty, public/private,
 selected Project, denial/ambiguity), 27 write transactions (create/read/delete
 for each supported scope, rollback failure, and Issue-specific deletion/recovery), 10 progress and session cases
@@ -197,7 +197,7 @@ does not claim live GitHub behavior. `Open` requires a new automated test.
 `W` = `src/infrastructure/__tests__/setup_permission_resource_probes.test.ts`,
 `B` = `src/cli/__tests__/web_setup_bridge.test.ts`, and `Z` =
 `src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts`.
-The original 350-case web-assistant ledger remains a separate baseline in
+The 350-case web-assistant ledger remains a separate baseline in
 `specs/local-web-setup-assistant-acceptance.json`; these cases extend the PAT
 capability contract without relabelling its 42 open gates.
 
@@ -273,1058 +273,421 @@ the separate 42 open web-assistant cases.
 
 ## 1. Executive summary
 
-`copilot setup` MUST explain the permissions required by each GitHub PAT before
-the secret prompt and MUST show an evidence-based permission report immediately
-after a newly supplied token is validated. The setup PAT and workflow PAT remain
-separate credentials with separate least-privilege matrices.
-
-GitHub does not expose a complete self-inspection API for fine-grained PAT
-permissions. The product therefore MUST distinguish permissions that were
-verified through a safe read-only probe, permissions that were rejected, and
-write levels that cannot be proven without a mutation. It MUST never perform a
-write merely to turn an unknown result into a pass or fail.
+Setup distinguishes the temporary operator PAT from the persistent workflow
+PAT, derives permissions from the reviewed configuration, and checks actual
+capabilities before provisioning. A read is usable only with valid scoped
+evidence. A write needs its own approved temporary transaction and confirmed
+cleanup. No confirmation or response header can substitute for that evidence.
 
 ```text
-selected setup capability -> required permission table -> masked PAT prompt
--> identity/repository validation -> read-only permission probes -> status table
--> continue, block, or explain unverifiable write levels
+Intent → setup PAT identity and reads → remote inventory → reviewed plan
+→ approval → setup PAT transactions → workflow PAT identity and transactions
+→ credential provisioning → installation receipt → user revokes setup PAT
 ```
 
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
 
-Operators currently see prose explaining that the setup and workflow PATs are
-different, but the terminal does not show the exact repository/organization
-permission matrix at the point of entry. After entry it reports only overall
-credential validity. Operators can therefore discover a missing permission late,
-after setup has started a remote operation or a workflow fails at runtime.
+A superficially successful probe can accept a malformed identity, consume a
+native fetch body twice, mistake public metadata for an Administration grant,
+or delete a temporary branch after another actor advanced it. Runtime grants
+can also omit Contents read for routes that inspect commits and branches.
 
 ### 2.2 Current behavior
 
-1. `SetupCredentialPromptAdapter.requestSetupPat` explains memory-only handling
-   and asks for a masked setup PAT.
-2. `SetupCredentialValidationAdapter.validateSetupPat` verifies `/user` and
-   repository metadata access only.
-3. `SetupCredentialsUseCase` later explains credential separation, prompts for
-   the workflow PAT, and reuses setup-PAT validation for that token.
-4. `docs/authentication.mdx` documents detailed conditional permissions, but the
-   same information is not projected into the terminal journey.
+1. `/user` must return a positive numeric ID and safe login. Repository access
+   must resolve the exact owner/repository and positive ID. Guided bot lookup
+   additionally matches the requested login case-insensitively and binds the
+   entered PAT to that immutable account ID before Secret installation.
+2. Bootstrap reads and conditional rows precede the plan. Configuration and
+   scope-sensitive inventory blocks return before approval or disposable writes.
+3. Approval authorizes only the displayed plan. Required writes then run the
+   family-specific probes in section 0. Preview, revision, decline and dry-run
+   do not execute them. Existing PAT Secrets must be re-entered for auditing;
+   credential-health success cannot reveal their grants.
+4. Both transports share the application use cases and canonical evidence
+   reconciliation. Malformed, duplicate, forged or contradictory evidence
+   cannot alter requirements; matching pending cleanup remains blocking.
 
-### 2.3 Evidence
+### 2.3 Evidence and classification
 
-- Code: `src/cli/setup_credential_prompt_adapter.ts`,
-  `src/application/usecases/setup/setup_credentials_use_case.ts`,
-  `src/infrastructure/setup_credential_validation_adapter.ts`, and
-  `src/cli/commands/setup.ts`.
-- Tests: setup credential use-case, prompt-rendering, and credential-validation
-  adapter suites catalogued under `setup-and-doctor`.
-- Documentation: `docs/authentication.mdx` and GitHub's REST documentation for
-  fine-grained PAT permissions and `X-Accepted-GitHub-Permissions`.
-- Provider limitation: `X-Accepted-GitHub-Permissions` describes an endpoint's
-  requirements, not the complete grants of the presented fine-grained PAT.
-
-### 2.4 Retrospective classification
-
-- Observed behavior: the current CLI separates PAT roles and validates identity
-  plus repository access.
-- Intentional contract: masked input, in-memory-only setup PAT, remotely stored
-  workflow PAT, and no secret values in plans/logs/output.
-- Known debt and limitations: permission requirements are prose-only and the
-  workflow PAT receives no capability-level audit.
-- Unknown rationale: no evidence establishes that the coarse validation result
-  was intended as the final permission UX.
-- Proposed improvement: the permission planning, probing, and presentation
-  contract in this SDD.
+- Implementations and fixtures are registered under `setup-and-doctor` in
+  `catalog.json`; the targeted audit suite is `setup_pat_audit.test.ts`.
+- Observed facts: endpoint selection, status mapping, exact identities, bounded
+  headers/body deadlines, cleanup and runtime authentication are fixture-tested.
+- Intentional contract: fail closed on indeterminate required work; preserve
+  public-read provenance; require transaction evidence for writes.
+- Known limitations: section 0 provider constraints, residual ref deletion race,
+  runtime-grant versus probe-prerequisite mismatch, and open human gates.
+- Unknowns: actual current PAT form behavior, organization policy and Windows
+  journal ACL behavior without live evidence. Fixtures do not establish these.
+- Historic motivation beyond these contracts is not inferred from the audit.
 
 ## 3. Actors, surfaces, and terminology
 
-| Actor | Goal | Entry point | Visible surfaces |
-|---|---|---|---|
-| Setup owner | create the least-privileged setup PAT | `copilot setup` setup-PAT prompt | required-permissions table and result table |
-| Bot owner | create the least-privileged workflow PAT | workflow-PAT prompt | selected-feature permission table and result table |
-| Operator | diagnose an inconclusive permission | setup output and authentication docs | status reason and recovery action |
+| Actor | Credential | Surface and responsibility |
+|---|---|---|
+| Setup operator | Temporary setup PAT | CLI or local web, configuration and permitted setup changes |
+| Workflow bot | Persistent `PAT` Secret | GitHub Action API/Git operations and selected Project roles |
+| Reviewer | No credential | PR diff, tests, SDD/catalog and validation evidence |
 
-A **permission requirement** is a token role, GitHub scope, permission name,
-access level, applicability, and reason derived without inspecting a secret. A
-**permission check** is one safe observation for that requirement. `Verified`
-means a read-only provider operation proved the required capability; `Missing`
-means GitHub rejected a deterministic probe after token identity and repository
-access were established; `Unverifiable` means GitHub does not provide a safe
-non-mutating proof for the required access level or returned an ambiguous or
-transient response.
+`Verified` proves the capability, `Read available` proves exact public usability,
+`Missing` means deterministic denial, and `Unverifiable` means insufficient
+proof. Cleanup pending and Secret collision are blocking facts, including on a
+conditional row. Operational availability never proves a write grant.
 
 ## 4. Goals, non-goals, and fixed invariants
 
 ### 4.1 Goals
 
-1. Both PAT prompts MUST show a complete, role-specific permission table before
-   reading the secret.
-2. A newly supplied or re-entered PAT MUST produce a permission status table
-   in the same terminal flow before setup relies on it.
-3. Workflow-PAT requirements MUST be narrowed by the final selected features;
-   optional permissions MUST state their enabling condition.
-4. Missing safely verifiable required access MUST block the dependent setup
-   phase before mutation.
+- Functional permission matrices for selected CLI/web and runtime routes.
+- No false positive from public endpoints, malformed data or another permission.
+- Small adapters with shared deadlines and precise ownership-aware cleanup.
+- Automated evidence and user/SDD documentation that describe the same contract.
 
 ### 4.2 Non-goals
 
-1. The implemented permission-guidance flow does not enumerate, create, edit,
-   rotate, or revoke GitHub PATs. The proposed guided operator PAT flow and
-   its explicit GitHub deletion responsibility are documented in
-   [`temporary-setup-operator-authorization.md`](./temporary-setup-operator-authorization.md).
-   The separate proposed guided workflow PAT is covered by
-   [`guided-bot-pat-onboarding.md`](./guided-bot-pat-onboarding.md).
-2. Setup does not prove write access by creating temporary labels, branches,
-   files, Variables, Secrets, comments, projects, or workflow runs.
-3. Existing remote Secret values remain unavailable. Credential-health evidence
-   MAY establish bounded runtime reachability, but MUST NOT be treated as a
-   permission audit; an existing workflow PAT is not accepted until its value is
-   re-entered and the configured permission audit completes.
-4. This change does not merge the setup and workflow PAT roles.
+Automatic token creation/revocation, GitHub account switching, live dogfooding,
+deployment, replacing the Action PAT with job-local `GITHUB_TOKEN`, or weakening
+write evidence to avoid a blocked provider prerequisite are outside this audit.
 
-### 4.3 Fixed product/safety invariants
+### 4.3 Invariants
 
-1. Token values MUST remain masked, memory-only where already specified, and
-   absent from requirements, checks, errors, fixtures, logs, and documentation.
-2. Provider text MUST be mapped to bounded semantic reasons; raw bodies and
-   authentication headers MUST never be rendered.
-3. A read probe MAY prove equal or weaker access. A read probe MUST NOT claim
-   that a write requirement is verified.
-4. `Unverifiable` MUST NOT be rendered as `Verified` or `Missing`.
-5. No permission-check configuration may enable mutating probes.
+- The setup PAT is never installed as the bot PAT implicitly or persisted locally.
+- No disposable write before plan approval; no setup application on failed audit.
+- Scope, role, row ID, level and provenance are immutable application facts.
+- Default branch commits, existing Project items and unknown Secrets are never
+  edited by probes. Upsert collisions disclose the unavoidable provider race.
+- No raw provider body, PAT, authorization header or test Secret in presentation.
 
-For a public repository, a successful Metadata or Contents read can be
-`Unverifiable` as PAT-grant evidence because the same resource is available
-without that grant. Organization `Projects: read` MAY be `Verified` when a
-non-public Project is returned, while required write rows remain
-`Unverifiable`. The browser MUST explain these mixed states beside the rows:
-`Unverifiable` is an evidence limit, not a claim that the PAT form omitted the
-grant. The confirmation prompt MUST direct the operator to inspect only
-required `Unverifiable` rows, including Projects read only if that row itself
-is `Unverifiable`; already `Verified` rows need no manual confirmation.
+## 5. Product journey
 
-## 5. Current versus proposed product journey
-
-| Stage | Current | Proposed | User/operator effect |
-|---|---|---|---|
-| Setup PAT guidance | explanatory paragraph | bootstrap permission matrix before prompt | operator can configure the PAT before pasting it |
-| Setup PAT result | identity/repository validity | identity plus permission evidence table | missing read access is visible early |
-| Workflow PAT guidance | credential-separation paragraph | exact matrix derived from selected features | bot PAT avoids unnecessary grants |
-| Workflow PAT result | generic valid/invalid check | one row per permission with evidence state | workflow readiness is understandable before Secret write |
-| Inconclusive write access | discovered during mutation/runtime | explicit `Unverifiable` with reason | no false assurance and no test mutation |
+| Stage | Before audit | Audited behavior |
+|---|---|---|
+| Identity | Object-shaped success could be accepted | Exact safe account and repository identity required |
+| Administration | Ruleset listing could prove the wrong permission | Protected Actions-permissions read required |
+| Network | Some deadlines covered headers only | Headers and body bounded; late reads cannot emit success |
+| Runtime matrix | Read-only routes omitted Contents | Contents read appears for enabled runtime inspection |
+| Cleanup | Branch name alone could authorize deletion | Exact ref and recorded commit must still match |
+| Selected Projects | Disposable creation only | Every selected Project also confirms `viewerCanUpdate` |
 
 ```mermaid
 flowchart LR
-    C[Selected capabilities] --> P[Pure permission policy]
-    P --> R[Required permissions table]
-    R --> S[Masked PAT input]
-    S --> V[Validation use case]
-    V --> Q[Read-only GitHub query port]
-    Q --> O[Permission status table]
+  A[Identity and reads] --> B[Review plan]
+  B --> C{Approve}
+  C -->|Yes| D[Disposable capability checks]
+  C -->|No or preview| E[No writes]
+  D --> F{Evidence and cleanup complete}
+  F -->|Yes| G[Provision and install]
+  F -->|No| H[Blocked or partial with recovery]
 ```
 
-Text equivalent: selected capabilities produce a pure permission plan; the CLI
-presents that plan before secret input; a validation use case then invokes only
-read-only GitHub queries and presents ordered permission outcomes.
+Text equivalent: reads → review → approval → capability checks → installation,
+or a blocked/partial result with the named failed phase and recovery action.
 
 ## 6. Functional behavior and state model
 
-### 6.1 Setup PAT
+### 6.1 Read evidence
 
-1. After repository coordinates are resolved and before `readSecret`, setup
-   renders the bootstrap requirements needed to inspect the repository and
-   build the plan. Conditional rows explicitly identify later feature/storage
-   choices that can require broader access.
-2. After entry, setup validates identity and repository selection, executes the
-   safe bootstrap probes, and renders results in the same order as requirements.
-3. A missing required bootstrap permission blocks the wizard before remote
-   inspection. Missing conditional Secret/Variable inventory access remains
-   visible but does not block before the operator has selected storage features.
-4. Pre-plan remote inventory MUST map unavailable repository and organization
-   Secret/Variable reads to bounded access facts instead of throwing. The wizard
-   may continue with unknown inventory, but MUST NOT describe unavailable data
-   as an empty resource list. A rejected or absent remote inspection port when
-   a remote target was supplied MUST yield an explicitly unavailable snapshot
-   with unknown owner/visibility and no fabricated resource facts; the final
-   audit and scope-sensitive validation still run before confirmation.
-5. After the final configuration is approved, the setup PAT permission plan is
-   recomputed for mutation-time capabilities. Newly relevant missing access
-   blocks mutation. A required `Unverifiable` row is never reported as ready:
-   unverifiable read access without positive public operational evidence blocks,
-   while an unverifiable write level may
-   proceed only after a separate, explicit operator acknowledgement that the
-   PAT was configured with the displayed access. Interactive acknowledgement
-   defaults to No; non-interactive execution requires
-   `--confirm-unverifiable-write-permissions`. `--yes` alone is not evidence.
-   Readiness is computed over **all** required rows: `ready` is true only when
-   every required row is a usable read (including the zero-row case). A required
-   write is never ready by itself, even when every read is usable;
-   `confirmationRequired` is true only when all required reads are usable, at
-   least one required write exists, and every required write is unverifiable.
-   A missing write never enters the acknowledgement path. This distinction is
-   enforced in the application use case before the CLI or credential collector
-   can accept the report.
-   Generic interactive or unattended setup examples MUST omit that exception
-   flag. Documentation may show it only in a separately labelled recovery flow
-   whose immediately adjacent prerequisite requires the operator to inspect the
-   displayed PAT settings first. A recovery rerun MUST preserve the original
-   setup plan: repeat interactive selections, or append the flag to the exact
-   non-interactive invocation with the same configuration file, feature/agent
-   flags, and credential inputs. A bare example that silently selects defaults
-   is forbidden. The documentation validator MUST enumerate shell fences in
-   `README.md` and every public `docs/*.mdx` page, at any indentation used in
-   repository MDX, including nested `<Steps>` blocks and one or more Markdown
-   blockquote prefixes (`>`, with optional indentation),
-   and examine only the nearest ordinary prose paragraph before each
-   exceptional block. Opening and closing fence indentation and marker MUST
-   be paired consistently; text inside an earlier indented backtick or tilde
-   fence, including a blockquoted fence, and unrelated prose cannot authorize
-   the exception. A quoted fence stops containing later content when its
-   blockquote level ends, even without a matching closing marker, so it cannot
-   hide a subsequent shell example. A quoted shell example still requires the
-   same adjacent visible prerequisite. An exceptional
-   shell fence that reaches end of file without a closing marker is still
-   inspected rather than silently skipped.
-   The wizard MUST invoke a configured final-permission-audit port after
-   normalization and before final remote storage validation. Expected missing
-   or unconfirmed permissions return a bounded rejection outcome from this
-   port, not an exception. The wizard returns a structured `blocked` result
-   with the final normalized configuration, bounded permission errors, and
-   available remote facts; it MUST NOT continue to storage validation or
-   mutation. Unexpected provider/transport failures may still throw. On an
-   accepted audit, the wizard MUST apply both organization-storage validation
-   and scope-sensitive managed-resource inventory validation, using the exact
-   Secret and Variable names derived from the normalized configuration. It
-   MUST return the final configuration and bounded storage blocking facts
-   rather than throw. The CLI MUST recognize either structured blocked reason
-   immediately, report the corresponding bounded permission or storage error
-   with the result's exit code, and MUST NOT duplicate either
-   inventory validator or start another permission audit, credential collection,
-   workflow comparison, target resolution, or mutation.
-6. If repository or organization Secret or Variable inventory is still
-   unavailable or unknown, the setup wizard MUST stop after rendering the final
-   permission table and before
-   credential decisions, resource targeting, or mutation only when at least one
-   selected resource may resolve to that scope, or when
-   `preserveExisting` requires discovering whether an unoverridden resource
-   already exists in either scope. An empty collection is authoritative only
-   when its access state is `available`; transient or ambiguous failures MUST
-   NOT imply absence. Repository resources take precedence: once every
-   unoverridden selected name is verified as already present in repository
-   inventory, organization inventory is not required merely for preservation.
-7. A selected resource with an explicit organization override still depends on
-   repository inventory for that resource class: a same-name repository value
-   would shadow the organization target. Even when every selected resource is
-   forced to organization scope with `preserveExisting: false`, setup MUST block
-   on unavailable repository inventory or a known same-name shadow before
-   credential collection or provisioning.
-8. Remote setup inspection records whether `copilot_credential_health.yml` is
-   installed, confirmed missing, unavailable, or unknown without mutating the
-   repository. When existing Secrets require health validation, Actions write
-   is required for dispatch and Contents write is required for its isolated
-   disposable branch. Workflows write is required only when the workflow is
-   independently confirmed missing; installed, unavailable, or unknown states
-   MUST NOT trigger that bootstrap grant because ambiguous absence never
-   authorizes workflow mutation.
-   Workflow-file inspection requires Contents read, not a separate Workflows
-   read permission; the Workflows grant is write-only and bootstrap-specific.
-   The remote-configuration summary renders the bounded workflow state.
-9. An Actions `getWorkflow` `404` does not by itself prove absence. Setup MUST
-   classify the workflow as `missing` only when an independent Contents read
-   first probes the repository root (`path: ''`) to prove Contents visibility
-   and a subsequent exact read of
-   `.github/workflows/copilot_credential_health.yml` returns `404`. A readable
-   file, absent Contents endpoint, failed visibility proof, or
-   ambiguous/transient exact-file result is `unavailable`, never `missing`.
-   Initial remote inspection may use GitHub's default branch before the
-   questionnaire fixes the selected main branch; that status is provisional.
-   After normalization and before the final permission audit, the wizard MUST
-   use a narrow read-only port to inspect repository-root visibility and the
-   exact workflow file on `configuration.repository.mainBranch`, replacing only
-   the workflow state in its remote snapshot. A missing/rejected probe becomes
-   `unavailable`, never an inherited default-branch `installed` or `missing`.
-   The root Contents read proves visibility only when its `data` is a directory
-   listing array (which may be empty) whose entries have non-empty names.
-   Missing, scalar, object, and malformed-entry payloads remain `unavailable`
-   even if the subsequent exact-file lookup would be 404.
-   A successful exact-file response proves `installed` only when its `data` is
-   a non-array file object with a non-empty string `sha`. An empty object,
-   directory array, absent `sha`, or malformed payload is `unavailable`, not
-   proof of installation; this rule also governs the setup-only bootstrap.
-   The separate setup-only credential-health bootstrap adapter MUST apply the
-   same two-read confirmation on the selected ref before dispatch or creating
-   a temporary workflow, even if Actions finds a workflow on the default
-   branch. Dispatch additionally requires evidence that GitHub can register the
-   workflow from its default branch: either the Actions workflow index resolves
-   the known file, or, when that index returns `404`, repository metadata names
-   a valid default branch and exact Contents inspection proves the workflow
-   installed there. A selected-ref file alone never authorizes dispatch when
-   the default branch lacks the workflow. A confirmed selected-ref absence may
-   require bootstrap despite default-branch presence; if the selected ref is
-   the default branch itself, confirmed absence permits temporary bootstrap
-   there before dispatch. Otherwise, missing or ambiguous default-branch
-   dispatchability evidence returns unavailable without mutation. Ambiguous
-   reads return unavailable health evidence and MUST NOT create, dispatch, or
-   delete a workflow; doctor remains query-only.
-   Temporary bootstrap MUST use create-only semantics (no existing-file SHA)
-   and retain the non-empty file SHA returned by the successful creation. If
-   creation races with another actor or the returned SHA is unavailable, setup
-   MUST NOT dispatch or infer ownership. Cleanup MUST reread the exact file on
-   the selected ref and delete it only if its SHA still equals the SHA created
-   by this run; the delete request MUST use that same SHA so a later concurrent
-   edit fails safely. A missing, changed, or unreadable file remains untouched
-   and produces bounded cleanup guidance without raw provider detail.
-   This remote-configuration absence inspection is distinct from the PAT
-   permission audit's read-only commit-list probe below. Operator guidance
-   MUST identify the correct endpoint for each purpose instead of conflating
-   the two Contents reads.
+| Permission | Probe | Positive evidence |
+|---|---|---|
+| Metadata | Exact repository metadata | Private visibility proves authentication; public is available |
+| Contents | Commit list | Valid list, or documented empty-repository 409 with known visibility |
+| Administration | `/repos/{owner}/{repo}/actions/permissions` | Object with boolean `enabled`; endpoint requires Administration read |
+| Actions / Checks | Workflow list / default-branch check runs | Valid collection and established visibility |
+| Issues / Pull requests | Labels / open PR list | Valid collection and visibility; read success never proves write |
+| Secrets / Variables | Exact-scope inventory | Valid protected collection |
+| Members | Authenticated user's membership | Active membership for the exact organization |
+| Issue Types | Organization collection | Public success cannot prove the token grant |
+| Projects | Bounded list or selected exact number | Private read proves scoped read; public is available |
 
-### 6.2 Workflow PAT
+Repository/public collection responses must contain the expected array or
+structured collection, including valid empty arrays. `{}`, malformed members,
+wrong organizations, scalar payloads and unknown visibility do not pass.
+Administration is never eligible for public-read provenance: ruleset listing
+requires Metadata only and cannot establish Administration.
 
-1. The final `SetupConfiguration` determines workflow permissions.
-2. Repository Metadata read is the only unconditional workflow-PAT row. The
-   four repository write permissions are derived independently from enabled
-   runtime consumers, not inherited as a fixed baseline:
+### 6.2 Runtime grants
 
-   Any enabled runtime route additionally requires Actions read for the
-   fail-closed previous-run queue check, even when it does not dispatch a
-   workflow. Actions write replaces that read row only for release/hotfix
-   dispatch. Repository templates and setup-only credential-health selection
-   are not runtime routes and do not retain this grant by themselves.
+Metadata read is unconditional. An enabled runtime route adds Actions read for
+queue inspection and Contents read for branch/commit/file access. Managed issue
+branches, file-editing comments or release/hotfix use Contents write instead;
+release/hotfix also upgrades Actions to write. Issues and PR write are selected
+by their actual routes. Guarded approval adds Administration, Checks and
+Variables read, including organization Variables when the effective approval
+policy is inherited there. Organization Members follows assignment/reviewer
+counts, protected authorization and members-only agent actions. Disabled issue
+routes do not gain authority from a retained workflow profile. Selected
+organization Projects and Issue Types receive their own write requirements.
 
-   | Permission | Selected runtime capability that requires it |
-   |---|---|
-   | Actions write | Release/hotfix workflow dispatch, including an enabled release/hotfix issue workflow |
-   | Contents write | Managed issue branches, enabled issue/PR comment routes that permit authorized autofix or do-user-request file commits, or release/hotfix branch, tag, and merge operations |
-   | Issues write | Issue automation, issue comments, issue-progress commit processing, inactive-issue closure, or release/hotfix issue lifecycle |
-   | Pull requests write | PR automation, PR review comments, commit-triggered Bugbot review, issue-comment autofix on a PR, guarded approval, or release/hotfix promotion |
+A grant and a disposable probe prerequisite are distinct. Opening a temporary
+PR needs a changed branch (Contents write); Actions probing needs a branch and
+sometimes a no-job workflow override (Workflows write); Issue deletion needs
+administration/organization policy; organization Project creation may require
+a stronger role than item updates. These constraints can block otherwise valid
+runtime tokens. The audit does not silently add broad grants or claim that a
+failure of a prerequisite proves absence of the target grant. This remains
+explicit product debt until an equally strong isolated proof is available.
 
-   An issue-workflow kind is a runtime consumer only when the issue route is
-   enabled. A disabled route MUST NOT retain a write grant merely because its
-   template or issue-workflow selection remains in the configuration. With
-   all mutating routes disabled, guarded approval off, and `ai.membersOnly`
-   off, the workflow table contains only Metadata read. Independently available
-   members-only single actions can still require organization Members read.
-   Existing defaults still select the normal write grants, and disabling one
-   consumer MUST NOT remove a grant needed by
-   another. Every enabled issue/PR comment route includes potential
-   file-modifying autofix and do-user-request capabilities; an individual
-   comment that only posts an answer does not make its configured route
-   read-only or remove the workflow PAT's Contents write requirement. The
-   separate repository-write collaborator check authorizes the comment
-   author, not the workflow PAT. There is no selectable comment-only runtime
-   capability in this configuration. GitHub documents Contents write for merging a PR and Actions write
-   for workflow dispatch; neither is required just to render a disabled route.
-3. Administration read is included for release/hotfix orchestration or guarded
-   PR approval. Checks read and Variables read are included for guarded
-   approval. Organization Members read is included only when an enabled runtime
-   can inspect membership: automatic issue/PR assignees, automatic PR reviewers,
-   release/hotfix issue authorization, or `ai.membersOnly` for an enabled issue,
-   PR, commit, or comment route or an independently available agent-backed
-   single action. Members-only single actions retain this organization grant
-   even when all event-driven routes are disabled. An ordinary comment route
-   alone, disabled event routes by themselves, and zero assignment/reviewer
-   counts MUST NOT retain a Members grant. Ordinary
-   comment mutations use the separate repository-write collaborator check and
-   MUST NOT be projected as organization-membership consumers.
-   Issue Types write, Projects write, and organization Variables read are
-   included only when their selected capability and effective target require
-   them. Effective targets include an existing
-   organization `PR_APPROVAL_POLICY` Variable preserved from remote inventory,
-   even when the configured default remains repository scope.
-4. Identity/repository validation and safe read probes run before the value is
-   accepted for Secret provisioning.
-5. Repository Contents read is probed through the read-only commit-list endpoint,
-   not the root Contents endpoint. Repository metadata MUST first establish
-   whether a successful target read is authentication-bound. A successful read,
-   including GitHub's documented `409 Conflict` for an empty Git repository,
-   verifies permission only when the repository is private. On a public
-   repository the same target can be anonymously readable and therefore remains
-   `Unverifiable`; `404` also remains ambiguous and never becomes verified.
-6. Repository Checks read MUST resolve the repository's exact `default_branch`
-   through a read-only metadata request and use that percent-encoded branch as
-   the commit reference for the check-runs request. A literal local alias such
-   as `HEAD` MUST NOT be sent to GitHub as a repository commit reference. Both
-   reads share one bounded probe slot and timeout. Missing, malformed, empty, or
-   oversized branch metadata, or a failed metadata request, returns bounded
-   `Unverifiable` evidence and MUST NOT start the check-runs request.
-7. When the `PAT` Secret already exists, remote credential health is presented
-   as bounded evidence only. Setup MUST require the operator to re-enter the
-   workflow PAT, run the same ordered permission audit used for a new value, and
-   provision it only after that audit is accepted. Interactive setup MUST NOT
-   offer an unaudited keep path. Non-interactive setup MUST fail before mutation
-   unless `PAT` is supplied again; GitHub's write-only Secret API is never
-   described as permission evidence.
-8. A successful provider read MUST become `Verified` only when the endpoint is
-   permission-bound (for example Secret or Variable inventory), or when
-   repository metadata in the same bounded probe proves that the target
-   repository is private. Publicly readable repository probes, organization
-   Issue Types reads, and successful reads whose visibility cannot be established
-   remain `Unverifiable`. The public organization members listing MUST NOT prove
-   Members-read capability: it may omit concealed members. For an organization
-   Members read, use the permission-bound
-   [`GET /user/memberships/orgs/{org}` endpoint](https://docs.github.com/en/rest/orgs/members#get-an-organization-membership-for-the-authenticated-user),
-   which requires Members read for a fine-grained PAT; accept only a successful
-   active membership payload for the exact organization. Malformed, pending,
-   denied, or unavailable membership evidence remains unusable. Organization
-   Issue Types, every write, and failed or ambiguous reads never gain a public
-   operational fact. Visibility resolution and the target read share
-   one concurrency slot and timeout, preserve result order, and never use
-   unauthenticated success as token permission evidence.
-9. For any existing non-workflow credential, a `keep` choice is authoritative
-   only when the effective Secret storage policy permits preserving that exact
-   scope. Disabled preservation or an override that moves the Secret MUST
-   request and validate a replacement value; non-interactive execution without
-   that value fails before resource mutation.
-10. After approval, the resource-provisioning workflow MUST require an
-    authoritative remote configuration snapshot before grouping any selected
-    Secret or Variable write. A failed or missing inspection cannot fall back
-    to empty inventory, even when the configured target defaults to repository
-    scope; the relevant provider upsert MUST remain untouched.
-11. Once a selected managed Secret/Variable inventory is absent or required
-    access is unavailable, initial setup MUST return a structured failure before
-    local setup-file copying or any remote Secret, Variable, label, issue-type,
-    or tag mutation. GitHub identity and selected inventory preflight MUST
-    precede workspace preparation; a successful preflight then permits the
-    existing file-first provisioning order. An unrelated unavailable scope
-    remains non-blocking under the shared storage policy.
-12. A successful publicly readable repository GET after valid token identity
-    may prove that the selected read operation is usable, while remaining
-    `Unverifiable` as PAT permission evidence. This structured usable-read fact
-    may satisfy only the matching public-repository required read for execution
-    readiness; it never upgrades the row to `Verified`, never satisfies
-    organization Members, Issue Types or any write, and never applies to a denied,
-    ambiguous, malformed, timed-out, or visibility-unknown probe. The terminal
-    MUST explain that access is operationally available without claiming the
-    PAT has the named grant.
-    Positive operational evidence MUST carry an explicit public-read provenance
-    created by the query adapter after repository metadata proves public
-    visibility. A public organization Members listing is never operational
-    evidence for the full membership capability.
-    Reconciliation accepts that provenance only for the matching bounded public
-    permission/probe pair; Secret/Variable inventory, private or unknown repository
-    visibility, and arbitrary adapter booleans cannot make a required read ready.
+### 6.3 State transitions
 
-### 6.3 Permission states
+| State | Meaning | Next action |
+|---|---|---|
+| pending/checking | No final evidence yet | Await bounded operation |
+| creating/reading/deleting | Approved disposable operation | Await cleanup; never install early |
+| verified/available | Capability or exact read usability established | Continue when every required row is usable |
+| missing/unverifiable | Required evidence unavailable | Correct named access or retry; no generic override |
+| cleanup pending | Residue cannot be safely removed | Recover exact journal target before new audit |
+| partial | Session ended with unresolved effect | Inspect receipt, GitHub and journal |
 
-| State | Entered when | User-visible meaning | Setup behavior | Recovery |
-|---|---|---|---|---|
-| required | before input | grant this access level | wait for masked input | configure PAT |
-| verified | safe evidence proves the level | capability is available | continue | none |
-| missing | deterministic provider denial | capability is unavailable | block if required | grant permission/repository access |
-| unverifiable | write level or ambiguous response cannot be safely proven | no PAT-permission pass/fail claim; successful public repository reads may be usable | block required reads without positive operational evidence; require explicit acknowledgement for required writes | inspect PAT settings, acknowledge only after checking them, or retry |
-
-Duplicate requirements are normalized to the strongest access level and one
-row. Provider probes MAY complete concurrently with a fixed maximum of four
-in-flight requests, while returned checks and presentation remain in original
-requirement order. The immutable requirement remains authoritative for `role`,
-`scope`, `permission`, `level`, `applicability`, `condition`, and `probe`; a
-provider result is evidence, not a replacement requirement. Exactly one result
-with the same stable ID and identical security semantics is required. Missing,
-duplicate, malformed, or semantically mismatched evidence is projected onto
-the canonical requirement as `Unverifiable` with bounded generic guidance.
-Presentation MUST use canonical requirement fields even when provider evidence
-is hostile.
-
-Because the query port is read-only, it MUST NOT establish a write grant. A
-provider result that claims `Verified` for a write requirement is downgraded to
-canonical `Unverifiable` evidence and follows the explicit write-
-acknowledgement flow. `operationallyAvailable` may be retained only for an
-exactly matching repository-scoped read or organization Members-read
-requirement whose status remains `Unverifiable`; it cannot make organization
-Issue Types or any write requirement usable.
-Retry creates no durable permission state.
+Same-process inspections for one case-insensitive repository target are mutually
+exclusive. Independent rows retain four-slot concurrency and stable ordering.
+Another process with a live journal owner blocks recovery. Late results cannot
+promote a timed-out read or supersede a cancelled/expired web session.
 
 ## 7. User-facing configuration
 
-This change adds one bounded CLI acknowledgement flag:
-`--confirm-unverifiable-write-permissions`. It applies only when every required
-read is verified or positively operationally usable, no required permission is
-missing, and one or more required
-write levels remain unverifiable because validation is intentionally read-only.
-It does not convert a row to `Verified`, bypass invalid identity/repository
-selection, or accept unavailable required read evidence. Requirements remain
-derived from the existing immutable configuration, repository owner type,
-storage targets, and selected features. The permission catalog, status
-semantics, maximum probe concurrency, and prohibition on write probes are not
-configurable.
-If authenticated repository inspection cannot establish whether the owner is
-an organization or a user, the final token-backed setup audit MUST stop before
-all provisioning, with a retry/inspection action. The preview may display
-potential organization grants, but neither a guided owner assertion nor an
-accepted PAT probe may convert unknown ownership into verified scope.
+| Input | Default / boundary | Scope |
+|---|---|---|
+| Setup PAT | Hidden prompt; `--token` or `PERSONAL_ACCESS_TOKEN` alternative | Command memory only |
+| Workflow PAT | Hidden bot prompt; explicit `--workflow-pat`/Secret input alternative | Approved Actions Secret scope |
+| Feature/storage choices | Shared setup configuration and effective remote inventory | Reviewed plan |
+| Projects | Canonical unique numbers, maximum 10, integers 1–2147483647 | Approved organization selection |
+| `--yes` | Approves displayed plan | Does not prove grants |
+| `--dry-run` | Preview only | No disposable write probes |
+| Retired confirmation option | Rejected | No compatibility bypass |
 
-Recommended interactive use remains `copilot setup`. Non-interactive setup
-prints permission results for supplied PATs but never prompts. `--dry-run`
-prints requirements and any available checks without implying mutation access.
+No new public knob is added. Concurrency four, request deadline 10 seconds,
+Projects discovery two pages of 100, Actions discovery five pages of 100 and 64
+file checks are bounded implementation limits. Runtime JSON overrides follow
+normal input precedence; a required empty PAT does not fall back to another
+identity. The setup bootstrap/final matrices keep stable distinct read/write
+IDs, then normalize the strongest required grant for final consumers.
 
 ## 8. Clean Architecture design
 
-### 8.1 Responsibilities and dependency direction
-
-| Layer/boundary | Owns | Must not own/import |
+| Boundary | Owns | Excludes |
 |---|---|---|
-| Domain/pure policy | permission vocabulary, strongest-level normalization, capability-to-requirement decisions | terminal, fetch, Octokit, tokens |
-| Application | validate-token-permissions use case, ordered result contract, final scope-sensitive inventory blocking | provider endpoints/headers, console |
-| Semantic ports | read-only identity/repository/permission inspection | mutation methods or provider DTOs |
-| Infrastructure adapter | bounded GitHub GET/GraphQL probes, status/error mapping, non-throwing optional resource inventory | feature selection or rendering |
-| CLI presentation | narrow tables, icons plus status text, wrapping/no-color behavior | capability policy or remote calls |
-| Entrypoint/composition | target/config projection and concrete wiring | duplicated requirement lists |
+| Domain | Permission requirements, checks, provenance/proof types | HTTP/filesystem/frameworks |
+| Pure policies | Feature-derived matrices and canonical evidence reconciliation | Provider/process imports |
+| Application | Identity-before-probes, readiness, approved plan orchestration | Concrete fetch, Git and SDK DTOs |
+| Semantic ports | `SetupTokenPermissionInspectionPort` and audit/presentation contracts | SDK/resource DTOs |
+| Infrastructure | Read targets/shapes, HTTP deadlines, family transactions and journal cleanup | Product readiness decisions |
+| CLI/web adapters | Masked entry and sanitized ordered presentation | Duplicated permission policy |
+| Action/Git boundary | Runtime input masking and child-only GitHub credentials | Persistent credentials |
 
-The dependency direction is CLI/infrastructure -> application -> domain. The
-application-facing permission query port exposes no POST, PUT, PATCH, DELETE,
-upsert, dispatch, or temporary-resource operation.
+```mermaid
+flowchart LR
+  UI[CLI or web] --> UC[Setup application]
+  UC --> Policy[Pure requirements and evidence]
+  UC --> Port[Semantic inspection port]
+  Adapter[HTTP and resource adapters] --> Port
+  Adapter --> Journal[Private recovery journal]
+```
 
-### 8.2 Contracts, state, and trust boundaries
-
-- Pure decisions: token role, permission list, strongest access, applicability,
-  stable order, and whether selected resource names plus storage policy require
-  repository inventory.
-- Application contracts: immutable requirement/check arrays and a summary with
-  strict `ready`, `confirmationRequired`, counts, and credential identity check.
-- Semantic port: one `inspect(owner, repository, token, requirements)` read-only
-  operation returning semantic evidence states.
-- Durable state: none; results exist only for the command.
-- Concurrency/idempotency: at most four read probes in flight, stable returned
-  order, and safe repetition; the fixed limit is not user-configurable.
-- Remote inventory state: repository and organization Secret/Variable access is
-  represented separately from the discovered resource names; unavailable or
-  unknown access is never projected as a confirmed empty inventory.
-- Fail-closed consumers: final audit, credential collection, and resource
-  provisioning reject unavailable/unknown repository or organization inventory
-  when the selected resource needs that scope. Every managed Secret or Variable
-  also needs repository inventory to rule out a same-name repository value
-  shadowing an organization target at workflow runtime. A known shadow blocks
-  organization provisioning with a named recovery action; it is never treated
-  as successful organization configuration. Repository-only targets do not
-  gain an unrelated organization inventory dependency.
-- Public-read usability is a separate, positive semantic fact on one successful
-  repository read. Neither generic `Unverifiable` nor a public URL alone
-  authorizes a read; invalid token identity, denied/ambiguous probes, protected
-  reads, organization permissions, and writes still block or require their
-  existing explicit acknowledgement.
-- Untrusted inputs: provider status/body/headers, repository metadata, token.
-- Provider error mapping: 401 after base validation and an explicit permission-
-  denial 403 are missing; 404, rate limit, 5xx, network, and unsupported proof
-  are unverifiable.
-  A permission-probe `403` is deterministic only when bounded normalized
-  provider metadata explicitly identifies a missing permission and no
-  `Retry-After`, exhausted rate-limit, or SSO header is present. Bare responses,
-  the generic provider message `Forbidden`, rate-limited responses, SSO
-  responses, and otherwise ambiguous `403` responses remain `Unverifiable`;
-  raw provider prose is never rendered.
-  This strict probe classification is context-specific: it MUST NOT weaken
-  established operational fallbacks in other GitHub adapters, such as treating
-  a generic forbidden duplicate-comment deletion as requiring compaction.
-  Malformed provider JSON and unavailable header access are also bounded as
-  ambiguous evidence and MUST resolve to `Unverifiable` without leaking or
-  propagating the provider failure.
-- Empty-repository mapping: only the repository Contents probe may interpret
-  `409 Conflict` from the commit-list endpoint as verified read evidence. No
-  other probe/status pair gains this exception, and a write requirement remains
-  `Unverifiable` because the read-only endpoint cannot prove mutation access.
-- Checks-reference mapping: the repository Checks probe first reads bounded
-  repository metadata, accepts only a non-empty `default_branch` of at most 255
-  characters without ASCII control characters, percent-encodes that exact value,
-  and then requests check runs. It never substitutes `HEAD`, an invented branch,
-  or untrusted metadata directly into the URL. The two serial GETs consume one
-  concurrency slot and one timeout budget.
-
-### 8.3 Executable architecture constraints
-
-1. Pure permission policy imports no CLI, `node:*`, infrastructure, Octokit, or
-   fetch types.
-2. Architecture tests reject mutation verbs on the permission query port and
-   reject permission catalogs duplicated in CLI/infrastructure.
-3. Adapter tests assert every request is GET or GraphQL query and that rendered
-   values never contain the token or raw response body.
+The historical `SetupTokenPermissionQueryAdapter` class name is retained for
+fixture compatibility, but its semantic interface is an inspection capability:
+required approved writes are real transactions. Read mapping, Projects access,
+workflow/Project cleanup and HTTP mechanics have separate modules. Architecture
+fixtures enforce provider-independent policies and a 300-line ceiling for the
+PAT orchestration/resource modules covered by this change.
 
 ## 9. UI/UX and content contract
 
-### 9.1 Information hierarchy
-
-1. PAT role and why it is needed.
-2. Required permission matrix.
-3. Masked input prompt.
-4. Identity/repository result.
-5. Permission status matrix.
-6. One next action for missing or unverifiable access.
-
-### 9.2 Representative views
+Example primary rows, identically ordered across CLI/web:
 
 ```text
-Setup PAT permissions (example: selected Secret and Variable provisioning,
-plus validation of an existing credential)
-
-Permission              Access       Applies when
-Metadata                Read         Always: repository discovery
-Contents                Read         Always: inspect repository files
-Secrets                 Write        If selected Secrets are provisioned
-Variables               Write        If selected Variables are provisioned
-Actions                 Write        If existing credentials need health dispatch
-
-Enter Setup PAT: ********
-
-Setup PAT permission check
-
-Status            Permission              Access
-✅ Verified        Metadata                Read
-✅ Verified        Contents                Read
-? Unverifiable    Secrets                 Write
-? Unverifiable    Variables                Write
-? Unverifiable    Actions                  Write
-
-Action required: inspect the displayed write levels in your PAT settings and
-explicitly confirm them before setup proceeds. Unverifiable is not a pass:
-GitHub offers no safe read-only proof of those write levels.
-
-Browser example for a public repository: `Projects · organization · Read —
-Verified` can coexist with `Metadata · repository · Read — Unverifiable` and
-`Secrets · organization · Write — Unverifiable`. The browser explains that a
-public repository read does not prove the PAT grant and a read-only check
-cannot prove Write. Its prompt says to compare only the required
-`Unverifiable` grants with GitHub PAT settings. A user who declines stops
-before mutation; an explicit confirmation leaves the rows `Unverifiable` and
-allows only the already specified, narrowly scoped continuation.
+Setup PAT: @operator — identity verified
+Metadata / Read      Read available — public repository; grant not independently proven
+Administration / Read Verified — protected operation succeeded
+Variables / Write    Creating → Reading → Deleting → Verified
+Secrets / Write      Unverifiable — cleanup pending; inspect the audit trail
+Action required: resolve the named cleanup before retrying. No installation started.
 ```
 
-The real table is derived from the selected features and remote state; disabled
-Secret/Variable provisioning or absent credential-health validation omits the
-corresponding rows. An Actions write check needs Contents write for its isolated
-branch; a confirmed missing health workflow additionally needs Workflows write
-for temporary bootstrap.
+The reviewed plan lists disposable probes and unavoidable notifications/audit
+history. A pending row names its phase without claiming readiness. A blocked
+row names the permission, scope, level, bounded category and recovery. A partial
+result preserves completed facts; cancellation never promises PAT revocation.
 
-The workflow-PAT view uses the same structure and the title `Workflow PAT`.
-Tables MUST use status text as well as symbols, fit terminal widths 40/80/120,
-wrap purpose/action text, and remain understandable with `NO_COLOR`. Token,
-authorization headers, raw provider prose, account email, and private response
-payloads never appear.
-
-### 9.3 Primary states
-
-- Pending: required table followed by masked prompt.
-- Action required: at least one required permission is missing or a required
-  read is unverifiable without positive operational evidence; no dependent
-  mutation has started.
-- Confirmation required: identity and required reads are verified or positively
-  usable on the selected public repository, no required
-  permission is missing, and at least one required write cannot be proven by a
-  safe read-only probe. The table remains non-ready until the operator confirms.
-- Partial: verified and unverifiable rows coexist with an explicit limitation.
-- Blocked/failed: token invalid, wrong repository selection, or required safe
-  probe rejected.
-- Complete: all safely verifiable requirements pass and any required
-  unverifiable writes were explicitly acknowledged without changing their
-  displayed status. Publicly readable required repository reads may remain
-  visibly `Unverifiable` but operationally usable, with a distinct explanation.
-
-GitHub issues, PRs, or comments are not changed by this local terminal feature.
-No durable marker or notification is created.
+CLI is English; web uses en/es/fr/pt with accessible text and live regions.
+Color/icons supplement textual state. Existing responsive, light/dark, keyboard,
+zoom and screen-reader gates are retained; the human gates are not closed by
+this audit. Test resources use a random namespaced title and exact IDs. PRs are
+drafts, closed rather than merged; Issues may create notifications; no per-phase
+GitHub comment is published. GitHub's own history remains after cleanup.
 
 ## 10. Failure, recovery, and cleanup
 
-| Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |
-|---|---|---|---|---|---|
-| invalid token | setup stops before remote planning | no token/result persisted | no | replace PAT | none |
-| wrong repository selection | setup stops | identity only in memory | no | grant repository access | none |
-| missing safe-probe permission | dependent phase stops | table remains in terminal | no | grant named permission | none |
-| final configuration or preservation has unavailable organization storage | final setup-PAT requirements and results remain visible, then setup stops before credential decisions, target resolution, or mutation | approved configuration, bounded storage facts, permission table | no | grant the named organization permission and retry | none |
-| optional repository inventory denied before selection | wizard continues with unavailable/unknown inventory; the final audit blocks if the capability becomes required | access state and completed permission rows | no | select features, then grant any required permission named by the final table | none |
-| required repository inventory remains unavailable after final audit | setup stops before credential prompts, target resolution, or mutation; no empty inventory is inferred | final permission table and bounded access state | no | retry after provider recovery or correct the named PAT permission | none |
-| repository inventory unavailable for organization-only resources | setup blocks because a repository Secret/Variable could shadow the organization target | final permission table and bounded access states | no | restore repository inventory access | none |
-| required write level unverifiable | setup pauses before dependent work; the row remains non-verified | verified identity/read facts | no | inspect PAT settings, then confirm interactively or pass the dedicated non-interactive acknowledgement flag | none |
-| existing workflow PAT cannot be read | setup requests the PAT again before accepting or reprovisioning it; non-interactive setup without `PAT` stops | bounded remote-health result only | no | re-enter or supply `PAT`, then complete its permission audit | none |
-| rate limit/network/5xx | no false missing result | other completed rows | bounded provider retry only | retry later | none |
-| narrow terminal | table wraps | semantic row order | not applicable | none | none |
+| Failure | Result and retained facts | Recovery |
+|---|---|---|
+| Invalid identity or exact repository mismatch | Block before capability probes | Correct account, selection or PAT |
+| 401 / explicit permission 403 | Missing, unless cleanup still pending | Correct selected access |
+| Rate limit, SSO, ambiguous 403/404, 5xx, malformed body or timeout | Unverifiable; raw data dropped | Resolve policy/network and retry |
+| Secret PUT reports update | Blocking collision; unknown Secret not deleted | Inspect audit trail; no automatic ownership assumption |
+| Ref SHA changed or legacy journal lacks SHA | Cleanup pending; branch retained | Inspect exact ref/commit manually |
+| Issue deletion denied | Exact Issue closed and number retained; setup blocked | Authorized deletion and confirmed absence |
+| Project role denied | Named selected Project blocks before disposable creation | Grant bot account access to that Project |
+| Concurrent inspection | Second audit unavailable; no recovery of active resources | Retry after first completes |
+| Session cancellation/expiry | Clean probes keep cancellation; pending effects become partial | Use result and journal to reconcile |
+
+New journal records use version 2 so older releases reject them instead of
+ignoring ownership and incident fields during rollback. Version 1 remains
+readable for conservative recovery, including old label probes. New branch
+entries record `referenceSha` before creation and after any successful file
+commit. Actions entries also record the selected workflow ID before dispatch;
+run cleanup requires that ID as well as run ID, event and branch. A present
+legacy run without its workflow identity is retained. Secret collisions keep a
+version-two incident record that blocks another audit without deleting the
+unknown Secret; only manual reconciliation can remove that marker. A present legacy ref without a SHA is retained, never deleted blindly;
+an already-absent one can be resolved. POSIX root/files are private; Windows
+ACL validation remains an explicit human gate. No token/test value is journaled.
+The pre-delete SHA comparison narrows the race but GitHub provides no atomic
+compare-and-delete; a concurrent advance after that check remains a documented
+provider limitation.
 
 ## 11. Security, permissions, and privacy
 
-1. The feature promotes least privilege and never recommends Administration
-   write, Secrets access, Variables write, Webhooks, or Workflows access for the
-   runtime PAT unless a future reviewed capability requires it.
-2. Permission probes are read-only and target only the resolved repository or
-   selected organization resources.
-3. Tokens never enter requirement/check objects, renderer fixtures, thrown
-   messages, logs, snapshots, analytics, or durable files.
-4. A provider denial is not retried with broader endpoints and an ambiguous
-   denial is not converted to `Missing` without base identity/repository proof.
+1. Requests target GitHub API only and reject redirects; Projects pagination
+   rejects cross-origin targets. All identity/read/write bodies are consumed
+   under the request deadline; ignored AbortSignals cannot hang the result.
+2. Metadata is buffered once. Provider headers describe endpoint requirements,
+   never the full PAT grant inventory. Public and protected facts stay distinct.
+3. Guided account login and immutable ID checks reject mismatched accounts.
+   Manual entry has the ordinary identity/grant audit, not the guided binding.
+4. Action registers the resolved PAT with `core.setSecret`, including JSON
+   input, before returning it to runtime. Git Authorization uses the URL-scoped
+   `http.https://github.com/.extraheader` in a copied child environment; no PAT
+   in process arguments, remote URL or persistent Git config.
+5. Reconciliation rejects forged/duplicate status and permission provenance;
+   cleanup remains blocking even if another row claims success. Conditional
+   cleanup and Secret incidents cannot be ignored by readiness.
 
 ## 12. Observability and operational UX
 
-The CLI reports role, stable permission ID, target scope, requested level,
-semantic status, and bounded reason. It MAY log total verified/missing/
-unverifiable counts in debug mode, never the token or raw headers. There is no
-telemetry service. Status ordering is the requirement-plan order, independent
-of probe completion order.
+Progress is observational: a closed view or broken callback cannot interrupt
+cleanup or change authoritative evidence. Ordered progress and receipts identify
+role, stable requirement ID, phase and
+bounded failure category. No raw provider text or secret is rendered or retained
+in diagnostic summaries. A failed audit is a concrete blocked/partial result,
+not a misleading generic authentication pass. Existing runtime Job Summary and
+Check Run contracts are unchanged; job-local evidence `GITHUB_TOKEN` remains
+separate from the product PAT. No recurring status noise is added.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-No config or persistent-state migration is required. Existing CLI flags and PAT
-sources remain valid. The output is additive. Automation consuming human CLI
-text is unsupported; exit behavior changes only when a newly detected,
-deterministically missing required permission fails earlier than the eventual
-remote operation would have failed. Rollback removes the permission use case,
-port, adapter, and presenter together; it must not leave duplicated static
-permission prose in the CLI.
+CLI and web share the strengthened contract on Ubuntu, macOS and Windows. No
+configuration schema or dependency change is introduced. Existing PAT Secrets
+are never inferred valid from presence; values must be supplied for auditing.
+Stricter malformed-response and Administration checks can correctly block a
+previous false positive. Legacy journal behavior follows section 10. Rollback
+can restore code/bundles, but cannot erase GitHub notifications/audit history.
+This PR targets develop; no deployment or dogfooding is part of acceptance.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD adds at least **135 distinct cases**.
+The retained 198-case baseline in section 0 is extended by a minimum **96**
+distinct regression cases (total minimum **294**, with three baseline human
+observations still open). Cases are counted once by their primary risk.
 
-| Area | Minimum distinct cases | Behaviors/risks covered |
+| Audit area | Additional minimum | Evidence/risk |
 |---|---:|---|
-| Domain permission policy | 25 | setup/workflow plans, independent selected-feature write grants and all-disabled minimum, enabled comment-route file-mutation potential versus individual answer-only events, conditional permissions, strongest-level dedupe, stable order, repository/organization preservation dependencies, effective preserved workflow-variable scope, installed-versus-bootstrap health workflow grants, positive and negative organization-membership capability projection including comment-only and independently available single-action routes |
-| Application state/blocking | 28 | verified, missing, required-read unverifiable, bounded public-read provenance and disguised protected permission rejection, public repository operational readiness and public-Members rejection, required-write confirmation including a write-only required plan, canonical reconstruction after semantic mismatch, duplicate evidence rejection, verified-write downgrade, invalid base token, organization-target shadow rejection, bounded pre-plan inspection failure, accepted/rejected final audit with structured block, selected-ref workflow state refresh, immediate remote-storage blocked handling, zero-count assignment and inactive membership checks |
-| Adapter/provider contracts | 42 | GET-only probes, fixed four-request concurrency with stable result order, private-versus-public/unknown visibility evidence, protected-endpoint evidence, permission-bound active self-Members membership and malformed/public-list rejection, commit-list Contents target, private empty-repository 409 versus public operational usability, default-branch Checks resolution plus encoded check-runs target, invalid/missing branch fail-closed behavior, ambiguous 404, 401, explicit permission denial, bare/generic/rate-limited/SSO 403, malformed JSON/header access, 5xx, redaction, bounded unavailable repository inventory, Contents-visibility proof plus independently confirmed missing versus permission-hidden health workflow on the selected ref in inspection and bootstrap, default-branch dispatchability proof even when Actions-index returns 404, malformed root scalar/object success remains unavailable without bootstrap, malformed exact-file success remains unavailable, unavailable endpoint state, duplicate-comment deletion fallback regression |
-| Setup/credential integration | 22 | pre-prompt setup table, conditional denial through planning, wizard-owned repository-inventory block for organization targets and known-shadow rejection, final setup check before remote-storage failure, scope-sensitive credential/resource consumers, absent/failed remote snapshot blocks every subsequent mutation, preserve-disabled and scope-moving keep rejection, workflow PAT check and explicit acknowledgement, existing PAT re-entry/audit, non-interactive missing-value rejection, missing audit composition failure |
-| UI/accessibility | 5 | required/result tables, public-read limitation copy, confirmation-required copy, 40-column wrapping, no-color text |
-| Architecture/security/docs | 13 | query-only boundary, no duplicated catalog, safe generic/recovery automation examples, nearest-paragraph permission-prerequisite cases, blockquoted backtick/tilde shell fences, quote-level transitions and quoted-prerequisite spoofing, and README plus MDX source enumeration with file-specific diagnostics |
-| **Total** | **135** | No double counting |
+| Provider identity/read/HTTP contracts | 21 | Exact/malformed identity/repo, native bodies, protected endpoint, shape/denial/deadline |
+| Project selection and authorization | 16 | Bounds, owner/number/role, every selection, propagation and pre-mutation block |
+| Runtime credential boundary | 6 | Masked environment/JSON source, empty override, safe fallback, non-secret input |
+| Application evidence/readiness | 5 | Pending conditional, duplicate/contradictory cleanup, forged public evidence |
+| Recovery/concurrency/architecture | 48 | Changed/legacy ref, workflow identity, collision persistence, malformed cleanup, bounded recovery, concurrent audit, observational progress and small pure modules |
+| **Total additional** | **96** | No live services or tokens |
 
-The pure policy requires 100% statements/branches/functions/lines. Changed
-application modules require at least 95% statements and 90% branches; terminal
-presentation and provider adapters require at least 90% lines and 85% branches;
-no live GitHub calls, no real secrets, no mutating requests, and semantic
-assertions rather than snapshots alone. Manual evidence covers both PAT prompts
-at widths 40/80/120 and `NO_COLOR`.
+Repository coverage keeps Jest's committed thresholds; changed pure matrices
+and evidence policy target 100% branch/line/function/statement coverage. HTTP and
+transaction paths use fixtures for failure phases and ownership/races. Critical new/shared HTTP,
+read, selected-role and cleanup boundaries must pass an aggregate 95%
+line/statement and 90% branch/function budget. Existing
+family write, session replay, four-locale UI and cross-platform workflow-contract
+suites remain required. No fake-timer test relies on real waits. Human provider,
+Windows ACL, responsive and accessibility observations remain separately open.
 
 ## 15. Documentation and discoverability
 
-| Audience | Artifact/page | Required content | Validation/navigation |
-|---|---|---|---|
-| Setup owner | `docs/authentication.mdx` | both matrices, status meanings, provider limitation | docs validation and setup links |
-| Operator | `docs/configuration-checklist.mdx` | preflight and recovery for each status | checklist link validation |
-| Troubleshooter | `docs/security-operations/operations/troubleshooting.mdx` | missing versus unverifiable decision | docs validation |
-| Automation operator | `README.md`, `docs/how-to-use.mdx`, `docs/single-actions/workflow-and-cli.mdx`, `docs/pull-requests/guarded-approval.mdx`, and `docs/issues/configurable-workflows.mdx` | every generic command omits acknowledgement; any inspected-PAT recovery is separately labelled | docs validation |
-| Contributor | `docs/development/architecture.mdx` | policy/use case/query adapter/presenter boundary | architecture test reference |
+| Audience | Artifact | Content and verification |
+|---|---|---|
+| Setup owner | `docs/authentication.mdx` | Two roles, statuses, matrix, approval, prerequisites and cleanup |
+| Operator | `docs/security-operations/operations/troubleshooting.mdx` | Failure category, exact ownership and retry decision |
+| CLI user | `docs/single-actions/workflow-and-cli.mdx` | Valid flags and rejected legacy bypass |
+| Contributor | `docs/development/architecture.mdx` | Semantic inspection and split adapters |
+| Maintainer | This SDD, related setup/guided/web SDDs and catalog | Executable evidence and honest open gates |
+
+Documentation/specification validators and regenerated `CATALOG.md` are required.
+The web 350-case acceptance ledger updates Administration evidence without
+promoting any of its 42 open cases.
 
 ## 16. Acceptance scenarios
 
-1. Given interactive setup, before secret input the terminal shows the setup PAT
-   role, every bootstrap permission, access level, and purpose.
-2. Given a valid setup PAT with safe probe access, after input the terminal shows
-   textual `Verified` rows and setup continues.
-3. Given a valid token missing a safely probed required permission, the terminal
-   shows `Missing`, one recovery action, and no dependent mutation occurs.
-4. Given a permission probe returns a rate-limited, SSO-constrained, bare,
-   generic `Forbidden`, or otherwise ambiguous `403`, the affected row is
-   `Unverifiable`, not `Missing`; an explicit bounded permission-denial response
-   remains `Missing`, and raw provider prose is absent from both results.
-5. Given a valid token missing only a conditional repository Secret or Variable
-   read before feature selection, remote inventory records that access as
-   unavailable without throwing; if the final plan requires it, the configured
-   permission table shows `Missing` and setup stops before mutation.
-6. Given a selected managed Secret or Variable that may resolve to repository
-   or organization scope, or whose unoverridden scope must be discovered in
-   either location to preserve an existing resource, when the required inventory
-   remains unavailable or unknown, the final table remains visible and the
-   wizard returns its structured blocked result before plan presentation,
-   confirmation, credential prompts, scope resolution, or mutation without
-   treating the inventory as empty. This holds for every wizard caller, not only
-   the CLI entrypoint.
-7. Given any selected organization-scoped Secret or Variable, unavailable
-   repository inventory blocks credential collection, target resolution, and
-   provisioning even when organization inventory is available and
-   `preserveExisting` is false. Given available repository inventory with the
-   same resource name, organization provisioning blocks with a named shadow
-   conflict before mutation; it cannot report the organization target as active.
-8. Given a mixed storage policy with any selected repository-scoped or
-   preservation-dependent resource, unavailable repository inventory still
-   blocks all dependent work before mutation.
-9. Given final organization storage validation will be blocked, the wizard first
-   invokes its final-permission-audit port and then returns the structured result;
-   the CLI recognizes it immediately and reports the bounded storage error with
-   exit code 1. It does not start another audit, generic inventory revalidation,
-   plan confirmation, credential prompts, workflow comparison, target resolution,
-   or mutation.
-10. Given a write permission that GitHub cannot prove without mutation, the row
-   shows `Unverifiable`; `ready` remains false even if all required reads are
-   usable or the write is the only required row, no write probe occurs, and no
-   dependent work starts until the operator explicitly acknowledges the exact
-   displayed write requirements. `--yes` alone does not acknowledge them.
-11. Given the final selected features, the workflow PAT table contains exactly
-   their required repository/organization permissions and no unrelated grant.
-12. Given a workflow PAT with invalid identity or repository selection, it is not
-   accepted for Secret provisioning.
-13. Given any permission plan, no more than four provider probes are in flight;
-    completion order cannot change returned or presented requirement order.
-    Given provider 429/5xx/network failure, the affected row is unverifiable, raw
-    provider text is absent, and other rows remain ordered and visible.
-14. Given width 40 or `NO_COLOR`, symbols are accompanied by status text and the
-   table remains readable.
-15. Given non-interactive supplied credentials, no prompt is created but the
-   requirement and result reports are still emitted.
-16. Given architecture validation, the permission port exposes only read
-    semantics and the renderer contains no permission decision catalog.
-17. Given duplicate-comment deletion receives a generic non-rate-limited
-    `Forbidden` response, the existing compaction fallback remains available;
-    setup permission probes still classify that same generic prose as
-    `Unverifiable`.
-18. Given a permission probe cannot parse provider JSON, receives a non-object
-    body, or cannot read provider headers, the row remains `Unverifiable`, the
-    audit continues, and no provider payload or exception is rendered.
-19. Given guarded approval preserves an existing organization-scoped
-    `PR_APPROVAL_POLICY` Variable, the workflow PAT requires organization
-    Variables read even though the configured default scope is repository.
-20. Given a metadata-proven private empty repository, the Contents read probe
-    uses the commit-list endpoint and treats its documented `409 Conflict` as
-    verified read evidence; on a public repository the same `409` remains
-    `Unverifiable` with operational read usability, while a write requirement
-    remains unconfirmed and a `404` remains blocked as ambiguous.
-21. Given existing Secrets require credential-health validation, when the remote
-    health workflow is installed, the configured setup PAT requires Actions
-    write but omits bootstrap-only Contents and Workflows write; only confirmed
-    missing requires those bootstrap grants. Unavailable/unknown health remains
-    non-mutating and cannot silently claim a credential passed.
-22. Given an existing workflow PAT passes remote credential health, interactive
-    setup still requires its value to be re-entered, audits every configured
-    workflow permission, and provisions the value only after acceptance; no
-    unaudited keep decision is available.
-23. Given an existing workflow PAT in non-interactive setup, when no `PAT` value
-    is supplied, setup fails before resource mutation with bounded guidance to
-    supply it again rather than treating remote health as a permission audit.
-24. Given a workflow permission plan but no permission-audit port, credential
-    collection fails closed as an unsupported installation before accepting or
-    provisioning the PAT.
-25. Given an organization-owned repository, automatic assignees/reviewers or
-    release/hotfix authorization adds Members read for each enabled capability
-    that performs a membership lookup, even when members-only AI is disabled.
-    Ordinary comment routes alone do not add the grant; zero-count or inactive
-    runtime paths omit it unless another enabled membership consumer remains.
-26. Given Actions returns `404` for the credential-health workflow, setup reports
-    `missing` only when an independent Contents request first proves repository
-    visibility and a subsequent read of the exact workflow file confirms `404`;
-    a readable file, absent fallback endpoint, failed visibility proof, or other
-    exact-file failure reports `unavailable` and cannot trigger a false
-    confirmed-absence path.
-27. Given Checks read is required, the adapter first resolves a bounded
-    `default_branch` from repository metadata and requests check runs for that
-    exact percent-encoded branch, never `HEAD`; missing or invalid branch
-    metadata produces `Unverifiable` without a second request, and the two-read
-    sequence remains inside one probe concurrency slot and timeout.
-28. Given an operator copies any generic interactive, non-interactive,
-    credential-provisioning, guarded-approval, or issue-workflow setup command
-    from public docs, it does not silently acknowledge unverifiable write
-    access. In any shell block across the documentation set, the acknowledgement
-    flag appears only in a separate recovery example immediately after an
-    instruction to inspect every displayed PAT requirement; the recovery
-    example preserves the original interactive selections or every original
-    unattended configuration/credential input.
-29. Given a successful read against public repository metadata, commits,
-    rulesets, labels, workflows, checks, pulls, or workflow contents, the row is
-    `Unverifiable`; the equivalent read is `Verified` only when the metadata
-    response proves the repository private. Protected Secret/Variable inventory
-    may verify directly, while organization member/issue-type success remains
-    `Unverifiable`.
-30. Given an existing valid API credential, choosing `keep` with preservation
-    disabled or with an override that moves its scope requests and validates a
-    replacement value; setup cannot report the requirement satisfied without a
-    value for the selected target.
-31. Given selected repository or organization Secrets/Variables and absent or
-    failed remote inspection, grouping returns a bounded failure and invokes
-    no provider upsert, regardless of whether a policy could select a default
-    target without inventory.
-32. Given valid identity, public visibility, and a successful repository read,
-    the row stays `Unverifiable` but carries positive operational evidence;
-    setup may continue when all other required reads are verified/usable and
-    required writes are explicitly acknowledged. A denied, unknown-visibility,
-    organization, or write probe never gains this exception.
-33. Given a rejected or absent pre-plan remote inspection, the wizard supplies
-    a bounded unavailable snapshot to planning and final audit; when selected
-    storage requires inventory, it blocks before confirmation without leaking
-    the provider error, inferring empty inventory, or misclassifying unknown
-    ownership as a personal repository.
-34. Given initial setup cannot obtain the selected inventory or a required
-    access state, it stops before Secrets, Variables, labels, issue types, and
-    tags, while unrelated scope unavailability does not stop valid targets.
-35. Given exact Contents inspection proves the credential-health file installed
-    on the selected ref, setup dispatches that file path on the selected ref
-    only when the Actions index resolves it or exact Contents inspection also
-    proves its default-branch definition after an index `404`. Given the
-    exact path returns `404`, setup-only credential health bootstraps only after
-    successful Contents visibility on that same ref and proof of default-branch
-    dispatchability (or confirmed bootstrap on the default branch itself);
-    unreadable and unsupported cases never create, delete, or dispatch a workflow.
-36. Given all runtime routes are disabled, guarded approval is off, and
-    `ai.membersOnly` is off, the
-    workflow PAT matrix contains only Metadata read. Enabling a route adds
-    Actions read for queue safety; enabling release/hotfix dispatch upgrades it
-    to write and adds Contents/Issues/Pull requests write. Enabling managed
-    issue branches, either file-edit comment route, issue-progress commits, PR
-    review, or guarded approval adds only the write rows actually consumed by
-    each route. Disabling a route while another consumer remains active preserves
-    the shared grant; an inactive issue-workflow selection alone adds nothing.
-37. Given an organization repository with all event-driven routes disabled,
-    `ai.membersOnly` still adds Members read for independently available
-    agent-backed single actions; turning members-only off omits that grant when
-    no other membership consumer remains.
-38. Given an exceptional setup shell example, the validator accepts only an
-    immediately preceding ordinary prose paragraph that explicitly instructs
-    PAT-setting inspection and confirmation of every required row. Text inside
-    backtick or tilde code fences, unrelated preceding paragraphs, or generic
-    `inspect`/`only after` words cannot authorize it.
-39. Given missing or unconfirmed final setup PAT permissions, the audit returns
-    bounded rejection; the wizard returns the normalized configuration and a
-    permission-specific `blocked` reason without plan confirmation, credential
-    collection, storage validation, or mutation. Unexpected provider failures
-    remain distinct from expected denial.
-40. Given a selected main branch differing from GitHub's default branch, the
-    post-questionnaire workflow read uses the selected ref for both root and
-    exact-file Contents requests. Its `installed`/`missing`/`unavailable` state
-    replaces the provisional status before permission planning; absent or
-    rejected selected-ref reads never inherit a default-branch status.
-41. Given a Contents exact-file request returns success with `{data:{}}`, an
-    array, an absent/empty `sha`, or another malformed file payload, selected-
-    ref inspection returns `unavailable` rather than `installed`. Bootstrap
-    does not dispatch or mutate on that evidence; a valid non-empty file `sha`
-    establishes installation on that ref but permits dispatch after an Actions
-    index `404` only with separate exact default-branch installation proof.
-42. Given provider evidence reuses a requirement ID but changes any security
-    semantic, appears more than once, is absent, or is malformed, the audit
-    renders the canonical requirement as `Unverifiable` and blocks required
-    reads. Exactly matching read evidence may verify; a claimed verified write
-    is downgraded to `Unverifiable`, and only an exactly matching repository
-    read may retain positive operational availability; organization Members
-    cannot use a public-read exception.
-43. Given PAT identity is valid and permission-bound self-membership GET
-    returns an active membership for the exact organization, Members read is
-    `Verified`. A public members-list success, pending/malformed membership,
-    Issue Types, organization write, mismatched evidence, or failed/ambiguous
-    response does not satisfy a required Members read.
-44. Given issue workflows remain selected in stored configuration but the
-    effective issue route is disabled, neither PAT matrix retains Issues or
-    Issue Types write or release/hotfix Administration read solely from that
-    stale selection.
-45. Given the selected-ref credential-health file is installed but absent on
-    the default branch and the Actions index returns `404`, setup does not
-    dispatch or mutate. If the selected file is confirmed missing on a
-    nondefault branch, temporary bootstrap likewise requires a dispatchable
-    default-branch definition; missing or malformed branch metadata fails
-    closed. Confirmed absence on the default branch itself may bootstrap there.
-46. Given confirmed workflow absence, setup creates a temporary file without
-    an existing-file SHA and records the non-empty created SHA. A concurrent
-    create or missing creation SHA prevents dispatch. After dispatch, cleanup
-    deletes only when the current exact-file SHA still matches the created SHA;
-    changed, missing, or unreadable files are left intact with bounded guidance,
-    and a change between reread and conditional delete cannot remove another
-    actor's revision.
-47. Given GitHub identity or selected remote inventory cannot be verified,
-    initial setup returns a bounded failure before preparing or copying any
-    local files and before all remote mutations. On successful preflight, setup
-    copies the approved files before provisioning remote resources.
-48. Given an exceptional acknowledgement command inside an indented MDX shell
-    fence, including a `<Steps>` block, the validator applies the same nearest-
-    prose prerequisite as for a root-level fence. An earlier indented code
-    fence containing prerequisite words does not authorize it, and mismatched
-    fence indentation or an unclosed shell fence cannot hide an exceptional
-    command.
-49. Given an exceptional acknowledgement command in `README.md`, the same
-    nearest-prose rule applies as for a public MDX page. A missing prerequisite
-    fails documentation validation with `README.md` and the source line, while
-    an adjacent complete prerequisite passes. Source enumeration cannot silently
-    exclude either the README or any public MDX page.
-50. Given a shell fence inside one or more Markdown blockquotes, with backtick
-    or tilde markers and optional indentation, the documentation validator
-    detects an exceptional PAT acknowledgement and reports its source line when
-    the adjacent prerequisite is absent. A prerequisite phrase inside an earlier
-    quoted code fence cannot authorize it; a real adjacent prose prerequisite
-    still can. An unclosed quoted fence cannot hide a later shell block after
-    the blockquote level ends, and an exceptional quoted shell fence remains
-    inspectable if its container ends without a closing marker.
-51. Given authenticated remote owner type is `Unknown`, the setup permission
-    preview retains potential organization grants for selected issue workflows,
-    Projects, and organization storage, but a token-backed final audit blocks
-    before permission probes or provisioning. A guided owner assertion cannot
-    bypass this; once GitHub verifies `User` or `Organization`, the requirements
-    are recomputed for that actual type.
-52. Given organization Projects were selected before PAT entry, the bootstrap
-    audit performs at most two read-only GETs of the organization's Projects V2
-    list, requesting up to 100 rows per page. It follows only a bounded GitHub
-    `Link: rel="next"` URL for that exact organization and endpoint. A
-    successful page containing an explicitly non-public Project verifies the
-    permission-bound read, including when public Projects precede it. An
-    exhausted public-only or empty list, or a list still paginated at the
-    two-page limit with no non-public result, remains `Unverifiable` as PAT grant evidence; later
-    selected Project access must be checked separately. Unsafe or malformed
-    next links cannot trigger a request or become positive evidence.
-    Denial, malformed data, timeout, and provider failure never become a pass.
-    A `public-organization-projects` provenance marker matches only the exact
-    organization-scoped, read-level `Projects` requirement with the `projects`
-    probe and an `Unverifiable` status. The evidence reconciler MUST discard a
-    marker attached to another permission or a claimed verified result before
-    readiness is calculated, even if all other row fields match.
-    The audit performs no test mutation and does not require a live Project in
-    test fixtures.
-53. Given a public repository and a non-public organization Project, when the
-    setup PAT report contains a verified `Projects: read` row alongside
-    unverifiable repository reads and required writes, the web context explains
-    each evidence limit in English, Spanish, French, and Portuguese. The
-    confirmation prompt names only required `Unverifiable` rows as needing
-    manual inspection and does not suggest that verified Projects read failed.
-    Declining stops before setup mutation; confirming does not upgrade any row
-    to `Verified`. CLI status semantics and English CLI output stay unchanged.
+1. Valid account plus wrong/malformed repository never passes identity access.
+2. Native `Response` metadata is inspected once and yields correct provenance.
+3. Administration read hits the protected permissions endpoint; an `enabled:
+   false` response still proves read capability. Public rulesets cannot stand in.
+4. Malformed success, stalled body, rate limit and SSO remain indeterminate;
+   late completion never emits verified progress or starts a dependent request.
+5. Every enabled runtime route requests Contents read or its stronger write.
+6. Approved family writes need create, exact readback and confirmed cleanup;
+   preview/decline/revision/dry-run cannot start them.
+7. Changed/legacy ref is retained; exact name and recorded SHA may be deleted.
+8. Selected workflow Projects all match organization/number and allow update;
+   a denial blocks before temporary Project creation.
+9. Conditional pending cleanup, collision and duplicate/contradictory evidence
+   keep readiness false; forged Administration public provenance is rejected.
+10. Concurrent same-target audit does not recover the first audit's resources;
+    after completion a retry can proceed.
+11. Runtime JSON/environment PAT is trimmed and masked; empty required JSON
+    value fails without silently changing the token identity.
+12. CLI/web docs agree with actual statuses and rejected confirmation option;
+    architecture modules are bounded and policies are provider-independent.
 
 ## 17. Requirements traceability
 
-| Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
+| Requirement | Owner | Executable evidence | Documentation |
 |---|---|---|---|
-| role-specific least privilege | permission policy | policy matrix tests | authentication |
-| feature-derived workflow write grants | permission policy and final wizard audit | all-disabled and independent feature/overlap matrix tests | authentication checklist |
-| pre-prompt table | credential orchestration/presenter | CLI prompt tests | authentication |
-| safe evidence states | validation use case/query adapter | state/error mapping and private/public/protected endpoint tests | troubleshooting |
-| deterministic 403 mapping | provider adapter plus bounded GitHub error policy | rate-limit, SSO, bare, and explicit-denial fixtures | authentication/troubleshooting |
-| context-specific generic 403 handling | setup query adapter plus operational GitHub error policy | setup-probe and duplicate-comment deletion regression fixtures | authentication/troubleshooting |
-| final report before remote-storage block | wizard result contract/CLI orchestration | blocked-result and CLI ordering tests | authentication/troubleshooting |
-| scope-sensitive inventory gating | storage policy plus setup wizard boundary | wizard-blocked, organization-target shadow, preserve-existing, and mixed-scope tests | authentication/troubleshooting |
-| absent-snapshot fail-closed provisioning | resource grouping and initial setup workflow | missing port, failed inspection, no-upsert tests | troubleshooting/provisioning |
-| all-provisioning fail-closed boundary | initial setup workflow + storage policy | no local file copy or label/type/tag/Secret/Variable calls after failed inspection | troubleshooting |
-| public-read and Members evidence | permission query adapter + evidence policy + readiness use case + presenter | public repository provenance; protected active self-membership success; public-list, malformed, pending, denied, Issue-Types and write fixtures | authentication/troubleshooting |
-| organization Projects read evidence | permission query adapter + evidence policy + bootstrap use case | scenario 52; private/public/empty/malformed/denied local GET fixtures | authentication/troubleshooting |
-| mixed PAT evidence explanation | web confirmation prompt + context evidence presenter | scenario 53; four-locale component/prompt fixtures and acknowledgement tests | authentication/troubleshooting |
-| safe bootstrap 404 | credential health bootstrap adapter | exact path/visibility proof, create-only SHA ownership, conditional cleanup and no-mutation ambiguous/race fixtures | authentication |
-| no write probes | semantic query port/architecture rule | method/transport tests | architecture |
-| secret safety | all contracts/presenter | redaction fixtures | credentials |
-| feature/effective-target workflow PAT | configuration projection policy | conditional matrix and preserved organization-variable tests | checklist |
-| membership-sensitive workflow PAT | permission policy plus membership-consuming workflows | positive/negative capability matrix and no-query inactive-path tests | authentication/checklist |
-| evidence-based health-workflow state | remote configuration query and setup bootstrap adapters | Actions-404 plus Contents-visibility and exact-file installed/missing/unavailable fixtures, including default-branch dispatchability proof | authentication/troubleshooting |
-| empty-repository-safe Contents probe | read-only query adapter | private/public commit-list 409, write, and 404 tests | authentication/troubleshooting |
-| policy-safe existing credential reuse | storage policy + credential use case | preserve-disabled and scope-moving override fixtures | authentication/provisioning |
-| valid Checks commit reference | read-only query adapter | default-branch resolution, encoding, and invalid-metadata tests | authentication/troubleshooting |
-| least-privilege credential-health bootstrap | remote configuration query plus permission policy | installed/missing/unavailable inspection and permission-matrix tests | authentication/troubleshooting |
-| no unaudited existing workflow PAT | credential collection use case plus prompt adapter | existing re-entry/audit and non-interactive rejection tests | authentication/troubleshooting |
-| explicit unverifiable-write acknowledgement | CLI option plus global documentation contract | README and all public MDX shell examples omit by default; inspected-recovery exception preserving original setup plan | README, setup, workflow and CLI pages |
+| Identity and bounded bodies | Validation/identity adapters, `http_deadline` | `setup_pat_audit`, identity-adapter suites | Authentication |
+| Correct protected read | Read target/evidence/shape adapters | Native Response and Administration regression | Authentication, ledger A025 |
+| Runtime matrix | `setup_token_permission_policy` | Feature-derived policy suite | Authentication |
+| Write transactions/recovery | Family probes and journal/cleanup adapters | `setup_permission_resource_probes`, journal/cleanup contracts and audit transaction regressions | Troubleshooting |
+| Selected Project roles | `setup_permission_projects_access`, credentials request | Projects-access and credentials/adapter suites | Authentication |
+| Evidence and readiness | Evidence policy and permission use case | Permission use-case suite | Authentication |
+| Runtime PAT/Git isolation | Action input and Git environment | Action-input, audit and Git suites | Authentication, architecture |
+| Layering and module size | Semantic port and split infrastructure | `setup_doctor_boundaries` | Architecture |
+| Approval/session/UX | Wizard, web apply and presenters | Existing wizard/web/localized fixtures | Related web SDD |
 
-## 18. Implementation sequence
+## 18. Maintenance sequence
 
-1. Add immutable permission vocabulary and pure setup/workflow requirement policy.
-2. Add the read-only permission inspection port, use case, and unit tests.
-3. Add the GitHub read-only adapter and semantic error mapping tests.
-4. Add requirement/result presenters and integrate setup PAT before the wizard.
-5. Integrate the final setup-PAT and workflow-PAT checks into credential setup.
-6. Add architecture enforcement, docs, catalog evidence, and generated artifacts.
-7. Run targeted suites, coverage, specifications, docs, typecheck, and lint.
+Changes follow contracts/pure decisions → application readiness → adapters and
+ownership cleanup → fixtures and presentation → user/SDD/catalog documentation
+→ full coverage, package/build and workflow validation. This document describes
+the audited implementation and proposes no hidden live rollout. A future proof
+that removes extra audit prerequisites must revise this SDD and evidence before
+changing readiness.
 
 ## 19. Definition of Done
 
-- [x] Both PATs show role-specific requirements before masked input.
-- [x] Both PATs show ordered verified/missing/unverifiable outcomes after input.
-- [x] Required deterministic denials block before dependent mutation.
-- [x] No validation request mutates GitHub and no result overclaims write access.
-- [x] Token values and raw provider text are absent from all output/state/errors.
-- [x] Clean Architecture boundaries and their executable test pass.
-- [x] At least 122 distinct cases and stated coverage thresholds pass.
-- [x] Authentication, checklist, troubleshooting, and architecture docs agree.
-- [x] Catalog evidence and generated `specs/CATALOG.md` are current.
-- [x] Specification, documentation, typecheck, lint, and test gates pass.
+The develop PR requires passing typecheck, lint, web checks, full test coverage,
+setup acceptance, documentation/workflow/specification validation, generated
+bundle validation and current graph/catalog evidence. No unrelated files or
+credentials enter the commit. All automated requirements above are reviewable
+in the PR. Human/provider gates remain open and must be identified as such;
+fixture success never counts as live validation.
 
 ## 20. References and decisions
 
-- Baseline SDD: [`setup-configuration-credentials-and-doctor.md`](./setup-configuration-credentials-and-doctor.md).
-- Architecture SDD: [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md).
-- GitHub primary source: [Permissions required for fine-grained personal access tokens](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens).
-- GitHub primary source: [Troubleshooting the REST API](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api).
-- Decision: retain an explicit `Unverifiable` state instead of performing test
-  mutations or presenting false binary certainty.
-- Rejected: parsing only `X-Accepted-GitHub-Permissions` as the token's grants;
-  the header describes endpoint requirements, not a complete token inventory.
+- [GitHub Actions permissions](https://docs.github.com/en/rest/actions/permissions#get-github-actions-permissions-for-a-repository): protected Administration read.
+- [Repository rulesets](https://docs.github.com/en/rest/repos/rules#get-repository-rulesets): Metadata alone cannot prove Administration.
+- [ProjectV2 GraphQL contract](https://docs.github.com/en/graphql/reference/projects): selected viewer update authorization.
+- Related SDDs: setup configuration/doctor, architecture hardening, temporary
+  operator authorization, guided bot onboarding, local web assistant and guarded
+  PR approval; all catalogued in `catalog.json`.
+- Decisions: retain strict write transactions, no generic acknowledgement,
+  protected/public evidence distinction and separate PAT roles. Preserve old
+  journal compatibility conservatively. Additional audit prerequisites and live
+  provider/human gates remain explicit debt, rather than granting broad access
+  or fabricating permission proof.

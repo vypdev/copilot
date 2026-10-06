@@ -355,9 +355,10 @@ exactly what completed and what remains.
   `--workflow-pat`, `--secret`, and
   `--confirm-unverifiable-write-permissions` combined with `--web` fail early
   with a concrete CLI fallback; this prevents a hidden approval or command
-  history secret path from masquerading as visual review. Unverifiable writes
-  use the existing explicit, narrowly allowed acknowledgement in the UI;
-  unverifiable required reads remain blocked.
+  history secret path from masquerading as visual review. The legacy
+  confirmation option is rejected in every setup mode. Required writes must
+  pass approved disposable transactions; unverifiable required reads remain
+  blocked without exact positive operational evidence.
 - The bot may be the same account as the setup operator only under existing
   policy. Warn about self-event/guarded-approval consequences. The browser's
   active GitHub account is never inferred from Git, `gh`, or the setup PAT.
@@ -506,11 +507,12 @@ silent override. Web validation and pre-answer guidance are localized in all
 four supported languages; CLI explains the same constraints in English.
 
 The initial setup-PAT identity/access gate is an application use case shared by
-both presentations; it requires explicit acknowledgement for unverifiable
-write grants and confirmation of the authenticated operator account before
-planning. The configured setup-PAT audit is another application use case. It compares
+both presentations; it checks identity and required reads while writes
+remain deferred until plan approval. The authenticated operator account is
+confirmed before planning. The configured setup-PAT audit is another application use case. It compares
 provisional and final required grants, verifies the authenticated identity and
-effective access through the read-only permission port, and returns a blocked
+effective access through the semantic permission inspection port, including
+approved temporary write transactions, and returns a blocked
 result when owner-kind or grants differ. A pure policy builds corrected official
 GitHub form links; presenters own their display and explanatory text. The
 command does not decide whether an unverifiable write grant is acceptable.
@@ -1856,7 +1858,7 @@ showed only the aggregate rejection, so the diagnostic reference alone could
 not identify the grant. This follow-up requires the blocked browser result to
 retain and display safe, localized permission evidence; it must never display
 the PAT or pairing code. The incident also selected organization Projects,
-which exposed a missing read-only probe described in the permission SDD.
+which exposed missing capability evidence described in the permission SDD.
 Fixture tests add this regression to the existing acceptance budget; they do
 not close the human visual/accessibility or live-provider gates. The local
 coverage run passed 511 suites / 5,752 tests, with 96.19% statements, 91.37%

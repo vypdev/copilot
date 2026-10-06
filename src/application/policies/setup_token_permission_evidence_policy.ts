@@ -22,8 +22,16 @@ export function reconcileSetupTokenPermissionEvidence(
             isRecord(row) && row.id === requirement.id
         ));
         const candidate = candidates[0];
+        // Cleanup is a blocking fact even if the adapter also supplied duplicate,
+        // malformed, or contradictory success evidence for this same target.
+        const cleanupPending = requirement.level === 'write' && candidates.some(row =>
+            matchesRequirement(requirement, row) && row.cleanupPending === true);
+        const secretCollision = requirement.level === 'write' && requirement.probe === 'secrets'
+            && candidates.some(row => matchesRequirement(requirement, row) && row.incident === 'secret-collision');
         if (candidates.length !== 1 || !isMatchingEvidence(requirement, candidate)) {
-            return unverifiable(requirement, NO_SAFE_EVIDENCE_MESSAGE);
+            return { ...unverifiable(requirement, NO_SAFE_EVIDENCE_MESSAGE),
+                ...(cleanupPending || secretCollision ? { cleanupPending: true as const } : {}),
+                ...(secretCollision ? { incident: 'secret-collision' as const } : {}) };
         }
         if (requirement.level === 'write' && candidate.status === 'verified'
             && candidate.writeProof !== 'transaction') {
@@ -38,6 +46,7 @@ export function reconcileSetupTokenPermissionEvidence(
                 && candidate.writeProof === 'transaction' ? { writeProof: 'transaction' as const } : {}),
             ...(requirement.level === 'write' && candidate.status === 'unverifiable'
                 && candidate.cleanupPending === true ? { cleanupPending: true as const } : {}),
+            ...(candidate.incident === 'secret-collision' ? { incident: 'secret-collision' as const } : {}),
             ...(candidate.status === 'available'
                 && candidate.operationallyAvailable === true
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
@@ -77,21 +86,14 @@ export function isAttestableProjectsRead(
 }
 
 const PUBLIC_REPOSITORY_READ_PROBES = new Set<SetupTokenPermissionRequirement['probe']>([
-    'metadata', 'contents', 'administration', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
+    'metadata', 'contents', 'issues', 'actions', 'checks', 'pull-requests', 'workflows',
 ]);
 
 function isMatchingEvidence(
     requirement: SetupTokenPermissionRequirement,
     value: Record<string, unknown>,
 ): value is Record<string, unknown> & SetupTokenPermissionCheck {
-    return value.id === requirement.id
-        && value.role === requirement.role
-        && value.scope === requirement.scope
-        && value.permission === requirement.permission
-        && value.level === requirement.level
-        && value.applicability === requirement.applicability
-        && value.condition === requirement.condition
-        && value.probe === requirement.probe
+    return matchesRequirement(requirement, value)
         && isPermissionStatus(value.status)
         && typeof value.message === 'string'
         && value.message.trim().length > 0
@@ -100,11 +102,24 @@ function isMatchingEvidence(
             && value.status === 'verified' && value.writeProof === 'transaction'))
         && (value.cleanupPending === undefined || (requirement.level === 'write'
             && value.status === 'unverifiable' && value.cleanupPending === true))
+        && (value.incident === undefined || (requirement.level === 'write' && requirement.probe === 'secrets'
+            && value.status === 'unverifiable' && value.cleanupPending === true && value.incident === 'secret-collision'))
         && (value.publicReadEvidence === undefined
             || (value.status === 'available' && (
                 isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)
                 || isAttestableProjectsRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)
             )));
+}
+
+function matchesRequirement(requirement: SetupTokenPermissionRequirement, value: Record<string, unknown>): boolean {
+    return value.id === requirement.id
+        && value.role === requirement.role
+        && value.scope === requirement.scope
+        && value.permission === requirement.permission
+        && value.level === requirement.level
+        && value.applicability === requirement.applicability
+        && value.condition === requirement.condition
+        && value.probe === requirement.probe;
 }
 
 function isPermissionStatus(value: unknown): value is SetupTokenPermissionStatus {
