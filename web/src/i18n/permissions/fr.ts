@@ -30,6 +30,7 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Inspect and provision selected organization Actions Variables.': 'Examiner et configurer les Variables Actions choisies dans l’organisation.',
   'Provision native issue types for the selected workflows.': 'Créer des types de ticket natifs pour les workflows choisis.',
   'Resolve repository and collaborator metadata.': 'Consulter les métadonnées du dépôt et de ses collaborateurs.',
+  'Read repository branches, commits, and files for enabled runtime routes.': 'Lire les branches, commits et fichiers du dépôt pour les parcours d’exécution activés.',
   'Dispatch selected release or hotfix workflows and check previous runs.': 'Lancer les workflows de version ou correctif urgent choisis et vérifier les exécutions précédentes.',
   'Check previous workflow runs before executing an enabled route.': 'Vérifier les exécutions précédentes avant de lancer un parcours activé.',
   'Create managed branches, edit files, or merge selected release/hotfix changes.': 'Créer des branches gérées, modifier des fichiers ou fusionner les changements de version et correctif.',
@@ -53,5 +54,4 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Organization Variable storage selected': 'Stockage des Variables dans l’organisation choisi',
   'Issue type automation enabled': 'Automatisation des types de ticket activée',
   'Organization Projects selected': 'Projets de l’organisation choisis',
-  'After setup plan approval': 'Après approbation du plan de configuration',
 };

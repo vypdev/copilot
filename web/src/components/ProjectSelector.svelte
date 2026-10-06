@@ -28,5 +28,7 @@
   <p class="field-help">{tr('projectSelectionNotObserved', $setupLocale)}</p>
   <ul>{#each noLongerListed as number}<li><bdi>#{number}</bdi> <button type="button" onclick={() => selected = toggleSelection(selected, number)} disabled={!controller}>{tr('removeSelection', $setupLocale)}</button></li>{/each}</ul>
 {/if}
-<label for="manual-project">{tr('projectManual', $setupLocale)}</label>
-<input id="manual-project" type="text" bind:value disabled={!controller} autocomplete="off" />
+<div class="project-manual-field">
+  <label for="manual-project">{tr('projectManual', $setupLocale)}</label>
+  <input id="manual-project" type="text" bind:value disabled={!controller} autocomplete="off" />
+</div>

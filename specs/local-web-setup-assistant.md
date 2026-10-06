@@ -234,10 +234,18 @@ exactly what completed and what remains.
    ambiguous/missing remotes block rather than guessing. Acquire a per-checkout
    local setup-session guard shared by terminal and web modes so a second
    setup process cannot apply to the same checkout concurrently. A lock has
-   no credentials and is released on normal exit. If the recorded owner is
+   no credentials and is released on normal exit or cooperative SIGINT/SIGTERM
+   only when
+   its PID, nonce and canonical checkout still match. Signal handlers exit
+   with 130/143 and are removed on ordinary release. Pending remote-probe
+   journals remain available for interrupted-transaction recovery. Windows
+   forceful process termination bypasses these handlers; console Ctrl+C uses
+   the cooperative SIGINT path. If the recorded owner is
    dead, the CLI MUST fail closed, print the exact lock path, and require an
    operator to verify no setup process is running before removing that one
-   file manually. It MUST NOT unlink a stale lock automatically: another
+   file manually. These bounded local diagnostics MUST survive the application
+   error boundary and terminal presentation; raw filesystem/provider failures
+   remain redacted. It MUST NOT unlink a stale lock automatically: another
    process can replace it between a read and an unlink. Publish a fully
    written lock record atomically; failed writes MUST NOT leave a blocking
    empty lock. Web
@@ -355,9 +363,10 @@ exactly what completed and what remains.
   `--workflow-pat`, `--secret`, and
   `--confirm-unverifiable-write-permissions` combined with `--web` fail early
   with a concrete CLI fallback; this prevents a hidden approval or command
-  history secret path from masquerading as visual review. Unverifiable writes
-  use the existing explicit, narrowly allowed acknowledgement in the UI;
-  unverifiable required reads remain blocked.
+  history secret path from masquerading as visual review. The legacy
+  confirmation option is rejected in every setup mode. Required writes must
+  pass approved disposable transactions; unverifiable required reads remain
+  blocked without exact positive operational evidence.
 - The bot may be the same account as the setup operator only under existing
   policy. Warn about self-event/guarded-approval consequences. The browser's
   active GitHub account is never inferred from Git, `gh`, or the setup PAT.
@@ -506,11 +515,15 @@ silent override. Web validation and pre-answer guidance are localized in all
 four supported languages; CLI explains the same constraints in English.
 
 The initial setup-PAT identity/access gate is an application use case shared by
-both presentations; it requires explicit acknowledgement for unverifiable
-write grants and confirmation of the authenticated operator account before
-planning. The configured setup-PAT audit is another application use case. It compares
+both presentations; it checks identity and required reads, confirms the guided
+operator account, then tests every displayed Write with isolated temporary
+create/read/delete transactions before planning. Conditional rows are tested too;
+applicability governs installation requirements, not verification timing. PAT-entry
+and environment-PAT selection disclose these tests and possible history or
+pending cleanup. Preview/dry-run performs no writes, including recovery. The configured setup-PAT audit is another application use case. It compares
 provisional and final required grants, verifies the authenticated identity and
-effective access through the read-only permission port, and returns a blocked
+effective access through the semantic permission inspection port, including
+approved temporary write transactions, and returns a blocked
 result when owner-kind or grants differ. A pure policy builds corrected official
 GitHub form links; presenters own their display and explanatory text. The
 command does not decide whether an unverifiable write grant is acceptable.
@@ -1277,6 +1290,24 @@ Primary design references: [W3C multi-page forms](https://www.w3.org/WAI/tutoria
 [GOV.UK check answers](https://design-system.service.gov.uk/patterns/check-answers/),
 and [GitHub PAT management](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
+### 9.7 Selector spacing regression (2026-10-06)
+
+Observed CI producer and Project cards place their name, metadata, and branch
+rule evidence on separate lines. Checkbox labels retain an explicit gap and
+links occupy a separate column, moving below the label at narrow widths.
+Manual inputs use visible label/control spacing and the shared secondary
+button styling. Scrollable candidate lists reserve room for focus outlines;
+long names wrap within the card. This is presentation-only: selected producer
+identities, Project numbers, validation, and permission policy are unchanged.
+
+Review the three fixture states (producer list/manual fields, Project
+list/manual input, and release strategy) at desktop and narrow widths without
+credentials or live setup. Retain the existing **350-case** acceptance ledger;
+this visual review does not close outstanding screen-reader, platform, or
+human/provider gates. PAT transaction success followed by unavailable storage
+must remain a Plan failure until the separate inventory adapter can read the
+required scopes; it must not start applying setup changes.
+
 ## 10. Failure, recovery, and cleanup
 
 | Condition | Impact and retained facts | Automatic retry | Operator action / cleanup |
@@ -1415,6 +1446,15 @@ existing CLI tests are retained, not re-counted as new web evidence.
 | Integration/compatibility/recovery | 42 | live reconnect, preserved answers, incompatible-Project blocking and complete beginner replay in CLI/web |
 | Security/abuse | 28 | forged links, stale revisions/controller takeover, PAT exclusion, permissions and least-privilege fallback |
 | **Total** | **350** | No double counting |
+
+Four additional session-lock regressions, outside that ledger, are required
+in `src/cli/__tests__/setup_session_guard.test.ts`: stale-owner diagnostics
+reach the terminal without exposing the nonce, SIGINT exits with 130 and
+releases the owned lock, SIGTERM exits with 143 and releases the owned lock,
+and interruption preserves a replacement owner's lock. Child-process tests
+use real OS signals on macOS/Linux and IPC-delivered Node signal events on
+Windows, where `child.kill` is forceful termination. The Windows simulation
+does not close native console or human-review acceptance gates.
 
 The acceptance ledger is [`local-web-setup-assistant-acceptance.json`](./local-web-setup-assistant-acceptance.json).
 It MUST contain one row per ID below with an observable assertion, the
@@ -1856,7 +1896,7 @@ showed only the aggregate rejection, so the diagnostic reference alone could
 not identify the grant. This follow-up requires the blocked browser result to
 retain and display safe, localized permission evidence; it must never display
 the PAT or pairing code. The incident also selected organization Projects,
-which exposed a missing read-only probe described in the permission SDD.
+which exposed missing capability evidence described in the permission SDD.
 Fixture tests add this regression to the existing acceptance budget; they do
 not close the human visual/accessibility or live-provider gates. The local
 coverage run passed 511 suites / 5,752 tests, with 96.19% statements, 91.37%

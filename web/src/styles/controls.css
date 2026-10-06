@@ -23,17 +23,26 @@ textarea { width: 100%; min-height: 120px; resize: vertical; border: 1px solid v
 .secondary-button:disabled { opacity: .55; cursor: not-allowed; }
 .status-review-list { margin: 6px 0 18px; padding-inline-start: 20px; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .status-review-list strong { color: var(--text); }
-.producer-grid { max-height: 330px; margin-bottom: 15px; }
-.producer-option { align-items: flex-start; cursor: pointer; }
-.producer-option > span { min-width: 0; display: grid; gap: 5px; overflow-wrap: anywhere; }
+.producer-grid { max-height: 360px; margin-bottom: 20px; padding: 6px; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.check-option.producer-option { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 16px; padding: 14px 16px; }
+.producer-option > label { min-width: 0; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.producer-option > label > input { flex: 0 0 17px; margin: 3px 0 0; }
+.producer-option > label > span { min-width: 0; display: grid; gap: 5px; overflow-wrap: anywhere; }
 .producer-option small { color: var(--muted); font-size: 10px; line-height: 1.5; }
-.producer-option a { font-size: 11px; }
+.producer-option a { font-size: 11px; line-height: 1.5; }
+.producer-option > a { max-width: 140px; }
+.producer-links { display: grid; gap: 8px; max-width: 140px; }
+.producer-manual-fields { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.producer-manual-fields > label, .project-manual-field { display: grid; gap: 8px; font-size: 12px; font-weight: 700; line-height: 1.5; }
+.producer-manual-fields > label:last-child { grid-column: 1 / -1; }
+.producer-add { margin-top: 16px; }
+.project-manual-field { margin-top: 20px; }
 input[type="checkbox"] { accent-color: var(--accent); width: 17px; height: 17px; }
 .field-help { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 14px 0 24px; }
 .segmented { display: flex; gap: 9px; }
 .segmented button { flex: 1; padding: 13px; border: 1px solid var(--control-line); border-radius: 8px; color: var(--text); background: var(--surface-soft); font-weight: 700; }
 .segmented button.selected { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-strong); }
-.check-grid { display: grid; gap: 7px; max-height: 280px; overflow-y: auto; }
+.check-grid { display: grid; gap: 10px; max-height: 360px; overflow-y: auto; }
 .check-option { display: flex; align-items: center; gap: 10px; padding: 10px 13px; background: var(--surface-soft); border: 1px solid var(--control-line); border-radius: 7px; font-size: 12px; }
 .choice-list { display: grid; gap: 9px; }
 .choice-card { width: 100%; min-height: 52px; display: flex; justify-content: space-between; align-items: center; text-align: left; background: var(--surface-soft); color: var(--text); border: 1px solid var(--control-line); border-radius: 8px; padding: 13px 15px; font-size: 13px; font-weight: 650; }

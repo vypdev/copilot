@@ -213,8 +213,11 @@ and stores the bot PAT in the selected Actions Secret scope.
    switches to that account in GitHub, selects the target repository, reviews
    the form, generates the PAT, and pastes it into the masked prompt.
 4. Verify `/user` with the exact supplied PAT, compare immutable IDs, and run
-   the existing role-specific permission audit. An `Unverifiable` write stays
-   `Unverifiable` and follows the established acknowledgement policy.
+   the role-specific permission audit only after the identity binding succeeds.
+   This binding is application-owned and precedes every disposable transaction.
+   Required writes must complete create/read/cleanup; an `Unverifiable` write
+   remains blocked and cannot be acknowledged into readiness. Exact selected
+   organization Projects additionally require `viewerCanUpdate` for this PAT.
 5. After plan confirmation, use the operator credential to install the bot
    PAT as repository or organization Secret `PAT`. Print Secret scope, expected
    bot identity, successful setup facts, and any remaining health checks.
@@ -413,7 +416,7 @@ Escape untrusted usernames and descriptions in terminal and URL content.
 | Wrong browser account | PAT belongs to another user | no Secret write | new PAT | switch account in GitHub | user deletes wrong PAT |
 | Wrong resource owner/repo | PAT lacks target access | no Secret write | correct form | select target repo and owner | user deletes wrong PAT |
 | Org PAT pending or inaccessible | Action cannot use it yet | no Secret write | after access is verified | inspect approval with org admin or choose permitted account; label pending only with evidence | user owns token |
-| Missing/unverifiable grant | setup blocked by established audit policy | permission table | corrected PAT | inspect settings/acknowledge only where allowed | user deletes obsolete PAT |
+| Missing/unverifiable grant | setup blocked by established audit policy | permission table | corrected PAT | correct access or retry the required capability transaction | user deletes obsolete PAT |
 | Secret write fails | Action keeps prior Secret or none | known Secret name/scope | setup retry | repair operator rights | local value discarded after run |
 | Secret write succeeds, later step fails | bot PAT may be active | Secret name/scope and completed steps | idempotent retry | inspect report | do not delete runtime PAT |
 | User cancels after PAT creation | PAT may remain active in GitHub | no local value retained | new setup | delete unused PAT | user-owned deletion |

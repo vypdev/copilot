@@ -25,6 +25,7 @@ jest.mock('@actions/github', () => ({
 
 jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
+  setSecret: jest.fn(),
   setFailed: jest.fn(),
   setOutput: jest.fn(),
   summary: { addRaw: jest.fn().mockReturnThis(), write: jest.fn().mockResolvedValue(undefined) },

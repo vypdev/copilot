@@ -4,13 +4,25 @@
 - Date: 2026-09-11
 - Last updated: 2026-09-30
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-30 (shared-session and resource-progress fixture evidence; live GitHub path remains external)
+- Last verified: 2026-10-06 (local automated audit evidence) (shared-session and resource-progress fixture evidence; live GitHub path remains external)
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
   scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
+
+The [PAT capability SDD](./setup-pat-permission-guidance-and-verification.md)
+is authoritative for the audited operator/runtime credential contract. Identity
+and reads precede temporary create/read/delete checks during initial PAT
+verification, including conditional writes. Preview/dry-run remains read-only,
+including recovery; persistent installation requires approval and
+require confirmed cleanup. Scope-sensitive inventory failures block before that
+approval. Guided bot identity is bound before its capability transactions, and
+the selected Project role is checked in addition to the disposable grant proof.
+Runtime routes include Contents read where they inspect branches/commits without
+writing. Local fixtures do not close live provider, accessibility or Windows ACL
+gates; this revision includes no dogfooding.
 
 ## 1. Executive summary
 
@@ -171,7 +183,8 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   successful, because the create/delete commits remain in history. A failed
   create request is conservatively classified as possible mutation when its
   remote outcome is uncertain. The browser path does not bootstrap a workflow
-  before Apply and retains its no-mutation pre-approval guarantee.
+  before Apply. Initial PAT verification may already have completed and cleaned
+  isolated temporary resources; persistent installation retains its approval boundary.
 - A missing remote resource snapshot is never an empty inventory. Selected
   Secret/Variable management MUST stop before all remote resource, label,
   issue-type, and tag calls when inspection fails, its port is absent, or a
@@ -256,6 +269,22 @@ Config objects contain names and policies, never secret values. The workspace
 adapter owns backups and writes; GitHub adapters own remote error mapping.
 Architecture tests and workflow/catalog validators enforce dependencies and
 asset parity.
+The Actions resource facade delegates inventory reads to
+`GithubActionsResourceInspector` and scope-preserving mutations to
+`GithubActionsResourceCommands`, sharing only collection decoding. Provider
+protocols must match the installed Octokit: Secrets belong to `rest.actions`,
+effective organization inventory accepts `owner`/`repo`, and organization
+Variables use distinct create/update methods. Missing methods or malformed
+collections cannot masquerade as empty inventory. The SDK integration test
+uses an intercepted fixture transport, exercises organization inventory and
+Secret/Variable provisioning, and makes no live provider request.
+For effective `selected` visibility, including an existing resource whose
+visibility is preserved, provisioning requires both repository identity and
+the selected-repository grant endpoint before any value write. Missing either
+produces a resource error without mutation. A rejected grant is an error and
+cannot increment the created/updated success count; private/all visibility
+does not require that endpoint.
+
 
 The shared coordinator is the authority for stage order, cancellation before
 mutation, single-flight Apply, and the conservative partial outcome once a
@@ -411,11 +440,11 @@ manual reversal.
 |---|---:|---|
 | Defaults/config/storage policy | 27 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
-| Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
+| Credentials/provider adapters | 28 | valid/invalid/missing/unverifiable/groups; ten Secret/Variable cases for missing selected-repository endpoint/identity, creation, failed grants, and private visibility |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
 | Integration/security/cutover | 17 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails |
-| **Total** | **112** | no double counting |
+| **Total** | **122** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -475,10 +504,15 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     than `blocked` or "no changes applied"; the same conservative outcome
     applies when creation times out ambiguously. Without a bootstrap attempt,
     pre-Apply cancellation remains `cancelled`.
-18. Given an organization Secret or Variable target, repository inventory is
+19. Given an organization Secret or Variable target, repository inventory is
     available and confirms that no same-name repository resource exists;
     otherwise setup blocks before credential collection or mutation, even with
     an explicit organization override or `preserveExisting: false`.
+20. Given a new or preserved `selected` organization Secret or Variable,
+    missing repository identity or grant endpoint yields an error before any
+    value write. A denied grant never counts as created/updated; private
+    visibility succeeds without that endpoint. Execute
+    `repository_selected_resource_grants.test.ts` for both resource families.
 
 ## 17. Requirements traceability
 

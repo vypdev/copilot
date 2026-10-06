@@ -227,11 +227,24 @@ these dependencies and file-size budgets. The application-level setup-session
 coordinator extraction and full web acceptance budget remain open per the
 [web setup SDD](../../specs/local-web-setup-assistant.md).
 
+PAT inspection delegates read targets, response-shape/evidence mapping, Projects
+access, HTTP deadlines, transactions, and family cleanup to separate adapters.
+The application binds guided bot identity before any PAT transaction and keeps
+readiness false while any matching cleanup or collision is unresolved. Native
+fetch bodies are buffered once under the deadline. Branch cleanup requires the
+exact journaled commit; the Action masks the resolved PAT, and Git credentials
+are scoped to GitHub in a copied child environment. The permission boundary is
+an inspection capability because approved writes use disposable transactions.
+
 PAT permission validation follows the same dependency rule. The application
 `SetupTokenPermissionsUseCase` validates identity before invoking the narrow
-`SetupTokenPermissionQueryPort`; the infrastructure adapter performs targeted
+`SetupTokenPermissionInspectionPort`; the infrastructure adapter performs targeted
 GitHub reads at PAT entry and temporary create/read/delete transactions for
-required writes after plan approval. It maps provider outcomes to `verified`,
+displayed writes during initial PAT verification, after identity and guided account
+confirmation. Dry-run never writes or recovers temporary resources; installation
+requires plan approval. A small shared libsodium adapter encrypts both probe and
+provisioned Secrets with provider-compatible sealed boxes. The permission adapter
+maps provider outcomes to `verified`,
 `available`, `missing`, or `unverifiable`, with a bounded concurrency limit of
 four and original requirement order preserved. Write access is never inferred
 from a successful read. The CLI and web presenters render the same application
@@ -250,6 +263,15 @@ the same structured block; the CLI consumes that result without duplicating
 inventory validation before credential decisions or resource grouping.
 An architecture test rejects mutation methods on the query port and non-GET
 methods in its adapter.
+The GitHub Actions resource facades delegate to separate inventory and command
+adapters with a small shared collection decoder. Secrets and Variables use
+Octokit's `rest.actions` namespace. Effective organization resources are queried
+through repository routes with `owner` and `repo`; organization Variable
+creation and updates use separate SDK endpoints. An isolated transport test
+loads the installed SDK itself, so invented mock namespaces or parameters
+cannot satisfy this contract. Malformed collections remain unavailable and
+never permit provisioning as if no resource existed.
+
 
 There are no installed users or persisted setup state to migrate, so this is a
 greenfield contract: no legacy prompt facade, compatibility overload, dual

@@ -29,6 +29,7 @@ export const permissionTexts = [
   'Inspect and provision selected organization Actions Variables.',
   'Provision native issue types for the selected workflows.',
   'Resolve repository and collaborator metadata.',
+  'Read repository branches, commits, and files for enabled runtime routes.',
   'Dispatch selected release or hotfix workflows and check previous runs.',
   'Check previous workflow runs before executing an enabled route.',
   'Create managed branches, edit files, or merge selected release/hotfix changes.',
@@ -52,7 +53,6 @@ export const permissionTexts = [
   'Organization Variable storage selected',
   'Issue type automation enabled',
   'Organization Projects selected',
-  'After setup plan approval',
 ] as const;
 
 export type PermissionText = typeof permissionTexts[number];

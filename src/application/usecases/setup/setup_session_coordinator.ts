@@ -13,7 +13,7 @@ export interface SetupSessionReceipt {
 export interface SetupSessionPorts {
   readonly repository: () => Promise<SetupSessionDecision>;
   readonly choices: () => Promise<SetupSessionDecision>;
-  readonly setupPat: () => Promise<SetupSessionDecision>;
+  readonly setupPat: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly plan: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly credentials: (possibleMutation: () => void) => Promise<SetupSessionDecision>;
   readonly authorizeApply: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
@@ -47,7 +47,7 @@ export class SetupSessionCoordinator {
       const stages: readonly [SetupJourneyStage, () => Promise<SetupSessionDecision>][] = [
         ['repository', this.ports.repository],
         ['choices', this.ports.choices],
-        ['setup-pat', this.ports.setupPat],
+        ['setup-pat', () => this.ports.setupPat(() => this.markPossibleMutation())],
         ['plan', () => this.ports.plan(() => this.markPossibleMutation())],
         ['credentials', () => this.ports.credentials(() => this.markPossibleMutation())],
         ['apply', () => this.ports.authorizeApply(() => this.markPossibleMutation())],

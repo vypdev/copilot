@@ -3,6 +3,8 @@ import type {
     SetupCredentialRequirement,
 } from '../domain/setup';
 import type { SetupCredentialValidationPort } from '../application/ports/setup_wizard_ports';
+import { withHttpDeadline } from './http_deadline';
+import { isSetupPermissionDenied } from './setup_permission_denial';
 
 export interface SetupCredentialValidationOptions {
     fetcher?: typeof fetch;
@@ -28,11 +30,20 @@ export class SetupCredentialValidationAdapter implements SetupCredentialValidati
                 Authorization: `Bearer ${token}`,
                 Accept: 'application/vnd.github+json',
             });
-            const account = typeof user.login === 'string' ? user.login : undefined;
-            await this.requestJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`, {
+            if (!Number.isSafeInteger(user.id) || (user.id as number) <= 0
+                || typeof user.login !== 'string' || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/u.test(user.login)) {
+                throw new Error('Invalid GitHub identity.');
+            }
+            const account = user.login;
+            const metadata = await this.requestJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`, {
                 Authorization: `Bearer ${token}`,
                 Accept: 'application/vnd.github+json',
             });
+            if (!Number.isSafeInteger(metadata.id) || (metadata.id as number) <= 0
+                || typeof metadata.full_name !== 'string'
+                || metadata.full_name.toLowerCase() !== `${owner}/${repository}`.toLowerCase()) {
+                throw new Error('Invalid GitHub repository identity.');
+            }
             return { name: 'SETUP_PAT', status: 'valid', message: 'GitHub identity and repository access verified.', account };
         } catch (error) {
             return { name: 'SETUP_PAT', status: classifyError(error), message: safeMessage(error) };
@@ -65,16 +76,19 @@ export class SetupCredentialValidationAdapter implements SetupCredentialValidati
     }
 
     private async requestJson(url: string, headers: Record<string, string>, init: RequestInit = {}): Promise<Record<string, unknown>> {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-        try {
-            const response = await this.fetcher(url, { ...init, headers, signal: controller.signal });
-            if (!response.ok) throw new CredentialHttpError(response.status);
+        return withHttpDeadline(this.timeoutMs, async signal => {
+            const response = await this.fetcher(url, { ...init, method: 'GET', headers, signal, redirect: 'error' });
+            if (!response.ok) {
+                // Authentication failure differs from rate limiting, SSO and ambiguous forbidden responses.
+                if (new URL(url).hostname === 'api.github.com' && response.status === 403
+                    && !await isSetupPermissionDenied(response)) throw new Error('Ambiguous GitHub rejection.');
+                throw new CredentialHttpError(response.status);
+            }
             const body: unknown = await response.json();
-            return body && typeof body === 'object' ? body as Record<string, unknown> : {};
-        } finally {
-            clearTimeout(timeout);
-        }
+            signal.throwIfAborted();
+            if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Invalid provider metadata.');
+            return body as Record<string, unknown>;
+        });
     }
 }
 
@@ -123,7 +137,7 @@ class CredentialHttpError extends Error {
 
 function classifyError(error: unknown): SetupCredentialCheck['status'] {
     if (error instanceof CredentialHttpError && (error.status === 401 || error.status === 403)) return 'invalid';
-    if (error instanceof CredentialHttpError && error.status >= 400 && error.status < 500) return 'invalid';
+    if (error instanceof CredentialHttpError && error.status === 404) return 'invalid';
     return 'unverifiable';
 }
 

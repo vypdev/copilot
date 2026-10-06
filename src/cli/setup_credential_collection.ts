@@ -55,9 +55,11 @@ export async function collectSetupCredentials(input: CredentialInput): Promise<S
     secretStoragePolicy: input.configuration.storage.secrets,
     ref: input.configuration.repository.mainBranch, remoteConfiguration: input.remoteConfiguration,
     workflowTokenPermissions,
+    ...(input.configuration.projects.ids ? { selectedProjectNumbers: input.configuration.projects.ids } : {}),
   });
   const guidedBotIdentity = input.prompt.guidedWorkflowBotIdentity;
   if (guidedBotIdentity && credentials.collection.workflowPat) {
+    // Revalidate at the installation boundary after potentially long capability checks.
     const verifiedBot = await new VerifyGuidedWorkflowPatIdentityUseCase(githubIdentities)
       .execute(guidedBotIdentity, credentials.collection.workflowPat.value);
     logInfo(`✅ Workflow PAT owner verified as @${verifiedBot.login} (GitHub account ID ${verifiedBot.id}).`);

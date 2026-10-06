@@ -3,6 +3,38 @@ import { SetupCredentialsUseCase } from '../setup_credentials_use_case';
 const requirement = (name: string, kind: 'workflowPat' | 'apiKey' = 'apiKey') => ({ name, kind, description: name, provider: 'openai' });
 
 describe('SetupCredentialsUseCase', () => {
+    it.each(['wrong-owner', 'missing-verifier', 'verified'] as const)(
+        'binds a guided workflow PAT before any capability transaction: %s', async scenario => {
+            const prompt = {
+                guidedWorkflowBotIdentity: { id: 42, login: 'bot' },
+                requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+                requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+                requestApiKey: jest.fn(), chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+            };
+            const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }),
+                validateCredential: jest.fn() };
+            const verifier = { execute: jest.fn().mockImplementation(async () => {
+                if (scenario === 'wrong-owner') throw new Error('Wrong selected bot identity.');
+                return prompt.guidedWorkflowBotIdentity;
+            }) };
+            const audit = { inspect: jest.fn().mockResolvedValue({ ready: true, identityStatus: 'valid', checks: [] }) };
+            const result = new SetupCredentialsUseCase(prompt, validation, { list: jest.fn().mockResolvedValue([]) },
+                undefined, audit, undefined, scenario === 'missing-verifier' ? undefined : verifier).collect({
+                owner: 'owner', repository: 'repo', setupToken: 'setup-token', requirements: [requirement('PAT', 'workflowPat')],
+                manageSecrets: true, workflowTokenPermissions: [{ id: 'workflow.repository.metadata', role: 'workflow',
+                    scope: 'repository', permission: 'Metadata', level: 'read', applicability: 'required',
+                    reason: 'Identify repository.', probe: 'metadata' }],
+            });
+            if (scenario === 'verified') {
+                await expect(result).resolves.toMatchObject({ collection: { workflowPat: { value: 'workflow-token' } } });
+                expect(verifier.execute.mock.invocationCallOrder[0]).toBeLessThan(audit.inspect.mock.invocationCallOrder[0]);
+                expect(verifier.execute).toHaveBeenCalledWith({ id: 42, login: 'bot' }, 'workflow-token');
+            } else {
+                await expect(result).rejects.toThrow(scenario === 'wrong-owner' ? 'Wrong selected bot' : 'not available');
+                expect(audit.inspect).not.toHaveBeenCalled();
+            }
+        });
+
     it('rejects an invalid setup PAT before collecting credentials', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
@@ -191,6 +223,7 @@ describe('SetupCredentialsUseCase', () => {
             owner: 'owner', repository: 'repo', setupToken: 'setup-token', ref: 'main',
             requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
             workflowTokenPermissions: [permission],
+            selectedProjectNumbers: '7,9',
         });
 
         expect(prompt.chooseExistingCredential).not.toHaveBeenCalled();
@@ -202,7 +235,7 @@ describe('SetupCredentialsUseCase', () => {
             }),
         );
         expect(tokenPermissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
-            role: 'workflow', token: 'workflow-token', requirements: [permission],
+            role: 'workflow', token: 'workflow-token', requirements: [permission], selectedProjectNumbers: '7,9',
         }));
         expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
         expect(result.checks.filter(check => check.name === 'PAT')).toEqual([

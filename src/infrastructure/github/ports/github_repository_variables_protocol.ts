@@ -35,13 +35,12 @@ export interface GithubRepositoryVariablesClient {
             updateRepoVariable(parameters: Record<string, unknown>): Promise<unknown>;
             listRepoOrganizationVariables?: (parameters: Record<string, unknown>) => Promise<{ data: { variables: GithubOrganizationResource[] } }>;
             listOrgVariables?: (parameters: Record<string, unknown>) => Promise<{ data: { variables: GithubOrganizationResource[] } }>;
-            createOrUpdateOrgVariable?: (parameters: Record<string, unknown>) => Promise<unknown>;
+            createOrgVariable?: (parameters: Record<string, unknown>) => Promise<unknown>;
+            updateOrgVariable?: (parameters: Record<string, unknown>) => Promise<unknown>;
             addSelectedRepoToOrgVariable?: (parameters: Record<string, unknown>) => Promise<unknown>;
-        };
-        secrets?: {
-            listRepoSecrets(parameters: Record<string, unknown>): Promise<{ data: { secrets: GithubRepositorySecret[] } }>;
-            getRepoPublicKey(parameters: Record<string, unknown>): Promise<{ data: GithubActionsPublicKey }>;
-            createOrUpdateRepoSecret(parameters: Record<string, unknown>): Promise<unknown>;
+            listRepoSecrets?: (parameters: Record<string, unknown>) => Promise<{ data: { secrets: GithubRepositorySecret[] } }>;
+            getRepoPublicKey?: (parameters: Record<string, unknown>) => Promise<{ data: GithubActionsPublicKey }>;
+            createOrUpdateRepoSecret?: (parameters: Record<string, unknown>) => Promise<unknown>;
             listRepoOrganizationSecrets?: (parameters: Record<string, unknown>) => Promise<{ data: { secrets: GithubOrganizationResource[] } }>;
             listOrgSecrets?: (parameters: Record<string, unknown>) => Promise<{ data: { secrets: GithubOrganizationResource[] } }>;
             getOrgPublicKey?: (parameters: Record<string, unknown>) => Promise<{ data: GithubActionsPublicKey }>;

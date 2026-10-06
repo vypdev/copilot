@@ -59,7 +59,6 @@ export const pt: Record<SetupMessageKey, string> = {
   conditionalGrants: 'As permissões condicionais dependem das escolhas e do GitHub. Haverá uma auditoria final antes das alterações.',
   permissionEvidenceVerified: 'Uma leitura no GitHub confirmou este acesso.',
   permissionEvidenceVerifiedWrite: 'Foi criado, lido e removido um recurso temporário.',
-  permissionEvidenceConditional: 'Esta escrita é condicional. Será verificada se o plano final a exigir.',
   permissionEvidencePrivateProject: 'Um Project não público da organização confirmou o acesso de leitura a Projects.',
   permissionEvidenceMissing: 'O GitHub recusou o acesso necessário. Verifique as definições do PAT.',
   permissionEvidenceWrite: 'A verificação temporária de escrita não terminou com sucesso. Reveja a etapa que falhou e tente novamente.',

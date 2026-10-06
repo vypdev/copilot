@@ -1,14 +1,16 @@
+import { cleanupPullRequest, cleanupActionRun } from './setup_permission_workflow_cleanup';
+import { cleanupProject } from './setup_permission_project_cleanup';
 import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, readFile, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { SetupTokenPermissionProbe, SetupTokenPermissionScope } from '../domain/setup_token_permissions';
-import { ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord } from './setup_permission_probe_http';
+import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord } from './setup_permission_probe_http';
 import { cleanupIssue } from './setup_permission_issue_cleanup';
 
 interface ProbeJournalEntry {
-    readonly version: 1;
+    readonly version: 1 | 2;
     readonly owner: string;
     readonly repository: string;
     readonly scope: SetupTokenPermissionScope;
@@ -18,12 +20,18 @@ interface ProbeJournalEntry {
     readonly issueNumber?: number;
     readonly issueNodeId?: string;
     readonly runId?: number;
+    readonly workflowId?: number;
     readonly dispatchAttempted?: true;
     readonly pullAttempted?: true;
+    readonly referenceSha?: string;
+    readonly incident?: 'secret-collision';
     readonly pid: number;
 }
 
 const supported = new Set<SetupTokenPermissionProbe>(['variables', 'secrets', 'issues', 'issue-types', 'contents', 'workflows', 'projects', 'pull-requests', 'actions']);
+
+/** Legacy dispatched runs cannot be deleted without an independently verified workflow identity. */
+export class LegacyActionsRecoveryRequired extends ProbeFailure {}
 
 /** No token or test value is persisted. A file exists before the first remote mutation. */
 export class SetupPermissionProbeJournal {
@@ -38,10 +46,10 @@ export class SetupPermissionProbeJournal {
         const path = join(this.root, `${randomBytes(16).toString('hex')}.json`);
         const file = await open(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
         try {
-            await file.writeFile(JSON.stringify({ ...entry, version: 1, pid: process.pid } satisfies ProbeJournalEntry));
+            await file.writeFile(JSON.stringify({ ...entry, version: 2, pid: process.pid } satisfies ProbeJournalEntry));
             await file.sync();
         } finally { await file.close(); }
-        return new ProbeJournalHandle(path, { ...entry, version: 1, pid: process.pid });
+        return new ProbeJournalHandle(path, { ...entry, version: 2, pid: process.pid });
     }
 
     async recover(owner: string, repository: string, http: SetupPermissionProbeHttp): Promise<void> {
@@ -58,6 +66,9 @@ export class SetupPermissionProbeJournal {
             catch { throw new ProbeFailure('A temporary-resource cleanup record could not be read.'); }
             if (!validEntry(entry)) throw new ProbeFailure('A temporary-resource cleanup record is invalid.');
             if (entry.owner !== owner || entry.repository !== repository) continue;
+            if (entry.incident === 'secret-collision') {
+                throw new ProbeCollision('A previous Secret collision requires GitHub audit-trail review. Reconcile the incident before removing its local journal record.', undefined, true);
+            }
             if (entry.pid !== process.pid && processIsRunning(entry.pid)) {
                 throw new ProbeFailure('Another setup process has a temporary permission resource in progress.');
             }
@@ -80,6 +91,11 @@ export class ProbeJournalHandle {
 
     /** Use only when GitHub definitively rejected creation before ownership was established. */
     async dismiss(): Promise<void> { await unlink(this.path); }
+
+    async markSecretCollision(): Promise<void> {
+        if (this.entry.probe !== 'secrets') throw new ProbeFailure('Invalid Secret incident journal target.');
+        await this.update({ incident: 'secret-collision' });
+    }
 
     async setRemoteId(remoteId: string): Promise<void> {
         if (this.entry.probe !== 'projects' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(remoteId)) {
@@ -116,9 +132,24 @@ export class ProbeJournalHandle {
         await this.update({ runId });
     }
 
+    async setDispatchWorkflowId(workflowId: number): Promise<void> {
+        if (this.entry.probe !== 'actions' || !Number.isSafeInteger(workflowId) || workflowId <= 0) {
+            throw new ProbeFailure('Invalid temporary Actions workflow ID.');
+        }
+        await this.update({ workflowId });
+    }
+
     async markPullAttempted(): Promise<void> {
         if (this.entry.probe !== 'pull-requests') throw new ProbeFailure('Invalid temporary pull-request journal update.');
         await this.update({ pullAttempted: true });
+    }
+
+    async setReferenceSha(referenceSha: unknown): Promise<void> {
+        if (!['contents', 'workflows', 'pull-requests', 'actions'].includes(this.entry.probe)
+            || typeof referenceSha !== 'string' || !/^[a-f0-9]{40}$/u.test(referenceSha)) {
+            throw new ProbeFailure('Temporary reference update did not identify its exact commit.');
+        }
+        await this.update({ referenceSha });
     }
 
     async clearRejectedPull(): Promise<void> {
@@ -150,13 +181,17 @@ export class ProbeJournalHandle {
         if (probe === 'projects') {
             await cleanupProject(http, owner, name, this.entry.remoteId);
         } else if (probe === 'actions') {
-            await cleanupActionRun(http, root, name, this.entry.runId, this.entry.dispatchAttempted === true);
-            await cleanupReference(http, root, name);
+            if (this.entry.version === 1 && this.entry.workflowId === undefined
+                && (this.entry.dispatchAttempted || this.entry.runId !== undefined)) {
+                throw new LegacyActionsRecoveryRequired(`Legacy Actions cleanup record has no workflow identity. Inspect workflow_dispatch runs for ${owner}/${repository} on temporary branch ${name}, cancel and delete only the verified temporary run, then remove that branch only after checking its recorded commit. Once GitHub cleanup is confirmed, remove only the journal file ${this.path} and retry setup.`);
+            }
+            await cleanupActionRun(http, root, name, this.entry.runId, this.entry.dispatchAttempted === true, this.entry.workflowId);
+            await cleanupReference(http, root, name, this.entry.referenceSha);
         } else if (probe === 'pull-requests') {
             if (this.entry.pullAttempted) await cleanupPullRequest(http, root, owner, name);
-            await cleanupReference(http, root, name);
+            await cleanupReference(http, root, name, this.entry.referenceSha);
         } else if (probe === 'contents' || probe === 'workflows') {
-            await cleanupReference(http, root, name);
+            await cleanupReference(http, root, name, this.entry.referenceSha);
         } else if (probe === 'issue-types') {
             const list = `${root}/issue-types`;
             const matching = await matchingIssueTypeIds(http, list, name);
@@ -185,20 +220,23 @@ async function matchingIssueTypeIds(http: SetupPermissionProbeHttp, url: string,
     let value: unknown;
     try { value = await response.json(); }
     catch { throw new ProbeFailure('GitHub returned invalid Issue Types cleanup data.'); }
-    if (!Array.isArray(value)) throw new ProbeFailure('GitHub returned invalid Issue Types cleanup data.');
+    if (!Array.isArray(value) || value.some(item => !item || typeof item !== 'object' || Array.isArray(item)
+        || typeof item.name !== 'string' || !Number.isSafeInteger(item.id) || item.id <= 0)) {
+        throw new ProbeFailure('GitHub returned invalid Issue Types cleanup data.');
+    }
     return value.filter(item => item && typeof item === 'object' && (item as Record<string, unknown>).name === name)
-        .map(item => (item as Record<string, unknown>).id)
-        .filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id) && id > 0);
+        .map(item => item.id as number);
 }
 
 function validEntry(value: unknown): value is ProbeJournalEntry {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     const entry = value as Partial<ProbeJournalEntry>;
-    return entry.version === 1 && typeof entry.owner === 'string' && typeof entry.repository === 'string'
+    return (entry.version === 1 || entry.version === 2) && typeof entry.owner === 'string' && typeof entry.repository === 'string'
         && (entry.scope === 'repository' || entry.scope === 'organization')
         && supported.has(entry.probe as SetupTokenPermissionProbe)
         && validScope(entry.scope, entry.probe as SetupTokenPermissionProbe)
         && typeof entry.name === 'string' && safeName(entry.probe as SetupTokenPermissionProbe, entry.name)
+        && (entry.incident === undefined || (entry.version === 2 && entry.probe === 'secrets' && entry.incident === 'secret-collision'))
         && (entry.remoteId === undefined || (entry.probe === 'projects'
             && typeof entry.remoteId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.remoteId)))
         && (entry.issueNumber === undefined && entry.issueNodeId === undefined
@@ -207,8 +245,12 @@ function validEntry(value: unknown): value is ProbeJournalEntry {
                 && typeof entry.issueNodeId === 'string' && /^[A-Za-z0-9_=-]{8,128}$/u.test(entry.issueNodeId)))
         && (entry.runId === undefined || (entry.probe === 'actions'
             && typeof entry.runId === 'number' && Number.isSafeInteger(entry.runId) && entry.runId > 0))
+        && (entry.workflowId === undefined || (entry.probe === 'actions'
+            && typeof entry.workflowId === 'number' && Number.isSafeInteger(entry.workflowId) && entry.workflowId > 0))
         && (entry.dispatchAttempted === undefined || (entry.probe === 'actions' && entry.dispatchAttempted === true))
         && (entry.pullAttempted === undefined || (entry.probe === 'pull-requests' && entry.pullAttempted === true))
+        && (entry.referenceSha === undefined || (['contents', 'workflows', 'pull-requests', 'actions'].includes(entry.probe!)
+            && typeof entry.referenceSha === 'string' && /^[a-f0-9]{40}$/u.test(entry.referenceSha)))
         && typeof entry.pid === 'number' && Number.isSafeInteger(entry.pid) && entry.pid > 0;
 }
 
@@ -230,171 +272,24 @@ function validScope(scope: SetupTokenPermissionScope, probe: SetupTokenPermissio
         && (probe === 'variables' || probe === 'secrets' || probe === 'issue-types' || probe === 'projects'));
 }
 
-async function cleanupReference(http: SetupPermissionProbeHttp, root: string, name: string): Promise<void> {
+async function cleanupReference(http: SetupPermissionProbeHttp, root: string, name: string, expectedSha?: string): Promise<void> {
     const exact = `${root}/git/ref/heads/${encodeURIComponent(name)}`;
     const before = await http.request(exact);
-    if (before.status === 200) await http.expect(`${root}/git/refs/heads/${encodeURIComponent(name)}`, 'DELETE', [204]);
+    if (before.status === 200) {
+        const ref = await probeJsonRecord(before);
+        const object = ref.object;
+        if (!expectedSha || ref.ref !== `refs/heads/${name}` || !object || typeof object !== 'object'
+            || Array.isArray(object) || (object as Record<string, unknown>).sha !== expectedSha) {
+            throw new ProbeFailure('Temporary reference changed or has no recorded commit; inspect the recovery journal before removing it.', undefined, true);
+        }
+        await http.expect(`${root}/git/refs/heads/${encodeURIComponent(name)}`, 'DELETE', [204]);
+    }
     else if (before.status !== 404) throw new ProbeFailure(`Temporary reference cleanup check returned HTTP ${before.status}.`, before.status);
     const after = await http.request(exact);
     if (after.status !== 404) throw new ProbeFailure(`Temporary reference cleanup could not be confirmed (HTTP ${after.status}).`, after.status);
 }
 
-async function cleanupPullRequest(http: SetupPermissionProbeHttp, root: string, owner: string, name: string): Promise<void> {
-    const title = `Copilot permission test ${name.slice('copilot-permission-test-'.length)}`;
-    const search = `${root}/pulls?state=all&head=${encodeURIComponent(`${owner}:${name}`)}&per_page=100`;
-    const response = await http.expect(search, 'GET', [200]);
-    let rows: unknown;
-    try { rows = await response.json(); }
-    catch { throw new ProbeFailure('GitHub returned invalid temporary pull-request cleanup data.'); }
-    if (!Array.isArray(rows)) throw new ProbeFailure('GitHub returned invalid temporary pull-request cleanup data.');
-    const matches = rows.filter(item => item && typeof item === 'object' && !Array.isArray(item)
-        && (item as Record<string, unknown>).title === title
-        && typeof (item as Record<string, unknown>).head === 'object'
-        && ((item as Record<string, unknown>).head as Record<string, unknown>)?.ref === name);
-    if (matches.length > 1) throw new ProbeFailure('Multiple temporary pull requests matched the cleanup branch.');
-    if (matches.length === 0) return;
-    const row = matches[0] as Record<string, unknown>;
-    const number = row.number;
-    if (!Number.isSafeInteger(number) || (number as number) <= 0 || row.merged_at) {
-        throw new ProbeFailure('Temporary pull-request identity changed; automatic cleanup stopped.');
-    }
-    const exact = `${root}/pulls/${number}`;
-    if (row.state === 'open') await http.expect(exact, 'PATCH', [200], { state: 'closed' });
-    else if (row.state !== 'closed') throw new ProbeFailure('Temporary pull request has an unexpected state.');
-    const after = await probeJsonRecord(await http.expect(exact, 'GET', [200]));
-    if (after.number !== number || after.state !== 'closed' || after.title !== title) {
-        throw new ProbeFailure('Temporary pull-request closure could not be confirmed.');
-    }
-}
-
-async function cleanupActionRun(
-    http: SetupPermissionProbeHttp, root: string, branch: string, recordedId?: number, attempted = false,
-): Promise<void> {
-    if (!attempted && recordedId === undefined) return;
-    let id = recordedId;
-    for (let attempt = 0; id === undefined && attempt < 6; attempt += 1) {
-        const response = await http.expect(`${root}/actions/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=100`, 'GET', [200]);
-        const body = await probeJsonRecord(response);
-        if (!Array.isArray(body.workflow_runs)) throw new ProbeFailure('GitHub returned invalid temporary Actions run cleanup data.');
-        const matches = body.workflow_runs.filter(item => item && typeof item === 'object' && !Array.isArray(item)
-            && (item as Record<string, unknown>).head_branch === branch
-            && (item as Record<string, unknown>).event === 'workflow_dispatch');
-        if (matches.length > 1) throw new ProbeFailure('Multiple temporary Actions runs matched the cleanup branch.');
-        if (matches.length === 1) {
-            const candidate = (matches[0] as Record<string, unknown>).id;
-            if (!Number.isSafeInteger(candidate) || (candidate as number) <= 0) {
-                throw new ProbeFailure('GitHub returned an invalid temporary Actions run ID.');
-            }
-            id = candidate as number;
-        } else if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    if (id === undefined) throw new ProbeFailure('Temporary Actions dispatch may have succeeded, but its run was not found for cleanup.');
-    const exact = `${root}/actions/runs/${id}`;
-    let run: Record<string, unknown> | undefined;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-        const response = await http.request(exact);
-        if (response.status === 404 && attempt === 7) return;
-        if (response.status !== 200) {
-            if (response.status === 404 && attempt < 7) { await new Promise(resolve => setTimeout(resolve, 500)); continue; }
-            throw new ProbeFailure(`Temporary Actions run lookup returned HTTP ${response.status}.`, response.status);
-        }
-        run = await probeJsonRecord(response);
-        if (run.id !== id || run.head_branch !== branch || run.event !== 'workflow_dispatch') {
-            throw new ProbeFailure('Temporary Actions run identity changed; automatic deletion stopped.');
-        }
-        if (run.status === 'completed') break;
-        if (attempt === 0) {
-            const cancel = await http.request(`${exact}/cancel`, 'POST');
-            if (cancel.status !== 202 && cancel.status !== 409) {
-                throw new ProbeFailure(`Temporary Actions run cancellation returned HTTP ${cancel.status}.`, cancel.status);
-            }
-        }
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    if (run?.status !== 'completed') throw new ProbeFailure('Temporary Actions run did not finish before cleanup deadline.');
-    await http.expect(exact, 'DELETE', [204]);
-    const after = await http.request(exact);
-    if (after.status !== 404) throw new ProbeFailure(`Temporary Actions run deletion could not be confirmed (HTTP ${after.status}).`, after.status);
-}
-
 function processIsRunning(pid: number): boolean {
     try { process.kill(pid, 0); return true; }
     catch (error) { return (error as NodeJS.ErrnoException).code === 'EPERM'; }
-}
-
-async function cleanupProject(http: SetupPermissionProbeHttp, owner: string, title: string, recordedId?: string): Promise<void> {
-    const id = recordedId ?? await findProjectByTitle(http, owner, title);
-    if (!id) return;
-    const before = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
-    if (before.node === null) return;
-    if (!before.node || typeof before.node !== 'object' || Array.isArray(before.node)
-        || (before.node as Record<string, unknown>).id !== id
-        || (before.node as Record<string, unknown>).title !== title) {
-        throw new ProbeFailure('Temporary Project identity changed; automatic deletion was stopped.');
-    }
-    const deleted = await projectGraphQl(http,
-        'mutation($id:ID!){deleteProjectV2(input:{projectId:$id}){projectV2{id}}}', { id });
-    const result = deleted.deleteProjectV2;
-    if (!result || typeof result !== 'object' || Array.isArray(result)
-        || !(result as Record<string, unknown>).projectV2
-        || typeof (result as Record<string, unknown>).projectV2 !== 'object'
-        || ((result as Record<string, unknown>).projectV2 as Record<string, unknown>).id !== id) {
-        throw new ProbeFailure('GitHub did not confirm deletion of the temporary Project.');
-    }
-    const after = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
-    if (after.node !== null) throw new ProbeFailure('Temporary Project cleanup could not be confirmed.');
-}
-
-async function findProjectByTitle(http: SetupPermissionProbeHttp, owner: string, title: string): Promise<string | undefined> {
-    let after: string | null = null;
-    const matches: string[] = [];
-    for (let page = 0; page < 5; page += 1) {
-        const data = await projectGraphQl(http,
-            'query($owner:String!,$title:String!,$after:String){organization(login:$owner){projectsV2(first:100,after:$after,query:$title){nodes{id title} pageInfo{hasNextPage endCursor}}}}',
-            { owner, title, after });
-        const organization = data.organization;
-        if (!organization || typeof organization !== 'object' || Array.isArray(organization)) {
-            throw new ProbeFailure('GitHub did not return organization Projects for cleanup.');
-        }
-        const projects = (organization as Record<string, unknown>).projectsV2;
-        if (!projects || typeof projects !== 'object' || Array.isArray(projects)) {
-            throw new ProbeFailure('GitHub returned invalid Projects cleanup data.');
-        }
-        const list = projects as Record<string, unknown>;
-        if (!Array.isArray(list.nodes)) throw new ProbeFailure('GitHub returned invalid Projects cleanup data.');
-        for (const item of list.nodes) {
-            if (item && typeof item === 'object' && !Array.isArray(item)
-                && (item as Record<string, unknown>).title === title) {
-                const id = (item as Record<string, unknown>).id;
-                if (typeof id !== 'string' || !/^[A-Za-z0-9_=-]{8,128}$/u.test(id)) {
-                    throw new ProbeFailure('GitHub returned an invalid temporary Project ID.');
-                }
-                matches.push(id);
-            }
-        }
-        const pageInfo = list.pageInfo;
-        if (!pageInfo || typeof pageInfo !== 'object' || Array.isArray(pageInfo)) {
-            throw new ProbeFailure('GitHub returned invalid Projects pagination data.');
-        }
-        const pageState = pageInfo as Record<string, unknown>;
-        if (pageState.hasNextPage === false) break;
-        if (pageState.hasNextPage !== true || typeof pageState.endCursor !== 'string'
-            || pageState.endCursor.length > 256 || page === 4) {
-            throw new ProbeFailure('Temporary Project cleanup exceeded the bounded organization scan.');
-        }
-        after = pageState.endCursor;
-    }
-    if (matches.length > 1) throw new ProbeFailure('Multiple Projects matched the temporary cleanup name.');
-    return matches[0];
-}
-
-async function projectGraphQl(http: SetupPermissionProbeHttp, query: string, variables: Record<string, unknown>): Promise<Record<string, unknown>> {
-    const response = await http.expect('https://api.github.com/graphql', 'POST', [200], { query, variables });
-    const body = await probeJsonRecord(response);
-    if (Array.isArray(body.errors) && body.errors.length > 0) throw new ProbeFailure('GitHub rejected temporary Project cleanup.');
-    const data = body.data;
-    if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        throw new ProbeFailure('GitHub returned invalid temporary Project cleanup data.');
-    }
-    return data as Record<string, unknown>;
 }

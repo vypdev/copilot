@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { closeSync, linkSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ApplicationError } from '../application/errors/application_error';
 
 interface GuardRecord { pid: number; nonce: string; repository: string }
 
@@ -29,8 +30,9 @@ export function acquireSetupSessionGuard(cwd: string): () => void {
     if (!collision || typeof collision !== 'object' || !('code' in collision) || collision.code !== 'EEXIST') throw collision;
     let existing: GuardRecord;
     try { existing = JSON.parse(readFileSync(lockPath, 'utf8')) as GuardRecord; }
-    catch { throw new Error('A setup lock exists but cannot be verified. Inspect it before retrying.'); }
-    if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository || !existing.nonce) {
+    catch (cause) { throw setupLockError('A setup lock exists but cannot be verified. Inspect it before retrying.', cause); }
+    if (!Number.isSafeInteger(existing.pid) || existing.pid <= 0 || existing.repository !== repository
+      || typeof existing.nonce !== 'string' || !existing.nonce) {
       throw setupLockError('A setup lock has unexpected contents. Inspect it before retrying.', collision);
     }
     try {
@@ -42,12 +44,24 @@ export function acquireSetupSessionGuard(cwd: string): () => void {
     // Filesystem reads and unlink are not atomic. Never remove a dead owner's lock here.
     throw setupLockError(`A setup lock for a stopped process (${existing.pid}) remains at ${lockPath}. Verify no setup is running, remove only that file manually, then retry.`, collision);
   }
-  return () => {
+  const interrupt = () => process.exit(130);
+  const terminate = () => process.exit(143);
+  const release = () => {
+    process.removeListener('exit', release);
+    process.removeListener('SIGINT', interrupt);
+    process.removeListener('SIGTERM', terminate);
     try {
       const current = JSON.parse(readFileSync(lockPath, 'utf8')) as GuardRecord;
       if (current.pid === record.pid && current.nonce === record.nonce && current.repository === record.repository) unlinkSync(lockPath);
     } catch { /* Missing or replaced lock is not ours to remove. */ }
   };
+  // A default Node signal exit does not run the command's asynchronous finally.
+  // Synchronous exit cleanup releases only our exact record; remote probe
+  // journals remain available to recover any interrupted GitHub transaction.
+  process.once('exit', release);
+  process.once('SIGINT', interrupt);
+  process.once('SIGTERM', terminate);
+  return release;
 }
 
 function writeStagedLock(path: string, record: GuardRecord): void {
@@ -62,6 +76,6 @@ function writeStagedLock(path: string, record: GuardRecord): void {
   }
 }
 
-function setupLockError(message: string, cause: unknown): Error {
-  return Object.assign(new Error(message), { cause });
+function setupLockError(message: string, cause: unknown): ApplicationError {
+  return new ApplicationError('configuration.invalid', message, { cause });
 }

@@ -14,9 +14,12 @@ export async function withProbeCleanup(
     let created = false;
     try { await operation(() => { created = true; }, handle); }
     catch (error) { operationError = error; }
-    if (!created && (operationError instanceof ProbeCollision
-        || (operationError instanceof ProbeFailure && operationError.httpStatus !== undefined
-            && operationError.httpStatus >= 400 && operationError.httpStatus < 500))) {
+    if (!created && operationError instanceof ProbeCollision) {
+        await handle.markSecretCollision();
+        throw operationError;
+    }
+    if (!created && operationError instanceof ProbeFailure && operationError.httpStatus !== undefined
+            && operationError.httpStatus >= 400 && operationError.httpStatus < 500) {
         await handle.dismiss();
         throw operationError;
     }

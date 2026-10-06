@@ -1,4 +1,6 @@
 import type { SetupTokenPermissionCheck, SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
+import { withHttpDeadline } from './http_deadline';
+import { isSetupPermissionDenied } from './setup_permission_denial';
 
 export type ProbeMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -12,20 +14,10 @@ export class SetupPermissionProbeHttp {
 
     async request(url: string, method: ProbeMethod = 'GET', body?: unknown): Promise<Response> {
         if (!url.startsWith('https://api.github.com/')) throw new ProbeFailure('Invalid GitHub probe target.');
-        const controller = new AbortController();
-        let timeout: ReturnType<typeof setTimeout> | undefined;
-        const deadline = new Promise<never>((_, reject) => {
-            timeout = setTimeout(() => {
-                controller.abort();
-                reject(new Error('Probe request timeout.'));
-            }, this.timeoutMs);
-        });
         try {
-            return await Promise.race([this.fetchAndRead(url, method, body, controller.signal), deadline]);
+            return await withHttpDeadline(this.timeoutMs, signal => this.fetchAndRead(url, method, body, signal));
         } catch {
             throw new ProbeFailure(`GitHub ${method} did not complete or timed out.`);
-        } finally {
-            if (timeout) clearTimeout(timeout);
         }
     }
 
@@ -42,7 +34,7 @@ export class SetupPermissionProbeHttp {
             signal,
             redirect: 'error',
         });
-        if (response.status >= 300 || response.status === 204 || response.status === 205) return response;
+        if (response.status !== 403 && (response.status >= 300 || response.status === 204 || response.status === 205)) return response;
         // Consume the complete body while the request deadline and abort signal
         // are still active. A fixture response may expose json() but no text().
         const payload = typeof response.text === 'function' ? await response.text() : await response.json();
@@ -57,17 +49,23 @@ export class SetupPermissionProbeHttp {
     async expect(url: string, method: ProbeMethod, statuses: readonly number[], body?: unknown): Promise<Response> {
         const response = await this.request(url, method, body);
         if (!statuses.includes(response.status)) {
-            throw new ProbeFailure(`GitHub ${method} returned HTTP ${response.status}.`, response.status);
+            throw await probeResponseFailure(response, `GitHub ${method} returned HTTP ${response.status}.`);
         }
         return response;
     }
 }
 
 export class ProbeFailure extends Error {
-    constructor(message: string, readonly httpStatus?: number, readonly cleanupPending = false) { super(message); }
+    constructor(message: string, readonly httpStatus?: number, readonly cleanupPending = false,
+        readonly permissionDenied = false) { super(message); }
 }
 
 export class ProbeCollision extends ProbeFailure {}
+
+export async function probeResponseFailure(response: Response, message: string): Promise<ProbeFailure> {
+    return new ProbeFailure(message, response.status, false,
+        response.status === 403 && await isSetupPermissionDenied(response));
+}
 
 export async function probeJsonRecord(response: Response): Promise<Record<string, unknown>> {
     try {
@@ -81,7 +79,7 @@ export function writeProbeFailure(requirement: SetupTokenPermissionRequirement, 
     const failure = error instanceof ProbeFailure ? error : new ProbeFailure('The temporary permission check could not complete.');
     return {
         ...requirement,
-        status: failure.httpStatus === 401 ? 'missing' : 'unverifiable',
+        status: !failure.cleanupPending && (failure.httpStatus === 401 || failure.permissionDenied) ? 'missing' : 'unverifiable',
         message: failure.message,
         ...(failure.cleanupPending ? { cleanupPending: true } : {}),
         ...(failure instanceof ProbeCollision ? { incident: 'secret-collision' as const } : {}),

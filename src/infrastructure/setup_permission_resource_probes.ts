@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { encryptSecret } from '../data/repository/repository_variables_repository';
-import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord } from './setup_permission_probe_http';
+import { encryptSecret } from './github_secret_encryption';
+import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord, probeResponseFailure } from './setup_permission_probe_http';
 import type { ResourceProbeContext } from './setup_permission_probe_context';
 import { probeOrganizationProject } from './setup_permission_project_probe';
 import { probePullRequest } from './setup_permission_pull_request_probe';
@@ -72,7 +72,7 @@ async function probeSecret(context: ResourceProbeContext): Promise<void> {
     const exact = `${root}/${name}`;
     const key = await probeJsonRecord(await context.http.expect(`${root}/public-key`, 'GET', [200]));
     if (typeof key.key !== 'string' || typeof key.key_id !== 'string') throw new ProbeFailure('GitHub returned an invalid Secret public key.');
-    const encrypted = encryptSecret(randomBytes(24).toString('hex'), key.key);
+    const encrypted = await encryptSecret(randomBytes(24).toString('hex'), key.key);
     const body = context.scope === 'organization'
         ? { encrypted_value: encrypted, key_id: key.key_id, visibility: 'selected', selected_repository_ids: [await repositoryId(context)] }
         : { encrypted_value: encrypted, key_id: key.key_id };
@@ -81,7 +81,7 @@ async function probeSecret(context: ResourceProbeContext): Promise<void> {
     await withProbeCleanup(context, name, async owned => {
         const result = await context.http.request(exact, 'PUT', body);
         if (result.status === 204) throw new ProbeCollision('GitHub updated an existing Secret at the random temporary name. A concurrent Secret value may have been replaced; setup stopped and did not delete it. Inspect the GitHub Secret audit trail.', 204, true);
-        if (result.status !== 201) throw new ProbeFailure(`GitHub PUT returned HTTP ${result.status}.`, result.status);
+        if (result.status !== 201) throw await probeResponseFailure(result, `GitHub PUT returned HTTP ${result.status}.`);
         owned();
         context.phase('reading');
         const observed = await probeJsonRecord(await context.http.expect(exact, 'GET', [200]));
@@ -134,12 +134,14 @@ async function probeReference(context: ResourceProbeContext): Promise<void> {
     const sha = await defaultBranchSha(context);
     context.phase('creating');
     await requireAbsent(context.http, `${root}/git/ref/heads/${name}`);
-    await withProbeCleanup(context, name, async owned => {
+    await withProbeCleanup(context, name, async (owned, handle) => {
+        await handle.setReferenceSha(sha);
         await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         owned();
         context.phase('reading');
         const observed = await probeJsonRecord(await context.http.expect(`${root}/git/ref/heads/${name}`, 'GET', [200]));
-        if (observed.ref !== `refs/heads/${name}`) throw new ProbeFailure('Temporary reference readback did not match the created branch.');
+        if (observed.ref !== `refs/heads/${name}` || !observed.object || typeof observed.object !== 'object'
+            || (observed.object as Record<string, unknown>).sha !== sha) throw new ProbeFailure('Temporary reference readback did not match the created branch.');
     });
 }
 
@@ -152,16 +154,19 @@ async function probeWorkflowFile(context: ResourceProbeContext): Promise<void> {
     const content = `name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: false\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'true'\n`;
     context.phase('creating');
     await requireAbsent(context.http, `${root}/git/ref/heads/${name}`);
-    await withProbeCleanup(context, name, async owned => {
+    await withProbeCleanup(context, name, async (owned, handle) => {
+        await handle.setReferenceSha(sha);
         await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         owned();
-        await context.http.expect(workflowUrl, 'PUT', [201], {
+        const written = await probeJsonRecord(await context.http.expect(workflowUrl, 'PUT', [201], {
             message: 'chore: temporary permission verification',
             content: Buffer.from(content, 'utf8').toString('base64'), branch: name,
-        });
+        }));
+        await handle.setReferenceSha((written.commit as Record<string, unknown> | undefined)?.sha);
         context.phase('reading');
         const observed = await probeJsonRecord(await context.http.expect(`${workflowUrl}?ref=${name}`, 'GET', [200]));
-        if (observed.path !== workflowPath || observed.type !== 'file') {
+        if (observed.path !== workflowPath || observed.type !== 'file' || observed.encoding !== 'base64'
+            || typeof observed.content !== 'string' || Buffer.from(observed.content, 'base64').toString('utf8') !== content) {
             throw new ProbeFailure('Temporary workflow readback did not match the created file.');
         }
     });

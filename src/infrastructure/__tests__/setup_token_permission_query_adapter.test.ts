@@ -42,6 +42,18 @@ function response(
     } as unknown as Response;
 }
 
+
+function validReadPayload(url: string, isPrivate = true): unknown {
+    const path = new URL(url).pathname;
+    if (/\/repos\/[^/]+\/[^/]+$/u.test(path)) return { private: isPrivate, default_branch: 'main' };
+    if (path.endsWith('/actions/permissions')) return { enabled: true };
+    if (path.endsWith('/check-runs')) return { check_runs: [] };
+    if (path.endsWith('/actions/workflows')) return { workflows: [] };
+    if (path.endsWith('/actions/secrets')) return { secrets: [] };
+    if (path.endsWith('/actions/variables')) return { variables: [] };
+    return [];
+}
+
 const ambiguousForbiddenResponses: ReadonlyArray<{
     label: string;
     options: { message?: string; headers?: Record<string, string> };
@@ -61,7 +73,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             .map(item => ({ ...item, applicability: 'required' as const }));
         const fetcher = jest.fn(async (url: string) => url.endsWith('/projectsV2?per_page=100')
             ? response(true, 200, { payload: [] })
-            : response(true, 200, { payload: { private: true, default_branch: 'main' } }));
+            : response(true, 200, { payload: validReadPayload(url) }));
         const audit = new SetupTokenPermissionsUseCase({
             validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
         }, new SetupTokenPermissionQueryAdapter({ fetcher: fetcher as typeof fetch }));
@@ -122,12 +134,10 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     });
 
     it.each([
-        'metadata', 'contents', 'administration', 'issues', 'actions', 'checks',
+        'metadata', 'contents', 'issues', 'actions', 'checks',
         'pull-requests', 'workflows',
     ] as const)('reports a successful public repository %s read as available', async probe => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200, {
-            payload: { private: false, default_branch: 'main' },
-        }));
+        const fetcher = jest.fn(async (url: Parameters<typeof fetch>[0], _options?: RequestInit) => response(true, 200, { payload: validReadPayload(String(url), false) }));
 
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
             'owner', 'repo', 'secret-token', [requirement('read', probe)],
@@ -162,7 +172,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
         ['organization', 'secrets'],
         ['organization', 'variables'],
     ] as const)('verifies a successful permission-bound %s %s inventory probe directly', async (scope, probe) => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200));
+        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { [probe]: [] } }));
 
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect(
             'owner', 'repo', 'secret-token', [requirement('read', probe, scope)],
@@ -310,7 +320,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     it('resolves and encodes the repository default branch before probing Checks', async () => {
         const fetcher = jest.fn()
             .mockResolvedValueOnce(response(true, 200, { payload: { default_branch: 'release/v1', private: true } }))
-            .mockResolvedValueOnce(response(true, 200));
+            .mockResolvedValueOnce(response(true, 200, { payload: { check_runs: [] } }));
 
         const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher })
             .inspect('owner', 'repo', 'secret', [requirement('read', 'checks')]);
@@ -496,7 +506,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
     });
 
     it('maps every supported repository probe to a read-only endpoint', async () => {
-        const fetcher = jest.fn().mockResolvedValue(response(true, 200, { payload: { default_branch: 'main', private: true } }));
+        const fetcher = jest.fn(async (url: Parameters<typeof fetch>[0], _options?: RequestInit) => response(true, 200, { payload: validReadPayload(String(url)) }));
         const probes: SetupTokenPermissionRequirement['probe'][] = [
             'metadata', 'contents', 'administration', 'issues', 'actions', 'checks',
             'pull-requests', 'variables', 'secrets', 'workflows',
@@ -509,7 +519,7 @@ describe('SetupTokenPermissionQueryAdapter', () => {
             probes.map(probe => requirement('read', probe)),
         );
 
-        expect(fetcher).toHaveBeenCalledTimes(17);
+        expect(fetcher).toHaveBeenCalledTimes(16);
         expect(checks).toHaveLength(probes.length);
         expect(checks.every(check => check.status === 'verified')).toBe(true);
         for (const [url, options] of fetcher.mock.calls) {

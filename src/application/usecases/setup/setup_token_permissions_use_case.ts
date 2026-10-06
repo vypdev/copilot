@@ -1,6 +1,6 @@
 import type { SetupCredentialValidationPort } from '../../ports/setup_wizard_ports';
 import type {
-    SetupTokenPermissionQueryPort,
+    SetupTokenPermissionInspectionPort,
     SetupTokenPermissionsRequest,
 } from '../../ports/setup_token_permission_ports';
 import type {
@@ -14,7 +14,7 @@ import { isOperationallyAvailableSetupRead, reconcileSetupTokenPermissionEvidenc
 export class SetupTokenPermissionsUseCase {
     constructor(
         private readonly credentials: Pick<SetupCredentialValidationPort, 'validateSetupPat'>,
-        private readonly permissions: SetupTokenPermissionQueryPort,
+        private readonly permissions: SetupTokenPermissionInspectionPort,
         private readonly onProgress?: (progress: SetupTokenPermissionProgress) => void,
     ) {}
 
@@ -41,9 +41,11 @@ export class SetupTokenPermissionsUseCase {
 
         const evidence = this.onProgress
             ? await this.permissions.inspect(request.owner, request.repository, request.token,
-                request.requirements, this.onProgress, request.selectedProjectNumbers)
+                request.requirements, this.onProgress, request.selectedProjectNumbers,
+                ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]))
             : await this.permissions.inspect(request.owner, request.repository, request.token,
-                request.requirements, undefined, request.selectedProjectNumbers);
+                request.requirements, undefined, request.selectedProjectNumbers,
+                ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]));
         const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');
@@ -53,7 +55,8 @@ export class SetupTokenPermissionsUseCase {
                 && isOperationallyAvailableSetupRead(check, check.publicReadEvidence)
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
-        const ready = readsUsable && requiredWrites.every(check => check.status === 'verified'
+        const ready = !checks.some(check => check.cleanupPending || check.incident)
+            && readsUsable && requiredWrites.every(check => check.status === 'verified'
             && check.writeProof === 'transaction');
         const confirmationRequired = false;
         return {

@@ -104,14 +104,14 @@ describe('temporary permission resource probes', () => {
                 return reply(201);
             }
             if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`) && method === 'GET') {
-                return branch ? reply(200, { ref: `refs/heads/${branch}` }) : reply(404);
+                return branch ? reply(200, { ref: `refs/heads/${branch}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             }
             if (path.startsWith(`${root}/git/refs/heads/copilot-permission-test-`) && method === 'DELETE') {
                 branch = undefined; return reply(204);
             }
             if (path.startsWith(`${root}/contents/.copilot-permission-test/`) && method === 'PUT') {
                 expect((JSON.parse(String(options?.body)) as { branch: string }).branch).toBe(branch);
-                file = true; return reply(201);
+                file = true; return reply(201, { commit: { sha } });
             }
             if (path === `${root}/pulls` && method === 'POST') {
                 const body = JSON.parse(String(options?.body)) as { title: string; head: string; draft: boolean };
@@ -147,12 +147,12 @@ describe('temporary permission resource probes', () => {
             calls.push(`${method} ${path}`);
             if (path === root) return reply(200, { default_branch: 'main' });
             if (path === `${root}/git/ref/heads/main`) return reply(200, { object: { sha: 'a'.repeat(40) } });
-            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200) : reply(404);
+            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200, { ref: `refs/heads/${branch}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             if (path === `${root}/git/refs` && method === 'POST') {
                 branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.slice('refs/heads/'.length);
                 return reply(201);
             }
-            if (path.startsWith(`${root}/contents/.copilot-permission-test/`) && method === 'PUT') return reply(201);
+            if (path.startsWith(`${root}/contents/.copilot-permission-test/`) && method === 'PUT') return reply(201, { commit: { sha: 'a'.repeat(40) } });
             if (path === `${root}/pulls` && method === 'POST') return reply(403);
             if (path.startsWith(`${root}/git/refs/heads/copilot-permission-test-`) && method === 'DELETE') {
                 branch = undefined; return reply(204);
@@ -226,7 +226,7 @@ describe('temporary permission resource probes', () => {
                 return reply(200, { object: { sha: current } });
             }
             if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`) && method === 'GET') {
-                return branch ? reply(200, { ref: `refs/heads/${branch}` }) : reply(404);
+                return branch ? reply(200, { ref: `refs/heads/${branch}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             }
             if (path === `${root}/git/refs` && method === 'POST') {
                 const body = JSON.parse(String(options?.body)) as { ref: string; sha: string };
@@ -239,7 +239,7 @@ describe('temporary permission resource probes', () => {
                 expect(body.sha).toBe(blobSha);
                 expect(body.branch).toBe(branch);
                 content = body.content;
-                return reply(200);
+                return reply(200, { commit: { sha } });
             }
             if (path === `${root}/actions/workflows/123/dispatches` && method === 'POST') {
                 expect(JSON.parse(String(options?.body))).toEqual({ ref: branch, return_run_details: true });
@@ -318,7 +318,7 @@ describe('temporary permission resource probes', () => {
             if (path === `${root}/contents/${workflowPath}`) return reply(200, { path: workflowPath, encoding: 'base64',
                 sha: 'b'.repeat(40), content: Buffer.from(template).toString('base64') });
             if (path === `${root}/git/ref/heads/main`) return reply(200, { object: { sha: 'a'.repeat(40) } });
-            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200) : reply(404);
+            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200, { ref: `refs/heads/${branch}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             if (path === `${root}/git/refs` && method === 'POST') {
                 branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.slice('refs/heads/'.length);
                 return reply(201);
@@ -383,7 +383,7 @@ describe('temporary permission resource probes', () => {
             if (path === `${root}/contents/${workflowPath}`) return reply(200, { path: workflowPath,
                 encoding: 'base64', sha: 'b'.repeat(40), content: Buffer.from(template).toString('base64') });
             if (path === `${root}/git/ref/heads/main`) return reply(200, { object: { sha: 'a'.repeat(40) } });
-            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200) : reply(404);
+            if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`)) return branch ? reply(200, { ref: `refs/heads/${branch}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             if (path === `${root}/git/refs` && method === 'POST') {
                 branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.slice('refs/heads/'.length);
                 return reply(201);
@@ -465,7 +465,9 @@ describe('temporary permission resource probes', () => {
             .toMatchObject({ status: 'unverifiable', cleanupPending: true, incident: 'secret-collision' });
         expect(methods).toContain('PUT');
         expect(methods).not.toContain('DELETE');
-        expect(await readdir(folder)).toEqual([]);
+        expect(await readdir(folder)).toHaveLength(1);
+        await expect(probe.journal.recover('owner', 'repo', probe.value.http)).rejects.toThrow('Secret collision');
+        expect(methods).not.toContain('DELETE');
     });
 
     it.each([
@@ -736,12 +738,13 @@ describe('temporary permission resource probes', () => {
             }]);
             if (path === `${root}/pulls/42` && method === 'PATCH') { state = 'closed'; return reply(200); }
             if (path === `${root}/pulls/42` && method === 'GET') return reply(200, { number: 42, title, state });
-            if (path === `${root}/git/ref/heads/${name}` && method === 'GET') return branch ? reply(200) : reply(404);
+            if (path === `${root}/git/ref/heads/${name}` && method === 'GET') return branch ? reply(200, { ref: `refs/heads/${name}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             if (path === `${root}/git/refs/heads/${name}` && method === 'DELETE') { branch = false; return reply(204); }
             throw new Error(`Unexpected fixture request ${method} ${path}`);
         }) as unknown as typeof fetch;
         const probe = context('pull-requests', 'repository', fetcher);
         const handle = await probe.journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'pull-requests', name });
+        await handle.setReferenceSha('a'.repeat(40));
         await handle.markPullAttempted();
         await probe.journal.recover('owner', 'repo', probe.value.http);
         expect(state).toBe('closed');
@@ -759,17 +762,19 @@ describe('temporary permission resource probes', () => {
             const method = options?.method ?? 'GET';
             const root = '/repos/owner/repo';
             if (path === `${root}/actions/runs/77` && method === 'GET') return run
-                ? reply(200, { id: 77, head_branch: name, event: 'workflow_dispatch', status: cancelled ? 'completed' : 'queued' })
+                ? reply(200, { id: 77, head_branch: name, event: 'workflow_dispatch', workflow_id: 123, status: cancelled ? 'completed' : 'queued' })
                 : reply(404);
             if (path === `${root}/actions/runs/77/cancel` && method === 'POST') { cancelled = true; return reply(202); }
             if (path === `${root}/actions/runs/77` && method === 'DELETE') { run = false; return reply(204); }
-            if (path === `${root}/git/ref/heads/${name}` && method === 'GET') return branch ? reply(200) : reply(404);
+            if (path === `${root}/git/ref/heads/${name}` && method === 'GET') return branch ? reply(200, { ref: `refs/heads/${name}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             if (path === `${root}/git/refs/heads/${name}` && method === 'DELETE') { branch = false; return reply(204); }
             throw new Error(`Unexpected fixture request ${method} ${path}`);
         }) as unknown as typeof fetch;
         const probe = context('actions', 'repository', fetcher);
         const handle = await probe.journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'actions', name });
+        await handle.setReferenceSha('a'.repeat(40));
         await handle.markDispatchAttempted();
+        await handle.setDispatchWorkflowId(123);
         await handle.setRunId(77);
         await probe.journal.recover('owner', 'repo', probe.value.http);
         expect(cancelled).toBe(true);
@@ -782,6 +787,7 @@ describe('temporary permission resource probes', () => {
         const root = '/repos/owner/repo';
         let branch: string | undefined;
         let filePath: string | undefined;
+        let fileContent: string | undefined;
         const calls: string[] = [];
         const fetcher = jest.fn(async (url: string, options?: RequestOptions) => {
             const parsed = new URL(url);
@@ -791,7 +797,7 @@ describe('temporary permission resource probes', () => {
             if (path === root && method === 'GET') return reply(200, { default_branch: 'main' });
             if (path === `${root}/git/ref/heads/main` && method === 'GET') return reply(200, { object: { sha: 'a'.repeat(40) } });
             if (path.startsWith(`${root}/git/ref/heads/copilot-permission-test-`) && method === 'GET') {
-                return branch ? reply(200, { ref: `refs/heads/${branch}` }) : reply(404);
+                return branch ? reply(200, { ref: `refs/heads/${branch}`, object: { sha: 'a'.repeat(40) } }) : reply(404);
             }
             if (path === `${root}/git/refs` && method === 'POST') {
                 branch = (JSON.parse(String(options?.body)) as { ref: string }).ref.replace('refs/heads/', '');
@@ -803,11 +809,12 @@ describe('temporary permission resource probes', () => {
                 expect(body.branch).toBe(branch);
                 expect(Buffer.from(body.content, 'base64').toString('utf8')).toContain('if: false');
                 filePath = path.slice(`${root}/contents/`.length);
-                return reply(201);
+                fileContent = body.content;
+                return reply(201, { commit: { sha: 'a'.repeat(40) } });
             }
             if (path.startsWith(`${root}/contents/.github/workflows/`) && method === 'GET') {
                 expect(parsed.searchParams.get('ref')).toBe(branch);
-                return reply(200, { path: filePath, type: 'file' });
+                return reply(200, { path: filePath, type: 'file', encoding: 'base64', content: fileContent });
             }
             throw new Error(`Unexpected fixture request ${method} ${path}`);
         }) as unknown as typeof fetch;

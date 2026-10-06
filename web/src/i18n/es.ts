@@ -59,7 +59,6 @@ export const es: Record<keyof typeof en, string> = {
   conditionalGrants: 'Los permisos condicionales dependen de tus elecciones y de GitHub. Se hará una auditoría final antes de cualquier cambio.',
   permissionEvidenceVerified: 'Una lectura de GitHub confirmó este acceso.',
   permissionEvidenceVerifiedWrite: 'Se creó, leyó y eliminó un recurso temporal.',
-  permissionEvidenceConditional: 'Esta escritura es condicional. Se comprueba si el plan final la requiere.',
   permissionEvidencePrivateProject: 'Un Project no público de la organización confirmó el acceso de lectura a Projects.',
   permissionEvidenceMissing: 'GitHub rechazó el acceso necesario. Comprueba los ajustes del PAT.',
   permissionEvidenceWrite: 'La comprobación temporal de escritura no terminó correctamente. Revisa la fase fallida y vuelve a intentarlo.',

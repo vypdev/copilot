@@ -11,6 +11,7 @@ import type {
 } from '../../domain/setup';
 import type { SetupDoctorMessageCatalog } from '../policies/setup_doctor_message_catalog';
 import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
+import type { SetupGithubIdentity } from './setup_pat_identity_ports';
 
 export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
@@ -28,6 +29,7 @@ export interface SetupFinalPermissionAuditPort {
 }
 
 export interface SetupCredentialPromptPort {
+    readonly guidedWorkflowBotIdentity?: SetupGithubIdentity;
     requestSetupPat(): Promise<string | undefined>;
     confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;
     explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void;
