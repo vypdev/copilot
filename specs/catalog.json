@@ -785,6 +785,7 @@
         "src/infrastructure/__tests__/setup_pat_bootstrap_transactions.test.ts",
         "src/data/repository/__tests__/repository_actions_sdk_contract.integration.test.ts",
         "src/data/repository/__tests__/repository_actions_resource_edge_cases.test.ts",
+        "src/data/repository/__tests__/repository_selected_resource_grants.test.ts",
         "src/infrastructure/__tests__/setup_permission_read_contract.test.ts"
       ],
       "documentation": [

@@ -70,18 +70,21 @@ export class GithubActionsResourceCommands {
             try {
                 const current = existing.get(credential.name);
                 const visibility = current?.visibility ?? target.organizationVisibility;
+                if (visibility === 'selected' && (target.repositoryId === undefined || !secrets.addSelectedRepoToOrgSecret)) {
+                    throw new Error('Selected organization Secret access cannot be granted to this repository.');
+                }
                 await secrets.createOrUpdateOrgSecret({
                     org: owner,
                     secret_name: credential.name,
                     encrypted_value: await encryptSecret(credential.value, publicKey.data.key),
                     key_id: publicKey.data.key_id,
                     visibility,
-                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
+                    ...(visibility === 'selected' && !current
                         ? { selected_repository_ids: [target.repositoryId] }
                         : {}),
                 });
-                if (visibility === 'selected' && target.repositoryId !== undefined && secrets.addSelectedRepoToOrgSecret) {
-                    await secrets.addSelectedRepoToOrgSecret({ org: owner, secret_name: credential.name, repository_id: target.repositoryId });
+                if (visibility === 'selected') {
+                    await secrets.addSelectedRepoToOrgSecret!({ org: owner, secret_name: credential.name, repository_id: target.repositoryId });
                 }
                 if (current) updated += 1;
                 else created += 1;
@@ -147,18 +150,21 @@ export class GithubActionsResourceCommands {
             try {
                 const current = existing.get(variable.name);
                 const visibility = current?.visibility ?? target.organizationVisibility;
+                if (visibility === 'selected' && (target.repositoryId === undefined || !actions.addSelectedRepoToOrgVariable)) {
+                    throw new Error('Selected organization Variable access cannot be granted to this repository.');
+                }
                 const write = current ? actions.updateOrgVariable : actions.createOrgVariable;
                 await write({
                     org: owner,
                     name: variable.name,
                     value: variable.value,
                     visibility,
-                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
+                    ...(visibility === 'selected' && !current
                         ? { selected_repository_ids: [target.repositoryId] }
                         : {}),
                 });
-                if (visibility === 'selected' && target.repositoryId !== undefined && actions.addSelectedRepoToOrgVariable) {
-                    await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
+                if (visibility === 'selected') {
+                    await actions.addSelectedRepoToOrgVariable!({ org: owner, name: variable.name, repository_id: target.repositoryId });
                 }
                 if (current) updated += 1;
                 else created += 1;

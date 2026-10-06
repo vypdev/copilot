@@ -55,7 +55,7 @@ Secret writes, separate organization Variable create/update methods, and
 preservation of visibility and selected repository grants. This later review
 used no live PAT or setup mutation.
 
-The complete local run passes **540 suites, 6,380 tests, 26 skipped**, all
+The complete local run passes **541 suites, 6,390 tests, 26 skipped**, all
 coverage budgets, and the retained **308/350** acceptance ledger with **42**
 explicit human/provider cases open. The local diff has no missing executable
 statements or partial changed branches. Overall coverage is 95.66% statements,
@@ -76,3 +76,11 @@ dependency audit: [GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-
 affected the locked `shell-quote` 1.10.0. Updating the direct dependency and
 lockfile to 1.12.0 restores a clean production audit; its existing command-parser
 regressions and regenerated bundles remain part of the required checks.
+
+The subsequent review also exposed a silent selected-repository grant skip.
+Both organization resource commands now require repository identity and the
+grant endpoint before writing a selected resource, including preserved
+visibility. Ten regressions cover absent endpoints/identity, new resources,
+denied grants, and private visibility; the command module has 100% coverage in
+the focused four-suite run. A denied grant after writing remains a resource
+error rather than a configured credential.

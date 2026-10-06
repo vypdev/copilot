@@ -260,6 +260,12 @@ The provisioning workflow repeats this fail-closed rule after approval: if it
 cannot obtain an authoritative remote snapshot or required selected inventory
 access, it stops before Secrets, Variables, labels, issue types, and tag writes
 with bounded recovery guidance, including for a repository-scope default.
+When an organization Secret or Variable has `selected` visibility, setup must
+grant this repository access before counting it as configured. It preserves
+the visibility of existing resources. If repository identity or the grant
+endpoint is unavailable, it reports a resource error before writing its value;
+a rejected grant also prevents a success result. An API failure after a value
+write may require inspecting that resource before retrying.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and may validate existing remote Secrets by dispatching the installed `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch. Plain `copilot doctor` may create an Actions run; `copilot doctor --read-only` never dispatches it and leaves Secret values unverified. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 

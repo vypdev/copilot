@@ -399,6 +399,7 @@ describe('narrow GitHub Actions resource repositories', () => {
     it('uses the paginated client path and preserves existing organization visibility', async () => {
         const paginate = jest.fn().mockResolvedValue([{ name: 'EXISTING', visibility: 'selected' }]);
         const createOrUpdateOrgSecret = jest.fn().mockResolvedValue(undefined);
+        const addSelectedRepoToOrgSecret = jest.fn().mockResolvedValue(undefined);
         const client = {
             paginate,
             rest: {
@@ -411,7 +412,7 @@ describe('narrow GitHub Actions resource repositories', () => {
                     createOrUpdateRepoSecret: jest.fn(),
                     listOrgSecrets: jest.fn(),
                     getOrgPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'key', key: randomBytes(32).toString('base64') } }),
-                    createOrUpdateOrgSecret
+                    createOrUpdateOrgSecret, addSelectedRepoToOrgSecret
                 },
             },
         };
@@ -421,5 +422,6 @@ describe('narrow GitHub Actions resource repositories', () => {
         await repository.upsertScopedSecrets('owner', 'repo', 'token', target, [{ name: 'EXISTING', value: 'new' }]);
         expect(paginate).toHaveBeenCalled();
         expect(createOrUpdateOrgSecret).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'selected' }));
+        expect(addSelectedRepoToOrgSecret).toHaveBeenCalledWith({ org: 'owner', secret_name: 'EXISTING', repository_id: 9 });
     });
 });

@@ -278,6 +278,12 @@ Variables use distinct create/update methods. Missing methods or malformed
 collections cannot masquerade as empty inventory. The SDK integration test
 uses an intercepted fixture transport, exercises organization inventory and
 Secret/Variable provisioning, and makes no live provider request.
+For effective `selected` visibility, including an existing resource whose
+visibility is preserved, provisioning requires both repository identity and
+the selected-repository grant endpoint before any value write. Missing either
+produces a resource error without mutation. A rejected grant is an error and
+cannot increment the created/updated success count; private/all visibility
+does not require that endpoint.
 
 
 The shared coordinator is the authority for stage order, cancellation before
@@ -434,11 +440,11 @@ manual reversal.
 |---|---:|---|
 | Defaults/config/storage policy | 27 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
-| Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
+| Credentials/provider adapters | 28 | valid/invalid/missing/unverifiable/groups; ten Secret/Variable cases for missing selected-repository endpoint/identity, creation, failed grants, and private visibility |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
 | Integration/security/cutover | 17 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails |
-| **Total** | **112** | no double counting |
+| **Total** | **122** | no double counting |
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -498,10 +504,15 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     than `blocked` or "no changes applied"; the same conservative outcome
     applies when creation times out ambiguously. Without a bootstrap attempt,
     pre-Apply cancellation remains `cancelled`.
-18. Given an organization Secret or Variable target, repository inventory is
+19. Given an organization Secret or Variable target, repository inventory is
     available and confirms that no same-name repository resource exists;
     otherwise setup blocks before credential collection or mutation, even with
     an explicit organization override or `preserveExisting: false`.
+20. Given a new or preserved `selected` organization Secret or Variable,
+    missing repository identity or grant endpoint yields an error before any
+    value write. A denied grant never counts as created/updated; private
+    visibility succeeds without that endpoint. Execute
+    `repository_selected_resource_grants.test.ts` for both resource families.
 
 ## 17. Requirements traceability
 
