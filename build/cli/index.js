@@ -6366,19 +6366,19 @@ exports.visit = visit;
 
 /***/ }),
 
-/***/ 75430:
+/***/ 18108:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-exports.quote = __nccwpck_require__(91017);
-exports.parse = __nccwpck_require__(79131);
+exports.quote = __nccwpck_require__(34657);
+exports.parse = __nccwpck_require__(39465);
 
 
 /***/ }),
 
-/***/ 79131:
+/***/ 39465:
 /***/ ((module) => {
 
 "use strict";
@@ -6392,24 +6392,31 @@ exports.parse = __nccwpck_require__(79131);
  * 	ParseEntry,
  * } from './parse' */
 
-// '<(' is process substitution operator and
+// '<(' and '>(' are process substitution operators and
 // can be parsed the same as control operator
 var CONTROL = /** @type {const} */ ('(?:') + /** @type {const} */ ([
 	'\\|\\|',
-	'\\&\\&',
-	';;',
-	'\\|\\&',
+	'\\&(?:\\&|>>?)', // `&&`, `&>`, and `&>>`
+	';;\\&?', // `;;` and `;;&`
+	'[;|]\\&', // `;&` and `|&`
 	'\\<\\(',
 	'\\<\\<\\<',
+	'\\<\\<-',
+	'\\<\\<(?!\\()', // `<<(` stays `<` and `<(`, as zsh reads it; other shells reject it
 	'>>',
-	'>\\&',
-	'<\\&',
+	'>[&|(]', // `>&`, `>|`, and `>(`
+	'<[&>]', // `<&` and `<>`
 	'[&;()|<>]'
 ]).join(/** @type {const} */ ('|')) + /** @type {const} */ (')');
 var controlRE = new RegExp('^' + CONTROL + '$');
 var META = /** @type {const} */ ('|&;()<> \\t');
 var SINGLE_QUOTE = /** @type {const} */ ('\'([^\']*?)\'');
-var DOUBLE_QUOTE = /** @type {const} */ ('"((\\\\"|[^"])*?)"');
+// bash ANSI-C quoting, `$'...'`: a backslash escapes the next character, including `'`
+var ANSI_C_BODY = '(?:\\\\[\\s\\S]|[^\\\\\'])*?';
+var ANSI_C_QUOTE = '\\$\'' + ANSI_C_BODY + '\'';
+var ansiCAt = new RegExp('\\$\'' + ANSI_C_BODY + '(?:(\')|\\\\?$)', 'g');
+var ANSI_C_LETTERS = 'abeEfnrtv';
+var ANSI_C_CHARS = '\x07\b\x1B\x1B\f\n\r\t\v';
 var hash = /^#$/;
 
 var SQ = /** @type {const} */ ("'");
@@ -6464,6 +6471,46 @@ function getVar(env, pre, key) {
 	return pre + r;
 }
 
+var ansiCEscape = /\\([0-7]{1,3}|x[\dA-Fa-f]{1,2}|u[\dA-Fa-f]{1,4}|U[\dA-Fa-f]{1,8}|c(?:\\\\|[\s\S])|[abeEfnrtv\\'"?])/g;
+
+/**
+ * @param {string} m
+ * @param {string} escape
+ */
+function expandAnsiCEscape(m, escape) {
+	var kind = escape.charAt(0);
+	if (kind === 'c') {
+		var ctrl = escape.charAt(1);
+		return ctrl === '?' ? '\x7F' : String.fromCharCode(ctrl.charCodeAt(0) & 0x1F);
+	}
+	if (kind === 'x' || kind === 'u' || kind === 'U') {
+		var cp = parseInt(escape.slice(1), 16);
+		if (cp > 0x10FFFF) {
+			return m;
+		}
+		return String.fromCharCode.apply(null, cp > 0xFFFF ? [0xD7C0 + (cp >> 10), 0xDC00 + (cp & 0x3FF)] : [cp]);
+	}
+	if (kind >= '0' && kind <= '7') {
+		return String.fromCharCode(parseInt(escape, 8) & 0xFF);
+	}
+	var letter = ANSI_C_LETTERS.indexOf(escape);
+	return letter < 0 ? escape : ANSI_C_CHARS.charAt(letter);
+}
+
+/** @param {string} body */
+function expandAnsiC(body) {
+	return body.replace(ansiCEscape, expandAnsiCEscape).split('\0')[0]; // like bash, a NUL ends the string
+}
+
+/**
+ * @param {string} s
+ * @param {number} i
+ */
+function closesAnsiC(s, i) {
+	ansiCAt.lastIndex = i;
+	return !!(/** @type {RegExpExecArray} */ (ansiCAt.exec(s)))[1];
+}
+
 /**
  * @param {string} string
  * @param {Env} [env]
@@ -6476,11 +6523,12 @@ function parseInternal(string, env, opts) {
 	}
 	var BS = opts.escape || '\\';
 	var ifs = opts.splitUnquoted === true ? ' \t\n' : (typeof opts.splitUnquoted === 'string' ? opts.splitUnquoted : '');
-	var BAREWORD = '(\\' + BS + '[\'"' + META + ']|[^\\s\'"' + META + '])+';
+	var BAREWORD = '(\\' + BS + '[\'"$\\' + BS + META + ']|\\$\\$|\\$(?!' + ANSI_C_QUOTE.slice(2) + ')|[^\\s\'"$' + META + '])+';
+	var DOUBLE_QUOTE = '"(?:\\' + BS + '[\\s\\S]|[^"\\' + BS + '])*"';
 
 	var chunker = new RegExp([
 		'(' + CONTROL + ')', // control chars
-		'(' + BAREWORD + '|' + DOUBLE_QUOTE + '|' + SINGLE_QUOTE + ')+'
+		'(' + ANSI_C_QUOTE + '|' + BAREWORD + '|' + DOUBLE_QUOTE + '|' + SINGLE_QUOTE + ')+'
 	].join('|'), 'g');
 
 	var matches = matchAll(string, chunker);
@@ -6557,9 +6605,8 @@ function parseInternal(string, env, opts) {
 				varend -= 1;
 				varname = s.slice(i, varend);
 				i = varend;
-			} else if ((/[*@#?$!_-]/).test(char)) {
+			} else if ((/[*@#?$!-]/).test(char)) {
 				varname = char;
-				i += 1;
 			} else {
 				var slicedFromI = s.slice(i);
 				varend = slicedFromI.match(/[^\w\d_]/);
@@ -6636,6 +6683,11 @@ function parseInternal(string, env, opts) {
 				return /** @type {const} */ ([commentObj]);
 			} else if (c === BS) {
 				esc = true;
+			} else if (c === DS && s.charAt(i + 1) === SQ && closesAnsiC(s, i)) {
+				flushRun();
+				sawQuote = true;
+				out += expandAnsiC(s.slice(i + 2, ansiCAt.lastIndex - 1));
+				i = ansiCAt.lastIndex - 1;
 			} else if (c === DS) {
 				var value = parseEnvVar();
 				if (!ifs) {
@@ -6716,7 +6768,7 @@ module.exports = function parse(s, env, opts) {
 
 /***/ }),
 
-/***/ 91017:
+/***/ 34657:
 /***/ ((module) => {
 
 "use strict";
@@ -6728,13 +6780,22 @@ module.exports = function parse(s, env, opts) {
 var OPS = /** @type {const} */ ([
 	'||',
 	'&&',
+	';;&',
 	';;',
+	';&',
 	'|&',
 	'<(',
+	'>(',
 	'<<<',
+	'<<-',
+	'<<',
 	'>>',
 	'>&',
+	'>|',
+	'&>>',
+	'&>',
 	'<&',
+	'<>',
 	'&',
 	';',
 	'(',
@@ -6744,11 +6805,15 @@ var OPS = /** @type {const} */ ([
 	'>'
 ]);
 var LINE_TERMINATORS = /[\n\r\u2028\u2029]/;
-var GLOB_SHELL_SPECIAL = /[\s#!"$&'():;<=>@\\^`|]/g;
+var GLOB_SHELL_SPECIAL = /[\s#!"$&'():;<=>@\\^`|~]/g;
 
 /** @type {typeof import('./quote')} */
 module.exports = function quote(xs) {
+	var sawComment = false;
 	return xs.map(function (s) {
+		if (sawComment && typeof s === 'string' && LINE_TERMINATORS.test(s)) {
+			throw new TypeError('a token after a `comment` must not contain line terminators');
+		}
 		if (s === '') {
 			return /** @type {const} */ ('\'\'');
 		}
@@ -6759,6 +6824,9 @@ module.exports = function quote(xs) {
 				}
 				if (LINE_TERMINATORS.test(s.pattern)) {
 					throw new TypeError('glob `pattern` must not contain line terminators');
+				}
+				if (s.pattern === '') {
+					return /** @type {const} */ ('\'\'');
 				}
 				return s.pattern.replace(GLOB_SHELL_SPECIAL, '\\$&');
 			}
@@ -6772,15 +6840,19 @@ module.exports = function quote(xs) {
 				if (LINE_TERMINATORS.test(s.comment)) {
 					throw new TypeError('`comment` must not contain line terminators');
 				}
+				sawComment = true;
 				return '#' + s.comment;
 			}
 			throw new TypeError('unrecognized object token shape');
 		}
+		if ((/'/).test(s) && (/!/).test(s)) {
+			return "'" + s.replace(/'/g, "'\"'\"'") + "'";
+		}
 		if ((/["\s\\]/).test(s) && !(/'/).test(s)) {
-			return "'" + s.replace(/(['])/g, '\\$1') + "'";
+			return "'" + s + "'";
 		}
 		if ((/["'\s]/).test(s)) {
-			return '"' + s.replace(/(["\\$`!])/g, '\\$1') + '"';
+			return '"' + s.replace(/(["\\$`])/g, '\\$1') + '"';
 		}
 		return String(s).replace(/([A-Za-z]:)?([#!"$&'()*,:;<=>?@[\\\]^`{|}~])/g, '$1\\$2');
 	}).join(' ');
@@ -59818,7 +59890,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_VERIFY_COMMANDS = void 0;
 exports.parseVerifyCommand = parseVerifyCommand;
 exports.limitVerifyCommands = limitVerifyCommands;
-const shellQuote = __importStar(__nccwpck_require__(75430));
+const shellQuote = __importStar(__nccwpck_require__(18108));
 exports.MAX_VERIFY_COMMANDS = 20;
 function parseVerifyCommand(cmd) {
     const trimmed = cmd.trim();

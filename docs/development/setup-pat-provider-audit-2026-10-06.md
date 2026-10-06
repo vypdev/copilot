@@ -70,3 +70,9 @@ on separate lines; controls retain their labels and spacing; the narrow page
 width matches the 390-pixel viewport after header wrapping. The packaged CLI,
 typed API, and isolated local web-session smoke tests pass. These observations
 leave independent accessibility and native platform acceptance gates open.
+
+The first pushed SDK/layout head stopped before tests at the production
+dependency audit: [GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-j6r4-53mv)
+affected the locked `shell-quote` 1.10.0. Updating the direct dependency and
+lockfile to 1.12.0 restores a clean production audit; its existing command-parser
+regressions and regenerated bundles remain part of the required checks.
