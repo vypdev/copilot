@@ -181,6 +181,18 @@ number, retains the cleanup record and blocks further setup until deletion is
 confirmed. This test can leave notifications and audit history. Actions and Pull
 request tests may also leave GitHub history and notifications after cleanup; the
 PAT-entry guidance discloses these tests before they start.
+If **Actions Write is Unverifiable** because the temporary workflow could not
+be written, the dispatch was never tested. Check **repository Contents → Read
+and write** and **repository Workflows → Read and write** in the PAT settings,
+as well as repository selection and organization authorization. Workflows is a
+separate grant: granting Actions write alone does not grant it. A separate
+**Workflows Write: Missing** result means GitHub explicitly denied that workflow
+write; do not treat a denied request as verified access. If there is no eligible
+`workflow_dispatch` workflow on the default branch, install one before retrying.
+The web result explains the prerequisite without displaying raw GitHub errors.
+After correcting the PAT, start a fresh setup run. These rules apply separately
+to the temporary setup PAT and any bot PAT being audited.
+
 If a temporary permission resource cannot be confirmed as deleted, the row
 shows pending cleanup and setup stops. Cancelling or losing the local session
 during that failed cleanup is reported as partial; the local recovery journal

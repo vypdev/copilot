@@ -47635,6 +47635,7 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
             ...(requirement.level === 'write' && candidate.status === 'unverifiable'
                 && candidate.cleanupPending === true ? { cleanupPending: true } : {}),
             ...(candidate.incident === 'secret-collision' ? { incident: 'secret-collision' } : {}),
+            ...(candidate.prerequisite ? { prerequisite: candidate.prerequisite } : {}),
             ...(candidate.status === 'available'
                 && candidate.operationallyAvailable === true
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
@@ -47677,6 +47678,10 @@ function isMatchingEvidence(requirement, value) {
             && value.status === 'unverifiable' && value.cleanupPending === true))
         && (value.incident === undefined || (requirement.level === 'write' && requirement.probe === 'secrets'
             && value.status === 'unverifiable' && value.cleanupPending === true && value.incident === 'secret-collision'))
+        && (value.prerequisite === undefined || (requirement.scope === 'repository'
+            && requirement.level === 'write' && requirement.probe === 'actions' && value.status === 'unverifiable'
+            && (value.prerequisite === 'contents-write' || value.prerequisite === 'contents-workflows-write'
+                || value.prerequisite === 'dispatch-workflow')))
         && (value.publicReadEvidence === undefined
             || (value.status === 'available' && (isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence)
                 || isAttestableProjectsRead(requirement, value.publicReadEvidence))));
@@ -68464,7 +68469,7 @@ class WebSetupBridge {
             return;
         const previous = this.view.permissions.progress ?? [];
         const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
-            || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'].includes(progress.detail))
+            || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported', 'contents-write', 'contents-workflows-write', 'dispatch-workflow'].includes(progress.detail))
             ? progress.detail : undefined;
         this.publish({ permissions: { ...this.view.permissions, progress: [
                     ...previous.filter(item => item.requirementId !== progress.requirementId),
@@ -85777,7 +85782,7 @@ async function probeActions(context) {
     }
     const workflow = await findDispatchWorkflow(context, root, sha);
     if (!workflow) {
-        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
+        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.', undefined, false, false, 'dispatch-workflow');
     }
     const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
     const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
@@ -85786,7 +85791,7 @@ async function probeActions(context) {
     const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
         scope: 'repository', probe: 'actions', name });
     let operationError;
-    const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+    const noOp = "name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'true'\n";
     context.phase('creating');
     try {
         await handle.setReferenceSha(sha);
@@ -85795,7 +85800,7 @@ async function probeActions(context) {
         }
         catch (error) {
             if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.httpStatus === 403) {
-                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403);
+                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403, false, false, 'contents-write');
             }
             throw error;
         }
@@ -85808,8 +85813,11 @@ async function probeActions(context) {
                 }));
                 await handle.setReferenceSha(written.commit?.sha);
             }
-            catch {
-                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
+            catch (error) {
+                if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.httpStatus === 403) {
+                    throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not write its no-job override (HTTP 403); confirm repository Contents and Workflows Write and organization authorization.', 403, false, false, 'contents-workflows-write');
+                }
+                throw error;
             }
             const observedFile = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
             if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'
@@ -86206,11 +86214,12 @@ class SetupPermissionProbeHttp {
 }
 exports.SetupPermissionProbeHttp = SetupPermissionProbeHttp;
 class ProbeFailure extends Error {
-    constructor(message, httpStatus, cleanupPending = false, permissionDenied = false) {
+    constructor(message, httpStatus, cleanupPending = false, permissionDenied = false, prerequisite) {
         super(message);
         this.httpStatus = httpStatus;
         this.cleanupPending = cleanupPending;
         this.permissionDenied = permissionDenied;
+        this.prerequisite = prerequisite;
     }
 }
 exports.ProbeFailure = ProbeFailure;
@@ -86237,6 +86246,7 @@ function writeProbeFailure(requirement, error) {
         message: failure.message,
         ...(failure.cleanupPending ? { cleanupPending: true } : {}),
         ...(failure instanceof ProbeCollision ? { incident: 'secret-collision' } : {}),
+        ...(failure.prerequisite ? { prerequisite: failure.prerequisite } : {}),
     };
 }
 
@@ -88070,6 +88080,8 @@ function probeDiagnostic(value) {
             }
             return 'cleanup-pending';
         }
+        if (value.prerequisite)
+            return value.prerequisite;
         if (value.httpStatus !== undefined)
             return `http-${value.httpStatus}`;
         if (value.message.startsWith('No isolated'))

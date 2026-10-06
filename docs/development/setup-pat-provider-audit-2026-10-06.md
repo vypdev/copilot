@@ -84,3 +84,40 @@ visibility. Ten regressions cover absent endpoints/identity, new resources,
 denied grants, and private visibility; the command module has 100% coverage in
 the focused four-suite run. A denied grant after writing remains a resource
 error rather than a configured credential.
+
+## Setup layout and Actions prerequisite follow-up
+
+A later authorized, isolated run invoked the production Workflows and Actions
+probes with another temporary PAT. Repository identity and temporary branch
+creation succeeded. GitHub rejected both workflow-file writes with permission-bound
+HTTP 403. Workflows therefore remained Missing; Actions was not dispatched and
+remained Unverifiable because its disabled-job override could not be prepared.
+Both attempts removed their exact temporary branches and ended with zero
+pending journal entries. No setup plan was applied. The observed denial cannot
+be replaced by the operator's assumption that all permissions were selected;
+the accepted-permissions header describes endpoint requirements, not token
+grants. A successful live Workflows write or Actions dispatch with this PAT is
+not claimed. See the [Contents API permission contract](https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents).
+
+The follow-up preserves the bounded prerequisite in the report and live
+progress, explains it in all four web locales, and preserves non-403 override
+failures instead of mislabelling them as a permission requirement. Fixtures
+still establish successful dispatch/readback/cleanup and enforce rejected or
+contradictory evidence. The disabled-job override now uses a string `run` value.
+
+The complete local run passes **541 suites, 6,416 tests, 26 skipped**, every
+coverage budget and the unchanged **308/350** acceptance ledger; **42** human
+or provider gates remain explicitly open. Overall coverage is 95.67%
+statements, 91.28% branches, 96.61% functions and 96.88% lines. TypeScript,
+Svelte, lint, specification, documentation and workflow contracts pass. The
+rebuilt package passes its CLI, typed API and isolated web-session smoke test.
+
+Credential-free browser fixtures were inspected at 1280×900 and 390×844 in
+light/dark themes. The expanded Variables inventory includes all 68 entries;
+its list, the permissions context and selectable CI cards have no internal
+scroller. The 12 CI cards occupy their full content height. Continue's right
+edge matches its navigation row with and without Previous; Previous remains
+on the left. Both viewports have document width equal to viewport width.
+Inventory disclosure, aligned decision rows and additional panel spacing
+replace clipped, crowded lists. These observations are layout evidence, not
+independent screen-reader, linguistic or native-platform acceptance.

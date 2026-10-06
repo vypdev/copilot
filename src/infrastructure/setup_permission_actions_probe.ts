@@ -30,7 +30,8 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
     }
     const workflow = await findDispatchWorkflow(context, root, sha);
     if (!workflow) {
-        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
+        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.',
+            undefined, false, false, 'dispatch-workflow');
     }
     const name = `copilot-permission-test-${randomBytes(16).toString('hex')}`;
     const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
@@ -38,7 +39,7 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
     const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
         scope: 'repository', probe: 'actions', name });
     let operationError: unknown;
-    const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+    const noOp = "name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'true'\n";
     context.phase('creating');
     try {
         await handle.setReferenceSha(sha);
@@ -46,7 +47,8 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
             await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         } catch (error) {
             if (error instanceof ProbeFailure && error.httpStatus === 403) {
-                throw new ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403);
+                throw new ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.',
+                    403, false, false, 'contents-write');
             }
             throw error;
         }
@@ -58,8 +60,12 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
                     content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
                 }));
                 await handle.setReferenceSha((written.commit as Record<string, unknown> | undefined)?.sha);
-            } catch {
-                throw new ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
+            } catch (error) {
+                if (error instanceof ProbeFailure && error.httpStatus === 403) {
+                    throw new ProbeFailure('The isolated Actions check could not write its no-job override (HTTP 403); confirm repository Contents and Workflows Write and organization authorization.',
+                        403, false, false, 'contents-workflows-write');
+                }
+                throw error;
             }
             const observedFile = await probeJsonRecord(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
             if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'

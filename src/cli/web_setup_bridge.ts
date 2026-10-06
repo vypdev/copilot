@@ -156,7 +156,7 @@ export class WebSetupBridge {
       || !this.view.permissions.requirements?.some(item => item.id === progress.requirementId)) return;
     const previous = this.view.permissions.progress ?? [];
     const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
-      || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'].includes(progress.detail))
+      || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported', 'contents-write', 'contents-workflows-write', 'dispatch-workflow'].includes(progress.detail))
       ? progress.detail : undefined;
     this.publish({ permissions: { ...this.view.permissions, progress: [
       ...previous.filter(item => item.requirementId !== progress.requirementId),

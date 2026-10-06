@@ -698,6 +698,50 @@ button says `Apply to vypdev/copilot`; it is disabled until the current plan
 revision is accepted. After click, disable retries until the same operation
 returns; never imply progress based on elapsed time alone.
 
+### 9.1.1 Setup review layout correction — 2026-10-06
+
+All selectable lists, permission lists, plan inventories and warnings MUST grow
+with their visible content. They MUST NOT impose fixed-height internal scroll
+areas; narrow progress navigation wraps. The document is the scrolling surface.
+The four plan inventories use native `details`/`summary`, closed initially and
+labelled with their exact item counts. Opening one reveals every item in normal
+page flow. Warnings remain visible without disclosure. The plan occupies the
+workspace width; its context cards follow it. Key decisions use aligned label
+and value columns, separated rows and consistent body/list typography. At narrow
+widths those rows stack without clipping or horizontal page scrolling.
+
+Every question, credential and pairing navigation row MUST keep the primary
+Continue action on the right, including when Previous is absent. When present,
+Previous stays on the left. Plan approval retains the same alignment. No new
+configuration, mutation or persistence behavior is introduced.
+
+```text
+Review your setup plan
+[Temporary checks and their prerequisites]
+[Key decisions: label | value, with space between rows]
+[Files 29 ▸]                 [Workflows 15 ▸]
+[Variables 68 ▸]             [Secret names 1 ▸]
+[Before you continue: every warning visible]
+[Change your answers]
+Stop here                                  Approve this plan →
+```
+
+Text equivalent: review temporary checks and decisions first; expand any
+inventory to inspect all items, then read warnings and edit or approve. Pending
+and completed views retain their existing contracts. Blocked permission results
+show the bounded prerequisite explanation described by the PAT SDD; partial
+cleanup remains the primary recovery instruction.
+
+Incremental regression budget: **9 automated cases** (four locale result
+renders, four locale progress/evidence consistency cases, one credential/pairing
+navigation case), plus credential-free browser observations of plan inventories,
+CI cards, question navigation and blocked results in desktop/narrow layouts and
+light/dark themes. These supplement the existing ledger; they do not close
+independent accessibility or provider gates. Evidence lives in the component,
+catalog and browser-review fixtures; user guidance lives in authentication and
+`docs/development/setup-assistant-review.mdx`. Rollback restores presentation
+and optional diagnostics without changing stored answers or setup configuration.
+
 ### 9.2 Browser, responsive, accessibility, and localization
 
 The visual system is a reusable set of tokens and patterns, not page-specific

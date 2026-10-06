@@ -23,6 +23,18 @@ or a screenshot alone.
    static asset or unintended external request. The GitHub PAT settings link
    is informational; do not follow it to create a token for this review.
 
+For setup layout regressions, the same fixture supports `plan`, `checks`,
+`question`, `credential`, and `blocked-permissions`. `plan` has 29 files, 15
+workflows and 68 Variables: open each inventory and verify that every item
+appears in page flow, with no internal scrolling. Check that warnings remain
+visible, decision rows align, and the page has consistent spacing. `checks`
+shows 12 selectable CI cards without a fixed-height scroller. `question` has no
+Previous button; Continue must remain on the right. `credential` uses the same
+navigation row. `blocked-permissions` explains the Workflows prerequisite for
+Actions separately from the independently denied Workflows grant. Review each
+at desktop and narrow widths in both themes; these fixtures contain no PAT and
+reject all setup commands.
+
 ## Required observations
 
 For each of the seven states above, review light and dark modes (`U041–U054`).

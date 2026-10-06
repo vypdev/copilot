@@ -47,6 +47,7 @@ export function reconcileSetupTokenPermissionEvidence(
             ...(requirement.level === 'write' && candidate.status === 'unverifiable'
                 && candidate.cleanupPending === true ? { cleanupPending: true as const } : {}),
             ...(candidate.incident === 'secret-collision' ? { incident: 'secret-collision' as const } : {}),
+            ...(candidate.prerequisite ? { prerequisite: candidate.prerequisite } : {}),
             ...(candidate.status === 'available'
                 && candidate.operationallyAvailable === true
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
@@ -104,6 +105,10 @@ function isMatchingEvidence(
             && value.status === 'unverifiable' && value.cleanupPending === true))
         && (value.incident === undefined || (requirement.level === 'write' && requirement.probe === 'secrets'
             && value.status === 'unverifiable' && value.cleanupPending === true && value.incident === 'secret-collision'))
+        && (value.prerequisite === undefined || (requirement.scope === 'repository'
+            && requirement.level === 'write' && requirement.probe === 'actions' && value.status === 'unverifiable'
+            && (value.prerequisite === 'contents-write' || value.prerequisite === 'contents-workflows-write'
+                || value.prerequisite === 'dispatch-workflow')))
         && (value.publicReadEvidence === undefined
             || (value.status === 'available' && (
                 isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence as SetupTokenPublicReadEvidence)

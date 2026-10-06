@@ -919,7 +919,9 @@
         "scripts/validate-workflow-contract.cjs",
         "scripts/documentation_checkout_text.cjs",
         "scripts/set-cli-executable.cjs",
-        "scripts/render-web-setup-component.cjs"
+        "scripts/render-web-setup-component.cjs",
+        "web/src/i18n/permissionPrerequisite.ts",
+        "scripts/web-setup-review-views.cjs"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",

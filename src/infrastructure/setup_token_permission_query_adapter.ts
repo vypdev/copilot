@@ -202,6 +202,7 @@ function probeDiagnostic(value: unknown): SetupTokenPermissionProgress['detail']
             }
             return 'cleanup-pending';
         }
+        if (value.prerequisite) return value.prerequisite;
         if (value.httpStatus !== undefined) return `http-${value.httpStatus}` as const;
         if (value.message.startsWith('No isolated')) return 'unsupported';
         return 'unavailable';

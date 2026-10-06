@@ -3,8 +3,10 @@
 const { createServer } = require('node:http');
 const { readFileSync, realpathSync } = require('node:fs');
 const { join, sep } = require('node:path');
+const { reviewView } = require('./web-setup-review-views.cjs');
 
-const states = new Set(['pending', 'action-required', 'blocked', 'partial', 'completed', 'cancelled', 'expired']);
+const states = new Set(['pending', 'action-required', 'blocked', 'partial', 'completed', 'cancelled', 'expired',
+  'plan', 'checks', 'question', 'credential', 'blocked-permissions']);
 const selected = process.argv[2];
 if (!states.has(selected)) {
   console.error(`Choose one fixture state: ${[...states].join(', ')}`);
@@ -18,6 +20,8 @@ const code = '0123456789abcdef'; // A public fixture value, never a real setup c
 const key = 'f'.repeat(64);
 
 function view() {
+  const review = reviewView(selected);
+  if (review) return review;
   const terminal = !['pending', 'action-required'].includes(selected);
   const outcome = selected === 'completed' ? 'complete' : selected === 'expired' || selected === 'blocked'
     ? 'blocked' : selected === 'partial' ? 'partial' : selected === 'cancelled' ? 'cancelled' : undefined;

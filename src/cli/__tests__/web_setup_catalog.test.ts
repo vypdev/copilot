@@ -17,8 +17,23 @@ import { projectTransitionKey } from '../../../web/src/i18n/projectTransitions';
 import { validationCopy } from '../web_setup_adapters';
 import { translatedQuestionLabel } from '../../application/policies/setup_question_labels_fr_pt';
 import { permissionProgressCopy, permissionProgressError } from '../../../web/src/i18n/permissionProgress';
+import { permissionPrerequisite } from '../../../web/src/i18n/permissionPrerequisite';
 
 describe('web setup localization catalog', () => {
+  test.each(setupLocales)('%s uses the same bounded prerequisite explanation in progress and result evidence', locale => {
+    for (const prerequisite of ['contents-write', 'contents-workflows-write', 'dispatch-workflow']) {
+      const copy = permissionPrerequisite(prerequisite, locale);
+      expect(copy).toBeTruthy();
+      expect(permissionProgressError(locale, prerequisite)).toBe(copy);
+      expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
+        applicability: 'required', status: 'unverifiable', prerequisite }, locale)).toBe(copy);
+    }
+    expect(permissionPrerequisite('provider-secret', locale)).toBeUndefined();
+    expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
+      applicability: 'required', status: 'verified', prerequisite: 'contents-write' }, locale))
+      .not.toBe(permissionPrerequisite('contents-write', locale));
+  });
+
   test('permission progress and bounded errors have four complete localized paths', () => {
     for (const locale of setupLocales) {
       for (const phase of ['pending', 'checking', 'creating', 'reading', 'deleting', 'verified', 'failed', 'skipped'] as const) {

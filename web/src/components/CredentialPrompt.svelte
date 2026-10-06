@@ -22,4 +22,4 @@
 <label for="answer">{tr(prompt.kind === 'secret' ? 'pasteHere' : 'yourAnswer', $setupLocale)}</label>
 <input id="answer" type={prompt.kind === 'secret' ? 'password' : 'text'} bind:value disabled={!controller} autocomplete="off" spellcheck="false" autocapitalize="off" placeholder={tr(prompt.kind === 'secret' ? 'hiddenAfter' : 'typeAnswer', $setupLocale)} />
 {#if prompt.kind === 'secret'}<p class="field-help">{tr('secretHelp', $setupLocale)}</p>{/if}
-<ActionButton label={tr('continue', $setupLocale)} arrow onClick={submit} disabled={!controller || busy || (!prompt.optional && !value.trim())} />
+<div class="button-row"><ActionButton label={tr('continue', $setupLocale)} arrow onClick={submit} disabled={!controller || busy || (!prompt.optional && !value.trim())} /></div>

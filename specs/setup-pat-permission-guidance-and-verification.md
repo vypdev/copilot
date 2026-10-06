@@ -159,6 +159,53 @@ See [bounded provider evidence](../docs/development/setup-pat-provider-audit-202
     [GraphQL `deleteIssue`](https://docs.github.com/en/graphql/reference/issues),
     and [deletion policy](https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue).
 
+### Actions prerequisite diagnostics — 2026-10-06
+
+An Actions WRITE check that stops before dispatch MUST remain `Unverifiable`;
+it MUST NOT claim an absent Actions grant from a failed supporting operation.
+The report and live progress carry only one of three bounded prerequisites:
+`contents-write` (temporary branch denied), `contents-workflows-write` (disabled
+workflow override denied), or `dispatch-workflow` (no eligible default-branch
+workflow found). The application accepts these codes only on repository Actions
+WRITE rows with `Unverifiable` status. Unknown codes and contradictory success
+are rejected. The CLI keeps a sanitized explanatory message; web progress,
+context and blocked result use the same localized explanation, never provider
+prose. Cleanup errors retain priority and their existing recovery contract.
+
+A 403 from the override preserves HTTP 403 and explains that Contents and
+Workflows WRITE, repository selection and organization authorization need review.
+A non-403 override failure preserves its actual HTTP/network classification; it
+MUST NOT invent a permission-denial cause. Workflows is tested independently;
+a permission-bound denial on that row remains `Missing`. GitHub's accepted
+permissions header cannot prove the token's grants. Before approval the plan
+explains the Actions prerequisites, including the difference between using the
+exact packaged workflow and preparing a disabled-job override. The override's
+`run` value is a YAML string, even though its job is disabled.
+
+```text
+No setup changes started
+Actions · repository · Write · Unverifiable
+  Actions was not tested because its temporary workflow could not be written.
+  Check Contents and Workflows Write, repository selection and organization authorization.
+Workflows · repository · Write · Missing
+  Review the PAT in GitHub, then start a fresh setup run.
+```
+
+Text equivalent: the Actions capability has not been exercised; its workflow
+preparation was denied. Correct the prerequisite rather than assuming Actions
+is absent. No setup plan is applied by these isolated checks.
+
+Incremental budget: **17 automated cases**: eight adapter/classification/progress
+cases, six application evidence/security cases and three bridge allowlist cases.
+The existing transaction/recovery and coverage gates remain required. The
+credential-free browser fixture and four-locale result tests in the web SDD
+establish presentation evidence. Authorized isolated provider transactions can
+establish denial and cleanup for the supplied PAT; fixture success never proves
+an unobserved live success. No new token scope is silently requested, no stored
+configuration or journal schema changes, and rollback drops optional diagnostic
+codes without weakening readiness. Authentication documentation describes the
+operator correction and keeps setup/workflow PAT roles separate.
+
 ### Implemented permission-specific operations
 
 | Requirement | Disposable capability operation | Required cleanup |

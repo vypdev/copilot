@@ -17,6 +17,28 @@ const requiredWrite: SetupTokenPermissionRequirement = {
 };
 
 describe('SetupTokenPermissionsUseCase', () => {
+    it.each(['contents-write', 'contents-workflows-write', 'dispatch-workflow'])('retains the bounded Actions prerequisite %s while blocking setup', async prerequisite => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requiredWrite, status: 'unverifiable', prerequisite, message: 'The Actions check stopped before dispatch.' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requiredWrite] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', prerequisite });
+    });
+
+    it.each([
+        { status: 'verified', writeProof: 'transaction', prerequisite: 'contents-write' },
+        { status: 'missing', prerequisite: 'contents-write' },
+        { status: 'unverifiable', prerequisite: 'private provider prose' },
+    ])('rejects contradictory or unbounded Actions prerequisite evidence %j', async evidence => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requiredWrite, ...evidence, message: 'unsafe evidence' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requiredWrite] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0].prerequisite).toBeUndefined();
+    });
+
     it.each([true, false])('forwards explicit conditional-write intent with optional progress (%s)', async includeConditionalWrites => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
         const inspect = jest.fn().mockResolvedValue([{ ...required, status: 'verified', message: 'ok' }]);

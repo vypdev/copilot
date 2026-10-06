@@ -6,6 +6,7 @@
   import ResourceProgress from './ResourceProgress.svelte';
   import { focusOnRevision } from '../lib/focusOnRevision';
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
+  import { permissionEvidence } from '../i18n/permissionEvidence';
   export let outcome: NonNullable<WebSetupView['outcome']>;
   export let controller: boolean;
   export let onClose: () => Promise<void>;
@@ -53,7 +54,7 @@
       <p>{tr('permissionReportLead', $setupLocale)}</p>
       <p><strong>{tr('permissionIdentity', $setupLocale)}:</strong> {tr(blockedPermissionReport.identityStatus === 'valid' ? 'permissionIdentityValid' : blockedPermissionReport.identityStatus === 'invalid' ? 'permissionIdentityInvalid' : 'permissionIdentityUnknown', $setupLocale)}</p>
       {#if unresolvedPermissions.length}
-        <ul>{#each unresolvedPermissions as check}<li><strong>{permissionName($setupLocale, check.permission)}</strong>{#if $setupLocale !== 'en' && permissionName($setupLocale, check.permission) !== check.permission} <small><bdi>GitHub · {check.permission}</bdi></small>{/if} — {permissionTerm($setupLocale, check.scope)} · {permissionTerm($setupLocale, check.level)} · <strong>{blockedPermissionReport.identityStatus === 'valid' ? permissionTerm($setupLocale, check.status) : tr('permissionGrantNotChecked', $setupLocale)}</strong></li>{/each}</ul>
+        <ul class="result-permissions">{#each unresolvedPermissions as check}<li><strong>{permissionName($setupLocale, check.permission)}</strong>{#if $setupLocale !== 'en' && permissionName($setupLocale, check.permission) !== check.permission} <small><bdi>GitHub · {check.permission}</bdi></small>{/if} — {permissionTerm($setupLocale, check.scope)} · {permissionTerm($setupLocale, check.level)} · <strong>{blockedPermissionReport.identityStatus === 'valid' ? permissionTerm($setupLocale, check.status) : tr('permissionGrantNotChecked', $setupLocale)}</strong>{#if blockedPermissionReport.identityStatus === 'valid'}<p>{permissionEvidence(check, $setupLocale)}</p>{/if}</li>{/each}</ul>
       {:else if blockedPermissionReport.identityStatus === 'valid'}
         <p>{tr('permissionReportNoFailedGrant', $setupLocale)}</p>
       {/if}

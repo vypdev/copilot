@@ -264,6 +264,16 @@ describe('WebSetupBridge', () => {
     expect(JSON.stringify(bridge.snapshot())).not.toContain('private provider body');
   });
 
+  test.each(['contents-write', 'contents-workflows-write', 'dispatch-workflow'] as const)('retains the bounded Actions prerequisite %s in live progress', detail => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const requirement = { id: 'setup.repository.actions', role: 'setup' as const,
+      scope: 'repository' as const, permission: 'Actions', level: 'write' as const,
+      applicability: 'required' as const, reason: 'temporary test', probe: 'actions' as const };
+    bridge.requirements('setup', [requirement]);
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id, phase: 'failed', detail });
+    expect(bridge.snapshot().permissions?.progress?.[0]).toMatchObject({ phase: 'failed', detail });
+  });
+
   test('retains the redacted Secret collision progress diagnostic', () => {
     const bridge = new WebSetupBridge('owner/repo');
     const requirement = { id: 'setup.repository.secrets', role: 'setup' as const,

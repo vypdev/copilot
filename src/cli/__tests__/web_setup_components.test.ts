@@ -13,6 +13,28 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test.each(['en', 'es', 'fr', 'pt'])('%s blocked result explains the Actions workflow prerequisite without provider prose', locale => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', ready: false, confirmationRequired: false,
+        checks: [{ id: 'actions', role: 'setup', scope: 'repository', permission: 'Actions', probe: 'actions',
+          level: 'write', applicability: 'required', status: 'unverifiable', prerequisite: 'contents-workflows-write',
+          message: 'private provider prose token-marker' }] } }, locale);
+    expect(html).toContain('Contents');
+    expect(html).toContain('Workflows Write');
+    expect(html).not.toContain('private provider prose');
+    expect(html).not.toContain('token-marker');
+  });
+
+  test('credential and pairing primary actions share the navigation row', () => {
+    for (const [component, props] of [
+      ['CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT' }, controller: true, busy: false }],
+      ['PairingPanel', { busy: false }],
+    ] as const) {
+      expect(markup(component, props)).toMatch(/class="button-row"[^>]*>.*?<button[^>]*class="primary"/su);
+    }
+  });
+
   test('bootstrap Contents read progress leaves the conditional write row pending', () => {
     const requirements = buildSetupPatPermissionRequirements().filter(item => item.permission === 'Contents');
     const html = markup('PermissionProgressPanel', { permissions: { requirements, progress: [
