@@ -33,7 +33,7 @@ describe('bot PAT storage exception', () => {
     test('uses the selected repository scope instead of preserving an inherited organization PAT', () => {
         const config = configuration(); config.storage.secrets.defaultScope = 'repository';
         expect(resolveSetupResourceTarget(config, 'secret', 'PAT', cleared).scope).toBe('repository');
-        expect(canKeepExistingSetupResource(config.storage.secrets, 'PAT', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('secret', config.storage.secrets, 'PAT', 'organization')).toBe(false);
         expect(shouldUpsertSetupResource(config, 'secret', 'PAT', cleared)).toBe(true);
     });
     test('detects a repository PAT shadow with preservation enabled and organization selected', () => {
@@ -50,7 +50,7 @@ describe('bot PAT storage exception', () => {
         const config = configuration(); config.storage.secrets.defaultScope = 'repository';
         const inherited = { ...cleared, organizationSecrets: ['OPENAI_API_KEY'], organizationVariables: [{ name: 'PAT', value: 'non-secret' }] };
         expect(resolveSetupResourceTarget(config, 'secret', 'OPENAI_API_KEY', inherited).scope).toBe('organization');
-        expect(canKeepExistingSetupResource(config.storage.secrets, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', config.storage.secrets, 'OPENAI_API_KEY', 'organization')).toBe(true);
         expect(resolveSetupResourceTarget(config, 'variable', 'PAT', inherited).scope).toBe('organization');
     });
     test('does not need organization inventory to replace a repository-targeted PAT', () => {
@@ -159,7 +159,7 @@ describe('wizard conflict recovery before plan approval', () => {
         if (result.status !== 'completed') throw new Error('Expected completed plan');
         expect(result.remoteConfiguration?.repositorySecrets).toEqual([]);
         expect(result.plan.workflowPatStorage).toEqual({ scope: 'organization', destination: 'owner', replacesExisting: true });
-        expect(result.configuration.createInitialTag).toBe(false);
+        expect(result.configuration.createInitialTag).toBe(true);
         expect(f.deps.collector.collect).toHaveBeenCalledTimes(1);
         expect(f.deps.finalPermissionAudit.audit).toHaveBeenCalledWith(result.configuration, result.remoteConfiguration);
     });

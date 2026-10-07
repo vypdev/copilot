@@ -1723,6 +1723,14 @@ pass, system/light/dark visual review including contrast/focus/error states,
 browser close/reopen, and truthful partial result. Controlled evidence
 uses test accounts outside this repository; no dogfooding is required.
 
+The initial tag is an automatic plan outcome governed by the effective release/
+hotfix issue workflow selection, not a provisioning question. Existing semantic
+version tags skip creation; only confirmed absence permits `v1.0.0`. Remote
+inspection uses the setup PAT without touching local moving Action tags. Named,
+value-free Variable failure diagnostics and partial outcomes are shared with
+terminal Apply. The 37 incremental cases are counted in the setup-and-doctor
+SDD's 169-case budget; they do not add duplicate cases to the web ledger.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content | Check |

@@ -1,3 +1,9 @@
+export interface GithubRepositoryVersionTagsClient {
+    rest: { repos: {
+        listTags(parameters: Record<string, unknown>): Promise<{ data: Array<{ name: string }> }>;
+    } };
+}
+
 export interface GithubReleaseClient {
     rest: {
         git: {

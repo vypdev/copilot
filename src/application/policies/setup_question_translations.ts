@@ -78,7 +78,6 @@ export const spanishQuestionLabels: Readonly<Record<string, string>> = {
   'projects.pullRequestCreatedColumn': 'Estado Status de nuevos pull requests',
   'projects.issueInProgressColumn': 'Estado Status de issues en curso',
   'projects.pullRequestInProgressColumn': 'Estado Status de pull requests en curso',
-  createInitialTag: '¿Crear v1.0.0 si todavía no existe ningún tag?',
   manageRepositoryVariables: '¿Crear o actualizar Variables de GitHub Actions?',
   manageRepositorySecrets: '¿Validar y configurar Secrets de GitHub Actions?',
 };

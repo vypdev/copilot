@@ -45,7 +45,7 @@ export function renderSetupPlan(plan: SetupPlan): string {
     `  Variable storage: ${storageLabel(plan.configuration.storage.variables)}`,
     `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
     '  Labels and issue types: always checked by Copilot setup',
-    `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+    `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'not needed by selected issue workflows'}`, '',
     color('Temporary PAT write checks after approval', 33),
     ...(plan.permissionProbes?.length
       ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)

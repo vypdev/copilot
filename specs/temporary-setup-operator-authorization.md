@@ -280,7 +280,7 @@ hard-coded permission table in the terminal adapter:
 | Pre-PAT intent question or local input | Grant projected into the URL when selected | Still unknown until GitHub inspection |
 |---|---|---|
 | Repository owner kind (`organization` or `personal`), asked only if an organization grant is a candidate | Enables valid organization grants for an asserted organization owner; never by itself adds a grant | Actual owner kind and organization PAT policy |
-| Create initial tag? | Repository Contents write instead of read | Whether tag creation is ultimately needed |
+| Release/hotfix issue workflows enabled | Repository Contents write for the automatic initial-version baseline | Whether remote version tags already exist; no tag question |
 | Manage Actions Secrets and their requested default scope, preservation, and known explicit overrides? | Repository Secrets write for selected managed names/inventory; organization Secrets write when an organization target or inventory is definitely selected; conditional repository Actions, Contents and Workflows write for possible health checks | Existing effective scopes, inherited names, and conditional organization inventory |
 | Manage Actions Variables and their requested default scope, preservation, and known explicit overrides? | Repository Variables write for selected managed names/inventory; organization Variables write when an organization target or inventory is definitely selected | Existing effective scopes, inherited names, and conditional organization inventory |
 | Enable issue workflow types? | Repository Issues write; organization Issue Types write if owner is an organization | Verified owner kind |
@@ -502,7 +502,7 @@ Secrets storage? [Repository]: Repository
 Create/update Actions Variables? [Yes]: Yes
 Variables storage? [Repository]: Repository
 Enable guarded approval or release/hotfix? [No from --config]: No
-Create an initial tag? [Yes]: No
+Initial version baseline: not needed by selected issue workflows (automatic)
 Organization-owned repository? [No answer yet]: Yes
 Configure organization Projects? [No]: No
 

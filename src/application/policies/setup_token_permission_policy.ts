@@ -1,7 +1,7 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../domain/setup';
 import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
-import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { setupNeedsInitialVersion, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import {
     getSetupResourceStoragePolicy,
     requiresSetupOrganizationInventory,
@@ -170,11 +170,11 @@ function buildSetupPatRequirements(
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
-        ...(configuration.createInitialTag || needsActionsFixture ? [requirement({
+        ...(setupNeedsInitialVersion(configuration) || needsActionsFixture ? [requirement({
             role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
-            reason: configuration.createInitialTag && needsActionsFixture
+            reason: setupNeedsInitialVersion(configuration) && needsActionsFixture
                 ? 'Create the initial tag and an isolated branch for the Actions permission check.'
-                : configuration.createInitialTag
+                : setupNeedsInitialVersion(configuration)
                     ? 'Create the initial repository tag when no version tag exists.'
                     : 'Create an isolated branch for the Actions permission check.', probe: 'contents',
         })] : []),

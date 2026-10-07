@@ -46579,6 +46579,7 @@ exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfig
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
 exports.normalizeSetupConfigurationLocales = normalizeSetupConfigurationLocales;
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const agent_1 = __nccwpck_require__(89040);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const deployment_configuration_1 = __nccwpck_require__(22495);
@@ -46741,7 +46742,7 @@ function mergeSetupConfiguration(base, overrides = {}) {
             coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
         },
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
-        createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
+        createInitialTag: (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)({ features, issueWorkflows: { enabled: enabledIssueWorkflows } }),
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
         manageRepositorySecrets: overrides.manageRepositorySecrets ?? base.manageRepositorySecrets,
         actionInputs: { ...base.actionInputs, ...(overrides.actionInputs ?? {}) },
@@ -47152,8 +47153,8 @@ function resolveSetupResourceScope(policy, name) {
  * the legacy caller contract; an explicit policy must preserve the exact
  * effective scope rather than silently moving or replacing the resource.
  */
-function canKeepExistingSetupResource(policy, name, existingScope) {
-    if (name === 'PAT')
+function canKeepExistingSetupResource(kind, policy, name, existingScope) {
+    if (kind === 'secret' && name === 'PAT')
         return false;
     if (!existingScope)
         return false;
@@ -47751,6 +47752,7 @@ exports.effectiveIssueWorkflowProfile = effectiveIssueWorkflowProfile;
 exports.effectiveIssueWorkflowFeatures = effectiveIssueWorkflowFeatures;
 exports.effectiveIssueWorkflowLabels = effectiveIssueWorkflowLabels;
 exports.effectiveIssueFormLabels = effectiveIssueFormLabels;
+exports.setupNeedsInitialVersion = setupNeedsInitialVersion;
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 /** Applies feature switches to the explicit issue workflow selection. */
 function effectiveIssueWorkflowProfile(configuration) {
@@ -47799,6 +47801,10 @@ function effectiveIssueFormLabels(configuration) {
         hotfix: Object.freeze([...labels.hotfix, priority.high]),
         release: Object.freeze([...labels.release, priority.medium]),
     });
+}
+/** Release and hotfix issue workflows need a version baseline; other kinds do not. */
+function setupNeedsInitialVersion(configuration) {
+    return effectiveIssueWorkflowProfile(configuration).enabled.some(kind => kind === 'release' || kind === 'hotfix');
 }
 
 
@@ -49840,6 +49846,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const setup_resource_provisioning_1 = __nccwpck_require__(94894);
 const application_error_1 = __nccwpck_require__(75999);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const setup_issue_resource_policy_1 = __nccwpck_require__(67323);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const TASK_ID = 'InitialSetupUseCase';
@@ -49964,9 +49971,14 @@ async function runInitialSetupWorkflow(request, dependencies) {
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
             steps.push(variables.step);
-        if (variables.errors.length > 0)
-            errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
-        if (setupConfiguration?.createInitialTag !== false)
+        if (variables.errors.length > 0) {
+            const variableErrors = variables.failures?.length
+                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors ?? [], 'provider.unavailable')]
+                : fromMessages(variables.errors, 'provider.unavailable');
+            variableErrors.forEach(error => (0, logging_ports_1.logError)(error.message));
+            errors.push(...variableErrors);
+        }
+        if (!setupConfiguration || (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(setupConfiguration))
             mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
@@ -50023,8 +50035,8 @@ async function ensureIssueTypes(request, repository, setupConfiguration) {
     }
 }
 async function ensureDefaultVersion(_request, dependencies, setupConfiguration) {
-    if (setupConfiguration?.createInitialTag === false) {
-        return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
+    if (setupConfiguration && !(0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(setupConfiguration)) {
+        return { step: '⏭️  Initial version tag is not needed by the selected issue workflows.' };
     }
     try {
         const existingTag = await dependencies.latestTagQueryPort.getLatestTag();
@@ -50077,6 +50089,17 @@ function resourceScope(configuration, kind) {
 }
 function fromMessages(messages, code) {
     return messages.map(message => new application_error_1.ApplicationError(code, message));
+}
+function variableFailureError(failure) {
+    const details = {
+        authorization: ['authorization.denied', 'GitHub denied access; check Variables Write for this scope and repository authorization'],
+        'invalid-input': ['validation.invalid-input', 'GitHub rejected the request; check the Variable name, value limits and visibility'],
+        conflict: ['provider.conflict', 'GitHub reported a conflict; inspect the existing Variable before retrying'],
+        'rate-limited': ['provider.rate-limited', 'GitHub rate limited the request; retry after the limit resets'],
+        unavailable: ['provider.unavailable', 'GitHub did not complete the request'],
+    };
+    const [code, message] = details[failure.reason];
+    return new application_error_1.ApplicationError(code, `Unable to configure ${failure.scope} Variable ${failure.name} during ${failure.phase}: ${message}.`);
 }
 
 
@@ -50942,7 +50965,7 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
         if (result.errors.length > 0)
-            return { errors: result.errors, writes };
+            return { errors: result.errors, writes, ...(result.failures ? { failures: result.failures, unclassifiedErrors: result.unclassifiedErrors } : {}) };
         return {
             step: writes > 0
                 ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`
@@ -51058,9 +51081,13 @@ async function upsertVariableGroups(context, port, groups) {
     let created = 0;
     let updated = 0;
     const errors = [];
+    const unclassifiedErrors = [];
+    const failures = [];
     for (const group of groups) {
         if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
-            errors.push('Organization Variable provisioning is not available in this installation.');
+            const message = 'Organization Variable provisioning is not available in this installation.';
+            errors.push(message);
+            unclassifiedErrors.push(message);
             continue;
         }
         const result = group.target.scope === 'organization'
@@ -51069,8 +51096,11 @@ async function upsertVariableGroups(context, port, groups) {
         created += result.created;
         updated += result.updated;
         errors.push(...result.errors);
+        failures.push(...(result.failures ?? []));
+        if (!result.failures?.length)
+            unclassifiedErrors.push(...result.errors);
     }
-    return { created, updated, errors };
+    return { created, updated, errors, unclassifiedErrors, ...(failures.length ? { failures } : {}) };
 }
 async function upsertSecretGroups(context, port, groups) {
     let created = 0;
@@ -68434,6 +68464,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubActionsResourceCommands = void 0;
 const github_secret_encryption_1 = __nccwpck_require__(83725);
 const github_actions_resource_collection_1 = __nccwpck_require__(81189);
+const github_error_policy_1 = __nccwpck_require__(58791);
 /** GitHub Actions Secret encryption and scope-preserving resource writes. */
 class GithubActionsResourceCommands {
     constructor(githubClient) {
@@ -68526,6 +68557,7 @@ class GithubActionsResourceCommands {
         let created = 0;
         let updated = 0;
         const errors = [];
+        const failures = [];
         for (const variable of variables) {
             try {
                 if (existingValues.has(variable.name)) {
@@ -68539,11 +68571,12 @@ class GithubActionsResourceCommands {
                     created += 1;
                 }
             }
-            catch {
+            catch (error) {
+                failures.push(variableWriteFailure(variable.name, 'repository', existingValues.has(variable.name) ? 'update' : 'create', error));
                 errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors };
+        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
     }
     async upsertScopedVariables(owner, repository, token, target, variables) {
         if (target.scope === 'repository')
@@ -68561,7 +68594,9 @@ class GithubActionsResourceCommands {
         let created = 0;
         let updated = 0;
         const errors = [];
+        const failures = [];
         for (const variable of variables) {
+            let phase = existing.has(variable.name) ? 'update' : 'create';
             try {
                 const current = existing.get(variable.name);
                 const visibility = current?.visibility ?? target.organizationVisibility;
@@ -68573,12 +68608,13 @@ class GithubActionsResourceCommands {
                     org: owner,
                     name: variable.name,
                     value: variable.value,
-                    visibility,
+                    ...(!current ? { visibility } : {}),
                     ...(visibility === 'selected' && !current
                         ? { selected_repository_ids: [target.repositoryId] }
                         : {}),
                 });
                 if (visibility === 'selected') {
+                    phase = 'repository-access';
                     await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
                 }
                 if (current)
@@ -68586,14 +68622,24 @@ class GithubActionsResourceCommands {
                 else
                     created += 1;
             }
-            catch {
+            catch (error) {
+                failures.push(variableWriteFailure(variable.name, 'organization', phase, error));
                 errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors };
+        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
     }
 }
 exports.GithubActionsResourceCommands = GithubActionsResourceCommands;
+function variableWriteFailure(name, scope, phase, error) {
+    const status = (0, github_error_policy_1.getGithubErrorStatus)(error);
+    const reason = (0, github_error_policy_1.isGithubRateLimited)(error) ? 'rate-limited'
+        : status === 401 || status === 403 ? 'authorization'
+            : status === 400 || status === 422 ? 'invalid-input'
+                : status === 409 ? 'conflict'
+                    : 'unavailable';
+    return { name, scope, phase, reason };
+}
 
 
 /***/ }),
@@ -68771,7 +68817,7 @@ function combineOrganizationAccess(secrets, variables) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubRateLimited = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
 const getGithubErrorStatus = (error) => {
     if (typeof error !== "object" || error === null)
         return undefined;
@@ -68781,6 +68827,21 @@ const getGithubErrorStatus = (error) => {
 exports.getGithubErrorStatus = getGithubErrorStatus;
 const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
 exports.isGithubNotFound = isGithubNotFound;
+const isGithubRateLimited = (error) => {
+    const status = (0, exports.getGithubErrorStatus)(error);
+    if (status === 429)
+        return true;
+    if (status !== 403)
+        return false;
+    const record = readRecord(error);
+    const response = readRecord(record?.response);
+    const headers = readRecord(response?.headers);
+    const message = readRecord(response?.data)?.message ?? record?.message;
+    return readHeader(headers, 'retry-after') !== undefined
+        || readHeader(headers, 'x-ratelimit-remaining') === '0'
+        || (typeof message === 'string' && /rate limit|secondary rate|abuse limit|too many requests/i.test(message));
+};
+exports.isGithubRateLimited = isGithubRateLimited;
 const isGithubPermissionDenied = (error) => {
     if ((0, exports.getGithubErrorStatus)(error) !== 403)
         return false;
@@ -72629,6 +72690,44 @@ class RepositoryTagRepository {
     }
 }
 exports.RepositoryTagRepository = RepositoryTagRepository;
+
+
+/***/ }),
+
+/***/ 4385:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RepositoryVersionTagsQueryRepository = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const version_policy_1 = __nccwpck_require__(8381);
+/** Remote-only setup query: never fetches or rewrites local moving Action tags. */
+class RepositoryVersionTagsQueryRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+    }
+    async getLatestTag(owner, repository, token) {
+        const client = this.githubClient.getClient(token);
+        const versions = [];
+        for (let page = 1; page <= 100; page += 1) {
+            const { data } = await client.rest.repos.listTags({ owner, repo: repository, per_page: 100, page });
+            if (!Array.isArray(data) || data.some(tag => !tag || typeof tag.name !== 'string')) {
+                throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub returned an invalid version-tag inventory. No initial tag was created.');
+            }
+            for (const tag of data) {
+                const match = /^v?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(tag.name);
+                if (match && match[1].split('.').every(part => Number.isSafeInteger(Number(part))))
+                    versions.push(match[1]);
+            }
+            if (data.length < 100)
+                return (0, version_policy_1.getLatestVersion)(versions);
+        }
+        throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub version-tag inventory exceeded the setup inspection limit. No initial tag was created.');
+    }
+}
+exports.RepositoryVersionTagsQueryRepository = RepositoryVersionTagsQueryRepository;
 
 
 /***/ }),
@@ -77982,10 +78081,12 @@ exports.createPullRequestReviewCommentClient = createPullRequestReviewCommentCli
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createReleaseClient = void 0;
+exports.createRepositoryVersionTagsClient = exports.createReleaseClient = void 0;
 const octokit_release_adapters_1 = __nccwpck_require__(5334);
 const createReleaseClient = () => new octokit_release_adapters_1.OctokitReleaseClientAdapter();
 exports.createReleaseClient = createReleaseClient;
+const createRepositoryVersionTagsClient = () => new octokit_release_adapters_1.OctokitRepositoryVersionTagsClientAdapter();
+exports.createRepositoryVersionTagsClient = createRepositoryVersionTagsClient;
 
 
 /***/ }),
@@ -78022,7 +78123,7 @@ const issue_type_repository_1 = __nccwpck_require__(4858);
 const authenticated_user_repository_1 = __nccwpck_require__(11454);
 const repository_default_branch_repository_1 = __nccwpck_require__(96578);
 const repository_tag_repository_1 = __nccwpck_require__(58717);
-const git_cli_repository_1 = __nccwpck_require__(26331);
+const repository_version_tags_query_repository_1 = __nccwpck_require__(4385);
 const initial_setup_use_case_composition_1 = __nccwpck_require__(93141);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const repository_variables_repository_1 = __nccwpck_require__(28493);
@@ -78031,7 +78132,7 @@ const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createInitialSetupCompositionRoot(binding, progress) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryVersionTags)(new repository_version_tags_query_repository_1.RepositoryVersionTagsQueryRepository((0, github_release_client_factory_1.createRepositoryVersionTagsClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
 }
 
 
@@ -78736,6 +78837,7 @@ exports.bindDeploymentIssues = bindDeploymentIssues;
 exports.bindRepositoryTag = bindRepositoryTag;
 exports.bindRepositoryRelease = bindRepositoryRelease;
 exports.bindRepositoryDefaultBranch = bindRepositoryDefaultBranch;
+exports.bindRepositoryVersionTags = bindRepositoryVersionTags;
 exports.bindIssueCommentPublication = bindIssueCommentPublication;
 exports.bindIssueReopen = bindIssueReopen;
 exports.bindBranchListQuery = bindBranchListQuery;
@@ -78836,6 +78938,11 @@ function bindRepositoryRelease(port, binding) {
 function bindRepositoryDefaultBranch(port, binding) {
     return Object.freeze({
         getDefaultBranch: () => port.getDefaultBranch(binding.owner, binding.repository, binding.token),
+    });
+}
+function bindRepositoryVersionTags(port, binding) {
+    return Object.freeze({
+        getLatestTag: () => port.getLatestTag(binding.owner, binding.repository, binding.token),
     });
 }
 function bindIssueCommentPublication(port, binding) {
@@ -79660,12 +79767,16 @@ exports.OctokitPullRequestReviewCommentClientAdapter = OctokitPullRequestReviewC
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OctokitReleaseClientAdapter = void 0;
+exports.OctokitRepositoryVersionTagsClientAdapter = exports.OctokitReleaseClientAdapter = void 0;
 const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitReleaseClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
 exports.OctokitReleaseClientAdapter = OctokitReleaseClientAdapter;
+class OctokitRepositoryVersionTagsClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitRepositoryVersionTagsClientAdapter = OctokitRepositoryVersionTagsClientAdapter;
 
 
 /***/ }),

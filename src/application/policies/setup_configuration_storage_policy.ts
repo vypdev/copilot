@@ -30,11 +30,12 @@ export function resolveSetupResourceScope(
  * effective scope rather than silently moving or replacing the resource.
  */
 export function canKeepExistingSetupResource(
+    kind: SetupResourceKind,
     policy: Readonly<SetupResourceStoragePolicy> | undefined,
     name: string,
     existingScope: SetupResourceScope | undefined,
 ): boolean {
-    if (name === 'PAT') return false;
+    if (kind === 'secret' && name === 'PAT') return false;
     if (!existingScope) return false;
     if (!policy) return true;
     if (!policy.preserveExisting) return false;

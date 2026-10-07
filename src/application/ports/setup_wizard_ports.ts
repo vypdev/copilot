@@ -1,3 +1,4 @@
+import type { SetupVariablesWriteResult } from '../../domain/setup';
 import type {
     SetupConfiguration,
     SetupCredentialCheck,
@@ -107,14 +108,14 @@ export interface SetupRepositoryVariablesCommandPort {
         repository: string,
         token: string,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    ): Promise<SetupVariablesWriteResult>;
     upsertScopedVariables?(
         owner: string,
         repository: string,
         token: string,
         target: SetupResourceTarget,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    ): Promise<SetupVariablesWriteResult>;
 }
 
 export interface BoundSetupRemoteConfigurationReadPort {
@@ -130,9 +131,9 @@ export interface BoundSetupRepositorySecretsCommandPort {
 }
 
 export interface BoundSetupRepositoryVariablesCommandPort {
-    upsert(variables: readonly { name: string; value: string }[]): Promise<{ created: number; updated: number; errors: string[] }>;
+    upsert(variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsertScopedVariables?(
         target: SetupResourceTarget,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    ): Promise<SetupVariablesWriteResult>;
 }

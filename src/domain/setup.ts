@@ -111,6 +111,7 @@ export interface SetupConfiguration {
     ai: SetupAiConfiguration;
     pullRequestApproval: PullRequestApprovalPolicy;
     projects: SetupProjectConfiguration;
+    /** Derived from the enabled release/hotfix issue workflows, never prompted. */
     createInitialTag: boolean;
     manageRepositoryVariables: boolean;
     /** Whether setup should provision repository secrets after validating them. */
@@ -274,4 +275,19 @@ export interface SetupOperationEffect {
     readonly id: 'files' | 'secrets' | 'labels' | 'issue-types' | 'variables' | 'initial-tag';
     readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started' | 'in-progress';
     readonly scope: 'local' | 'repository' | 'organization' | 'mixed';
+}
+
+/** Value-free failures crossing the Variable provisioning boundary. */
+export interface SetupVariableWriteFailure {
+    name: string;
+    scope: SetupResourceScope;
+    phase: 'create' | 'update' | 'repository-access';
+    reason: 'authorization' | 'invalid-input' | 'conflict' | 'rate-limited' | 'unavailable';
+}
+
+export interface SetupVariablesWriteResult {
+    created: number;
+    updated: number;
+    errors: string[];
+    failures?: readonly SetupVariableWriteFailure[];
 }

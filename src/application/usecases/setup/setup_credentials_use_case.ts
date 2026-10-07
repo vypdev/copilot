@@ -170,7 +170,7 @@ export class SetupCredentialsUseCase {
                     if (decision === 'keep'
                         && remoteCheck.status !== 'invalid'
                         && canKeepExistingSetupResource(
-                            request.secretStoragePolicy,
+                            'secret', request.secretStoragePolicy,
                             requirement.name,
                             sourceScope,
                         )) {

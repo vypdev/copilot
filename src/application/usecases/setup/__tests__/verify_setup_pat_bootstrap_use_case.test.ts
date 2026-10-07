@@ -128,7 +128,8 @@ describe('VerifySetupPatBootstrapUseCase', () => {
   test('guided bootstrap defers prefilled health writes until the final plan resolves their conditions', async () => {
     const { ports, useCase } = harness();
     const configuration = createDefaultSetupConfiguration();
-    configuration.createInitialTag = false;
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
     const requirements = buildSetupPatIntentPermissionRequirements(configuration, 'Organization');
     await useCase.execute({ ...request, requirements });
     const inspected = jest.mocked(ports.permissions.inspect).mock.calls.flatMap(([input]) => input.requirements);

@@ -79,7 +79,6 @@ export const questionLabelsFr: Readonly<Record<keyof typeof spanishQuestionLabel
   'projects.pullRequestCreatedColumn': 'Valeur Status des nouvelles pull requests',
   'projects.issueInProgressColumn': 'Valeur Status des tickets en cours',
   'projects.pullRequestInProgressColumn': 'Valeur Status des pull requests en cours',
-  createInitialTag: 'Créer v1.0.0 si aucune étiquette de version n’existe ?',
   manageRepositoryVariables: 'Créer ou mettre à jour les Variables GitHub Actions ?',
   manageRepositorySecrets: 'Valider et configurer les Secrets GitHub Actions ?',
 };

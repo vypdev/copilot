@@ -990,11 +990,11 @@ describe('CLI', () => {
     it('revises permission intent and drops the tag audit write while retaining conditional health prefill', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       let reviews = 0;
-      let tags = 0;
+      let workflows = 0;
       const input = guidedTerminal(prompt => {
         if (prompt.includes('repository owner an organization')) return '2';
         if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '2' : '1';
-        if (prompt.includes('Create v1.0.0')) return ++tags === 2 ? 'no' : '';
+        if (prompt.includes('Issue workflow types to enable')) return ++workflows === 2 ? 'feature,bugfix,documentation,chore,help' : '';
         return '';
       });
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
@@ -1003,7 +1003,7 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
         expect(reviews).toBe(2);
-        expect(tags).toBe(2);
+        expect(workflows).toBe(2);
         expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
           expect.objectContaining({ permission: 'Contents', level: 'read' }),
         ]));
@@ -1087,7 +1087,7 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
         expect(reviews).toBe(2);
-        expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Create v1.0.0'))).toHaveLength(1);
+        expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Create v1.0.0'))).toHaveLength(0);
         const output = consoleLogSpy.mock.calls.flat().join('\n');
         expect(output).toContain('Setup PAT permission summary');
         expect(output).toContain('Setup PAT permissions required');
@@ -1152,7 +1152,6 @@ describe('CLI', () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
       const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides').mockReturnValue({
-        createInitialTag: false,
         features: { issues: false, release: false, hotfix: false },
         projects: { ids: '42' },
       });

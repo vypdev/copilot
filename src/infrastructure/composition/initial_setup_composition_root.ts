@@ -1,7 +1,7 @@
 import { createAuthenticatedUserClient } from './github_identity_client_factory';
 import { createIssueLabelProvisioningClient } from './github_issue_client_factory';
 import { createGraphqlTransportClient } from './github_project_client_factory';
-import { createReleaseClient } from './github_release_client_factory';
+import { createReleaseClient, createRepositoryVersionTagsClient } from './github_release_client_factory';
 import { InitialSetupUseCase } from "../../application/usecases/actions/initial_setup_use_case";
 import type { SetupOperationEffect } from '../../domain/setup';
 import { IssueLabelProvisioningRepository } from "../../data/repository/issue/issue_label_provisioning_repository";
@@ -10,7 +10,7 @@ import { IssueTypeRepository } from "../../data/repository/issue/issue_type_repo
 import { AuthenticatedUserRepository } from "../../data/repository/organization/authenticated_user_repository";
 import { RepositoryDefaultBranchRepository } from "../../data/repository/release/repository_default_branch_repository";
 import { RepositoryTagRepository } from "../../data/repository/release/repository_tag_repository";
-import { GitCliRepository } from "../../data/repository/git_cli_repository";
+import { RepositoryVersionTagsQueryRepository } from "../../data/repository/release/repository_version_tags_query_repository";
 import { composeInitialSetupUseCase } from "./initial_setup_use_case_composition";
 import { SetupWorkspaceMutationAdapter } from "../setup_workspace_adapter";
 import {
@@ -25,6 +25,7 @@ import {
     bindInitialLabels,
     bindIssueTypes,
     bindRepositoryDefaultBranch,
+    bindRepositoryVersionTags,
     bindRepositoryTag,
     bindSetupRemoteConfiguration,
     bindSetupSecrets,
@@ -43,7 +44,7 @@ export function createInitialSetupCompositionRoot(binding: RepositoryCredentialB
         bindAuthenticatedUser(new AuthenticatedUserRepository(createAuthenticatedUserClient()), binding),
         bindInitialLabels(labelProvisioning, binding),
         bindIssueTypes(new IssueTypeRepository(createGraphqlTransportClient()), binding),
-        new GitCliRepository(),
+        bindRepositoryVersionTags(new RepositoryVersionTagsQueryRepository(createRepositoryVersionTagsClient()), binding),
         bindRepositoryDefaultBranch(new RepositoryDefaultBranchRepository(createReleaseClient()), binding),
         bindRepositoryTag(new RepositoryTagRepository(createReleaseClient()), binding),
         bindSetupWorkspace(new SetupWorkspaceMutationAdapter(), binding),

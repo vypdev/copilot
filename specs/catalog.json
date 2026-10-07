@@ -664,6 +664,9 @@
         "src/domain/setup_token_permissions.ts",
         "src/application/ports/setup_terminal_ports.ts",
         "src/application/ports/setup_wizard_ports.ts",
+        "src/application/ports/branch_tag_ports.ts",
+        "src/application/policies/setup_issue_workflow_policy.ts",
+        "src/data/repository/release/repository_version_tags_query_repository.ts",
         "src/application/ports/setup_token_permission_ports.ts",
         "src/application/policies/setup_token_permission_evidence_policy.ts",
         "src/application/policies/setup_token_permission_policy.ts",
@@ -742,6 +745,9 @@
         "src/application/usecases/execution/setup_execution_workflow.ts"
       ],
       "tests": [
+        "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
+        "src/data/repository/__tests__/setup_variable_write_failures.test.ts",
+        "src/infrastructure/composition/__tests__/initial_setup_composition_root.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",

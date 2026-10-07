@@ -345,18 +345,27 @@ describe('setup configuration policy', () => {
             overrides: {},
         };
 
-        expect(canKeepExistingSetupResource(undefined, 'OPENAI_API_KEY', 'organization')).toBe(true);
-        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', 'organization')).toBe(true);
-        expect(canKeepExistingSetupResource({ ...base, preserveExisting: false }, 'OPENAI_API_KEY', 'organization')).toBe(false);
-        expect(canKeepExistingSetupResource({
+        expect(canKeepExistingSetupResource('secret', undefined, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', base, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', { ...base, preserveExisting: false }, 'OPENAI_API_KEY', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('secret', {
             ...base,
             overrides: { OPENAI_API_KEY: 'repository' },
         }, 'OPENAI_API_KEY', 'organization')).toBe(false);
-        expect(canKeepExistingSetupResource({
+        expect(canKeepExistingSetupResource('secret', {
             ...base,
             overrides: { OPENAI_API_KEY: 'organization' },
         }, 'OPENAI_API_KEY', 'organization')).toBe(true);
-        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', undefined)).toBe(false);
+        expect(canKeepExistingSetupResource('secret', base, 'OPENAI_API_KEY', undefined)).toBe(false);
+    });
+
+    it('preserves a Variable named PAT while requiring a replacement for the bot Secret', () => {
+        const policy = { defaultScope: 'repository' as const, organizationVisibility: 'selected' as const,
+            preserveExisting: true, overrides: {} };
+        expect(canKeepExistingSetupResource('variable', policy, 'PAT', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', policy, 'PAT', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('variable', { ...policy, preserveExisting: false }, 'PAT', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('variable', { ...policy, overrides: { PAT: 'repository' } }, 'PAT', 'organization')).toBe(false);
     });
 
     it('keeps replacement credentials on the effective repository scope unless scope is explicitly overridden', () => {

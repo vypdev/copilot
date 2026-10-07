@@ -11,7 +11,7 @@ import type { BoundSetupWorkspacePort } from '../../ports/setup_workspace_ports'
 import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
-import type { SetupConfiguration, SetupOperationEffect } from '../../../domain/setup';
+import type { SetupConfiguration, SetupOperationEffect, SetupVariableWriteFailure } from '../../../domain/setup';
 import type { SetupResourceProvisioningDependencies } from './setup_resource_provisioning';
 import type { InitialSetupContext } from '../push_single_action_contexts';
 import {
@@ -22,6 +22,7 @@ import {
     resolveRemoteConfiguration,
 } from './setup_resource_provisioning';
 import { ApplicationError, type ApplicationErrorCode, toApplicationError } from '../../errors/application_error';
+import { setupNeedsInitialVersion } from '../../policies/setup_issue_workflow_policy';
 import { selectedInitialIssueTypes, selectedInitialLabels } from '../../policies/setup_issue_resource_policy';
 import {
     buildSetupCredentialRequirements,
@@ -175,9 +176,15 @@ export async function runInitialSetupWorkflow(
         const variables = await ensureRepositoryVariables(request, dependencies, setupConfiguration, remoteConfiguration);
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step) steps.push(variables.step);
-        if (variables.errors.length > 0) errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
+        if (variables.errors.length > 0) {
+            const variableErrors = variables.failures?.length
+                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors ?? [], 'provider.unavailable')]
+                : fromMessages(variables.errors, 'provider.unavailable');
+            variableErrors.forEach(error => logError(error.message));
+            errors.push(...variableErrors);
+        }
 
-        if (setupConfiguration?.createInitialTag !== false) mark('initial-tag', 'in-progress');
+        if (!setupConfiguration || setupNeedsInitialVersion(setupConfiguration)) mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
             : defaultVersion.step?.includes('created on branch') ? 'completed' : 'skipped');
@@ -250,8 +257,8 @@ async function ensureDefaultVersion(
     dependencies: InitialSetupWorkflowDependencies,
     setupConfiguration?: SetupConfiguration,
 ): Promise<{ step?: string; error?: ApplicationError }> {
-    if (setupConfiguration?.createInitialTag === false) {
-        return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
+    if (setupConfiguration && !setupNeedsInitialVersion(setupConfiguration)) {
+        return { step: '⏭️  Initial version tag is not needed by the selected issue workflows.' };
     }
     try {
         const existingTag = await dependencies.latestTagQueryPort.getLatestTag();
@@ -315,4 +322,16 @@ function resourceScope(configuration: SetupConfiguration | undefined, kind: 'sec
 
 function fromMessages(messages: readonly string[], code: ApplicationErrorCode): ApplicationError[] {
     return messages.map(message => new ApplicationError(code, message));
+}
+
+function variableFailureError(failure: SetupVariableWriteFailure): ApplicationError {
+    const details = {
+        authorization: ['authorization.denied', 'GitHub denied access; check Variables Write for this scope and repository authorization'],
+        'invalid-input': ['validation.invalid-input', 'GitHub rejected the request; check the Variable name, value limits and visibility'],
+        conflict: ['provider.conflict', 'GitHub reported a conflict; inspect the existing Variable before retrying'],
+        'rate-limited': ['provider.rate-limited', 'GitHub rate limited the request; retry after the limit resets'],
+        unavailable: ['provider.unavailable', 'GitHub did not complete the request'],
+    } as const;
+    const [code, message] = details[failure.reason];
+    return new ApplicationError(code, `Unable to configure ${failure.scope} Variable ${failure.name} during ${failure.phase}: ${message}.`);
 }
