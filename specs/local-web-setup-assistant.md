@@ -1741,8 +1741,10 @@ hotfix issue workflow selection, not a provisioning question. Existing semantic
 version tags skip creation; only confirmed absence permits `v1.0.0`. Remote
 inspection uses the setup PAT without touching local moving Action tags. Named,
 value-free Variable failure diagnostics and partial outcomes are shared with
-terminal Apply. The 40 incremental cases are counted in the setup-and-doctor
-SDD's 172-case budget; they do not add duplicate cases to the web ledger.
+terminal Apply. Existing organization Variable access is reused when the
+inherited inventory confirms it; new selected Variables include access during
+creation. The 48 incremental cases are counted in the setup-and-doctor
+SDD's 180-case budget; they do not add duplicate cases to the web ledger.
 
 ## 15. Documentation and discoverability
 

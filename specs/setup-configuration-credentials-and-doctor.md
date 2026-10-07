@@ -319,12 +319,15 @@ Variables use distinct create/update methods. Missing methods or malformed
 collections cannot masquerade as empty inventory. The SDK integration test
 uses an intercepted fixture transport, exercises organization inventory and
 Secret/Variable provisioning, and makes no live provider request.
-For effective `selected` visibility, including an existing resource whose
-visibility is preserved, provisioning requires both repository identity and
-the selected-repository grant endpoint before any value write. Missing either
-produces a resource error without mutation. A rejected grant is an error and
-cannot increment the created/updated success count; private/all visibility
-does not require that endpoint.
+For effective `selected` visibility, provisioning requires repository identity.
+Secrets also require the selected-repository grant endpoint before writing.
+New Variables include that repository in their creation request. Existing
+Variables preserve visibility and reuse confirmed access from the paginated
+inherited organization inventory; unknown, unavailable or malformed inventory
+does not prove access. Without that evidence, the grant endpoint is required
+before writing and access is granted separately. Missing prerequisites produce
+a resource error without mutation. A rejected required grant cannot increment
+the success count; private/all visibility does not require that endpoint.
 
 
 The shared coordinator is the authority for stage order, cancellation before
@@ -342,7 +345,8 @@ repository and operator credential as the other installation ports. The Git CLI
 adapter remains unchanged for runtime branch/version operations. A Variable
 named `PAT` follows normal preservation rules; only the workflow PAT Secret
 requires reentry and audit. Existing organization Variable updates send name and
-value, retaining visibility; selected repository access is granted separately.
+value, retaining visibility; selected repository access is granted separately
+only when inherited inventory does not already confirm it.
 Variable write failures cross the semantic port as value-free name, scope,
 phase and bounded reason (authorization, invalid input, conflict, rate limit or
 unavailability). Apply correlates these facts with the partial receipt and logs
@@ -499,11 +503,11 @@ manual reversal.
 |---|---:|---|
 | Defaults/config/storage policy | 29 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 24 | transitions, immutability, cancel, preserve, replace |
-| Credentials/provider adapters | 42 | valid/invalid/missing/unverifiable/groups; ten Secret/Variable cases for missing selected-repository endpoint/identity, creation, failed grants, and private visibility |
+| Credentials/provider adapters | 49 | valid/invalid/missing/unverifiable/groups; selected-repository prerequisites, atomic Variable creation, confirmed inherited access and unavailable/malformed inventory |
 | Workflows/assets/schema | 26 | selection, parity, readiness, permissions; four repository-only installation cases reject incidental configured issue/event linkage; two mixed Variable error cases retain partial evidence |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 33 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails; two execution bootstrap and four Apply/authentication cases |
-| **Total** | **172** | no double counting |
+| Integration/security/cutover | 34 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails; execution bootstrap, Apply/authentication and real SDK paginated inherited Variable access |
+| **Total** | **180** | no double counting |
 
 The repository-only Apply correction adds **10 distinct automated cases**:
 four in `execution_issue_number_policy.test.ts`, two in
@@ -524,6 +528,13 @@ existing intercepted Octokit transport case additionally checks remote tag
 reads and existing Variable update payloads; it is not counted again. Existing
 version detection and creation tests continue to assert the default tag and no
 creation after a failed query.
+
+The selected Variable access correction adds **8 distinct automated cases**:
+seven adapter cases cover confirmed access with and without the grant endpoint,
+atomic creation, denied inventory, a different inherited name and two malformed
+inventories. One intercepted real SDK case confirms access found on a later
+inventory page prevents redundant grant requests. These are fixture tests,
+not evidence of successful live GitHub writes.
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -587,11 +598,13 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     available and confirms that no same-name repository resource exists;
     otherwise setup blocks before credential collection or mutation, even with
     an explicit organization override or `preserveExisting: false`.
-20. Given a new or preserved `selected` organization Secret or Variable,
-    missing repository identity or grant endpoint yields an error before any
-    value write. A denied grant never counts as created/updated; private
-    visibility succeeds without that endpoint. Execute
-    `repository_selected_resource_grants.test.ts` for both resource families.
+20. Given a `selected` organization resource, missing repository identity
+    prevents writing. Secrets require the grant endpoint; a new Variable
+    includes repository access on creation, and an existing Variable with
+    confirmed inherited access needs no redundant grant. Unknown or malformed
+    inherited inventory still requires the endpoint. A denied required grant
+    never counts as created/updated; private visibility succeeds without it.
+    Execute the selected-resource, Variable-failure and real SDK suites.
 21. Given an approved setup plan with Codex runner authentication and no API
     key, Apply reaches repository installation without looking up any issue.
     A legacy explicit issue `1` or issue/PR/push event does not change that
@@ -624,7 +637,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 172-case budget and coverage thresholds pass.
+- [x] The 180-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and metadata-only `doctor --read-only`
       behavior pass; ordinary doctor dispatch is disclosed separately.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.

@@ -68590,6 +68590,14 @@ class GithubActionsResourceCommands {
         }
         const existing = new Map((await (0, github_actions_resource_collection_1.listCollection)(client, actions.listOrgVariables, { org: owner, per_page: 30 }, 'variables'))
             .map(variable => [variable.name, variable]));
+        const accessible = new Set();
+        if (actions.listRepoOrganizationVariables && variables.some(variable => existing.get(variable.name)?.visibility === 'selected')) {
+            try {
+                const inherited = await (0, github_actions_resource_collection_1.listCollection)(client, actions.listRepoOrganizationVariables, { owner, repo: repository, per_page: 30 }, 'variables');
+                inherited.forEach(variable => accessible.add(variable.name));
+            }
+            catch { /* Unknown access still requires the grant operation below. */ }
+        }
         let created = 0;
         let updated = 0;
         const errors = [];
@@ -68599,7 +68607,8 @@ class GithubActionsResourceCommands {
             try {
                 const current = existing.get(variable.name);
                 const visibility = current?.visibility ?? target.organizationVisibility;
-                if (visibility === 'selected' && (target.repositoryId === undefined || !actions.addSelectedRepoToOrgVariable)) {
+                const needsGrant = visibility === 'selected' && current !== undefined && !accessible.has(variable.name);
+                if (visibility === 'selected' && (target.repositoryId === undefined || (needsGrant && !actions.addSelectedRepoToOrgVariable))) {
                     throw new Error('Selected organization Variable access cannot be granted to this repository.');
                 }
                 const write = current ? actions.updateOrgVariable : actions.createOrgVariable;
@@ -68612,7 +68621,7 @@ class GithubActionsResourceCommands {
                         ? { selected_repository_ids: [target.repositoryId] }
                         : {}),
                 });
-                if (visibility === 'selected') {
+                if (needsGrant) {
                     phase = 'repository-access';
                     await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
                 }

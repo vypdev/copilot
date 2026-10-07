@@ -6,12 +6,69 @@ function fixture() {
     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
     listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'EXISTING', visibility: 'selected' }] } }),
     createOrgVariable: jest.fn(), updateOrgVariable: jest.fn(), addSelectedRepoToOrgVariable: jest.fn(),
+    listRepoOrganizationVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
   };
   return { actions, repository: new RepositoryVariablesCommandRepository({ getClient: () => ({ rest: { actions } }) }) };
 }
 const target = { scope: 'organization' as const, organizationVisibility: 'selected' as const, repositoryId: 42 };
 
 describe('setup Variable write failures', () => {
+  it('reuses confirmed repository access for an existing selected Variable', async () => {
+    const { actions, repository } = fixture();
+    actions.listRepoOrganizationVariables.mockResolvedValue({ data: { variables: [{ name: 'EXISTING' }] } });
+    actions.addSelectedRepoToOrgVariable.mockRejectedValue(new Error('redundant grant unavailable'));
+    await expect(repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'EXISTING', value: 'replacement' }]))
+      .resolves.toEqual({ created: 0, updated: 1, errors: [] });
+    expect(actions.listRepoOrganizationVariables).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', per_page: 30 });
+    expect(actions.updateOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'EXISTING', value: 'replacement' });
+    expect(actions.addSelectedRepoToOrgVariable).not.toHaveBeenCalled();
+  });
+
+  it('can update a selected Variable with confirmed access even without a grant endpoint', async () => {
+    const { actions, repository } = fixture();
+    actions.listRepoOrganizationVariables.mockResolvedValue({ data: { variables: [{ name: 'EXISTING' }] } });
+    Reflect.deleteProperty(actions, 'addSelectedRepoToOrgVariable');
+    await expect(repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'EXISTING', value: 'replacement' }]))
+      .resolves.toEqual({ created: 0, updated: 1, errors: [] });
+    expect(actions.updateOrgVariable).toHaveBeenCalled();
+  });
+
+  it('uses the creation request to grant access to a new selected Variable without a redundant PUT', async () => {
+    const { actions, repository } = fixture();
+    actions.addSelectedRepoToOrgVariable.mockRejectedValue(new Error('redundant grant unavailable'));
+    await expect(repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'NEW_VAR', value: 'value' }]))
+      .resolves.toEqual({ created: 1, updated: 0, errors: [] });
+    expect(actions.createOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'NEW_VAR', value: 'value', visibility: 'selected', selected_repository_ids: [42] });
+    expect(actions.addSelectedRepoToOrgVariable).not.toHaveBeenCalled();
+    expect(actions.listRepoOrganizationVariables).not.toHaveBeenCalled();
+  });
+
+  it('still grants access when inherited inspection is unavailable', async () => {
+    const { actions, repository } = fixture();
+    actions.listRepoOrganizationVariables.mockRejectedValue({ status: 403 });
+    await expect(repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'EXISTING', value: 'replacement' }]))
+      .resolves.toEqual({ created: 0, updated: 1, errors: [] });
+    expect(actions.addSelectedRepoToOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'EXISTING', repository_id: 42 });
+  });
+
+  it('does not infer access from a different inherited Variable name', async () => {
+    const { actions, repository } = fixture();
+    actions.listRepoOrganizationVariables.mockResolvedValue({ data: { variables: [{ name: 'OTHER' }] } });
+    await expect(repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'EXISTING', value: 'replacement' }]))
+      .resolves.toEqual({ created: 0, updated: 1, errors: [] });
+    expect(actions.addSelectedRepoToOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'EXISTING', repository_id: 42 });
+  });
+
+  it.each([{}, { variables: [null] }])('does not claim access from a malformed inherited inventory: %j', async data => {
+    const { actions, repository } = fixture();
+    actions.listRepoOrganizationVariables.mockResolvedValue({ data });
+    actions.addSelectedRepoToOrgVariable.mockRejectedValue({ status: 403 });
+    const result = await repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'EXISTING', value: 'replacement' }]);
+    expect(result.updated).toBe(0);
+    expect(result.failures).toEqual([{ name: 'EXISTING', scope: 'organization', phase: 'repository-access', reason: 'authorization' }]);
+    expect(actions.addSelectedRepoToOrgVariable).toHaveBeenCalled();
+  });
+
   it('updates only the existing value and grants repository access without replacing its visibility or other grants', async () => {
     const { actions, repository } = fixture();
     await repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'EXISTING', value: 'replacement' }]);

@@ -40,13 +40,18 @@ describe.each(['Secret', 'Variable'] as const)('selected organization %s reposit
         expect(grant).not.toHaveBeenCalled();
     });
 
-    it('does not create a selected resource when the grant endpoint is absent', async () => {
+    it('requires only the capabilities needed for selected resource creation', async () => {
         const { run, write, removeGrant } = fixture(kind);
         removeGrant();
-        await expect(run(selected, 'NEW')).resolves.toMatchObject({
-            created: 0, updated: 0, errors: [`Unable to configure organization ${kind} NEW.`],
-        });
-        expect(write).not.toHaveBeenCalled();
+        if (kind === 'Secret') {
+            await expect(run(selected, 'NEW')).resolves.toMatchObject({
+                created: 0, updated: 0, errors: [`Unable to configure organization ${kind} NEW.`],
+            });
+            expect(write).not.toHaveBeenCalled();
+        } else {
+            await expect(run(selected, 'NEW')).resolves.toMatchObject({ created: 1, updated: 0, errors: [] });
+            expect(write).toHaveBeenCalledWith({ org: 'owner', name: 'NEW', value: 'fixture', visibility: 'selected', selected_repository_ids: [42] });
+        }
     });
 
     it('does not count an updated value as configured when granting access fails', async () => {

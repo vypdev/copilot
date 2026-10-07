@@ -345,11 +345,12 @@ cannot obtain an authoritative remote snapshot or required selected inventory
 access, it stops before Secrets, Variables, labels, issue types, and tag writes
 with bounded recovery guidance, including for a repository-scope default.
 When an organization Secret or Variable has `selected` visibility, setup must
-grant this repository access before counting it as configured. It preserves
-the visibility of existing resources. If repository identity or the grant
-endpoint is unavailable, it reports a resource error before writing its value;
-a rejected grant also prevents a success result. An API failure after a value
-write may require inspecting that resource before retrying.
+confirm this repository has access before counting it as configured. It preserves
+existing visibility. New Variables include repository access when created;
+existing Variables reuse access confirmed by GitHub's inherited inventory.
+Otherwise setup grants access separately. Missing required capabilities prevent
+the value write, and a rejected required grant prevents a success result. An API
+failure after a value write may require inspecting that resource before retrying.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and may validate existing remote Secrets by dispatching the installed `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch. Plain `copilot doctor` may create an Actions run; `copilot doctor --read-only` never dispatches it and leaves Secret values unverified. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
@@ -411,7 +412,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
   <Step title="Create the setup PAT">
     Initial version setup is automatic: enabled release/hotfix issues need a version baseline. Copilot checks remote `x.y.z`/`vx.y.z` tags with the setup PAT, preserves existing versions and creates `v1.0.0` only when none exist. Other issue workflows skip this step. Neither terminal nor web setup asks about it; `createInitialTag` is not a config-file option. Local moving Action tags (`v1`, `v2`, `v3`) are untouched, and a failed tag read stops creation.
 
-    When updating existing organization Variables, Copilot preserves their visibility and adds selected repository access separately. A failed Variable write now names the resource and phase with a bounded reason. Review partial results before retrying; values and raw GitHub response bodies are never displayed.
+    When updating existing organization Variables, Copilot preserves their visibility and reuses confirmed repository access. It grants selected repository access separately only when needed. A failed Variable write names the resource and phase with a bounded reason. Review partial results before retrying; values and raw GitHub response bodies are never displayed.
 
     The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and Contents read for inspecting repository files and installed workflows; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. Setup uses organization Projects **read**, not write, to list Projects after the PAT is entered. There is no separate Workflows read permission for inspection. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. For existing Secrets, dispatching an installed `copilot_credential_health.yml` requires Actions write. Its isolated Actions permission test also requires Contents write for a disposable branch. If the exact trusted packaged workflow cannot be used, the test requires Workflows write for a verified no-job override; this prerequisite does not establish a Workflows grant automatically. Temporary installation on the setup branch is authorized only when the workflow is independently confirmed missing; unavailable or unknown workflow state never authorizes temporary creation. Contents write can also be required for an initial tag or another explicitly selected repository mutation.
 
