@@ -80,19 +80,35 @@ export function buildConfiguredSetupPatPermissionRequirements(
         remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
 }
 
-/** Grants justified by local choices alone; remote-only conditions stay unresolved. */
+/** Local requirements plus disclosed health prerequisites for selected Secret management. */
 export function buildSetupPatIntentPermissionRequirements(
     configuration: Readonly<SetupConfiguration>,
     ownerKind: 'Organization' | 'User',
     projectsWanted = configuration.projects.ids.trim().length > 0,
 ): SetupTokenPermissionRequirement[] {
-    return buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    const required = buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    if (!configuration.manageRepositorySecrets) return required;
+    // Prefill these possible health-check grants without treating unknown remote
+    // inventory/workflow state as permission to run their write probes now.
+    const healthPrerequisites = [
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Create an isolated branch for the Actions permission check.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+            applicability: 'conditional', condition: 'Temporary health workflow required',
+            reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+    ];
+    return [...required, ...healthPrerequisites.filter(candidate => !required.some(item =>
+        item.scope === candidate.scope && item.permission === candidate.permission && item.level === 'write'))];
 }
 
 export function buildSetupPatIntentUncertainty(configuration: Readonly<SetupConfiguration>, ownerKind: 'Organization' | 'User'): string[] {
     const unknown: string[] = [];
     if (configuration.manageRepositorySecrets) {
-        unknown.push('Existing managed Secrets may require repository Actions write and Contents write for an isolated credential-health check. A confirmed missing health workflow may also require repository Workflows write.');
+        unknown.push('Actions write, Contents write and Workflows write are prefilled for checking existing managed Secrets. GitHub inspection determines which checks the approved plan needs.');
     }
     if (ownerKind === 'Organization') {
         for (const kind of ['secrets', 'variables'] as const) {

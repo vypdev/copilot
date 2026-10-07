@@ -43,17 +43,22 @@ choose **view full permission table** at review to inspect every grant, reason,
 and condition, then return to the same review without repeating setup choices.
 Choosing manual PAT entry shows the full table directly. The later bot PAT
 prompt has its own full-table option based on the finalized workflow grants,
-not on the temporary setup PAT. The link is still **provisional** for facts that require GitHub
-inspection, such as existing Secrets, inherited organization resources, and a
-missing credential-health workflow. If the final plan needs
+not on the temporary setup PAT. When Secret management is selected, the first
+link already prefills repository **Actions: read and write**, **Contents: read
+and write**, and **Workflows: read and write** for possible credential-health
+checks. These grants are conditional: authenticated inspection and the approved
+plan determine which write checks are needed. Disabling Secret management omits
+these health-write grants; approval-only CI inspection keeps Actions read. The
+link remains **provisional** for inherited organization resources and later
+changes to your choices. If the final plan needs
 additional grants, setup stops before applying it and prints a corrected link.
 Update the PAT in GitHub or create a replacement, then rerun setup. Guided
 setup shows the account returned by GitHub and asks you to confirm it.
 
 In the web assistant, a blocked permission result keeps a **Create corrected
-setup PAT** link with the final required grants. For example, discovering an
-existing managed Secret and a missing credential-health workflow can add
-**Workflows: write** after you created the first PAT. Select the target repository
+setup PAT** link with the final required grants. The link uses final required grants,
+including any health-write grants that inspection confirms are needed. An older
+PAT created from a previous link may still lack Actions or Workflows write. Select the target repository
 in the updated GitHub form, create or correct the PAT, close the old local
 session and start `copilot setup --web` again. If temporary cleanup or a
 concurrent Secret collision needs inspection, resolve that first. An Actions
@@ -166,13 +171,14 @@ visibility-unknown probe, organization Issue Types, or any write.
 The distinction between an available public read and a verified grant is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
 requires; it does not enumerate every effective grant of the presented
-fine-grained PAT. During initial PAT verification, Copilot tests each displayed Write
-capability with a disposable resource and requires confirmed cleanup.
+fine-grained PAT. Each required Write capability is tested with a disposable
+resource and requires confirmed cleanup.
 
 At PAT entry, the assistant checks identity and required reads, confirms the
-guided operator account, then tests every displayed Write with isolated temporary
-resources, including conditional rows. Conditional means installation may not
-need that grant; it does not postpone its verification. PAT-entry and environment
+guided operator account, then tests required Writes with isolated temporary
+resources. Guided mode defers the prefilled conditional health Writes until
+authenticated inspection and plan approval establish they are required. Manual
+and supplied-token paths also test their displayed conditional Writes. PAT-entry and environment
 selection explain these tests before they start. `--dry-run` performs reads only,
 including leaving pending recovery records untouched. Installation still needs
 plan approval. A public read can be usable without
@@ -234,8 +240,9 @@ child process environment, and are not written to repository URLs or Git config.
 
 Permission checks use at most four concurrent GitHub probes. At PAT entry,
 identity and required reads run first; after guided account confirmation,
-every displayed Write grant is tested with a temporary resource that is read
-back and cleaned up, including conditional rows. Plan approval remains required
+required Write grants are tested with a temporary resource that is read
+back and cleaned up. Guided health prerequisites wait until the approved plan
+requires them; manual and supplied-token paths also test conditional rows. Plan approval remains required
 for installation; dry-run performs no writes or recovery. Disposable branches
 are deleted only after their exact ref and journaled commit match. Actions run
 cleanup also matches the journaled workflow ID, run ID, branch and event; an

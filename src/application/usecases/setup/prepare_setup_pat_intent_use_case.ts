@@ -110,7 +110,7 @@ export class PrepareSetupPatIntentUseCase {
           kind: 'guided',
           url: buildSetupPatCreationUrl({
             role: 'setup', owner: request.owner, repository: request.repository, expiresIn: 1,
-            requirements,
+            requirements, includeConditionalSetupGrants: true,
           }),
           requirements,
           ownerKind,

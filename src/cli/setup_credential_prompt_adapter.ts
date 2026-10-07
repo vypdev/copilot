@@ -131,7 +131,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
       console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
     }
     console.log(renderBox(
-      'Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.',
+      'Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.',
       'Setup PAT',
       33,
     ));

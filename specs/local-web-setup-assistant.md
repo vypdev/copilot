@@ -744,9 +744,11 @@ and optional diagnostics without changing stored answers or setup configuration.
 
 ### 9.1.2 Guided setup PAT recovery after inspection — 2026-10-07
 
-The first guided PAT link is provisional: GitHub inspection can reveal existing
-Secrets and a missing credential-health workflow, adding Actions and Workflows
-WRITE to the final requirements. When this final audit blocks setup, the updated
+The first guided PAT link includes disclosed conditional Actions, Contents and
+Workflows WRITE when Secret management is selected. GitHub inspection can
+confirm existing Secrets and a missing credential-health workflow, making
+those grants required in the final audit. Other remote-only scopes and changed
+choices can still need correction. When this final audit blocks setup, the updated
 official PAT creation link MUST survive cleanup reminders, permission updates
 and the terminal outcome message. `WebSetupView.setupPatCorrection` carries the
 generated URL, `bootstrap`/`final` stage and finite permission delta separately
@@ -784,7 +786,7 @@ permission outcome with `mutationStarted: false` and a supplied correction.
 Pending probe cleanup, concurrent Secret collisions, partial setup or unrelated
 failures MUST keep their inspection instructions without offering this shortcut.
 Manual PAT entry and older views without the optional field retain the generic
-PAT settings action. Do not broaden the provisional link, auto-retry an audit,
+PAT settings action. Do not broaden the link from this recovery section, auto-retry an audit,
 reuse approvals, revoke credentials or apply setup from this recovery section.
 No configuration, persistent storage or journal schema changes are introduced;
 rollback drops the optional view field and restores the generic recovery UI.

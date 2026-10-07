@@ -32,9 +32,46 @@ describe('PrepareSetupPatIntentUseCase', () => {
     if (result.kind !== 'guided') return;
     expect(result.url).toContain('https://github.com/settings/personal-access-tokens/new?');
     expect(result.url).toContain('target_name=owner');
+    const url = new URL(result.url);
+    expect(url.searchParams.get('actions')).toBe('write');
+    expect(url.searchParams.get('workflows')).toBe('write');
+    expect(result.requirements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ permission: 'Actions', level: 'write', applicability: 'conditional' }),
+      expect.objectContaining({ permission: 'Workflows', level: 'write', applicability: 'conditional' }),
+    ]));
     expect(result.permissionIntent.answeredQuestionIds.filter(id => id === 'features.issues')).toHaveLength(1);
     expect(ports.advanceToSetupPat).toHaveBeenCalledTimes(1);
     expect(ports.showPreview).toHaveBeenCalledWith(expect.objectContaining({ pass: 1, requirements: result.requirements }));
+  });
+
+  test('skip-secrets removes health-write prefill from the first link', async () => {
+    const { useCase } = harness();
+    const result = await useCase.execute({ ...request, skipRepositorySecrets: true,
+      overrides: { pullRequestApproval: { mode: 'recommend' } } });
+    expect(result.kind).toBe('guided');
+    if (result.kind !== 'guided') return;
+    const url = new URL(result.url);
+    expect(url.searchParams.get('actions')).toBe('read');
+    expect(url.searchParams.has('workflows')).toBe(false);
+    expect(url.searchParams.has('secrets')).toBe(false);
+  });
+
+  test('revising Secret management removes previously prefilled health writes', async () => {
+    const { ports, useCase } = harness();
+    jest.spyOn(ports, 'review').mockResolvedValueOnce('revise').mockResolvedValueOnce('continue');
+    jest.spyOn(ports, 'collect')
+      .mockImplementationOnce(async initial => ({ ...initial, terminal: 'review', question: undefined }))
+      .mockImplementationOnce(async initial => ({ ...initial, terminal: 'review', question: undefined,
+        draft: { ...initial.draft, manageRepositorySecrets: false } }));
+    const result = await useCase.execute({ ...request, overrides: { pullRequestApproval: { mode: 'recommend' } } });
+    expect(result.kind).toBe('guided');
+    if (result.kind !== 'guided') return;
+    const url = new URL(result.url);
+    expect(url.searchParams.get('actions')).toBe('read');
+    expect(url.searchParams.has('workflows')).toBe(false);
+    expect(ports.showPreview).toHaveBeenLastCalledWith(expect.objectContaining({
+      requirements: expect.not.arrayContaining([expect.objectContaining({ permission: 'Actions', level: 'write' })]),
+    }));
   });
 
   test('passes explicit release/hotfix constraints to the intent questionnaire and retains their fixed provenance', async () => {

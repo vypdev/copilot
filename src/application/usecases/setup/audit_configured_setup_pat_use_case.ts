@@ -49,7 +49,8 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
       return { status: 'blocked', errors: ['Repository owner type differs from the pre-PAT selection. Rerun setup with the correct owner type and PAT.'] };
     }
     if (this.context.guided) {
-      const removed = requiredSetupPatPermissionDelta(required, this.context.provisionalRequirements);
+      const removed = requiredSetupPatPermissionDelta(required, this.context.provisionalRequirements
+        .map(item => ({ ...item, applicability: 'required' as const })));
       if (removed.length) this.ports.showExcessGrants(removed);
     }
     if (!this.context.token) return { status: 'accepted' };

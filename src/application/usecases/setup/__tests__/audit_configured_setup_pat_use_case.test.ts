@@ -1,5 +1,5 @@
 import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_defaults';
-import { buildSetupPatPermissionRequirements } from '../../../policies/setup_token_permission_policy';
+import { buildSetupPatIntentPermissionRequirements, buildSetupPatPermissionRequirements } from '../../../policies/setup_token_permission_policy';
 import type { SetupRemoteConfiguration } from '../../../../domain/setup';
 import type { SetupTokenPermissionReport } from '../../../../domain/setup_token_permissions';
 import { AuditConfiguredSetupPatUseCase, type AuditConfiguredSetupPatPorts } from '../audit_configured_setup_pat_use_case';
@@ -150,6 +150,36 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     expect(ports.permissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
       requirements: expect.arrayContaining([expect.objectContaining({ permission: 'Workflows', level: 'write', applicability: 'required' })]),
     }));
+  });
+
+  test('unused prefilled health writes are reported as possible excess access without being audited', async () => {
+    const { context, ports, useCase } = harness({ token: 'test-token', guided: true });
+    const selected = createDefaultSetupConfiguration();
+    selected.pullRequestApproval = { ...selected.pullRequestApproval, mode: 'recommend' };
+    selected.createInitialTag = false;
+    context.provisionalRequirements = buildSetupPatIntentPermissionRequirements(selected, 'Organization');
+    expect(await useCase.audit(selected, remote)).toEqual({ status: 'accepted' });
+    expect(ports.showExcessGrants).toHaveBeenCalledWith(expect.arrayContaining([
+      'repository Actions write', 'repository Contents write', 'repository Workflows write',
+    ]));
+    const inspected = jest.mocked(ports.permissions.inspect).mock.calls[0][0].requirements;
+    expect(inspected.some(item => item.permission === 'Workflows')).toBe(false);
+    expect(inspected.filter(item => item.permission === 'Actions')).toEqual([
+      expect.objectContaining({ level: 'read', applicability: 'required' }),
+    ]);
+  });
+
+  test('final discovered health needs still require audited write proof despite being prefilled initially', async () => {
+    const { context, ports, useCase } = harness({ token: 'test-token', guided: true });
+    context.provisionalRequirements = buildSetupPatIntentPermissionRequirements(configuration, 'Organization');
+    jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false });
+    expect(await useCase.audit(configuration, { ...remote, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing' }))
+      .toEqual(expect.objectContaining({ status: 'blocked' }));
+    const inspected = jest.mocked(ports.permissions.inspect).mock.calls[0][0].requirements;
+    for (const permission of ['Actions', 'Contents', 'Workflows']) {
+      expect(inspected).toEqual(expect.arrayContaining([expect.objectContaining({ permission, level: 'write', applicability: 'required' })]));
+    }
+    expect(ports.showUpdatedLink).toHaveBeenCalledWith(expect.stringContaining('actions=write'), expect.any(Array));
   });
 
   test('surfaces unconfirmed temporary cleanup and marks the session as possibly changed', async () => {

@@ -124,9 +124,11 @@ directory. The lock contains no PAT or other credential.
     ambiguous because it can also mean the token cannot see the repository, so
     setup never upgrades it to `Verified`.
     A required unverifiable read without positive public-repository operational
-    evidence blocks and must be retried. Displayed writes, including conditional rows, are checked during initial PAT
-    verification by creating, reading and deleting a temporary resource for each
-    permission. Inspect the failed phase and HTTP category. An unresolved
+    evidence blocks and must be retried. Required writes are checked by creating,
+    reading and deleting a temporary resource for each permission. Guided links
+    prefill possible health-write grants when managing Secrets, but their tests
+    wait until the approved plan needs them. Manual and supplied-token paths
+    also test displayed conditional writes during initial PAT verification. Inspect the failed phase and HTTP category. An unresolved
     cleanup blocks retries until the recovery journal can finish it. The old
     `--confirm-unverifiable-write-permissions` flag is rejected.
     In the web assistant, inspect only required rows marked `Unverifiable`;

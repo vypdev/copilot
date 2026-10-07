@@ -987,7 +987,7 @@ describe('CLI', () => {
       } finally { createTerminal.mockRestore(); }
     });
 
-    it('revises permission intent before the link and drops the initial-tag write grant', async () => {
+    it('revises permission intent and drops the tag audit write while retaining conditional health prefill', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       let reviews = 0;
       let tags = 0;
@@ -1008,7 +1008,9 @@ describe('CLI', () => {
           expect.objectContaining({ permission: 'Contents', level: 'read' }),
         ]));
         const output = consoleLogSpy.mock.calls.flat().join('\n');
-        expect(output).toContain('contents=read');
+        expect(output).toContain('contents=write');
+        expect(output).toContain('actions=write');
+        expect(output).toContain('workflows=write');
         expect(output).toContain('Stage 2/6 · Setup choices · review pass 2');
         expect(output).toContain('This is the same setup run. Your answers are saved as defaults');
         const { logInfo } = require('../utils/logger');

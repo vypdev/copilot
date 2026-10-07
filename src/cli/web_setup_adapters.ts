@@ -136,7 +136,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
   }
   async requestSetupPat(): Promise<string | undefined> {
     return this.secret('Temporary setup PAT',
-      'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.',
+      'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.',
       this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
   }
   async confirmGuidedSetupAccount(account?: string): Promise<boolean> {

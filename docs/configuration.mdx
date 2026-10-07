@@ -198,8 +198,11 @@ and `--config` keep their normal precedence; fields fixed by them are skipped
 by the questionnaire. A supplied environment setup PAT is never consumed
 silently in the web mode; the browser asks whether to use it without seeing
 its value. `--web` rejects unattended approval and secret-bearing flags.
-The link reflects reviewed local intent; remote-only conditions are disclosed separately
-and may require correction after inspection. The bot-PAT
+The link reflects reviewed local intent. Selected Secret management prefills
+repository Actions, Contents and Workflows write for possible health checks;
+these conditional checks wait until the approved plan requires them. With
+`--skip-secrets`, health-write grants are omitted. Inherited organization
+resources and changed choices may still require correction after inspection. The bot-PAT
 link is built from the final workflow permission policy and suggests a 90-day
 expiry; the bot account owner must renew it and replace Secret `PAT` before
 expiration. Manual and non-interactive token inputs keep their existing

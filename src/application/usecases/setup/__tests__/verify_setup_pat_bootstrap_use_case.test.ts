@@ -1,5 +1,6 @@
 import type { SetupTokenPermissionReport } from '../../../../domain/setup_token_permissions';
-import { buildSetupPatPermissionRequirements } from '../../../policies/setup_token_permission_policy';
+import { buildSetupPatIntentPermissionRequirements, buildSetupPatPermissionRequirements } from '../../../policies/setup_token_permission_policy';
+import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_defaults';
 import { VerifySetupPatBootstrapUseCase, type VerifySetupPatBootstrapPorts } from '../verify_setup_pat_bootstrap_use_case';
 
 const report: SetupTokenPermissionReport = {
@@ -7,7 +8,9 @@ const report: SetupTokenPermissionReport = {
   ready: true, confirmationRequired: false,
 };
 const request = {
-  owner: 'owner', repository: 'repo', token: 'test-token', requirements: buildSetupPatPermissionRequirements(), guided: true,
+  owner: 'owner', repository: 'repo', token: 'test-token',
+  requirements: buildSetupPatIntentPermissionRequirements(createDefaultSetupConfiguration(), 'Organization')
+    .filter(item => item.applicability === 'required'), guided: true,
 };
 
 function harness() {
@@ -110,7 +113,7 @@ describe('VerifySetupPatBootstrapUseCase', () => {
     expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
   });
 
-  test.each(['cleanup', 'collision'] as const)('pending %s in a conditional write blocks and marks partial effects', async kind => {
+  test.each(['cleanup', 'collision'] as const)('pending %s in a required write blocks and marks partial effects', async kind => {
     const { ports, useCase } = harness();
     const onCleanupPending = jest.fn();
     const requirement = request.requirements.find(item => item.probe === 'secrets')!;
@@ -120,5 +123,38 @@ describe('VerifySetupPatBootstrapUseCase', () => {
     });
     await expect(useCase.execute({ ...request, onCleanupPending })).rejects.toThrow('did not pass');
     expect(onCleanupPending).toHaveBeenCalledTimes(1);
+  });
+
+  test('guided bootstrap defers prefilled health writes until the final plan resolves their conditions', async () => {
+    const { ports, useCase } = harness();
+    const configuration = createDefaultSetupConfiguration();
+    configuration.createInitialTag = false;
+    const requirements = buildSetupPatIntentPermissionRequirements(configuration, 'Organization');
+    await useCase.execute({ ...request, requirements });
+    const inspected = jest.mocked(ports.permissions.inspect).mock.calls.flatMap(([input]) => input.requirements);
+    expect(inspected.some(item => item.applicability === 'conditional')).toBe(false);
+    expect(inspected.filter(item => item.level === 'write' && ['Actions', 'Contents', 'Workflows'].includes(item.permission)))
+      .toEqual([]);
+    expect(ports.permissions.inspect).toHaveBeenCalledTimes(2);
+  });
+
+  test('manual bootstrap still inspects displayed conditional writes after account confirmation', async () => {
+    const { ports, useCase } = harness();
+    const requirements = buildSetupPatPermissionRequirements();
+    await useCase.execute({ ...request, requirements, guided: false });
+    expect(ports.permissions.inspect).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      requirements, includeConditionalWrites: true,
+    }));
+    expect(ports.confirmAccount).toHaveBeenCalledWith('operator');
+  });
+
+  test('a failed guided bootstrap keeps health prerequisites in its corrected creation link', async () => {
+    const { ports, useCase } = harness();
+    const requirements = buildSetupPatIntentPermissionRequirements(createDefaultSetupConfiguration(), 'Organization');
+    jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false });
+    await expect(useCase.execute({ ...request, requirements })).rejects.toThrow('did not pass');
+    const url = new URL(jest.mocked(ports.showCorrectedLink).mock.calls[0][0]);
+    expect(url.searchParams.get('actions')).toBe('write');
+    expect(url.searchParams.get('workflows')).toBe('write');
   });
 });

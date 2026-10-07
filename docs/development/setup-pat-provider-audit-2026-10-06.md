@@ -154,3 +154,23 @@ Coverage is 95.67% statements, 91.29% branches, 96.61% functions and 96.89%
 lines. TypeScript, Svelte, lint, specification, documentation, workflow,
 generated-bundle and package contracts pass; the extracted package also passes
 the isolated CLI, typed API and local web-session smoke test.
+
+## Initial-link prefill follow-up — 2026-10-07
+
+The operator observed Actions Read-only on the first guided setup link despite
+selected Secret management. The initial intent now discloses and prefills
+conditional repository Actions, Contents and Workflows WRITE for possible
+credential-health checks. Guided bootstrap inspects local required grants;
+those conditional write transactions wait for the approved final plan. Manual
+and supplied-token audits retain their existing conditional checks. Final
+audits independently derive required grants and disclose unused prefilled
+grants as possible excess access. The workflow/bot link keeps required-only
+projection. Twelve additional regressions cover these boundaries.
+
+Credential-free form observation used the URL emitted by
+`PrepareSetupPatIntentUseCase` for an organization setup with managed Secrets
+and Variables, Projects and recommendation-mode approval. GitHub displayed
+Actions, Contents and Workflows as **Read and write**. No token was generated,
+no provider write probe was run and no setup plan was applied in this follow-up.
+This proves form prefill for the observed account/session, without claiming
+that a generated PAT would pass all capability checks.

@@ -45584,12 +45584,15 @@ function buildSetupPatCreationUrl(input) {
         || input.expiresIn > 366) {
         throw new Error('Invalid PAT form owner, repository, or expiration.');
     }
+    if (input.includeConditionalSetupGrants && input.role !== 'setup') {
+        throw new Error('Conditional setup grants cannot be added to a workflow PAT form.');
+    }
     const grants = new Map();
     const unsupported = [];
     for (const item of input.requirements) {
         if (item.role !== input.role)
             throw new Error('PAT permission role does not match the requested form.');
-        if (item.applicability !== 'required')
+        if (item.applicability !== 'required' && !input.includeConditionalSetupGrants)
             continue;
         const key = QUERY_PERMISSIONS[item.scope][item.permission];
         if (!key || (key === 'metadata' && item.level !== 'read')
@@ -47771,14 +47774,30 @@ function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     // grants visible until the final audit can verify the actual owner type.
     return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
 }
-/** Grants justified by local choices alone; remote-only conditions stay unresolved. */
+/** Local requirements plus disclosed health prerequisites for selected Secret management. */
 function buildSetupPatIntentPermissionRequirements(configuration, ownerKind, projectsWanted = configuration.projects.ids.trim().length > 0) {
-    return buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    const required = buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    if (!configuration.manageRepositorySecrets)
+        return required;
+    // Prefill these possible health-check grants without treating unknown remote
+    // inventory/workflow state as permission to run their write probes now.
+    const healthPrerequisites = [
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Create an isolated branch for the Actions permission check.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+            applicability: 'conditional', condition: 'Temporary health workflow required',
+            reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+    ];
+    return [...required, ...healthPrerequisites.filter(candidate => !required.some(item => item.scope === candidate.scope && item.permission === candidate.permission && item.level === 'write'))];
 }
 function buildSetupPatIntentUncertainty(configuration, ownerKind) {
     const unknown = [];
     if (configuration.manageRepositorySecrets) {
-        unknown.push('Existing managed Secrets may require repository Actions write and Contents write for an isolated credential-health check. A confirmed missing health workflow may also require repository Workflows write.');
+        unknown.push('Actions write, Contents write and Workflows write are prefilled for checking existing managed Secrets. GitHub inspection determines which checks the approved plan needs.');
     }
     if (ownerKind === 'Organization') {
         for (const kind of ['secrets', 'variables']) {
@@ -54164,7 +54183,8 @@ class AuditConfiguredSetupPatUseCase {
             return { status: 'blocked', errors: ['Repository owner type differs from the pre-PAT selection. Rerun setup with the correct owner type and PAT.'] };
         }
         if (this.context.guided) {
-            const removed = (0, setup_token_permission_policy_1.requiredSetupPatPermissionDelta)(required, this.context.provisionalRequirements);
+            const removed = (0, setup_token_permission_policy_1.requiredSetupPatPermissionDelta)(required, this.context.provisionalRequirements
+                .map(item => ({ ...item, applicability: 'required' })));
             if (removed.length)
                 this.ports.showExcessGrants(removed);
         }
@@ -54872,7 +54892,7 @@ class PrepareSetupPatIntentUseCase {
                     kind: 'guided',
                     url: (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
                         role: 'setup', owner: request.owner, repository: request.repository, expiresIn: 1,
-                        requirements,
+                        requirements, includeConditionalSetupGrants: true,
                     }),
                     requirements,
                     ownerKind,
@@ -55851,21 +55871,24 @@ class VerifySetupPatBootstrapUseCase {
         this.ports = ports;
     }
     async execute(request) {
+        const requirements = request.guided
+            ? request.requirements.filter(requirement => requirement.applicability === 'required')
+            : request.requirements;
         const identityReport = await this.ports.permissions.inspect({
             role: 'setup', owner: request.owner, repository: request.repository,
-            token: request.token, requirements: request.requirements.filter(requirement => requirement.level === 'read'),
+            token: request.token, requirements: requirements.filter(requirement => requirement.level === 'read'),
         });
         this.ports.presenter.showReport(identityReport);
         this.requireReady(request, identityReport);
         if (!await this.ports.confirmAccount(identityReport.account)) {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
         }
-        if (request.previewOnly || !request.requirements.some(requirement => requirement.level === 'write'))
+        if (request.previewOnly || !requirements.some(requirement => requirement.level === 'write'))
             return identityReport.account;
-        this.ports.presenter.showRequirements('setup', request.requirements);
+        this.ports.presenter.showRequirements('setup', requirements);
         const report = await this.ports.permissions.inspect({
             role: 'setup', owner: request.owner, repository: request.repository,
-            token: request.token, requirements: request.requirements, includeConditionalWrites: true,
+            token: request.token, requirements, includeConditionalWrites: true,
         });
         if (report.checks.some(check => check.cleanupPending || check.incident))
             request.onCleanupPending?.();
@@ -55878,7 +55901,7 @@ class VerifySetupPatBootstrapUseCase {
             if (request.guided)
                 this.ports.showCorrectedLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
                     role: 'setup', owner: request.owner, repository: request.repository,
-                    expiresIn: 1, requirements: request.requirements,
+                    expiresIn: 1, requirements: request.requirements, includeConditionalSetupGrants: true,
                 }));
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT did not pass every required capability check. Review the failed permission and cleanup result, correct access, and retry.');
         }
@@ -66691,7 +66714,7 @@ class SetupCredentialPromptAdapter {
             console.log(this.setupPatGuide);
             console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
         }
-        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.', 'Setup PAT', 33));
+        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.', 'Setup PAT', 33));
         console.log(`PAT creation and cleanup: ${AUTHENTICATION_GUIDE}\nGitHub PAT settings: ${GITHUB_PAT_SETTINGS}`);
         return this.readSecret('Setup PAT');
     }
@@ -68183,7 +68206,7 @@ class WebSetupCredentialPrompt {
             : answer === 'Enter a PAT manually' ? 'manual' : 'continue';
     }
     async requestSetupPat() {
-        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.', this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
+        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.', this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
     }
     async confirmGuidedSetupAccount(account) {
         if (!this.guidedSetup)

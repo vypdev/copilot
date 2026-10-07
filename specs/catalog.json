@@ -1040,7 +1040,7 @@
       "status": "proposed",
       "scope": "Guide creation of the one-run operator PAT through GitHub's official form, verify final setup access, and report user-owned deletion accurately",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/temporary-setup-operator-authorization.md"
       ],
@@ -1056,6 +1056,9 @@
         "src/application/policies/setup_token_permission_policy.ts",
         "src/application/policies/setup_pat_creation_url_policy.ts",
         "src/application/usecases/setup/setup_wizard_use_case.ts",
+        "src/application/usecases/setup/prepare_setup_pat_intent_use_case.ts",
+        "src/application/usecases/setup/verify_setup_pat_bootstrap_use_case.ts",
+        "src/application/usecases/setup/audit_configured_setup_pat_use_case.ts",
         "src/application/usecases/setup/setup_token_permissions_use_case.ts",
         "src/infrastructure/setup_token_permission_query_adapter.ts",
         "src/utils/setup_files.ts"
@@ -1069,6 +1072,9 @@
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
         "src/application/policies/__tests__/setup_pat_creation_url_policy.test.ts",
         "src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/prepare_setup_pat_intent_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/verify_setup_pat_bootstrap_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts",
         "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts",
         "src/utils/__tests__/setup_files.test.ts"

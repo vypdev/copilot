@@ -38,12 +38,15 @@ See [bounded provider evidence](../docs/development/setup-pat-provider-audit-202
    Verified. The row names the failed phase and a bounded HTTP category,
    without raw provider body, headers, token, or secret value.
 3. PAT entry and environment-PAT selection MUST disclose isolated temporary
-   create/read/delete checks before planning, including displayed conditional
-   writes, notifications/audit history, and cleanup requirements. Bootstrap
+   create/read/delete checks before planning, notifications/audit history, and
+   cleanup requirements. Manual and supplied-token paths include displayed
+   conditional writes; guided intent defers its possible health prerequisites
+   until authenticated inspection and plan approval establish a requirement. Bootstrap
    first validates identity and required reads, confirms the intended guided
    operator account, and then executes the displayed write transactions.
-   Conditional applicability describes whether installation needs that grant;
-   it MUST NOT defer its initial permission test. Organization writes require
+   Guided conditional health grants MUST be prefilled when Secret management is
+   selected, but MUST NOT authorize an early write test or establish evidence.
+   Manual conditional rows retain their initial permission tests. Organization writes require
    metadata proving the exact selected repository's organization owner.
    Final review still approves persistent setup application and provisioning;
    its fresh configured audit runs before those operations. A revision or
@@ -224,7 +227,9 @@ fresh setup run. No automatic retry or setup application is authorized here.
 The shared incremental regression budget is **20 automated cases**, counted
 once in the web SDD: seven bridge, twelve rendering and one final-requirements
 case. The existing credential adapter test is extended through finish. No
-additional grants are silently added to the initial guided link. Authentication
+additional grants are silently added by this recovery section. The reviewed
+initial intent separately prefills disclosed health prerequisites when managing
+Secrets, as specified in the operator-PAT SDD. Authentication
 documentation explains the later link and independent Actions prerequisite;
 isolated live denial/cleanup evidence remains distinct from fixture success.
 
@@ -742,7 +747,8 @@ promoting any of its 42 open cases.
    late completion never emits verified progress or starts a dependent request.
 5. Every enabled runtime route requests Contents read or its stronger write.
 6. Initial displayed writes need create, exact readback and confirmed cleanup
-   after identity/account checks, including conditional writes. Preview/dry-run
+   after identity/account checks. Guided conditional health Writes wait for the
+   approved plan; manual/supplied-token conditional Writes remain initial checks. Preview/dry-run
    cannot start them or mutate recovery resources. Decline/revision does not
    start a final audit or persistent installation.
 7. Changed/legacy ref is retained; exact name and recorded SHA may be deleted.
