@@ -3,11 +3,13 @@
   import { tr, stageLabel, type SetupMessageKey } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
   import ActionButton from './ActionButton.svelte';
+  import { managementCopy } from '../i18n/managementCopy';
   import ResourceProgress from './ResourceProgress.svelte';
   import SetupPatCorrectionPanel from './SetupPatCorrectionPanel.svelte';
   import { focusOnRevision } from '../lib/focusOnRevision';
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   import { permissionEvidence } from '../i18n/permissionEvidence';
+  export let management = false;
   export let outcome: NonNullable<WebSetupView['outcome']>;
   export let controller: boolean;
   export let onClose: () => Promise<void>;
@@ -22,11 +24,11 @@
     cancelled: ['reasonCancelled', 'nextCancelled'], provider: ['reasonProvider', 'nextProvider'],
     'rate-limit': ['reasonRateLimit', 'nextRateLimit'], unknown: ['reasonUnknown', 'nextUnknown'],
   };
-  $: heading = outcome === 'complete' ? tr('resultApplied', $setupLocale)
+  $: heading = management ? managementCopy($setupLocale)[outcome === 'complete' ? 'finished' : outcome === 'partial' ? 'inspectAdjustment' : 'inspectionFinished'] : outcome === 'complete' ? tr('resultApplied', $setupLocale)
     : outcome === 'dry-run' ? tr('resultNoChanges', $setupLocale)
     : outcome === 'cancelled' || outcome === 'blocked' ? tr('resultStopped', $setupLocale)
     : tr('resultPartial', $setupLocale);
-  $: explanation = outcome === 'complete'
+  $: explanation = management ? managementCopy($setupLocale)[outcome === 'complete' ? 'finishedBody' : outcome === 'partial' ? 'partial' : 'inspectionBody'] : outcome === 'complete'
     ? tr('resultCompleteBody', $setupLocale)
     : outcome === 'partial'
       ? tr('resultPartialBody', $setupLocale)
@@ -72,9 +74,9 @@
     <SetupPatCorrectionPanel correction={setupPatCorrection} />
   {/if}
   <p>{secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : explanation}</p>
-  {#if outcome === 'complete'}<p>{tr('botRenewal', $setupLocale)}</p>{/if}
-  <p>{tr('doctorHelp', $setupLocale)}</p>
-  {#if outcome === 'complete'}
+  {#if outcome === 'complete' && !management}<p>{tr('botRenewal', $setupLocale)}</p>{/if}
+  {#if !management}<p>{tr('doctorHelp', $setupLocale)}</p>{/if}
+  {#if outcome === 'complete' && !management}
     <section class="result-doctor" aria-live="polite">
       {#if doctor?.status === 'running'}<p>{tr('doctorRunning', $setupLocale)}</p>
       {:else if doctor?.status === 'complete'}<p>{tr(doctor.healthy ? 'doctorPassed' : 'doctorWarnings', $setupLocale)} {tr('doctorCounts', $setupLocale, { pass: String(doctor.pass ?? 0), warn: String(doctor.warn ?? 0), fail: String(doctor.fail ?? 0), skipped: String(doctor.skipped ?? 0) })} {tr('doctorSecretLimit', $setupLocale)}</p>

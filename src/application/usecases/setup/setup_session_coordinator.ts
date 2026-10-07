@@ -11,6 +11,7 @@ export interface SetupSessionReceipt {
 
 /** Semantic work only. Entrypoints adapt prompts, providers and process exit codes. */
 export interface SetupSessionPorts {
+  readonly manage?: (possibleMutation: () => void, record: (effect: SetupOperationEffect) => void) => Promise<'continue' | 'complete' | 'partial' | 'blocked' | 'cancelled'>;
   readonly repository: () => Promise<SetupSessionDecision>;
   readonly choices: () => Promise<SetupSessionDecision>;
   readonly setupPat: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
@@ -61,6 +62,11 @@ export class SetupSessionCoordinator {
         const after = this.liveOutcome();
         if (after) return this.finish(after);
         if (decision !== 'continue') return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+        if (stage === 'repository' && this.ports.manage) {
+          const managed = await this.ports.manage(() => { this.stage = 'apply'; this.markPossibleMutation(); },
+            effect => this.effects.set(effect.id, Object.freeze({ ...effect })));
+          if (managed !== 'continue') return this.finish(managed);
+        }
       }
 
       // The authorization operation must finish while the live session is active.

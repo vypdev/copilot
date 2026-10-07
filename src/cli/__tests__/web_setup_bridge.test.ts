@@ -334,3 +334,15 @@ describe('WebSetupBridge', () => {
     expect(bridge.snapshot()).toBe(before);
   });
 });
+
+
+describe('management command revisions', () => {
+ test('surface and semantic messages are value-free', () => { const bridge = new WebSetupBridge('fixture/repo'); bridge.setSurface('management'); bridge.managementMessage('updated'); expect(bridge.snapshot()).toMatchObject({surface:'management',message:{managementState:'updated',tone:'success'}}); bridge.managementMessage('blocked'); expect(bridge.snapshot().message?.tone).toBe('warning'); bridge.managementMessage('checking');expect(bridge.snapshot().message?.tone).toBe('info');bridge.clearMessage();expect(bridge.snapshot().message).toBeUndefined(); });
+ test('takeover changes the approval generation without exposing a credential', () => { const bridge = new WebSetupBridge('fixture/repo'); const first = bridge.controllerGeneration(); bridge.takeOver(); expect(bridge.controllerGeneration()).toBeGreaterThan(first); });
+ test('only editable displayed settings can be selected and a revision cannot replay', async () => {
+  const bridge = new WebSetupBridge('fixture/repo'); const { buildSetupManagementView } = await import('../../application/policies/setup_management_policy'); const { localInstallation,remoteConfiguration } = await import('../../../test-support/setup-management-fixtures');
+  const prompt = bridge.ask({kind:'management',title:'',management:buildSetupManagementView(localInstallation(),remoteConfiguration())}); const revision=bridge.snapshot().promptRevision!;
+  expect(bridge.answer(revision,'edit:forged')).toBe(false); expect(bridge.answer(revision,'edit:members')).toBe(false); expect(bridge.answer(revision,'edit:commentLimit')).toBe(true); expect(await prompt).toBe('edit:commentLimit'); expect(bridge.answer(revision,'close')).toBe(false);
+ });
+ test('quick review rejects unsupported values without consuming the review', async () => { const bridge=new WebSetupBridge('fixture/repo'); const pending=bridge.ask({kind:'quick-review',title:'',change:{id:'commentLimit',variable:'BUGBOT_COMMENT_LIMIT',before:'20',after:'15',scope:'organization'}}); const revision=bridge.snapshot().promptRevision!; expect(bridge.answer(revision,'yes')).toBe(false); expect(bridge.answer(revision,'cancel')).toBe(true); expect(await pending).toBe('cancel'); });
+});

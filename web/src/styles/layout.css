@@ -5,6 +5,7 @@
 .brand strong { display: block; font-size: 23px; line-height: 1; }
 .brand small { display: block; font-size: 9px; letter-spacing: .23em; margin-top: 5px; color: #aac8bd; font-weight: 800; }
 .rail-caption { color: #9dbab0; font-size: 10px; letter-spacing: .18em; font-weight: 800; margin-block: 78px 22px; margin-inline-start: 7px; }
+.sidebar .description { color: #afcabe; }
 .steps { padding: 0; margin: 0; list-style: none; position: relative; }
 .steps::before { content: ''; position: absolute; top: 22px; bottom: 22px; inset-inline-start: 19px; width: 1px; background: var(--side-line); }
 .steps li { position: relative; min-height: 55px; display: flex; align-items: center; gap: 16px; padding-block: 8px; padding-inline: 1px 12px; color: #a6c2b7; font-size: 13px; font-weight: 600; border-radius: 10px; }

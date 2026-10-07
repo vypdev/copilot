@@ -114,3 +114,22 @@ For each human row, record:
 Update the ledger row only after direct observation. A pass needs all fields;
 leave it open when a platform, assistive technology or language reviewer is
 unavailable. Run `pnpm run validate:setup-acceptance` after editing it.
+
+## Configuration panel review
+
+The management tests use fake ports and bounded filesystem fixtures. They cover
+unconfigured/detected/incomplete states, source precedence, unknown expressions,
+read-only access, organization impact, preview cancellation, controller takeover,
+concurrent drift, single-variable writes, uncertain read-back, repeated edits
+and restoring the original value. These cases supplement the existing 350-case
+ledger rather than changing its human review status.
+
+For authorized live review, record the selected scope, baseline value, changed
+value, restored value, remote read-back, unchanged workflow hashes and absence
+of pending permission journals. Never persist PATs in review evidence. Review
+both themes, narrow layouts, keyboard labels, focus and status messages. A live
+macOS browser pass does not establish Windows/Linux or screen-reader approval.
+
+Archive and inspect generated workflows, forms and collaborator guidance after
+each setup iteration, then discard those generated changes. Never commit the
+dogfooding output over this repository's checked-in configuration baseline.

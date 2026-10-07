@@ -35,6 +35,16 @@ unconfirmed cleanup produces a partial result and preserves the permission
 failure and local recovery journal, including during the final pre-Apply
 recheck. The browser must show the affected row and recovery action.
 
+## Configuration management entry (2026-10-08)
+
+Web mode now starts with an inspectable configuration panel and supports focused,
+independently approved runtime adjustments. The additive contract, state model,
+96-case budget, architecture and evidence gates live in
+[Configuration panel and focused adjustments](./setup-configuration-management.md).
+This supersedes the web-only assumption that every launch immediately starts the
+installation questionnaire. Terminal behavior and full-wizard guards remain.
+
+
 ## 1. Executive summary
 
 The default `copilot setup` remains the terminal wizard. `copilot setup --web`

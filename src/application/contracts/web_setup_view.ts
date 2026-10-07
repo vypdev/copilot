@@ -6,6 +6,10 @@ export type { SetupFeature } from '../../domain/setup';
 export type { SetupWorkflowPatStorageNotice } from '../../domain/setup';
 import type { SetupTokenPermissionProgress, SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../../domain/setup_token_permissions';
 import type { SetupCredentialStatus, SetupWorkflowPatStorageNotice } from '../../domain/setup';
+import type { SetupManagementView } from './setup_management_view';
+import type { SetupQuickChange } from '../../domain/setup_management';
+export type { SetupManagementView } from './setup_management_view';
+export type { SetupQuickChange } from '../../domain/setup_management';
 
 export interface SetupQuestionExplanation {
   readonly label: string;
@@ -23,7 +27,7 @@ export interface SetupQuestionExplanation {
 export type SetupQuestionPresentation = Readonly<Record<'en' | 'es' | 'fr' | 'pt', SetupQuestionExplanation>>;
 
 export type WebSetupPromptCopyId =
-  | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
+  | 'management.token' | 'management.tokenWrite' | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
   | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setupPat.entry'
   | 'setupPat.confirmAccount' | 'setupPat.confirmUnverifiedAccess' | 'botPat.method' | 'botPat.login'
   | 'botPat.entry.guided' | 'botPat.entry.manual' | 'botPat.identityMismatch' | 'botPat.scopeConflict' | 'botPat.scopeConflictUnavailable' | 'credential.apiKey'
@@ -50,6 +54,9 @@ export type WebSetupMessageCopyId =
   | 'validation.fixedIssues' | 'validation.fixedWorkflowEnabled' | 'validation.fixedWorkflowDisabled';
 
 export type WebSetupPrompt =
+  | ({ kind: 'management'; title: string; management: SetupManagementView } & WebSetupPromptCopyRef)
+  | ({ kind: 'quick-edit'; title: string; id: string; current: string; presentation?: SetupQuestionPresentation; choices?: readonly string[]; min?: number; max?: number } & WebSetupPromptCopyRef)
+  | ({ kind: 'quick-review'; title: string; change: Omit<SetupQuickChange, 'fingerprint'> } & WebSetupPromptCopyRef)
   | ({ kind: 'question'; title: string; question: SetupQuestion; presentation?: SetupQuestionPresentation; phase: string; pass: number;
       progress?: SetupQuestionnaireProgress; canGoBack?: boolean } & WebSetupPromptCopyRef)
   | ({ kind: 'choice'; title: string; description?: string; choices: readonly string[]; defaultValue?: string } & WebSetupPromptCopyRef)
@@ -89,12 +96,14 @@ export interface WebSetupPlan {
 }
 
 export interface WebSetupView {
+  readonly surface?: 'management' | 'wizard';
   readonly revision: number;
   readonly promptRevision?: number;
   readonly repository: string;
   readonly journey?: SetupJourneyView;
   readonly prompt?: WebSetupPrompt;
   readonly message?: { tone: 'info' | 'success' | 'warning' | 'error'; text: string; link?: string;
+    managementState?: 'checking' | 'connected' | 'invalid' | 'unchanged' | 'stale' | 'blocked' | 'updated' | 'partial';
     copyId?: WebSetupMessageCopyId; copyValues?: Readonly<Record<string, string>>;
     credentialChecks?: readonly { readonly name: string; readonly status: SetupCredentialStatus }[] };
   readonly permissions?: { role: SetupTokenRole; requirements?: readonly SetupTokenPermissionRequirement[];

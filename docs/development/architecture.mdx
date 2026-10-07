@@ -6,6 +6,16 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 
 Guarded PR approval uses a separate trusted observer entrypoint, a pure domain decision (`pull_request_approval`), a read-before-write application use case, and a GitHub adapter. The adapter owns exact producer/rule/review queries and the `commit_id`-pinned native review. Its PR assessment card and supplemental Check are derived UI; GitHub's native review is authoritative. The observer has no PR-head checkout or agent invocation. See the [runtime SDD](../../specs/guarded-pull-request-approval.md) and [setup/doctor SDD](../../specs/guarded-pull-request-approval-setup-and-doctor.md).
 
+Web configuration management has its own `ManageSetupUseCase` over semantic
+ports. Pure policies resolve local workflow bindings, repository/organization
+precedence, edit bounds and approval fingerprints. A bounded YAML adapter reads
+regular files without executing expressions; the existing GitHub adapters read
+resource inventories and write one Variable. Svelte receives redacted typed
+views and cannot choose provider mutations. Each adjustment crosses explicit
+approval, narrow permission testing, drift recheck and read-back boundaries.
+A controller takeover invalidates the pending approval. See the
+[configuration management SDD](../../specs/setup-configuration-management.md).
+
 The repository separates semantic application ports from provider-specific adapters.
 
 Interactive setup milestones are tracked by the application-layer

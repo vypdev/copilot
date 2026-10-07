@@ -3,6 +3,43 @@ title: How To Use
 description: Quick setup with copilot setup, then customize labels, templates, and workflows.
 ---
 
+## Inspect configuration and make a small adjustment
+
+Run `copilot setup --web` from your checkout. After pairing and repository
+confirmation, the configuration panel explains whether Copilot is detected,
+not configured, or only partly inspectable. A new checkout offers **Start
+setup**. Existing workflows offer inspection, **Quick adjustments**, and
+**Run the complete assistant**.
+
+Choose **Read configuration from GitHub** to supply a temporary setup PAT.
+Opening or refreshing the panel reads only. The guided link requests read
+access for Variable values and Secret names; Secret presence does not prove
+that its token is valid. The panel distinguishes repository values,
+organization values and workflow fallbacks, including repository overrides.
+Expand the workflow details to inspect every detected non-secret input.
+
+For an independent setting such as the review comment limit, choose **Change**,
+enter a value, then review the old value, new value and scope. Organization
+changes show their shared impact before approval and retain existing visibility
+and repository access. Copilot tests Variables Write with a temporary Variable,
+removes it, checks for changes during your review, writes the single setting,
+and reads it back. It returns to the panel so you can make another adjustment.
+Quick adjustments never request a bot PAT or rewrite workflows and Secrets.
+
+Use the complete assistant for agents, Projects, capabilities, credentials,
+scope changes or workflows. This starts a fresh questionnaire with its usual
+defaults; it does not reconstruct your customized configuration. Inspect the
+panel first and review the final plan before applying it. `--skip-variables`
+keeps quick adjustments read-only; `--dry-run` uses the existing full preview
+assistant without the management write path.
+
+If access is limited, reconnect with a corrected setup PAT. Unknown expressions,
+environment overrides and unavailable inventories cannot authorize a quick
+change. If cleanup or read-back cannot be confirmed, inspect GitHub before
+retrying; Copilot does not automatically restore an earlier value. The panel
+describes this checkout rather than certifying the default branch or runner.
+
+
 ## Recommended installation and initialization
 
 The setup questionnaire includes an optional [guarded PR approval](/pull-requests/guarded-approval) stage. It recommends guarded mode for new installations, but will not invent test or coverage evidence; `recommend` and `off` remain explicit choices. Existing installations do not begin approving merely by upgrading.

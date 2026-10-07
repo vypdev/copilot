@@ -46,6 +46,7 @@ import {
 } from '../web_setup_adapters';
 import { setupActionResultFailure, setupResultEffects } from '../setup_result_receipt';
 import { reportSetupFailure, finishWebSetupSession } from '../setup_outcome_adapter';
+import { manageWebSetup } from '../setup_management_adapter';
 
 export interface SetupExecutionOptions extends SetupCommandOverrideOptions {
   debug?: boolean; token?: string; workflowPat?: string; secret?: Record<string, string>;
@@ -96,6 +97,10 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             '--confirm-unverifiable-write-permissions is no longer accepted. Setup tests Write capabilities with temporary resources during PAT verification.');
         }
         const session = new SetupSessionCoordinator({
+          ...(webBridge && !options.dryRun ? { manage: async (possibleMutation: () => void, record: (effect: import('../../domain/setup').SetupOperationEffect) => void) =>
+            manageWebSetup(webBridge, checkoutRoot, gitInfo.owner, gitInfo.repo, () => {
+              setupMutationStarted = true; setupApplyStarted = true; possibleMutation();
+            }, record, Boolean(options.skipVariables)) } : {}),
           repository: async (): Promise<SetupSessionDecision> => {
         if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
           || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {

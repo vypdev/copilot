@@ -5,12 +5,14 @@ import { messageCopyEs } from './messages/es';
 import { messageCopyFr } from './messages/fr';
 import { messageCopyPt } from './messages/pt';
 import { questionOptionLabel } from './questionOptions';
+import { managementCopy } from './managementCopy';
 
 export const messageCopyCatalogs: Readonly<Record<SetupLocale, typeof messageCopyEn>> = {
   en: messageCopyEn, es: messageCopyEs, fr: messageCopyFr, pt: messageCopyPt,
 };
 
 export function localizedMessage(message: NonNullable<WebSetupView['message']>, locale: SetupLocale): string {
+  if (message.managementState) return managementCopy(locale)[message.managementState];
   if (!message.copyId) return locale === 'en' ? message.text : tr('unknownLocalError', locale);
   const template = messageCopyCatalogs[locale][message.copyId];
   const values = message.copyValues ?? {};

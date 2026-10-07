@@ -110,3 +110,14 @@ describe('shared setup session coordinator', () => {
     expect(calls).not.toContain('apply');
   });
 });
+
+describe('configuration management handoff', () => {
+ test.each(['complete', 'cancelled', 'blocked', 'partial'] as const)('management %s bypasses the full questionnaire', async outcome => {
+  const f = fixture({ manage: async () => outcome }); expect((await f.coordinator.execute()).outcome).toBe(outcome); expect(f.calls).toEqual(['repository']);
+ });
+ test('management may explicitly continue into the full assistant', async () => { const f = fixture({ manage: async () => 'continue' }); expect((await f.coordinator.execute()).outcome).toBe('complete'); expect(f.calls).toContain('choices'); });
+ test('a later uncertain adjustment supersedes an earlier completed receipt', async () => {
+  const f = fixture({ manage: async (mutation, record) => { mutation(); record({ id: 'variables', state: 'completed', scope: 'organization' }); record({ id: 'variables', state: 'needs-inspection', scope: 'organization' }); return 'partial'; } });
+  expect(await f.coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true, effects: [{ id: 'variables', state: 'needs-inspection', scope: 'organization' }] });
+ });
+});

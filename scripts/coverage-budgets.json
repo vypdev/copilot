@@ -489,6 +489,26 @@
         }
       ],
       "successMessage": "PAT capability audit coverage: PASS (pure permission policies 100%; each credential/HTTP/read/write/cleanup module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "setup configuration management",
+      "missingEntryLabel": "setup management",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_management_permissions_policy.ts",
+            "src/application/policies/setup_management_policy.ts",
+            "src/application/policies/setup_quick_settings_policy.ts",
+            "src/application/usecases/setup/manage_setup_use_case.ts",
+            "src/infrastructure/setup_management_workspace_adapter.ts",
+            "src/cli/setup_management_adapter.ts",
+            "web/src/i18n/managementCopy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "setup configuration management coverage: PASS (each new runtime module 100% lines/statements/branches/functions)"
     }
   ]
 }

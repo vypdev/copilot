@@ -47,14 +47,14 @@
 </script>
 
 <div class="shell">
-  <SetupSidebar journey={$session.view?.journey} />
+  <SetupSidebar journey={$session.view?.journey} management={$session.view?.surface === 'management'} />
   <main class="main">
     <SetupHeader repository={$session.view?.repository} />
     <div class="content">
       {#if $setupLocale !== 'en'}
         <StatusBanner tone="warning" title={tr('translationPreviewTitle', $setupLocale)} message={tr('translationPreviewBody', $setupLocale)} />
       {/if}
-      {#if $session.paired}<SetupIntro view={$session.view} />{/if}
+      {#if $session.paired && $session.view?.surface !== 'management'}<SetupIntro view={$session.view} />{/if}
       {#if $session.view?.journey?.choiceReviewPass && $session.view.journey.choiceReviewPass > 1 && !$session.view.outcome}
         <div class="review-pass" role="status"><span aria-hidden="true">↺</span> {tr('reviewPass', $setupLocale, { pass: String($session.view.journey.choiceReviewPass) })}</div>
       {/if}
@@ -70,7 +70,7 @@
       {#if !$session.paired}
         <PairingPanel busy={$session.busy} onPair={session.pair} />
       {:else if $session.view?.outcome}
-        <ResultPanel outcome={$session.view.outcome} detail={$session.view.resultDetail} permissionReport={$session.view.permissions?.report} setupPatCorrection={$session.view.setupPatCorrection} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
+        <ResultPanel management={$session.view.surface === 'management'} outcome={$session.view.outcome} detail={$session.view.resultDetail} permissionReport={$session.view.permissions?.report} setupPatCorrection={$session.view.setupPatCorrection} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
       {:else if $session.view?.prompt}
         <div class="workspace-grid">
           <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} promptRevision={$session.view.promptRevision!} controller={$session.controller} busy={$session.busy} onSubmit={submit} onRetryDiscovery={retryDiscovery} onBack={back} />

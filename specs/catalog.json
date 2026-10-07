@@ -828,11 +828,12 @@
       "id": "local-web-setup-assistant",
       "title": "Local web setup assistant",
       "status": "proposed",
-      "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes",
+      "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-07",
+      "lastVerified": "2026-10-08",
       "specs": [
-        "specs/local-web-setup-assistant.md"
+        "specs/local-web-setup-assistant.md",
+        "specs/setup-configuration-management.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -949,7 +950,22 @@
         "web/src/components/WorkflowPatStorageNotice.svelte",
         "src/cli/commands/setup_policy.ts",
         "src/application/usecases/execution/execution_issue_number_policy.ts",
-        "src/application/usecases/execution/setup_execution_workflow.ts"
+        "src/application/usecases/execution/setup_execution_workflow.ts",
+        "src/domain/setup_management.ts",
+        "src/application/contracts/setup_management_view.ts",
+        "src/application/ports/setup_management_ports.ts",
+        "src/application/policies/setup_quick_settings_policy.ts",
+        "src/application/policies/setup_management_policy.ts",
+        "src/application/policies/setup_management_permissions_policy.ts",
+        "src/application/usecases/setup/manage_setup_use_case.ts",
+        "src/infrastructure/setup_management_workspace_adapter.ts",
+        "src/cli/setup_management_adapter.ts",
+        "web/src/components/SetupManagementPanel.svelte",
+        "web/src/components/ManagementInventory.svelte",
+        "web/src/components/QuickSettingPrompt.svelte",
+        "web/src/i18n/managementCopy.ts",
+        "web/src/styles/management.css",
+        "scripts/coverage-budgets.json"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -1008,7 +1024,12 @@
         "src/actions/__tests__/local_setup_apply_contract.test.ts",
         "src/cli/commands/__tests__/setup_policy.test.ts",
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
-        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts"
+        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts",
+        "src/application/policies/__tests__/setup_management_policy.test.ts",
+        "src/application/usecases/setup/__tests__/manage_setup_use_case.test.ts",
+        "src/infrastructure/__tests__/setup_management_workspace_adapter.test.ts",
+        "src/cli/__tests__/setup_management_adapter.test.ts",
+        "src/cli/__tests__/web_setup_management_components.test.ts"
       ],
       "documentation": [
         "README.md",

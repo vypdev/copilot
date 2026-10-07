@@ -509,6 +509,7 @@ describe('CLI', () => {
       const webView = () => ((startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge).snapshot();
 
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
+        if (prompt.kind === 'management') return 'wizard';
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
         if (prompt.title === 'Choose setup detail') return 'Basic guided setup';
         if (prompt.title === 'How will you provide your setup PAT?') return 'Manual PAT';

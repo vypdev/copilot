@@ -24,6 +24,16 @@ Runtime routes include Contents read where they inspect branches/commits without
 writing. Local fixtures do not close live provider, accessibility or Windows ACL
 gates; this revision includes no dogfooding.
 
+## Configuration management entry (2026-10-08)
+
+Web mode now starts with an inspectable configuration panel and supports focused,
+independently approved runtime adjustments. The additive contract, state model,
+96-case budget, architecture and evidence gates live in
+[Configuration panel and focused adjustments](./setup-configuration-management.md).
+This supersedes the web-only assumption that every launch immediately starts the
+installation questionnaire. Terminal behavior and full-wizard guards remain.
+
+
 ## 1. Executive summary
 
 `copilot setup` builds and previews a validated installation plan before writing
