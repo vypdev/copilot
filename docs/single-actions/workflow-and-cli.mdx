@@ -224,6 +224,12 @@ flags, and credentials after correcting the PAT. Actions and Pull request
 checks can leave GitHub run or PR history and notifications despite cleanup;
 review those effects in the plan before approving it.
 
+Setup installs the selected repository and does not require an existing issue
+or an issue workflow label. Its Apply step does not inspect issue `#1` or derive
+an issue from the current branch. Codex API credentials may be left empty when
+the target runners already have a working Codex login; runtime preflight checks
+that authentication when an agent task runs.
+
 Without an explicit `--agent-guidance` or config value, non-interactive setup
 still generates the profile, guide, and skill, but it uses
 `create-if-missing`: an existing root `AGENTS.md` is not edited. Pass

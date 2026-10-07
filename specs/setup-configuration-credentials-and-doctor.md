@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-07
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-06 (local automated audit evidence) (shared-session and resource-progress fixture evidence; live GitHub path remains external)
+- Last verified: 2026-10-07 (shared-session, resource-progress and repository-only Apply fixture evidence; live GitHub path remains external)
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -277,6 +277,22 @@ Config objects contain names and policies, never secret values. The workspace
 adapter owns backups and writes; GitHub adapters own remote error mapping.
 Architecture tests and workflow/catalog validators enforce dependencies and
 asset parity.
+
+Repository installation is independent of issue workflow admission. CLI Apply
+passes repository identity, approved setup configuration and validated credentials
+to the shared action adapter without a fabricated issue or `single-action-issue`.
+The application issue-resolution policy treats `initial_setup` as repository
+work before reading configured issue numbers or event metadata. Even legacy
+callers supplying issue `1`, an issue event, a PR branch or a push branch cannot
+make installation load issue labels, descriptions, configuration or version
+metadata, including the unlinked-PR configuration fallback. The previous
+setup-only tolerance for failed issue-label reads is removed, since installation
+does not read issue labels. Authentication and all setup validation/provisioning ports still run;
+issue-bound actions retain their admission checks. `InitialSetupUseCase` receives
+its existing narrow repository setup context, rather than an issue-shaped input.
+An omitted Codex API key remains valid when runner authentication is the selected
+alternative; installation does not invoke Codex to validate an unrelated issue.
+
 The Actions resource facade delegates inventory reads to
 `GithubActionsResourceInspector` and scope-preserving mutations to
 `GithubActionsResourceCommands`, sharing only collection decoding. Provider
@@ -449,10 +465,19 @@ manual reversal.
 | Defaults/config/storage policy | 27 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 28 | valid/invalid/missing/unverifiable/groups; ten Secret/Variable cases for missing selected-repository endpoint/identity, creation, failed grants, and private visibility |
-| Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
+| Workflows/assets/schema | 18 | selection, parity, readiness, permissions; four repository-only installation cases reject incidental configured issue/event linkage |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 17 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails |
-| **Total** | **122** | no double counting |
+| Integration/security/cutover | 23 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails; two execution bootstrap and four Apply/authentication cases |
+| **Total** | **132** | no double counting |
+
+The repository-only Apply correction adds **10 distinct automated cases**:
+four in `execution_issue_number_policy.test.ts`, two in
+`setup_execution_workflow.test.ts` and four in
+`local_setup_apply_contract.test.ts`. The last four exercise the production
+local action, execution setup, single-action dispatch and installation use case
+with fixture provider/workspace ports: an approved Codex plan without API keys,
+the same plan with legacy issue `1` or PR event metadata, and invalid setup authentication with zero
+installation writes. No live GitHub resources or runner authentication are tested.
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -521,6 +546,13 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     value write. A denied grant never counts as created/updated; private
     visibility succeeds without that endpoint. Execute
     `repository_selected_resource_grants.test.ts` for both resource families.
+21. Given an approved setup plan with Codex runner authentication and no API
+    key, Apply reaches repository installation without looking up any issue.
+    A legacy explicit issue `1` or issue/PR/push event does not change that
+    scope. Invalid setup authentication still prevents file, Secret and Variable
+    writes. Execute `local_setup_apply_contract.test.ts` and the execution
+    issue-resolution/workflow suites; issue-bound actions keep their existing
+    admission regressions.
 
 ## 17. Requirements traceability
 
@@ -545,7 +577,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 112-case budget and coverage thresholds pass.
+- [x] The 132-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and metadata-only `doctor --read-only`
       behavior pass; ordinary doctor dispatch is disclosed separately.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.

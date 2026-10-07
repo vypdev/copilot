@@ -491,6 +491,17 @@ single-flight and cannot be entered if the approval use case did not return an
 approved result. Deterministic fake-port tests cover every drift category,
 cancel/expiry interleavings, and audit outcomes.
 
+Apply installs a repository; it has no issue workflow admission prerequisite.
+The CLI action adapter must not supply a placeholder issue number. Application
+issue resolution ignores incidental issue/PR/push metadata for `initial_setup`,
+including the old explicit issue `1`, while preserving authentication and setup
+validation. The production local-action/installation fixture proves that an
+approved Codex plan with an omitted API key reaches scoped provisioning when
+runner authentication is the chosen alternative. Its **10-case incremental
+budget** is owned by [setup and doctor](./setup-configuration-credentials-and-doctor.md#14-testing-strategy-and-numeric-budget),
+shared here without adding a second count to the web acceptance ledger. Other
+issue-bound actions retain their admission checks.
+
 The follow-up extraction MUST introduce a frontend-neutral application session
 coordinator that owns the order and terminal classification of repository
 confirmation, choice collection, operator PAT verification, plan review,

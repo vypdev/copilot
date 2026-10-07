@@ -52299,6 +52299,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveEventIssueNumber = resolveEventIssueNumber;
 exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const action_types_1 = __nccwpck_require__(19625);
 const title_utils_1 = __nccwpck_require__(46267);
 function resolveEventIssueNumber(context) {
     let issueNumber;
@@ -52325,6 +52326,11 @@ function resolveEventIssueNumber(context) {
     return { issueNumber, singleAction: currentSingleAction(context) };
 }
 async function resolveSingleActionIssueNumber(context, issueRepository) {
+    // Installation targets the repository, even if a legacy caller supplies
+    // an issue number or an issue/PR/push event. Never load unrelated work.
+    if (context.singleAction.currentAction === action_types_1.ACTIONS.INITIAL_SETUP) {
+        return { singleAction: { issue: 0, isIssue: false, isPullRequest: false, isPush: false } };
+    }
     const configuredIssue = context.configuredSingleActionIssue;
     if (configuredIssue !== undefined && String(configuredIssue).trim() !== '') {
         const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(configuredIssue);
@@ -52483,7 +52489,7 @@ exports.SetupExecutionUseCase = SetupExecutionUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSetupExecution = runSetupExecution;
 const application_error_1 = __nccwpck_require__(75999);
-const initial_labels_policy_1 = __nccwpck_require__(50293);
+const action_types_1 = __nccwpck_require__(19625);
 const previous_branch_state_policy_1 = __nccwpck_require__(43630);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -52492,7 +52498,8 @@ async function runSetupExecution(context, dependencies) {
     (0, logging_ports_1.setGlobalLoggerDebug)(context.debug, context.local);
     const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
     const issueResolution = await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(context, dependencies.issueSetupPort);
-    const canConfigureUnlinkedPullRequest = context.isPullRequest
+    const isRepositorySetup = context.isSingleAction && context.singleAction.currentAction === action_types_1.ACTIONS.INITIAL_SETUP;
+    const canConfigureUnlinkedPullRequest = context.isPullRequest && !isRepositorySetup
         && positiveIssueNumberOrUndefined(context.pullRequest.number) !== undefined;
     if (issueResolution.issueNumber === undefined && !canConfigureUnlinkedPullRequest) {
         return { status: 'issue-unresolved', tokenUser, issueResolution };
@@ -52500,7 +52507,7 @@ async function runSetupExecution(context, dependencies) {
     const previousConfiguration = await loadPreviousConfiguration(context, issueResolution.issueNumber, dependencies.configurationPort);
     const currentIssueLabels = issueResolution.issueNumber === undefined
         ? []
-        : await loadIssueLabels(context, issueResolution.issueNumber, dependencies.issueSetupPort);
+        : await dependencies.issueSetupPort.getLabels(issueResolution.issueNumber);
     const liveIssueBody = issueResolution.issueNumber === undefined
         ? undefined
         : await dependencies.issueSetupPort.getDescription(issueResolution.issueNumber);
@@ -52608,17 +52615,6 @@ async function loadTokenUser(context, organizationSetupPort) {
 async function loadPreviousConfiguration(context, resolvedIssueNumber, configurationPort) {
     const issueNumber = configurationIssueNumber(context, resolvedIssueNumber);
     return issueNumber === undefined ? undefined : configurationPort.get(issueNumber);
-}
-async function loadIssueLabels(context, issueNumber, issueSetupPort) {
-    try {
-        return await issueSetupPort.getLabels(issueNumber);
-    }
-    catch (error) {
-        if (!(0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(context.isSingleAction, context.singleAction.currentAction))
-            throw error;
-        (0, logging_ports_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
-        return [];
-    }
 }
 function configurationIssueNumber(context, resolvedIssueNumber) {
     if (context.isSingleAction || context.isPush)
@@ -63952,21 +63948,6 @@ class Hotfix {
     }
 }
 exports.Hotfix = Hotfix;
-
-
-/***/ }),
-
-/***/ 50293:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.shouldSkipInitialLabelsFetch = shouldSkipInitialLabelsFetch;
-const action_types_1 = __nccwpck_require__(19625);
-function shouldSkipInitialLabelsFetch(isSingleAction, currentSingleAction) {
-    return isSingleAction && currentSingleAction === action_types_1.ACTIONS.INITIAL_SETUP;
-}
 
 
 /***/ }),

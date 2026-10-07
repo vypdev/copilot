@@ -12,8 +12,9 @@ describe('setup command policy', () => {
       [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.INITIAL_SETUP,
       [INPUT_KEYS.TOKEN]: 'token',
       repo: gitInfo,
-      issue: { number: 1 },
     });
+    expect(params).not.toHaveProperty('issue');
+    expect(params).not.toHaveProperty(INPUT_KEYS.SINGLE_ACTION_ISSUE);
     expect(params[INPUT_KEYS.WELCOME_MESSAGES]).toHaveLength(2);
   });
 
