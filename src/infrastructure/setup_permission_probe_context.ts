@@ -8,6 +8,8 @@ export interface ResourceProbeContext {
     readonly scope: SetupTokenPermissionScope;
     readonly probe: SetupTokenPermissionProbe;
     readonly http: SetupPermissionProbeHttp;
+    /** Setup authority prepares and cleans Actions fixtures; the candidate still dispatches and reads its run. */
+    readonly operatorHttp?: SetupPermissionProbeHttp;
     readonly journal: SetupPermissionProbeJournal;
     readonly phase: (phase: 'creating' | 'reading' | 'deleting') => void;
 }

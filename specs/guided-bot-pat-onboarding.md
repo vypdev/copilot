@@ -218,6 +218,13 @@ and stores the bot PAT in the selected Actions Secret scope.
    Required writes must complete create/read/cleanup; an `Unverifiable` write
    remains blocked and cannot be acknowledged into readiness. Exact selected
    organization Projects additionally require `viewerCanUpdate` for this PAT.
+   For Actions Write, the validated operator PAT prepares and cleans the
+   isolated branch and verified disabled-job workflow; the bot PAT alone must
+   dispatch and read its exact run. The runtime link MUST NOT add Workflows
+   solely to satisfy that preparation. Other bot write probes retain bot
+   authority, including Project creation/deletion. Operator preparation grants
+   are disclosed in the setup plan before the bot audit. Credentials remain in
+   application memory and never enter the browser report or recovery journal.
 5. After plan confirmation, use the operator credential to install the bot
    PAT as repository or organization Secret `PAT`. Print Secret scope, expected
    bot identity, successful setup facts, and any remaining health checks.

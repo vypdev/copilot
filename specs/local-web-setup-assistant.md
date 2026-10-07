@@ -1595,6 +1595,14 @@ still offers the terminal setup and doctor paths.
 
 ## 14. Testing strategy and numeric budget
 
+Bot permission failures select role-specific result copy from the authoritative
+permission report. A workflow-role failure MUST name the bot PAT, including
+when temporary cleanup is pending; stale reports cannot override unrelated
+storage/provider causes. The plan explains that the setup PAT prepares and
+cleans an Actions fixture while the bot PAT dispatches and reads it. Four
+localized component cases in `web_setup_components` cover this correction as
+part of the 27-case PAT regression slice in the permission-guidance SDD.
+
 The revised floor is **350 distinct cases** (the previous 274 plus 76
 first-run-completion cases), derived from shared-engine parity,
 six-stage transitions, two PAT roles, local HTTP abuse, packaged installs,

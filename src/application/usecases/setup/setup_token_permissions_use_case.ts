@@ -39,13 +39,24 @@ export class SetupTokenPermissionsUseCase {
             };
         }
 
-        const evidence = this.onProgress
-            ? await this.permissions.inspect(request.owner, request.repository, request.token,
-                request.requirements, this.onProgress, request.selectedProjectNumbers,
-                ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]))
-            : await this.permissions.inspect(request.owner, request.repository, request.token,
-                request.requirements, undefined, request.selectedProjectNumbers,
-                ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]));
+        if (request.operatorToken !== undefined) {
+            const operator = await this.credentials.validateSetupPat(request.owner, request.repository, request.operatorToken);
+            if (operator.status !== 'valid') {
+                return {
+                    role: request.role, ...(identity.account ? { account: identity.account } : {}),
+                    identityStatus: 'valid', identityMessage: identity.message,
+                    checks: request.requirements.map(requirement => ({ ...requirement, status: 'unverifiable',
+                        message: 'The setup PAT could not authorize preparation or cleanup of the temporary Actions check.' })),
+                    ready: false, confirmationRequired: false,
+                };
+            }
+        }
+        const audit = (...options: [boolean?, string?]) => this.permissions.inspect(
+            request.owner, request.repository, request.token, request.requirements,
+            this.onProgress, request.selectedProjectNumbers, ...options);
+        const evidence = request.operatorToken !== undefined
+            ? await audit(request.includeConditionalWrites ?? false, request.operatorToken)
+            : request.includeConditionalWrites === undefined ? await audit() : await audit(request.includeConditionalWrites);
         const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');

@@ -13,6 +13,20 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test.each([
+    ['en', 'The bot PAT did not complete', 'The setup PAT lacked'],
+    ['es', 'El PAT del bot no completó', 'Faltan permisos del PAT de configuración'],
+    ['fr', 'Le PAT du bot n’a pas terminé', 'Les droits nécessaires du PAT de configuration'],
+    ['pt', 'O PAT do bot não concluiu', 'Faltam permissões do PAT de configuração'],
+  ])('%s bot failure identifies the audited PAT without blaming the setup PAT', (locale, correct, wrong) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Bot PAT & credentials', mutationStarted: false },
+      permissionReport: { role: 'workflow', identityStatus: 'valid', checks: [{ permission: 'Projects', scope: 'organization',
+        level: 'write', applicability: 'required', status: 'unverifiable', cleanupPending: true }] } }, locale);
+    expect(html).toContain(correct);
+    expect(html).not.toContain(wrong);
+    expect(html).toContain('Projects');
+  });
   test.each(['en', 'es', 'fr', 'pt'])('%s shows an explicit conflict recheck, scope choice and safe GitHub settings link', locale => {
     const choices = ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'];
     const prompt = { kind: 'choice', title: 'Conflict', copyId: 'botPat.scopeConflict',

@@ -23,6 +23,8 @@ export const permissionCopyEs: Readonly<Record<PermissionText, string>> = {
   'Inspect and provision selected repository Actions Variables.': 'Examinar y configurar las Variables de Actions seleccionadas en el repositorio.',
   'Provision labels for the selected issue workflows.': 'Crear las etiquetas de los flujos de issues seleccionados.',
   'Dispatch credential-health checks for existing Secrets.': 'Ejecutar comprobaciones de credenciales para los Secrets existentes.',
+  'Prepare and clean isolated Actions checks for the bot PAT and any existing credentials.': 'Preparar y limpiar las pruebas aisladas de Actions para el PAT del bot y las credenciales existentes.',
+  'Prepare a verified no-job workflow for the bot Actions check.': 'Preparar un workflow verificado con los jobs desactivados para comprobar Actions con el PAT del bot.',
   'Inspect CI workflow runs and jobs for approval evidence.': 'Examinar ejecuciones y jobs de CI como prueba para la aprobación.',
   'Temporarily install credential health when its workflow is not confirmed installed.': 'Instalar temporalmente la comprobación de credenciales si su workflow no está confirmado.',
   'Inspect branch protection and effective rulesets.': 'Examinar la protección de ramas y las reglas efectivas.',

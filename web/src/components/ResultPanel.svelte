@@ -35,6 +35,7 @@
     ? permissionReport : undefined;
   $: pendingProbeCleanup = blockedPermissionReport?.checks.some(check => check.cleanupPending === true) === true;
   $: secretCollision = blockedPermissionReport?.checks.some(check => check.incident === 'secret-collision') === true;
+  $: reasonKey = blockedPermissionReport?.role === 'workflow' ? 'reasonWorkflowPermissions' : reasons[detail?.reasonCode ?? 'unknown'][0];
   $: showPatCorrection = outcome === 'blocked' && detail?.reasonCode === 'permissions'
     && detail.mutationStarted === false && !pendingProbeCleanup && !secretCollision && setupPatCorrection;
   $: unresolvedPermissions = blockedPermissionReport
@@ -45,7 +46,7 @@
 <section class="card result-card" tabindex="-1" use:focusOnRevision={1}><span class="result-icon" aria-hidden="true">{outcome === 'complete' ? '✓' : '!'}</span><h2>{heading}</h2>
   {#if outcome === 'blocked' || outcome === 'cancelled' || outcome === 'partial'}
     <div class="result-facts">
-      <p><strong>{tr('whatHappened', $setupLocale)}:</strong> {tr(reasons[detail?.reasonCode ?? 'unknown'][0], $setupLocale)}</p>
+      <p><strong>{tr('whatHappened', $setupLocale)}:</strong> {tr(reasonKey, $setupLocale)}</p>
       {#if detail?.stoppedStage}<p><strong>{tr('progress', $setupLocale)}:</strong> {stageLabel(detail.stoppedStage, $setupLocale)}</p>{/if}
       <p><strong>{tr('alreadyChanged', $setupLocale)}:</strong> {secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : detail?.mutationStarted || outcome === 'partial' ? tr('inspectPartial', $setupLocale) : tr('noChanges', $setupLocale)}</p>
       <p><strong>{tr('nextAction', $setupLocale)}:</strong> {secretCollision ? tr('permissionSecretCollisionAction', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupAction', $setupLocale) : outcome === 'partial' ? `${tr('inspectPartial', $setupLocale)} ${tr(reasons[detail?.reasonCode ?? 'unknown'][1], $setupLocale)}` : tr(reasons[detail?.reasonCode ?? 'unknown'][1], $setupLocale)}</p>

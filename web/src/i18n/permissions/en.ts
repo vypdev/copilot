@@ -22,6 +22,8 @@ export const permissionTexts = [
   'Inspect and provision selected repository Actions Variables.',
   'Provision labels for the selected issue workflows.',
   'Dispatch credential-health checks for existing Secrets.',
+  'Prepare and clean isolated Actions checks for the bot PAT and any existing credentials.',
+  'Prepare a verified no-job workflow for the bot Actions check.',
   'Inspect CI workflow runs and jobs for approval evidence.',
   'Temporarily install credential health when its workflow is not confirmed installed.',
   'Inspect branch protection and effective rulesets.',

@@ -3,7 +3,7 @@ import { ProbeFailure, SetupPermissionProbeHttp, probeJsonRecord } from './setup
 export async function cleanupProject(http: SetupPermissionProbeHttp, owner: string, title: string, recordedId?: string): Promise<void> {
     const id = recordedId ?? await findProjectByTitle(http, owner, title);
     if (!id) return;
-    const before = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    const before = await projectNode(http, owner, title, id);
     if (before.node === null) return;
     if (!before.node || typeof before.node !== 'object' || Array.isArray(before.node)
         || (before.node as Record<string, unknown>).id !== id
@@ -19,8 +19,30 @@ export async function cleanupProject(http: SetupPermissionProbeHttp, owner: stri
         || ((result as Record<string, unknown>).projectV2 as Record<string, unknown>).id !== id) {
         throw new ProbeFailure('GitHub did not confirm deletion of the temporary Project.');
     }
-    const after = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    const after = await projectNode(http, owner, title, id);
     if (after.node !== null) throw new ProbeFailure('Temporary Project cleanup could not be confirmed.');
+}
+
+/** GitHub returns a node-scoped NOT_FOUND alongside node:null after deletion. */
+async function projectNode(http: SetupPermissionProbeHttp, owner: string, title: string, id: string): Promise<Record<string, unknown>> {
+    const response = await http.expect('https://api.github.com/graphql', 'POST', [200], {
+        query: 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', variables: { id },
+    });
+    const body = await probeJsonRecord(response);
+    const data = cleanupData(body);
+    if (Array.isArray(body.errors) && body.errors.length > 0 && data.node === null
+        && body.errors.every(error => error && typeof error === 'object' && !Array.isArray(error)
+            && error.type === 'NOT_FOUND' && Array.isArray(error.path)
+            && error.path.length === 1 && error.path[0] === 'node')) {
+        // A hidden node can also look missing. Require a complete, authorized
+        // organization title lookup before clearing its recovery record.
+        if (await findProjectByTitle(http, owner, title)) {
+            throw new ProbeFailure('Temporary Project cleanup could not be confirmed.');
+        }
+        return data;
+    }
+    rejectGraphQlErrors(body);
+    return data;
 }
 
 async function findProjectByTitle(http: SetupPermissionProbeHttp, owner: string, title: string): Promise<string | undefined> {
@@ -72,7 +94,17 @@ async function findProjectByTitle(http: SetupPermissionProbeHttp, owner: string,
 async function projectGraphQl(http: SetupPermissionProbeHttp, query: string, variables: Record<string, unknown>): Promise<Record<string, unknown>> {
     const response = await http.expect('https://api.github.com/graphql', 'POST', [200], { query, variables });
     const body = await probeJsonRecord(response);
-    if (Array.isArray(body.errors) && body.errors.length > 0) throw new ProbeFailure('GitHub rejected temporary Project cleanup.');
+    rejectGraphQlErrors(body);
+    return cleanupData(body);
+}
+
+function rejectGraphQlErrors(body: Record<string, unknown>): void {
+    if (body.errors !== undefined && (!Array.isArray(body.errors) || body.errors.length > 0)) {
+        throw new ProbeFailure('GitHub rejected temporary Project cleanup.');
+    }
+}
+
+function cleanupData(body: Record<string, unknown>): Record<string, unknown> {
     const data = body.data;
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
         throw new ProbeFailure('GitHub returned invalid temporary Project cleanup data.');

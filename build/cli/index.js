@@ -47820,7 +47820,7 @@ function buildSetupPatPermissionRequirements() {
 function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     // Unknown is not evidence of a personal owner: keep possible organization
     // grants visible until the final audit can verify the actual owner type.
-    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
+    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote, undefined, true);
 }
 /** Local requirements plus disclosed health prerequisites for selected Secret management. */
 function buildSetupPatIntentPermissionRequirements(configuration, ownerKind, projectsWanted = configuration.projects.ids.trim().length > 0) {
@@ -47866,7 +47866,7 @@ function requiredSetupPatPermissionDelta(before, after) {
             || (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === 'read' && item.level === 'write')))
         .map(item => `${item.scope} ${item.permission} ${item.level}`);
 }
-function buildSetupPatRequirements(configuration, organization, remote, projectsWanted = configuration.projects.ids.trim().length > 0) {
+function buildSetupPatRequirements(configuration, organization, remote, projectsWanted = configuration.projects.ids.trim().length > 0, includeBotActionsFixture = false) {
     const repositorySecretNames = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration)
         .map(credential => credential.name);
     const repositoryVariableNames = (0, setup_configuration_plan_1.buildSetupRepositoryVariables)(configuration)
@@ -47886,14 +47886,16 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
     const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
     const hasExistingCredential = repositorySecretNames.filter(name => name !== 'PAT').some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
+    const needsBotActionsFixture = includeBotActionsFixture && configuration.manageRepositorySecrets && releaseOrHotfix;
+    const needsActionsFixture = needsCredentialHealth || needsBotActionsFixture;
     const needsCredentialHealthBootstrap = needsCredentialHealth
         && remote?.credentialHealthWorkflow === 'missing';
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
-        ...(configuration.createInitialTag || needsCredentialHealth ? [requirement({
+        ...(configuration.createInitialTag || needsActionsFixture ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
-                reason: configuration.createInitialTag && needsCredentialHealth
+                reason: configuration.createInitialTag && needsActionsFixture
                     ? 'Create the initial tag and an isolated branch for the Actions permission check.'
                     : configuration.createInitialTag
                         ? 'Create the initial repository tag when no version tag exists.'
@@ -47911,16 +47913,20 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
                 role: 'setup', scope: 'repository', permission: 'Issues', level: 'write',
                 reason: 'Provision labels for the selected issue workflows.', probe: 'issues',
             })] : []),
-        ...(needsCredentialHealth ? [requirement({
+        ...(needsActionsFixture ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Actions', level: 'write',
-                reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
+                reason: needsBotActionsFixture
+                    ? 'Prepare and clean isolated Actions checks for the bot PAT and any existing credentials.'
+                    : 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
             })] : []),
         ...(approvalEnabled ? [
             requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', reason: 'Inspect CI workflow runs and jobs for approval evidence.', probe: 'actions' }),
             requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
         ] : []),
-        ...(needsCredentialHealthBootstrap ? [
-            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+        ...(needsCredentialHealthBootstrap || needsBotActionsFixture ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+                reason: needsBotActionsFixture ? 'Prepare a verified no-job workflow for the bot Actions check.'
+                    : 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
         ] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
@@ -55163,6 +55169,8 @@ class SetupCredentialsUseCase {
                     owner: request.owner,
                     repository: request.repository,
                     token: value.value,
+                    ...(workflowTokenPermissions.some(permission => permission.probe === 'actions' && permission.level === 'write')
+                        ? { operatorToken: request.setupToken } : {}),
                     requirements: workflowTokenPermissions,
                     ...(request.selectedProjectNumbers ? { selectedProjectNumbers: request.selectedProjectNumbers } : {}),
                 });
@@ -55601,9 +55609,22 @@ class SetupTokenPermissionsUseCase {
                 confirmationRequired: false,
             };
         }
-        const evidence = this.onProgress
-            ? await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, this.onProgress, request.selectedProjectNumbers, ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]))
-            : await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, undefined, request.selectedProjectNumbers, ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]));
+        if (request.operatorToken !== undefined) {
+            const operator = await this.credentials.validateSetupPat(request.owner, request.repository, request.operatorToken);
+            if (operator.status !== 'valid') {
+                return {
+                    role: request.role, ...(identity.account ? { account: identity.account } : {}),
+                    identityStatus: 'valid', identityMessage: identity.message,
+                    checks: request.requirements.map(requirement => ({ ...requirement, status: 'unverifiable',
+                        message: 'The setup PAT could not authorize preparation or cleanup of the temporary Actions check.' })),
+                    ready: false, confirmationRequired: false,
+                };
+            }
+        }
+        const audit = (...options) => this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, this.onProgress, request.selectedProjectNumbers, ...options);
+        const evidence = request.operatorToken !== undefined
+            ? await audit(request.includeConditionalWrites ?? false, request.operatorToken)
+            : request.includeConditionalWrites === undefined ? await audit() : await audit(request.includeConditionalWrites);
         const checks = (0, setup_token_permission_evidence_policy_1.reconcileSetupTokenPermissionEvidence)(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');
@@ -86043,26 +86064,27 @@ const MAX_WORKFLOW_FILE_CHECKS = 64;
 const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa6979dfda71446a54f607b18d61';
 /** Dispatches a disabled-job branch override of a workflow already registered on default. */
 async function probeActions(context) {
+    const preparationHttp = context.operatorHttp ?? context.http;
     const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
-    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(root, 'GET', [200]));
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(root, 'GET', [200]));
     const base = metadata.default_branch;
     if (typeof base !== 'string' || !/^[A-Za-z0-9._/-]{1,255}$/u.test(base)
         || base.startsWith('/') || base.endsWith('/')) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
     }
-    const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
+    const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
     const object = ref.object;
     const sha = object && typeof object === 'object' && !Array.isArray(object)
         ? object.sha : undefined;
     if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
     }
-    const workflow = await findDispatchWorkflow(context, root, sha);
+    const workflow = await findDispatchWorkflow({ ...context, http: preparationHttp }, root, sha);
     if (!workflow) {
         throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.', undefined, false, false, 'dispatch-workflow');
     }
     const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
-    const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
+    const prior = await preparationHttp.request(`${root}/git/ref/heads/${name}`);
     if (prior.status !== 404)
         throw new setup_permission_probe_http_1.ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
     const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
@@ -86073,7 +86095,7 @@ async function probeActions(context) {
     try {
         await handle.setReferenceSha(sha);
         try {
-            await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+            await preparationHttp.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         }
         catch (error) {
             if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.httpStatus === 403) {
@@ -86084,7 +86106,7 @@ async function probeActions(context) {
         if (!workflow.trustedNoOp) {
             const file = `${root}/contents/${workflow.path}`;
             try {
-                const written = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(file, 'PUT', [200], {
+                const written = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(file, 'PUT', [200], {
                     message: 'chore: verify temporary Actions permission [skip ci]',
                     content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
                 }));
@@ -86096,7 +86118,7 @@ async function probeActions(context) {
                 }
                 throw error;
             }
-            const observedFile = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
+            const observedFile = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(`${file}?ref=${name}`, 'GET', [200]));
             if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'
                 || typeof observedFile.content !== 'string'
                 || Buffer.from(observedFile.content, 'base64').toString('utf8') !== noOp) {
@@ -86129,7 +86151,7 @@ async function probeActions(context) {
     }
     context.phase('deleting');
     try {
-        await handle.cleanup(context.http);
+        await handle.cleanup(preparationHttp);
     }
     catch {
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions cleanup could not be confirmed; recovery is required before retrying.', undefined, true);
@@ -86573,7 +86595,7 @@ class SetupPermissionProbeJournal {
         }
         return new ProbeJournalHandle(path, { ...entry, version: 2, pid: process.pid });
     }
-    async recover(owner, repository, http) {
+    async recover(owner, repository, http, operatorHttp) {
         let names;
         try {
             names = await (0, promises_1.readdir)(this.root);
@@ -86602,7 +86624,7 @@ class SetupPermissionProbeJournal {
             if (entry.pid !== process.pid && processIsRunning(entry.pid)) {
                 throw new setup_permission_probe_http_1.ProbeFailure('Another setup process has a temporary permission resource in progress.');
             }
-            await new ProbeJournalHandle((0, node_path_1.join)(this.root, name), entry).cleanup(http);
+            await new ProbeJournalHandle((0, node_path_1.join)(this.root, name), entry).cleanup(entry.probe === 'actions' ? operatorHttp ?? http : http);
         }
     }
     async assertPrivateRoot() {
@@ -86902,7 +86924,7 @@ async function cleanupProject(http, owner, title, recordedId) {
     const id = recordedId ?? await findProjectByTitle(http, owner, title);
     if (!id)
         return;
-    const before = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    const before = await projectNode(http, owner, title, id);
     if (before.node === null)
         return;
     if (!before.node || typeof before.node !== 'object' || Array.isArray(before.node)
@@ -86918,9 +86940,30 @@ async function cleanupProject(http, owner, title, recordedId) {
         || result.projectV2.id !== id) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not confirm deletion of the temporary Project.');
     }
-    const after = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    const after = await projectNode(http, owner, title, id);
     if (after.node !== null)
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup could not be confirmed.');
+}
+/** GitHub returns a node-scoped NOT_FOUND alongside node:null after deletion. */
+async function projectNode(http, owner, title, id) {
+    const response = await http.expect('https://api.github.com/graphql', 'POST', [200], {
+        query: 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', variables: { id },
+    });
+    const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+    const data = cleanupData(body);
+    if (Array.isArray(body.errors) && body.errors.length > 0 && data.node === null
+        && body.errors.every(error => error && typeof error === 'object' && !Array.isArray(error)
+            && error.type === 'NOT_FOUND' && Array.isArray(error.path)
+            && error.path.length === 1 && error.path[0] === 'node')) {
+        // A hidden node can also look missing. Require a complete, authorized
+        // organization title lookup before clearing its recovery record.
+        if (await findProjectByTitle(http, owner, title)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup could not be confirmed.');
+        }
+        return data;
+    }
+    rejectGraphQlErrors(body);
+    return data;
 }
 async function findProjectByTitle(http, owner, title) {
     let after = null;
@@ -86970,8 +87013,15 @@ async function findProjectByTitle(http, owner, title) {
 async function projectGraphQl(http, query, variables) {
     const response = await http.expect('https://api.github.com/graphql', 'POST', [200], { query, variables });
     const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
-    if (Array.isArray(body.errors) && body.errors.length > 0)
+    rejectGraphQlErrors(body);
+    return cleanupData(body);
+}
+function rejectGraphQlErrors(body) {
+    if (body.errors !== undefined && (!Array.isArray(body.errors) || body.errors.length > 0)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub rejected temporary Project cleanup.');
+    }
+}
+function cleanupData(body) {
     const data = body.data;
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid temporary Project cleanup data.');
@@ -88220,25 +88270,25 @@ class SetupTokenPermissionQueryAdapter {
         this.timeoutMs = options.timeoutMs ?? 10000;
         this.journal = options.journal ?? new setup_permission_probe_journal_1.SetupPermissionProbeJournal();
     }
-    async inspect(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites = false) {
+    async inspect(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites = false, operatorToken) {
         const target = `${owner.toLowerCase()}/${repository.toLowerCase()}`;
         if (activeInspections.has(target)) {
             return requirements.map(requirement => (0, setup_permission_read_evidence_1.outcome)(requirement, 'unverifiable', 'Another permission inspection is in progress for this repository. Retry after it completes.'));
         }
         activeInspections.add(target);
         try {
-            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites);
+            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken);
         }
         finally {
             activeInspections.delete(target);
         }
     }
-    async inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites) {
+    async inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken) {
         try {
             // Read-only identity checks and previews must never perform recovery writes.
             if (requirements.some(item => item.level === 'write'
                 && (item.applicability === 'required' || includeConditionalWrites))) {
-                await this.journal.recover(owner, repository, new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+                await this.journal.recover(owner, repository, new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs), operatorToken === undefined ? undefined : new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs));
             }
         }
         catch (error) {
@@ -88255,9 +88305,9 @@ class SetupTokenPermissionQueryAdapter {
                         ? { incident: 'secret-collision' } : {}) } : check;
             });
         }
-        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites)), SETUP_PERMISSION_PROBE_CONCURRENCY);
+        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken)), SETUP_PERMISSION_PROBE_CONCURRENCY);
     }
-    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites) {
+    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken) {
         let acceptingProgress = true;
         const emit = (phase, detail) => {
             if (acceptingProgress)
@@ -88280,6 +88330,8 @@ class SetupTokenPermissionQueryAdapter {
                 }
                 await (0, setup_permission_resource_probes_1.probeDisposableResource)({ owner, repository, scope: requirement.scope, probe: requirement.probe,
                     http,
+                    ...(requirement.role === 'workflow' && requirement.probe === 'actions' && operatorToken !== undefined
+                        ? { operatorHttp: new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs) } : {}),
                     journal: this.journal, phase: emit });
                 const check = { ...requirement, status: 'verified', writeProof: 'transaction',
                     message: 'GitHub accepted temporary create, exact readback, and confirmed cleanup.' };

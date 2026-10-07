@@ -228,9 +228,17 @@ number, retains the cleanup record and blocks further setup until deletion is
 confirmed. This test can leave notifications and audit history. Actions and Pull
 request tests may also leave GitHub history and notifications after cleanup; the
 PAT-entry guidance discloses these tests before they start.
+For a bot **Actions Write** check, the already verified **setup PAT** prepares
+and cleans the isolated branch and disabled-job workflow. Only the **bot PAT**
+dispatches and reads its exact run. The bot link therefore does not need
+Workflows Write just to validate Actions. Setup displays its own Contents,
+Actions and Workflows Write prerequisites when bot release/hotfix dispatch is
+selected and Secret management is enabled. A denied bot dispatch or readback
+still blocks setup; the setup PAT cannot substitute for it.
+
 If **Actions Write is Unverifiable** because the temporary workflow could not
 be written, the dispatch was never tested. Check **repository Contents → Read
-and write** and **repository Workflows → Read and write** in the PAT settings,
+and write** and **repository Workflows → Read and write** on the **setup PAT**,
 as well as repository selection and organization authorization. Workflows is a
 separate grant: granting Actions write alone does not grant it. A separate
 **Workflows Write: Missing** result means GitHub explicitly denied that workflow
@@ -238,7 +246,14 @@ write; do not treat a denied request as verified access. If there is no eligible
 `workflow_dispatch` workflow on the default branch, install one before retrying.
 The web result explains the prerequisite without displaying raw GitHub errors.
 After correcting the PAT, start a fresh setup run. These rules apply separately
-to the temporary setup PAT and any bot PAT being audited.
+to each audited role; the web result names the bot PAT when its audit failed.
+
+GitHub can return `node: null` together with a node-scoped `NOT_FOUND` error
+after deleting a temporary Project. Copilot confirms absence with a complete,
+authorized organization lookup for its private random title before clearing
+the recovery record. Permission errors, an incomplete lookup or a remaining
+exact title still block cleanup. An older false pending-cleanup record is
+rechecked automatically before the next audit; stop the old local session first.
 
 If a temporary permission resource cannot be confirmed as deleted, the row
 shows pending cleanup and setup stops. Cancelling or losing the local session
@@ -437,7 +452,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - **Pull requests**: Read and write for PR automation/comments, commit-driven Bugbot review, issue-comment autofix, guarded approval, or release/hotfix promotion
     - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
 
-    Workflow installation and Secret/Variable administration belong to the separate setup PAT. The runtime matrix does not request Administration write, Secrets, Variables write, Webhooks, or Workflows. Some disposable audit operations need extra prerequisites: opening a draft PR needs a temporary changed branch (Contents write), Actions testing may need Workflows write, deleting a temporary Issue needs repository administration/organization enablement, and creating or deleting an organization Project may require a stronger organization role than updating an existing item. A runtime grant alone cannot satisfy these prerequisites. Inspect the failed phase; setup blocks rather than treating an incomplete transaction as verified or silently adding broad permissions.
+    Workflow installation and Secret/Variable administration belong to the separate setup PAT. The runtime matrix does not request Administration write, Secrets, Variables write, Webhooks, or Workflows. Some disposable audit operations need extra prerequisites: opening a draft PR needs a temporary changed branch (Contents write), the setup PAT needs Workflows write to prepare an Actions override, deleting a temporary Issue needs repository administration/organization enablement, and creating or deleting an organization Project may require a stronger organization role than updating an existing item. A runtime grant alone cannot satisfy these prerequisites. Inspect the failed phase; setup blocks rather than treating an incomplete transaction as verified or silently adding broad permissions.
 
     **If your bot belongs to an organization** set these permissions for the organization:
 

@@ -777,6 +777,7 @@
         "src/infrastructure/__tests__/git_commit_adapter.test.ts",
         "src/actions/__tests__/github_action_input.test.ts",
         "src/infrastructure/__tests__/setup_permission_cleanup_contract.test.ts",
+        "src/infrastructure/__tests__/setup_permission_operator_actions.test.ts",
         "src/infrastructure/__tests__/setup_permission_journal_contract.test.ts",
         "src/infrastructure/__tests__/setup_permission_audit_transactions.test.ts",
         "src/infrastructure/__tests__/setup_permission_write_failures.test.ts",

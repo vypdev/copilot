@@ -201,14 +201,14 @@ describe('SetupCredentialsUseCase', () => {
             validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'Remote health passed.' }]),
         };
         const permission = {
-            id: 'workflow.repository.metadata', role: 'workflow' as const, scope: 'repository' as const,
-            permission: 'Metadata', level: 'read' as const, applicability: 'required' as const,
-            reason: 'Resolve repository.', probe: 'metadata' as const,
+            id: 'workflow.repository.actions', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Actions', level: 'write' as const, applicability: 'required' as const,
+            reason: 'Dispatch selected workflows.', probe: 'actions' as const,
         };
         const report = {
             role: 'workflow' as const, account: 'workflow-bot', identityStatus: 'valid' as const,
             identityMessage: 'ok', ready: true, confirmationRequired: false,
-            checks: [{ ...permission, status: 'verified' as const, message: 'available' }],
+            checks: [{ ...permission, status: 'verified' as const, writeProof: 'transaction' as const, message: 'available' }],
         };
         const tokenPermissions = { inspect: jest.fn().mockResolvedValue(report) };
 
@@ -236,7 +236,7 @@ describe('SetupCredentialsUseCase', () => {
             { scope: 'repository', destination: 'owner/repo', replacesExisting: true },
         );
         expect(tokenPermissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
-            role: 'workflow', token: 'workflow-token', requirements: [permission], selectedProjectNumbers: '7,9',
+            role: 'workflow', token: 'workflow-token', operatorToken: 'setup-token', requirements: [permission], selectedProjectNumbers: '7,9',
         }));
         expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
         expect(result.checks.filter(check => check.name === 'PAT')).toEqual([

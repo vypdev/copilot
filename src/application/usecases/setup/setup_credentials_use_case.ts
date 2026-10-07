@@ -213,6 +213,8 @@ export class SetupCredentialsUseCase {
                     owner: request.owner,
                     repository: request.repository,
                     token: value.value,
+                    ...(workflowTokenPermissions.some(permission => permission.probe === 'actions' && permission.level === 'write')
+                        ? { operatorToken: request.setupToken } : {}),
                     requirements: workflowTokenPermissions,
                     ...(request.selectedProjectNumbers ? { selectedProjectNumbers: request.selectedProjectNumbers } : {}),
                 });

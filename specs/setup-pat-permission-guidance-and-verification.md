@@ -723,6 +723,47 @@ branches in the local merged coverage, followed by a fresh Codecov report.
 Provider references: [repository organization Secrets](https://docs.github.com/en/rest/actions/secrets#list-repository-organization-secrets)
 and [repository organization Variables](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables).
 
+### 14.2 Bot Actions preparation and Project absence correction (2026-10-07)
+
+The Actions probe accepts separately validated setup authority solely for
+fixture preparation, exact no-job workflow readback and cleanup. Dispatch and
+its first exact run read MUST use the bot candidate; a rejection cannot be
+retried with the operator token or promoted to verified. All other probes keep
+candidate authority. Recovery selects operator authority only for Actions
+entries. The final setup permission matrix discloses Contents, Actions and
+Workflows Write for bot release/hotfix validation when Secret management is
+selected, even with no existing credentials. The runtime matrix is unchanged.
+
+Project cleanup MUST accept a node-scoped `NOT_FOUND` with `data.node: null`
+only after a complete, error-free, authorized organization title lookup finds
+no exact private random title. Mixed errors, malformed data, forbidden/scoped
+responses, incomplete pagination or an exact title keep the journal pending.
+The existing five-page limit and ownership checks remain fixed. This permits
+recovery of earlier already-deleted Project entries without another mutation;
+the journal schema and live-process lock do not change.
+
+```text
+Setup PAT: prepare disabled-job fixture -> Bot PAT: dispatch + exact run read
+-> Setup PAT: verified cleanup -> bot permission verified
+```
+
+The web result MUST attribute a failed workflow-role audit to the bot PAT in
+all four locales, preserve bounded prerequisite and cleanup evidence, and
+avoid exposing provider prose. Example: “The bot PAT did not complete every
+required permission check. Check the failed grant and any preparation or
+cleanup prerequisite below.” Pending cleanup retains the existing blocking
+action; partial and successful states keep their existing semantics. No new
+public configuration or automatic setup Apply is introduced.
+
+This slice adds a **27-case minimum**: 12 Project absence/error/corroboration
+cases, six adapter/recovery cases proving credential separation and cleanup,
+three application authority/identity cases, two setup-versus-runtime policy
+cases, and four localized result cases. Its executable evidence is
+`setup_permission_cleanup_contract`, `setup_permission_operator_actions`,
+`setup_token_permissions_use_case`, `setup_token_permission_policy`, and
+`web_setup_components`; `docs/authentication.mdx` documents both corrections.
+Existing module coverage and human provider/UX gates remain in force.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Content and verification |

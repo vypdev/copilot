@@ -44,6 +44,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         onProgress?: (progress: SetupTokenPermissionProgress) => void,
         selectedProjectNumbers?: string,
         includeConditionalWrites = false,
+        operatorToken?: string,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
         const target = `${owner.toLowerCase()}/${repository.toLowerCase()}`;
         if (activeInspections.has(target)) {
@@ -52,7 +53,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         }
         activeInspections.add(target);
         try {
-            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites);
+            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken);
         } finally { activeInspections.delete(target); }
     }
 
@@ -61,13 +62,15 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         onProgress: ((progress: SetupTokenPermissionProgress) => void) | undefined,
         selectedProjectNumbers: string | undefined,
         includeConditionalWrites: boolean,
+        operatorToken: string | undefined,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
         try {
             // Read-only identity checks and previews must never perform recovery writes.
             if (requirements.some(item => item.level === 'write'
                 && (item.applicability === 'required' || includeConditionalWrites))) {
                 await this.journal.recover(owner, repository,
-                    new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+                    new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs),
+                    operatorToken === undefined ? undefined : new SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs));
             }
         } catch (error) {
             return requirements.map(requirement => {
@@ -86,7 +89,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         }
         return runWithConcurrencyLimit(
             requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress,
-                selectedProjectNumbers, includeConditionalWrites)),
+                selectedProjectNumbers, includeConditionalWrites, operatorToken)),
             SETUP_PERMISSION_PROBE_CONCURRENCY,
         );
     }
@@ -99,6 +102,7 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
         onProgress: ((progress: SetupTokenPermissionProgress) => void) | undefined,
         selectedProjectNumbers: string | undefined,
         includeConditionalWrites: boolean,
+        operatorToken: string | undefined,
     ): Promise<SetupTokenPermissionCheck> {
         let acceptingProgress = true;
         const emit = (phase: SetupTokenPermissionProgress['phase'], detail?: SetupTokenPermissionProgress['detail']) => {
@@ -121,6 +125,8 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionIns
                 }
                 await probeDisposableResource({ owner, repository, scope: requirement.scope, probe: requirement.probe,
                     http,
+                    ...(requirement.role === 'workflow' && requirement.probe === 'actions' && operatorToken !== undefined
+                        ? { operatorHttp: new SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs) } : {}),
                     journal: this.journal, phase: emit });
                 const check: SetupTokenPermissionCheck = { ...requirement, status: 'verified', writeProof: 'transaction',
                     message: 'GitHub accepted temporary create, exact readback, and confirmed cleanup.' };

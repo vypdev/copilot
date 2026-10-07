@@ -12,7 +12,7 @@ const reply = (body: unknown, status = 200) => ({ body, status });
 const gql = (data: unknown) => reply({ data });
 function fixture(...responses: ReturnType<typeof reply>[]) {
     let index = 0;
-    const fetcher = jest.fn(async () => {
+    const fetcher = jest.fn(async (_url: string | URL | Request, _options?: RequestInit) => {
         const response = responses[Math.min(index++, responses.length - 1)];
         return new Response(response.status === 204 || response.status === 404 ? null : JSON.stringify(response.body),
             { status: response.status });
@@ -140,6 +140,41 @@ describe('temporary PAT cleanup ownership contracts', () => {
         const { http } = fixture(gql({ node: { id: projectId, title } }),
             gql({ deleteProjectV2: { projectV2: { id: projectId } } }), gql({ node: { id: projectId, title } }));
         await expect(cleanupProject(http, 'owner', title, projectId)).rejects.toThrow('cleanup could not be confirmed');
+    });
+    const missingProject = { data: { node: null }, errors: [{ type: 'NOT_FOUND', path: ['node'] }] };
+    const emptyProjects = { organization: { projectsV2: { nodes: [], pageInfo: { hasNextPage: false } } } };
+    it('confirms GitHub node-scoped NOT_FOUND after deletion through a complete authorized title lookup', async () => {
+        const { http, fetcher } = fixture(gql({ node: { id: projectId, title } }),
+            gql({ deleteProjectV2: { projectV2: { id: projectId } } }), reply(missingProject), gql(emptyProjects));
+        await cleanupProject(http, 'owner', title, projectId);
+        expect(fetcher).toHaveBeenCalledTimes(4);
+        expect(JSON.parse(String(fetcher.mock.calls[3][1]?.body)).variables).toEqual({ owner: 'owner', title, after: null });
+    });
+    it('recovers an already deleted Project without another deletion', async () => {
+        const { http, fetcher } = fixture(reply(missingProject), gql(emptyProjects));
+        await cleanupProject(http, 'owner', title, projectId);
+        expect(fetcher.mock.calls.every(call => !String(call[1]?.body).includes('mutation'))).toBe(true);
+    });
+    it.each([
+        { data: { node: null }, errors: [{ type: 'FORBIDDEN', path: ['node'] }] },
+        { data: { node: null }, errors: [{ type: 'INSUFFICIENT_SCOPES', path: ['node'] }] },
+        { data: { node: null }, errors: [{ type: 'NOT_FOUND', path: ['organization'] }] },
+        { data: { node: null }, errors: [{ type: 'NOT_FOUND', path: ['node', 'title'] }] },
+        { data: { node: null }, errors: [...missingProject.errors, { type: 'FORBIDDEN', path: ['node'] }] },
+        { data: { node: { id: projectId, title } }, errors: missingProject.errors },
+        { data: { node: null }, errors: 'private provider error' },
+    ])('does not infer Project absence from scope errors or contradictory data %j', async body => {
+        const { http, fetcher } = fixture(reply(body));
+        await expect(cleanupProject(http, 'owner', title, projectId)).rejects.toThrow('rejected');
+        expect(fetcher).toHaveBeenCalledTimes(1);
+    });
+    it.each([
+        { errors: [{ type: 'FORBIDDEN' }], data: emptyProjects },
+        { data: { organization: { projectsV2: { nodes: [{ id: projectId, title }], pageInfo: { hasNextPage: false } } } } },
+        { data: { organization: { projectsV2: { nodes: [], pageInfo: { hasNextPage: true, endCursor: 'next' } } } } },
+    ])('keeps recovery blocked when the NOT_FOUND corroboration is denied, contradictory or incomplete %j', async lookup => {
+        const { http } = fixture(reply(missingProject), reply(lookup));
+        await expect(cleanupProject(http, 'owner', title, projectId)).rejects.toThrow(/cleanup|bounded/u);
     });
     it.each([{ errors: [{}] }, { data: null }, { data: [] }])('rejects malformed GraphQL cleanup %j', async body => {
         const { http } = fixture(reply(body));

@@ -155,6 +155,7 @@ describe('AuditConfiguredSetupPatUseCase', () => {
   test('unused prefilled health writes are reported as possible excess access without being audited', async () => {
     const { context, ports, useCase } = harness({ token: 'test-token', guided: true });
     const selected = createDefaultSetupConfiguration();
+    selected.features.release = false; selected.features.hotfix = false; selected.issueWorkflows.enabled = ['feature'];
     selected.pullRequestApproval = { ...selected.pullRequestApproval, mode: 'recommend' };
     selected.createInitialTag = false;
     context.provisionalRequirements = buildSetupPatIntentPermissionRequirements(selected, 'Organization');
