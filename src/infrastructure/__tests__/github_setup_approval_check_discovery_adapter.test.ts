@@ -45,6 +45,66 @@ describe('GitHub setup approval check discovery', () => {
     expect(calls.listJobsForWorkflowRunAttempt).not.toHaveBeenCalled();
   });
 
+  test('finds a recent PR after a full page of newer push runs', async () => {
+    const calls = arrange(Array.from({ length: 100 }, (_, index) => ({ id: index + 1, event: 'push' })),
+      [{ id: 90, name: 'Tests', app: { id: 12 }, head_sha: sha, conclusion: 'success' }],
+      [{ name: 'Tests', check_run_url: 'https://api.github.com/repos/acme/project/check-runs/90' }]);
+    calls.listWorkflowRunsForRepo.mockResolvedValueOnce({ data: { workflow_runs: Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1, event: 'push', created_at: '2026-10-06T00:00:00Z',
+    })) } }).mockResolvedValueOnce({ data: { workflow_runs: [{ id: 101, event: 'pull_request', name: 'CI',
+      head_sha: sha, run_attempt: 1, status: 'completed', created_at: '2026-10-05T00:00:00Z' }] } });
+    const result = await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret');
+    expect(result.status).toBe('observed');
+    expect(result.candidates[0].runUrl).toBe('https://github.com/acme/project/actions/runs/101');
+    expect(calls.listWorkflowRunsForRepo.mock.calls.map(([args]) => args.page)).toEqual([1, 2]);
+    expect(result.truncated).toBeUndefined();
+  });
+
+  test('stops when an entire page is older than the lookback', async () => {
+    const calls = arrange(Array.from({ length: 100 }, (_, index) => ({ id: index + 1,
+      created_at: '2026-03-14T11:28:34Z' })), [], []);
+    expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
+      .toEqual({ status: 'no-verifiable-checks', candidates: [] });
+    expect(calls.listWorkflowRunsForRepo).toHaveBeenCalledTimes(1);
+    expect(calls.listForRef).not.toHaveBeenCalled();
+  });
+
+  test('distinguishes an exhausted push-only inventory from an empty repository', async () => {
+    const calls = arrange(Array.from({ length: 100 }, (_, index) => ({ id: index + 1, event: 'push' })), [], []);
+    calls.listWorkflowRunsForRepo.mockResolvedValueOnce({ data: { workflow_runs: Array.from({ length: 100 }, () => ({
+      event: 'push', created_at: '2026-10-06T00:00:00Z',
+    })) } }).mockResolvedValueOnce({ data: { workflow_runs: [] } });
+    expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
+      .toEqual({ status: 'no-verifiable-checks', candidates: [] });
+    expect(calls.listWorkflowRunsForRepo).toHaveBeenCalledTimes(2);
+  });
+
+  test('marks the result truncated after ten full recent push-only pages', async () => {
+    const calls = arrange(Array.from({ length: 100 }, (_, index) => ({ id: index + 1, event: 'push' })), [], []);
+    expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
+      .toEqual({ status: 'no-verifiable-checks', candidates: [], truncated: true });
+    expect(calls.listWorkflowRunsForRepo.mock.calls.map(([args]) => args.page)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(calls.listForRef).not.toHaveBeenCalled();
+  });
+
+  test('reports a later page permission failure instead of trusting partial evidence', async () => {
+    const calls = arrange(Array.from({ length: 100 }, (_, index) => ({ id: index + 1, event: index ? 'push' : 'pull_request' })), [], []);
+    calls.listWorkflowRunsForRepo.mockResolvedValueOnce({ data: { workflow_runs: Array.from({ length: 100 }, (_, index) => ({
+      event: index ? 'push' : 'pull_request', created_at: '2026-10-06T00:00:00Z',
+    })) } }).mockRejectedValueOnce({ status: 403 });
+    expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
+      .toEqual({ status: 'permission-denied', candidates: [] });
+    expect(calls.listWorkflowRunsForRepo).toHaveBeenCalledTimes(2);
+    expect(calls.listForRef).not.toHaveBeenCalled();
+  });
+
+  test('reports a malformed inventory as unavailable instead of an empty sample', async () => {
+    const calls = arrange([], [], []);
+    calls.listWorkflowRunsForRepo.mockResolvedValueOnce({ data: { workflow_runs: null } });
+    expect(await new GithubSetupApprovalCheckDiscoveryAdapter().discover(owner, repository, 'secret'))
+      .toEqual({ status: 'unavailable', candidates: [] });
+  });
+
   test('sorts by creation time before the 15-run inspection limit and keeps the newest producer evidence', async () => {
     const calls = arrange(Array.from({ length: 30 }, (_, index) => ({ id: index + 1, name: 'CI', head_sha: sha,
       run_attempt: 1, status: 'completed', created_at: `2026-10-06T00:${String(index).padStart(2, '0')}:00Z` })),
@@ -58,6 +118,7 @@ describe('GitHub setup approval check discovery', () => {
     expect(result.candidates[0]).toMatchObject({ runUrl: 'https://github.com/acme/project/actions/runs/30',
       observedAt: '2026-10-06T00:29:00Z' });
     expect(result.truncated).toBe(true);
+    expect(calls.listWorkflowRunsForRepo).toHaveBeenCalledTimes(1);
   });
 
   test('accepts the exact 90-day boundary and never expands a returned page beyond 100 runs', async () => {

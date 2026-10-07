@@ -115,7 +115,7 @@ export const fr: Record<SetupMessageKey, string> = {
   projectsUnavailable: 'La découverte des Projects a échoué. Cela ne prouve pas leur absence. Saisissez un numéro vérifié ou réessayez.',
   projectsUnsupported: 'Cette API GitHub ne liste pas les Projects personnels avec un PAT à permissions fines. Saisissez le numéro figurant dans l’URL.',
   discoveryTruncated: 'Seul un échantillon limité de Projects accessibles ou checks récents a été inspecté. Saisissez manuellement un élément absent.',
-  checksDiscoveryScope: 'Périmètre : jusqu’à 20 exécutions de PR parmi les 100 dernières exécutions de workflows des 90 derniers jours ; au plus 15 exécutions et 100 checks par commit sont inspectés.',
+  checksDiscoveryScope: 'Périmètre : jusqu’à 20 exécutions de PR parmi les 1 000 dernières exécutions de workflows (jusqu’à 10 pages) des 90 derniers jours ; au plus 15 exécutions et 100 checks par commit sont inspectés.',
   projectsDiscoveryScope: 'Périmètre : au plus 30 Projects ouverts et accessibles de l’organisation sur deux pages ; jusqu’à 100 champs sont inspectés par Project. Les Projects fermés sont exclus.',
   retryDiscovery: 'Relancer la recherche GitHub', retryRemaining: 'Il reste {count} essais en lecture seule. Vos réponses sont conservées.',
   retryExhausted: 'Plus aucun essai disponible. Vérifiez GitHub et saisissez manuellement tout élément manquant.',

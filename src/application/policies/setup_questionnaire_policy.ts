@@ -627,7 +627,7 @@ function parseAnswer(question: SetupQuestion, raw: string): { value: string | nu
     return choice ? { value: choice } : { error: 'Select one of the listed options.' };
   }
   if (question.kind === 'multi-select') {
-    const selected = parseWorkflowSelection(input || String(question.defaultValue));
+    const selected = parseWorkflowSelection(input);
     if ('error' in selected) return selected;
     return { value: selected.value.join(',') };
   }

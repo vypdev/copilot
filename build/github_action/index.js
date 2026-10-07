@@ -51097,8 +51097,7 @@ async function upsertVariableGroups(context, port, groups) {
         updated += result.updated;
         errors.push(...result.errors);
         failures.push(...(result.failures ?? []));
-        if (!result.failures?.length)
-            unclassifiedErrors.push(...result.errors);
+        unclassifiedErrors.push(...(result.unclassifiedErrors ?? result.errors));
     }
     return { created, updated, errors, unclassifiedErrors, ...(failures.length ? { failures } : {}) };
 }
@@ -68576,7 +68575,7 @@ class GithubActionsResourceCommands {
                 errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
     async upsertScopedVariables(owner, repository, token, target, variables) {
         if (target.scope === 'repository')
@@ -68627,7 +68626,7 @@ class GithubActionsResourceCommands {
                 errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
 }
 exports.GithubActionsResourceCommands = GithubActionsResourceCommands;

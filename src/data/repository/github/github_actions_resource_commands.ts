@@ -125,7 +125,7 @@ export class GithubActionsResourceCommands {
                 errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
 
     async upsertScopedVariables(
@@ -179,7 +179,7 @@ export class GithubActionsResourceCommands {
                 errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
 }
 

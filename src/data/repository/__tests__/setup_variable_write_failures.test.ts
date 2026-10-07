@@ -25,6 +25,7 @@ describe('setup Variable write failures', () => {
       actions.createOrgVariable.mockRejectedValue(Object.assign(new Error('sensitive provider body'), { status }));
       const result = await repository.upsertScopedVariables('owner', 'repo', 'fixture', target, [{ name: 'NEW_VAR', value: 'private-value' }]);
       expect(result.failures).toEqual([{ name: 'NEW_VAR', scope: 'organization', phase: 'create', reason }]);
+      expect(result.unclassifiedErrors).toEqual([]);
       expect(result.created).toBe(0);
       expect(actions.addSelectedRepoToOrgVariable).not.toHaveBeenCalled();
       expect(JSON.stringify(result)).not.toMatch(/private-value|sensitive provider body/);
@@ -47,6 +48,7 @@ describe('setup Variable write failures', () => {
     actions.createRepoVariable.mockRejectedValue('private-exception-value');
     const result = await repository.upsert('owner', 'repo', 'fixture', [{ name: 'NEW_VAR', value: 'value' }]);
     expect(result.failures?.[0].reason).toBe('unavailable');
+    expect(result.unclassifiedErrors).toEqual([]);
     expect(JSON.stringify(result)).not.toContain('private-exception-value');
   });
 

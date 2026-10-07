@@ -231,7 +231,7 @@ async function upsertVariableGroups(
         updated += result.updated;
         errors.push(...result.errors);
         failures.push(...(result.failures ?? []));
-        if (!result.failures?.length) unclassifiedErrors.push(...result.errors);
+        unclassifiedErrors.push(...(result.unclassifiedErrors ?? result.errors));
     }
     return { created, updated, errors, unclassifiedErrors, ...(failures.length ? { failures } : {}) };
 }

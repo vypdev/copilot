@@ -113,7 +113,7 @@ export const en = {
   projectsUnavailable: 'GitHub Project discovery could not complete. This is not evidence that no Projects exist. Enter a verified Project number manually or retry.',
   projectsUnsupported: 'GitHub does not support listing personal Projects with a fine-grained PAT through this endpoint. Enter an existing Project number from its URL.',
   discoveryTruncated: 'Only a bounded sample of accessible Projects or recent checks was inspected. Use manual entry for an item not shown.',
-  checksDiscoveryScope: 'Search scope: select up to 20 PR runs from the latest 100 workflow runs within 90 days; at most 15 runs and 100 checks per commit are inspected.',
+  checksDiscoveryScope: 'Search scope: select up to 20 PR runs from the latest 1,000 workflow runs (up to 10 pages) within 90 days; at most 15 runs and 100 checks per commit are inspected.',
   projectsDiscoveryScope: 'Search scope: at most 30 open, accessible organization Projects from two pages; up to 100 fields are inspected per Project. Closed Projects are excluded.',
   retryDiscovery: 'Retry GitHub discovery', retryRemaining: '{count} read-only retries left. Your answers stay here.',
   retryExhausted: 'No discovery retries remain. Inspect GitHub and use the manual option if the item is missing.',

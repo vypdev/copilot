@@ -347,6 +347,10 @@ Variable write failures cross the semantic port as value-free name, scope,
 phase and bounded reason (authorization, invalid input, conflict, rate limit or
 unavailability). Apply correlates these facts with the partial receipt and logs
 a named recovery message without provider response bodies or Variable values.
+The result contract MUST identify any unclassified messages separately from
+typed failures. Apply MUST retain those messages even in a mixed failure batch;
+if that explicit list is absent, it MUST conservatively retain all error
+messages rather than suppress evidence based on the presence of typed failures.
 The October 7 logs did not retain HTTP evidence, so the exact live Variable
 failure is still unconfirmed. This request shape follows the optional visibility
 contract in [GitHub's organization Variable update API](https://docs.github.com/en/rest/actions/variables#update-an-organization-variable).
@@ -496,10 +500,10 @@ manual reversal.
 | Defaults/config/storage policy | 29 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
 | Questionnaire/wizard/idempotency | 24 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 42 | valid/invalid/missing/unverifiable/groups; ten Secret/Variable cases for missing selected-repository endpoint/identity, creation, failed grants, and private visibility |
-| Workflows/assets/schema | 24 | selection, parity, readiness, permissions; four repository-only installation cases reject incidental configured issue/event linkage |
+| Workflows/assets/schema | 26 | selection, parity, readiness, permissions; four repository-only installation cases reject incidental configured issue/event linkage; two mixed Variable error cases retain partial evidence |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
 | Integration/security/cutover | 33 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails; two execution bootstrap and four Apply/authentication cases |
-| **Total** | **170** | no double counting |
+| **Total** | **172** | no double counting |
 
 The repository-only Apply correction adds **10 distinct automated cases**:
 four in `execution_issue_number_policy.test.ts`, two in
@@ -510,9 +514,10 @@ with fixture provider/workspace ports: an approved Codex plan without API keys,
 the same plan with legacy issue `1` or PR event metadata, and invalid setup authentication with zero
 installation writes. No live GitHub resources or runner authentication are tested.
 
-The automatic-version and Variable correction adds **38 distinct automated
+The automatic-version and Variable correction adds **40 distinct automated
 cases**: six questionnaire selection/revision/invalid-answer cases, one config rejection and
-one PAT resource-kind preservation case, six Apply skip/failure-mapping cases,
+one PAT resource-kind preservation case, eight Apply skip/failure-mapping cases
+(including mixed batches with and without explicit unclassified metadata),
 nine remote tag inventory/order/failure/bound cases, fourteen Variable request/grant/
 value-free failure cases (including 403 rate limits and non-HTTP redaction), and one composition credential-binding case. The
 existing intercepted Octokit transport case additionally checks remote tag
@@ -619,7 +624,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 170-case budget and coverage thresholds pass.
+- [x] The 172-case budget and coverage thresholds pass.
 - [x] Setup cancel/retry/partial state and metadata-only `doctor --read-only`
       behavior pass; ordinary doctor dispatch is disclosed separately.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.

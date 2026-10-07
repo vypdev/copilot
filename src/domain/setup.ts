@@ -290,4 +290,6 @@ export interface SetupVariablesWriteResult {
     updated: number;
     errors: string[];
     failures?: readonly SetupVariableWriteFailure[];
+    /** Messages not represented by failures. If absent, consumers retain all errors. */
+    unclassifiedErrors?: readonly string[];
 }

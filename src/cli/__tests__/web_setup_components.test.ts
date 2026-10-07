@@ -408,7 +408,7 @@ describe('web setup component semantics', () => {
   test('discovery scope is specific and unsupported personal Projects do not offer retry', () => {
     const checkNotice = markup('DiscoveryNotice', { kind: 'checks', status: 'observed' }, 'en');
     expect(checkNotice).toContain('20 PR runs');
-    expect(checkNotice).toContain('latest 100 workflow runs within 90 days');
+    expect(checkNotice).toContain('latest 1,000 workflow runs (up to 10 pages) within 90 days');
     expect(checkNotice).toContain('15 runs');
     const projectNotice = markup('DiscoveryNotice', { kind: 'projects', status: 'observed' }, 'en');
     expect(projectNotice).toContain('30 open, accessible organization Projects');

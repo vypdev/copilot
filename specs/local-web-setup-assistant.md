@@ -1045,15 +1045,20 @@ guarded mode fails closed until exact identities and human attestations pass.
 Discovery MUST return a semantic state (`observed`, `no-recent-runs`,
 `permission-denied`, `unavailable`) independently of its candidates. The web
 and terminal explain which state occurred, the bounded sample (up to 20 PR
-runs selected from the latest 100 workflow runs within 90 days, at most 15
+runs selected from the latest 1,000 workflow runs within 90 days, at most 15
 inspected; up to 30 Projects over two pages), and the
 next action before asking for a manual tuple. A network/API failure must not
 masquerade as an empty repository. The manual path labels check name, numeric
 source App ID, and workflow name separately (or gives an equivalent CLI
 template), validates the exact tuple, and never treats it as verified.
-The adapter MUST read the first page of at most 100 latest workflow runs
-without provider search filters, select only `pull_request` events locally,
-and retain at most 20 runs from the last 90 days. It MUST discard dates outside
+The adapter MUST read at most ten pages of 100 latest workflow runs
+without provider search filters and select only `pull_request` events locally.
+It MUST stop after collecting at least 20 recent PR runs, an exhausted page,
+or a page whose dates are all older than the lookback. It MUST report a
+truncated sample if it reaches ten full pages without those stopping conditions.
+Malformed inventories and failures on later pages MUST return an error state,
+never trusted partial candidates. It MUST retain at most 20 runs from the last
+90 days and discard dates outside
 that
 window (including future or malformed dates), sort the remaining sample by
 creation time descending before the 15-run inspection limit, and retain the
@@ -1071,7 +1076,7 @@ remote event/date filters returned current CI Check, RepoWise and
 Ubuntu/Windows/macOS runs in read-only diagnostics; the exact upstream cause
 remains unknown. See GitHub's
 [workflow-run listing and search filters](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository).
-The incremental test budget is **5 distinct cases**: four adapter cases for
+The initial incremental test budget is **5 distinct cases**: four adapter cases for
 the unfiltered query bound, stale/malformed/future and non-PR rejection,
 sorting before inspection
 with newest duplicate evidence, and the inclusive date/page limits; one
@@ -1085,6 +1090,14 @@ retry-retention and four-language presentation coverage. The evidence is in
 Repository coverage and architecture budgets remain in force. The fixture
 performs no live setup or Apply; manual UX acceptance remains governed by the
 existing acceptance ledger.
+
+The bounded pagination correction adds **6 distinct adapter cases** for a
+PR hidden behind a full push-only page, stopping at an entirely stale page,
+exhausting a nonempty inventory, the ten-page cap, a later-page denial, and a
+malformed inventory. The existing newest-evidence case additionally asserts
+that 20 collected PR runs prevent further page reads. These cases are counted
+once outside the fixed 350-case web acceptance ledger; no new manual gate or
+live provider write is introduced.
 
 The web App ID field MUST remain string-bound (with a numeric keyboard hint)
 and normalize both string and numeric values before validation; an edited
@@ -1728,8 +1741,8 @@ hotfix issue workflow selection, not a provisioning question. Existing semantic
 version tags skip creation; only confirmed absence permits `v1.0.0`. Remote
 inspection uses the setup PAT without touching local moving Action tags. Named,
 value-free Variable failure diagnostics and partial outcomes are shared with
-terminal Apply. The 38 incremental cases are counted in the setup-and-doctor
-SDD's 170-case budget; they do not add duplicate cases to the web ledger.
+terminal Apply. The 40 incremental cases are counted in the setup-and-doctor
+SDD's 172-case budget; they do not add duplicate cases to the web ledger.
 
 ## 15. Documentation and discoverability
 

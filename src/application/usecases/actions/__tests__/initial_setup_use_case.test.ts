@@ -348,10 +348,35 @@ describe('InitialSetupUseCase', () => {
     setupConfiguration.features.hotfix = false;
     mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 1, updated: 2,
       errors: ['Unable to configure repository Variable AGENT_MODEL.'],
+      unclassifiedErrors: [],
       failures: [{ name: 'AGENT_MODEL', scope: 'repository', phase: 'update', reason }] });
     const [result] = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
     expect(result.success).toBe(false);
     expect(result.errors).toEqual([expect.objectContaining({ code, message: expect.stringContaining('Variable AGENT_MODEL during update') })]);
+    expect(getResultPayload(getResultPayload(result.payload)?.setupReceipt)?.effects)
+      .toEqual(expect.arrayContaining([{ id: 'variables', state: 'needs-inspection', scope: 'repository' }]));
+  });
+
+  it.each([
+    { explicit: true, expectedErrors: 2 },
+    { explicit: false, expectedErrors: 3 },
+  ])('retains mixed Variable errors with explicit unclassified metadata: $explicit', async ({ explicit, expectedErrors }) => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.features.release = false;
+    setupConfiguration.features.hotfix = false;
+    const unclassified = 'Unable to configure repository Variable UNCLASSIFIED.';
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 1, updated: 2,
+      errors: ['Unable to configure repository Variable AGENT_MODEL.', unclassified],
+      ...(explicit ? { unclassifiedErrors: [unclassified] } : {}),
+      failures: [{ name: 'AGENT_MODEL', scope: 'repository', phase: 'update', reason: 'authorization' }] });
+    const [result] = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(expectedErrors);
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'authorization.denied', message: expect.stringContaining('Variable AGENT_MODEL during update') }),
+      expect.objectContaining({ code: 'provider.unavailable', message: unclassified }),
+    ]));
     expect(getResultPayload(getResultPayload(result.payload)?.setupReceipt)?.effects)
       .toEqual(expect.arrayContaining([{ id: 'variables', state: 'needs-inspection', scope: 'repository' }]));
   });

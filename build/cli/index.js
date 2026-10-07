@@ -47443,7 +47443,7 @@ function parseAnswer(question, raw) {
         return choice ? { value: choice } : { error: 'Select one of the listed options.' };
     }
     if (question.kind === 'multi-select') {
-        const selected = parseWorkflowSelection(input || String(question.defaultValue));
+        const selected = parseWorkflowSelection(input);
         if ('error' in selected)
             return selected;
         return { value: selected.value.join(',') };
@@ -51257,8 +51257,7 @@ async function upsertVariableGroups(context, port, groups) {
         updated += result.updated;
         errors.push(...result.errors);
         failures.push(...(result.failures ?? []));
-        if (!result.failures?.length)
-            unclassifiedErrors.push(...result.errors);
+        unclassifiedErrors.push(...(result.unclassifiedErrors ?? result.errors));
     }
     return { created, updated, errors, unclassifiedErrors, ...(failures.length ? { failures } : {}) };
 }
@@ -67687,7 +67686,7 @@ function discoveryNote(question) {
     const sample = status === 'observed' || status === 'empty' || status === 'no-recent-runs' || status === 'no-verifiable-checks'
         ? question.id === 'projects.ids'
             ? '\n  Search scope: at most 30 open, accessible organization Projects from two pages; up to 100 fields per Project. Closed Projects are excluded.'
-            : '\n  Search scope: select up to 20 PR runs from the latest 100 workflow runs within 90 days; at most 15 runs and 100 checks per commit are inspected.'
+            : '\n  Search scope: select up to 20 PR runs from the latest 1,000 workflow runs (up to 10 pages) within 90 days; at most 15 runs and 100 checks per commit are inspected.'
         : '';
     return note ? `\n  ${note}${sample}${question.discoveryTruncated ? '\n  Only a bounded sample was inspected; use manual entry for missing items.' : ''}${question.discoveryRetryRemaining ? `\n  Type r to retry GitHub discovery (${question.discoveryRetryRemaining} read-only attempts left).` : ''}` : '';
 }
@@ -74554,7 +74553,7 @@ class GithubActionsResourceCommands {
                 errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
     async upsertScopedVariables(owner, repository, token, target, variables) {
         if (target.scope === 'repository')
@@ -74605,7 +74604,7 @@ class GithubActionsResourceCommands {
                 errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors, ...(failures.length ? { failures } : {}) };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
 }
 exports.GithubActionsResourceCommands = GithubActionsResourceCommands;
@@ -84958,6 +84957,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubSetupApprovalCheckDiscoveryAdapter = void 0;
 const github = __importStar(__nccwpck_require__(78227));
 const discoveryLookbackMs = 90 * 24 * 60 * 60 * 1000;
+const discoveryPageLimit = 10;
 /** Bounded, read-only GitHub evidence. Unavailable permissions yield no suggestions, never invented identities. */
 class GithubSetupApprovalCheckDiscoveryAdapter {
     async discover(owner, repository, token, targetBranch) {
@@ -84988,24 +84988,40 @@ class GithubSetupApprovalCheckDiscoveryAdapter {
         }
         const observedAt = Date.now();
         const earliestRun = observedAt - discoveryLookbackMs;
-        let recent;
+        const recent = [];
+        let sawRuns = false;
+        let inventoryTruncated = false;
         try {
             // GitHub's filtered search can return historical samples on busy repositories.
-            // Read one bounded page of latest runs and select PR events locally instead.
-            recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, per_page: 100, page: 1 });
+            // Scan bounded latest-run pages so non-PR events cannot fill the entire sample.
+            for (let page = 1; page <= discoveryPageLimit; page += 1) {
+                const response = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, per_page: 100, page });
+                if (!Array.isArray(response.data.workflow_runs))
+                    throw new Error('Workflow run inventory is unavailable.');
+                const returned = response.data.workflow_runs;
+                const pageRuns = returned.slice(0, 100);
+                sawRuns || (sawRuns = pageRuns.length > 0);
+                inventoryTruncated || (inventoryTruncated = returned.length > 100);
+                for (const run of pageRuns) {
+                    const createdAt = Date.parse(run.created_at ?? '');
+                    if (run.event === 'pull_request' && createdAt >= earliestRun && createdAt <= observedAt)
+                        recent.push(run);
+                }
+                if (recent.length >= 20 || pageRuns.length < 100
+                    || pageRuns.every(run => Date.parse(run.created_at ?? '') < earliestRun))
+                    break;
+                if (page === discoveryPageLimit)
+                    inventoryTruncated = true;
+            }
         }
         catch (error) {
             return { status: discoveryFailure(error), candidates: [] };
         }
-        if (recent.data.workflow_runs.length === 0)
+        if (!sawRuns)
             return { status: 'no-recent-runs', candidates: [] };
         const candidates = new Map();
         const checksByHead = new Map();
-        const runs = recent.data.workflow_runs.slice(0, 100)
-            .filter(run => {
-            const createdAt = Date.parse(run.created_at ?? '');
-            return run.event === 'pull_request' && createdAt >= earliestRun && createdAt <= observedAt;
-        })
+        const runs = recent
             .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
             .slice(0, 20);
         try {
@@ -85052,7 +85068,7 @@ class GithubSetupApprovalCheckDiscoveryAdapter {
             return { status: discoveryFailure(error), candidates: [] };
         }
         return { status: candidates.size > 0 ? 'observed' : 'no-verifiable-checks', candidates: [...candidates.values()],
-            ...(recent.data.workflow_runs.length > 15 ? { truncated: true } : {}) };
+            ...(inventoryTruncated || recent.length > 15 ? { truncated: true } : {}) };
     }
 }
 exports.GithubSetupApprovalCheckDiscoveryAdapter = GithubSetupApprovalCheckDiscoveryAdapter;
