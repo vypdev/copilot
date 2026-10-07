@@ -19,10 +19,14 @@ describe('setup preparation of a bot Actions permission check', () => {
     beforeEach(async () => { folder = await mkdtemp(join(tmpdir(), 'copilot-operator-actions-')); });
     afterEach(async () => { await rm(folder, { recursive: true, force: true }); });
 
-    function fixture(denial?: 'dispatch' | 'preparation' | 'cleanup' | 'readback') {
+    function fixture(denial?: 'dispatch' | 'preparation' | 'cleanup' | 'readback', completionDelayMs = 0) {
         let branch: string | undefined;
         let content: string | undefined;
         let runExists = false;
+        let candidateReadPending = false;
+        let dispatchedAt = 0;
+        let notifyCancellation: () => void;
+        const cancellationStarted = new Promise<void>(resolve => { notifyCancellation = resolve; });
         const calls: { method: string; path: string; token: string }[] = [];
         const fetcher = jest.fn(async (url: string | URL | Request, options?: RequestInit) => {
             const parsed = new URL(String(url));
@@ -32,8 +36,7 @@ describe('setup preparation of a bot Actions permission check', () => {
             const isCandidate = token === 'Bearer bot-fixture';
             // Only the candidate can prove dispatch and its first exact run read.
             const candidateOperation = parsed.pathname.endsWith('/dispatches')
-                || (parsed.pathname.endsWith('/actions/runs/7') && method === 'GET' && calls.filter(call =>
-                    call.path.endsWith('/actions/runs/7') && call.method === 'GET').length === 1);
+                || (parsed.pathname.endsWith('/actions/runs/7') && method === 'GET' && candidateReadPending);
             if (candidateOperation) expect(isCandidate).toBe(true);
             else expect(token).toBe('Bearer operator-fixture');
             if (parsed.pathname === root) return reply(200, { default_branch: 'main' });
@@ -64,13 +67,17 @@ describe('setup preparation of a bot Actions permission check', () => {
                 expect(JSON.parse(String(options?.body)).ref).toBe(branch);
                 if (denial === 'dispatch') return reply(403, { message: 'Resource not accessible by personal access token' });
                 runExists = true;
+                candidateReadPending = true;
+                dispatchedAt = Date.now();
                 return reply(200, { workflow_run_id: 7 });
             }
+            if (parsed.pathname.endsWith('/actions/runs/7/cancel')) { notifyCancellation(); return reply(202); }
             if (parsed.pathname.endsWith('/actions/runs/7')) {
                 if (method === 'DELETE') { runExists = false; return reply(204); }
+                candidateReadPending = false;
                 if (denial === 'readback' && isCandidate) return reply(403);
                 return runExists ? reply(200, { id: 7, workflow_id: 123, head_branch: branch,
-                    event: 'workflow_dispatch', status: 'completed' }) : reply(404);
+                    event: 'workflow_dispatch', status: Date.now() - dispatchedAt >= completionDelayMs ? 'completed' : 'queued' }) : reply(404);
             }
             if (parsed.pathname.startsWith(`${root}/git/refs/heads/copilot-permission-test-`) && method === 'DELETE') {
                 if (denial === 'cleanup') return reply(403);
@@ -78,7 +85,8 @@ describe('setup preparation of a bot Actions permission check', () => {
             }
             throw new Error(`Unexpected fixture request ${method} ${parsed.pathname}`);
         });
-        return { fetcher, calls, hasBranch: () => branch !== undefined };
+        return { fetcher, calls, hasBranch: () => branch !== undefined,
+            completeNow: () => { completionDelayMs = 0; }, cancellationStarted };
     }
 
     async function inspect(value: ReturnType<typeof fixture>) {
@@ -117,6 +125,44 @@ describe('setup preparation of a bot Actions permission check', () => {
         const journal = await readFile(join(folder, records[0]), 'utf8');
         expect(journal).not.toContain('bot-fixture');
         expect(journal).not.toContain('operator-fixture');
+    });
+    it('keeps a delayed no-job bot audit pending until operator cleanup confirms both run and branch removal', async () => {
+        jest.useFakeTimers();
+        try {
+            const value = fixture(undefined, 11000);
+            const result = inspect(value);
+            await Promise.race([value.cancellationStarted, result]);
+            expect(value.calls.some(call => call.path.endsWith('/cancel'))).toBe(true);
+            expect(value.hasBranch()).toBe(true);
+            expect(await readdir(folder)).toHaveLength(1);
+            await jest.advanceTimersByTimeAsync(15000);
+            expect(await result).toEqual([expect.objectContaining({ status: 'verified', writeProof: 'transaction' })]);
+            expect(value.calls.filter(call => call.token === 'Bearer bot-fixture').map(call => call.method)).toEqual(['POST', 'GET']);
+            expect(value.hasBranch()).toBe(false);
+            expect(await readdir(folder)).toEqual([]);
+        } finally { jest.useRealTimers(); }
+    });
+    it('retains an overdue Actions journal and recovers it before starting another candidate dispatch', async () => {
+        jest.useFakeTimers();
+        try {
+            const value = fixture(undefined, Infinity);
+            const result = inspect(value);
+            await Promise.race([value.cancellationStarted, result]);
+            expect(value.calls.some(call => call.path.endsWith('/cancel'))).toBe(true);
+            await jest.advanceTimersByTimeAsync(60000);
+            expect(await result).toEqual([expect.objectContaining({ status: 'unverifiable', cleanupPending: true })]);
+            expect(value.hasBranch()).toBe(true);
+            expect(await readdir(folder)).toHaveLength(1);
+            const startRecovery = value.calls.length;
+            value.completeNow();
+            expect(await inspect(value)).toEqual([expect.objectContaining({ status: 'verified', writeProof: 'transaction' })]);
+            const recovery = value.calls.slice(startRecovery);
+            const nextDispatch = recovery.findIndex(call => call.path.endsWith('/dispatches'));
+            expect(recovery.slice(0, nextDispatch).filter(call => call.method === 'DELETE').map(call => call.path))
+                .toEqual([`${root}/actions/runs/7`, expect.stringContaining(`${root}/git/refs/heads/copilot-permission-test-`)]);
+            expect(value.hasBranch()).toBe(false);
+            expect(await readdir(folder)).toEqual([]);
+        } finally { jest.useRealTimers(); }
     });
     it('uses setup authority only for pending Actions recovery, preserving candidate authority for Projects', async () => {
         const journal = new SetupPermissionProbeJournal(folder);

@@ -291,8 +291,17 @@ back and cleaned up. Guided health prerequisites wait until the approved plan
 requires them; manual and supplied-token paths also test conditional rows. Plan approval remains required
 for installation; dry-run performs no writes or recovery. Disposable branches
 are deleted only after their exact ref and journaled commit match. Actions run
-cleanup also matches the journaled workflow ID, run ID, branch and event; an
-older dispatched record without the workflow identity stops recovery before
+cleanup also matches the journaled workflow ID, run ID, branch and event.
+
+An Actions run can remain queued briefly even when its only job is skipped.
+Copilot waits with bounded backoff for about a minute, in addition to individual
+request deadlines, before reporting unresolved run cleanup. It deletes only a
+completed run and then confirms absence before removing the recorded branch.
+If this wait expires, close the failed local session and retry with the required
+setup PAT; the next audit first recovers that exact run and branch from the
+local journal. A timeout does not establish that the Actions grant is missing.
+
+An older dispatched record without the workflow identity stops recovery before
 requests and gives a manual cleanup path. Verify the exact dispatch run and
 recorded branch commit, confirm their cleanup, then remove only its matching
 journal file and retry; see [troubleshooting](/security-operations/operations/troubleshooting). A branch

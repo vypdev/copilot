@@ -764,6 +764,42 @@ cases, and four localized result cases. Its executable evidence is
 `web_setup_components`; `docs/authentication.mdx` documents both corrections.
 Existing module coverage and human provider/UX gates remain in force.
 
+### 14.3 Asynchronous Actions completion correction (2026-10-07)
+
+An operator's isolated no-job run completed as `skipped` 11 seconds after
+creation, after the previous four-second cleanup wait. The matching run,
+workflow, branch and recorded commit remained intact. This read-only provider
+observation identifies completion latency; it does not establish the
+cancellation response or claim that the full permission audit passed.
+
+Actions cleanup MUST allow 15 exact-run observations with exponential delays
+of 0.5, 1, 2, 4 and then at most 5 seconds (57.5 seconds of maximum polling
+delay), in addition to the existing per-request HTTP deadline. A cancellation
+`202` is asynchronous acceptance: wait for `completed` before deletion, and
+do not repeat accepted cancellation. A queued cancellation `409` MAY be retried
+only after the next exact ownership check. Other errors stop cleanup. The
+existing eight-read, short-delay absence check remains valid for recovery.
+Ownership changes, an exhausted completion budget, denied cleanup or ambiguous
+deletion retain the journal, block Verified evidence and prevent a new audit
+until recovery succeeds. No force-cancel, user setting, token-role change or
+unbounded wait is introduced. CLI/web retain their deleting phase while pending.
+
+```text
+Queued -> cancellation accepted/conflict -> bounded owned-run observations
+-> Completed -> delete exact run -> confirm absence -> delete recorded branch
+-> confirm absence -> remove journal -> Verified
+```
+
+This slice requires **11 new automated cases**: nine timing, conflict, late
+absence, denial, changed ownership and deadline cases in
+`setup_permission_actions_cleanup_timing`; two adapter/journal scenarios in
+`setup_permission_operator_actions` prove delayed success and timeout followed
+by recovery before a new dispatch. Fake clocks avoid real polling waits.
+Existing cleanup, role separation, per-module coverage and human gates apply.
+`docs/authentication.mdx` explains waiting and fresh-session recovery; bounded
+provider evidence remains separate from fixture success. See
+[GitHub cancellation and deletion responses](https://docs.github.com/en/rest/actions/workflow-runs).
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Content and verification |

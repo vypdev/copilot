@@ -117,11 +117,11 @@ describe('temporary PAT cleanup ownership contracts', () => {
                 : fixture(reply({ ...run, status: 'queued' }), reply({}, 202), reply({ ...run, status: 'queued' }));
         const result = cleanupActionRun(http, root, name, state === 'unidentified' ? undefined : 7, true, 123)
             .catch(error => error);
-        await jest.advanceTimersByTimeAsync(6000);
+        await jest.advanceTimersByTimeAsync(60000);
         if (state === 'absent') expect(await result).toBeUndefined();
         else expect(await result).toBeInstanceOf(Error);
         expect(methods(fetcher)).not.toContain('DELETE');
-        expect(fetcher.mock.calls.length).toBeLessThanOrEqual(9);
+        expect(fetcher.mock.calls.length).toBeLessThanOrEqual(16);
     });
 
     it.each([null, [], {}, { id: 'PVT_87654321', title }, { id: projectId, title: 'other' }])(

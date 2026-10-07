@@ -174,3 +174,27 @@ Actions, Contents and Workflows as **Read and write**. No token was generated,
 no provider write probe was run and no setup plan was applied in this follow-up.
 This proves form prefill for the observed account/session, without claiming
 that a generated PAT would pass all capability checks.
+
+## Queued Actions cleanup observation — 2026-10-07
+
+A later operator setup stopped at Plan with Actions `Unverifiable` and a
+pending recovery record. Read-only inspection of its exact recorded
+workflow-dispatch run `37662029697` and branch confirmed workflow ID
+`136515388`, matching recorded commit
+`468e9f22c3aaf5398eba11a2474077faf96733dd`, and an unchanged private random
+probe branch. GitHub reported creation at `17:49:20Z`, completion at
+`17:49:31Z`, and conclusion `skipped`; its only job was the disabled `noop`.
+The previous cleanup loop allowed approximately four seconds of polling delay.
+
+This observation supports a provider completion race. It does not reveal the
+earlier cancellation HTTP response, establish a missing Actions grant, or
+prove that the full audit succeeded. No PAT was reused and no new dispatch or
+setup Apply was performed for this inspection. The fix allows bounded
+completion polling and conflict-only cancellation retries, retaining exact
+ownership checks and the pending journal on failure. Automated delayed-run and
+recovery fixtures are separate evidence; the next authorized setup audit still
+has to confirm remote cleanup before continuing.
+
+The provider contract documents asynchronous `202` cancellation acceptance,
+`409` conflict and `204` deletion in
+[GitHub's workflow-run API](https://docs.github.com/en/rest/actions/workflow-runs).

@@ -87789,6 +87789,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanupPullRequest = cleanupPullRequest;
 exports.cleanupActionRun = cleanupActionRun;
 const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+// Even a skipped job can leave its run queued for several seconds. Allow 15
+// reads with 57.5s of bounded backoff; every HTTP request has its own deadline.
+const ACTIONS_CLEANUP_READ_ATTEMPTS = 15;
 async function cleanupPullRequest(http, root, owner, name) {
     const title = `Copilot permission test ${name.slice('copilot-permission-test-'.length)}`;
     const search = `${root}/pulls?state=all&head=${encodeURIComponent(`${owner}:${name}`)}&per_page=100`;
@@ -87860,9 +87863,10 @@ async function cleanupActionRun(http, root, branch, recordedId, attempted = fals
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions dispatch may have succeeded, but its run was not found for cleanup.');
     const exact = `${root}/actions/runs/${id}`;
     let run;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    let cancellationAccepted = false;
+    for (let attempt = 0; attempt < ACTIONS_CLEANUP_READ_ATTEMPTS; attempt += 1) {
         const response = await http.request(exact);
-        if (response.status === 404 && attempt === 7)
+        if (response.status === 404 && attempt >= 7)
             return;
         if (response.status !== 200) {
             if (response.status === 404 && attempt < 7) {
@@ -87878,13 +87882,19 @@ async function cleanupActionRun(http, root, branch, recordedId, attempted = fals
         }
         if (run.status === 'completed')
             break;
-        if (attempt === 0) {
+        // A queued run can reject cancellation with 409 before it is ready.
+        // Retry only that conflict, after checking ownership again. A 202 is
+        // asynchronous acceptance, so observe completion without cancel spam.
+        if (!cancellationAccepted) {
             const cancel = await http.request(`${exact}/cancel`, 'POST');
             if (cancel.status !== 202 && cancel.status !== 409) {
                 throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Actions run cancellation returned HTTP ${cancel.status}.`, cancel.status);
             }
+            cancellationAccepted = cancel.status === 202;
         }
-        await new Promise(resolve => setTimeout(resolve, 500));
+        if (attempt < ACTIONS_CLEANUP_READ_ATTEMPTS - 1) {
+            await new Promise(resolve => setTimeout(resolve, Math.min(500 * 2 ** attempt, 5000)));
+        }
     }
     if (run?.status !== 'completed')
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions run did not finish before cleanup deadline.');
