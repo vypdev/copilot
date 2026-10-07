@@ -45,6 +45,16 @@ that a real token has that grant or that a live Actions dispatch succeeds.
 
 ## Required observations
 
+The `bot-credential` fixture displays the selected account warning immediately
+above **Create bot PAT as @fixture-bot**. Check that the account and private-window
+guidance remain readable at narrow widths and that the link's accessible
+description references the warning. `bot-account-mismatch` shows both accounts,
+the no-Secret-write and retained-plan facts, and explicit re-entry/stop choices.
+Review both states in all four locales and themes. These read-only fixtures
+cannot exercise recovery; the application/bridge integration tests use fake
+identities to verify explicit correction, cancellation, stale-answer rejection
+and token redaction without creating a PAT or applying a setup plan.
+
 For each of the seven states above, review light and dark modes (`U041–U054`).
 At 320 px, tablet width, desktop width, and 200% browser zoom, check that the
 status, completed facts, next action, affected resource and inspection action

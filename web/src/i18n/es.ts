@@ -1,6 +1,9 @@
 import type { en } from './en';
 
 export const es: Record<keyof typeof en, string> = {
+  botAccountWarning: 'Debes abrir este enlace con la cuenta de bot seleccionada: @{account}.',
+  botAccountHelp: 'Comprueba la cuenta de GitHub antes de generar el PAT. Usa una ventana privada o cambia de cuenta si el navegador tiene la sesión del operador del setup.',
+  botGithubForm: 'Crear PAT del bot como @{account}',
   language: 'Idioma', english: 'English', spanish: 'Español',
   setup: 'CONFIGURACIÓN', connecting: 'Conectando…', localSession: 'SESIÓN LOCAL',
   progress: 'Progreso de la configuración', studio: 'ASISTENTE DE CONFIGURACIÓN', journey: 'TU RECORRIDO',

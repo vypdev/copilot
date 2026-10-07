@@ -34,6 +34,7 @@ export interface SetupCredentialPromptPort {
     confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;
     explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void;
     requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
+    recoverWorkflowPatIdentityMismatch?(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'>;
     requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
     chooseExistingCredential(requirement: SetupCredentialRequirement, check: SetupCredentialCheck): Promise<SetupCredentialDecision>;
     showCredentialChecks(checks: readonly SetupCredentialCheck[]): void;

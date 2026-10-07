@@ -25,7 +25,7 @@ export type WebSetupPromptCopyId =
   | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
   | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setupPat.entry'
   | 'setupPat.confirmAccount' | 'setupPat.confirmUnverifiedAccess' | 'botPat.method' | 'botPat.login'
-  | 'botPat.entry.guided' | 'botPat.entry.manual' | 'credential.apiKey'
+  | 'botPat.entry.guided' | 'botPat.entry.manual' | 'botPat.identityMismatch' | 'credential.apiKey'
   | 'credential.existing' | 'apply.confirm';
 
 export interface WebSetupPromptCopyRef {

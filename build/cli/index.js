@@ -36889,6 +36889,27 @@ exports.SetupInteractionCancelledError = SetupInteractionCancelledError;
 
 /***/ }),
 
+/***/ 20805:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupWorkflowPatIdentityMismatchError = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+/** A confirmed account mismatch, before workflow capability checks or Secret writes. */
+class SetupWorkflowPatIdentityMismatchError extends application_error_1.ApplicationError {
+    constructor(expected, actual) {
+        super('authorization.credential-invalid', `The workflow PAT belongs to @${actual.login}, not the selected bot @${expected.login}. No Secret was written. Delete the unintended PAT in GitHub and create one as @${expected.login}.`);
+        this.expected = expected;
+        this.actual = actual;
+    }
+}
+exports.SetupWorkflowPatIdentityMismatchError = SetupWorkflowPatIdentityMismatchError;
+
+
+/***/ }),
+
 /***/ 79966:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -54925,6 +54946,8 @@ exports.PrepareSetupPatIntentUseCase = PrepareSetupPatIntentUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialsUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
+const setup_workflow_pat_identity_mismatch_error_1 = __nccwpck_require__(20805);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 /** Coordinates secret collection and validation without placing secret values in config files. */
 class SetupCredentialsUseCase {
@@ -55025,9 +55048,7 @@ class SetupCredentialsUseCase {
                         continue;
                 }
             }
-            const value = requirement.kind === 'workflowPat'
-                ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
-                : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
+            const value = await this.requestCredential(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
                 if (existing && workflowPermissionAuditRequired) {
                     throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.');
@@ -55045,11 +55066,6 @@ class SetupCredentialsUseCase {
                 throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check;
-            if (requirement.kind === 'workflowPat' && this.prompt.guidedWorkflowBotIdentity) {
-                if (!this.workflowIdentity)
-                    throw new application_error_1.ApplicationError('configuration.unsupported', 'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
-                await this.workflowIdentity.execute(this.prompt.guidedWorkflowBotIdentity, value.value);
-            }
             if (workflowPermissionAuditRequired) {
                 if (!this.tokenPermissions) {
                     throw new application_error_1.ApplicationError('configuration.unsupported', 'Workflow PAT permission auditing is not available in this installation.');
@@ -55109,6 +55125,38 @@ class SetupCredentialsUseCase {
             checks,
             existingSecretNames,
         };
+    }
+    async requestCredential(requirement, current) {
+        if (requirement.kind !== 'workflowPat')
+            return this.prompt.requestApiKey(requirement, current);
+        while (true) {
+            const attempt = await this.requestVerifiedWorkflowPat(requirement, current);
+            if (!(attempt instanceof setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError))
+                return attempt;
+            if (!this.prompt.recoverWorkflowPatIdentityMismatch)
+                throw attempt;
+            const decision = await this.prompt.recoverWorkflowPatIdentityMismatch(attempt.expected, attempt.actual);
+            if (decision !== 'retry')
+                throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        }
+    }
+    async requestVerifiedWorkflowPat(requirement, current) {
+        const value = await this.prompt.requestWorkflowPat(requirement, current);
+        const expected = this.prompt.guidedWorkflowBotIdentity;
+        if (!value || !expected)
+            return value;
+        if (!this.workflowIdentity)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
+        try {
+            await this.workflowIdentity.execute(expected, value.value);
+            return value;
+        }
+        catch (error) {
+            // The rejected token never leaves this attempt; recovery receives only identities.
+            if (error instanceof setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError)
+                return error;
+            throw error;
+        }
     }
 }
 exports.SetupCredentialsUseCase = SetupCredentialsUseCase;
@@ -55837,7 +55885,7 @@ function unavailableRemoteConfiguration() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VerifyGuidedWorkflowPatIdentityUseCase = void 0;
-const application_error_1 = __nccwpck_require__(75999);
+const setup_workflow_pat_identity_mismatch_error_1 = __nccwpck_require__(20805);
 /** Binds a guided runtime PAT to the bot account chosen before token entry. */
 class VerifyGuidedWorkflowPatIdentityUseCase {
     constructor(identities) {
@@ -55846,7 +55894,7 @@ class VerifyGuidedWorkflowPatIdentityUseCase {
     async execute(expected, workflowToken) {
         const actual = await this.identities.identify(workflowToken);
         if (actual.id !== expected.id) {
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', `The workflow PAT belongs to @${actual.login}, not the selected bot @${expected.login}. No Secret was written. Delete the unintended PAT in GitHub and create one as @${expected.login}.`);
+            throw new setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError(expected, actual);
         }
         return expected;
     }
@@ -66761,7 +66809,7 @@ class SetupCredentialPromptAdapter {
         console.log(`Why these credentials are separate: ${AUTHENTICATION_GUIDE}`);
     }
     async requestWorkflowPat(requirement, current) {
-        if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
+        if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide && !this.guidedBotIdentity) {
             let choice;
             do {
                 choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link', `Use a PAT from the dedicated bot account, not the operator setup PAT. Guided opens GitHub's form; manual keeps the permission table visible. The bot PAT is installed as an Actions Secret only after Apply.\nRead more: ${AUTHENTICATION_GUIDE}`);
@@ -66775,15 +66823,24 @@ class SetupCredentialPromptAdapter {
                 const identity = await this.resolveBotIdentity(login);
                 this.guidedBotIdentity = identity;
                 console.log(`Expected bot account resolved: @${identity.login} (GitHub account ID ${identity.id}).`);
-                console.log((0, setup_prompt_rendering_1.renderBox)(`Open this link in a separate/private browser session, sign in as @${login} (the bot account), and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`, 'Create bot PAT in GitHub', 33));
-                console.log(this.workflowPatGuide);
-                console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
             }
             else if (this.workflowPatRequirements) {
                 console.log((0, setup_token_permission_presenter_1.renderSetupTokenPermissionRequirements)('workflow', this.workflowPatRequirements));
             }
         }
+        if (this.guidedBotIdentity) {
+            console.log((0, setup_prompt_rendering_1.renderBox)(`You must open this link with the selected bot account: @${this.guidedBotIdentity.login}. Use a separate/private browser session and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`, 'Create bot PAT in GitHub', 33));
+            console.log(this.workflowPatGuide);
+            console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+        }
         return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
+    }
+    async recoverWorkflowPatIdentityMismatch(expected, actual) {
+        if (!this.terminal)
+            return 'cancel';
+        console.log((0, setup_prompt_rendering_1.renderBox)(`This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub and create another while signed in as @${expected.login}.`, 'Bot PAT account mismatch', 33));
+        const answer = await this.readChoice('How would you like to continue?', ['enter another bot PAT', 'stop setup']);
+        return answer === 'enter another bot PAT' ? 'retry' : 'cancel';
     }
     async readBotLogin() {
         while (true) {
@@ -68243,21 +68300,27 @@ class WebSetupCredentialPrompt {
     async requestWorkflowPat(requirement, current) {
         let guide;
         let botInfo = '';
-        if (this.workflowGuide) {
+        if (this.workflowGuide && !this.botIdentity) {
             const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT'], undefined, 'botPat.method');
             if (method === 'Guided GitHub link') {
                 const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.', 'botPat.login');
                 if (!login || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login))
                     throw new Error('Enter a valid GitHub bot login.');
                 this.botIdentity = await this.resolveBot(login);
-                guide = this.workflowGuide;
-                botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
             }
             else if (this.workflowRequirements)
                 this.bridge.requirements('workflow', this.workflowRequirements);
         }
+        if (this.botIdentity) {
+            guide = this.workflowGuide;
+            botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
+        }
         const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '' });
         return value ? { name: requirement.name, value } : undefined;
+    }
+    async recoverWorkflowPatIdentityMismatch(expected, actual) {
+        const answer = await this.choice('This PAT belongs to a different GitHub account', ['Enter another bot PAT', 'Stop setup'], `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub, switch to @${expected.login}, then choose whether to enter another PAT or stop setup.`, 'botPat.identityMismatch', { expected: expected.login, actual: actual.login });
+        return answer === 'Enter another bot PAT' ? 'retry' : 'cancel';
     }
     async requestApiKey(requirement, current) {
         const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length), 'credential.apiKey', { name: requirement.name, provider: requirement.provider ?? 'provider' });

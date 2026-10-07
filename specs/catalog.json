@@ -970,7 +970,9 @@
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
         "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
         "src/infrastructure/__tests__/setup_pat_audit.test.ts",
-        "src/infrastructure/__tests__/setup_permission_projects_access.test.ts"
+        "src/infrastructure/__tests__/setup_permission_projects_access.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_recovery.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -993,9 +995,9 @@
       "id": "guided-bot-pat-onboarding",
       "title": "Guided bot PAT onboarding",
       "status": "proposed",
-      "scope": "Guide creation of the persistent workflow PAT using GitHub's official form, verify bot identity and grants, and install the approved Actions Secret",
+      "scope": "Guide creation of the persistent workflow PAT, verify bot identity and grants, recover explicitly from wrong-account input within the session, and install the approved Actions Secret",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/guided-bot-pat-onboarding.md"
       ],
@@ -1013,7 +1015,11 @@
         "src/application/usecases/setup/setup_credentials_use_case.ts",
         "src/cli/setup_credential_prompt_adapter.ts",
         "src/cli/setup_journey_presenter.ts",
-        "src/data/repository/repository_variables_repository.ts"
+        "src/data/repository/repository_variables_repository.ts",
+        "src/application/errors/setup_workflow_pat_identity_mismatch_error.ts",
+        "src/application/ports/setup_wizard_ports.ts",
+        "src/cli/web_setup_adapters.ts",
+        "web/src/components/CredentialPrompt.svelte"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
@@ -1023,7 +1029,11 @@
         "src/application/usecases/setup/__tests__/setup_credentials_use_case.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
         "src/cli/__tests__/setup_journey_presenter.test.ts",
-        "src/data/repository/__tests__/repository_variables_repository.test.ts"
+        "src/data/repository/__tests__/repository_variables_repository.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_recovery.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts",
+        "src/cli/__tests__/web_setup_components.test.ts",
+        "src/cli/__tests__/web_setup_catalog.test.ts"
       ],
       "documentation": [
         "README.md",

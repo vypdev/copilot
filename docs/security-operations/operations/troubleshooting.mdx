@@ -17,7 +17,13 @@ delta, use the corrected link printed by setup, and rerun; no approved setup
 mutation has started. If the final plan removes grants, your existing PAT may
 have excess access; replace it for strict least privilege. A guided bot PAT
 created while signed into another account fails the numeric-ID check before
-the Secret is written. Delete that unused PAT and create one as the chosen bot.
+the Secret is written. The message identifies both accounts. Choose **Enter
+another bot PAT** to keep your answers, approved plan and selected bot in this
+session, or **Stop setup** to end it. Delete that unused PAT and create one as
+the chosen bot, using a private window or switching GitHub accounts. Re-entry
+verifies the new token's numeric identity and required grants; it does not retry
+provider failures or permission checks automatically. Closing the session still
+requires a fresh setup run.
 If setup fails after applying changes, inspect the Actions Secret name and
 scope before revoking or replacing the bot PAT: it may already be active.
 Cancelling setup never revokes either PAT. Delete an unused setup PAT in GitHub;

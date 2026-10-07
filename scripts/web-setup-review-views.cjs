@@ -13,6 +13,14 @@ const decisions = {
 };
 
 function reviewView(state) {
+  if (state === 'bot-credential' || state === 'bot-account-mismatch') return { ...base,
+    journey: { repository: base.repository, position: 5, total: 6, current: 'Bot PAT & credentials',
+      complete: ['Repository', 'Setup choices', 'Setup PAT', 'Plan'], pending: ['Apply'], mutationStarted: false, choiceReviewPass: 1 },
+    prompt: state === 'bot-credential' ? { kind: 'secret', title: 'PAT — bot account PAT', copyId: 'botPat.entry.guided',
+      copyValues: { name: 'PAT', account: 'fixture-bot', accountId: '42' },
+      link: 'https://github.com/settings/personal-access-tokens/new?target_name=fixture-owner&contents=write&expires_in=90' }
+      : { kind: 'choice', title: 'This PAT belongs to a different GitHub account', copyId: 'botPat.identityMismatch',
+        copyValues: { expected: 'fixture-bot', actual: 'fixture-operator' }, choices: ['Enter another bot PAT', 'Stop setup'] } };
   if (state === 'plan') return { ...base, prompt: { kind: 'plan', title: 'Review your setup plan', copyId: 'plan.review',
     editGroups: ['capabilities', 'repository', 'projects', 'storage'], plan: {
       decisions, presentationDefaults: [{ group: 'bugbot', count: 10 }],

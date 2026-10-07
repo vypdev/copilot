@@ -318,10 +318,19 @@ exactly what completed and what remains.
    scopes, workflow updates, warnings, and credential **status only**. The
    operator reviews a plan revision. Then present the *distinct* bot PAT
    grants and resolved expected bot user ID. GitHub's form opens under the
-   bot account; the submitted bot PAT must pass the current guided numeric-ID
+   bot account. The link names the selected bot, with an adjacent account warning
+   and private-window/account-switching guidance. The submitted bot PAT must pass the current guided numeric-ID
    and grant checks before Secret `PAT` may be written. Manual and existing
    PAT handling retain the baseline's exact claims, not invented identity
-   assurances. An existing GitHub Secret value cannot be read back: when the
+   assurances. A confirmed bot-ID mismatch pauses for an explicit **Enter another
+   bot PAT** or **Stop setup** choice. Re-entry retains the approved plan, answers
+   and bot identity in this session, discards the rejected value and rechecks the
+   new hidden PAT before permission tests or Secret writes. No automatic retreat
+   or restart persistence is introduced. Generic provider, permission and cleanup
+   failures keep their existing behavior. The 22 new account-warning/recovery
+   regressions are specified in the [bot onboarding SDD](./guided-bot-pat-onboarding.md#14-testing-strategy-and-numeric-budget)
+   and do not close this SDD's human acceptance rows.
+   An existing GitHub Secret value cannot be read back: when the
    existing policy requires re-audit, ask for a new/re-entered bot PAT and
    show preserve-versus-replace consequences before Apply. Other credentials
    use masked local inputs. Unlike the terminal composition, the web

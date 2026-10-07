@@ -13,6 +13,26 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test.each(['en', 'es', 'fr', 'pt'])('%s puts the selected bot account warning next to the creation link', locale => {
+    const html = markup('CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided',
+      copyValues: { account: 'vypbot' }, link: 'https://github.com/settings/personal-access-tokens/new?name=bot' },
+      controller: true, busy: false }, locale);
+    expect(html).toContain('class="banner warning"');
+    expect(html).toContain('aria-describedby="bot-account-warning"');
+    expect(html.indexOf('id="bot-account-warning"')).toBeLessThan(html.indexOf('class="github-link"'));
+    expect(html).toMatch(/<a[^>]*class="github-link"[^>]*>[^<]*@vypbot/su);
+    expect(html).toContain('type="password"');
+  });
+
+  test('escapes the bot account and does not claim account binding for a setup or manual PAT', () => {
+    const prompt = { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided', copyValues: { account: '<script>test</script>' },
+      link: 'https://github.com/settings/personal-access-tokens/new' };
+    expect(markup('CredentialPrompt', { prompt, controller: true, busy: false })).not.toContain('<script>test</script>');
+    for (const copyId of ['setupPat.entry', 'botPat.entry.manual']) {
+      expect(markup('CredentialPrompt', { prompt: { ...prompt, copyId }, controller: true, busy: false }))
+        .not.toContain('bot-account-warning');
+    }
+  });
   const correctedPat = { stage: 'final', addedGrants: ['repository Workflows write'],
     url: 'https://github.com/settings/personal-access-tokens/new?contents=write&workflows=write' };
   const permissionFailure = { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false };

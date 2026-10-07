@@ -21,6 +21,41 @@ function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalD
 }
 
 describe('setup presenters and prompt-specific adapters', () => {
+  it('re-enters the guided bot PAT after an explicit choice without repeating method or bot identity input', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '1' }, { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'wrong-token' }, { kind: 'value', value: '' }, { kind: 'value', value: '1' },
+        { kind: 'value', value: 'correct-token' }]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      const expected = { id: 42, login: 'vypbot' };
+      const resolve = jest.fn().mockResolvedValue(expected);
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve);
+      const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime' };
+      await adapter.requestWorkflowPat(requirement);
+      await expect(adapter.recoverWorkflowPatIdentityMismatch(expected, { id: 99, login: 'operator' })).resolves.toBe('retry');
+      await expect(adapter.requestWorkflowPat(requirement)).resolves.toEqual({ name: 'PAT', value: 'correct-token' });
+      expect(resolve).toHaveBeenCalledTimes(1);
+      expect(input.readSecret).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('You must open this link with the selected bot account: @vypbot');
+      expect(output.replace(/[│\s]+/gu, ' ')).toContain('answers and approved plan are retained');
+      expect(output).toContain('retained');
+      expect(output).toContain('Select one of the listed options');
+      expect(output).not.toMatch(/wrong-token|correct-token/u);
+    } finally { log.mockRestore(); }
+  });
+
+  it('supports stopping at a bot mismatch and never prompts an unattended session for recovery', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const expected = { id: 42, login: 'vypbot' }, actual = { id: 99, login: 'operator' };
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '2' }]), {})
+        .recoverWorkflowPatIdentityMismatch(expected, actual)).resolves.toBe('cancel');
+      await expect(new SetupCredentialPromptAdapter(undefined, {})
+        .recoverWorkflowPatIdentityMismatch(expected, actual)).resolves.toBe('cancel');
+    } finally { log.mockRestore(); }
+  });
   it('renders complete and partial doctor reports with text statuses and the no-write guarantee', () => {
     const complete = renderDoctorReport(buildDoctorReport([
       doctorCheck({ id: 'configuration.valid', status: 'pass', summary: 'Valid.' }),

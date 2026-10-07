@@ -1,4 +1,7 @@
 export const en = {
+  botAccountWarning: 'You must open this link with the selected bot account: @{account}.',
+  botAccountHelp: 'Check the GitHub account before generating the PAT. Use a private window or switch accounts if your browser is signed in as the setup operator.',
+  botGithubForm: 'Create bot PAT as @{account}',
   language: 'Language', english: 'English', spanish: 'Español',
   setup: 'SETUP', connecting: 'Connecting…', localSession: 'LOCAL SESSION',
   progress: 'Setup progress', studio: 'SETUP STUDIO', journey: 'YOUR SETUP JOURNEY',

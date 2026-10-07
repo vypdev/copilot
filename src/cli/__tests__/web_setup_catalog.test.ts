@@ -20,6 +20,18 @@ import { permissionProgressCopy, permissionProgressError } from '../../../web/sr
 import { permissionPrerequisite } from '../../../web/src/i18n/permissionPrerequisite';
 
 describe('web setup localization catalog', () => {
+  test.each(setupLocales)('%s explains account mismatch and retained state with two explicit recovery choices', locale => {
+    const prompt = { kind: 'choice' as const, title: 'Mismatch', copyId: 'botPat.identityMismatch' as const,
+      copyValues: { expected: 'vypbot', actual: 'operator' }, choices: ['Enter another bot PAT', 'Stop setup'] };
+    const copy = localizedPromptCopy(prompt, locale)!;
+    expect(copy.description).toContain('@operator');
+    expect(copy.description).toContain('@vypbot');
+    expect(copy.description).toContain('GitHub');
+    expect(copy.description).toContain('Secret');
+    expect(copy.choices).toHaveLength(2);
+    expect(localizedPromptChoice(prompt, locale, 0)).toBe(copy.choices![0]);
+    expect(localizedPromptChoice(prompt, locale, 1)).toBe(copy.choices![1]);
+  });
   test.each(setupLocales)('%s uses the same bounded prerequisite explanation in progress and result evidence', locale => {
     for (const prerequisite of ['contents-write', 'contents-workflows-write', 'dispatch-workflow']) {
       const copy = permissionPrerequisite(prerequisite, locale);

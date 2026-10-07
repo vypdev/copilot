@@ -189,7 +189,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
     requirement: SetupCredentialRequirement,
     current?: SetupCredentialCheck,
   ): Promise<SetupCredentialValue | undefined> {
-    if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
+    if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide && !this.guidedBotIdentity) {
       let choice: string;
       do {
         choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link',
@@ -204,17 +204,29 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
         const identity = await this.resolveBotIdentity!(login);
         this.guidedBotIdentity = identity;
         console.log(`Expected bot account resolved: @${identity.login} (GitHub account ID ${identity.id}).`);
-        console.log(renderBox(
-          `Open this link in a separate/private browser session, sign in as @${login} (the bot account), and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`,
-          'Create bot PAT in GitHub', 33,
-        ));
-        console.log(this.workflowPatGuide);
-        console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
       } else if (this.workflowPatRequirements) {
         console.log(renderSetupTokenPermissionRequirements('workflow', this.workflowPatRequirements));
       }
     }
+    if (this.guidedBotIdentity) {
+      console.log(renderBox(
+        `You must open this link with the selected bot account: @${this.guidedBotIdentity.login}. Use a separate/private browser session and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`,
+        'Create bot PAT in GitHub', 33,
+      ));
+      console.log(this.workflowPatGuide);
+      console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+    }
     return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
+  }
+
+  async recoverWorkflowPatIdentityMismatch(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'> {
+    if (!this.terminal) return 'cancel';
+    console.log(renderBox(
+      `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub and create another while signed in as @${expected.login}.`,
+      'Bot PAT account mismatch', 33,
+    ));
+    const answer = await this.readChoice('How would you like to continue?', ['enter another bot PAT', 'stop setup']);
+    return answer === 'enter another bot PAT' ? 'retry' : 'cancel';
   }
 
   private async readBotLogin(): Promise<string> {

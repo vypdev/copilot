@@ -240,6 +240,12 @@ deleted by you in GitHub after the run. The bot PAT is suggested for 90 days,
 remains active as Actions Secret `PAT`, and needs renewal before expiry. See
 [authentication](/authentication) for permission and recovery details.
 
+The bot PAT link displays the selected bot login and a warning to open it under
+that account. If you accidentally create a PAT as another user, choose **Enter
+another bot PAT** at the account mismatch to keep your answers and approved plan
+in this session. Setup asks for a fresh value and verifies it again. You can
+instead choose **Stop setup**. Delete the unused PAT yourself in GitHub.
+
 If you previously installed Copilot from a local checkout, installing the published
 package with pnpm switches the same `copilot` command to the published package.
 Check which executable and package are active:

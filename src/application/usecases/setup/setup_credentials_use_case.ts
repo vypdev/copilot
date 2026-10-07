@@ -12,6 +12,8 @@ import type {
 } from '../../ports/setup_wizard_ports';
 import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 import { ApplicationError } from '../../errors/application_error';
+import { SetupWorkflowPatIdentityMismatchError } from '../../errors/setup_workflow_pat_identity_mismatch_error';
+import { SetupInteractionCancelledError } from '../../errors/setup_interaction_cancelled_error';
 import type {
     SetupRemoteConfiguration,
     SetupResourceScope,
@@ -173,9 +175,7 @@ export class SetupCredentialsUseCase {
                 }
             }
 
-            const value = requirement.kind === 'workflowPat'
-                ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
-                : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
+            const value = await this.requestCredential(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
                 if (existing && workflowPermissionAuditRequired) {
                     throw new ApplicationError(
@@ -194,11 +194,6 @@ export class SetupCredentialsUseCase {
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check: SetupCredentialCheck;
-            if (requirement.kind === 'workflowPat' && this.prompt.guidedWorkflowBotIdentity) {
-                if (!this.workflowIdentity) throw new ApplicationError('configuration.unsupported',
-                    'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
-                await this.workflowIdentity.execute(this.prompt.guidedWorkflowBotIdentity, value.value);
-            }
             if (workflowPermissionAuditRequired) {
                 if (!this.tokenPermissions) {
                     throw new ApplicationError(
@@ -258,6 +253,38 @@ export class SetupCredentialsUseCase {
             checks,
             existingSecretNames,
         };
+    }
+    private async requestCredential(
+        requirement: SetupCredentialRequirement,
+        current?: SetupCredentialCheck,
+    ): Promise<SetupCredentialValue | undefined> {
+        if (requirement.kind !== 'workflowPat') return this.prompt.requestApiKey(requirement, current);
+        while (true) {
+            const attempt = await this.requestVerifiedWorkflowPat(requirement, current);
+            if (!(attempt instanceof SetupWorkflowPatIdentityMismatchError)) return attempt;
+            if (!this.prompt.recoverWorkflowPatIdentityMismatch) throw attempt;
+            const decision = await this.prompt.recoverWorkflowPatIdentityMismatch(attempt.expected, attempt.actual);
+            if (decision !== 'retry') throw new SetupInteractionCancelledError();
+        }
+    }
+
+    private async requestVerifiedWorkflowPat(
+        requirement: SetupCredentialRequirement,
+        current?: SetupCredentialCheck,
+    ): Promise<SetupCredentialValue | SetupWorkflowPatIdentityMismatchError | undefined> {
+        const value = await this.prompt.requestWorkflowPat(requirement, current);
+        const expected = this.prompt.guidedWorkflowBotIdentity;
+        if (!value || !expected) return value;
+        if (!this.workflowIdentity) throw new ApplicationError('configuration.unsupported',
+            'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
+        try {
+            await this.workflowIdentity.execute(expected, value.value);
+            return value;
+        } catch (error) {
+            // The rejected token never leaves this attempt; recovery receives only identities.
+            if (error instanceof SetupWorkflowPatIdentityMismatchError) return error;
+            throw error;
+        }
     }
 }
 

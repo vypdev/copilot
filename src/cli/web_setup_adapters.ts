@@ -168,20 +168,28 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
   async requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined> {
     let guide: string | undefined;
     let botInfo = '';
-    if (this.workflowGuide) {
+    if (this.workflowGuide && !this.botIdentity) {
       const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT'], undefined, 'botPat.method');
       if (method === 'Guided GitHub link') {
         const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.', 'botPat.login');
         if (!login || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login)) throw new Error('Enter a valid GitHub bot login.');
         this.botIdentity = await this.resolveBot!(login);
-        guide = this.workflowGuide;
-        botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
       } else if (this.workflowRequirements) this.bridge.requirements('workflow', this.workflowRequirements);
+    }
+    if (this.botIdentity) {
+      guide = this.workflowGuide;
+      botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
     }
     const value = await this.secret(`${requirement.name} — bot account PAT`,
       `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`,
       guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '' });
     return value ? { name: requirement.name, value } : undefined;
+  }
+  async recoverWorkflowPatIdentityMismatch(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'> {
+    const answer = await this.choice('This PAT belongs to a different GitHub account', ['Enter another bot PAT', 'Stop setup'],
+      `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub, switch to @${expected.login}, then choose whether to enter another PAT or stop setup.`,
+      'botPat.identityMismatch', { expected: expected.login, actual: actual.login });
+    return answer === 'Enter another bot PAT' ? 'retry' : 'cancel';
   }
   async requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined> {
     const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length), 'credential.apiKey', { name: requirement.name, provider: requirement.provider ?? 'provider' });

@@ -1,6 +1,9 @@
 import type { SetupMessageKey } from './catalog';
 
 export const fr: Record<SetupMessageKey, string> = {
+  botAccountWarning: 'Vous devez ouvrir ce lien avec le compte bot sélectionné : @{account}.',
+  botAccountHelp: 'Vérifiez le compte GitHub avant de générer le PAT. Utilisez une fenêtre privée ou changez de compte si le navigateur utilise le compte de l’opérateur de configuration.',
+  botGithubForm: 'Créer le PAT du bot en tant que @{account}',
   language: 'Langue', english: 'Anglais', spanish: 'Espagnol',
   setup: 'CONFIGURATION', connecting: 'Connexion…', localSession: 'SESSION LOCALE',
   progress: 'Progression', studio: 'ASSISTANT DE CONFIGURATION', journey: 'VOTRE PARCOURS',

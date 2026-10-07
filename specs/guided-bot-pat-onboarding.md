@@ -1,12 +1,12 @@
 # Guided Bot PAT Onboarding
 
 - Status: Draft — guided implementation in progress; controlled GitHub UX and full test budget remain unverified
-- Date: 2026-09-25
+- Date: 2026-10-07
 - Catalog capability ID: `guided-bot-pat-onboarding`
 - Last verified: Not applicable; prospective change
 - Owners: Copilot maintainers and setup operators
 - Scope: guide creation and installation of the workflow/bot PAT when operator and bot are different GitHub accounts
-- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402); no Action dogfooding for this design
+- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402), [PR #411](https://github.com/vypdev/copilot/pull/411); no Action dogfooding for this design
 - Required review gates: product UX, architecture, testing, documentation, credential security, GitHub form compatibility
 - Open decisions blocking readiness: controlled GitHub UX, organization approval evidence, non-interactive identity extension, and full test-budget evidence
 
@@ -253,7 +253,8 @@ and stores the bot PAT in the selected Actions Secret scope.
 |---|---|---|---|---|
 | `operator-pat-needed` | bootstrap grants known | create/paste operator PAT | `operator-verified`, `cancelled` | user |
 | `operator-verified` | identity/grants accepted | reuse preflight intent, finish plan and resolve any operator grant correction | `bot-pat-needed`, `blocked` | CLI/user |
-| `bot-pat-needed` | final grants and expected bot ID known | open GitHub as bot, create PAT | `bot-pat-verified`, `blocked`, `cancelled` | bot user |
+| `bot-pat-needed` | final grants and expected bot ID known | open GitHub as bot, create PAT | `bot-pat-verified`, `bot-account-mismatch`, `blocked`, `cancelled` | bot user |
+| `bot-account-mismatch` | PAT `/user` ID differs from selected bot | no Secret write; answers and plan retained; choose re-entry or stop | `bot-pat-needed` after explicit re-entry, `cancelled` | user; no automatic transition |
 | `bot-pat-verified` | ID and grants accepted | Secret ready to write after approval | `secret-writing` | operator |
 | `secret-writing` | remote call started | provisioning | `installed`, `partial`, `blocked` | CLI |
 | `installed` | Secret API accepted | runtime PAT is stored | terminal | operator |
@@ -396,7 +397,7 @@ Workflow PAT (hidden):
 |---|---|---|
 | Pending | `Waiting for a PAT created by vypbot. No Secret has been written.` | open PAT link |
 | Action required | `Before generating, check that GitHub is using vypbot. Select only vypdev/copilot, then generate the PAT.` | check browser account |
-| Blocked | `The supplied PAT belongs to efrain, not vypbot. No Secret was written. Delete that PAT in GitHub and create one while signed in as vypbot.` | create correct PAT |
+| Account mismatch | `The supplied PAT belongs to efrain, not vypbot. No Secret was written. Your answers and approved plan are retained. Delete that unused PAT in GitHub and create one while signed in as vypbot.` | enter another bot PAT or stop |
 | Partial | `Secret PAT was updated, but later setup steps failed. The bot PAT may already be active. Inspect the setup report before retrying.` | inspect report |
 | Complete | `Secret PAT is installed for vypdev/copilot. Verified owner: vypbot (ID 5678). The local value was discarded; the GitHub Secret remains active.` | run doctor/health check |
 
@@ -411,9 +412,50 @@ Escape untrusted usernames and descriptions in terminal and URL content.
 
 ## 10. Failure, recovery, and cleanup
 
+### Wrong-account correction within the current session
+
+The guided creation link MUST name the selected bot, with a prominent adjacent
+warning: `You must open this link with the selected bot account: @vypbot.`
+The CLI repeats that instruction immediately before its copyable URL. The web
+link reads `Create bot PAT as @vypbot` and associates the warning as its
+accessible description. Suggest a private window or GitHub account switching;
+Copilot cannot choose or prove the browser's signed-in account.
+
+```text
+Choose bot -> account warning + creation link -> hidden PAT -> numeric-ID check
+  mismatch -> show actual/expected accounts and retained plan
+             [Enter another bot PAT] -> empty hidden input -> fresh ID/grant checks
+             [Stop setup] -> cancel this run
+```
+
+Text equivalent: an account mismatch pauses credential collection for an
+explicit choice. Re-entry retains the approved plan, answers, selected bot and
+previously collected credentials in this session. It does not repeat method or
+bot-login selection. The rejected value is discarded before recovery input;
+only safe identity facts enter the error and browser view. A repeated mismatch
+requires another explicit choice. No new default, configuration or persisted
+restart state is introduced; closing the session still ends this run.
+
+Representative recovery content: `The PAT belongs to @efraespada; the selected
+bot is @vypbot. No bot Secret was written. Your answers and approved plan are
+retained. Delete the unused PAT in GitHub, switch to @vypbot, then choose whether
+to enter another PAT or stop setup.` The warning and both choices are localized
+in English, Spanish, French and Portuguese, readable without color and without
+internal scrolling. Successful and partial-write content remains as specified
+in §9; this recovery is confined to pre-write identity entry.
+
+The application owns the loop through a semantic credential-prompt recovery
+port and a typed numeric-ID mismatch error. It MUST NOT infer this condition
+from provider prose or offer this retry for generic provider failures, missing
+permissions, cleanup incidents or later installation errors. Identity acceptance
+must precede capability transactions; a replacement PAT must pass its own full
+grant audit and the existing installation-boundary identity recheck. Presenters
+without interactive recovery keep the existing rejection contract. Manual and
+unattended inputs retain their existing behavior.
+
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
 |---|---|---|---|---|---|
-| Wrong browser account | PAT belongs to another user | no Secret write | new PAT | switch account in GitHub | user deletes wrong PAT |
+| Wrong browser account | PAT belongs to another user | no Secret write; answers, approved plan, selected bot and collected credentials remain in this session | explicit re-entry or stop | switch account in GitHub | user deletes wrong PAT |
 | Wrong resource owner/repo | PAT lacks target access | no Secret write | correct form | select target repo and owner | user deletes wrong PAT |
 | Org PAT pending or inaccessible | Action cannot use it yet | no Secret write | after access is verified | inspect approval with org admin or choose permitted account; label pending only with evidence | user owns token |
 | Missing/unverifiable grant | setup blocked by established audit policy | permission table | corrected PAT | correct access or retry the required capability transaction | user deletes obsolete PAT |
@@ -497,6 +539,18 @@ include two browser accounts, 2FA handled by GitHub, wrong-account rejection,
 repository selection, Secret installation, and post-write partial failure.
 Test PATs are deleted by their owners after the controlled exercise.
 
+The account-warning and same-session recovery change adds a **22-case regression
+floor**: 8 application cases for explicit waiting, cancellation, repeated
+mismatch, unavailable/non-semantic failures, presenter compatibility, denied
+replacement grants and absent replacement input; 3 application/web handoff cases
+for correction, stop and close (including stale answers and redaction); 2 CLI
+cases for account retention, deliberate choice and unattended compatibility;
+and 9 presentation/localization cases for four account warnings, escaping/manual
+role separation and four localized recovery prompts. These new cases do not
+close the baseline's outstanding human or full-budget gates. Existing changed
+module coverage and architecture gates remain mandatory; use fake identities
+and credential-free `bot-credential` / `bot-account-mismatch` browser fixtures.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Required content | Validation |
@@ -538,6 +592,14 @@ PAT, and the bot PAT remains active after setup.
     is claimed until the planned migration is implemented.
 12. Pending, action, blocked, partial, and complete CLI states are readable
     without color and accurately distinguish local disposal from GitHub Secret.
+13. Given a guided bot account, the creation link and adjacent warning name it
+    in each supported web locale and the CLI. A mismatched token exposes both
+    identities, no Secret write and two explicit recovery choices.
+14. Given a wrong-account PAT, no automatic re-entry occurs. Choosing re-entry
+    retains this session's answers, plan and selected bot, asks for a fresh
+    hidden value and audits only a correctly identified replacement. Stop or
+    close cancels; a repeated mismatch pauses again. Generic errors remain
+    terminal, stale answers are rejected, and token values never enter views.
 
 ## 17. Requirements traceability
 
@@ -549,6 +611,7 @@ PAT, and the bot PAT remains active after setup.
 | Secret lifecycle (§4.3, §10) | existing credential/Secret use cases | scenarios 7–10 | setup/troubleshooting |
 | Compatibility (§6.2, §13) | setup CLI | scenario 11 | CLI guide |
 | Truthful UX (§9) | presenter | scenario 12 | how-to-use |
+| Account warning and explicit correction (§10) | typed identity error, credential use case/prompt port, CLI/web presentation | scenarios 13–14; 22-case regression floor | authentication, how-to-use, troubleshooting, architecture |
 
 ## 18. Implementation sequence
 
@@ -609,3 +672,9 @@ PAT, and the bot PAT remains active after setup.
   its separate workflow-role policy; no bot-account browser session or token
   is created by Copilot. Controlled browser acceptance and the full numeric
   test budget remain open gates.
+- Implementation update (2026-10-07): guided bot creation names the selected
+  account beside the web link and CLI URL. A confirmed pre-write numeric-ID
+  mismatch supports explicit re-entry in the same session or cancellation;
+  replacement identity and grant checks remain mandatory. There is no local
+  recovery persistence. Controlled account-switching/2FA, linguistic and
+  assistive-technology evidence remain open.

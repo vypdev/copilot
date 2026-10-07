@@ -187,6 +187,15 @@ can write Secrets. GitHub owns the browser session, 2FA, token generation, and
 deletion. Manual and unattended inputs retain the prior audit without the new
 bot-ID assertion.
 
+A confirmed guided bot-ID mismatch has a typed application error containing
+only the expected and actual identities. `SetupCredentialsUseCase` offers a
+semantic recovery choice through the credential prompt port. Only an explicit
+retry requests another hidden PAT; the rejected value is discarded and prior
+credentials, answers and plan remain in memory. Web and terminal adapters keep
+the selected bot and display its account beside the creation link. Other errors
+retain their existing failure behavior, and the installation-boundary identity
+recheck remains mandatory. No restart persistence or new configuration is added.
+
 The optional `setup --web` presentation compiles Svelte/Vite into packaged
 `build/web` assets. The CLI serves those assets from a loopback-only Node HTTP
 server; the browser sends bounded semantic answers to an in-memory bridge.

@@ -98,6 +98,17 @@ PAT's own `/user` identity against that ID before any Secret write. A manual or
 non-interactive PAT retains the existing permission audit but does **not** gain
 this extra identity binding. A wrong bot account blocks installation.
 
+The guided bot link names the selected account, for example **Create bot PAT as
+@vypbot**, with an adjacent warning to use that GitHub account. A private browser
+window can help when your regular window uses the operator account; sign in as
+the bot and check GitHub's active account before generating the PAT.
+If the submitted PAT belongs to another account, setup shows both identities
+and offers **Enter another bot PAT** or **Stop setup**. Re-entry is explicit:
+it keeps your answers, approved plan and selected bot in the same session,
+clears the rejected input, and verifies the new PAT's numeric identity and
+permissions before continuing. Delete the unused wrong-account PAT in GitHub.
+Closing the session still ends the run; progress is not saved across restarts.
+
 Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 They do not sign you in, complete 2FA, generate or revoke a token, or choose
 an individual repository. Check the active browser account, change **All
