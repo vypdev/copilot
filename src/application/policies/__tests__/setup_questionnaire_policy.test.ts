@@ -51,6 +51,16 @@ describe('setup questionnaire policy', () => {
     expect(state.draft.createInitialTag).toBe(expected);
   });
 
+  it('keeps workflow selection unchanged after invalid input and supports the default and All answers', () => {
+    const state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration()), 'issueWorkflows.enabled');
+    const invalid = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'unknown-workflow' });
+    expect(invalid.validation).toContain('Unknown issue workflow');
+    expect(invalid.draft).toEqual(state.draft);
+    expect(invalid.question?.id).toBe('issueWorkflows.enabled');
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '' }).draft.issueWorkflows.enabled).toEqual(state.draft.issueWorkflows.enabled);
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'all' }).draft.issueWorkflows.enabled).toEqual(state.draft.issueWorkflows.enabled);
+  });
+
   it('recomputes the initial version decision when a saved workflow answer changes', () => {
     let state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration()), 'issueWorkflows.enabled');
     state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'feature' });

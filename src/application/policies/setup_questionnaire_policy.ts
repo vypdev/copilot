@@ -454,16 +454,12 @@ function approvalQuestions(): QuestionDefinition[] {
     {
       stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.minDiffPercent',
       label: 'Minimum changed-line coverage percentage (0–100)', kind: 'number',
-      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
-        ? draft.pullRequestApproval.coverage.minDiffPercent : 80,
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
         && draft.pullRequestApproval.coverage.mode === 'numeric',
     },
     {
       stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.artifactWorkflowName',
       label: 'Exact workflow publishing copilot-diff-coverage-v1', kind: 'text',
-      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
-        ? draft.pullRequestApproval.coverage.artifactWorkflowName : '',
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
         && draft.pullRequestApproval.coverage.mode === 'numeric',
     },
