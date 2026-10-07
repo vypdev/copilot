@@ -50,6 +50,16 @@ additional grants, setup stops before applying it and prints a corrected link.
 Update the PAT in GitHub or create a replacement, then rerun setup. Guided
 setup shows the account returned by GitHub and asks you to confirm it.
 
+In the web assistant, a blocked permission result keeps a **Create corrected
+setup PAT** link with the final required grants. For example, discovering an
+existing managed Secret and a missing credential-health workflow can add
+**Workflows: write** after you created the first PAT. Select the target repository
+in the updated GitHub form, create or correct the PAT, close the old local
+session and start `copilot setup --web` again. If temporary cleanup or a
+concurrent Secret collision needs inspection, resolve that first. An Actions
+check stopped by workflow preparation remains **Unverifiable**; it does not
+establish that the Actions grant is missing.
+
 For Projects, this early choice is only **whether you want the integration**.
 Listing private organization Projects requires authorization, so the assistant
 cannot reliably ask you to select Project numbers before the setup PAT exists.

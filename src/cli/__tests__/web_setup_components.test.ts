@@ -13,6 +13,48 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  const correctedPat = { stage: 'final', addedGrants: ['repository Workflows write'],
+    url: 'https://github.com/settings/personal-access-tokens/new?contents=write&workflows=write' };
+  const permissionFailure = { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false };
+
+  test.each([
+    ['en', 'Create corrected setup PAT', 'start a fresh setup run'],
+    ['es', 'Crear PAT de configuración corregido', 'inicia una nueva configuración'],
+    ['fr', 'Créer un PAT de configuration corrigé', 'recommencez la configuration'],
+    ['pt', 'Criar PAT de configuração corrigido', 'inicie uma nova configuração'],
+  ])('%s blocked result preserves the updated guided PAT link and explains restarting', (locale, label, restart) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: permissionFailure, setupPatCorrection: correctedPat }, locale);
+    expect(html).toContain(label);
+    expect(html).toContain(restart);
+    expect(html).toContain('repository Workflows write');
+    expect(html).toContain('contents=write&amp;workflows=write');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  test.each([
+    ['missing correction', { setupPatCorrection: undefined }],
+    ['completed setup', { outcome: 'complete' }],
+    ['unrelated failure', { detail: { ...permissionFailure, reasonCode: 'storage' } }],
+    ['partial setup', { outcome: 'partial' }],
+    ['started mutations', { detail: { ...permissionFailure, mutationStarted: true } }],
+    ['pending cleanup', { permissionReport: { role: 'setup', checks: [{ cleanupPending: true }] } }],
+    ['concurrent Secret collision', { permissionReport: { role: 'setup', checks: [{ incident: 'secret-collision' }] } }],
+  ])('does not offer a new PAT before inspection for %s', (_, overrides) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: permissionFailure, setupPatCorrection: correctedPat, ...overrides });
+    expect(html).not.toContain('Create corrected setup PAT');
+    expect(html).not.toContain('workflows=write');
+  });
+
+  test('bootstrap correction offers required permissions without claiming a later inspection delta', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { ...permissionFailure, stoppedStage: 'Setup PAT' },
+      setupPatCorrection: { ...correctedPat, stage: 'bootstrap', addedGrants: [] } });
+    expect(html).toContain('Create corrected setup PAT');
+    expect(html).not.toContain('Additional permissions discovered after inspection');
+  });
+
   test.each(['en', 'es', 'fr', 'pt'])('%s blocked result explains the Actions workflow prerequisite without provider prose', locale => {
     const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
       detail: { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false },

@@ -4,6 +4,7 @@
   import { setupLocale } from '../i18n/localeStore';
   import ActionButton from './ActionButton.svelte';
   import ResourceProgress from './ResourceProgress.svelte';
+  import SetupPatCorrectionPanel from './SetupPatCorrectionPanel.svelte';
   import { focusOnRevision } from '../lib/focusOnRevision';
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   import { permissionEvidence } from '../i18n/permissionEvidence';
@@ -14,6 +15,7 @@
   export let doctor: WebSetupView['doctor'] = undefined;
   export let detail: WebSetupView['resultDetail'] = undefined;
   export let permissionReport: NonNullable<WebSetupView['permissions']>['report'] = undefined;
+  export let setupPatCorrection: WebSetupView['setupPatCorrection'] = undefined;
   const reasons: Record<NonNullable<WebSetupView['resultDetail']>['reasonCode'], [SetupMessageKey, SetupMessageKey]> = {
     permissions: ['reasonPermissions', 'nextPermissions'], storage: ['reasonStorage', 'nextStorage'],
     configuration: ['reasonConfiguration', 'nextConfiguration'], 'session-expired': ['reasonExpired', 'nextExpired'],
@@ -33,6 +35,8 @@
     ? permissionReport : undefined;
   $: pendingProbeCleanup = blockedPermissionReport?.checks.some(check => check.cleanupPending === true) === true;
   $: secretCollision = blockedPermissionReport?.checks.some(check => check.incident === 'secret-collision') === true;
+  $: showPatCorrection = outcome === 'blocked' && detail?.reasonCode === 'permissions'
+    && detail.mutationStarted === false && !pendingProbeCleanup && !secretCollision && setupPatCorrection;
   $: unresolvedPermissions = blockedPermissionReport
     ? blockedPermissionReport.checks.filter(check => check.applicability === 'required'
       && check.status !== 'verified' && check.status !== 'available') : [];
@@ -62,6 +66,9 @@
   {/if}
   {#if detail?.effects?.length}
     <ResourceProgress effects={detail.effects} />
+  {/if}
+  {#if showPatCorrection && setupPatCorrection}
+    <SetupPatCorrectionPanel correction={setupPatCorrection} />
   {/if}
   <p>{secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : explanation}</p>
   {#if outcome === 'complete'}<p>{tr('botRenewal', $setupLocale)}</p>{/if}

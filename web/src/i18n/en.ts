@@ -26,6 +26,8 @@ export const en = {
   whatHappened: 'What happened', alreadyChanged: 'Already changed', noChanges: 'No repository or GitHub setup changes were started in this session.',
   nextAction: 'Next action', reasonPermissions: 'The setup PAT lacked or could not confirm required permissions.', nextPermissions: 'Check the displayed grants, correct the PAT in GitHub, then start a fresh setup run.',
   permissionReportTitle: 'PAT permission evidence', permissionReportLead: 'Any required grants that could not be confirmed are listed below. Unverifiable does not mean missing.',
+  updatedSetupPatTitle: 'Correct the setup PAT', updatedSetupPatBody: 'This GitHub link includes the required permissions for this setup run. Select this repository before creating the PAT. Close this local session, then start a fresh setup run with the corrected PAT.',
+  updatedSetupPatGrants: 'Additional permissions discovered after inspection', updatedSetupPatLink: 'Create corrected setup PAT',
   permissionProbeCleanupPending: 'A temporary permission-test resource may still exist. Setup has stopped; do not assume cleanup succeeded.',
   permissionProbeCleanupAction: 'Retry with a PAT that can remove this resource. The local recovery journal is checked before any new permission tests.',
   permissionSecretCollision: 'GitHub reported that a Secret at the random test name was updated. A concurrent Secret value may have changed. Setup stopped without deleting it.',

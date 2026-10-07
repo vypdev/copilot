@@ -68193,6 +68193,7 @@ class WebSetupCredentialPrompt {
         return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop'], undefined, 'setupPat.confirmAccount', { account }) === 'Yes, continue';
     }
     showUpdatedSetupPatLink(url, stage, delta) {
+        this.bridge.setupPatCorrection(url, stage, delta);
         this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. Installation has not started. Resolve failed permission tests and any pending cleanup before retrying. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
     }
     showSetupPatCleanupReminder() {
@@ -68458,6 +68459,21 @@ class WebSetupBridge {
     }
     requirements(role, requirements) {
         this.publish({ permissions: { role, requirements, report: undefined, progress: [] } });
+    }
+    setupPatCorrection(url, stage, addedGrants = []) {
+        if (this.view.outcome)
+            return;
+        let parsed;
+        try {
+            parsed = new URL(url);
+        }
+        catch {
+            return;
+        }
+        if (parsed.origin !== 'https://github.com' || parsed.pathname !== '/settings/personal-access-tokens/new'
+            || parsed.username || parsed.password || parsed.hash)
+            return;
+        this.publish({ setupPatCorrection: { url, stage, addedGrants: [...addedGrants] } });
     }
     report(report) {
         this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements,

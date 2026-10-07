@@ -3,7 +3,7 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-10-05 (PR #402 merge baseline and fixture-only follow-up evidence are recorded below; the operator incident is external evidence, not agent dogfooding)
+- Last verified: 2026-10-07 (PR #402 merge baseline, fixture follow-up and isolated permission-denial evidence are recorded below; no setup plan was applied by the agent)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
@@ -741,6 +741,62 @@ independent accessibility or provider gates. Evidence lives in the component,
 catalog and browser-review fixtures; user guidance lives in authentication and
 `docs/development/setup-assistant-review.mdx`. Rollback restores presentation
 and optional diagnostics without changing stored answers or setup configuration.
+
+### 9.1.2 Guided setup PAT recovery after inspection — 2026-10-07
+
+The first guided PAT link is provisional: GitHub inspection can reveal existing
+Secrets and a missing credential-health workflow, adding Actions and Workflows
+WRITE to the final requirements. When this final audit blocks setup, the updated
+official PAT creation link MUST survive cleanup reminders, permission updates
+and the terminal outcome message. `WebSetupView.setupPatCorrection` carries the
+generated URL, `bootstrap`/`final` stage and finite permission delta separately
+from transient messages. It contains no token, provider response or submitted
+answer. The bridge accepts only the HTTPS GitHub PAT creation endpoint without
+URL credentials or fragments; the application remains responsible for building
+the link from required grants. The browser does not derive permission scopes.
+
+```mermaid
+flowchart LR
+  A[Provisional guided PAT] --> B[GitHub inspection]
+  B --> C[Final permission audit]
+  C -->|Denied grant; cleanup confirmed| D[Blocked result with corrected PAT link]
+  D --> E[Operator selects repository and creates corrected PAT on GitHub]
+  E --> F[Close local session and start fresh setup]
+```
+
+Text equivalent: final inspection may require more grants than the first link;
+an unsuccessful audit stops before setup changes and exposes a corrected link.
+The operator creates the replacement in GitHub and starts a new local run.
+
+```text
+No setup changes started
+[PAT permission evidence: Actions prerequisite; Workflows Missing]
+Correct the setup PAT
+Select this repository before creating the PAT. Close this local session,
+then start a fresh setup run with the corrected PAT.
+Additional permissions discovered after inspection:
+  repository Workflows write
+Create corrected setup PAT ↗
+```
+
+Render this recovery section in all four web locales only for a blocked
+permission outcome with `mutationStarted: false` and a supplied correction.
+Pending probe cleanup, concurrent Secret collisions, partial setup or unrelated
+failures MUST keep their inspection instructions without offering this shortcut.
+Manual PAT entry and older views without the optional field retain the generic
+PAT settings action. Do not broaden the provisional link, auto-retry an audit,
+reuse approvals, revoke credentials or apply setup from this recovery section.
+No configuration, persistent storage or journal schema changes are introduced;
+rollback drops the optional view field and restores the generic recovery UI.
+
+Incremental budget: **20 automated cases** shared with the PAT SDD: seven bridge
+retention/URL/lifecycle cases, twelve result rendering cases (four locales,
+seven suppression conditions and bootstrap wording), one application case for
+Workflows discovered after inspection. Extend the existing credential adapter
+test through cleanup and finish. Credential-free desktop/narrow browser review
+checks the correction panel spacing and link target; it does not close human
+or provider ledger rows. Authentication and fixture-review documentation must
+describe provisional grants, the persistent final link and a fresh run.
 
 ### 9.2 Browser, responsive, accessibility, and localization
 

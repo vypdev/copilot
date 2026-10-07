@@ -121,3 +121,36 @@ on the left. Both viewports have document width equal to viewport width.
 Inventory disclosure, aligned decision rows and additional panel spacing
 replace clipped, crowded lists. These observations are layout evidence, not
 independent screen-reader, linguistic or native-platform acceptance.
+
+## Guided PAT recovery follow-up — 2026-10-07
+
+A fresh temporary PAT created from the assistant's initial link reproduced the
+same permission-bound HTTP 403 on Workflows and on the Actions disabled-job
+override. Identity and temporary Contents branch creation succeeded; each probe
+deleted its temporary branch and finished with zero pending recovery entries.
+Actions was never dispatched and no setup plan was applied. This establishes
+denial and cleanup for that PAT, not successful Workflows or Actions access.
+
+The initial guided link is provisional. Inspection of existing managed Secrets
+and a missing health workflow adds Workflows WRITE to the final requirements.
+The application already generated that corrected link, but the web bridge's
+cleanup/final messages replaced it and the terminal result hid it. A separate
+`setupPatCorrection` view field now preserves the final required-permissions
+link and delta. The blocked result offers it only before setup mutations and
+after cleanup is confirmed; partial outcomes and Secret collisions keep their
+inspection instructions. The correction includes repository selection and a
+fresh-run instruction in all four web locales.
+
+Twenty additional regressions cover final grant expansion, retained recovery,
+official URL validation, ended sessions, four locales, bootstrap wording and
+seven conditions that suppress the new action. The existing adapter regression
+also follows cleanup through the final result. Credential-free browser review
+at 1280×900 and 390×844 in both themes shows the additional recovery panel in
+page flow, with no internal scroller or horizontal page overflow. Independent
+human and provider gates retain their existing status.
+
+The complete follow-up suite passes **541 suites, 6,436 tests, 26 skipped**.
+Coverage is 95.67% statements, 91.29% branches, 96.61% functions and 96.89%
+lines. TypeScript, Svelte, lint, specification, documentation, workflow,
+generated-bundle and package contracts pass; the extracted package also passes
+the isolated CLI, typed API and local web-session smoke test.

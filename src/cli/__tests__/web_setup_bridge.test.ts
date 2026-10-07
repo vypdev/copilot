@@ -299,4 +299,38 @@ describe('WebSetupBridge', () => {
     expect(bridge.snapshot().permissions?.report?.checks[0]).toMatchObject({ permission: 'Projects', status: 'unverifiable' });
     expect(JSON.stringify(bridge.snapshot())).not.toContain('secret-token');
   });
+
+  test('corrected PAT link survives permission updates, cleanup guidance and the final result', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const url = 'https://github.com/settings/personal-access-tokens/new?workflows=write';
+    const grants = ['repository Workflows write'];
+    bridge.setupPatCorrection(url, 'final', grants);
+    grants.push('later mutable value');
+    bridge.requirements('setup', []);
+    bridge.message('Delete your PAT after this run.', 'warning', 'https://github.com/settings/personal-access-tokens');
+    bridge.resultReason('permissions');
+    bridge.finish('blocked', 'No setup changes started.');
+    expect(bridge.snapshot().setupPatCorrection).toEqual({ url, stage: 'final', addedGrants: ['repository Workflows write'] });
+    expect(bridge.snapshot().message?.link).toBeUndefined();
+  });
+
+  test.each([
+    'not a URL', 'http://github.com/settings/personal-access-tokens/new',
+    'https://other.example/settings/personal-access-tokens/new',
+    'https://secret-token@github.com/settings/personal-access-tokens/new',
+    'https://github.com/settings/personal-access-tokens/new#secret-token',
+  ])('does not publish an invalid or nonofficial correction link: %s', url => {
+    const bridge = new WebSetupBridge('owner/repo');
+    bridge.setupPatCorrection(url, 'final');
+    expect(bridge.snapshot().setupPatCorrection).toBeUndefined();
+  });
+
+  test('an ended session cannot replace the retained correction link', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    bridge.setupPatCorrection('https://github.com/settings/personal-access-tokens/new?contents=write', 'bootstrap');
+    bridge.finish('blocked', 'Stopped');
+    const before = bridge.snapshot();
+    bridge.setupPatCorrection('https://github.com/settings/personal-access-tokens/new?workflows=write', 'final');
+    expect(bridge.snapshot()).toBe(before);
+  });
 });

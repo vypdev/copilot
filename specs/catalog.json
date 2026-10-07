@@ -644,7 +644,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -809,7 +809,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/local-web-setup-assistant.md"
       ],
@@ -836,6 +836,7 @@
         "web/src/components/PermissionProgressPanel.svelte",
         "web/src/components/PromptCard.svelte",
         "web/src/components/ResultPanel.svelte",
+        "web/src/components/SetupPatCorrectionPanel.svelte",
         "web/src/components/ResourceProgress.svelte",
         "web/src/components/PlanPrompt.svelte",
         "web/src/components/PlanDecisionSummary.svelte",

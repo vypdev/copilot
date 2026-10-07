@@ -28,6 +28,8 @@ export const es: Record<keyof typeof en, string> = {
   whatHappened: 'Qué ha pasado', alreadyChanged: 'Qué ha cambiado', noChanges: 'No se iniciaron cambios de configuración en el repositorio ni en GitHub durante esta sesión.',
   nextAction: 'Siguiente paso', reasonPermissions: 'Faltan permisos del PAT de configuración o no pudieron confirmarse.', nextPermissions: 'Comprueba los permisos mostrados, corrige el PAT en GitHub e inicia una nueva sesión.',
   permissionReportTitle: 'Comprobación de permisos del PAT', permissionReportLead: 'Se muestran los permisos obligatorios que no pudieron confirmarse. «No verificable» no significa «ausente».',
+  updatedSetupPatTitle: 'Corrige el PAT de configuración', updatedSetupPatBody: 'Este enlace de GitHub incluye los permisos necesarios para esta configuración. Selecciona este repositorio antes de crear el PAT. Cierra esta sesión local e inicia una nueva configuración con el PAT corregido.',
+  updatedSetupPatGrants: 'Permisos adicionales detectados tras la inspección', updatedSetupPatLink: 'Crear PAT de configuración corregido',
   permissionProbeCleanupPending: 'Puede quedar un recurso temporal de comprobación de permisos. El setup se ha detenido; no supongas que se eliminó.',
   permissionProbeCleanupAction: 'Reintenta con un PAT capaz de eliminarlo. Se revisa el registro local de recuperación antes de nuevas pruebas.',
   permissionSecretCollision: 'GitHub indicó que se actualizó un Secret con el nombre aleatorio de prueba. Es posible que haya cambiado un valor creado a la vez. El setup se detuvo sin eliminarlo.',

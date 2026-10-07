@@ -3,7 +3,7 @@
 - Status: Implemented fixture baseline; live provider, accessibility, and Windows ACL gates remain open
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-06 (automated fixtures and isolated live provider transactions)
+- Last verified: 2026-10-07 (automated fixtures and isolated live provider transactions)
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then prove each selected read or write capability with bounded, visible operations
 - Related issues/PRs: none recorded
@@ -205,6 +205,28 @@ an unobserved live success. No new token scope is silently requested, no stored
 configuration or journal schema changes, and rollback drops optional diagnostic
 codes without weakening readiness. Authentication documentation describes the
 operator correction and keeps setup/workflow PAT roles separate.
+
+### Guided-link recovery after final inspection — 2026-10-07
+
+Following the provisional guided link does not prove that later requirements
+are already granted. An existing managed Secret plus a confirmed missing
+credential-health workflow can add repository Workflows WRITE only after GitHub
+inspection. The final audit MUST build its corrected link from final required
+grants and report the delta from the provisional requirements. A denied
+Workflows write remains Missing; Actions preparation failure remains
+Unverifiable with its bounded prerequisite. The updated link must remain visible
+on the blocked web result, independently of transient warning/cleanup messages.
+See the recovery flow, representative UI and suppression conditions in section
+9.1.2 of `specs/local-web-setup-assistant.md`. The user creates or corrects the PAT
+on GitHub, selects the repository, closes the old local session and starts a
+fresh setup run. No automatic retry or setup application is authorized here.
+
+The shared incremental regression budget is **20 automated cases**, counted
+once in the web SDD: seven bridge, twelve rendering and one final-requirements
+case. The existing credential adapter test is extended through finish. No
+additional grants are silently added to the initial guided link. Authentication
+documentation explains the later link and independent Actions prerequisite;
+isolated live denial/cleanup evidence remains distinct from fixture success.
 
 ### Implemented permission-specific operations
 

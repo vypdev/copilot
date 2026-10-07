@@ -97,6 +97,8 @@ export interface WebSetupView {
     credentialChecks?: readonly { readonly name: string; readonly status: SetupCredentialStatus }[] };
   readonly permissions?: { role: SetupTokenRole; requirements?: readonly SetupTokenPermissionRequirement[];
     report?: SetupTokenPermissionReport; progress?: readonly SetupTokenPermissionProgress[] };
+  readonly setupPatCorrection?: { readonly url: string; readonly stage: 'bootstrap' | 'final';
+    readonly addedGrants: readonly string[] };
   readonly outcome?: 'complete' | 'partial' | 'blocked' | 'cancelled' | 'dry-run';
   readonly doctor?: { readonly status: 'running' | 'complete' | 'failed'; readonly healthy?: boolean;
     readonly pass?: number; readonly warn?: number; readonly fail?: number; readonly skipped?: number };

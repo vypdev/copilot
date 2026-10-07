@@ -139,6 +139,19 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     expect(ports.showUpdatedLink).toHaveBeenCalledWith(expect.stringContaining('https://github.com/settings/personal-access-tokens/new?'), expect.any(Array));
   });
 
+  test('a missing health workflow adds Workflows write to the corrected guided link after inspection', async () => {
+    const { context, ports, useCase } = harness({ token: 'test-token', guided: true });
+    expect(context.provisionalRequirements.some(item => item.permission === 'Workflows' && item.applicability === 'required')).toBe(false);
+    jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false });
+    expect(await useCase.audit(configuration, { ...remote, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing' }))
+      .toEqual(expect.objectContaining({ status: 'blocked' }));
+    expect(ports.showUpdatedLink).toHaveBeenCalledWith(expect.stringContaining('workflows=write'),
+      expect.arrayContaining(['repository Workflows write']));
+    expect(ports.permissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
+      requirements: expect.arrayContaining([expect.objectContaining({ permission: 'Workflows', level: 'write', applicability: 'required' })]),
+    }));
+  });
+
   test('surfaces unconfirmed temporary cleanup and marks the session as possibly changed', async () => {
     const { ports, useCase } = harness({ token: 'test-token' });
     const onCleanupPending = jest.fn();

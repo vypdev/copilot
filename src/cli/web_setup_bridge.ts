@@ -147,6 +147,15 @@ export class WebSetupBridge {
   requirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
     this.publish({ permissions: { role, requirements, report: undefined, progress: [] } });
   }
+  setupPatCorrection(url: string, stage: 'bootstrap' | 'final', addedGrants: readonly string[] = []): void {
+    if (this.view.outcome) return;
+    let parsed: URL;
+    try { parsed = new URL(url); }
+    catch { return; }
+    if (parsed.origin !== 'https://github.com' || parsed.pathname !== '/settings/personal-access-tokens/new'
+      || parsed.username || parsed.password || parsed.hash) return;
+    this.publish({ setupPatCorrection: { url, stage, addedGrants: [...addedGrants] } });
+  }
   report(report: SetupTokenPermissionReport): void {
     this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements,
       progress: this.view.permissions?.progress, report } });

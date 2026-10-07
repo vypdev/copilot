@@ -28,6 +28,8 @@ export const fr: Record<SetupMessageKey, string> = {
   whatHappened: 'Ce qui s’est passé', alreadyChanged: 'Déjà modifié', noChanges: 'Aucun changement du dépôt ou de GitHub n’a commencé pendant cette session.',
   nextAction: 'Prochaine étape', reasonPermissions: 'Les droits nécessaires du PAT de configuration manquent ou n’ont pas pu être confirmés.', nextPermissions: 'Vérifiez les droits affichés, corrigez le PAT sur GitHub, puis recommencez.',
   permissionReportTitle: 'Vérification des droits du PAT', permissionReportLead: 'Les droits requis qui n’ont pas pu être confirmés sont indiqués ci-dessous. « Non vérifiable » ne signifie pas « absent ».',
+  updatedSetupPatTitle: 'Corrigez le PAT de configuration', updatedSetupPatBody: 'Ce lien GitHub inclut les droits requis pour cette configuration. Sélectionnez ce dépôt avant de créer le PAT. Fermez cette session locale, puis recommencez la configuration avec le PAT corrigé.',
+  updatedSetupPatGrants: 'Droits supplémentaires détectés après inspection', updatedSetupPatLink: 'Créer un PAT de configuration corrigé',
   permissionProbeCleanupPending: 'Une ressource temporaire de vérification peut encore exister. La configuration est arrêtée ; ne supposez pas que le nettoyage a réussi.',
   permissionProbeCleanupAction: 'Réessayez avec un PAT capable de la supprimer. Le journal local de récupération est consulté avant tout nouveau test.',
   permissionSecretCollision: 'GitHub a indiqué qu’un Secret portant le nom de test aléatoire a été mis à jour. Une valeur créée simultanément peut avoir changé. La configuration s’est arrêtée sans le supprimer.',

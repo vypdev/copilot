@@ -310,6 +310,11 @@ describe('semantic web setup adapters', () => {
     expect(bridge.snapshot().message?.text).toContain('Secrets write');
     prompt.showSetupPatCleanupReminder();
     expect(bridge.snapshot().message?.link).toBe('https://github.com/settings/personal-access-tokens');
+    bridge.resultReason('permissions');
+    bridge.finish('blocked', 'No setup changes started.');
+    expect(bridge.snapshot().setupPatCorrection).toEqual({
+      url: 'https://github.com/settings/personal-access-tokens/new?name=updated', stage: 'final', addedGrants: ['Secrets write'],
+    });
     prompt.useManualSetupPat();
     expect(prompt.usedGuidedSetupPat).toBe(false);
   });

@@ -145,6 +145,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
     return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop'], undefined, 'setupPat.confirmAccount', { account }) === 'Yes, continue';
   }
   showUpdatedSetupPatLink(url: string, stage: 'bootstrap' | 'final', delta?: readonly string[]): void {
+    this.bridge.setupPatCorrection(url, stage, delta);
     this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. Installation has not started. Resolve failed permission tests and any pending cleanup before retrying. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
   }
   showSetupPatCleanupReminder(): void {

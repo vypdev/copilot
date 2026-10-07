@@ -34,6 +34,8 @@ function reviewView(state) {
       kind: 'multi-select', defaultValue: '', choices: ['feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release'] } } };
   if (state === 'credential') return { ...base, prompt: { kind: 'secret', title: 'Setup PAT', copyId: 'setupPat.entry' } };
   if (state === 'blocked-permissions') return { ...base, prompt: undefined, outcome: 'blocked',
+    setupPatCorrection: { stage: 'final', addedGrants: ['repository Workflows write'],
+      url: 'https://github.com/settings/personal-access-tokens/new?target_name=fixture-owner&contents=write&actions=write&workflows=write&expires_in=1' },
     resultDetail: { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false },
     permissions: { role: 'setup', report: { role: 'setup', identityStatus: 'valid', identityMessage: 'Fixture identity verified',
       ready: false, confirmationRequired: false, checks: [

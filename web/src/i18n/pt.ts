@@ -28,6 +28,8 @@ export const pt: Record<SetupMessageKey, string> = {
   whatHappened: 'O que aconteceu', alreadyChanged: 'O que mudou', noChanges: 'Não foram iniciadas alterações no repositório nem no GitHub nesta sessão.',
   nextAction: 'Próximo passo', reasonPermissions: 'Faltam permissões do PAT de configuração ou não foi possível confirmá-las.', nextPermissions: 'Verifique as permissões, corrija o PAT no GitHub e inicie uma nova sessão.',
   permissionReportTitle: 'Verificação das permissões do PAT', permissionReportLead: 'As permissões obrigatórias que não puderam ser confirmadas aparecem abaixo. «Não verificável» não significa «ausente».',
+  updatedSetupPatTitle: 'Corrija o PAT de configuração', updatedSetupPatBody: 'Esta ligação do GitHub inclui as permissões necessárias para esta configuração. Selecione este repositório antes de criar o PAT. Feche esta sessão local e inicie uma nova configuração com o PAT corrigido.',
+  updatedSetupPatGrants: 'Permissões adicionais detetadas após a inspeção', updatedSetupPatLink: 'Criar PAT de configuração corrigido',
   permissionProbeCleanupPending: 'Pode ainda existir um recurso temporário de verificação de permissões. O setup parou; não presuma que foi removido.',
   permissionProbeCleanupAction: 'Tente novamente com um PAT que o possa remover. O registo local de recuperação é verificado antes de novos testes.',
   permissionSecretCollision: 'O GitHub indicou que um Secret com o nome aleatório de teste foi atualizado. Um valor criado em simultâneo pode ter mudado. A configuração parou sem o eliminar.',
