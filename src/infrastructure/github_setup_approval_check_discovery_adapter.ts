@@ -3,10 +3,12 @@ import type { SetupApprovalCheckDiscoveryPort } from '../application/ports/setup
 import type { SetupApprovalCheckCandidate, SetupDiscoveryResult } from '../domain/setup_questionnaire';
 
 interface CheckRun { id: number; name: string; app?: { id?: number; name?: string } | null; head_sha: string; conclusion: string | null }
-interface WorkflowRun { id: number; name: string; head_sha: string; run_attempt: number; status: string; conclusion: string | null; created_at?: string }
+interface WorkflowRun { id: number; name: string; event: string; head_sha: string; run_attempt: number; status: string; conclusion: string | null; created_at?: string }
 interface WorkflowJob { name: string; check_run_url?: string | null }
 interface ActiveBranchRule { type?: string; ruleset_id?: number; ruleset_source_type?: string; ruleset_source?: string;
   parameters?: { required_status_checks?: { context?: string; integration_id?: number | null }[] } }
+
+const discoveryLookbackMs = 90 * 24 * 60 * 60 * 1000;
 
 /** Bounded, read-only GitHub evidence. Unavailable permissions yield no suggestions, never invented identities. */
 export class GithubSetupApprovalCheckDiscoveryAdapter implements SetupApprovalCheckDiscoveryPort {
@@ -33,17 +35,28 @@ export class GithubSetupApprovalCheckDiscoveryAdapter implements SetupApprovalCh
         }
       } catch { required = new Map(); }
     }
+    const observedAt = Date.now();
+    const earliestRun = observedAt - discoveryLookbackMs;
     let recent;
     try {
-      recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, event: 'pull_request', per_page: 20 });
+      // GitHub's filtered search can return historical samples on busy repositories.
+      // Read one bounded page of latest runs and select PR events locally instead.
+      recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, per_page: 100, page: 1 });
     } catch (error) {
       return { status: discoveryFailure(error), candidates: [] };
     }
     if (recent.data.workflow_runs.length === 0) return { status: 'no-recent-runs', candidates: [] };
     const candidates = new Map<string, SetupApprovalCheckCandidate>();
     const checksByHead = new Map<string, CheckRun[]>();
+    const runs = (recent.data.workflow_runs as WorkflowRun[]).slice(0, 100)
+      .filter(run => {
+        const createdAt = Date.parse(run.created_at ?? '');
+        return run.event === 'pull_request' && createdAt >= earliestRun && createdAt <= observedAt;
+      })
+      .sort((a, b) => Date.parse(b.created_at!) - Date.parse(a.created_at!))
+      .slice(0, 20);
     try {
-    for (const run of (recent.data.workflow_runs as WorkflowRun[]).slice(0, 15)) {
+    for (const run of runs.slice(0, 15)) {
       const headSha = run.head_sha;
       if (!/^[a-f0-9]{40}$/iu.test(headSha)) continue;
       if (!run.name || run.name.startsWith('Copilot -') || run.status !== 'completed') continue;

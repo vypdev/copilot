@@ -974,6 +974,7 @@
         "src/application/policies/__tests__/setup_project_selection_policy.test.ts",
         "src/infrastructure/__tests__/github_setup_project_discovery_adapter.test.ts",
         "src/infrastructure/__tests__/github_setup_approval_check_discovery_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_check_discovery_sdk_contract.integration.test.ts",
         "src/application/policies/__tests__/setup_question_documentation_policy.test.ts",
         "src/application/policies/__tests__/setup_question_purpose_policy.test.ts",
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",

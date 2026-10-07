@@ -67653,7 +67653,7 @@ function discoveryNote(question) {
     const sample = status === 'observed' || status === 'empty' || status === 'no-recent-runs' || status === 'no-verifiable-checks'
         ? question.id === 'projects.ids'
             ? '\n  Search scope: at most 30 open, accessible organization Projects from two pages; up to 100 fields per Project. Closed Projects are excluded.'
-            : '\n  Search scope: up to 20 recent PR workflow runs; at most 15 runs and 100 checks per commit are inspected.'
+            : '\n  Search scope: select up to 20 PR runs from the latest 100 workflow runs within 90 days; at most 15 runs and 100 checks per commit are inspected.'
         : '';
     return note ? `\n  ${note}${sample}${question.discoveryTruncated ? '\n  Only a bounded sample was inspected; use manual entry for missing items.' : ''}${question.discoveryRetryRemaining ? `\n  Type r to retry GitHub discovery (${question.discoveryRetryRemaining} read-only attempts left).` : ''}` : '';
 }
@@ -84857,6 +84857,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubSetupApprovalCheckDiscoveryAdapter = void 0;
 const github = __importStar(__nccwpck_require__(78227));
+const discoveryLookbackMs = 90 * 24 * 60 * 60 * 1000;
 /** Bounded, read-only GitHub evidence. Unavailable permissions yield no suggestions, never invented identities. */
 class GithubSetupApprovalCheckDiscoveryAdapter {
     async discover(owner, repository, token, targetBranch) {
@@ -84885,9 +84886,13 @@ class GithubSetupApprovalCheckDiscoveryAdapter {
                 required = new Map();
             }
         }
+        const observedAt = Date.now();
+        const earliestRun = observedAt - discoveryLookbackMs;
         let recent;
         try {
-            recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, event: 'pull_request', per_page: 20 });
+            // GitHub's filtered search can return historical samples on busy repositories.
+            // Read one bounded page of latest runs and select PR events locally instead.
+            recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, per_page: 100, page: 1 });
         }
         catch (error) {
             return { status: discoveryFailure(error), candidates: [] };
@@ -84896,8 +84901,15 @@ class GithubSetupApprovalCheckDiscoveryAdapter {
             return { status: 'no-recent-runs', candidates: [] };
         const candidates = new Map();
         const checksByHead = new Map();
+        const runs = recent.data.workflow_runs.slice(0, 100)
+            .filter(run => {
+            const createdAt = Date.parse(run.created_at ?? '');
+            return run.event === 'pull_request' && createdAt >= earliestRun && createdAt <= observedAt;
+        })
+            .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+            .slice(0, 20);
         try {
-            for (const run of recent.data.workflow_runs.slice(0, 15)) {
+            for (const run of runs.slice(0, 15)) {
                 const headSha = run.head_sha;
                 if (!/^[a-f0-9]{40}$/iu.test(headSha))
                     continue;

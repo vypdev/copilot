@@ -114,7 +114,7 @@ export const es: Record<keyof typeof en, string> = {
   projectsUnavailable: 'No se pudo consultar Projects. Eso no demuestra que no existan. Introduce un número verificado o reintenta.',
   projectsUnsupported: 'GitHub no permite listar Projects personales con un PAT de permisos precisos mediante esta API. Introduce el número de la URL de un Project existente.',
   discoveryTruncated: 'Solo se inspeccionó una muestra limitada de Projects accesibles o checks recientes. Usa la entrada manual si falta uno.',
-  checksDiscoveryScope: 'Alcance: hasta 20 ejecuciones recientes de workflows de PR; se inspeccionan como máximo 15 ejecuciones y 100 checks por commit.',
+  checksDiscoveryScope: 'Alcance: hasta 20 ejecuciones de PR entre las últimas 100 ejecuciones de workflows de los últimos 90 días; se inspeccionan como máximo 15 ejecuciones y 100 checks por commit.',
   projectsDiscoveryScope: 'Alcance: hasta 30 Projects abiertos y accesibles de la organización en dos páginas; se inspeccionan hasta 100 campos por Project. Se excluyen los Projects cerrados.',
   retryDiscovery: 'Reintentar búsqueda en GitHub', retryRemaining: 'Quedan {count} reintentos de solo lectura. Tus respuestas se conservan.',
   retryExhausted: 'No quedan reintentos. Consulta GitHub e introduce manualmente lo que falte.',

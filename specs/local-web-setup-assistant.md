@@ -1033,12 +1033,48 @@ guarded mode fails closed until exact identities and human attestations pass.
 
 Discovery MUST return a semantic state (`observed`, `no-recent-runs`,
 `permission-denied`, `unavailable`) independently of its candidates. The web
-and terminal explain which state occurred, the bounded sample (20 recent PR
-workflow runs, at most 15 inspected; up to 30 Projects over two pages), and the
+and terminal explain which state occurred, the bounded sample (up to 20 PR
+runs selected from the latest 100 workflow runs within 90 days, at most 15
+inspected; up to 30 Projects over two pages), and the
 next action before asking for a manual tuple. A network/API failure must not
 masquerade as an empty repository. The manual path labels check name, numeric
 source App ID, and workflow name separately (or gives an equivalent CLI
 template), validates the exact tuple, and never treats it as verified.
+The adapter MUST read the first page of at most 100 latest workflow runs
+without provider search filters, select only `pull_request` events locally,
+and retain at most 20 runs from the last 90 days. It MUST discard dates outside
+that
+window (including future or malformed dates), sort the remaining sample by
+creation time descending before the 15-run inspection limit, and retain the
+newest evidence for each producer identity. This fixed discovery window is
+not configurable and does not expire an already configured producer; older
+checks remain available through manual entry. A retry refreshes the window
+without clearing answers or widening the sample. No extra PAT grants or
+GitHub writes are introduced. Existing sessions use their launching package;
+installing a new package requires a fresh session to use the changed lookup.
+
+The 2026-10-07 regression showed identical unbounded PR-run queries returning
+either current runs or a March-only sample. Adding a date filter still
+returned September runs in a later check. Listing latest runs without the
+remote event/date filters returned current CI Check, RepoWise and
+Ubuntu/Windows/macOS runs in read-only diagnostics; the exact upstream cause
+remains unknown. See GitHub's
+[workflow-run listing and search filters](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository).
+The incremental test budget is **5 distinct cases**: four adapter cases for
+the unfiltered query bound, stale/malformed/future and non-PR rejection,
+sorting before inspection
+with newest duplicate evidence, and the inclusive date/page limits; one
+offline real-SDK integration case verifies serialized parameters and the
+exact job/check/App join without inspecting stale or push-only runs. These
+supplement the existing permission, outage,
+retry-retention and four-language presentation coverage. The evidence is in
+`github_setup_approval_check_discovery_adapter.test.ts` and
+`setup_check_discovery_sdk_contract.integration.test.ts`; user guidance is in
+`docs/pull-requests/guarded-approval.mdx`, the CLI and all four web locales.
+Repository coverage and architecture budgets remain in force. The fixture
+performs no live setup or Apply; manual UX acceptance remains governed by the
+existing acceptance ledger.
+
 The web App ID field MUST remain string-bound (with a numeric keyboard hint)
 and normalize both string and numeric values before validation; an edited
 number MUST NOT throw or silently drop a valid producer. Observed check

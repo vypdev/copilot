@@ -144,7 +144,7 @@ function discoveryNote(question: SetupQuestion): string {
   const sample = status === 'observed' || status === 'empty' || status === 'no-recent-runs' || status === 'no-verifiable-checks'
     ? question.id === 'projects.ids'
       ? '\n  Search scope: at most 30 open, accessible organization Projects from two pages; up to 100 fields per Project. Closed Projects are excluded.'
-      : '\n  Search scope: up to 20 recent PR workflow runs; at most 15 runs and 100 checks per commit are inspected.'
+      : '\n  Search scope: select up to 20 PR runs from the latest 100 workflow runs within 90 days; at most 15 runs and 100 checks per commit are inspected.'
     : '';
   return note ? `\n  ${note}${sample}${question.discoveryTruncated ? '\n  Only a bounded sample was inspected; use manual entry for missing items.' : ''}${question.discoveryRetryRemaining ? `\n  Type r to retry GitHub discovery (${question.discoveryRetryRemaining} read-only attempts left).` : ''}` : '';
 }
