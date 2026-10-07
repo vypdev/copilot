@@ -728,8 +728,8 @@ function applyAnswer(
 
 function parseWorkflowSelection(raw: string): { value: IssueWorkflowKind[] } | { error: string } {
   const normalized = raw.trim().toLowerCase();
-  if (normalized === 'none') return { value: [] };
-  if (!normalized || normalized === 'all') return { value: [...ISSUE_WORKFLOW_KINDS] };
+  if (!normalized || normalized === 'none') return { value: [] };
+  if (normalized === 'all') return { value: [...ISSUE_WORKFLOW_KINDS] };
   const requested = normalized.split(',').map(item => item.trim()).filter(Boolean)
     .map(item => item.replace(/\s+—.*$/u, '').replace(/^\d+[.)]\s*/u, ''));
   const unknown = requested.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));

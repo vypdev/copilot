@@ -47539,9 +47539,9 @@ function applyAnswer(configuration, question, value, independently) {
 }
 function parseWorkflowSelection(raw) {
     const normalized = raw.trim().toLowerCase();
-    if (normalized === 'none')
+    if (!normalized || normalized === 'none')
         return { value: [] };
-    if (!normalized || normalized === 'all')
+    if (normalized === 'all')
         return { value: [...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS] };
     const requested = normalized.split(',').map(item => item.trim()).filter(Boolean)
         .map(item => item.replace(/\s+—.*$/u, '').replace(/^\d+[.)]\s*/u, ''));

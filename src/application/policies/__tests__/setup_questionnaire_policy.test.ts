@@ -59,6 +59,12 @@ describe('setup questionnaire policy', () => {
     expect(invalid.question?.id).toBe('issueWorkflows.enabled');
     expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '' }).draft.issueWorkflows.enabled).toEqual(state.draft.issueWorkflows.enabled);
     expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'all' }).draft.issueWorkflows.enabled).toEqual(state.draft.issueWorkflows.enabled);
+    const none = createDefaultSetupConfiguration();
+    none.issueWorkflows = { enabled: [] };
+    const noneState = advanceTo(createSetupQuestionnaire(none), 'issueWorkflows.enabled');
+    const kept = transitionSetupQuestionnaire(noneState, { kind: 'answer', value: '' });
+    expect(kept.draft.issueWorkflows.enabled).toEqual([]);
+    expect(kept.draft.createInitialTag).toBe(false);
   });
 
   it('recomputes the initial version decision when a saved workflow answer changes', () => {
