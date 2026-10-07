@@ -47139,6 +47139,7 @@ exports.findSetupOrganizationShadows = findSetupOrganizationShadows;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
 exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
+exports.setupWorkflowPatStorageNotice = setupWorkflowPatStorageNotice;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -47152,6 +47153,8 @@ function resolveSetupResourceScope(policy, name) {
  * effective scope rather than silently moving or replacing the resource.
  */
 function canKeepExistingSetupResource(policy, name, existingScope) {
+    if (name === 'PAT')
+        return false;
     if (!existingScope)
         return false;
     if (!policy)
@@ -47185,9 +47188,11 @@ function requiresSetupRepositoryInventory(names) {
  * organization or when preservation must discover an unoverridden resource
  * there before falling back to its configured default scope.
  */
-function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = []) {
+function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = [], kind = 'secret') {
     const repositoryExisting = new Set(repositoryExistingNames);
     return names.some(name => {
+        if (kind === 'secret' && name === 'PAT')
+            return resolveSetupResourceScope(policy, name) === 'organization';
         if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
             return policy.overrides[name] === 'organization';
         }
@@ -47229,6 +47234,8 @@ function findSetupOrganizationShadows(policy, kind, names, remote) {
         && setupResourceExists(remote, kind, name).repository);
 }
 function selectSetupResourceScope(policy, kind, name, remote) {
+    if (kind === 'secret' && name === 'PAT')
+        return resolveSetupResourceScope(policy, name);
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
     const existingScope = setupResourceExists(remote, kind, name).effective;
     return existingScope && policy.preserveExisting && !explicitOverride
@@ -47236,6 +47243,8 @@ function selectSetupResourceScope(policy, kind, name, remote) {
         : resolveSetupResourceScope(policy, name);
 }
 function shouldUpsertSetupResource(configuration, kind, name, remote) {
+    if (kind === 'secret' && name === 'PAT')
+        return true;
     const policy = getSetupResourceStoragePolicy(configuration, kind);
     const state = setupResourceExists(remote, kind, name);
     if (!state.effective)
@@ -47267,6 +47276,10 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (access !== 'available') {
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
         }
+        if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
+            && remote.organizationWorkflowPat === 'unavailable') {
+            errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
+        }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
             errors.push(`The repository ID is required for selected organization ${kind} access.`);
         }
@@ -47288,7 +47301,7 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
         && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets, remote.repositorySecrets);
     const variablesRequireOrganizationInventory = remote.ownerType === 'Organization'
         && configuration.manageRepositoryVariables
-        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name));
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name), 'variable');
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
@@ -47312,6 +47325,15 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
         errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
+}
+function setupWorkflowPatStorageNotice(owner, repository, policy, repositorySecrets, organizationSecrets, organizationWorkflowPat) {
+    const scope = policy ? resolveSetupResourceScope(policy, 'PAT') : 'repository';
+    return {
+        scope,
+        destination: scope === 'repository' ? `${owner}/${repository}` : owner,
+        replacesExisting: scope === 'repository' ? repositorySecrets.includes('PAT')
+            : organizationWorkflowPat === 'present' || organizationSecrets.includes('PAT'),
+    };
 }
 function usesOrganizationStorage(configuration) {
     const storage = getSetupStorageConfiguration(configuration);
@@ -51007,7 +51029,7 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
         && (0, setup_configuration_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name), kind === 'secret'
             ? remoteConfiguration.repositorySecrets
-            : remoteConfiguration.repositoryVariables.map(variable => variable.name));
+            : remoteConfiguration.repositoryVariables.map(variable => variable.name), kind);
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
     }
@@ -68639,6 +68661,7 @@ class GithubActionsResourceInspector {
         const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
+        const organizationWorkflowPat = ownerType === 'Organization' ? await this.inspectOrganizationWorkflowPat(client, owner) : undefined;
         const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
@@ -68650,6 +68673,7 @@ class GithubActionsResourceInspector {
             repositorySecrets: repositorySecretsResult.resources,
             repositorySecretsAccess: repositorySecretsResult.access,
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
             repositoryVariablesAccess: repositoryVariablesResult.access,
             organizationVariables: organizationVariablesResult.resources
@@ -68725,6 +68749,18 @@ class GithubActionsResourceInspector {
         }
         catch {
             return { resources: [], access: 'unavailable' };
+        }
+    }
+    async inspectOrganizationWorkflowPat(client, owner) {
+        const list = client.rest.actions.listOrgSecrets;
+        if (!list)
+            return 'unavailable';
+        try {
+            const resources = await (0, github_actions_resource_collection_1.listCollection)(client, list, { org: owner, per_page: 100 }, 'secrets');
+            return resources.some(resource => resource.name === 'PAT') ? 'present' : 'absent';
+        }
+        catch {
+            return 'unavailable';
         }
     }
 }

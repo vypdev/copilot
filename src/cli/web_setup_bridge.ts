@@ -231,6 +231,10 @@ function sameCapability(provided: string, expected: string): boolean {
 
 export function toWebSetupPlan(plan: SetupPlan): WebSetupPlan {
   return {
+    ...(plan.workflowPatStorage ? { workflowPatStorage: {
+      scope: plan.workflowPatStorage.scope, destination: plan.workflowPatStorage.destination,
+      replacesExisting: plan.workflowPatStorage.replacesExisting,
+    } } : {}),
     presentationDefaults: plan.presentationDefaults ?? [],
     permissionProbes: plan.permissionProbes ?? [],
     decisions: {

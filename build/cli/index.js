@@ -44431,6 +44431,7 @@ exports.findSetupOrganizationShadows = findSetupOrganizationShadows;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
 exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
+exports.setupWorkflowPatStorageNotice = setupWorkflowPatStorageNotice;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -44444,6 +44445,8 @@ function resolveSetupResourceScope(policy, name) {
  * effective scope rather than silently moving or replacing the resource.
  */
 function canKeepExistingSetupResource(policy, name, existingScope) {
+    if (name === 'PAT')
+        return false;
     if (!existingScope)
         return false;
     if (!policy)
@@ -44477,9 +44480,11 @@ function requiresSetupRepositoryInventory(names) {
  * organization or when preservation must discover an unoverridden resource
  * there before falling back to its configured default scope.
  */
-function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = []) {
+function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = [], kind = 'secret') {
     const repositoryExisting = new Set(repositoryExistingNames);
     return names.some(name => {
+        if (kind === 'secret' && name === 'PAT')
+            return resolveSetupResourceScope(policy, name) === 'organization';
         if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
             return policy.overrides[name] === 'organization';
         }
@@ -44521,6 +44526,8 @@ function findSetupOrganizationShadows(policy, kind, names, remote) {
         && setupResourceExists(remote, kind, name).repository);
 }
 function selectSetupResourceScope(policy, kind, name, remote) {
+    if (kind === 'secret' && name === 'PAT')
+        return resolveSetupResourceScope(policy, name);
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
     const existingScope = setupResourceExists(remote, kind, name).effective;
     return existingScope && policy.preserveExisting && !explicitOverride
@@ -44528,6 +44535,8 @@ function selectSetupResourceScope(policy, kind, name, remote) {
         : resolveSetupResourceScope(policy, name);
 }
 function shouldUpsertSetupResource(configuration, kind, name, remote) {
+    if (kind === 'secret' && name === 'PAT')
+        return true;
     const policy = getSetupResourceStoragePolicy(configuration, kind);
     const state = setupResourceExists(remote, kind, name);
     if (!state.effective)
@@ -44559,6 +44568,10 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (access !== 'available') {
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
         }
+        if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
+            && remote.organizationWorkflowPat === 'unavailable') {
+            errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
+        }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
             errors.push(`The repository ID is required for selected organization ${kind} access.`);
         }
@@ -44580,7 +44593,7 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
         && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets, remote.repositorySecrets);
     const variablesRequireOrganizationInventory = remote.ownerType === 'Organization'
         && configuration.manageRepositoryVariables
-        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name));
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name), 'variable');
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
@@ -44604,6 +44617,15 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
         errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
+}
+function setupWorkflowPatStorageNotice(owner, repository, policy, repositorySecrets, organizationSecrets, organizationWorkflowPat) {
+    const scope = policy ? resolveSetupResourceScope(policy, 'PAT') : 'repository';
+    return {
+        scope,
+        destination: scope === 'repository' ? `${owner}/${repository}` : owner,
+        replacesExisting: scope === 'repository' ? repositorySecrets.includes('PAT')
+            : organizationWorkflowPat === 'present' || organizationSecrets.includes('PAT'),
+    };
 }
 function usesOrganizationStorage(configuration) {
     const storage = getSetupStorageConfiguration(configuration);
@@ -46600,8 +46622,8 @@ function setupQuestionPurposeFrPt(question, locale) {
                 : `Escolha os repositórios que podem usar as ${resource} da organização; «selected» é a visibilidade mais restrita.`;
         if (field === 'preserveExisting')
             return locale === 'fr'
-                ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.`
-                : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.`;
+                ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.${storage[1] === 'secrets' ? ' Le Secret PAT du bot est toujours fourni, vérifié et remplacé dans le périmètre choisi.' : ''}`
+                : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.${storage[1] === 'secrets' ? ' O Secret PAT do bot é sempre fornecido, validado e substituído no âmbito escolhido.' : ''}`;
         return locale === 'fr'
             ? `Sélectionnez les ${resource} héritées de l’organisation à définir plutôt dans le dépôt.`
             : `Selecione as ${resource} herdadas da organização que pretende definir no repositório.`;
@@ -46720,7 +46742,11 @@ function setupQuestionPurpose(question) {
             preserveExisting: { en: `Keep effective existing ${resource} instead of overwriting them during setup.`, es: `Conserva los ${resource} existentes que ya se aplican, en lugar de sobrescribirlos durante setup.` },
             overrides: { en: `Select inherited organization ${resource} that should instead be set at repository scope.`, es: `Selecciona los ${resource} heredados de la organización que quieras definir en el repositorio.` },
         };
-        return setting[storageSetting[2]];
+        const purpose = setting[storageSetting[2]];
+        return storageSetting[1] === 'secrets' && storageSetting[2] === 'preserveExisting' ? {
+            en: `${purpose.en} The bot Secret PAT is always supplied, validated and replaced at its selected scope.`,
+            es: `${purpose.es} El Secret PAT del bot siempre se introduce, valida y sustituye en el ámbito elegido.`,
+        } : purpose;
     }
     return undefined;
 }
@@ -47588,6 +47614,7 @@ function sameSetupRemoteFacts(left, right) {
         repositorySecrets: [...facts.repositorySecrets].sort(),
         repositorySecretsAccess: facts.repositorySecretsAccess,
         organizationSecrets: [...facts.organizationSecrets].sort(),
+        organizationWorkflowPat: facts.organizationWorkflowPat,
         repositoryVariables: variables(facts.repositoryVariables),
         repositoryVariablesAccess: facts.repositoryVariablesAccess,
         organizationVariables: variables(facts.organizationVariables),
@@ -47857,7 +47884,7 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
         || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
-    const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
+    const hasExistingCredential = repositorySecretNames.filter(name => name !== 'PAT').some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
     const needsCredentialHealthBootstrap = needsCredentialHealth
         && remote?.credentialHealthWorkflow === 'missing';
@@ -48002,7 +48029,7 @@ function selectedResourceScopes(configuration, kind, names, remote) {
     scopes.add('repository');
     if (remote?.ownerType === 'Organization' && (0, setup_configuration_storage_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_storage_policy_1.getSetupResourceStoragePolicy)(configuration, kind), names, kind === 'secret'
         ? remote.repositorySecrets
-        : remote.repositoryVariables.map(variable => variable.name))) {
+        : remote.repositoryVariables.map(variable => variable.name), kind)) {
         scopes.add('organization');
     }
     return scopes;
@@ -51165,7 +51192,7 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
         && (0, setup_configuration_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name), kind === 'secret'
             ? remoteConfiguration.repositorySecrets
-            : remoteConfiguration.repositoryVariables.map(variable => variable.name));
+            : remoteConfiguration.repositoryVariables.map(variable => variable.name), kind);
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
     }
@@ -54938,6 +54965,62 @@ exports.PrepareSetupPatIntentUseCase = PrepareSetupPatIntentUseCase;
 
 /***/ }),
 
+/***/ 31830:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ResolveSetupWorkflowPatConflictUseCase = void 0;
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+/** Explicit, read-only conflict recovery. A claimed deletion is never evidence. */
+class ResolveSetupWorkflowPatConflictUseCase {
+    constructor(prompt, remote) {
+        this.prompt = prompt;
+        this.remote = remote;
+    }
+    async execute(request) {
+        const configuration = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(request.configuration);
+        let remote = request.remote;
+        let state = 'present';
+        if (!configuration.manageRepositorySecrets
+            || (0, setup_configuration_storage_policy_1.resolveSetupResourceScope)(configuration.storage.secrets, 'PAT') !== 'organization'
+            || remote.repositorySecretsAccess !== 'available'
+            || !remote.repositorySecrets.includes('PAT'))
+            return { configuration, remote };
+        while (true) {
+            const decision = await this.prompt.resolveWorkflowPatConflict(`${request.owner}/${request.repository}`, state);
+            if (decision === 'cancel')
+                throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+            if (decision === 'repository') {
+                configuration.storage.secrets.overrides.PAT = 'repository';
+                return { configuration, remote };
+            }
+            try {
+                const refreshed = await this.remote.inspect(request.owner, request.repository, request.token);
+                if (refreshed.repositorySecretsAccess !== 'available') {
+                    state = 'unavailable';
+                    continue;
+                }
+                remote = refreshed;
+                if (!remote.repositorySecrets.includes('PAT'))
+                    return { configuration, remote };
+                state = 'present';
+            }
+            catch {
+                // Failed reads retain the draft and the last known conflict, never an empty inventory.
+                state = 'unavailable';
+            }
+        }
+    }
+}
+exports.ResolveSetupWorkflowPatConflictUseCase = ResolveSetupWorkflowPatConflictUseCase;
+
+
+/***/ }),
+
 /***/ 67438:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54997,11 +55080,16 @@ class SetupCredentialsUseCase {
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
         const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
+        const workflowStorage = (0, setup_configuration_storage_policy_1.setupWorkflowPatStorageNotice)(request.owner, request.repository, request.secretStoragePolicy, existingSecretNames, existingOrganizationSecretNames, request.remoteConfiguration?.organizationWorkflowPat);
+        if (workflowStorage.scope === 'organization' && request.remoteConfiguration?.organizationWorkflowPat === 'unavailable') {
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Organization PAT Secret inventory is unavailable; credential collection cannot confirm replacement safely.');
+        }
         this.prompt.explainCredentialSeparation(requirements);
         if (workflowTokenPermissions.length > 0) {
             this.permissionPresenter?.showRequirements('workflow', workflowTokenPermissions);
         }
-        const existingRequirements = requirements.filter(requirement => existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name));
+        const existingRequirements = requirements.filter(requirement => requirement.kind !== 'workflowPat'
+            && (existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name)));
         const remoteChecks = this.remoteHealth && existingRequirements.length > 0
             ? await this.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.ref ?? 'master', existingRequirements)
             : undefined;
@@ -55029,11 +55117,11 @@ class SetupCredentialsUseCase {
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                const scopedCheck = workflowPermissionAuditRequired
-                    ? workflowPatReentryCheck(remoteCheck, sourceScope)
+                const scopedCheck = requirement.kind === 'workflowPat'
+                    ? workflowPatReentryCheck(requirement.name, sourceScope)
                     : { ...remoteCheck, sourceScope };
                 existingCheckIndex = checks.push(scopedCheck) - 1;
-                if (!workflowPermissionAuditRequired) {
+                if (requirement.kind !== 'workflowPat') {
                     const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
                     if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                         throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
@@ -55048,9 +55136,9 @@ class SetupCredentialsUseCase {
                         continue;
                 }
             }
-            const value = await this.requestCredential(requirement, existing ? checks[checks.length - 1] : undefined);
+            const value = await this.requestCredential(requirement, existing ? checks[checks.length - 1] : undefined, requirement.kind === 'workflowPat' ? workflowStorage : undefined);
             if (!value) {
-                if (existing && workflowPermissionAuditRequired) {
+                if (existing && requirement.kind === 'workflowPat') {
                     throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.');
                 }
                 if (!existing)
@@ -55126,11 +55214,11 @@ class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
-    async requestCredential(requirement, current) {
+    async requestCredential(requirement, current, storage) {
         if (requirement.kind !== 'workflowPat')
             return this.prompt.requestApiKey(requirement, current);
         while (true) {
-            const attempt = await this.requestVerifiedWorkflowPat(requirement, current);
+            const attempt = await this.requestVerifiedWorkflowPat(requirement, current, storage);
             if (!(attempt instanceof setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError))
                 return attempt;
             if (!this.prompt.recoverWorkflowPatIdentityMismatch)
@@ -55140,8 +55228,8 @@ class SetupCredentialsUseCase {
                 throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
         }
     }
-    async requestVerifiedWorkflowPat(requirement, current) {
-        const value = await this.prompt.requestWorkflowPat(requirement, current);
+    async requestVerifiedWorkflowPat(requirement, current, storage) {
+        const value = await this.prompt.requestWorkflowPat(requirement, current, storage);
         const expected = this.prompt.guidedWorkflowBotIdentity;
         if (!value || !expected)
             return value;
@@ -55160,12 +55248,12 @@ class SetupCredentialsUseCase {
     }
 }
 exports.SetupCredentialsUseCase = SetupCredentialsUseCase;
-function workflowPatReentryCheck(check, sourceScope) {
+function workflowPatReentryCheck(name, sourceScope) {
     return {
-        ...check,
+        name,
         sourceScope,
-        status: check.status === 'invalid' ? 'invalid' : 'unverifiable',
-        message: `${check.message} GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions.`,
+        status: 'unverifiable',
+        message: 'GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions before replacing Secret PAT.',
     };
 }
 function hasAlternative(requirement) {
@@ -55561,6 +55649,7 @@ const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -55668,7 +55757,13 @@ class SetupWizardUseCase {
         if (validationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
-        const configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
+        let configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
+        if (request.mode === 'interactive' && request.remoteTarget && remoteConfiguration && this.dependencies.workflowPatConflict) {
+            const resolved = await this.dependencies.workflowPatConflict.execute({ ...request.remoteTarget,
+                configuration, remote: remoteConfiguration });
+            configuration = resolved.configuration;
+            remoteConfiguration = resolved.remote;
+        }
         if (request.remoteTarget && remoteConfiguration) {
             let selectedWorkflowState = 'unavailable';
             try {
@@ -55750,6 +55845,9 @@ class SetupWizardUseCase {
             }
         }
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, approvalReadiness);
+        if (request.remoteTarget && remoteConfiguration && configuration.manageRepositorySecrets) {
+            plan.workflowPatStorage = (0, setup_configuration_storage_policy_1.setupWorkflowPatStorageNotice)(request.remoteTarget.owner, request.remoteTarget.repository, configuration.storage.secrets, remoteConfiguration.repositorySecrets, remoteConfiguration.organizationSecrets, remoteConfiguration.organizationWorkflowPat);
+        }
         plan.permissionProbes = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration)
             .filter(item => item.applicability === 'required' && item.level === 'write')
             .map(item => ({ scope: item.scope, permission: item.permission }));
@@ -65486,6 +65584,7 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_credential_collection_1 = __nccwpck_require__(19469);
+const resolve_setup_workflow_pat_conflict_use_case_1 = __nccwpck_require__(31830);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
@@ -65701,6 +65800,7 @@ async function executeSetupCommand(options) {
                     finalPermissionAudit: auditConfiguredSetupPat,
                     onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
                     remoteConfiguration: remoteConfigurationReader,
+                    workflowPatConflict: new resolve_setup_workflow_pat_conflict_use_case_1.ResolveSetupWorkflowPatConflictUseCase(credentialPrompt, remoteConfigurationReader),
                     mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
                     approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
                     approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
@@ -66670,6 +66770,7 @@ exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = voi
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
 /** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
 exports.SetupTerminalCancelledError = setup_interaction_cancelled_error_1.SetupInteractionCancelledError;
 const AUTHENTICATION_GUIDE = 'https://docs.page/vypdev/copilot/authentication';
@@ -66808,7 +66909,7 @@ class SetupCredentialPromptAdapter {
         console.log(`Credential options: ${requirements.map((requirement) => requirement.name).join(', ')}`);
         console.log(`Why these credentials are separate: ${AUTHENTICATION_GUIDE}`);
     }
-    async requestWorkflowPat(requirement, current) {
+    async requestWorkflowPat(requirement, current, storage) {
         if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide && !this.guidedBotIdentity) {
             let choice;
             do {
@@ -66833,7 +66934,22 @@ class SetupCredentialPromptAdapter {
             console.log(this.workflowPatGuide);
             console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
         }
+        if (storage)
+            console.log((0, setup_prompt_rendering_1.renderBox)((0, setup_workflow_pat_storage_copy_1.workflowPatStorageCopy)(storage), 'Bot PAT storage', 33));
         return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
+    }
+    async resolveWorkflowPatConflict(repository, state) {
+        if (!this.terminal)
+            return 'cancel';
+        console.log((0, setup_prompt_rendering_1.renderBox)([
+            state === 'present' ? `Repository Secret PAT in ${repository} overrides the selected organization PAT.`
+                : 'GitHub Secret inventory could not be checked. The PAT conflict remains unresolved.',
+            'Remove the repository Secret PAT in GitHub and ask Copilot to check again, or store the new PAT in this repository instead. Your setup answers are retained. Copilot will not delete any Secret.',
+            `Repository Actions Secrets: https://github.com/${repository}/settings/secrets/actions`,
+        ].join('\n'), 'Bot PAT scope conflict', 33));
+        const choice = await this.readChoice('How would you like to continue?', ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'stop setup']);
+        return choice === 'I have deleted the repository PAT — check again' ? 'recheck'
+            : choice === 'Store PAT in the repository instead' ? 'repository' : 'cancel';
     }
     async recoverWorkflowPatIdentityMismatch(expected, actual) {
         if (!this.terminal)
@@ -67176,6 +67292,7 @@ exports.renderSetupPlan = renderSetupPlan;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
 class ConsoleSetupPlanPresenter {
     present(plan) {
         console.log(renderSetupPlan(plan));
@@ -67239,6 +67356,7 @@ function renderSetupPlan(plan) {
             '',
         ] : []),
         (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
+        ...(plan.workflowPatStorage ? ['', (0, setup_prompt_rendering_1.color)('Bot PAT storage', 33), (0, setup_workflow_pat_storage_copy_1.workflowPatStorageCopy)(plan.workflowPatStorage)] : []),
         ...(plan.warnings.length > 0 ? ['', (0, setup_prompt_rendering_1.color)('Important notes', 33), ...plan.warnings.map((warning) => `  ⚠ ${warning}`)] : []),
     ].join('\n');
     return (0, setup_prompt_rendering_1.renderBox)(content, 'Setup Plan', 32);
@@ -68072,6 +68190,27 @@ function capitalize(value) {
 
 /***/ }),
 
+/***/ 97798:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.workflowPatStorageCopy = workflowPatStorageCopy;
+function workflowPatStorageCopy(storage) {
+    return [
+        storage.replacesExisting
+            ? `Secret PAT already exists in ${storage.scope} ${storage.destination}. It will be replaced even when other existing Secrets are preserved.`
+            : `The bot PAT will be stored as Secret PAT in ${storage.scope} ${storage.destination}.`,
+        'The supplied bot PAT must pass identity, repository access and required permission checks before this Secret is written.',
+        ...(storage.scope === 'organization' && storage.replacesExisting
+            ? ['Replacing this organization Secret can affect other repositories that use it. Checks for this repository do not verify their requirements.'] : []),
+    ].join('\n');
+}
+
+
+/***/ }),
+
 /***/ 84473:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -68297,7 +68436,7 @@ class WebSetupCredentialPrompt {
     explainCredentialSeparation(requirements) {
         this.bridge.message(`The bot PAT is separate from your setup PAT. Runtime credentials (${requirements.map(item => item.name).join(', ')}) become GitHub Actions Secrets; existing Secret values cannot be read back. This browser flow will not dispatch or install a credential-health workflow before Apply. Re-enter an existing bot PAT so its grants can be audited.`, 'info', undefined, 'botPat.separation', { names: requirements.map(item => item.name).join(', ') });
     }
-    async requestWorkflowPat(requirement, current) {
+    async requestWorkflowPat(requirement, current, storage) {
         let guide;
         let botInfo = '';
         if (this.workflowGuide && !this.botIdentity) {
@@ -68315,8 +68454,14 @@ class WebSetupCredentialPrompt {
             guide = this.workflowGuide;
             botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
         }
-        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '' });
+        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '',
+            ...(storage ? { storageScope: storage.scope, storageDestination: storage.destination, storageReplacesExisting: String(storage.replacesExisting) } : {}) });
         return value ? { name: requirement.name, value } : undefined;
+    }
+    async resolveWorkflowPatConflict(repository, state) {
+        const choice = await this.choice('Resolve the bot PAT scope conflict', ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'], 'The repository PAT overrides the selected organization PAT. Remove the repository Secret in GitHub and check again, or change the PAT scope. Your setup answers are retained. No Secret will be deleted by Copilot.', state === 'present' ? 'botPat.scopeConflict' : 'botPat.scopeConflictUnavailable', { repository });
+        return choice === 'I have deleted the repository PAT — check again' ? 'recheck'
+            : choice === 'Store PAT in the repository instead' ? 'repository' : 'cancel';
     }
     async recoverWorkflowPatIdentityMismatch(expected, actual) {
         const answer = await this.choice('This PAT belongs to a different GitHub account', ['Enter another bot PAT', 'Stop setup'], `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub, switch to @${expected.login}, then choose whether to enter another PAT or stop setup.`, 'botPat.identityMismatch', { expected: expected.login, actual: actual.login });
@@ -68644,6 +68789,10 @@ function sameCapability(provided, expected) {
 }
 function toWebSetupPlan(plan) {
     return {
+        ...(plan.workflowPatStorage ? { workflowPatStorage: {
+                scope: plan.workflowPatStorage.scope, destination: plan.workflowPatStorage.destination,
+                replacesExisting: plan.workflowPatStorage.replacesExisting,
+            } } : {}),
         presentationDefaults: plan.presentationDefaults ?? [],
         permissionProbes: plan.permissionProbes ?? [],
         decisions: {
@@ -74482,6 +74631,7 @@ class GithubActionsResourceInspector {
         const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
+        const organizationWorkflowPat = ownerType === 'Organization' ? await this.inspectOrganizationWorkflowPat(client, owner) : undefined;
         const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
@@ -74493,6 +74643,7 @@ class GithubActionsResourceInspector {
             repositorySecrets: repositorySecretsResult.resources,
             repositorySecretsAccess: repositorySecretsResult.access,
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
             repositoryVariablesAccess: repositoryVariablesResult.access,
             organizationVariables: organizationVariablesResult.resources
@@ -74568,6 +74719,18 @@ class GithubActionsResourceInspector {
         }
         catch {
             return { resources: [], access: 'unavailable' };
+        }
+    }
+    async inspectOrganizationWorkflowPat(client, owner) {
+        const list = client.rest.actions.listOrgSecrets;
+        if (!list)
+            return 'unavailable';
+        try {
+            const resources = await (0, github_actions_resource_collection_1.listCollection)(client, list, { org: owner, per_page: 100 }, 'secrets');
+            return resources.some(resource => resource.name === 'PAT') ? 'present' : 'absent';
+        }
+        catch {
+            return 'unavailable';
         }
     }
 }

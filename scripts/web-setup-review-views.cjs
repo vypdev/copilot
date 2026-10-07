@@ -13,16 +13,24 @@ const decisions = {
 };
 
 function reviewView(state) {
+  if (state === 'bot-scope-conflict' || state === 'bot-scope-conflict-unavailable') return { ...base,
+    journey: { repository: base.repository, position: 4, total: 6, current: 'Plan',
+      complete: ['Repository', 'Setup choices', 'Setup PAT'], pending: ['Bot PAT & credentials', 'Apply'], mutationStarted: false, choiceReviewPass: 1 },
+    prompt: { kind: 'choice', title: 'Resolve the bot PAT scope conflict',
+      copyId: state === 'bot-scope-conflict' ? 'botPat.scopeConflict' : 'botPat.scopeConflictUnavailable',
+      copyValues: { repository: base.repository },
+      choices: ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'] } };
   if (state === 'bot-credential' || state === 'bot-account-mismatch') return { ...base,
     journey: { repository: base.repository, position: 5, total: 6, current: 'Bot PAT & credentials',
       complete: ['Repository', 'Setup choices', 'Setup PAT', 'Plan'], pending: ['Apply'], mutationStarted: false, choiceReviewPass: 1 },
     prompt: state === 'bot-credential' ? { kind: 'secret', title: 'PAT — bot account PAT', copyId: 'botPat.entry.guided',
-      copyValues: { name: 'PAT', account: 'fixture-bot', accountId: '42' },
+      copyValues: { name: 'PAT', account: 'fixture-bot', accountId: '42', storageScope: 'organization', storageDestination: 'fixture-owner', storageReplacesExisting: 'true' },
       link: 'https://github.com/settings/personal-access-tokens/new?target_name=fixture-owner&contents=write&expires_in=90' }
       : { kind: 'choice', title: 'This PAT belongs to a different GitHub account', copyId: 'botPat.identityMismatch',
         copyValues: { expected: 'fixture-bot', actual: 'fixture-operator' }, choices: ['Enter another bot PAT', 'Stop setup'] } };
   if (state === 'plan') return { ...base, prompt: { kind: 'plan', title: 'Review your setup plan', copyId: 'plan.review',
     editGroups: ['capabilities', 'repository', 'projects', 'storage'], plan: {
+      workflowPatStorage: { scope: 'organization', destination: 'fixture-owner', replacesExisting: true },
       decisions, presentationDefaults: [{ group: 'bugbot', count: 10 }],
       permissionProbes: ['Contents', 'Secrets', 'Variables', 'Issues', 'Actions', 'Workflows'].map(permission => ({ scope: 'repository', permission })),
       files: Array.from({ length: 29 }, (_, i) => `workflows/fixture-workflow-${i + 1}.yml`),

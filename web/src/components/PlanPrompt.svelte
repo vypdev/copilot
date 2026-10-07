@@ -6,6 +6,7 @@
   import { localizedPlanWarning } from '../i18n/planWarningCopy';
   import type { SetupQuestion } from '../../../src/application/contracts/web_setup_view';
   import PlanDecisionSummary from './PlanDecisionSummary.svelte';
+  import WorkflowPatStorageNotice from './WorkflowPatStorageNotice.svelte';
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   export let prompt: Extract<WebSetupPrompt, { kind: 'plan' }>;
   export let controller: boolean;
@@ -39,6 +40,7 @@
   <ul>{#each prompt.plan.permissionProbes as probe}<li>{permissionTerm($setupLocale, probe.scope)}: {permissionName($setupLocale, probe.permission)}</li>{:else}<li>{tr('none', $setupLocale)}</li>{/each}</ul>
 </section>
 <PlanDecisionSummary decisions={prompt.plan.decisions} />
+{#if prompt.plan.workflowPatStorage}<WorkflowPatStorageNotice storage={prompt.plan.workflowPatStorage} />{/if}
 {#if prompt.plan.presentationDefaults.length}
   <section class="plan-decisions"><h3>{tr('planBasicDefaultsIntro', $setupLocale)}</h3>
     <ul>{#each prompt.plan.presentationDefaults as group}<li>{groupKeys[group.group as SetupQuestion['stateId']] ? tr(groupKeys[group.group as SetupQuestion['stateId']], $setupLocale) : group.group}: {group.count}</li>{/each}</ul>

@@ -109,6 +109,26 @@ clears the rejected input, and verifies the new PAT's numeric identity and
 permissions before continuing. Delete the unused wrong-account PAT in GitHub.
 Closing the session still ends the run; progress is not saved across restarts.
 
+The bot Secret `PAT` is always supplied and validated during setup, even when
+you preserve other existing Secrets. It uses the scope you selected (or its
+explicit override). The plan and hidden input warn when that destination already
+contains `PAT`; it is replaced only after the new value passes identity, target
+repository access and required permission checks and setup is approved.
+Replacing an organization PAT can affect other repositories using it: validation
+for this repository does not certify their requirements. Setup checks organization
+namespace metadata even when the existing PAT is not yet shared with this repo.
+It cannot recover, copy or move the previous Secret value.
+
+If organization PAT storage is selected but repository Secret `PAT` exists,
+setup pauses because GitHub will prefer the repository value. Open **repository
+Actions Secrets** in GitHub, delete that repository Secret manually and select
+**I have deleted the repository PAT — check again**. Copilot queries GitHub again;
+clicking the button alone does not clear the conflict. A still-present Secret or
+failed read keeps your answers and recovery choices. Alternatively, **Store PAT
+in the repository instead** changes only the PAT override and rebuilds the plan
+for approval. **Stop setup** ends the run. Copilot never deletes a Secret during
+this flow; a Secret you delete in GitHub is not restored if you stop.
+
 Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 They do not sign you in, complete 2FA, generate or revoke a token, or choose
 an individual repository. Check the active browser account, change **All

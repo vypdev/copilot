@@ -751,6 +751,27 @@ catalog and browser-review fixtures; user guidance lives in authentication and
 `docs/development/setup-assistant-review.mdx`. Rollback restores presentation
 and optional diagnostics without changing stored answers or setup configuration.
 
+### Bot PAT destination and manual shadow recheck — 2026-10-07
+
+The [bot storage amendment](./guided-bot-pat-onboarding.md#existing-pat-replacement-and-scope-conflict-recovery--2026-10-07)
+is authoritative for mandatory PAT replacement and the 57-case regression
+floor. Before approval, the browser shows a repository/org PAT conflict as an
+active choice rather than a terminal error. **I have deleted the repository
+PAT — check again** triggers a fresh, read-only inventory query; it never
+trusts the declaration or deletes a Secret. Known presence and failed reads
+retain the draft and three choices. **Store PAT in the repository instead**
+adds only the PAT repository override and requires a rebuilt, approved plan.
+Stop/close and stale revisions retain the existing cancellation/controller
+contract. Plan and hidden credential views disclose exact destination,
+replacement despite preservation, and organization shared impact in all four
+locales. Organization namespace metadata catches a PAT not currently shared
+with this repository; unavailable reads cannot be treated as absence.
+No stored token is retrieved, no health Action is dispatched for the previous
+PAT, and no deletion/migration capability or flag is added. Web Apply rereads
+the approved facts, including namespace state and repository shadows.
+Credential-free review fixtures and semantic tests supplement the existing
+acceptance ledger without closing its separate live/accessibility gates.
+
 ### 9.1.2 Guided setup PAT recovery after inspection — 2026-10-07
 
 The first guided PAT link includes disclosed conditional Actions, Contents and

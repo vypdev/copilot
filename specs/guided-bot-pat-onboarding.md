@@ -468,6 +468,109 @@ be rolled back by reading it. `copilot doctor`/health inspection is separate
 from Secret-write success. The terminal states these facts without exposing
 the PAT.
 
+### Existing PAT replacement and scope-conflict recovery — 2026-10-07
+
+This amendment replaces the proposed stored-PAT reuse/migration flow. GitHub
+Secret values are not read, copied, moved or remotely validated by setup.
+When Secrets are managed, `PAT` MUST always be supplied and pass the final
+workflow permission audit before installation. Guided input additionally binds
+the selected bot's numeric ID as specified above. `preserveExisting` continues
+for other Secrets/Variables; `PAT` instead uses its selected default scope or
+explicit override. There is no keep/skip decision for an existing bot PAT.
+
+The plan and hidden PAT prompt MUST show its exact destination and whether
+`PAT` already exists there. An existing destination is explicitly replaced
+only after successful validation and normal Apply approval. An organization
+replacement MUST disclose that other repositories using that Secret can be
+affected; checking this repository does not certify their requirements.
+Organization namespace metadata MUST also detect a PAT not yet shared with
+this repository. The effective inherited Secret list alone cannot prove
+namespace absence. Failed or malformed namespace inspection is unavailable,
+blocks that organization target, and is never described as an absent PAT.
+
+Before plan approval, an interactive organization PAT target with a known
+repository PAT MUST pause for an explicit decision:
+
+```text
+Resolve the bot PAT scope conflict
+Repository Secret PAT in owner/repo overrides the selected organization PAT.
+Your setup answers are retained. Copilot will not delete any Secret.
+[Open repository Actions Secrets ↗]
+[I have deleted the repository PAT — check again]
+[Store PAT in the repository instead]
+[Stop setup]
+```
+
+Text equivalent: manually remove the repository Secret in GitHub and request a
+fresh read, explicitly select repository storage for PAT, or stop. A claim of
+deletion is never permission evidence. Every recheck MUST query GitHub once
+and proceed only on available repository inventory without `PAT`. If it still
+exists, the same conflict appears again. Failed/unknown reads show an unresolved
+check state with the same recovery choices and retained draft. There is no
+automatic polling, deletion or scope change. The existing session lifetime and
+single-flight/revision controls bound this interaction; stale/duplicate browser
+answers cannot trigger another accepted transition.
+
+Choosing repository storage MUST change only `storage.secrets.overrides.PAT`;
+other scopes, overrides, preservation settings and answers are retained. The
+wizard rebuilds its plan and operator permission requirements and requires
+normal approval before collecting the bot PAT. Rechecks use only the operator
+PAT and read ports; the supplied bot PAT is never used to inspect/delete the
+previous Secret. Unattended conflicts retain the fail-closed error contract.
+The web Apply drift check includes organization PAT namespace state and the
+repository inventory, so a reappearing shadow invalidates approval.
+
+The application owns recovery through `ResolveSetupWorkflowPatConflictUseCase`,
+a semantic prompt port and the existing remote reader. Storage policy owns the
+PAT preservation exception. The GitHub inspector returns only bounded namespace
+presence, while presenters project only scope, destination and replacement
+facts. English CLI and English/Spanish/French/Portuguese web copy MUST explain
+pending, unresolved, scope changed, canceled, verified, and partial-write states
+without token values, color-only status, internal scrolling or raw provider
+errors. Existing post-write partial-result handling remains unchanged. A manual
+GitHub deletion cannot be rolled back by setup; stopping does not restore it.
+No new flags, persistent session state, deletion capability or account migration
+are introduced.
+
+Incremental automated floor: **57 distinct cases**, derived from storage and
+hidden namespace risks: 10 pure storage/permission and safe-link cases; 12 explicit
+recheck/state/error cases; 3 wizard plan/approval cases; 7 mandatory credential/permission cases;
+7 provider namespace/drift cases; 5 CLI/web recovery/stop/close cases; and 13
+component/localization/escaping cases. Existing changed-module thresholds and
+architecture gates remain in force (95% lines/statements, 90% branches/functions,
+100% for new pure policy branches where applicable). Tests use deterministic
+ports and fake credentials; no live PAT, Secret deletion or setup Apply is used.
+Credential-free `bot-scope-conflict`, `bot-scope-conflict-unavailable`,
+`bot-credential` and `plan` fixtures provide desktop/narrow and light/dark review.
+User documentation must cover the exception, replacement destination, shared
+organization impact, manual conflict resolution, same-session retry and stop.
+Controlled live provider/account and assistive-technology gates remain open.
+
+Acceptance: (1) an inherited PAT never bypasses new value validation; (2) selected
+scope wins for PAT while other resources preserve their effective scope; (3) a
+present hidden organization PAT gets a replacement warning; (4) unavailable
+namespace or PAT permission proof cannot authorize replacement; (5) no conflict
+check runs before the explicit button; (6) a claimed deletion, failed read or
+stale click never clears the conflict; (7) verified removal preserves the
+answers and refreshed inventory in the plan; (8) a repository choice changes
+only PAT and is reviewed/audited again; (9) stop/close makes no setup Secret
+write; (10) notices and recovery remain localized and escaped; (11) a new shadow
+before Apply invalidates approval; (12) partial Secret installation keeps its
+existing inspection guidance.
+
+Traceability: storage/acceptance 1–2 -> storage policy and
+`setup_workflow_pat_conflict.test.ts`; namespace/acceptance 3–4 and 11 -> inspector,
+remote-facts policy and `setup_organization_pat_inventory.test.ts`; credential
+proof -> `setup_workflow_pat_credential_rotation.test.ts`; recovery/acceptance
+5–9 -> resolver, wizard and `web_setup_bot_pat_scope_conflict.test.ts`; UI/acceptance
+10 -> component/catalog/presenter tests and `web_setup_ui_helpers.test.ts` for
+the bounded repository Secret settings route. Authentication, configuration,
+how-to-use, troubleshooting, architecture and setup-assistant-review pages are
+updated with the same contract. Definition of Done includes this floor,
+coverage, generated bundles, package smoke, graph update, documentation/workflow
+validators, specification/catalog regeneration, browser fixture review and the
+normal commit checks; live shared Secret mutation remains outside this change.
+
 ## 11. Security, permissions, and privacy
 
 1. GitHub owns password, 2FA, browser account selection, PAT generation, and

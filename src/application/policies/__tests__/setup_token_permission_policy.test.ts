@@ -148,12 +148,22 @@ describe('setup token permission policy', () => {
         expect(workflowPermissions.map(item => item.permission)).toEqual(['Metadata']);
     });
 
+    it('does not request health write grants only to inspect an existing bot PAT that must be supplied again', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing',
+        }).map(item => `${item.permission}:${item.level}`);
+        expect(permissions).not.toContain('Actions:write');
+        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).not.toContain('Workflows:write');
+    });
+
     it('detects repository credential health and selected organization Projects in the final setup plan', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.projects.ids = 'PVT_kwDOExample';
         const configuredRemote = {
             ...organization,
-            repositorySecrets: ['PAT'],
+            repositorySecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'missing' as const,
         };
 
@@ -172,7 +182,7 @@ describe('setup token permission policy', () => {
         configuration.createInitialTag = false;
         const configuredRemote = {
             ...organization,
-            repositorySecrets: ['PAT'],
+            repositorySecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'installed' as const,
         };
 
@@ -188,7 +198,7 @@ describe('setup token permission policy', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.createInitialTag = false;
         const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
-            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: state,
+            ...organization, repositorySecrets: ['CODEX_API_KEY'], credentialHealthWorkflow: state,
         }).map(item => `${item.permission}:${item.level}`);
         expect(permissions).toContain('Actions:write');
         expect(permissions).toContain('Contents:write');
@@ -203,7 +213,7 @@ describe('setup token permission policy', () => {
         configuration.storage.variables.preserveExisting = false;
         const configuredRemote = {
             ...organization,
-            organizationSecrets: ['PAT'],
+            organizationSecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'missing' as const,
         };
 

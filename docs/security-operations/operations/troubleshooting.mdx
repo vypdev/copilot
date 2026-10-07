@@ -29,6 +29,19 @@ scope before revoking or replacing the bot PAT: it may already be active.
 Cancelling setup never revokes either PAT. Delete an unused setup PAT in GitHub;
 renew an installed bot PAT before its suggested 90-day expiry.
 
+If setup reports that repository Secret `PAT` shadows the selected organization
+PAT, open the linked repository Actions Secrets settings. Remove the repository
+Secret in GitHub and select **I have deleted the repository PAT — check again**.
+The button requests a fresh read; a still-present PAT returns to the same choice.
+An unavailable read never means deletion succeeded: check setup-PAT access or
+GitHub availability and retry. Your answers remain in this session. **Store PAT
+in the repository instead** changes only PAT storage and requires a rebuilt plan;
+**Stop setup** ends the run without a setup Secret write. Copilot never performs
+that deletion and cannot restore a value you removed manually. The new bot PAT
+must still pass every required check before any replacement. Organization PAT
+replacements can affect other repositories, including when the old Secret was
+not available to this repository; read the shared-impact notice before approval.
+
 For `copilot setup --web`, an inaccessible page or failed browser launch does
 not imply a setup failure: open the exact `127.0.0.1` URL printed by the CLI.
 Enter the terminal's 16-character pairing code in the page; after a refresh,

@@ -41,8 +41,8 @@ export function setupQuestionPurposeFrPt(question: SetupQuestion, locale: 'fr' |
       ? `Choisissez les dépôts pouvant utiliser les ${resource} de l’organisation ; « selected » est l’accès le plus restreint.`
       : `Escolha os repositórios que podem usar as ${resource} da organização; «selected» é a visibilidade mais restrita.`;
     if (field === 'preserveExisting') return locale === 'fr'
-      ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.`
-      : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.`;
+      ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.${storage[1] === 'secrets' ? ' Le Secret PAT du bot est toujours fourni, vérifié et remplacé dans le périmètre choisi.' : ''}`
+      : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.${storage[1] === 'secrets' ? ' O Secret PAT do bot é sempre fornecido, validado e substituído no âmbito escolhido.' : ''}`;
     return locale === 'fr'
       ? `Sélectionnez les ${resource} héritées de l’organisation à définir plutôt dans le dépôt.`
       : `Selecione as ${resource} herdadas da organização que pretende definir no repositório.`;

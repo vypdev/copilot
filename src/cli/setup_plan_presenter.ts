@@ -3,6 +3,7 @@ import { SETUP_AGENT_TASKS, SETUP_FEATURE_DESCRIPTIONS } from '../application/po
 import type { SetupPlan } from '../domain/setup';
 import { color, doctorIcon, formatTask, renderBox } from './setup_prompt_rendering';
 import { FIXED_APPROVAL_EXCLUSIONS } from '../domain/pull_request_approval_policy';
+import { workflowPatStorageCopy } from './setup_workflow_pat_storage_copy';
 
 export class ConsoleSetupPlanPresenter implements SetupPlanPresenterPort {
   present(plan: SetupPlan): void {
@@ -67,6 +68,7 @@ export function renderSetupPlan(plan: SetupPlan): string {
       '',
     ] : []),
     color('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
+    ...(plan.workflowPatStorage ? ['', color('Bot PAT storage', 33), workflowPatStorageCopy(plan.workflowPatStorage)] : []),
     ...(plan.warnings.length > 0 ? ['', color('Important notes', 33), ...plan.warnings.map((warning) => `  ⚠ ${warning}`)] : []),
   ].join('\n');
   return renderBox(content, 'Setup Plan', 32);

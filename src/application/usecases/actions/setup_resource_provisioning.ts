@@ -173,6 +173,7 @@ export function groupSetupResources(
             kind === 'secret'
                 ? remoteConfiguration.repositorySecrets
                 : remoteConfiguration.repositoryVariables.map(variable => variable.name),
+            kind,
         );
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);

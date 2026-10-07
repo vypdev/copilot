@@ -13,6 +13,38 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test.each(['en', 'es', 'fr', 'pt'])('%s shows an explicit conflict recheck, scope choice and safe GitHub settings link', locale => {
+    const choices = ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'];
+    const prompt = { kind: 'choice', title: 'Conflict', copyId: 'botPat.scopeConflict',
+      copyValues: { repository: 'owner/repo' }, choices };
+    const html = markup('PromptCard', { prompt, promptRevision: 1, controller: true, busy: false }, locale);
+    expect(html).toContain('https://github.com/owner/repo/settings/secrets/actions');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html.match(/class="choice-card"/gu)).toHaveLength(3);
+    expect(html).toContain('owner/repo');
+    const readonly = markup('ChoicePrompt', { prompt, controller: false, busy: false }, locale);
+    expect(readonly.match(/disabled/gu)).toHaveLength(3);
+  });
+
+  test.each(['en', 'es', 'fr', 'pt'])('%s discloses existing organization PAT replacement and shared impact before hidden entry', locale => {
+    const html = markup('CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided',
+      copyValues: { account: 'fixture-bot', storageScope: 'organization', storageDestination: 'fixture-owner', storageReplacesExisting: 'true' },
+      link: 'https://github.com/settings/personal-access-tokens/new' }, controller: true, busy: false }, locale);
+    expect(html).toContain('fixture-owner');
+    expect(html).toContain('Secret PAT');
+    expect(html.indexOf('fixture-owner')).toBeLessThan(html.indexOf('type="password"'));
+    expect(html).toContain('role="note"');
+    expect(html).not.toContain('Keep existing');
+  });
+
+  test('escapes storage metadata and refuses arbitrary Secret-settings navigation', () => {
+    const html = markup('WorkflowPatStorageNotice', { storage: { scope: 'repository', destination: '<script>bad</script>', replacesExisting: true } });
+    expect(html).not.toContain('<script>bad</script>');
+    const choice = markup('ChoicePrompt', { prompt: { kind: 'choice', title: 'Conflict', copyId: 'botPat.scopeConflict',
+      copyValues: { repository: 'owner/repo?token=private' }, choices: ['Stop setup'] }, controller: true, busy: false });
+    expect(choice).not.toContain('href=');
+  });
+
   test.each(['en', 'es', 'fr', 'pt'])('%s puts the selected bot account warning next to the creation link', locale => {
     const html = markup('CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided',
       copyValues: { account: 'vypbot' }, link: 'https://github.com/settings/personal-access-tokens/new?name=bot' },

@@ -1,5 +1,14 @@
 import type { WebSetupPrompt } from '../../application/contracts/web_setup_view';
-import { safeGithubLink, safeGithubRunLink, safeGithubProjectLink, safeGithubRulesetLink } from '../../../web/src/lib/githubLink';
+import { safeGithubLink, safeGithubRunLink, safeGithubProjectLink, safeGithubRulesetLink, repositorySecretSettingsLink } from '../../../web/src/lib/githubLink';
+
+test('repository Secret settings links stay on the selected repository and reject untrusted navigation', () => {
+  expect(repositorySecretSettingsLink('owner/repo')).toBe('https://github.com/owner/repo/settings/secrets/actions');
+  expect(repositorySecretSettingsLink('owner/.github')).toBe('https://github.com/owner/.github/settings/secrets/actions');
+  for (const value of [undefined, '', 'https://attacker.example/repo', 'owner/../repo', 'owner/..', 'owner/.',
+    'owner/repo?token=value', 'owner/repo#fragment', 'owner/repo/extra', 'owner/<script>']) {
+    expect(repositorySecretSettingsLink(value)).toBeFalsy();
+  }
+});
 import { checkConclusionLabel } from '../../../web/src/i18n/checkEvidence';
 import { manualProducerIdentity } from '../../../web/src/lib/manualProducerIdentity';
 import { canSubmitPairingCode } from '../../../web/src/lib/pairingCode';

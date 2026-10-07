@@ -14,6 +14,7 @@ import { effectiveIssueWorkflowFeatures } from '../../application/policies/setup
 import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
 import { createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { collectSetupCredentials } from '../setup_credential_collection';
+import { ResolveSetupWorkflowPatConflictUseCase } from '../../application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case';
 import { createSetupDoctorUseCase, createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
 import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
@@ -236,6 +237,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           finalPermissionAudit: auditConfiguredSetupPat,
           onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
           remoteConfiguration: remoteConfigurationReader,
+          workflowPatConflict: new ResolveSetupWorkflowPatConflictUseCase(credentialPrompt, remoteConfigurationReader),
           mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
           approvalCheckDiscovery: new GithubSetupApprovalCheckDiscoveryAdapter(),

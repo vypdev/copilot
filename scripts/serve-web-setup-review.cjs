@@ -6,7 +6,7 @@ const { join, sep } = require('node:path');
 const { reviewView } = require('./web-setup-review-views.cjs');
 
 const states = new Set(['pending', 'action-required', 'blocked', 'partial', 'completed', 'cancelled', 'expired',
-  'plan', 'checks', 'question', 'credential', 'blocked-permissions', 'bot-credential', 'bot-account-mismatch']);
+  'plan', 'checks', 'question', 'credential', 'blocked-permissions', 'bot-credential', 'bot-account-mismatch', 'bot-scope-conflict', 'bot-scope-conflict-unavailable']);
 const selected = process.argv[2];
 if (!states.has(selected)) {
   console.error(`Choose one fixture state: ${[...states].join(', ')}`);

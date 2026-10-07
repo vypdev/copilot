@@ -148,6 +148,13 @@ export interface SetupResourceTarget {
     repositoryId?: number;
 }
 
+/** Storage facts only; the previous or replacement PAT value is never included. */
+export interface SetupWorkflowPatStorageNotice {
+    readonly scope: SetupResourceScope;
+    readonly destination: string;
+    readonly replacesExisting: boolean;
+}
+
 export interface SetupStorageConfiguration {
     secrets: SetupResourceStoragePolicy;
     variables: SetupResourceStoragePolicy;
@@ -204,6 +211,8 @@ export interface SetupRemoteConfiguration {
     repositorySecrets: readonly string[];
     repositorySecretsAccess: 'available' | 'unavailable' | 'unknown';
     organizationSecrets: readonly string[];
+    /** Organization namespace PAT metadata, including a Secret not yet shared with this repository. */
+    organizationWorkflowPat?: 'present' | 'absent' | 'unavailable';
     repositoryVariables: readonly SetupVariable[];
     repositoryVariablesAccess: 'available' | 'unavailable' | 'unknown';
     organizationVariables: readonly SetupVariable[];
@@ -243,6 +252,7 @@ export interface SetupVariable {
 }
 
 export interface SetupPlan {
+    workflowPatStorage?: SetupWorkflowPatStorageNotice;
     /** Informational only: advanced defaults not asked in basic presentation. */
     presentationDefaults?: readonly { group: string; count: number }[];
     /** Temporary PAT write probes disclosed before final approval. */

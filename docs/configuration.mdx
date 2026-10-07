@@ -187,6 +187,17 @@ storage:
 
 Guided setup asks the permission-affecting Secret and Variable management and default-scope questions before the setup PAT is created. After token authentication, the remaining questionnaire inspects the repository and reports repository-scoped resources, organization resources available to that repository, visibility, and access errors. Remote-dependent inherited-resource overrides are asked then; they may require a corrected PAT. Each accepted answer creates a fresh configuration snapshot; defaults, overrides, prior answers, and the result do not share mutable nested references. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
 
+Secret `PAT` is the preservation exception: setup always collects and audits
+the bot PAT and writes it at `storage.secrets.overrides.PAT` or, if absent,
+`storage.secrets.defaultScope`. Other Secrets and Variables keep their existing
+preservation behavior. An existing PAT in that destination gets an explicit
+replacement notice; an organization replacement can affect other repositories.
+A repository PAT shadows an organization PAT. Interactive setup offers a manual
+GitHub deletion followed by **I have deleted the repository PAT — check again**,
+a PAT-only repository override, or stopping. The recheck must confirm available
+inventory without PAT before retaining the organization target. Unattended
+setup blocks on the conflict instead of silently changing scope or deleting it.
+
 Organization storage is available only for organization-owned repositories and requires organization Actions permissions on the setup PAT. If only one class should be global, set that class to `organization` and leave the other at `repository`. `--skip-secrets` and `--skip-variables` disable their respective setup operations without changing the other class.
 
 Interactive PAT guidance does not add configuration keys: it is a one-run

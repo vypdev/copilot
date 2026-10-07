@@ -246,6 +246,16 @@ another bot PAT** at the account mismatch to keep your answers and approved plan
 in this session. Setup asks for a fresh value and verifies it again. You can
 instead choose **Stop setup**. Delete the unused PAT yourself in GitHub.
 
+The bot PAT always needs a supplied, validated value, including when you
+preserve other Secrets. Review its destination and replacement warning in the
+plan and hidden input. An organization replacement may affect other repos.
+If a repository PAT would override the chosen organization PAT, open its Actions
+Secrets settings and remove it manually, then choose **I have deleted the
+repository PAT — check again**. Setup continues only after a fresh GitHub read
+confirms removal, retaining your answers. You may instead choose **Store PAT in
+the repository instead** to change only PAT storage and review the updated plan,
+or **Stop setup**. Copilot does not delete or move an existing Secret for you.
+
 If you previously installed Copilot from a local checkout, installing the published
 package with pnpm switches the same `copilot` command to the published package.
 Check which executable and package are active:

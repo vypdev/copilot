@@ -20,6 +20,17 @@ import { permissionProgressCopy, permissionProgressError } from '../../../web/sr
 import { permissionPrerequisite } from '../../../web/src/i18n/permissionPrerequisite';
 
 describe('web setup localization catalog', () => {
+  test.each(setupLocales)('%s explains failed PAT rechecks and retains all three explicit recovery choices', locale => {
+    const prompt = { kind: 'choice' as const, title: 'Conflict', copyId: 'botPat.scopeConflictUnavailable' as const,
+      copyValues: { repository: 'owner/repo' }, choices: ['recheck', 'repository', 'cancel'] };
+    const copy = localizedPromptCopy(prompt, locale)!;
+    expect(copy.choices).toHaveLength(3);
+    expect(copy.description).toContain('GitHub');
+    expect(copy.description).not.toMatch(/\{\w+\}/u);
+    for (let i = 0; i < 3; i++) expect(localizedPromptChoice(prompt, locale, i)).toBe(copy.choices![i]);
+    expect(tr('patOrganizationReplace', locale, { destination: 'owner' })).toContain('owner');
+    expect(tr('patOrganizationImpact', locale)).toBeTruthy();
+  });
   test.each(setupLocales)('%s explains account mismatch and retained state with two explicit recovery choices', locale => {
     const prompt = { kind: 'choice' as const, title: 'Mismatch', copyId: 'botPat.identityMismatch' as const,
       copyValues: { expected: 'vypbot', actual: 'operator' }, choices: ['Enter another bot PAT', 'Stop setup'] };

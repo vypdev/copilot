@@ -1302,7 +1302,7 @@ describe('CLI', () => {
         .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ...defaultRemoteConfiguration,
-        repositorySecrets: ['PAT'],
+        repositorySecrets: ['CODEX_API_KEY'],
       });
       mockTokenPermissionInspect
         .mockResolvedValueOnce(acceptedSetupPatReport())

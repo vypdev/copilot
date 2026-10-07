@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-30
+- Last updated: 2026-10-07
 - Catalog capability ID: `setup-and-doctor`
 - Last verified: 2026-10-06 (local automated audit evidence) (shared-session and resource-progress fixture evidence; live GitHub path remains external)
 - Owners: Copilot maintainers
@@ -56,8 +56,9 @@ but unusable, overwrite hand-maintained files, or expose credentials.
 3. An immutable questionnaire collects choices, inspects remote
    repository/organization state, chooses Secret and Variable storage, validates
    cross-field rules, and shows a plan without giving terminal code product policy.
-4. Credential collection validates the setup PAT, checks effective existing
-   credentials remotely where possible, and asks to keep/replace/skip.
+4. Credential collection validates the setup PAT, checks other effective existing
+   credentials remotely where possible, and asks to keep/replace/skip for those
+   credentials. The workflow PAT always requires a supplied, audited value.
 5. Only confirmed plans provision selected files and GitHub resources; changed
    managed files require approval and backups.
 6. Doctor compares the repository to the same expected configuration and emits
@@ -171,9 +172,14 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   converts `keep` into a replacement flow; setup MUST collect and validate the
   value before provisioning the selected target. An explicit override that
   names the already-effective scope does not require a redundant rewrite.
-- An existing workflow `PAT` is an exception: setup requires re-entry and a
-  complete permission audit before provisioning; credential health and storage
-  preservation do not authorize an unaudited keep path.
+- Workflow `PAT` is an exception: setup always requires a supplied value and a
+  complete permission audit before provisioning at its selected default/override
+  scope. An existing target gets a replacement warning in the plan and prompt,
+  even with preservation enabled. Organization warnings disclose shared impact
+  and inspect namespace presence independently of repository access. Interactive
+  repository shadows pause for manual deletion/recheck, an explicit PAT-only
+  repository override or cancellation; unavailable inventory never clears a
+  conflict. See the [57-case amendment](./guided-bot-pat-onboarding.md#existing-pat-replacement-and-scope-conflict-recovery--2026-10-07).
 - Invalid required credentials must be replaced.
 - Terminal credential-health validation MAY temporarily create and remove the
   selected-branch health workflow before final Apply. As soon as the create
@@ -220,7 +226,9 @@ loop is not an implicit reset or back-navigation inside a questionnaire. The
 journey presentation reopens `Setup choices` only before PAT entry and returns
 to `Setup PAT` when that pass finishes.
 
-Cancellation before confirmation writes nothing. Partial remote provisioning
+Cancellation before confirmation makes no setup Secret write; a Secret manually
+deleted in GitHub during conflict recovery is not restored.
+Cancellation before confirmation writes nothing through setup. Partial remote provisioning
 retains successful facts and reports remaining work; retries MUST preserve valid
 existing resources and avoid duplicate shadowing.
 
@@ -234,7 +242,7 @@ existing resources and avoid duplicate shadowing.
 | locales | repository `en-US`; issue/PR inherit | any valid canonical BCP-47 tag; reviewed `en`/`es`, dynamic otherwise | Variables; repository → issue/PR inheritance |
 | agent roles | `codex` / `openai/gpt-6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
 | Bugbot | low, smart in setup, non-blocking | bounded enums/1–100 comments | Variables |
-| storage | repository, preserve existing | repository/org per resource | remote GitHub |
+| storage | repository, preserve existing except PAT | repository/org per resource; PAT is always supplied and audited | remote GitHub |
 | provisioning | `auto` | `always`, `disabled` | Variable |
 
 Repository values take precedence at runtime over organization values. Setup

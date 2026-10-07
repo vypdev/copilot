@@ -143,7 +143,7 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     const { context, ports, useCase } = harness({ token: 'test-token', guided: true });
     expect(context.provisionalRequirements.some(item => item.permission === 'Workflows' && item.applicability === 'required')).toBe(false);
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false });
-    expect(await useCase.audit(configuration, { ...remote, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing' }))
+    expect(await useCase.audit(configuration, { ...remote, repositorySecrets: ['CODEX_API_KEY'], credentialHealthWorkflow: 'missing' }))
       .toEqual(expect.objectContaining({ status: 'blocked' }));
     expect(ports.showUpdatedLink).toHaveBeenCalledWith(expect.stringContaining('workflows=write'),
       expect.arrayContaining(['repository Workflows write']));
@@ -173,7 +173,7 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     const { context, ports, useCase } = harness({ token: 'test-token', guided: true });
     context.provisionalRequirements = buildSetupPatIntentPermissionRequirements(configuration, 'Organization');
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false });
-    expect(await useCase.audit(configuration, { ...remote, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing' }))
+    expect(await useCase.audit(configuration, { ...remote, repositorySecrets: ['CODEX_API_KEY'], credentialHealthWorkflow: 'missing' }))
       .toEqual(expect.objectContaining({ status: 'blocked' }));
     const inspected = jest.mocked(ports.permissions.inspect).mock.calls[0][0].requirements;
     for (const permission of ['Actions', 'Contents', 'Workflows']) {

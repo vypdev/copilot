@@ -1,6 +1,14 @@
 import type { SetupMessageKey } from './catalog';
 
 export const fr: Record<SetupMessageKey, string> = {
+  patStorageTitle: "Stockage du PAT du bot",
+  patRepositoryReplace: "Le Secret PAT existe déjà dans le dépôt {destination}. Il sera remplacé même si vous avez choisi de conserver les autres Secrets existants.",
+  patOrganizationReplace: "Le Secret PAT existe déjà dans l’organisation {destination}. Il sera remplacé même si vous avez choisi de conserver les autres Secrets existants.",
+  patRepositoryCreate: "Le PAT du bot sera enregistré comme Secret PAT dans le dépôt {destination}.",
+  patOrganizationCreate: "Le PAT du bot sera enregistré comme Secret PAT dans l’organisation {destination}.",
+  patReplacementChecks: "Le PAT du bot fourni doit réussir les vérifications d’identité, d’accès au dépôt et des autorisations requises avant l’écriture de ce Secret.",
+  patOrganizationImpact: "Remplacer ce Secret d’organisation peut affecter les autres dépôts qui l’utilisent. Les vérifications pour ce dépôt ne valident pas leurs exigences.",
+  repositorySecretSettings: "Ouvrir les Secrets Actions du dépôt",
   botAccountWarning: 'Vous devez ouvrir ce lien avec le compte bot sélectionné : @{account}.',
   botAccountHelp: 'Vérifiez le compte GitHub avant de générer le PAT. Utilisez une fenêtre privée ou changez de compte si le navigateur utilise le compte de l’opérateur de configuration.',
   botGithubForm: 'Créer le PAT du bot en tant que @{account}',
@@ -60,7 +68,7 @@ export const fr: Record<SetupMessageKey, string> = {
   doctorSecretLimit: 'Ce mode ne peut pas vérifier les valeurs des Secrets.',
   botRenewal: 'Le PAT du bot reste dans le secret GitHub Actions choisi pour les futures exécutions. Sa date d’expiration réelle n’est pas vérifiée ici ; notez-la sur GitHub et remplacez le secret avant cette date.',
   working: 'Préparation de l’étape suivante', workingBody: 'Le processus local vérifie vos réponses. Gardez cette page ouverte.',
-  repoFocus: 'Dépôt concerné', repoFocusBody: 'Toutes les décisions de cette session concernent uniquement :', access: 'accès', readOnlyCheck: 'Vérification des capacités', provisionalGrants: 'Droits provisoires minimaux',
+  repoFocus: 'Dépôt concerné', repoFocusBody: 'Cette configuration concerne le dépôt indiqué. Les Secrets et Variables d’organisation peuvent être partagés avec d’autres dépôts.', access: 'accès', readOnlyCheck: 'Vérification des capacités', provisionalGrants: 'Droits provisoires minimaux',
   conditionalGrants: 'Les droits conditionnels dépendent de vos choix et de GitHub. Un contrôle final précède toute modification.',
   permissionEvidenceVerified: 'Une lecture GitHub a confirmé cet accès.',
   permissionEvidenceVerifiedWrite: 'Une ressource temporaire a été créée, lue et supprimée.',

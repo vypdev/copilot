@@ -39,6 +39,7 @@ export class GithubActionsResourceInspector {
         const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
+        const organizationWorkflowPat = ownerType === 'Organization' ? await this.inspectOrganizationWorkflowPat(client, owner) : undefined;
         const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
@@ -50,6 +51,7 @@ export class GithubActionsResourceInspector {
             repositorySecrets: repositorySecretsResult.resources,
             repositorySecretsAccess: repositorySecretsResult.access,
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
             repositoryVariablesAccess: repositoryVariablesResult.access,
             organizationVariables: organizationVariablesResult.resources
@@ -145,6 +147,20 @@ export class GithubActionsResourceInspector {
             return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'variables'), access: 'available' };
         } catch {
             return { resources: [], access: 'unavailable' };
+        }
+    }
+
+    private async inspectOrganizationWorkflowPat(
+        client: GithubRepositoryVariablesClient,
+        owner: string,
+    ): Promise<NonNullable<SetupRemoteConfiguration['organizationWorkflowPat']>> {
+        const list = client.rest.actions.listOrgSecrets;
+        if (!list) return 'unavailable';
+        try {
+            const resources = await listCollection(client, list, { org: owner, per_page: 100 }, 'secrets');
+            return resources.some(resource => resource.name === 'PAT') ? 'present' : 'absent';
+        } catch {
+            return 'unavailable';
         }
     }
 }

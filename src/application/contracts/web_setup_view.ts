@@ -3,8 +3,9 @@ import type { SetupQuestion, SetupQuestionnaireProgress } from '../../domain/set
 export type { SetupApprovalCheckCandidate, SetupProjectCandidate, SetupDiscoveryStatus } from '../../domain/setup_questionnaire';
 export type { SetupQuestion } from '../../domain/setup_questionnaire';
 export type { SetupFeature } from '../../domain/setup';
+export type { SetupWorkflowPatStorageNotice } from '../../domain/setup';
 import type { SetupTokenPermissionProgress, SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../../domain/setup_token_permissions';
-import type { SetupCredentialStatus } from '../../domain/setup';
+import type { SetupCredentialStatus, SetupWorkflowPatStorageNotice } from '../../domain/setup';
 
 export interface SetupQuestionExplanation {
   readonly label: string;
@@ -25,7 +26,7 @@ export type WebSetupPromptCopyId =
   | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
   | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setupPat.entry'
   | 'setupPat.confirmAccount' | 'setupPat.confirmUnverifiedAccess' | 'botPat.method' | 'botPat.login'
-  | 'botPat.entry.guided' | 'botPat.entry.manual' | 'botPat.identityMismatch' | 'credential.apiKey'
+  | 'botPat.entry.guided' | 'botPat.entry.manual' | 'botPat.identityMismatch' | 'botPat.scopeConflict' | 'botPat.scopeConflictUnavailable' | 'credential.apiKey'
   | 'credential.existing' | 'apply.confirm';
 
 export interface WebSetupPromptCopyRef {
@@ -57,6 +58,7 @@ export type WebSetupPrompt =
   | ({ kind: 'plan'; title: string; plan: WebSetupPlan; editGroups?: readonly SetupQuestion['stateId'][] } & WebSetupPromptCopyRef);
 
 export interface WebSetupPlan {
+  readonly workflowPatStorage?: SetupWorkflowPatStorageNotice;
   readonly presentationDefaults: readonly { readonly group: string; readonly count: number }[];
   readonly permissionProbes: readonly { readonly scope: 'repository' | 'organization'; readonly permission: string }[];
   readonly decisions: {

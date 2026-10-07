@@ -734,7 +734,9 @@
         "src/infrastructure/setup_permission_organization_owner.ts",
         "src/data/repository/github/github_actions_resource_inspector.ts",
         "src/data/repository/github/github_actions_resource_commands.ts",
-        "src/data/repository/github/github_actions_resource_collection.ts"
+        "src/data/repository/github/github_actions_resource_collection.ts",
+        "src/application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case.ts",
+        "src/cli/setup_workflow_pat_storage_copy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -786,7 +788,11 @@
         "src/data/repository/__tests__/repository_actions_sdk_contract.integration.test.ts",
         "src/data/repository/__tests__/repository_actions_resource_edge_cases.test.ts",
         "src/data/repository/__tests__/repository_selected_resource_grants.test.ts",
-        "src/infrastructure/__tests__/setup_permission_read_contract.test.ts"
+        "src/infrastructure/__tests__/setup_permission_read_contract.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_conflict.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_credential_rotation.test.ts",
+        "src/data/repository/__tests__/setup_organization_pat_inventory.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_scope_conflict.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -922,7 +928,10 @@
         "scripts/set-cli-executable.cjs",
         "scripts/render-web-setup-component.cjs",
         "web/src/i18n/permissionPrerequisite.ts",
-        "scripts/web-setup-review-views.cjs"
+        "scripts/web-setup-review-views.cjs",
+        "src/application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case.ts",
+        "src/cli/setup_workflow_pat_storage_copy.ts",
+        "web/src/components/WorkflowPatStorageNotice.svelte"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -972,7 +981,11 @@
         "src/infrastructure/__tests__/setup_pat_audit.test.ts",
         "src/infrastructure/__tests__/setup_permission_projects_access.test.ts",
         "src/application/usecases/setup/__tests__/setup_workflow_pat_recovery.test.ts",
-        "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts"
+        "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_conflict.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_credential_rotation.test.ts",
+        "src/data/repository/__tests__/setup_organization_pat_inventory.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_scope_conflict.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1019,7 +1032,9 @@
         "src/application/errors/setup_workflow_pat_identity_mismatch_error.ts",
         "src/application/ports/setup_wizard_ports.ts",
         "src/cli/web_setup_adapters.ts",
-        "web/src/components/CredentialPrompt.svelte"
+        "web/src/components/CredentialPrompt.svelte",
+        "src/application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case.ts",
+        "src/cli/setup_workflow_pat_storage_copy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
@@ -1033,7 +1048,11 @@
         "src/application/usecases/setup/__tests__/setup_workflow_pat_recovery.test.ts",
         "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts",
         "src/cli/__tests__/web_setup_components.test.ts",
-        "src/cli/__tests__/web_setup_catalog.test.ts"
+        "src/cli/__tests__/web_setup_catalog.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_conflict.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_credential_rotation.test.ts",
+        "src/data/repository/__tests__/setup_organization_pat_inventory.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_scope_conflict.test.ts"
       ],
       "documentation": [
         "README.md",

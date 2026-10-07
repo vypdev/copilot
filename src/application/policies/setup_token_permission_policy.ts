@@ -157,7 +157,7 @@ function buildSetupPatRequirements(
         || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
-    const hasExistingCredential = repositorySecretNames.some(name =>
+    const hasExistingCredential = repositorySecretNames.filter(name => name !== 'PAT').some(name =>
         remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name),
     );
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
@@ -328,6 +328,7 @@ function selectedResourceScopes(
         kind === 'secret'
             ? remote.repositorySecrets
             : remote.repositoryVariables.map(variable => variable.name),
+        kind,
     )) {
         scopes.add('organization');
     }

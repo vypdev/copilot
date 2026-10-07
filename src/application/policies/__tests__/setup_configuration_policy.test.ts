@@ -367,16 +367,16 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: ['PAT'], repositorySecretsAccess: 'available' as const,
+            repositorySecrets: ['OPENAI_API_KEY'], repositorySecretsAccess: 'available' as const,
             organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };
 
-        expect(resolveSetupResourceTarget(configuration, 'secret', 'PAT', remote).scope).toBe('repository');
-        const explicit = mergeSetupConfiguration(configuration, { storage: { secrets: { overrides: { PAT: 'organization' } } } });
-        expect(resolveSetupResourceTarget(explicit, 'secret', 'PAT', remote).scope).toBe('organization');
+        expect(resolveSetupResourceTarget(configuration, 'secret', 'OPENAI_API_KEY', remote).scope).toBe('repository');
+        const explicit = mergeSetupConfiguration(configuration, { storage: { secrets: { overrides: { OPENAI_API_KEY: 'organization' } } } });
+        expect(resolveSetupResourceTarget(explicit, 'secret', 'OPENAI_API_KEY', remote).scope).toBe('organization');
     });
 
     it('rejects organization storage for personal repositories or unavailable organization permissions', () => {
@@ -436,20 +436,20 @@ describe('setup configuration policy', () => {
 
         policy.defaultScope = 'repository';
         policy.preserveExisting = false;
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(false);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'])).toBe(false);
 
         policy.preserveExisting = true;
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(true);
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'], ['PAT'])).toBe(false);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'])).toBe(true);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'], ['OPENAI_API_KEY'])).toBe(false);
 
         policy.defaultScope = 'organization';
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'], ['PAT'])).toBe(false);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'], ['OPENAI_API_KEY'])).toBe(false);
 
-        policy.overrides.PAT = 'repository';
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(false);
+        policy.overrides.OPENAI_API_KEY = 'repository';
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'])).toBe(false);
 
-        policy.overrides.OPENAI_API_KEY = 'organization';
-        expect(requiresSetupOrganizationInventory(policy, ['PAT', 'OPENAI_API_KEY'])).toBe(true);
+        policy.overrides.CODEX_API_KEY = 'organization';
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY', 'CODEX_API_KEY'])).toBe(true);
     });
 
     it('blocks unavailable repository inventory even when every selected resource is organization-only', () => {
@@ -512,7 +512,7 @@ describe('setup configuration policy', () => {
         };
 
         expect(validateSetupManagedResourceInventory(configuration, remote, {
-            secrets: ['PAT'],
+            secrets: ['OPENAI_API_KEY'],
             variables: ['AGENT_PROVIDER'],
         })).toEqual([
             expect.stringContaining('Organization Secret inventory is unavailable'),

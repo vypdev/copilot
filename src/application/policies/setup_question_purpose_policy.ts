@@ -98,7 +98,11 @@ export function setupQuestionPurpose(question: SetupQuestion): Purpose | undefin
       preserveExisting: { en: `Keep effective existing ${resource} instead of overwriting them during setup.`, es: `Conserva los ${resource} existentes que ya se aplican, en lugar de sobrescribirlos durante setup.` },
       overrides: { en: `Select inherited organization ${resource} that should instead be set at repository scope.`, es: `Selecciona los ${resource} heredados de la organización que quieras definir en el repositorio.` },
     };
-    return setting[storageSetting[2]];
+    const purpose = setting[storageSetting[2]];
+    return storageSetting[1] === 'secrets' && storageSetting[2] === 'preserveExisting' ? {
+      en: `${purpose.en} The bot Secret PAT is always supplied, validated and replaced at its selected scope.`,
+      es: `${purpose.es} El Secret PAT del bot siempre se introduce, valida y sustituye en el ámbito elegido.`,
+    } : purpose;
   }
   return undefined;
 }

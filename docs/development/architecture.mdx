@@ -196,6 +196,20 @@ the selected bot and display its account beside the creation link. Other errors
 retain their existing failure behavior, and the installation-boundary identity
 recheck remains mandatory. No restart persistence or new configuration is added.
 
+`ResolveSetupWorkflowPatConflictUseCase` owns the pre-plan, read-only recovery
+loop for a repository PAT shadowing an organization target. It receives a
+semantic prompt port and the existing remote reader. Each explicit recheck reads
+fresh inventory; failed reads retain the last known conflict and the draft.
+Choosing repository scope creates only the PAT override before rebuilding and
+auditing the plan. The storage policy excludes PAT from preservation while
+other resource behavior remains intact. The inspector separately reads
+organization namespace metadata to detect a PAT outside the effective inherited
+list; unavailable namespace metadata blocks an organization PAT target. The
+plan/prompt carry only scope, destination and replacement facts, and the web
+Apply comparison includes namespace state. Credential collection always audits
+a supplied PAT and dispatches no health Action to validate its previous stored
+value. No delete, copy, migration or persistent recovery state is introduced.
+
 The optional `setup --web` presentation compiles Svelte/Vite into packaged
 `build/web` assets. The CLI serves those assets from a loopback-only Node HTTP
 server; the browser sends bounded semantic answers to an in-memory bridge.

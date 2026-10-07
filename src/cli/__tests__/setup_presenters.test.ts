@@ -21,6 +21,38 @@ function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalD
 }
 
 describe('setup presenters and prompt-specific adapters', () => {
+  it('requires an explicit PAT conflict decision, rejects blank input and prints safe settings navigation', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '' }, { kind: 'value', value: '1' }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('recheck');
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('https://github.com/owner/repo/settings/secrets/actions');
+      expect(output.replace(/[│\s]+/gu, ' ')).toContain('Your setup answers are retained');
+      await expect(new SetupCredentialPromptAdapter(undefined, {}).resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('cancel');
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '2' }]), {})
+        .resolveWorkflowPatConflict('owner/repo', 'unavailable')).resolves.toBe('repository');
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '3' }]), {})
+        .resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('cancel');
+    } finally { log.mockRestore(); }
+  });
+
+  it('discloses bot PAT replacement in the CLI plan and before supplied credential collection', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const storage = { scope: 'organization' as const, destination: 'owner', replacesExisting: true };
+      const plan = buildSetupPlan(createDefaultSetupConfiguration()); plan.workflowPatStorage = storage;
+      const output = renderSetupPlan(plan).replace(/[│\s]+/gu, ' ');
+      expect(output).toContain('Secret PAT already exists in organization owner');
+      expect(output).toContain('affect other repositories');
+      await expect(new SetupCredentialPromptAdapter(undefined, { PAT: 'supplied-fixture' })
+        .requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Bot' }, undefined, storage))
+        .resolves.toEqual({ name: 'PAT', value: 'supplied-fixture' });
+      expect(log.mock.calls.flat().join('\n')).not.toContain('supplied-fixture');
+    } finally { log.mockRestore(); }
+  });
+
   it('re-enters the guided bot PAT after an explicit choice without repeating method or bot identity input', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     try {

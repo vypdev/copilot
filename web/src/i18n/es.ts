@@ -1,6 +1,14 @@
 import type { en } from './en';
 
 export const es: Record<keyof typeof en, string> = {
+  patStorageTitle: "Almacenamiento del PAT del bot",
+  patRepositoryReplace: "El Secret PAT ya existe en el repositorio {destination}. Se sustituirá aunque hayas elegido preservar los demás Secrets existentes.",
+  patOrganizationReplace: "El Secret PAT ya existe en la organización {destination}. Se sustituirá aunque hayas elegido preservar los demás Secrets existentes.",
+  patRepositoryCreate: "El PAT del bot se guardará como Secret PAT en el repositorio {destination}.",
+  patOrganizationCreate: "El PAT del bot se guardará como Secret PAT en la organización {destination}.",
+  patReplacementChecks: "El PAT del bot que introduzcas debe superar las comprobaciones de identidad, acceso al repositorio y permisos necesarios antes de escribir este Secret.",
+  patOrganizationImpact: "Sustituir este Secret de organización puede afectar a otros repositorios que lo utilizan. Las comprobaciones para este repositorio no verifican los requisitos de los demás.",
+  repositorySecretSettings: "Abrir los Secrets de Actions del repositorio",
   botAccountWarning: 'Debes abrir este enlace con la cuenta de bot seleccionada: @{account}.',
   botAccountHelp: 'Comprueba la cuenta de GitHub antes de generar el PAT. Usa una ventana privada o cambia de cuenta si el navegador tiene la sesión del operador del setup.',
   botGithubForm: 'Crear PAT del bot como @{account}',
@@ -60,7 +68,7 @@ export const es: Record<keyof typeof en, string> = {
   doctorSecretLimit: 'Este modo no puede verificar los valores de Secrets.',
   botRenewal: 'El PAT del bot permanece en el Secret de GitHub Actions seleccionado para futuras ejecuciones. Su fecha real de caducidad no se verifica aquí; anótala en GitHub y rota el Secret antes de que venza.',
   working: 'Preparando el siguiente paso', workingBody: 'El proceso local comprueba tus respuestas y prepara la siguiente decisión. Mantén esta página abierta.',
-  repoFocus: 'Repositorio seleccionado', repoFocusBody: 'Todas las decisiones de esta sesión afectan solo a:', access: 'acceso', readOnlyCheck: 'Comprobación de capacidades', provisionalGrants: 'Permisos provisionales de mínimo privilegio',
+  repoFocus: 'Repositorio seleccionado', repoFocusBody: 'Este setup configura el repositorio indicado. Los Secrets y Variables de organización pueden compartirse con otros repositorios.', access: 'acceso', readOnlyCheck: 'Comprobación de capacidades', provisionalGrants: 'Permisos provisionales de mínimo privilegio',
   conditionalGrants: 'Los permisos condicionales dependen de tus elecciones y de GitHub. Se hará una auditoría final antes de cualquier cambio.',
   permissionEvidenceVerified: 'Una lectura de GitHub confirmó este acceso.',
   permissionEvidenceVerifiedWrite: 'Se creó, leyó y eliminó un recurso temporal.',

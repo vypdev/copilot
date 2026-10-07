@@ -41,6 +41,8 @@ import type { SetupProjectDiscoveryPort } from '../../ports/setup_project_discov
 import { validateDiscoveredProjectStatuses } from '../../policies/setup_project_selection_policy';
 import { buildConfiguredSetupPatPermissionRequirements } from '../../policies/setup_token_permission_policy';
 import type { DoctorCheck } from '../../../domain/setup';
+import type { ResolveSetupWorkflowPatConflictUseCase } from './resolve_setup_workflow_pat_conflict_use_case';
+import { setupWorkflowPatStorageNotice } from '../../policies/setup_configuration_storage_policy';
 
 export interface SetupWizardRequest {
   mode: 'interactive' | 'non-interactive';
@@ -95,6 +97,7 @@ export type SetupWizardResult =
     };
 
 export interface SetupWizardDependencies {
+  workflowPatConflict?: Pick<ResolveSetupWorkflowPatConflictUseCase, 'execute'>;
   collector?: SetupConfigurationCollectorPort;
   planPresenter: SetupPlanPresenterPort;
   confirmation: SetupPlanConfirmationPort;
@@ -230,7 +233,13 @@ export class SetupWizardUseCase {
         `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`,
       );
     }
-    const configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
+    let configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
+    if (request.mode === 'interactive' && request.remoteTarget && remoteConfiguration && this.dependencies.workflowPatConflict) {
+      const resolved = await this.dependencies.workflowPatConflict.execute({ ...request.remoteTarget,
+        configuration, remote: remoteConfiguration });
+      configuration = resolved.configuration;
+      remoteConfiguration = resolved.remote;
+    }
     if (request.remoteTarget && remoteConfiguration) {
       let selectedWorkflowState: 'installed' | 'missing' | 'unavailable' = 'unavailable';
       try {
@@ -318,6 +327,11 @@ export class SetupWizardUseCase {
       }
     }
     const plan = buildSetupPlan(configuration, readiness, approvalReadiness);
+    if (request.remoteTarget && remoteConfiguration && configuration.manageRepositorySecrets) {
+      plan.workflowPatStorage = setupWorkflowPatStorageNotice(request.remoteTarget.owner, request.remoteTarget.repository,
+        configuration.storage.secrets, remoteConfiguration.repositorySecrets, remoteConfiguration.organizationSecrets,
+        remoteConfiguration.organizationWorkflowPat);
+    }
     plan.permissionProbes = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration)
       .filter(item => item.applicability === 'required' && item.level === 'write')
       .map(item => ({ scope: item.scope, permission: item.permission }));

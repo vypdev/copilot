@@ -8,6 +8,7 @@ import type {
     SetupCredentialRequirement,
     SetupResourceTarget,
     SetupRemoteConfiguration,
+    SetupWorkflowPatStorageNotice,
 } from '../../domain/setup';
 import type { SetupDoctorMessageCatalog } from '../policies/setup_doctor_message_catalog';
 import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
@@ -33,11 +34,15 @@ export interface SetupCredentialPromptPort {
     requestSetupPat(): Promise<string | undefined>;
     confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;
     explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void;
-    requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
+    requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck, storage?: SetupWorkflowPatStorageNotice): Promise<SetupCredentialValue | undefined>;
     recoverWorkflowPatIdentityMismatch?(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'>;
     requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
     chooseExistingCredential(requirement: SetupCredentialRequirement, check: SetupCredentialCheck): Promise<SetupCredentialDecision>;
     showCredentialChecks(checks: readonly SetupCredentialCheck[]): void;
+}
+
+export interface SetupWorkflowPatConflictPromptPort {
+    resolveWorkflowPatConflict(repository: string, state: 'present' | 'unavailable'): Promise<'recheck' | 'repository' | 'cancel'>;
 }
 
 export interface SetupRepositorySecretNamesQueryPort {
