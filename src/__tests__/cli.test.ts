@@ -509,6 +509,7 @@ describe('CLI', () => {
       const webView = () => ((startWebSetupServer as jest.Mock).mock.calls[0][0] as WebSetupBridge).snapshot();
 
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
+        if (prompt.kind === 'management') return 'wizard';
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
         if (prompt.title === 'Choose setup detail') return 'Basic guided setup';
         if (prompt.title === 'How will you provide your setup PAT?') return 'Manual PAT';
@@ -559,6 +560,63 @@ describe('CLI', () => {
           owner: 'test-owner', repository: 'test-repo', setupToken: 'github_pat_web_setup_test_token', readOnly: true,
         }));
         expect(bridge.snapshot().doctor).toEqual({ status: 'complete', healthy: true, pass: 0, warn: 0, fail: 0, skipped: 0 });
+      });
+
+      it('retains a management mutation receipt and stops before the full installer after an uncertain quick write', async () => {
+        const management = require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
+        const manage = jest.spyOn(management, 'manageWebSetup').mockImplementation(async (bridge, _root, _owner, _repository, possibleMutation, record) => {
+          bridge.setSurface('management'); possibleMutation();
+          const effect = { id:'variables' as const,state:'needs-inspection' as const,scope:'organization' as const };
+          record(effect); bridge.progress(effect);
+          bridge.resultReason('provider');
+          return 'partial';
+        });
+        try {
+          await program.parseAsync(['node','cli','setup','--web']);
+          expect(webView().outcome).toBe('partial');
+          expect(webView().journey).toMatchObject({outcome:'partial',mutationStarted:true});
+          expect(webView().resultDetail).toMatchObject({reasonCode:'provider',effects:[{id:'variables',state:'needs-inspection',scope:'organization'}]});
+          expect(runLocalAction).not.toHaveBeenCalled(); expect(process.exitCode).toBe(1);
+          expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        } finally { manage.mockRestore(); }
+      });
+
+      it.each([false,true])('reports a management exception conservatively after prior mutation=%s', async changed => {
+        const management=require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
+        const manage=jest.spyOn(management,'manageWebSetup').mockImplementation(async (bridge,_root,_owner,_repository,possibleMutation) => {
+          bridge.setSurface('management'); if (changed) possibleMutation(); throw new Error('private-provider-detail');
+        });
+        try {
+          await program.parseAsync(['node','cli','setup','--web']);
+          expect(webView().outcome).toBe(changed ? 'partial' : 'blocked');
+          expect(JSON.stringify(webView())).not.toContain('private-provider-detail');
+          expect(runLocalAction).not.toHaveBeenCalled(); expect(process.exitCode).toBe(1);
+        } finally { manage.mockRestore(); }
+      });
+
+      it('finishes a configuration inspection successfully without certifying an installation', async () => {
+        ask.mockImplementation(async prompt => prompt.kind === 'management' ? 'close' : answerWebPrompt(prompt));
+        await program.parseAsync(['node','cli','setup','--web']);
+        expect(webView()).toMatchObject({surface:'management',outcome:'complete',journey:{outcome:'complete',mutationStarted:false}});
+        expect(runLocalAction).not.toHaveBeenCalled(); expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(process.exitCode).toBeUndefined();
+      });
+
+      it.each(['apply','cancel'] as const)('keeps prior quick changes while a fresh complete assistant proceeds to %s', async decision => {
+        const management = require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
+        const manage = jest.spyOn(management,'manageWebSetup').mockImplementation(async (bridge,_root,_owner,_repository,possibleMutation,record) => {
+          bridge.setSurface('management'); possibleMutation();
+          const effect={id:'variables' as const,state:'completed' as const,scope:'organization' as const}; record(effect); bridge.progress(effect);
+          bridge.setSurface('wizard'); return 'continue';
+        });
+        if (decision === 'cancel') ask.mockImplementation(async prompt => prompt.title === 'Choose setup detail' ? undefined : answerWebPrompt(prompt));
+        try {
+          await program.parseAsync(['node','cli','setup','--web','--pr-approval-mode','off','--skip-secrets']);
+          expect(webView().outcome).toBe(decision === 'apply' ? 'complete' : 'partial');
+          expect(webView().journey?.mutationStarted).toBe(true);
+          expect(runLocalAction).toHaveBeenCalledTimes(decision === 'apply' ? 1 : 0);
+          expect(process.exitCode).toBe(decision === 'apply' ? undefined : 130);
+        } finally { manage.mockRestore(); }
       });
 
       it('prints the pairing code to stdout even without an interactive TTY', async () => {
@@ -987,14 +1045,14 @@ describe('CLI', () => {
       } finally { createTerminal.mockRestore(); }
     });
 
-    it('revises permission intent before the link and drops the initial-tag write grant', async () => {
+    it('revises permission intent and drops the tag audit write while retaining conditional health prefill', async () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       let reviews = 0;
-      let tags = 0;
+      let workflows = 0;
       const input = guidedTerminal(prompt => {
         if (prompt.includes('repository owner an organization')) return '2';
         if (prompt.includes('Review these intended grants')) return ++reviews === 1 ? '2' : '1';
-        if (prompt.includes('Create v1.0.0')) return ++tags === 2 ? 'no' : '';
+        if (prompt.includes('Issue workflow types to enable')) return ++workflows === 2 ? 'feature,bugfix,documentation,chore,help' : '';
         return '';
       });
       const createTerminal = jest.spyOn(terminalDriver, 'createInteractiveTerminalDriver')
@@ -1003,12 +1061,14 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
         expect(reviews).toBe(2);
-        expect(tags).toBe(2);
+        expect(workflows).toBe(2);
         expect(mockTokenPermissionInspect.mock.calls[0][0].requirements).toEqual(expect.arrayContaining([
           expect.objectContaining({ permission: 'Contents', level: 'read' }),
         ]));
         const output = consoleLogSpy.mock.calls.flat().join('\n');
-        expect(output).toContain('contents=read');
+        expect(output).toContain('contents=write');
+        expect(output).toContain('actions=write');
+        expect(output).toContain('workflows=write');
         expect(output).toContain('Stage 2/6 · Setup choices · review pass 2');
         expect(output).toContain('This is the same setup run. Your answers are saved as defaults');
         const { logInfo } = require('../utils/logger');
@@ -1085,7 +1145,7 @@ describe('CLI', () => {
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
         expect(reviews).toBe(2);
-        expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Create v1.0.0'))).toHaveLength(1);
+        expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Create v1.0.0'))).toHaveLength(0);
         const output = consoleLogSpy.mock.calls.flat().join('\n');
         expect(output).toContain('Setup PAT permission summary');
         expect(output).toContain('Setup PAT permissions required');
@@ -1150,7 +1210,6 @@ describe('CLI', () => {
       const terminalDriver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const configFile = require('../cli/setup_config_file') as typeof import('../cli/setup_config_file');
       const loadConfig = jest.spyOn(configFile, 'loadSetupConfigurationOverrides').mockReturnValue({
-        createInitialTag: false,
         features: { issues: false, release: false, hotfix: false },
         projects: { ids: '42' },
       });
@@ -1300,7 +1359,7 @@ describe('CLI', () => {
         .mockReturnValue(input as unknown as ReturnType<typeof terminalDriver.createInteractiveTerminalDriver>);
       mockRemoteConfigurationInspect.mockResolvedValueOnce({
         ...defaultRemoteConfiguration,
-        repositorySecrets: ['PAT'],
+        repositorySecrets: ['CODEX_API_KEY'],
       });
       mockTokenPermissionInspect
         .mockResolvedValueOnce(acceptedSetupPatReport())

@@ -1,7 +1,7 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../domain/setup';
 import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
-import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { setupNeedsInitialVersion, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import {
     getSetupResourceStoragePolicy,
     requiresSetupOrganizationInventory,
@@ -77,22 +77,38 @@ export function buildConfiguredSetupPatPermissionRequirements(
     // Unknown is not evidence of a personal owner: keep possible organization
     // grants visible until the final audit can verify the actual owner type.
     return buildSetupPatRequirements(configuration,
-        remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
+        remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote, undefined, true);
 }
 
-/** Grants justified by local choices alone; remote-only conditions stay unresolved. */
+/** Local requirements plus disclosed health prerequisites for selected Secret management. */
 export function buildSetupPatIntentPermissionRequirements(
     configuration: Readonly<SetupConfiguration>,
     ownerKind: 'Organization' | 'User',
     projectsWanted = configuration.projects.ids.trim().length > 0,
 ): SetupTokenPermissionRequirement[] {
-    return buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    const required = buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    if (!configuration.manageRepositorySecrets) return required;
+    // Prefill these possible health-check grants without treating unknown remote
+    // inventory/workflow state as permission to run their write probes now.
+    const healthPrerequisites = [
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Create an isolated branch for the Actions permission check.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+            applicability: 'conditional', condition: 'Temporary health workflow required',
+            reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+    ];
+    return [...required, ...healthPrerequisites.filter(candidate => !required.some(item =>
+        item.scope === candidate.scope && item.permission === candidate.permission && item.level === 'write'))];
 }
 
 export function buildSetupPatIntentUncertainty(configuration: Readonly<SetupConfiguration>, ownerKind: 'Organization' | 'User'): string[] {
     const unknown: string[] = [];
     if (configuration.manageRepositorySecrets) {
-        unknown.push('Existing managed Secrets may require repository Actions write and Contents write for an isolated credential-health check. A confirmed missing health workflow may also require repository Workflows write.');
+        unknown.push('Actions write, Contents write and Workflows write are prefilled for checking existing managed Secrets. GitHub inspection determines which checks the approved plan needs.');
     }
     if (ownerKind === 'Organization') {
         for (const kind of ['secrets', 'variables'] as const) {
@@ -123,6 +139,7 @@ function buildSetupPatRequirements(
     organization: boolean,
     remote?: Readonly<SetupRemoteConfiguration>,
     projectsWanted = configuration.projects.ids.trim().length > 0,
+    includeBotActionsFixture = false,
 ): SetupTokenPermissionRequirement[] {
     const repositorySecretNames = buildSetupCredentialRequirements(configuration)
         .map(credential => credential.name);
@@ -141,21 +158,23 @@ function buildSetupPatRequirements(
         || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
-    const hasExistingCredential = repositorySecretNames.some(name =>
+    const hasExistingCredential = repositorySecretNames.filter(name => name !== 'PAT').some(name =>
         remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name),
     );
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
+    const needsBotActionsFixture = includeBotActionsFixture && configuration.manageRepositorySecrets && releaseOrHotfix;
+    const needsActionsFixture = needsCredentialHealth || needsBotActionsFixture;
     const needsCredentialHealthBootstrap = needsCredentialHealth
         && remote?.credentialHealthWorkflow === 'missing';
 
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
-        ...(configuration.createInitialTag || needsCredentialHealth ? [requirement({
+        ...(setupNeedsInitialVersion(configuration) || needsActionsFixture ? [requirement({
             role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
-            reason: configuration.createInitialTag && needsCredentialHealth
+            reason: setupNeedsInitialVersion(configuration) && needsActionsFixture
                 ? 'Create the initial tag and an isolated branch for the Actions permission check.'
-                : configuration.createInitialTag
+                : setupNeedsInitialVersion(configuration)
                     ? 'Create the initial repository tag when no version tag exists.'
                     : 'Create an isolated branch for the Actions permission check.', probe: 'contents',
         })] : []),
@@ -171,16 +190,20 @@ function buildSetupPatRequirements(
             role: 'setup', scope: 'repository', permission: 'Issues', level: 'write',
             reason: 'Provision labels for the selected issue workflows.', probe: 'issues',
         })] : []),
-        ...(needsCredentialHealth ? [requirement({
+        ...(needsActionsFixture ? [requirement({
             role: 'setup', scope: 'repository', permission: 'Actions', level: 'write',
-            reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
+            reason: needsBotActionsFixture
+                ? 'Prepare and clean isolated Actions checks for the bot PAT and any existing credentials.'
+                : 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
         })] : []),
         ...(approvalEnabled ? [
             requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', reason: 'Inspect CI workflow runs and jobs for approval evidence.', probe: 'actions' }),
             requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
         ] : []),
-        ...(needsCredentialHealthBootstrap ? [
-            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+        ...(needsCredentialHealthBootstrap || needsBotActionsFixture ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+                reason: needsBotActionsFixture ? 'Prepare a verified no-job workflow for the bot Actions check.'
+                    : 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
         ] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
             role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
@@ -312,6 +335,7 @@ function selectedResourceScopes(
         kind === 'secret'
             ? remote.repositorySecrets
             : remote.repositoryVariables.map(variable => variable.name),
+        kind,
     )) {
         scopes.add('organization');
     }

@@ -45,7 +45,6 @@ export const purposesFr: Readonly<Record<string, string>> = {
   'projects.enabled': 'Décidez si Copilot doit ajouter tickets et pull requests à des Projects existants ; le PAT servira ensuite à lister ceux de l’organisation.',
   'projects.ids': 'Choisissez des Projects existants par leur titre ou saisissez le numéro positif de leur URL ; les ID PVT_ ne conviennent pas.',
   'projects.statusVerified': 'Confirmez que les quatre options Status choisies existent dans chaque Project lorsque GitHub n’a pas pu vérifier leurs champs.',
-  createInitialTag: 'Créez v1.0.0 seulement si le dépôt n’a encore aucune étiquette de version.',
   manageRepositoryVariables: 'Autorisez la création ou mise à jour des Variables GitHub Actions nécessaires aux workflows choisis.',
   manageRepositorySecrets: 'Autorisez la validation et l’installation des Secrets GitHub Actions requis, dont le PAT du bot si nécessaire.',
 };

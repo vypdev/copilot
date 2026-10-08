@@ -644,7 +644,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -664,6 +664,9 @@
         "src/domain/setup_token_permissions.ts",
         "src/application/ports/setup_terminal_ports.ts",
         "src/application/ports/setup_wizard_ports.ts",
+        "src/application/ports/branch_tag_ports.ts",
+        "src/application/policies/setup_issue_workflow_policy.ts",
+        "src/data/repository/release/repository_version_tags_query_repository.ts",
         "src/application/ports/setup_token_permission_ports.ts",
         "src/application/policies/setup_token_permission_evidence_policy.ts",
         "src/application/policies/setup_token_permission_policy.ts",
@@ -734,9 +737,17 @@
         "src/infrastructure/setup_permission_organization_owner.ts",
         "src/data/repository/github/github_actions_resource_inspector.ts",
         "src/data/repository/github/github_actions_resource_commands.ts",
-        "src/data/repository/github/github_actions_resource_collection.ts"
+        "src/data/repository/github/github_actions_resource_collection.ts",
+        "src/application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case.ts",
+        "src/cli/setup_workflow_pat_storage_copy.ts",
+        "src/cli/commands/setup_policy.ts",
+        "src/application/usecases/execution/execution_issue_number_policy.ts",
+        "src/application/usecases/execution/setup_execution_workflow.ts"
       ],
       "tests": [
+        "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
+        "src/data/repository/__tests__/setup_variable_write_failures.test.ts",
+        "src/infrastructure/composition/__tests__/initial_setup_composition_root.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
@@ -775,6 +786,8 @@
         "src/infrastructure/__tests__/git_commit_adapter.test.ts",
         "src/actions/__tests__/github_action_input.test.ts",
         "src/infrastructure/__tests__/setup_permission_cleanup_contract.test.ts",
+        "src/infrastructure/__tests__/setup_permission_actions_cleanup_timing.test.ts",
+        "src/infrastructure/__tests__/setup_permission_operator_actions.test.ts",
         "src/infrastructure/__tests__/setup_permission_journal_contract.test.ts",
         "src/infrastructure/__tests__/setup_permission_audit_transactions.test.ts",
         "src/infrastructure/__tests__/setup_permission_write_failures.test.ts",
@@ -786,7 +799,15 @@
         "src/data/repository/__tests__/repository_actions_sdk_contract.integration.test.ts",
         "src/data/repository/__tests__/repository_actions_resource_edge_cases.test.ts",
         "src/data/repository/__tests__/repository_selected_resource_grants.test.ts",
-        "src/infrastructure/__tests__/setup_permission_read_contract.test.ts"
+        "src/infrastructure/__tests__/setup_permission_read_contract.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_conflict.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_credential_rotation.test.ts",
+        "src/data/repository/__tests__/setup_organization_pat_inventory.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_scope_conflict.test.ts",
+        "src/actions/__tests__/local_setup_apply_contract.test.ts",
+        "src/cli/commands/__tests__/setup_policy.test.ts",
+        "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
+        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -807,11 +828,12 @@
       "id": "local-web-setup-assistant",
       "title": "Local web setup assistant",
       "status": "proposed",
-      "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes",
+      "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-08",
       "specs": [
-        "specs/local-web-setup-assistant.md"
+        "specs/local-web-setup-assistant.md",
+        "specs/setup-configuration-management.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -836,6 +858,7 @@
         "web/src/components/PermissionProgressPanel.svelte",
         "web/src/components/PromptCard.svelte",
         "web/src/components/ResultPanel.svelte",
+        "web/src/components/SetupPatCorrectionPanel.svelte",
         "web/src/components/ResourceProgress.svelte",
         "web/src/components/PlanPrompt.svelte",
         "web/src/components/PlanDecisionSummary.svelte",
@@ -919,7 +942,30 @@
         "scripts/validate-workflow-contract.cjs",
         "scripts/documentation_checkout_text.cjs",
         "scripts/set-cli-executable.cjs",
-        "scripts/render-web-setup-component.cjs"
+        "scripts/render-web-setup-component.cjs",
+        "web/src/i18n/permissionPrerequisite.ts",
+        "scripts/web-setup-review-views.cjs",
+        "src/application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case.ts",
+        "src/cli/setup_workflow_pat_storage_copy.ts",
+        "web/src/components/WorkflowPatStorageNotice.svelte",
+        "src/cli/commands/setup_policy.ts",
+        "src/application/usecases/execution/execution_issue_number_policy.ts",
+        "src/application/usecases/execution/setup_execution_workflow.ts",
+        "src/domain/setup_management.ts",
+        "src/application/contracts/setup_management_view.ts",
+        "src/application/ports/setup_management_ports.ts",
+        "src/application/policies/setup_quick_settings_policy.ts",
+        "src/application/policies/setup_management_policy.ts",
+        "src/application/policies/setup_management_permissions_policy.ts",
+        "src/application/usecases/setup/manage_setup_use_case.ts",
+        "src/infrastructure/setup_management_workspace_adapter.ts",
+        "src/cli/setup_management_adapter.ts",
+        "web/src/components/SetupManagementPanel.svelte",
+        "web/src/components/ManagementInventory.svelte",
+        "web/src/components/QuickSettingPrompt.svelte",
+        "web/src/i18n/managementCopy.ts",
+        "web/src/styles/management.css",
+        "scripts/coverage-budgets.json"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -962,12 +1008,28 @@
         "src/application/policies/__tests__/setup_project_selection_policy.test.ts",
         "src/infrastructure/__tests__/github_setup_project_discovery_adapter.test.ts",
         "src/infrastructure/__tests__/github_setup_approval_check_discovery_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_check_discovery_sdk_contract.integration.test.ts",
         "src/application/policies/__tests__/setup_question_documentation_policy.test.ts",
         "src/application/policies/__tests__/setup_question_purpose_policy.test.ts",
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
         "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
         "src/infrastructure/__tests__/setup_pat_audit.test.ts",
-        "src/infrastructure/__tests__/setup_permission_projects_access.test.ts"
+        "src/infrastructure/__tests__/setup_permission_projects_access.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_recovery.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_conflict.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_credential_rotation.test.ts",
+        "src/data/repository/__tests__/setup_organization_pat_inventory.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_scope_conflict.test.ts",
+        "src/actions/__tests__/local_setup_apply_contract.test.ts",
+        "src/cli/commands/__tests__/setup_policy.test.ts",
+        "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
+        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts",
+        "src/application/policies/__tests__/setup_management_policy.test.ts",
+        "src/application/usecases/setup/__tests__/manage_setup_use_case.test.ts",
+        "src/infrastructure/__tests__/setup_management_workspace_adapter.test.ts",
+        "src/cli/__tests__/setup_management_adapter.test.ts",
+        "src/cli/__tests__/web_setup_management_components.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -990,9 +1052,9 @@
       "id": "guided-bot-pat-onboarding",
       "title": "Guided bot PAT onboarding",
       "status": "proposed",
-      "scope": "Guide creation of the persistent workflow PAT using GitHub's official form, verify bot identity and grants, and install the approved Actions Secret",
+      "scope": "Guide creation of the persistent workflow PAT, verify bot identity and grants, recover explicitly from wrong-account input within the session, and install the approved Actions Secret",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/guided-bot-pat-onboarding.md"
       ],
@@ -1010,7 +1072,13 @@
         "src/application/usecases/setup/setup_credentials_use_case.ts",
         "src/cli/setup_credential_prompt_adapter.ts",
         "src/cli/setup_journey_presenter.ts",
-        "src/data/repository/repository_variables_repository.ts"
+        "src/data/repository/repository_variables_repository.ts",
+        "src/application/errors/setup_workflow_pat_identity_mismatch_error.ts",
+        "src/application/ports/setup_wizard_ports.ts",
+        "src/cli/web_setup_adapters.ts",
+        "web/src/components/CredentialPrompt.svelte",
+        "src/application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case.ts",
+        "src/cli/setup_workflow_pat_storage_copy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
@@ -1020,7 +1088,15 @@
         "src/application/usecases/setup/__tests__/setup_credentials_use_case.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
         "src/cli/__tests__/setup_journey_presenter.test.ts",
-        "src/data/repository/__tests__/repository_variables_repository.test.ts"
+        "src/data/repository/__tests__/repository_variables_repository.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_recovery.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_recovery.test.ts",
+        "src/cli/__tests__/web_setup_components.test.ts",
+        "src/cli/__tests__/web_setup_catalog.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_conflict.test.ts",
+        "src/application/usecases/setup/__tests__/setup_workflow_pat_credential_rotation.test.ts",
+        "src/data/repository/__tests__/setup_organization_pat_inventory.test.ts",
+        "src/cli/__tests__/web_setup_bot_pat_scope_conflict.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1037,7 +1113,7 @@
       "status": "proposed",
       "scope": "Guide creation of the one-run operator PAT through GitHub's official form, verify final setup access, and report user-owned deletion accurately",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-06",
+      "lastVerified": "2026-10-07",
       "specs": [
         "specs/temporary-setup-operator-authorization.md"
       ],
@@ -1053,6 +1129,9 @@
         "src/application/policies/setup_token_permission_policy.ts",
         "src/application/policies/setup_pat_creation_url_policy.ts",
         "src/application/usecases/setup/setup_wizard_use_case.ts",
+        "src/application/usecases/setup/prepare_setup_pat_intent_use_case.ts",
+        "src/application/usecases/setup/verify_setup_pat_bootstrap_use_case.ts",
+        "src/application/usecases/setup/audit_configured_setup_pat_use_case.ts",
         "src/application/usecases/setup/setup_token_permissions_use_case.ts",
         "src/infrastructure/setup_token_permission_query_adapter.ts",
         "src/utils/setup_files.ts"
@@ -1066,6 +1145,9 @@
         "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
         "src/application/policies/__tests__/setup_pat_creation_url_policy.test.ts",
         "src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/prepare_setup_pat_intent_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/verify_setup_pat_bootstrap_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts",
         "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts",
         "src/utils/__tests__/setup_files.test.ts"

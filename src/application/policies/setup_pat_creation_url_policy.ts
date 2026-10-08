@@ -39,6 +39,8 @@ export function buildSetupPatCreationUrl(input: Readonly<{
     repository: string;
     expiresIn: number;
     requirements: readonly SetupTokenPermissionRequirement[];
+    /** Only the reviewed setup intent may prefill its disclosed conditional grants. */
+    includeConditionalSetupGrants?: boolean;
 }>): string {
     if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(input.owner)
         || !/^[A-Za-z0-9._-]{1,100}$/.test(input.repository)
@@ -48,11 +50,14 @@ export function buildSetupPatCreationUrl(input: Readonly<{
         throw new Error('Invalid PAT form owner, repository, or expiration.');
     }
 
+    if (input.includeConditionalSetupGrants && input.role !== 'setup') {
+        throw new Error('Conditional setup grants cannot be added to a workflow PAT form.');
+    }
     const grants = new Map<string, 'read' | 'write'>();
     const unsupported: string[] = [];
     for (const item of input.requirements) {
         if (item.role !== input.role) throw new Error('PAT permission role does not match the requested form.');
-        if (item.applicability !== 'required') continue;
+        if (item.applicability !== 'required' && !input.includeConditionalSetupGrants) continue;
         const key = QUERY_PERMISSIONS[item.scope][item.permission];
         if (!key || (key === 'metadata' && item.level !== 'read')
             || (key === 'workflows' && item.level !== 'write')) {

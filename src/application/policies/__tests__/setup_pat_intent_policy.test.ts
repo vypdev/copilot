@@ -16,8 +16,10 @@ describe('setup PAT permission intent', () => {
       'repository:Variables:write', 'repository:Issues:write', 'repository:Administration:read',
       'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:read',
     ]));
-    expect(grants(configuration, 'Organization')).not.toContain('repository:Actions:write');
-    expect(grants(configuration, 'Organization')).not.toContain('repository:Workflows:write');
+    expect(buildSetupPatIntentPermissionRequirements(configuration, 'Organization')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ permission: 'Actions', level: 'write', applicability: 'conditional' }),
+      expect.objectContaining({ permission: 'Workflows', level: 'write', applicability: 'conditional' }),
+    ]));
   });
 
   it('reduces to metadata and contents read when all optional setup operations are off', () => {
@@ -33,14 +35,16 @@ describe('setup PAT permission intent', () => {
     expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
   });
 
-  it('separates remote-only credential health and inherited inventory from required grants', () => {
+  it('discloses prefilled health prerequisites while leaving inherited inventory unresolved', () => {
     const configuration = createDefaultSetupConfiguration();
     const unknown = buildSetupPatIntentUncertainty(configuration, 'Organization');
     expect(unknown.join(' ')).toContain('Actions write');
     expect(unknown.join(' ')).toContain('Workflows write');
     expect(unknown.join(' ')).toContain('organization Secrets write');
     expect(unknown.join(' ')).toContain('organization Variables write');
-    expect(grants(configuration, 'Organization')).not.toContain('repository:Actions:write');
+    expect(unknown.join(' ')).toContain('prefilled');
+    expect(buildSetupPatIntentPermissionRequirements(configuration, 'Organization').filter(item => item.applicability === 'required'))
+      .not.toEqual(expect.arrayContaining([expect.objectContaining({ permission: 'Actions', level: 'write' })]));
     expect(grants(configuration, 'Organization')).not.toContain('organization:Secrets:write');
   });
 
@@ -59,11 +63,10 @@ describe('setup PAT permission intent', () => {
       features: { issues: false },
       issueWorkflows: { enabled: [] },
       storage: { variables: { defaultScope: 'organization' } },
-      createInitialTag: false,
     }, true, true);
     expect(fixed).toEqual(expect.arrayContaining([
       'features.issues', 'issueWorkflows.enabled', 'storage.variables.defaultScope',
-      'createInitialTag', 'manageRepositoryVariables', 'manageRepositorySecrets',
+      'manageRepositoryVariables', 'manageRepositorySecrets',
     ]));
   });
 
@@ -150,13 +153,13 @@ describe('setup PAT permission intent', () => {
     const requirements = buildSetupPatIntentPermissionRequirements(configuration, 'User');
     const url = new URL(buildSetupPatCreationUrl({ role: 'setup', owner: 'vypdev', repository: 'copilot', expiresIn: 1, requirements }));
     expect(Object.fromEntries(url.searchParams)).toEqual(expect.objectContaining({
-      metadata: 'read', contents: 'write', secrets: 'write', actions_variables: 'write',
+      metadata: 'read', contents: 'read', secrets: 'write', actions_variables: 'write',
     }));
     expect(url.searchParams.has('issues')).toBe(false);
     expect(url.searchParams.has('repository')).toBe(false);
   });
 
-  it('prefills the six grants in the reviewed organization example', () => {
+  it('prefills the eight grants in the reviewed organization example including health prerequisites', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.createInitialTag = false;
     configuration.features.release = false;
@@ -167,10 +170,42 @@ describe('setup PAT permission intent', () => {
     expect(requirements.map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
       'repository:Metadata:read', 'repository:Contents:read', 'repository:Secrets:write',
       'repository:Variables:write', 'repository:Issues:write', 'organization:Issue Types:write',
+      'repository:Contents:write', 'repository:Actions:write', 'repository:Workflows:write',
     ]);
-    const url = new URL(buildSetupPatCreationUrl({ role: 'setup', owner: 'vypdev', repository: 'copilot', expiresIn: 1, requirements }));
+    const url = new URL(buildSetupPatCreationUrl({ role: 'setup', owner: 'vypdev', repository: 'copilot', expiresIn: 1,
+      requirements, includeConditionalSetupGrants: true }));
     expect(Object.fromEntries([...url.searchParams].filter(([key]) => !['name', 'description', 'target_name', 'expires_in'].includes(key)))).toEqual({
-      actions_variables: 'write', contents: 'read', issue_types: 'write', issues: 'write', metadata: 'read', secrets: 'write',
+      actions: 'write', actions_variables: 'write', contents: 'write', issue_types: 'write', issues: 'write',
+      metadata: 'read', secrets: 'write', workflows: 'write',
     });
+  });
+
+  it('keeps approval-only Actions at read and omits health writes when Secret management is disabled', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    configuration.manageRepositorySecrets = false;
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
+    const requirements = buildSetupPatIntentPermissionRequirements(configuration, 'User');
+    const url = new URL(buildSetupPatCreationUrl({ role: 'setup', owner: 'owner', repository: 'repo', expiresIn: 1,
+      requirements, includeConditionalSetupGrants: true }));
+    expect(url.searchParams.get('actions')).toBe('read');
+    expect(url.searchParams.get('contents')).toBe('read');
+    expect(url.searchParams.has('workflows')).toBe(false);
+    expect(requirements.some(item => item.applicability === 'conditional')).toBe(false);
+  });
+
+  it('gives local reads and conditional writes distinct identities without duplicating required Contents write', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const requirements = buildSetupPatIntentPermissionRequirements(configuration, 'User');
+    expect(new Set(requirements.map(item => item.id)).size).toBe(requirements.length);
+    expect(requirements.filter(item => item.permission === 'Contents')).toEqual([
+      expect.objectContaining({ level: 'write', applicability: 'required' }),
+    ]);
+    expect(requirements.filter(item => item.permission === 'Actions')).toEqual([
+      expect.objectContaining({ level: 'read', applicability: 'required' }),
+      expect.objectContaining({ level: 'write', applicability: 'conditional' }),
+    ]);
   });
 });

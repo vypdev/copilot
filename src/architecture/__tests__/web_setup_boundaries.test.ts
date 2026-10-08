@@ -103,7 +103,7 @@ describe('local web setup architecture', () => {
 
   test('new setup application decisions have no transitive path to CLI, infrastructure, or browser adapters', () => {
     const useCases = ['prepare_setup_pat_intent_use_case', 'verify_setup_pat_bootstrap_use_case',
-      'audit_configured_setup_pat_use_case', 'verify_web_setup_apply_use_case', 'setup_session_coordinator']
+      'audit_configured_setup_pat_use_case', 'verify_web_setup_apply_use_case', 'setup_session_coordinator', 'manage_setup_use_case']
       .map(name => join(root, 'src', 'application', 'usecases', 'setup', `${name}.ts`));
     const visited = new Set<string>();
     const traverse = (path: string): void => {
@@ -165,4 +165,8 @@ describe('local web setup architecture', () => {
       expect(css).toContain(`@import './styles/${layer}.css'`);
     }
   });
+});
+
+test('configuration management modules remain bounded', () => {
+ for (const file of ['src/cli/setup_management_adapter.ts','src/infrastructure/setup_management_workspace_adapter.ts','src/application/usecases/setup/manage_setup_use_case.ts','src/application/policies/setup_management_policy.ts','src/application/policies/setup_quick_settings_policy.ts']) expect(readFileSync(join(root,file),'utf8').split('\n').length).toBeLessThanOrEqual(220);
 });

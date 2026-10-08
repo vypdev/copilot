@@ -4,6 +4,8 @@
   import ChoicePrompt from './ChoicePrompt.svelte';
   import CredentialPrompt from './CredentialPrompt.svelte';
   import PlanPrompt from './PlanPrompt.svelte';
+  import SetupManagementPanel from './SetupManagementPanel.svelte';
+  import QuickSettingPrompt from './QuickSettingPrompt.svelte';
   import { tr } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
   import { localizedPromptCopy } from '../i18n/promptCopy';
@@ -21,7 +23,7 @@
 
 <section class="card decision-card" aria-label={tr('currentDecision', $setupLocale)} tabindex="-1" use:focusOnRevision={promptRevision}>
   <div class="card-header"><span class="card-kicker">{tr('currentDecision', $setupLocale)}</span><span class="revision">{tr('session', $setupLocale)} {revision}</span></div>
-  {#if prompt.kind !== 'question'}<h2>{copy?.title ?? prompt.title}</h2>{/if}
+  {#if !['question', 'management', 'quick-edit', 'quick-review'].includes(prompt.kind)}<h2>{copy?.title ?? prompt.title}</h2>{/if}
   {#if copy?.description || ('description' in prompt && prompt.description)}<p class="description">{copy?.description ?? ('description' in prompt ? prompt.description : '')}</p>{/if}
   {#key promptRevision}
     {#if prompt.kind === 'question'}
@@ -32,6 +34,10 @@
       <CredentialPrompt {prompt} {controller} {busy} {onSubmit} />
     {:else if prompt.kind === 'plan'}
       <PlanPrompt {prompt} {controller} {busy} {onSubmit} />
+    {:else if prompt.kind === 'management'}
+      <SetupManagementPanel view={prompt.management} {controller} {busy} {onSubmit} />
+    {:else if prompt.kind === 'quick-edit' || prompt.kind === 'quick-review'}
+      <QuickSettingPrompt {prompt} {controller} {busy} {onSubmit} />
     {/if}
   {/key}
 </section>

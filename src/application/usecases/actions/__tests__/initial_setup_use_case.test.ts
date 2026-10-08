@@ -328,9 +328,63 @@ describe('InitialSetupUseCase', () => {
     expect(mockCreateTag).toHaveBeenCalledWith('main', 'v1.0.0');
   });
 
+  it('skips tag inspection and creation when release and hotfix issue workflows are disabled', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.issueWorkflows = { enabled: ['feature'] };
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.manageRepositoryVariables = false;
+    await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+    expect(mockGetLatestTag).not.toHaveBeenCalled();
+    expect(mockCreateTag).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['authorization', 'authorization.denied'], ['invalid-input', 'validation.invalid-input'],
+    ['conflict', 'provider.conflict'], ['rate-limited', 'provider.rate-limited'], ['unavailable', 'provider.unavailable'],
+  ] as const)('reports the Variable name and phase with semantic reason %s', async (reason, code) => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.features.release = false;
+    setupConfiguration.features.hotfix = false;
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 1, updated: 2,
+      errors: ['Unable to configure repository Variable AGENT_MODEL.'],
+      unclassifiedErrors: [],
+      failures: [{ name: 'AGENT_MODEL', scope: 'repository', phase: 'update', reason }] });
+    const [result] = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual([expect.objectContaining({ code, message: expect.stringContaining('Variable AGENT_MODEL during update') })]);
+    expect(getResultPayload(getResultPayload(result.payload)?.setupReceipt)?.effects)
+      .toEqual(expect.arrayContaining([{ id: 'variables', state: 'needs-inspection', scope: 'repository' }]));
+  });
+
+  it.each([
+    { explicit: true, expectedErrors: 2 },
+    { explicit: false, expectedErrors: 3 },
+  ])('retains mixed Variable errors with explicit unclassified metadata: $explicit', async ({ explicit, expectedErrors }) => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.features.release = false;
+    setupConfiguration.features.hotfix = false;
+    const unclassified = 'Unable to configure repository Variable UNCLASSIFIED.';
+    mockSetupVariablesUpsert.mockResolvedValueOnce({ created: 1, updated: 2,
+      errors: ['Unable to configure repository Variable AGENT_MODEL.', unclassified],
+      ...(explicit ? { unclassifiedErrors: [unclassified] } : {}),
+      failures: [{ name: 'AGENT_MODEL', scope: 'repository', phase: 'update', reason: 'authorization' }] });
+    const [result] = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(expectedErrors);
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'authorization.denied', message: expect.stringContaining('Variable AGENT_MODEL during update') }),
+      expect.objectContaining({ code: 'provider.unavailable', message: unclassified }),
+    ]));
+    expect(getResultPayload(getResultPayload(result.payload)?.setupReceipt)?.effects)
+      .toEqual(expect.arrayContaining([{ id: 'variables', state: 'needs-inspection', scope: 'repository' }]));
+  });
+
   it('applies the selected setup files and repository Variables from the wizard configuration', async () => {
     const setupConfiguration = createDefaultSetupConfiguration();
     setupConfiguration.features.release = false;
+    setupConfiguration.features.hotfix = false;
     setupConfiguration.createInitialTag = false;
     const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration, setupRemoteConfiguration: repositorySnapshot } }));
 
@@ -342,7 +396,7 @@ describe('InitialSetupUseCase', () => {
     expect(mockSetupVariablesUpsert).toHaveBeenCalledWith(
       expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
     );
-    expect(results[0].steps).toContain('⏭️  Initial version tag creation disabled by setup configuration.');
+    expect(results[0].steps).toContain('⏭️  Initial version tag is not needed by the selected issue workflows.');
     expect(getResultPayload(getResultPayload(results[0].payload)?.setupReceipt)?.effects)
       .toEqual(expect.arrayContaining([{ id: 'initial-tag', state: 'skipped', scope: 'repository' },
         { id: 'variables', state: 'completed', scope: 'repository' }]));
@@ -351,6 +405,7 @@ describe('InitialSetupUseCase', () => {
   it('provisions Variables at organization scope when the configuration selects it', async () => {
     const setupConfiguration = createDefaultSetupConfiguration();
     setupConfiguration.features.release = false;
+    setupConfiguration.features.hotfix = false;
     setupConfiguration.createInitialTag = false;
     setupConfiguration.manageRepositorySecrets = false;
     setupConfiguration.storage.variables.defaultScope = 'organization';

@@ -6,6 +6,7 @@
   import { localizedPlanWarning } from '../i18n/planWarningCopy';
   import type { SetupQuestion } from '../../../src/application/contracts/web_setup_view';
   import PlanDecisionSummary from './PlanDecisionSummary.svelte';
+  import WorkflowPatStorageNotice from './WorkflowPatStorageNotice.svelte';
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   export let prompt: Extract<WebSetupPrompt, { kind: 'plan' }>;
   export let controller: boolean;
@@ -25,22 +26,27 @@
   };
 </script>
 
+<div class="plan-review">
 <p class="description">{tr('planBody', $setupLocale)}</p>
 <section class="plan-decisions" aria-label={tr('planPermissionProbeTitle', $setupLocale)}>
   <h3>{tr('planPermissionProbeTitle', $setupLocale)}</h3>
   <p>{tr('planPermissionProbeBody', $setupLocale)}</p>
+  {#if prompt.plan.permissionProbes?.some(probe => probe.permission === 'Actions')}
+    <p>{tr('planActionsProbePrerequisites', $setupLocale)}</p>
+  {/if}
   {#if prompt.plan.permissionProbes?.some(probe => probe.permission === 'Secrets')}
     <p>{tr('planSecretProbeLimit', $setupLocale)}</p>
   {/if}
   <ul>{#each prompt.plan.permissionProbes as probe}<li>{permissionTerm($setupLocale, probe.scope)}: {permissionName($setupLocale, probe.permission)}</li>{:else}<li>{tr('none', $setupLocale)}</li>{/each}</ul>
 </section>
 <PlanDecisionSummary decisions={prompt.plan.decisions} />
+{#if prompt.plan.workflowPatStorage}<WorkflowPatStorageNotice storage={prompt.plan.workflowPatStorage} />{/if}
 {#if prompt.plan.presentationDefaults.length}
   <section class="plan-decisions"><h3>{tr('planBasicDefaultsIntro', $setupLocale)}</h3>
     <ul>{#each prompt.plan.presentationDefaults as group}<li>{groupKeys[group.group as SetupQuestion['stateId']] ? tr(groupKeys[group.group as SetupQuestion['stateId']], $setupLocale) : group.group}: {group.count}</li>{/each}</ul>
   </section>
 {/if}
-<div class="plan-sections">{#each sections as section}<div><h3>{section.title} <span>{section.items.length}</span></h3><ul>{#each section.items as item}<li><bdi>{item}</bdi></li>{/each}</ul></div>{/each}</div>
+<div class="plan-sections">{#each sections as section}<details class="plan-inventory"><summary><span>{section.title}</span><span>{section.items.length}</span></summary><ul>{#each section.items as item}<li><bdi>{item}</bdi></li>{:else}<li>{tr('none', $setupLocale)}</li>{/each}</ul></details>{/each}</div>
 {#if prompt.plan.warnings.length}<div class="plan-warnings"><h3>{tr('beforeContinue', $setupLocale)}</h3><ul>{#each prompt.plan.warnings as warning}<li>{localizedPlanWarning(warning, $setupLocale)}</li>{/each}</ul></div>{/if}
 {#if prompt.editGroups?.length}
   <section class="plan-edit"><h3>{tr('changeAnswersTitle', $setupLocale)}</h3><p class="field-help">{tr('changeAnswersHelp', $setupLocale)}</p>
@@ -48,3 +54,4 @@
   </section>
 {/if}
 <div class="button-row"><ActionButton label={tr('stopHere', $setupLocale)} variant="secondary" onClick={() => onSubmit('decline')} disabled={!controller || busy} /><ActionButton label={tr('approvePlan', $setupLocale)} arrow onClick={() => onSubmit('approve')} disabled={!controller || busy} /></div>
+</div>

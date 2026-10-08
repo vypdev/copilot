@@ -374,3 +374,14 @@ describe('setup resource provisioning policy', () => {
         expect(errors).toEqual(['Could not inspect existing GitHub Actions resource scopes.']);
     });
 });
+
+
+test('a missing organization Variable writer reports an unavailable operation without a repository fallback', async () => {
+ const configuration=createDefaultSetupConfiguration(); configuration.storage.variables.defaultScope='organization';
+ const upsert=jest.fn();
+ const result=await ensureRepositoryVariables(context,{setupRepositoryVariablesPort:{upsert}},configuration,{
+  ...repositorySnapshot,ownerType:'Organization',repositoryId:42,organizationAccess:'available',organizationSecretsAccess:'available',organizationVariablesAccess:'available',
+ });
+ expect(result).toEqual({writes:0,errors:['Organization Variable provisioning is not available in this installation.']});
+ expect(upsert).not.toHaveBeenCalled();
+});

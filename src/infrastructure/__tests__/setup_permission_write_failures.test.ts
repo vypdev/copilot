@@ -1,8 +1,9 @@
-import { SetupPermissionProbeHttp } from '../setup_permission_probe_http';
+import { SetupPermissionProbeHttp, writeProbeFailure } from '../setup_permission_probe_http';
 import type { ResourceProbeContext } from '../setup_permission_probe_context';
 import type { SetupPermissionProbeJournal } from '../setup_permission_probe_journal';
 import { probeDisposableResource } from '../setup_permission_resource_probes';
 import { hasWorkflowDispatch } from '../setup_permission_actions_probe';
+import { SetupTokenPermissionQueryAdapter } from '../setup_token_permission_query_adapter';
 
 const sha = 'a'.repeat(40);
 const workflowPath = '.github/workflows/check.yml';
@@ -51,11 +52,51 @@ function fixture(probe: ResourceProbeContext['probe'], override: Override = () =
     }) as unknown as jest.MockedFunction<typeof fetch>;
     const context: ResourceProbeContext = { owner: 'owner', repository: 'repo', scope: 'repository', probe,
         http: new SetupPermissionProbeHttp(fetcher, 'fixture-token', 1000),
-        journal: { begin } as unknown as SetupPermissionProbeJournal, phase: jest.fn() };
+        journal: { begin, recover: jest.fn().mockResolvedValue(undefined) } as unknown as SetupPermissionProbeJournal, phase: jest.fn() };
     return { context, fetcher, begin, handle };
 }
 
 describe('write-probe rejection and readback contracts', () => {
+    it.each(['branch', 'override', 'workflow'] as const)('streams the bounded %s prerequisite through the production audit adapter', async stage => {
+        const value = fixture('actions', (path, method) => {
+            if (stage === 'branch' && path.endsWith('/git/refs') && method === 'POST') return reply(403);
+            if (stage === 'override' && path.includes('/contents/') && method === 'PUT') return reply(403);
+            if (stage === 'workflow' && path.endsWith('/actions/workflows')) return reply(200, { workflows: [] });
+            return undefined;
+        });
+        const progress = jest.fn();
+        const checks = await new SetupTokenPermissionQueryAdapter({ fetcher: value.fetcher, journal: value.context.journal })
+            .inspect('owner', 'repo', 'fixture-token', [{ id: 'actions', role: 'setup', scope: 'repository', permission: 'Actions',
+                level: 'write', applicability: 'required', reason: 'test', probe: 'actions' }], progress);
+        expect(checks[0].status).toBe('unverifiable');
+        expect(progress).toHaveBeenLastCalledWith({ role: 'setup', requirementId: 'actions', phase: 'failed', detail: checks[0].prerequisite });
+        expect(checks[0].prerequisite).toBeDefined();
+    });
+
+    it.each([
+        ['branch', 'contents-write'], ['override', 'contents-workflows-write'], ['workflow', 'dispatch-workflow'],
+    ] as const)('reports an Actions %s prerequisite without claiming its grant is missing', async (stage, prerequisite) => {
+        const value = fixture('actions', (path, method) => {
+            if (stage === 'branch' && path.endsWith('/git/refs') && method === 'POST') return reply(403, { message: 'Resource not accessible by personal access token' });
+            if (stage === 'override' && path.includes('/contents/') && method === 'PUT') return reply(403, { message: 'Resource not accessible by personal access token' });
+            if (stage === 'workflow' && path.endsWith('/actions/workflows')) return reply(200, { workflows: [], total_count: 0 });
+            return undefined;
+        });
+        const error = await probeDisposableResource(value.context).catch((caught: unknown) => caught);
+        const check = writeProbeFailure({ id: 'actions', role: 'setup', scope: 'repository', permission: 'Actions',
+            level: 'write', applicability: 'required', reason: 'test', probe: 'actions' }, error);
+        expect(check).toMatchObject({ status: 'unverifiable', prerequisite });
+        expect(value.handle.markDispatchAttempted).not.toHaveBeenCalled();
+        expect(value.handle.cleanup).toHaveBeenCalledTimes(stage === 'workflow' ? 0 : 1);
+    });
+
+    it.each([422, 500])('preserves HTTP %s from an override failure instead of inventing a permission denial', async status => {
+        const value = fixture('actions', (path, method) => path.includes('/contents/') && method === 'PUT' ? reply(status) : undefined);
+        await expect(probeDisposableResource(value.context)).rejects.toMatchObject({ httpStatus: status, prerequisite: undefined });
+        expect(value.handle.cleanup).toHaveBeenCalledTimes(1);
+        expect(value.handle.markDispatchAttempted).not.toHaveBeenCalled();
+    });
+
     it.each(['actions', 'pull-requests', 'contents'] as const)('rejects unsafe %s base metadata before mutation', async probe => {
         const value = fixture(probe, path => path === '/repos/owner/repo' ? reply(200, { default_branch: '/unsafe' }) : undefined);
         // Contents accepts encoded ref names but rejects control bytes.

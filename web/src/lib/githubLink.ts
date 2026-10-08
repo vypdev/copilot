@@ -9,6 +9,12 @@ export function safeGithubLink(link?: string): string | undefined {
   }
 }
 
+/** Repository Actions Secret settings only; no token or arbitrary navigation parameters. */
+export function repositorySecretSettingsLink(repository?: string): string | undefined {
+  return repository && /^[A-Za-z0-9-]{1,39}\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/u.test(repository)
+    ? `https://github.com/${repository}/settings/secrets/actions` : undefined;
+}
+
 /** Only the immutable run-detail route is an allowed CI evidence destination. */
 export function safeGithubRunLink(link?: string): string | undefined {
   try {

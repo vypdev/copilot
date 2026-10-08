@@ -264,6 +264,16 @@ describe('WebSetupBridge', () => {
     expect(JSON.stringify(bridge.snapshot())).not.toContain('private provider body');
   });
 
+  test.each(['contents-write', 'contents-workflows-write', 'dispatch-workflow'] as const)('retains the bounded Actions prerequisite %s in live progress', detail => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const requirement = { id: 'setup.repository.actions', role: 'setup' as const,
+      scope: 'repository' as const, permission: 'Actions', level: 'write' as const,
+      applicability: 'required' as const, reason: 'temporary test', probe: 'actions' as const };
+    bridge.requirements('setup', [requirement]);
+    bridge.permissionProgress({ role: 'setup', requirementId: requirement.id, phase: 'failed', detail });
+    expect(bridge.snapshot().permissions?.progress?.[0]).toMatchObject({ phase: 'failed', detail });
+  });
+
   test('retains the redacted Secret collision progress diagnostic', () => {
     const bridge = new WebSetupBridge('owner/repo');
     const requirement = { id: 'setup.repository.secrets', role: 'setup' as const,
@@ -289,4 +299,50 @@ describe('WebSetupBridge', () => {
     expect(bridge.snapshot().permissions?.report?.checks[0]).toMatchObject({ permission: 'Projects', status: 'unverifiable' });
     expect(JSON.stringify(bridge.snapshot())).not.toContain('secret-token');
   });
+
+  test('corrected PAT link survives permission updates, cleanup guidance and the final result', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const url = 'https://github.com/settings/personal-access-tokens/new?workflows=write';
+    const grants = ['repository Workflows write'];
+    bridge.setupPatCorrection(url, 'final', grants);
+    grants.push('later mutable value');
+    bridge.requirements('setup', []);
+    bridge.message('Delete your PAT after this run.', 'warning', 'https://github.com/settings/personal-access-tokens');
+    bridge.resultReason('permissions');
+    bridge.finish('blocked', 'No setup changes started.');
+    expect(bridge.snapshot().setupPatCorrection).toEqual({ url, stage: 'final', addedGrants: ['repository Workflows write'] });
+    expect(bridge.snapshot().message?.link).toBeUndefined();
+  });
+
+  test.each([
+    'not a URL', 'http://github.com/settings/personal-access-tokens/new',
+    'https://other.example/settings/personal-access-tokens/new',
+    'https://secret-token@github.com/settings/personal-access-tokens/new',
+    'https://github.com/settings/personal-access-tokens/new#secret-token',
+  ])('does not publish an invalid or nonofficial correction link: %s', url => {
+    const bridge = new WebSetupBridge('owner/repo');
+    bridge.setupPatCorrection(url, 'final');
+    expect(bridge.snapshot().setupPatCorrection).toBeUndefined();
+  });
+
+  test('an ended session cannot replace the retained correction link', () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    bridge.setupPatCorrection('https://github.com/settings/personal-access-tokens/new?contents=write', 'bootstrap');
+    bridge.finish('blocked', 'Stopped');
+    const before = bridge.snapshot();
+    bridge.setupPatCorrection('https://github.com/settings/personal-access-tokens/new?workflows=write', 'final');
+    expect(bridge.snapshot()).toBe(before);
+  });
+});
+
+
+describe('management command revisions', () => {
+ test('surface and semantic messages are value-free', () => { const bridge = new WebSetupBridge('fixture/repo'); bridge.setSurface('management'); bridge.managementMessage('updated'); expect(bridge.snapshot()).toMatchObject({surface:'management',message:{managementState:'updated',tone:'success'}}); bridge.managementMessage('blocked'); expect(bridge.snapshot().message?.tone).toBe('warning'); bridge.managementMessage('checking');expect(bridge.snapshot().message?.tone).toBe('info');bridge.clearMessage();expect(bridge.snapshot().message).toBeUndefined(); });
+ test('takeover changes the approval generation without exposing a credential', () => { const bridge = new WebSetupBridge('fixture/repo'); const first = bridge.controllerGeneration(); bridge.takeOver(); expect(bridge.controllerGeneration()).toBeGreaterThan(first); });
+ test('only editable displayed settings can be selected and a revision cannot replay', async () => {
+  const bridge = new WebSetupBridge('fixture/repo'); const { buildSetupManagementView } = await import('../../application/policies/setup_management_policy'); const { localInstallation,remoteConfiguration } = await import('../../../test-support/setup-management-fixtures');
+  const prompt = bridge.ask({kind:'management',title:'',management:buildSetupManagementView(localInstallation(),remoteConfiguration())}); const revision=bridge.snapshot().promptRevision!;
+  expect(bridge.answer(revision,'edit:forged')).toBe(false); expect(bridge.answer(revision,'edit:members')).toBe(false); expect(bridge.answer(revision,'edit:commentLimit')).toBe(true); expect(await prompt).toBe('edit:commentLimit'); expect(bridge.answer(revision,'close')).toBe(false);
+ });
+ test('quick review rejects unsupported values without consuming the review', async () => { const bridge=new WebSetupBridge('fixture/repo'); const pending=bridge.ask({kind:'quick-review',title:'',change:{id:'commentLimit',variable:'BUGBOT_COMMENT_LIMIT',before:'20',after:'15',scope:'organization'}}); const revision=bridge.snapshot().promptRevision!; expect(bridge.answer(revision,'yes')).toBe(false); expect(bridge.answer(revision,'cancel')).toBe(true); expect(await pending).toBe('cancel'); });
 });

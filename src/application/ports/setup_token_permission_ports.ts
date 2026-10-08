@@ -11,6 +11,8 @@ export interface SetupTokenPermissionsRequest {
     owner: string;
     repository: string;
     token: string;
+    /** Already authorized setup PAT, kept in memory only, for Actions fixture preparation and cleanup. */
+    operatorToken?: string;
     requirements: readonly SetupTokenPermissionRequirement[];
     /** Canonical comma-separated Project numbers from the approved setup plan. */
     selectedProjectNumbers?: string;
@@ -28,6 +30,7 @@ export interface SetupTokenPermissionInspectionPort {
         onProgress?: (progress: SetupTokenPermissionProgress) => void,
         selectedProjectNumbers?: string,
         includeConditionalWrites?: boolean,
+        operatorToken?: string,
     ): Promise<readonly SetupTokenPermissionCheck[]>;
 }
 

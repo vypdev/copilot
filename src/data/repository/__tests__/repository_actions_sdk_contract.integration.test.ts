@@ -18,3 +18,19 @@ test('real Octokit routes support inventory and scope-preserving Secret/Variable
         { method: 'PATCH', path: '/orgs/owner/actions/variables/EXISTING_VAR' },
     ]));
 }, 20_000);
+
+test('real Octokit reuses confirmed inherited Variable access without redundant grants', () => {
+    const output = execFileSync(process.execPath, [resolve('test-support/github-actions-sdk-contract.cjs'), '--existing-access'], {
+        cwd: process.cwd(), encoding: 'utf8', timeout: 15_000,
+        env: { ...process.env, PERSONAL_ACCESS_TOKEN: '', GH_TOKEN: '', GITHUB_TOKEN: '' },
+    });
+    const result = JSON.parse(output);
+    expect(result.existingAccess).toBe(true);
+    expect(result.requests.filter((request: { path: string }) => request.path.endsWith('/organization-variables'))).toHaveLength(4);
+    expect(result.requests).toEqual(expect.arrayContaining([
+        { method: 'GET', path: '/repos/owner/repo/actions/organization-variables' },
+        { method: 'PATCH', path: '/orgs/owner/actions/variables/EXISTING_VAR' },
+        { method: 'POST', path: '/orgs/owner/actions/variables' },
+    ]));
+    expect(result.requests.filter((request: { method: string; path: string }) => request.method === 'PUT' && request.path.includes('/variables/'))).toEqual([]);
+}, 20_000);

@@ -1,3 +1,4 @@
+import { setupNeedsInitialVersion } from './setup_issue_workflow_policy';
 import type { AgentTask } from '../../domain/agent';
 import {
     DEFAULT_AGENT_MODEL,
@@ -160,7 +161,6 @@ export type SetupConfigurationOverrides = {
     ai?: Partial<SetupConfiguration['ai']>;
     pullRequestApproval?: Partial<SetupConfiguration['pullRequestApproval']>;
     projects?: Partial<SetupConfiguration['projects']>;
-    createInitialTag?: boolean;
     manageRepositoryVariables?: boolean;
     manageRepositorySecrets?: boolean;
     actionInputs?: Record<string, string>;
@@ -209,7 +209,7 @@ export function mergeSetupConfiguration(
             coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
         } as SetupConfiguration['pullRequestApproval'],
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
-        createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
+        createInitialTag: setupNeedsInitialVersion({ features, issueWorkflows: { enabled: enabledIssueWorkflows } }),
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
         manageRepositorySecrets: overrides.manageRepositorySecrets ?? base.manageRepositorySecrets,
         actionInputs: { ...base.actionInputs, ...(overrides.actionInputs ?? {}) },

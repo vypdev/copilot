@@ -43,12 +43,27 @@ choose **view full permission table** at review to inspect every grant, reason,
 and condition, then return to the same review without repeating setup choices.
 Choosing manual PAT entry shows the full table directly. The later bot PAT
 prompt has its own full-table option based on the finalized workflow grants,
-not on the temporary setup PAT. The link is still **provisional** for facts that require GitHub
-inspection, such as existing Secrets, inherited organization resources, and a
-missing credential-health workflow. If the final plan needs
+not on the temporary setup PAT. When Secret management is selected, the first
+link already prefills repository **Actions: read and write**, **Contents: read
+and write**, and **Workflows: read and write** for possible credential-health
+checks. These grants are conditional: authenticated inspection and the approved
+plan determine which write checks are needed. Disabling Secret management omits
+these health-write grants; approval-only CI inspection keeps Actions read. The
+link remains **provisional** for inherited organization resources and later
+changes to your choices. If the final plan needs
 additional grants, setup stops before applying it and prints a corrected link.
 Update the PAT in GitHub or create a replacement, then rerun setup. Guided
 setup shows the account returned by GitHub and asks you to confirm it.
+
+In the web assistant, a blocked permission result keeps a **Create corrected
+setup PAT** link with the final required grants. The link uses final required grants,
+including any health-write grants that inspection confirms are needed. An older
+PAT created from a previous link may still lack Actions or Workflows write. Select the target repository
+in the updated GitHub form, create or correct the PAT, close the old local
+session and start `copilot setup --web` again. If temporary cleanup or a
+concurrent Secret collision needs inspection, resolve that first. An Actions
+check stopped by workflow preparation remains **Unverifiable**; it does not
+establish that the Actions grant is missing.
 
 For Projects, this early choice is only **whether you want the integration**.
 Listing private organization Projects requires authorization, so the assistant
@@ -82,6 +97,37 @@ expected bot login first: setup resolves its GitHub numeric ID, then checks the
 PAT's own `/user` identity against that ID before any Secret write. A manual or
 non-interactive PAT retains the existing permission audit but does **not** gain
 this extra identity binding. A wrong bot account blocks installation.
+
+The guided bot link names the selected account, for example **Create bot PAT as
+@vypbot**, with an adjacent warning to use that GitHub account. A private browser
+window can help when your regular window uses the operator account; sign in as
+the bot and check GitHub's active account before generating the PAT.
+If the submitted PAT belongs to another account, setup shows both identities
+and offers **Enter another bot PAT** or **Stop setup**. Re-entry is explicit:
+it keeps your answers, approved plan and selected bot in the same session,
+clears the rejected input, and verifies the new PAT's numeric identity and
+permissions before continuing. Delete the unused wrong-account PAT in GitHub.
+Closing the session still ends the run; progress is not saved across restarts.
+
+The bot Secret `PAT` is always supplied and validated during setup, even when
+you preserve other existing Secrets. It uses the scope you selected (or its
+explicit override). The plan and hidden input warn when that destination already
+contains `PAT`; it is replaced only after the new value passes identity, target
+repository access and required permission checks and setup is approved.
+Replacing an organization PAT can affect other repositories using it: validation
+for this repository does not certify their requirements. Setup checks organization
+namespace metadata even when the existing PAT is not yet shared with this repo.
+It cannot recover, copy or move the previous Secret value.
+
+If organization PAT storage is selected but repository Secret `PAT` exists,
+setup pauses because GitHub will prefer the repository value. Open **repository
+Actions Secrets** in GitHub, delete that repository Secret manually and select
+**I have deleted the repository PAT — check again**. Copilot queries GitHub again;
+clicking the button alone does not clear the conflict. A still-present Secret or
+failed read keeps your answers and recovery choices. Alternatively, **Store PAT
+in the repository instead** changes only the PAT override and rebuilds the plan
+for approval. **Stop setup** ends the run. Copilot never deletes a Secret during
+this flow; a Secret you delete in GitHub is not restored if you stop.
 
 Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 They do not sign you in, complete 2FA, generate or revoke a token, or choose
@@ -156,13 +202,14 @@ visibility-unknown probe, organization Issue Types, or any write.
 The distinction between an available public read and a verified grant is intentional. GitHub's
 `X-Accepted-GitHub-Permissions` response header describes what an endpoint
 requires; it does not enumerate every effective grant of the presented
-fine-grained PAT. During initial PAT verification, Copilot tests each displayed Write
-capability with a disposable resource and requires confirmed cleanup.
+fine-grained PAT. Each required Write capability is tested with a disposable
+resource and requires confirmed cleanup.
 
 At PAT entry, the assistant checks identity and required reads, confirms the
-guided operator account, then tests every displayed Write with isolated temporary
-resources, including conditional rows. Conditional means installation may not
-need that grant; it does not postpone its verification. PAT-entry and environment
+guided operator account, then tests required Writes with isolated temporary
+resources. Guided mode defers the prefilled conditional health Writes until
+authenticated inspection and plan approval establish they are required. Manual
+and supplied-token paths also test their displayed conditional Writes. PAT-entry and environment
 selection explain these tests before they start. `--dry-run` performs reads only,
 including leaving pending recovery records untouched. Installation still needs
 plan approval. A public read can be usable without
@@ -181,6 +228,33 @@ number, retains the cleanup record and blocks further setup until deletion is
 confirmed. This test can leave notifications and audit history. Actions and Pull
 request tests may also leave GitHub history and notifications after cleanup; the
 PAT-entry guidance discloses these tests before they start.
+For a bot **Actions Write** check, the already verified **setup PAT** prepares
+and cleans the isolated branch and disabled-job workflow. Only the **bot PAT**
+dispatches and reads its exact run. The bot link therefore does not need
+Workflows Write just to validate Actions. Setup displays its own Contents,
+Actions and Workflows Write prerequisites when bot release/hotfix dispatch is
+selected and Secret management is enabled. A denied bot dispatch or readback
+still blocks setup; the setup PAT cannot substitute for it.
+
+If **Actions Write is Unverifiable** because the temporary workflow could not
+be written, the dispatch was never tested. Check **repository Contents → Read
+and write** and **repository Workflows → Read and write** on the **setup PAT**,
+as well as repository selection and organization authorization. Workflows is a
+separate grant: granting Actions write alone does not grant it. A separate
+**Workflows Write: Missing** result means GitHub explicitly denied that workflow
+write; do not treat a denied request as verified access. If there is no eligible
+`workflow_dispatch` workflow on the default branch, install one before retrying.
+The web result explains the prerequisite without displaying raw GitHub errors.
+After correcting the PAT, start a fresh setup run. These rules apply separately
+to each audited role; the web result names the bot PAT when its audit failed.
+
+GitHub can return `node: null` together with a node-scoped `NOT_FOUND` error
+after deleting a temporary Project. Copilot confirms absence with a complete,
+authorized organization lookup for its private random title before clearing
+the recovery record. Permission errors, an incomplete lookup or a remaining
+exact title still block cleanup. An older false pending-cleanup record is
+rechecked automatically before the next audit; stop the old local session first.
+
 If a temporary permission resource cannot be confirmed as deleted, the row
 shows pending cleanup and setup stops. Cancelling or losing the local session
 during that failed cleanup is reported as partial; the local recovery journal
@@ -212,12 +286,22 @@ child process environment, and are not written to repository URLs or Git config.
 
 Permission checks use at most four concurrent GitHub probes. At PAT entry,
 identity and required reads run first; after guided account confirmation,
-every displayed Write grant is tested with a temporary resource that is read
-back and cleaned up, including conditional rows. Plan approval remains required
+required Write grants are tested with a temporary resource that is read
+back and cleaned up. Guided health prerequisites wait until the approved plan
+requires them; manual and supplied-token paths also test conditional rows. Plan approval remains required
 for installation; dry-run performs no writes or recovery. Disposable branches
 are deleted only after their exact ref and journaled commit match. Actions run
-cleanup also matches the journaled workflow ID, run ID, branch and event; an
-older dispatched record without the workflow identity stops recovery before
+cleanup also matches the journaled workflow ID, run ID, branch and event.
+
+An Actions run can remain queued briefly even when its only job is skipped.
+Copilot waits with bounded backoff for about a minute, in addition to individual
+request deadlines, before reporting unresolved run cleanup. It deletes only a
+completed run and then confirms absence before removing the recorded branch.
+If this wait expires, close the failed local session and retry with the required
+setup PAT; the next audit first recovers that exact run and branch from the
+local journal. A timeout does not establish that the Actions grant is missing.
+
+An older dispatched record without the workflow identity stops recovery before
 requests and gives a manual cleanup path. Verify the exact dispatch run and
 recorded branch commit, confirm their cleanup, then remove only its matching
 journal file and retry; see [troubleshooting](/security-operations/operations/troubleshooting). A branch
@@ -261,11 +345,12 @@ cannot obtain an authoritative remote snapshot or required selected inventory
 access, it stops before Secrets, Variables, labels, issue types, and tag writes
 with bounded recovery guidance, including for a repository-scope default.
 When an organization Secret or Variable has `selected` visibility, setup must
-grant this repository access before counting it as configured. It preserves
-the visibility of existing resources. If repository identity or the grant
-endpoint is unavailable, it reports a resource error before writing its value;
-a rejected grant also prevents a success result. An API failure after a value
-write may require inspecting that resource before retrying.
+confirm this repository has access before counting it as configured. It preserves
+existing visibility. New Variables include repository access when created;
+existing Variables reuse access confirmed by GitHub's inherited inventory.
+Otherwise setup grants access separately. Missing required capabilities prevent
+the value write, and a rejected required grant prevents a success result. An API
+failure after a value write may require inspecting that resource before retrying.
 
 <Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and may validate existing remote Secrets by dispatching the installed `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch. Plain `copilot doctor` may create an Actions run; `copilot doctor --read-only` never dispatches it and leaves Secret values unverified. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
@@ -325,6 +410,10 @@ For comment-driven assistance, read-only commands are available to anyone who ca
   </Step>
 
   <Step title="Create the setup PAT">
+    Initial version setup is automatic: enabled release/hotfix issues need a version baseline. Copilot checks remote `x.y.z`/`vx.y.z` tags with the setup PAT, preserves existing versions and creates `v1.0.0` only when none exist. Other issue workflows skip this step. Neither terminal nor web setup asks about it; `createInitialTag` is not a config-file option. Local moving Action tags (`v1`, `v2`, `v3`) are untouched, and a failed tag read stops creation.
+
+    When updating existing organization Variables, Copilot preserves their visibility and reuses confirmed repository access. It grants selected repository access separately only when needed. A failed Variable write names the resource and phase with a bounded reason. Review partial results before retrying; values and raw GitHub response bodies are never displayed.
+
     The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and Contents read for inspecting repository files and installed workflows; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. Setup uses organization Projects **read**, not write, to list Projects after the PAT is entered. There is no separate Workflows read permission for inspection. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. For existing Secrets, dispatching an installed `copilot_credential_health.yml` requires Actions write. Its isolated Actions permission test also requires Contents write for a disposable branch. If the exact trusted packaged workflow cannot be used, the test requires Workflows write for a verified no-job override; this prerequisite does not establish a Workflows grant automatically. Temporary installation on the setup branch is authorized only when the workflow is independently confirmed missing; unavailable or unknown workflow state never authorizes temporary creation. Contents write can also be required for an initial tag or another explicitly selected repository mutation.
 
     Enter it in the hidden prompt, or use `--token`/`PERSONAL_ACCESS_TOKEN` for automation. It remains in memory for the command and is not written to `.env`, a config file, or the `PAT` Secret.
@@ -377,7 +466,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - **Pull requests**: Read and write for PR automation/comments, commit-driven Bugbot review, issue-comment autofix, guarded approval, or release/hotfix promotion
     - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
 
-    Workflow installation and Secret/Variable administration belong to the separate setup PAT. The runtime matrix does not request Administration write, Secrets, Variables write, Webhooks, or Workflows. Some disposable audit operations need extra prerequisites: opening a draft PR needs a temporary changed branch (Contents write), Actions testing may need Workflows write, deleting a temporary Issue needs repository administration/organization enablement, and creating or deleting an organization Project may require a stronger organization role than updating an existing item. A runtime grant alone cannot satisfy these prerequisites. Inspect the failed phase; setup blocks rather than treating an incomplete transaction as verified or silently adding broad permissions.
+    Workflow installation and Secret/Variable administration belong to the separate setup PAT. The runtime matrix does not request Administration write, Secrets, Variables write, Webhooks, or Workflows. Some disposable audit operations need extra prerequisites: opening a draft PR needs a temporary changed branch (Contents write), the setup PAT needs Workflows write to prepare an Actions override, deleting a temporary Issue needs repository administration/organization enablement, and creating or deleting an organization Project may require a stronger organization role than updating an existing item. A runtime grant alone cannot satisfy these prerequisites. Inspect the failed phase; setup blocks rather than treating an incomplete transaction as verified or silently adding broad permissions.
 
     **If your bot belongs to an organization** set these permissions for the organization:
 

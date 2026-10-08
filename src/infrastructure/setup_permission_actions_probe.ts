@@ -13,14 +13,15 @@ const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa69
 
 /** Dispatches a disabled-job branch override of a workflow already registered on default. */
 export async function probeActions(context: ResourceProbeContext): Promise<void> {
+    const preparationHttp = context.operatorHttp ?? context.http;
     const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
-    const metadata = await probeJsonRecord(await context.http.expect(root, 'GET', [200]));
+    const metadata = await probeJsonRecord(await preparationHttp.expect(root, 'GET', [200]));
     const base = metadata.default_branch;
     if (typeof base !== 'string' || !/^[A-Za-z0-9._/-]{1,255}$/u.test(base)
         || base.startsWith('/') || base.endsWith('/')) {
         throw new ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
     }
-    const ref = await probeJsonRecord(await context.http.expect(
+    const ref = await probeJsonRecord(await preparationHttp.expect(
         `${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
     const object = ref.object;
     const sha = object && typeof object === 'object' && !Array.isArray(object)
@@ -28,40 +29,46 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
     if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
         throw new ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
     }
-    const workflow = await findDispatchWorkflow(context, root, sha);
+    const workflow = await findDispatchWorkflow({ ...context, http: preparationHttp }, root, sha);
     if (!workflow) {
-        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
+        throw new ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.',
+            undefined, false, false, 'dispatch-workflow');
     }
     const name = `copilot-permission-test-${randomBytes(16).toString('hex')}`;
-    const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
+    const prior = await preparationHttp.request(`${root}/git/ref/heads/${name}`);
     if (prior.status !== 404) throw new ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
     const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
         scope: 'repository', probe: 'actions', name });
     let operationError: unknown;
-    const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+    const noOp = "name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'true'\n";
     context.phase('creating');
     try {
         await handle.setReferenceSha(sha);
         try {
-            await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+            await preparationHttp.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         } catch (error) {
             if (error instanceof ProbeFailure && error.httpStatus === 403) {
-                throw new ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403);
+                throw new ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.',
+                    403, false, false, 'contents-write');
             }
             throw error;
         }
         if (!workflow.trustedNoOp) {
             const file = `${root}/contents/${workflow.path}`;
             try {
-                const written = await probeJsonRecord(await context.http.expect(file, 'PUT', [200], {
+                const written = await probeJsonRecord(await preparationHttp.expect(file, 'PUT', [200], {
                     message: 'chore: verify temporary Actions permission [skip ci]',
                     content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
                 }));
                 await handle.setReferenceSha((written.commit as Record<string, unknown> | undefined)?.sha);
-            } catch {
-                throw new ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
+            } catch (error) {
+                if (error instanceof ProbeFailure && error.httpStatus === 403) {
+                    throw new ProbeFailure('The isolated Actions check could not write its no-job override (HTTP 403); confirm repository Contents and Workflows Write and organization authorization.',
+                        403, false, false, 'contents-workflows-write');
+                }
+                throw error;
             }
-            const observedFile = await probeJsonRecord(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
+            const observedFile = await probeJsonRecord(await preparationHttp.expect(`${file}?ref=${name}`, 'GET', [200]));
             if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'
                 || typeof observedFile.content !== 'string'
                 || Buffer.from(observedFile.content, 'base64').toString('utf8') !== noOp) {
@@ -89,7 +96,7 @@ export async function probeActions(context: ResourceProbeContext): Promise<void>
         }
     } catch (error) { operationError = error; }
     context.phase('deleting');
-    try { await handle.cleanup(context.http); }
+    try { await handle.cleanup(preparationHttp); }
     catch { throw new ProbeFailure('Temporary Actions cleanup could not be confirmed; recovery is required before retrying.',
         undefined, true); }
     if (operationError) throw operationError;

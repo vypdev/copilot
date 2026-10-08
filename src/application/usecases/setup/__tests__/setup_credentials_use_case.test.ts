@@ -143,15 +143,15 @@ describe('SetupCredentialsUseCase', () => {
             validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
             validateCredential: jest.fn(),
         };
-        const secrets = { list: jest.fn().mockResolvedValue(['PAT']), upsertSecrets: jest.fn() };
-        const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'remote ok' }]) };
+        const secrets = { list: jest.fn().mockResolvedValue(['OPENAI_API_KEY']), upsertSecrets: jest.fn() };
+        const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'OPENAI_API_KEY', status: 'valid', message: 'remote ok' }]) };
         const result = await new SetupCredentialsUseCase(prompt, validation, secrets, remoteHealth).collect({
             owner: 'owner', repository: 'repo', setupToken: 'setup-token', ref: 'main',
-            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true,
+            requirements: [requirement('OPENAI_API_KEY')], manageSecrets: true,
         });
 
         expect(result.collection).toEqual({ apiKeys: [] });
-        expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
+        expect(prompt.requestApiKey).not.toHaveBeenCalled();
         expect(remoteHealth.validateExisting).toHaveBeenCalledWith('owner', 'repo', 'setup-token', 'main', expect.any(Array));
     });
 
@@ -201,14 +201,14 @@ describe('SetupCredentialsUseCase', () => {
             validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'Remote health passed.' }]),
         };
         const permission = {
-            id: 'workflow.repository.metadata', role: 'workflow' as const, scope: 'repository' as const,
-            permission: 'Metadata', level: 'read' as const, applicability: 'required' as const,
-            reason: 'Resolve repository.', probe: 'metadata' as const,
+            id: 'workflow.repository.actions', role: 'workflow' as const, scope: 'repository' as const,
+            permission: 'Actions', level: 'write' as const, applicability: 'required' as const,
+            reason: 'Dispatch selected workflows.', probe: 'actions' as const,
         };
         const report = {
             role: 'workflow' as const, account: 'workflow-bot', identityStatus: 'valid' as const,
             identityMessage: 'ok', ready: true, confirmationRequired: false,
-            checks: [{ ...permission, status: 'verified' as const, message: 'available' }],
+            checks: [{ ...permission, status: 'verified' as const, writeProof: 'transaction' as const, message: 'available' }],
         };
         const tokenPermissions = { inspect: jest.fn().mockResolvedValue(report) };
 
@@ -233,9 +233,10 @@ describe('SetupCredentialsUseCase', () => {
                 status: 'unverifiable',
                 message: expect.stringContaining('re-enter the workflow PAT'),
             }),
+            { scope: 'repository', destination: 'owner/repo', replacesExisting: true },
         );
         expect(tokenPermissions.inspect).toHaveBeenCalledWith(expect.objectContaining({
-            role: 'workflow', token: 'workflow-token', requirements: [permission], selectedProjectNumbers: '7,9',
+            role: 'workflow', token: 'workflow-token', operatorToken: 'setup-token', requirements: [permission], selectedProjectNumbers: '7,9',
         }));
         expect(result.collection.workflowPat).toEqual({ name: 'PAT', value: 'workflow-token' });
         expect(result.checks.filter(check => check.name === 'PAT')).toEqual([
@@ -243,7 +244,7 @@ describe('SetupCredentialsUseCase', () => {
         ]);
     });
 
-    it('preserves invalid remote-health evidence while requesting a workflow PAT re-entry', async () => {
+    it('requires supplied PAT validation rather than dispatching health for the previous stored PAT', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
             requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'replacement-token' }),
@@ -278,7 +279,8 @@ describe('SetupCredentialsUseCase', () => {
 
         expect(prompt.requestWorkflowPat).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'PAT' }),
-            expect.objectContaining({ status: 'invalid', message: expect.stringContaining('re-enter the workflow PAT') }),
+            expect.objectContaining({ status: 'unverifiable', message: expect.stringContaining('re-enter the workflow PAT') }),
+            { scope: 'repository', destination: 'owner/repo', replacesExisting: true },
         );
     });
 
@@ -376,11 +378,11 @@ describe('SetupCredentialsUseCase', () => {
         };
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }), validateCredential: jest.fn() };
         const secrets = { list: jest.fn(), upsertSecrets: jest.fn() };
-        const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'remote ok' }]) };
+        const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'OPENAI_API_KEY', status: 'valid', message: 'remote ok' }]) };
         const remoteConfiguration = {
             ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
             repositorySecrets: [], repositorySecretsAccess: 'available' as const,
-            organizationSecrets: ['PAT'], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
+            organizationSecrets: ['OPENAI_API_KEY'], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
@@ -388,11 +390,11 @@ describe('SetupCredentialsUseCase', () => {
 
         const result = await new SetupCredentialsUseCase(prompt, validation, secrets, remoteHealth).collect({
             owner: 'owner', repository: 'repo', setupToken: 'setup-token', ref: 'main',
-            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true, remoteConfiguration,
+            requirements: [requirement('OPENAI_API_KEY')], manageSecrets: true, remoteConfiguration,
         });
 
         expect(result.collection).toEqual({ apiKeys: [] });
-        expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
+        expect(prompt.requestApiKey).not.toHaveBeenCalled();
         expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ sourceScope: 'organization' }));
         expect(secrets.list).not.toHaveBeenCalled();
     });
@@ -450,13 +452,11 @@ describe('SetupCredentialsUseCase', () => {
             collection: { workflowPat: { name: 'PAT', value: 'replacement-token' }, apiKeys: [] },
         }));
 
-        expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'PAT' }),
-            expect.objectContaining({ sourceScope: 'organization' }),
-        );
+        expect(prompt.chooseExistingCredential).not.toHaveBeenCalled();
         expect(prompt.requestWorkflowPat).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'PAT' }),
             expect.objectContaining({ sourceScope: 'organization' }),
+            { scope: 'organization', destination: 'owner', replacesExisting: true },
         );
         expect(secrets.list).not.toHaveBeenCalled();
     });
@@ -550,14 +550,14 @@ describe('SetupCredentialsUseCase', () => {
 
         await expect(new SetupCredentialsUseCase(prompt, validation, secrets).collect({
             owner: 'owner', repository: 'repo', setupToken: 'setup-token',
-            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true, remoteConfiguration,
+            requirements: [requirement('OPENAI_API_KEY')], manageSecrets: true, remoteConfiguration,
             secretStoragePolicy: {
                 defaultScope: 'repository', organizationVisibility: 'selected', preserveExisting: true, overrides: {},
             },
         })).rejects.toThrow('Organization Secret inventory is unavailable');
 
         expect(prompt.explainCredentialSeparation).not.toHaveBeenCalled();
-        expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
+        expect(prompt.requestApiKey).not.toHaveBeenCalled();
         expect(secrets.list).not.toHaveBeenCalled();
     });
 

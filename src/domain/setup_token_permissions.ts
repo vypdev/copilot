@@ -4,7 +4,8 @@ export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
 export type SetupTokenPermissionStatus = 'verified' | 'available' | 'missing' | 'unverifiable';
 export type SetupTokenPermissionProbePhase = 'checking' | 'creating' | 'reading' | 'deleting' | 'verified' | 'failed' | 'skipped';
-export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported' | `http-${number}` | `issue-closed-${number}` | `issue-unresolved-${number}`;
+export type SetupActionsProbePrerequisite = 'contents-write' | 'contents-workflows-write' | 'dispatch-workflow';
+export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported' | SetupActionsProbePrerequisite | `http-${number}` | `issue-closed-${number}` | `issue-unresolved-${number}`;
 
 /** Secret-free, bounded progress for one permission. Never contains provider prose. */
 export interface SetupTokenPermissionProgress {
@@ -56,6 +57,8 @@ export interface SetupTokenPermissionCheck extends SetupTokenPermissionRequireme
     cleanupPending?: true;
     /** GitHub's upsert-only Secret endpoint reported an existing object. */
     incident?: 'secret-collision';
+    /** An Actions check stopped before dispatch; this is not evidence against Actions Write. */
+    prerequisite?: SetupActionsProbePrerequisite;
 }
 
 export interface SetupTokenPermissionReport {

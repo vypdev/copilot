@@ -356,7 +356,7 @@ describe('narrow GitHub Actions resource repositories', () => {
         expect(createOrUpdateOrgSecret).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
         expect(addSelectedRepoToOrgSecret).toHaveBeenCalledWith({ org: 'owner', secret_name: 'PAT', repository_id: 42 });
         expect(createOrgVariable).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
-        expect(addSelectedRepoToOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'MODE', repository_id: 42 });
+        expect(addSelectedRepoToOrgVariable).not.toHaveBeenCalled();
     });
 
     it('reports unavailable organization inspection separately from personal repositories', async () => {

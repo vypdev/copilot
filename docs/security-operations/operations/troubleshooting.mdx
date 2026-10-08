@@ -17,11 +17,30 @@ delta, use the corrected link printed by setup, and rerun; no approved setup
 mutation has started. If the final plan removes grants, your existing PAT may
 have excess access; replace it for strict least privilege. A guided bot PAT
 created while signed into another account fails the numeric-ID check before
-the Secret is written. Delete that unused PAT and create one as the chosen bot.
+the Secret is written. The message identifies both accounts. Choose **Enter
+another bot PAT** to keep your answers, approved plan and selected bot in this
+session, or **Stop setup** to end it. Delete that unused PAT and create one as
+the chosen bot, using a private window or switching GitHub accounts. Re-entry
+verifies the new token's numeric identity and required grants; it does not retry
+provider failures or permission checks automatically. Closing the session still
+requires a fresh setup run.
 If setup fails after applying changes, inspect the Actions Secret name and
 scope before revoking or replacing the bot PAT: it may already be active.
 Cancelling setup never revokes either PAT. Delete an unused setup PAT in GitHub;
 renew an installed bot PAT before its suggested 90-day expiry.
+
+If setup reports that repository Secret `PAT` shadows the selected organization
+PAT, open the linked repository Actions Secrets settings. Remove the repository
+Secret in GitHub and select **I have deleted the repository PAT — check again**.
+The button requests a fresh read; a still-present PAT returns to the same choice.
+An unavailable read never means deletion succeeded: check setup-PAT access or
+GitHub availability and retry. Your answers remain in this session. **Store PAT
+in the repository instead** changes only PAT storage and requires a rebuilt plan;
+**Stop setup** ends the run without a setup Secret write. Copilot never performs
+that deletion and cannot restore a value you removed manually. The new bot PAT
+must still pass every required check before any replacement. Organization PAT
+replacements can affect other repositories, including when the old Secret was
+not available to this repository; read the shared-impact notice before approval.
 
 For `copilot setup --web`, an inaccessible page or failed browser launch does
 not imply a setup failure: open the exact `127.0.0.1` URL printed by the CLI.
@@ -124,9 +143,11 @@ directory. The lock contains no PAT or other credential.
     ambiguous because it can also mean the token cannot see the repository, so
     setup never upgrades it to `Verified`.
     A required unverifiable read without positive public-repository operational
-    evidence blocks and must be retried. Displayed writes, including conditional rows, are checked during initial PAT
-    verification by creating, reading and deleting a temporary resource for each
-    permission. Inspect the failed phase and HTTP category. An unresolved
+    evidence blocks and must be retried. Required writes are checked by creating,
+    reading and deleting a temporary resource for each permission. Guided links
+    prefill possible health-write grants when managing Secrets, but their tests
+    wait until the approved plan needs them. Manual and supplied-token paths
+    also test displayed conditional writes during initial PAT verification. Inspect the failed phase and HTTP category. An unresolved
     cleanup blocks retries until the recovery journal can finish it. The old
     `--confirm-unverifiable-write-permissions` flag is rejected.
     In the web assistant, inspect only required rows marked `Unverifiable`;
@@ -408,3 +429,17 @@ directory. The lock contains no PAT or other credential.
        - The error Reference UUID (never a credential or raw provider response)
   </Accordion>
 </AccordionGroup>
+
+## Web configuration adjustments
+
+If **Change** is unavailable, connect to GitHub and check whether both Variable
+scopes can be read. Literal or complex workflow expressions, input environment
+overrides and unreadable files require the complete assistant. The panel keeps
+unknown values distinct from missing or disabled values.
+
+A change during review or a browser control takeover invalidates the approval.
+Review the refreshed value before trying again. A permissions failure allows a
+corrected setup PAT; the guided link grants Variables Write only at the reviewed
+scope and Variable reads for precedence. Cleanup or read-back uncertainty stops
+the session with an inspection receipt. Check the actual GitHub Variable before
+retrying; there is no automatic rollback of an unconfirmed remote write.

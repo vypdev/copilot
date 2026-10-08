@@ -1,4 +1,5 @@
 import { parsePositiveSafeInteger } from '../../../domain/positive_integer_policy';
+import { ACTIONS } from '../../../data/model/action_types';
 import { extractIssueNumberFromBranch, extractIssueNumberFromPush } from '../../../utils/title_utils';
 import type { SetupIssueQueryPort } from '../../ports/setup_execution_ports';
 import type {
@@ -33,6 +34,11 @@ export async function resolveSingleActionIssueNumber(
     context: SetupExecutionContext,
     issueRepository: IssueRepository,
 ): Promise<ExecutionIssueResolution> {
+    // Installation targets the repository, even if a legacy caller supplies
+    // an issue number or an issue/PR/push event. Never load unrelated work.
+    if (context.singleAction.currentAction === ACTIONS.INITIAL_SETUP) {
+        return { singleAction: { issue: 0, isIssue: false, isPullRequest: false, isPush: false } };
+    }
     const configuredIssue = context.configuredSingleActionIssue;
     if (configuredIssue !== undefined && String(configuredIssue).trim() !== '') {
         const issueNumber = parsePositiveSafeInteger(configuredIssue);

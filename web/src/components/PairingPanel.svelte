@@ -24,6 +24,6 @@
     <label for="pairing-code">{tr('pairLabel', $setupLocale)}</label>
     <input id="pairing-code" type="text" bind:value={code} maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" disabled={busy} placeholder={tr('pairPlaceholder', $setupLocale)} />
     <p class="field-help">{tr('pairHelp', $setupLocale)}</p>
-    <ActionButton label={tr(mode === 'pair' ? 'pairButton' : 'takeOver', $setupLocale)} arrow onClick={submit} disabled={!canSubmitPairingCode(code, busy)} />
+    <div class="button-row"><ActionButton label={tr(mode === 'pair' ? 'pairButton' : 'takeOver', $setupLocale)} arrow onClick={submit} disabled={!canSubmitPairingCode(code, busy)} /></div>
   </form>
 </section>

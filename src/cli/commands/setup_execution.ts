@@ -14,6 +14,7 @@ import { effectiveIssueWorkflowFeatures } from '../../application/policies/setup
 import { buildSetupPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
 import { createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { collectSetupCredentials } from '../setup_credential_collection';
+import { ResolveSetupWorkflowPatConflictUseCase } from '../../application/usecases/setup/resolve_setup_workflow_pat_conflict_use_case';
 import { createSetupDoctorUseCase, createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupDoctorWorkspaceQueryAdapter } from '../../infrastructure/setup_workspace_adapter';
 import { GithubSetupApprovalReadinessAdapter } from '../../infrastructure/setup_approval_readiness_adapter';
@@ -45,6 +46,7 @@ import {
 } from '../web_setup_adapters';
 import { setupActionResultFailure, setupResultEffects } from '../setup_result_receipt';
 import { reportSetupFailure, finishWebSetupSession } from '../setup_outcome_adapter';
+import { manageWebSetup } from '../setup_management_adapter';
 
 export interface SetupExecutionOptions extends SetupCommandOverrideOptions {
   debug?: boolean; token?: string; workflowPat?: string; secret?: Record<string, string>;
@@ -95,6 +97,14 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             '--confirm-unverifiable-write-permissions is no longer accepted. Setup tests Write capabilities with temporary resources during PAT verification.');
         }
         const session = new SetupSessionCoordinator({
+          ...(webBridge && !options.dryRun ? { manage: async (possibleMutation: () => void, record: (effect: import('../../domain/setup').SetupOperationEffect) => void) => {
+            const result = await manageWebSetup(webBridge, checkoutRoot, gitInfo.owner, gitInfo.repo, () => {
+              setupMutationStarted = true; setupApplyStarted = true; possibleMutation();
+            }, record, Boolean(options.skipVariables));
+            if (result === 'continue') journey = new SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`,
+              new WebSetupJourneyPresenter(webBridge), setupMutationStarted);
+            return result;
+          } } : {}),
           repository: async (): Promise<SetupSessionDecision> => {
         if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
           || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
@@ -236,6 +246,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           finalPermissionAudit: auditConfiguredSetupPat,
           onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
           remoteConfiguration: remoteConfigurationReader,
+          workflowPatConflict: new ResolveSetupWorkflowPatConflictUseCase(credentialPrompt, remoteConfigurationReader),
           mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
           approvalCheckDiscovery: new GithubSetupApprovalCheckDiscoveryAdapter(),
@@ -346,9 +357,13 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
             : webBridge?.snapshot().outcome ? 'expired' : 'active',
           present: (stage, mutationStarted, outcome) => {
+            if (webBridge?.snapshot().surface === 'management') {
+              webBridge.setJourney(buildSetupJourneyView(`${gitInfo.owner}/${gitInfo.repo}`, stage, mutationStarted, outcome));
+              return;
+            }
             if (!journey) return;
             journey.advance(stage);
-            if (mutationStarted) journey.markMutationStarted();
+            if (mutationStarted && ['plan','credentials','apply'].includes(stage)) journey.markMutationStarted();
             if (outcome) journey.finish(outcome);
           },
           isCancellationError: error => error instanceof SetupTerminalCancelledError,
@@ -358,7 +373,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
         if (run.error !== undefined) throw run.error;
         if (run.outcome === 'blocked' || run.outcome === 'partial') process.exitCode = 1;
       } catch (error) {
-        process.exitCode = reportSetupFailure(error, { journey, bridge: webBridge,
+        process.exitCode = reportSetupFailure(error, { journey: webBridge?.snapshot().surface === 'management' ? undefined : journey, bridge: webBridge,
           mutationStarted: setupMutationStarted, applyStarted: setupApplyStarted,
           guidedBotIdentity: Boolean(credentialPrompt.guidedWorkflowBotIdentity) });
       } finally {

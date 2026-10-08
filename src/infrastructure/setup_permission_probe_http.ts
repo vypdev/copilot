@@ -1,4 +1,4 @@
-import type { SetupTokenPermissionCheck, SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
+import type { SetupActionsProbePrerequisite, SetupTokenPermissionCheck, SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
 import { withHttpDeadline } from './http_deadline';
 import { isSetupPermissionDenied } from './setup_permission_denial';
 
@@ -57,7 +57,7 @@ export class SetupPermissionProbeHttp {
 
 export class ProbeFailure extends Error {
     constructor(message: string, readonly httpStatus?: number, readonly cleanupPending = false,
-        readonly permissionDenied = false) { super(message); }
+        readonly permissionDenied = false, readonly prerequisite?: SetupActionsProbePrerequisite) { super(message); }
 }
 
 export class ProbeCollision extends ProbeFailure {}
@@ -83,5 +83,6 @@ export function writeProbeFailure(requirement: SetupTokenPermissionRequirement, 
         message: failure.message,
         ...(failure.cleanupPending ? { cleanupPending: true } : {}),
         ...(failure instanceof ProbeCollision ? { incident: 'secret-collision' as const } : {}),
+        ...(failure.prerequisite ? { prerequisite: failure.prerequisite } : {}),
     };
 }

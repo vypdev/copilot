@@ -3,6 +3,8 @@ import type {
     SetupCredentialCollection,
     SetupRemoteConfiguration,
     SetupResourceTarget,
+    SetupVariableWriteFailure,
+    SetupVariablesWriteResult,
 } from '../../../domain/setup';
 import {
     buildSetupRepositoryVariables,
@@ -34,7 +36,10 @@ export interface SetupRepositoryContext {
 
 export type SetupResource = { name: string; value: string };
 export type SetupResourceGroup = { target: SetupResourceTarget; resources: SetupResource[] };
-export type SetupResourceProvisioningOutcome = { step?: string; errors: string[]; writes: number };
+export type SetupResourceProvisioningOutcome = { step?: string; errors: string[]; writes: number } & (
+    | { failures: readonly SetupVariableWriteFailure[]; unclassifiedErrors: readonly string[] }
+    | { failures?: undefined; unclassifiedErrors?: undefined }
+);
 
 export const VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisioning is unavailable; no Variables were changed.';
 export const SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
@@ -56,7 +61,11 @@ export async function ensureRepositoryVariables(
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
-        if (result.errors.length > 0) return { errors: result.errors, writes };
+        if (result.errors.length > 0) {
+            return result.failures
+                ? { errors: result.errors, writes, failures: result.failures, unclassifiedErrors: result.unclassifiedErrors }
+                : { errors: result.errors, writes };
+        }
         return {
             step: writes > 0
                 ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`
@@ -173,6 +182,7 @@ export function groupSetupResources(
             kind === 'secret'
                 ? remoteConfiguration.repositorySecrets
                 : remoteConfiguration.repositoryVariables.map(variable => variable.name),
+            kind,
         );
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
@@ -208,13 +218,17 @@ async function upsertVariableGroups(
     context: SetupRepositoryContext,
     port: BoundSetupRepositoryVariablesCommandPort,
     groups: readonly SetupResourceGroup[],
-): Promise<{ created: number; updated: number; errors: string[] }> {
+): Promise<SetupVariablesWriteResult & { unclassifiedErrors: string[] }> {
     let created = 0;
     let updated = 0;
     const errors: string[] = [];
+    const unclassifiedErrors: string[] = [];
+    const failures: SetupVariableWriteFailure[] = [];
     for (const group of groups) {
         if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
-            errors.push('Organization Variable provisioning is not available in this installation.');
+            const message = 'Organization Variable provisioning is not available in this installation.';
+            errors.push(message);
+            unclassifiedErrors.push(message);
             continue;
         }
         const result = group.target.scope === 'organization'
@@ -223,8 +237,10 @@ async function upsertVariableGroups(
         created += result.created;
         updated += result.updated;
         errors.push(...result.errors);
+        failures.push(...(result.failures ?? []));
+        unclassifiedErrors.push(...(result.unclassifiedErrors ?? result.errors));
     }
-    return { created, updated, errors };
+    return { created, updated, errors, unclassifiedErrors, ...(failures.length ? { failures } : {}) };
 }
 
 async function upsertSecretGroups(

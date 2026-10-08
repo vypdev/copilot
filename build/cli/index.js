@@ -36889,6 +36889,27 @@ exports.SetupInteractionCancelledError = SetupInteractionCancelledError;
 
 /***/ }),
 
+/***/ 20805:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupWorkflowPatIdentityMismatchError = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+/** A confirmed account mismatch, before workflow capability checks or Secret writes. */
+class SetupWorkflowPatIdentityMismatchError extends application_error_1.ApplicationError {
+    constructor(expected, actual) {
+        super('authorization.credential-invalid', `The workflow PAT belongs to @${actual.login}, not the selected bot @${expected.login}. No Secret was written. Delete the unintended PAT in GitHub and create one as @${expected.login}.`);
+        this.expected = expected;
+        this.actual = actual;
+    }
+}
+exports.SetupWorkflowPatIdentityMismatchError = SetupWorkflowPatIdentityMismatchError;
+
+
+/***/ }),
+
 /***/ 79966:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -43850,6 +43871,7 @@ exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfig
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
 exports.normalizeSetupConfigurationLocales = normalizeSetupConfigurationLocales;
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const agent_1 = __nccwpck_require__(89040);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const deployment_configuration_1 = __nccwpck_require__(22495);
@@ -44012,7 +44034,7 @@ function mergeSetupConfiguration(base, overrides = {}) {
             coverage: { ...base.pullRequestApproval.coverage, ...(overrides.pullRequestApproval?.coverage ?? {}) },
         },
         projects: { ...base.projects, ...(overrides.projects ?? {}) },
-        createInitialTag: overrides.createInitialTag ?? base.createInitialTag,
+        createInitialTag: (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)({ features, issueWorkflows: { enabled: enabledIssueWorkflows } }),
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
         manageRepositorySecrets: overrides.manageRepositorySecrets ?? base.manageRepositorySecrets,
         actionInputs: { ...base.actionInputs, ...(overrides.actionInputs ?? {}) },
@@ -44410,6 +44432,7 @@ exports.findSetupOrganizationShadows = findSetupOrganizationShadows;
 exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
 exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
 exports.validateSetupManagedResourceInventory = validateSetupManagedResourceInventory;
+exports.setupWorkflowPatStorageNotice = setupWorkflowPatStorageNotice;
 exports.usesOrganizationStorage = usesOrganizationStorage;
 exports.validateStorageConfiguration = validateStorageConfiguration;
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
@@ -44422,7 +44445,9 @@ function resolveSetupResourceScope(policy, name) {
  * the legacy caller contract; an explicit policy must preserve the exact
  * effective scope rather than silently moving or replacing the resource.
  */
-function canKeepExistingSetupResource(policy, name, existingScope) {
+function canKeepExistingSetupResource(kind, policy, name, existingScope) {
+    if (kind === 'secret' && name === 'PAT')
+        return false;
     if (!existingScope)
         return false;
     if (!policy)
@@ -44456,9 +44481,11 @@ function requiresSetupRepositoryInventory(names) {
  * organization or when preservation must discover an unoverridden resource
  * there before falling back to its configured default scope.
  */
-function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = []) {
+function requiresSetupOrganizationInventory(policy, names, repositoryExistingNames = [], kind = 'secret') {
     const repositoryExisting = new Set(repositoryExistingNames);
     return names.some(name => {
+        if (kind === 'secret' && name === 'PAT')
+            return resolveSetupResourceScope(policy, name) === 'organization';
         if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
             return policy.overrides[name] === 'organization';
         }
@@ -44500,6 +44527,8 @@ function findSetupOrganizationShadows(policy, kind, names, remote) {
         && setupResourceExists(remote, kind, name).repository);
 }
 function selectSetupResourceScope(policy, kind, name, remote) {
+    if (kind === 'secret' && name === 'PAT')
+        return resolveSetupResourceScope(policy, name);
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
     const existingScope = setupResourceExists(remote, kind, name).effective;
     return existingScope && policy.preserveExisting && !explicitOverride
@@ -44507,6 +44536,8 @@ function selectSetupResourceScope(policy, kind, name, remote) {
         : resolveSetupResourceScope(policy, name);
 }
 function shouldUpsertSetupResource(configuration, kind, name, remote) {
+    if (kind === 'secret' && name === 'PAT')
+        return true;
     const policy = getSetupResourceStoragePolicy(configuration, kind);
     const state = setupResourceExists(remote, kind, name);
     if (!state.effective)
@@ -44538,6 +44569,10 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
         if (access !== 'available') {
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
         }
+        if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
+            && remote.organizationWorkflowPat === 'unavailable') {
+            errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
+        }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
             errors.push(`The repository ID is required for selected organization ${kind} access.`);
         }
@@ -44559,7 +44594,7 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
         && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'secret'), resources.secrets, remote.repositorySecrets);
     const variablesRequireOrganizationInventory = remote.ownerType === 'Organization'
         && configuration.manageRepositoryVariables
-        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name));
+        && requiresSetupOrganizationInventory(getSetupResourceStoragePolicy(configuration, 'variable'), resources.variables, remote.repositoryVariables.map(variable => variable.name), 'variable');
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
     }
@@ -44583,6 +44618,15 @@ function validateSetupManagedResourceInventory(configuration, remote, resources)
         errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
+}
+function setupWorkflowPatStorageNotice(owner, repository, policy, repositorySecrets, organizationSecrets, organizationWorkflowPat) {
+    const scope = policy ? resolveSetupResourceScope(policy, 'PAT') : 'repository';
+    return {
+        scope,
+        destination: scope === 'repository' ? `${owner}/${repository}` : owner,
+        replacesExisting: scope === 'repository' ? repositorySecrets.includes('PAT')
+            : organizationWorkflowPat === 'present' || organizationSecrets.includes('PAT'),
+    };
 }
 function usesOrganizationStorage(configuration) {
     const storage = getSetupStorageConfiguration(configuration);
@@ -45443,6 +45487,7 @@ exports.effectiveIssueWorkflowProfile = effectiveIssueWorkflowProfile;
 exports.effectiveIssueWorkflowFeatures = effectiveIssueWorkflowFeatures;
 exports.effectiveIssueWorkflowLabels = effectiveIssueWorkflowLabels;
 exports.effectiveIssueFormLabels = effectiveIssueFormLabels;
+exports.setupNeedsInitialVersion = setupNeedsInitialVersion;
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 /** Applies feature switches to the explicit issue workflow selection. */
 function effectiveIssueWorkflowProfile(configuration) {
@@ -45492,6 +45537,10 @@ function effectiveIssueFormLabels(configuration) {
         release: Object.freeze([...labels.release, priority.medium]),
     });
 }
+/** Release and hotfix issue workflows need a version baseline; other kinds do not. */
+function setupNeedsInitialVersion(configuration) {
+    return effectiveIssueWorkflowProfile(configuration).enabled.some(kind => kind === 'release' || kind === 'hotfix');
+}
 
 
 /***/ }),
@@ -45531,6 +45580,125 @@ function buildSetupJourneyView(repository, stage, mutationStarted, outcome, choi
         mutationStarted,
         choiceReviewPass,
     };
+}
+
+
+/***/ }),
+
+/***/ 70371:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.managementPermissions = managementPermissions;
+function managementPermissions(scope, ownerType) {
+    const requirement = (permission, probe, target, level) => ({
+        id: `setup:${target}:${probe}:${level}`, role: 'setup', scope: target, permission, probe, level,
+        applicability: 'required', reason: scope ? 'Apply the one reviewed runtime setting.' : 'Read the installed configuration without changing it.',
+    });
+    if (scope)
+        return [requirement('Metadata', 'metadata', 'repository', 'read'),
+            ...['repository', ...(ownerType === 'User' ? [] : ['organization'])].map(target => requirement('Variables', 'variables', target, target === scope ? 'write' : 'read'))];
+    return [requirement('Metadata', 'metadata', 'repository', 'read'),
+        ...['repository', 'organization'].flatMap(target => [requirement('Variables', 'variables', target, 'read'),
+            requirement('Secrets', 'secrets', target, 'read')])];
+}
+
+
+/***/ }),
+
+/***/ 50895:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.managementFingerprint = managementFingerprint;
+exports.buildSetupManagementView = buildSetupManagementView;
+exports.planQuickChange = planQuickChange;
+const sensitive_text_1 = __nccwpck_require__(47122);
+const setup_quick_settings_policy_1 = __nccwpck_require__(40582);
+const safe = (value) => (0, sensitive_text_1.redactSensitiveText)(value.slice(0, 4096));
+function managementFingerprint(local, remote, variable) {
+    return JSON.stringify([local, remote.ownerType, remote.repositoryId, remote.repositoryVariablesAccess,
+        remote.organizationVariablesAccess, remote.repositoryVariables.find(item => item.name === variable) ?? null,
+        remote.organizationVariables.find(item => item.name === variable) ?? null]);
+}
+function variablesAccessible(remote) {
+    if (remote?.repositoryVariablesAccess !== 'available')
+        return false;
+    return remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationVariablesAccess === 'available';
+}
+function resolvedValue(bindings, bindingsSafe, stored, accessible) {
+    const fallbacks = [...new Set(bindings.map(input => input.literal ?? input.fallback))];
+    const fallback = fallbacks.length === 1 ? fallbacks[0] : undefined;
+    if (stored && bindingsSafe)
+        return stored.value || fallback;
+    if (bindings.length > 0 && bindings.every(input => !input.variable && !input.unsupported))
+        return fallback;
+    return accessible && bindingsSafe ? fallback : undefined;
+}
+function settingSource(stored, bindingsSafe, repository, value) {
+    if (stored && bindingsSafe)
+        return repository ? 'repository' : 'organization';
+    return value === undefined ? 'unknown' : 'workflow';
+}
+function settingView(local, remote, setting, accessible) {
+    const bindings = local.workflows.flatMap(workflow => workflow.inputs.filter(input => input.name === setting.input)
+        .map(input => ({ ...input, environmentScoped: workflow.environmentScoped })));
+    const repository = remote?.repositoryVariables.find(item => item.name === setting.variable);
+    const organization = remote?.organizationVariables.find(item => item.name === setting.variable);
+    const stored = accessible ? repository ?? organization : undefined;
+    const bindingsSafe = bindings.length > 0 && bindings.every(input => input.variable === setting.variable && !input.environmentScoped);
+    const value = resolvedValue(bindings, bindingsSafe, stored, accessible);
+    const editable = accessible && bindingsSafe && !local.unreadable && value !== undefined && safe(value) === value;
+    return { id: setting.id, variable: setting.variable, ...(value === undefined ? {} : { value: safe(value) }),
+        source: settingSource(stored, bindingsSafe, Boolean(repository), value), editable };
+}
+function variableInventory(local, remote) {
+    const referenced = new Set(local.workflows.flatMap(workflow => workflow.inputs.flatMap(input => input.variable ? [input.variable] : [])));
+    const repository = remote?.repositoryVariables ?? [];
+    const organization = remote?.organizationVariables ?? [];
+    const entries = (values, scope) => values.filter(item => referenced.has(item.name))
+        .map(item => ({ name: item.name, value: safe(item.value), scope,
+        shadowed: scope === 'organization' && repository.some(repo => repo.name === item.name) }));
+    return [...entries(repository, 'repository'), ...entries(organization, 'organization')];
+}
+function secretInventory(remote) {
+    const repository = remote?.repositorySecrets ?? [];
+    const organization = remote?.organizationSecrets ?? [];
+    return [...repository.map(name => ({ name, scope: 'repository', shadowed: false })),
+        ...organization.map(name => ({ name, scope: 'organization', shadowed: repository.includes(name) }))];
+}
+function secretAccess(remote) {
+    if (!remote)
+        return 'not-connected';
+    if (remote.repositorySecretsAccess !== 'available')
+        return 'incomplete';
+    return remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationSecretsAccess === 'available' ? 'available' : 'incomplete';
+}
+function installationStatus(local) {
+    if (local.unreadable || local.guidancePresent && !local.workflows.length)
+        return 'incomplete';
+    return local.workflows.length ? 'detected' : 'unconfigured';
+}
+function buildSetupManagementView(local, remote, changed = false) {
+    const accessible = variablesAccessible(remote);
+    return { status: installationStatus(local), github: !remote ? 'not-connected' : accessible ? 'available' : 'incomplete',
+        workflows: local.workflows, settings: setup_quick_settings_policy_1.SETUP_QUICK_SETTINGS.map(setting => settingView(local, remote, setting, accessible)),
+        variables: variableInventory(local, remote), secrets: secretInventory(remote), secretInventory: secretAccess(remote), changed };
+}
+/** The effective scope stays fixed; a quick change cannot create a shadow or move resources. */
+function planQuickChange(local, remote, id, raw) {
+    const setting = (0, setup_quick_settings_policy_1.quickSetting)(id);
+    const after = (0, setup_quick_settings_policy_1.validateQuickSetting)(id, raw);
+    const current = buildSetupManagementView(local, remote).settings.find(item => item.id === id);
+    if (!setting || after === undefined || !current?.editable || current.value === undefined)
+        return undefined;
+    const scope = current.source === 'organization' ? 'organization' : 'repository';
+    return { id, variable: setting.variable, before: current.value, after, scope,
+        fingerprint: managementFingerprint(local, remote, setting.variable) };
 }
 
 
@@ -45584,12 +45752,15 @@ function buildSetupPatCreationUrl(input) {
         || input.expiresIn > 366) {
         throw new Error('Invalid PAT form owner, repository, or expiration.');
     }
+    if (input.includeConditionalSetupGrants && input.role !== 'setup') {
+        throw new Error('Conditional setup grants cannot be added to a workflow PAT form.');
+    }
     const grants = new Map();
     const unsupported = [];
     for (const item of input.requirements) {
         if (item.role !== input.role)
             throw new Error('PAT permission role does not match the requested form.');
-        if (item.applicability !== 'required')
+        if (item.applicability !== 'required' && !input.includeConditionalSetupGrants)
             continue;
         const key = QUERY_PERMISSIONS[item.scope][item.permission];
         if (!key || (key === 'metadata' && item.level !== 'read')
@@ -45640,8 +45811,6 @@ function fixedSetupPatIntentQuestionIds(overrides, skipVariables, skipSecrets) {
         fixed.push('pullRequestApproval.mode');
     if (overrides.projects?.ids !== undefined)
         fixed.push('projects.enabled', 'projects.ids');
-    if (overrides.createInitialTag !== undefined)
-        fixed.push('createInitialTag');
     if (skipVariables || overrides.manageRepositoryVariables !== undefined)
         fixed.push('manageRepositoryVariables');
     if (skipSecrets || overrides.manageRepositorySecrets !== undefined)
@@ -46247,7 +46416,6 @@ exports.questionLabelsFr = {
     'projects.pullRequestCreatedColumn': 'Valeur Status des nouvelles pull requests',
     'projects.issueInProgressColumn': 'Valeur Status des tickets en cours',
     'projects.pullRequestInProgressColumn': 'Valeur Status des pull requests en cours',
-    createInitialTag: 'Créer v1.0.0 si aucune étiquette de version n’existe ?',
     manageRepositoryVariables: 'Créer ou mettre à jour les Variables GitHub Actions ?',
     manageRepositorySecrets: 'Valider et configurer les Secrets GitHub Actions ?',
 };
@@ -46341,7 +46509,6 @@ exports.questionLabelsPt = {
     'projects.pullRequestCreatedColumn': 'Valor Status das novas pull requests',
     'projects.issueInProgressColumn': 'Valor Status das questões em curso',
     'projects.pullRequestInProgressColumn': 'Valor Status das pull requests em curso',
-    createInitialTag: 'Criar v1.0.0 se ainda não existir uma etiqueta de versão?',
     manageRepositoryVariables: 'Criar ou atualizar as Variables do GitHub Actions?',
     manageRepositorySecrets: 'Validar e configurar os Secrets do GitHub Actions?',
 };
@@ -46450,7 +46617,6 @@ exports.purposesFr = {
     'projects.enabled': 'Décidez si Copilot doit ajouter tickets et pull requests à des Projects existants ; le PAT servira ensuite à lister ceux de l’organisation.',
     'projects.ids': 'Choisissez des Projects existants par leur titre ou saisissez le numéro positif de leur URL ; les ID PVT_ ne conviennent pas.',
     'projects.statusVerified': 'Confirmez que les quatre options Status choisies existent dans chaque Project lorsque GitHub n’a pas pu vérifier leurs champs.',
-    createInitialTag: 'Créez v1.0.0 seulement si le dépôt n’a encore aucune étiquette de version.',
     manageRepositoryVariables: 'Autorisez la création ou mise à jour des Variables GitHub Actions nécessaires aux workflows choisis.',
     manageRepositorySecrets: 'Autorisez la validation et l’installation des Secrets GitHub Actions requis, dont le PAT du bot si nécessaire.',
 };
@@ -46512,7 +46678,6 @@ exports.purposesPt = {
     'projects.enabled': 'Decida se o Copilot deve adicionar questões e pull requests a Projects existentes; o PAT será usado depois para listar os da organização.',
     'projects.ids': 'Selecione Projects existentes pelo título ou introduza o número positivo do URL; IDs PVT_ não são usados.',
     'projects.statusVerified': 'Confirme que as quatro opções Status escolhidas existem em todos os Projects quando o GitHub não conseguiu verificar os campos.',
-    createInitialTag: 'Crie v1.0.0 apenas se o repositório ainda não tiver uma etiqueta de versão.',
     manageRepositoryVariables: 'Permita criar ou atualizar as Variables do GitHub Actions necessárias aos fluxos escolhidos.',
     manageRepositorySecrets: 'Permita validar e instalar os Secrets do GitHub Actions necessários, incluindo o PAT do bot quando aplicável.',
 };
@@ -46576,8 +46741,8 @@ function setupQuestionPurposeFrPt(question, locale) {
                 : `Escolha os repositórios que podem usar as ${resource} da organização; «selected» é a visibilidade mais restrita.`;
         if (field === 'preserveExisting')
             return locale === 'fr'
-                ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.`
-                : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.`;
+                ? `Conservez les ${resource} existantes déjà applicables au lieu de les écraser pendant la configuration.${storage[1] === 'secrets' ? ' Le Secret PAT du bot est toujours fourni, vérifié et remplacé dans le périmètre choisi.' : ''}`
+                : `Conserve as ${resource} existentes e aplicáveis em vez de as substituir durante a configuração.${storage[1] === 'secrets' ? ' O Secret PAT do bot é sempre fornecido, validado e substituído no âmbito escolhido.' : ''}`;
         return locale === 'fr'
             ? `Sélectionnez les ${resource} héritées de l’organisation à définir plutôt dans le dépôt.`
             : `Selecione as ${resource} herdadas da organização que pretende definir no repositório.`;
@@ -46643,7 +46808,6 @@ exports.setupQuestionPurposes = {
     'projects.enabled': { en: 'Decide whether Copilot should add issues and pull requests to existing GitHub Projects; the setup PAT is needed to list private organization Projects later.', es: 'Decide si Copilot debe añadir issues y pull requests a Projects existentes; el PAT de setup hará falta después para consultar Projects privados de la organización.' },
     'projects.ids': { en: 'Choose existing Projects by title after PAT verification, or enter the positive number in each Project URL; PVT_ node IDs are not used.', es: 'Elige Projects existentes por título tras verificar el PAT o introduce el número positivo de cada URL; no se usan IDs de nodo PVT_.' },
     'projects.statusVerified': { en: 'Confirm that all four chosen Status options actually exist in every selected Project when GitHub could not verify their fields.', es: 'Confirma que las cuatro opciones Status existen en todos los Projects elegidos cuando GitHub no pudo comprobar sus campos.' },
-    createInitialTag: { en: 'Create v1.0.0 only if this repository has no version tag yet.', es: 'Crea v1.0.0 solo si este repositorio todavía no tiene un tag de versión.' },
     manageRepositoryVariables: { en: 'Allow setup to create or update GitHub Actions Variables required by selected workflows.', es: 'Permite a setup crear o actualizar Variables de GitHub Actions necesarias para los workflows elegidos.' },
     manageRepositorySecrets: { en: 'Allow setup to validate and install required GitHub Actions Secrets, including the bot PAT when needed.', es: 'Permite a setup validar e instalar Secrets de GitHub Actions, incluido el PAT del bot cuando haga falta.' },
 };
@@ -46696,7 +46860,11 @@ function setupQuestionPurpose(question) {
             preserveExisting: { en: `Keep effective existing ${resource} instead of overwriting them during setup.`, es: `Conserva los ${resource} existentes que ya se aplican, en lugar de sobrescribirlos durante setup.` },
             overrides: { en: `Select inherited organization ${resource} that should instead be set at repository scope.`, es: `Selecciona los ${resource} heredados de la organización que quieras definir en el repositorio.` },
         };
-        return setting[storageSetting[2]];
+        const purpose = setting[storageSetting[2]];
+        return storageSetting[1] === 'secrets' && storageSetting[2] === 'preserveExisting' ? {
+            en: `${purpose.en} The bot Secret PAT is always supplied, validated and replaced at its selected scope.`,
+            es: `${purpose.es} El Secret PAT del bot siempre se introduce, valida y sustituye en el ámbito elegido.`,
+        } : purpose;
     }
     return undefined;
 }
@@ -46790,7 +46958,6 @@ exports.spanishQuestionLabels = {
     'projects.pullRequestCreatedColumn': 'Estado Status de nuevos pull requests',
     'projects.issueInProgressColumn': 'Estado Status de issues en curso',
     'projects.pullRequestInProgressColumn': 'Estado Status de pull requests en curso',
-    createInitialTag: '¿Crear v1.0.0 si todavía no existe ningún tag?',
     manageRepositoryVariables: '¿Crear o actualizar Variables de GitHub Actions?',
     manageRepositorySecrets: '¿Validar y configurar Secrets de GitHub Actions?',
 };
@@ -46837,6 +47004,7 @@ exports.enterSetupConfirmation = enterSetupConfirmation;
 exports.finishSetupQuestionnaire = finishSetupQuestionnaire;
 exports.setupQuestionnaireStateLabel = setupQuestionnaireStateLabel;
 exports.setupQuestionContentInventory = setupQuestionContentInventory;
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
@@ -46845,13 +47013,14 @@ const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'];
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'];
 const PERMISSION_INTENT_QUESTION_IDS = new Set([
     'features.issues', 'features.pullRequests', 'issueWorkflows.enabled',
-    'pullRequestApproval.mode', 'projects.enabled', 'createInitialTag',
+    'pullRequestApproval.mode', 'projects.enabled',
     'manageRepositoryVariables', 'manageRepositorySecrets',
     'storage.variables.defaultScope', 'storage.variables.preserveExisting',
     'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
 ]);
 function createSetupQuestionnaire(configuration, context = {}) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
+    draft.createInitialTag = (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(draft);
     const independently = hasIndependentAgentSettings(draft);
     const question = questions(draft, independently, context, 'full')[0];
     return question
@@ -46864,6 +47033,7 @@ function hasIndependentAgentSettings(draft) {
 }
 function createSetupPermissionIntentQuestionnaire(configuration, context = {}) {
     const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
+    draft.createInitialTag = (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(draft);
     const projectsWanted = context.projectsWanted ?? Boolean(draft.projects.ids.trim());
     const question = questions(draft, false, context, 'permission-intent')[0];
     return question
@@ -46996,6 +47166,7 @@ function transitionSetupQuestionnaire(state, event, context = {}) {
         ? Boolean(parsed.value)
         : state.configureIndependently;
     const draft = applyAnswer(state.draft, state.question, parsed.value, state.configureIndependently);
+    draft.createInitialTag = (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(draft);
     const projectsWanted = state.question.id === 'projects.enabled' ? Boolean(parsed.value) : state.projectsWanted;
     const answeredQuestionIds = [...(state.answeredQuestionIds ?? []), state.question.id];
     const nextQuestions = questions(draft, configureIndependently, context, state.phase ?? 'full');
@@ -47115,7 +47286,6 @@ function definitions() {
             applies: (draft, _independently, context) => Boolean(draft.projects.ids.trim())
                 && (0, setup_project_selection_policy_1.sharedProjectStatusOptions)(draft.projects.ids, context.projectDiscovery?.candidates ?? []).state === 'unavailable',
         },
-        { stateId: 'provisioning', id: 'createInitialTag', label: 'Create v1.0.0 when no version tag exists?', kind: 'boolean' },
         { stateId: 'provisioning', id: 'manageRepositoryVariables', label: 'Create/update GitHub Actions Variables?', kind: 'boolean' },
         { stateId: 'provisioning', id: 'manageRepositorySecrets', label: 'Validate and provision required GitHub Actions Secrets?', kind: 'boolean' },
         ...storageQuestions('variables'),
@@ -47222,16 +47392,12 @@ function approvalQuestions() {
         {
             stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.minDiffPercent',
             label: 'Minimum changed-line coverage percentage (0–100)', kind: 'number',
-            read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
-                ? draft.pullRequestApproval.coverage.minDiffPercent : 80,
             applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
                 && draft.pullRequestApproval.coverage.mode === 'numeric',
         },
         {
             stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.artifactWorkflowName',
             label: 'Exact workflow publishing copilot-diff-coverage-v1', kind: 'text',
-            read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
-                ? draft.pullRequestApproval.coverage.artifactWorkflowName : '',
             applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
                 && draft.pullRequestApproval.coverage.mode === 'numeric',
         },
@@ -47396,7 +47562,7 @@ function parseAnswer(question, raw) {
         return choice ? { value: choice } : { error: 'Select one of the listed options.' };
     }
     if (question.kind === 'multi-select') {
-        const selected = parseWorkflowSelection(input || String(question.defaultValue));
+        const selected = parseWorkflowSelection(input);
         if ('error' in selected)
             return selected;
         return { value: selected.value.join(',') };
@@ -47492,9 +47658,9 @@ function applyAnswer(configuration, question, value, independently) {
 }
 function parseWorkflowSelection(raw) {
     const normalized = raw.trim().toLowerCase();
-    if (normalized === 'none')
+    if (!normalized || normalized === 'none')
         return { value: [] };
-    if (!normalized || normalized === 'all')
+    if (normalized === 'all')
         return { value: [...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS] };
     const requested = normalized.split(',').map(item => item.trim()).filter(Boolean)
         .map(item => item.replace(/\s+—.*$/u, '').replace(/^\d+[.)]\s*/u, ''));
@@ -47545,6 +47711,53 @@ function projectLabel(field) {
 
 /***/ }),
 
+/***/ 40582:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_QUICK_SETTINGS = void 0;
+exports.quickSetting = quickSetting;
+exports.validateQuickSetting = validateQuickSetting;
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const pull_request_description_1 = __nccwpck_require__(45315);
+/** Small independent runtime settings. Structural changes use the complete wizard. */
+exports.SETUP_QUICK_SETTINGS = [
+    { id: 'assignees', questionId: 'repository.desiredAssigneesCount', variable: 'DESIRED_ASSIGNEES_COUNT', input: 'desired-assignees-count', min: 0, max: 10 },
+    { id: 'reviewers', questionId: 'repository.desiredReviewersCount', variable: 'DESIRED_REVIEWERS_COUNT', input: 'desired-reviewers-count', min: 0, max: 15 },
+    { id: 'inactivity', questionId: 'repository.inactivityThresholdHours', variable: 'INACTIVITY_THRESHOLD_HOURS', input: 'inactivity-threshold-hours', min: 1, max: issue_inactivity_1.MAX_INACTIVITY_THRESHOLD_HOURS },
+    { id: 'reopen', questionId: 'repository.reopenIssueOnPush', variable: 'REOPEN_ISSUE_ON_PUSH', input: 'reopen-issue-on-push', choices: ['true', 'false'] },
+    { id: 'description', questionId: 'ai.pullRequestDescriptionMode', variable: 'AI_PULL_REQUEST_DESCRIPTION_MODE', input: 'ai-pull-request-description-mode', choices: pull_request_description_1.PULL_REQUEST_DESCRIPTION_MODES },
+    { id: 'members', questionId: 'ai.membersOnly', variable: 'AI_MEMBERS_ONLY', input: 'ai-members-only', choices: ['true', 'false'] },
+    { id: 'reasoning', questionId: 'ai.includeReasoning', variable: 'AI_INCLUDE_REASONING', input: 'ai-include-reasoning', choices: ['true', 'false'] },
+    { id: 'severity', questionId: 'ai.bugbotSeverity', variable: 'BUGBOT_SEVERITY', input: 'bugbot-severity', choices: ['info', 'low', 'medium', 'high'] },
+    { id: 'commentLimit', questionId: 'ai.bugbotCommentLimit', variable: 'BUGBOT_COMMENT_LIMIT', input: 'bugbot-comment-limit', min: 1, max: 100 },
+    { id: 'dryRun', questionId: 'ai.bugbotDryRun', variable: 'BUGBOT_DRY_RUN', input: 'bugbot-dry-run', choices: ['true', 'false'] },
+    { id: 'effort', questionId: 'ai.bugbotEffort', variable: 'BUGBOT_EFFORT', input: 'bugbot-effort', choices: ['smart', 'low', 'default', 'high'] },
+    { id: 'drafts', questionId: 'ai.bugbotReviewDrafts', variable: 'BUGBOT_REVIEW_DRAFTS', input: 'bugbot-review-drafts', choices: ['true', 'false'] },
+    { id: 'suggestions', questionId: 'ai.bugbotSuggestedChanges', variable: 'BUGBOT_SUGGESTED_CHANGES', input: 'bugbot-suggested-changes', choices: ['true', 'false'] },
+    { id: 'telemetry', questionId: 'ai.bugbotTelemetry', variable: 'BUGBOT_TELEMETRY', input: 'bugbot-telemetry', choices: ['true', 'false'] },
+];
+function quickSetting(id) {
+    return exports.SETUP_QUICK_SETTINGS.find(setting => setting.id === id);
+}
+function validateQuickSetting(id, raw) {
+    const setting = quickSetting(id);
+    if (!setting)
+        return undefined;
+    const value = raw.trim();
+    if ('choices' in setting)
+        return setting.choices.includes(value) ? value : undefined;
+    if (!/^\d{1,5}$/u.test(value))
+        return undefined;
+    const number = Number(value);
+    return number >= setting.min && number <= setting.max ? String(number) : undefined;
+}
+
+
+/***/ }),
+
 /***/ 92567:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -47564,6 +47777,7 @@ function sameSetupRemoteFacts(left, right) {
         repositorySecrets: [...facts.repositorySecrets].sort(),
         repositorySecretsAccess: facts.repositorySecretsAccess,
         organizationSecrets: [...facts.organizationSecrets].sort(),
+        organizationWorkflowPat: facts.organizationWorkflowPat,
         repositoryVariables: variables(facts.repositoryVariables),
         repositoryVariablesAccess: facts.repositoryVariablesAccess,
         organizationVariables: variables(facts.organizationVariables),
@@ -47635,6 +47849,7 @@ function reconcileSetupTokenPermissionEvidence(requirements, evidence) {
             ...(requirement.level === 'write' && candidate.status === 'unverifiable'
                 && candidate.cleanupPending === true ? { cleanupPending: true } : {}),
             ...(candidate.incident === 'secret-collision' ? { incident: 'secret-collision' } : {}),
+            ...(candidate.prerequisite ? { prerequisite: candidate.prerequisite } : {}),
             ...(candidate.status === 'available'
                 && candidate.operationallyAvailable === true
                 && isOperationallyAvailableSetupRead(requirement, candidate.publicReadEvidence)
@@ -47677,6 +47892,10 @@ function isMatchingEvidence(requirement, value) {
             && value.status === 'unverifiable' && value.cleanupPending === true))
         && (value.incident === undefined || (requirement.level === 'write' && requirement.probe === 'secrets'
             && value.status === 'unverifiable' && value.cleanupPending === true && value.incident === 'secret-collision'))
+        && (value.prerequisite === undefined || (requirement.scope === 'repository'
+            && requirement.level === 'write' && requirement.probe === 'actions' && value.status === 'unverifiable'
+            && (value.prerequisite === 'contents-write' || value.prerequisite === 'contents-workflows-write'
+                || value.prerequisite === 'dispatch-workflow')))
         && (value.publicReadEvidence === undefined
             || (value.status === 'available' && (isOperationallyAvailableSetupRead(requirement, value.publicReadEvidence)
                 || isAttestableProjectsRead(requirement, value.publicReadEvidence))));
@@ -47764,16 +47983,32 @@ function buildSetupPatPermissionRequirements() {
 function buildConfiguredSetupPatPermissionRequirements(configuration, remote) {
     // Unknown is not evidence of a personal owner: keep possible organization
     // grants visible until the final audit can verify the actual owner type.
-    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote);
+    return buildSetupPatRequirements(configuration, remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote, undefined, true);
 }
-/** Grants justified by local choices alone; remote-only conditions stay unresolved. */
+/** Local requirements plus disclosed health prerequisites for selected Secret management. */
 function buildSetupPatIntentPermissionRequirements(configuration, ownerKind, projectsWanted = configuration.projects.ids.trim().length > 0) {
-    return buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    const required = buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    if (!configuration.manageRepositorySecrets)
+        return required;
+    // Prefill these possible health-check grants without treating unknown remote
+    // inventory/workflow state as permission to run their write probes now.
+    const healthPrerequisites = [
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Create an isolated branch for the Actions permission check.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', idSuffix: 'write',
+            applicability: 'conditional', condition: 'Credential health enabled',
+            reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+            applicability: 'conditional', condition: 'Temporary health workflow required',
+            reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+    ];
+    return [...required, ...healthPrerequisites.filter(candidate => !required.some(item => item.scope === candidate.scope && item.permission === candidate.permission && item.level === 'write'))];
 }
 function buildSetupPatIntentUncertainty(configuration, ownerKind) {
     const unknown = [];
     if (configuration.manageRepositorySecrets) {
-        unknown.push('Existing managed Secrets may require repository Actions write and Contents write for an isolated credential-health check. A confirmed missing health workflow may also require repository Workflows write.');
+        unknown.push('Actions write, Contents write and Workflows write are prefilled for checking existing managed Secrets. GitHub inspection determines which checks the approved plan needs.');
     }
     if (ownerKind === 'Organization') {
         for (const kind of ['secrets', 'variables']) {
@@ -47794,7 +48029,7 @@ function requiredSetupPatPermissionDelta(before, after) {
             || (previous.get(`${item.scope}:${item.permission.toLowerCase()}`) === 'read' && item.level === 'write')))
         .map(item => `${item.scope} ${item.permission} ${item.level}`);
 }
-function buildSetupPatRequirements(configuration, organization, remote, projectsWanted = configuration.projects.ids.trim().length > 0) {
+function buildSetupPatRequirements(configuration, organization, remote, projectsWanted = configuration.projects.ids.trim().length > 0, includeBotActionsFixture = false) {
     const repositorySecretNames = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration)
         .map(credential => credential.name);
     const repositoryVariableNames = (0, setup_configuration_plan_1.buildSetupRepositoryVariables)(configuration)
@@ -47812,18 +48047,20 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
         || enabledIssueWorkflowKinds.some(kind => kind === 'release' || kind === 'hotfix');
     const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
     const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
-    const hasExistingCredential = repositorySecretNames.some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
+    const hasExistingCredential = repositorySecretNames.filter(name => name !== 'PAT').some(name => remote?.repositorySecrets.includes(name) || remote?.organizationSecrets.includes(name));
     const needsCredentialHealth = configuration.manageRepositorySecrets && hasExistingCredential;
+    const needsBotActionsFixture = includeBotActionsFixture && configuration.manageRepositorySecrets && releaseOrHotfix;
+    const needsActionsFixture = needsCredentialHealth || needsBotActionsFixture;
     const needsCredentialHealthBootstrap = needsCredentialHealth
         && remote?.credentialHealthWorkflow === 'missing';
     return normalizePermissionRequirements([
         requirement({ role: 'setup', scope: 'repository', permission: 'Metadata', level: 'read', reason: 'Resolve repository identity and visibility.', probe: 'metadata' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'read', reason: 'Inspect installed workflows and repository files.', probe: 'contents' }),
-        ...(configuration.createInitialTag || needsCredentialHealth ? [requirement({
+        ...((0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(configuration) || needsActionsFixture ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
-                reason: configuration.createInitialTag && needsCredentialHealth
+                reason: (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(configuration) && needsActionsFixture
                     ? 'Create the initial tag and an isolated branch for the Actions permission check.'
-                    : configuration.createInitialTag
+                    : (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(configuration)
                         ? 'Create the initial repository tag when no version tag exists.'
                         : 'Create an isolated branch for the Actions permission check.', probe: 'contents',
             })] : []),
@@ -47839,16 +48076,20 @@ function buildSetupPatRequirements(configuration, organization, remote, projects
                 role: 'setup', scope: 'repository', permission: 'Issues', level: 'write',
                 reason: 'Provision labels for the selected issue workflows.', probe: 'issues',
             })] : []),
-        ...(needsCredentialHealth ? [requirement({
+        ...(needsActionsFixture ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Actions', level: 'write',
-                reason: 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
+                reason: needsBotActionsFixture
+                    ? 'Prepare and clean isolated Actions checks for the bot PAT and any existing credentials.'
+                    : 'Dispatch credential-health checks for existing Secrets.', probe: 'actions',
             })] : []),
         ...(approvalEnabled ? [
             requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', reason: 'Inspect CI workflow runs and jobs for approval evidence.', probe: 'actions' }),
             requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
         ] : []),
-        ...(needsCredentialHealthBootstrap ? [
-            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', reason: 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
+        ...(needsCredentialHealthBootstrap || needsBotActionsFixture ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+                reason: needsBotActionsFixture ? 'Prepare a verified no-job workflow for the bot Actions check.'
+                    : 'Temporarily install credential health when its workflow is not confirmed installed.', probe: 'workflows' }),
         ] : []),
         ...(releaseOrHotfix || guardedApproval ? [requirement({
                 role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
@@ -47957,7 +48198,7 @@ function selectedResourceScopes(configuration, kind, names, remote) {
     scopes.add('repository');
     if (remote?.ownerType === 'Organization' && (0, setup_configuration_storage_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_storage_policy_1.getSetupResourceStoragePolicy)(configuration, kind), names, kind === 'secret'
         ? remote.repositorySecrets
-        : remote.repositoryVariables.map(variable => variable.name))) {
+        : remote.repositoryVariables.map(variable => variable.name), kind)) {
         scopes.add('organization');
     }
     return scopes;
@@ -49931,6 +50172,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const setup_resource_provisioning_1 = __nccwpck_require__(94894);
 const application_error_1 = __nccwpck_require__(75999);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const setup_issue_resource_policy_1 = __nccwpck_require__(67323);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const TASK_ID = 'InitialSetupUseCase';
@@ -50055,9 +50297,14 @@ async function runInitialSetupWorkflow(request, dependencies) {
         mark('variables', variables.errors.length ? 'needs-inspection' : variables.writes > 0 ? 'completed' : 'skipped');
         if (variables.step)
             steps.push(variables.step);
-        if (variables.errors.length > 0)
-            errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
-        if (setupConfiguration?.createInitialTag !== false)
+        if (variables.errors.length > 0) {
+            const variableErrors = variables.failures?.length
+                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors, 'provider.unavailable')]
+                : fromMessages(variables.errors, 'provider.unavailable');
+            variableErrors.forEach(error => (0, logging_ports_1.logError)(error.message));
+            errors.push(...variableErrors);
+        }
+        if (!setupConfiguration || (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(setupConfiguration))
             mark('initial-tag', 'in-progress');
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         mark('initial-tag', defaultVersion.error ? 'needs-inspection'
@@ -50114,8 +50361,8 @@ async function ensureIssueTypes(request, repository, setupConfiguration) {
     }
 }
 async function ensureDefaultVersion(_request, dependencies, setupConfiguration) {
-    if (setupConfiguration?.createInitialTag === false) {
-        return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
+    if (setupConfiguration && !(0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(setupConfiguration)) {
+        return { step: '⏭️  Initial version tag is not needed by the selected issue workflows.' };
     }
     try {
         const existingTag = await dependencies.latestTagQueryPort.getLatestTag();
@@ -50168,6 +50415,17 @@ function resourceScope(configuration, kind) {
 }
 function fromMessages(messages, code) {
     return messages.map(message => new application_error_1.ApplicationError(code, message));
+}
+function variableFailureError(failure) {
+    const details = {
+        authorization: ['authorization.denied', 'GitHub denied access; check Variables Write for this scope and repository authorization'],
+        'invalid-input': ['validation.invalid-input', 'GitHub rejected the request; check the Variable name, value limits and visibility'],
+        conflict: ['provider.conflict', 'GitHub reported a conflict; inspect the existing Variable before retrying'],
+        'rate-limited': ['provider.rate-limited', 'GitHub rate limited the request; retry after the limit resets'],
+        unavailable: ['provider.unavailable', 'GitHub did not complete the request'],
+    };
+    const [code, message] = details[failure.reason];
+    return new application_error_1.ApplicationError(code, `Unable to configure ${failure.scope} Variable ${failure.name} during ${failure.phase}: ${message}.`);
 }
 
 
@@ -51032,8 +51290,11 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
-        if (result.errors.length > 0)
-            return { errors: result.errors, writes };
+        if (result.errors.length > 0) {
+            return result.failures
+                ? { errors: result.errors, writes, failures: result.failures, unclassifiedErrors: result.unclassifiedErrors }
+                : { errors: result.errors, writes };
+        }
         return {
             step: writes > 0
                 ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`
@@ -51120,7 +51381,7 @@ function groupSetupResources(resources, kind, configuration, remoteConfiguration
     const requiresOrganizationInventory = remoteConfiguration?.ownerType === 'Organization'
         && (0, setup_configuration_policy_1.requiresSetupOrganizationInventory)((0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, kind), resources.map(resource => resource.name), kind === 'secret'
             ? remoteConfiguration.repositorySecrets
-            : remoteConfiguration.repositoryVariables.map(variable => variable.name));
+            : remoteConfiguration.repositoryVariables.map(variable => variable.name), kind);
     if (requiresOrganizationInventory && organizationAccess !== 'available') {
         throw new Error(`Organization ${kind} inventory is ${organizationAccess}; resource targets cannot be resolved safely.`);
     }
@@ -51149,9 +51410,13 @@ async function upsertVariableGroups(context, port, groups) {
     let created = 0;
     let updated = 0;
     const errors = [];
+    const unclassifiedErrors = [];
+    const failures = [];
     for (const group of groups) {
         if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
-            errors.push('Organization Variable provisioning is not available in this installation.');
+            const message = 'Organization Variable provisioning is not available in this installation.';
+            errors.push(message);
+            unclassifiedErrors.push(message);
             continue;
         }
         const result = group.target.scope === 'organization'
@@ -51160,8 +51425,10 @@ async function upsertVariableGroups(context, port, groups) {
         created += result.created;
         updated += result.updated;
         errors.push(...result.errors);
+        failures.push(...(result.failures ?? []));
+        unclassifiedErrors.push(...(result.unclassifiedErrors ?? result.errors));
     }
-    return { created, updated, errors };
+    return { created, updated, errors, unclassifiedErrors, ...(failures.length ? { failures } : {}) };
 }
 async function upsertSecretGroups(context, port, groups) {
     let created = 0;
@@ -52284,6 +52551,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveEventIssueNumber = resolveEventIssueNumber;
 exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const action_types_1 = __nccwpck_require__(19625);
 const title_utils_1 = __nccwpck_require__(46267);
 function resolveEventIssueNumber(context) {
     let issueNumber;
@@ -52310,6 +52578,11 @@ function resolveEventIssueNumber(context) {
     return { issueNumber, singleAction: currentSingleAction(context) };
 }
 async function resolveSingleActionIssueNumber(context, issueRepository) {
+    // Installation targets the repository, even if a legacy caller supplies
+    // an issue number or an issue/PR/push event. Never load unrelated work.
+    if (context.singleAction.currentAction === action_types_1.ACTIONS.INITIAL_SETUP) {
+        return { singleAction: { issue: 0, isIssue: false, isPullRequest: false, isPush: false } };
+    }
     const configuredIssue = context.configuredSingleActionIssue;
     if (configuredIssue !== undefined && String(configuredIssue).trim() !== '') {
         const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(configuredIssue);
@@ -52433,7 +52706,7 @@ exports.SetupExecutionUseCase = SetupExecutionUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSetupExecution = runSetupExecution;
 const application_error_1 = __nccwpck_require__(75999);
-const initial_labels_policy_1 = __nccwpck_require__(50293);
+const action_types_1 = __nccwpck_require__(19625);
 const previous_branch_state_policy_1 = __nccwpck_require__(43630);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -52442,7 +52715,8 @@ async function runSetupExecution(context, dependencies) {
     (0, logging_ports_1.setGlobalLoggerDebug)(context.debug, context.local);
     const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
     const issueResolution = await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(context, dependencies.issueSetupPort);
-    const canConfigureUnlinkedPullRequest = context.isPullRequest
+    const isRepositorySetup = context.isSingleAction && context.singleAction.currentAction === action_types_1.ACTIONS.INITIAL_SETUP;
+    const canConfigureUnlinkedPullRequest = context.isPullRequest && !isRepositorySetup
         && positiveIssueNumberOrUndefined(context.pullRequest.number) !== undefined;
     if (issueResolution.issueNumber === undefined && !canConfigureUnlinkedPullRequest) {
         return { status: 'issue-unresolved', tokenUser, issueResolution };
@@ -52450,7 +52724,7 @@ async function runSetupExecution(context, dependencies) {
     const previousConfiguration = await loadPreviousConfiguration(context, issueResolution.issueNumber, dependencies.configurationPort);
     const currentIssueLabels = issueResolution.issueNumber === undefined
         ? []
-        : await loadIssueLabels(context, issueResolution.issueNumber, dependencies.issueSetupPort);
+        : await dependencies.issueSetupPort.getLabels(issueResolution.issueNumber);
     const liveIssueBody = issueResolution.issueNumber === undefined
         ? undefined
         : await dependencies.issueSetupPort.getDescription(issueResolution.issueNumber);
@@ -52558,17 +52832,6 @@ async function loadTokenUser(context, organizationSetupPort) {
 async function loadPreviousConfiguration(context, resolvedIssueNumber, configurationPort) {
     const issueNumber = configurationIssueNumber(context, resolvedIssueNumber);
     return issueNumber === undefined ? undefined : configurationPort.get(issueNumber);
-}
-async function loadIssueLabels(context, issueNumber, issueSetupPort) {
-    try {
-        return await issueSetupPort.getLabels(issueNumber);
-    }
-    catch (error) {
-        if (!(0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(context.isSingleAction, context.singleAction.currentAction))
-            throw error;
-        (0, logging_ports_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
-        return [];
-    }
 }
 function configurationIssueNumber(context, resolvedIssueNumber) {
     if (context.isSingleAction || context.isPush)
@@ -54159,7 +54422,8 @@ class AuditConfiguredSetupPatUseCase {
             return { status: 'blocked', errors: ['Repository owner type differs from the pre-PAT selection. Rerun setup with the correct owner type and PAT.'] };
         }
         if (this.context.guided) {
-            const removed = (0, setup_token_permission_policy_1.requiredSetupPatPermissionDelta)(required, this.context.provisionalRequirements);
+            const removed = (0, setup_token_permission_policy_1.requiredSetupPatPermissionDelta)(required, this.context.provisionalRequirements
+                .map(item => ({ ...item, applicability: 'required' })));
             if (removed.length)
                 this.ports.showExcessGrants(removed);
         }
@@ -54633,6 +54897,166 @@ Object.defineProperty(exports, "SetupCredentialsUseCase", ({ enumerable: true, g
 
 /***/ }),
 
+/***/ 10989:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ManageSetupUseCase = void 0;
+const setup_management_policy_1 = __nccwpck_require__(50895);
+/** Management owns the edit transaction; presenters cannot select a provider write. */
+class ManageSetupUseCase {
+    constructor(ports, readOnly = false) {
+        this.ports = ports;
+        this.readOnly = readOnly;
+        this.started = false;
+    }
+    async execute() {
+        if (this.started)
+            throw new Error('A management session can run only once.');
+        this.started = true;
+        const state = { changed: false };
+        while (this.ports.active()) {
+            const local = this.ports.inspectLocal();
+            const view = (0, setup_management_policy_1.buildSetupManagementView)(local, state.connection?.remote, state.changed);
+            const choice = await this.ports.choose(this.readOnly ? { ...view, settings: view.settings.map(setting => ({ ...setting, editable: false })) } : view);
+            if (!this.ports.active() || !choice)
+                break;
+            if (choice === 'close')
+                return 'complete';
+            if (choice === 'wizard')
+                return 'continue';
+            if (choice === 'connect' || choice === 'refresh')
+                await this.connect(state);
+            else if (await this.adjust(state, local, choice) === 'partial')
+                return 'partial';
+        }
+        return state.changed ? 'complete' : 'cancelled';
+    }
+    async connect(state) {
+        const token = state.connection?.token ?? await this.ports.requestToken();
+        if (!token)
+            return;
+        try {
+            state.connection = { token, remote: await this.ports.inspectRemote(token) };
+            this.ports.notify('connected');
+        }
+        catch {
+            state.connection = undefined;
+            this.ports.notify('blocked');
+        }
+    }
+    async adjust(state, local, choice) {
+        if (this.readOnly || !state.connection || !choice.startsWith('edit:')) {
+            this.ports.notify('blocked');
+            return;
+        }
+        const connection = state.connection;
+        const plan = await this.review(connection, local, choice.slice(5));
+        if (!plan)
+            return;
+        const audit = await this.audit(state, connection, plan);
+        if (audit === 'partial')
+            return 'partial';
+        if (audit !== 'accepted' || !this.ports.active())
+            return;
+        const fresh = await this.inspectApprovedChange(state, connection, plan);
+        if (!fresh)
+            return;
+        return this.writeAndVerify(state, connection, plan, fresh);
+    }
+    async review(connection, local, id) {
+        const current = (0, setup_management_policy_1.buildSetupManagementView)(local, connection.remote).settings.find(item => item.id === id);
+        if (!current?.editable || current.value === undefined) {
+            this.ports.notify('blocked');
+            return;
+        }
+        const value = await this.ports.requestValue(id, current.value);
+        if (value === undefined)
+            return;
+        const plan = (0, setup_management_policy_1.planQuickChange)(local, connection.remote, id, value);
+        if (!plan) {
+            this.ports.notify('invalid');
+            return;
+        }
+        if (plan.before === plan.after) {
+            this.ports.notify('unchanged');
+            return;
+        }
+        if (await this.ports.confirm(plan) && this.ports.active())
+            return plan;
+    }
+    async audit(state, connection, plan) {
+        let audit;
+        try {
+            audit = await this.ports.audit(plan, connection.token, connection.remote);
+        }
+        catch {
+            this.ports.possibleMutation();
+            this.ports.notify('partial');
+            return 'partial';
+        }
+        if (audit === 'cleanup-pending') {
+            this.ports.possibleMutation();
+            return 'partial';
+        }
+        if (audit === 'blocked') {
+            this.ports.notify('blocked');
+            state.connection = undefined;
+        }
+        return audit;
+    }
+    async inspectApprovedChange(state, connection, plan) {
+        let fresh;
+        try {
+            fresh = await this.ports.inspectRemote(connection.token);
+        }
+        catch {
+            this.ports.notify('blocked');
+            return;
+        }
+        if (!this.ports.active())
+            return;
+        if (!this.ports.approvalCurrent() || (0, setup_management_policy_1.managementFingerprint)(this.ports.inspectLocal(), fresh, plan.variable) !== plan.fingerprint) {
+            state.connection = { ...connection, remote: fresh };
+            this.ports.notify('stale');
+            return;
+        }
+        return fresh;
+    }
+    async writeAndVerify(state, connection, plan, fresh) {
+        this.ports.possibleMutation();
+        try {
+            const result = await this.ports.write(plan, connection.token, fresh);
+            const remote = await this.ports.inspectRemote(connection.token);
+            state.connection = { ...connection, remote };
+            const success = this.matchesReceipt(result, remote, plan);
+            this.ports.recordWrite(success, plan.scope);
+            if (!success) {
+                this.ports.notify('partial');
+                return 'partial';
+            }
+            state.changed = true;
+            this.ports.notify('updated');
+        }
+        catch {
+            this.ports.recordWrite(false, plan.scope);
+            this.ports.notify('partial');
+            return 'partial';
+        }
+    }
+    matchesReceipt(result, remote, plan) {
+        const observed = (0, setup_management_policy_1.buildSetupManagementView)(this.ports.inspectLocal(), remote).settings.find(item => item.id === plan.id);
+        return result.errors.length === 0 && result.created + result.updated === 1
+            && observed?.value === plan.after && observed.source === plan.scope;
+    }
+}
+exports.ManageSetupUseCase = ManageSetupUseCase;
+
+
+/***/ }),
+
 /***/ 9890:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54867,7 +55291,7 @@ class PrepareSetupPatIntentUseCase {
                     kind: 'guided',
                     url: (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
                         role: 'setup', owner: request.owner, repository: request.repository, expiresIn: 1,
-                        requirements,
+                        requirements, includeConditionalSetupGrants: true,
                     }),
                     requirements,
                     ownerKind,
@@ -54892,6 +55316,62 @@ exports.PrepareSetupPatIntentUseCase = PrepareSetupPatIntentUseCase;
 
 /***/ }),
 
+/***/ 31830:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ResolveSetupWorkflowPatConflictUseCase = void 0;
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+/** Explicit, read-only conflict recovery. A claimed deletion is never evidence. */
+class ResolveSetupWorkflowPatConflictUseCase {
+    constructor(prompt, remote) {
+        this.prompt = prompt;
+        this.remote = remote;
+    }
+    async execute(request) {
+        const configuration = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(request.configuration);
+        let remote = request.remote;
+        let state = 'present';
+        if (!configuration.manageRepositorySecrets
+            || (0, setup_configuration_storage_policy_1.resolveSetupResourceScope)(configuration.storage.secrets, 'PAT') !== 'organization'
+            || remote.repositorySecretsAccess !== 'available'
+            || !remote.repositorySecrets.includes('PAT'))
+            return { configuration, remote };
+        while (true) {
+            const decision = await this.prompt.resolveWorkflowPatConflict(`${request.owner}/${request.repository}`, state);
+            if (decision === 'cancel')
+                throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+            if (decision === 'repository') {
+                configuration.storage.secrets.overrides.PAT = 'repository';
+                return { configuration, remote };
+            }
+            try {
+                const refreshed = await this.remote.inspect(request.owner, request.repository, request.token);
+                if (refreshed.repositorySecretsAccess !== 'available') {
+                    state = 'unavailable';
+                    continue;
+                }
+                remote = refreshed;
+                if (!remote.repositorySecrets.includes('PAT'))
+                    return { configuration, remote };
+                state = 'present';
+            }
+            catch {
+                // Failed reads retain the draft and the last known conflict, never an empty inventory.
+                state = 'unavailable';
+            }
+        }
+    }
+}
+exports.ResolveSetupWorkflowPatConflictUseCase = ResolveSetupWorkflowPatConflictUseCase;
+
+
+/***/ }),
+
 /***/ 67438:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54900,6 +55380,8 @@ exports.PrepareSetupPatIntentUseCase = PrepareSetupPatIntentUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialsUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
+const setup_workflow_pat_identity_mismatch_error_1 = __nccwpck_require__(20805);
+const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 /** Coordinates secret collection and validation without placing secret values in config files. */
 class SetupCredentialsUseCase {
@@ -54949,11 +55431,16 @@ class SetupCredentialsUseCase {
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
         const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
+        const workflowStorage = (0, setup_configuration_storage_policy_1.setupWorkflowPatStorageNotice)(request.owner, request.repository, request.secretStoragePolicy, existingSecretNames, existingOrganizationSecretNames, request.remoteConfiguration?.organizationWorkflowPat);
+        if (workflowStorage.scope === 'organization' && request.remoteConfiguration?.organizationWorkflowPat === 'unavailable') {
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Organization PAT Secret inventory is unavailable; credential collection cannot confirm replacement safely.');
+        }
         this.prompt.explainCredentialSeparation(requirements);
         if (workflowTokenPermissions.length > 0) {
             this.permissionPresenter?.showRequirements('workflow', workflowTokenPermissions);
         }
-        const existingRequirements = requirements.filter(requirement => existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name));
+        const existingRequirements = requirements.filter(requirement => requirement.kind !== 'workflowPat'
+            && (existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name)));
         const remoteChecks = this.remoteHealth && existingRequirements.length > 0
             ? await this.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.ref ?? 'master', existingRequirements)
             : undefined;
@@ -54981,18 +55468,18 @@ class SetupCredentialsUseCase {
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                const scopedCheck = workflowPermissionAuditRequired
-                    ? workflowPatReentryCheck(remoteCheck, sourceScope)
+                const scopedCheck = requirement.kind === 'workflowPat'
+                    ? workflowPatReentryCheck(requirement.name, sourceScope)
                     : { ...remoteCheck, sourceScope };
                 existingCheckIndex = checks.push(scopedCheck) - 1;
-                if (!workflowPermissionAuditRequired) {
+                if (requirement.kind !== 'workflowPat') {
                     const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
                     if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                         throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
                     }
                     if (decision === 'keep'
                         && remoteCheck.status !== 'invalid'
-                        && (0, setup_configuration_storage_policy_1.canKeepExistingSetupResource)(request.secretStoragePolicy, requirement.name, sourceScope)) {
+                        && (0, setup_configuration_storage_policy_1.canKeepExistingSetupResource)('secret', request.secretStoragePolicy, requirement.name, sourceScope)) {
                         markRequirementSatisfied(requirement, satisfiedGroups);
                         continue;
                     }
@@ -55000,11 +55487,9 @@ class SetupCredentialsUseCase {
                         continue;
                 }
             }
-            const value = requirement.kind === 'workflowPat'
-                ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
-                : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
+            const value = await this.requestCredential(requirement, existing ? checks[checks.length - 1] : undefined, requirement.kind === 'workflowPat' ? workflowStorage : undefined);
             if (!value) {
-                if (existing && workflowPermissionAuditRequired) {
+                if (existing && requirement.kind === 'workflowPat') {
                     throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.');
                 }
                 if (!existing)
@@ -55020,11 +55505,6 @@ class SetupCredentialsUseCase {
                 throw new application_error_1.ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check;
-            if (requirement.kind === 'workflowPat' && this.prompt.guidedWorkflowBotIdentity) {
-                if (!this.workflowIdentity)
-                    throw new application_error_1.ApplicationError('configuration.unsupported', 'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
-                await this.workflowIdentity.execute(this.prompt.guidedWorkflowBotIdentity, value.value);
-            }
             if (workflowPermissionAuditRequired) {
                 if (!this.tokenPermissions) {
                     throw new application_error_1.ApplicationError('configuration.unsupported', 'Workflow PAT permission auditing is not available in this installation.');
@@ -55034,6 +55514,8 @@ class SetupCredentialsUseCase {
                     owner: request.owner,
                     repository: request.repository,
                     token: value.value,
+                    ...(workflowTokenPermissions.some(permission => permission.probe === 'actions' && permission.level === 'write')
+                        ? { operatorToken: request.setupToken } : {}),
                     requirements: workflowTokenPermissions,
                     ...(request.selectedProjectNumbers ? { selectedProjectNumbers: request.selectedProjectNumbers } : {}),
                 });
@@ -55085,14 +55567,46 @@ class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
+    async requestCredential(requirement, current, storage) {
+        if (requirement.kind !== 'workflowPat')
+            return this.prompt.requestApiKey(requirement, current);
+        while (true) {
+            const attempt = await this.requestVerifiedWorkflowPat(requirement, current, storage);
+            if (!(attempt instanceof setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError))
+                return attempt;
+            if (!this.prompt.recoverWorkflowPatIdentityMismatch)
+                throw attempt;
+            const decision = await this.prompt.recoverWorkflowPatIdentityMismatch(attempt.expected, attempt.actual);
+            if (decision !== 'retry')
+                throw new setup_interaction_cancelled_error_1.SetupInteractionCancelledError();
+        }
+    }
+    async requestVerifiedWorkflowPat(requirement, current, storage) {
+        const value = await this.prompt.requestWorkflowPat(requirement, current, storage);
+        const expected = this.prompt.guidedWorkflowBotIdentity;
+        if (!value || !expected)
+            return value;
+        if (!this.workflowIdentity)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
+        try {
+            await this.workflowIdentity.execute(expected, value.value);
+            return value;
+        }
+        catch (error) {
+            // The rejected token never leaves this attempt; recovery receives only identities.
+            if (error instanceof setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError)
+                return error;
+            throw error;
+        }
+    }
 }
 exports.SetupCredentialsUseCase = SetupCredentialsUseCase;
-function workflowPatReentryCheck(check, sourceScope) {
+function workflowPatReentryCheck(name, sourceScope) {
     return {
-        ...check,
+        name,
         sourceScope,
-        status: check.status === 'invalid' ? 'invalid' : 'unverifiable',
-        message: `${check.message} GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions.`,
+        status: 'unverifiable',
+        message: 'GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions before replacing Secret PAT.',
     };
 }
 function hasAlternative(requirement) {
@@ -55136,9 +55650,10 @@ exports.SetupJourneyUseCase = void 0;
 const setup_journey_policy_1 = __nccwpck_require__(53289);
 /** Tracks semantic milestones, independently of the CLI's rendering. */
 class SetupJourneyUseCase {
-    constructor(repository, presenter) {
+    constructor(repository, presenter, priorSessionMutation = false) {
         this.repository = repository;
         this.presenter = presenter;
+        this.priorSessionMutation = priorSessionMutation;
         this.stage = 'repository';
         this.mutationStarted = false;
         this.choiceReviewPass = 1;
@@ -55179,14 +55694,14 @@ class SetupJourneyUseCase {
         if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted)) {
             throw new Error('Setup cannot be complete before applying the plan.');
         }
-        if (outcome === 'partial' && !this.mutationStarted) {
+        if (outcome === 'partial' && !this.mutationStarted && !this.priorSessionMutation) {
             throw new Error('Setup cannot be partial before mutation starts.');
         }
         this.outcome = outcome;
         this.present();
     }
     present() {
-        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted, this.outcome, this.choiceReviewPass));
+        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted || this.priorSessionMutation, this.outcome, this.choiceReviewPass));
     }
 }
 exports.SetupJourneyUseCase = SetupJourneyUseCase;
@@ -55321,6 +55836,7 @@ class SetupSessionCoordinator {
         this.mutationStarted = false;
         this.stage = 'repository';
         this.effects = new Map();
+        this.installationEffects = new Set();
     }
     async execute() {
         if (this.running || this.finished)
@@ -55347,6 +55863,11 @@ class SetupSessionCoordinator {
                     return this.finish(after);
                 if (decision !== 'continue')
                     return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+                if (stage === 'repository' && this.ports.manage) {
+                    const managed = await this.ports.manage(() => { this.stage = 'apply'; this.markPossibleMutation(); }, effect => this.effects.set(effect.id, Object.freeze({ ...effect })));
+                    if (managed !== 'continue')
+                        return this.finish(managed);
+                }
             }
             // The authorization operation must finish while the live session is active.
             // The mutation marker is set before entering the provider boundary: a
@@ -55379,7 +55900,8 @@ class SetupSessionCoordinator {
         this.ports.present(this.stage, true);
     }
     record(effect) {
-        const previous = this.effects.get(effect.id);
+        const previous = this.installationEffects.has(effect.id) ? this.effects.get(effect.id) : undefined;
+        this.installationEffects.add(effect.id);
         if (previous?.state === 'completed' && effect.state !== 'completed')
             return;
         this.effects.set(effect.id, Object.freeze({ ...effect }));
@@ -55440,9 +55962,22 @@ class SetupTokenPermissionsUseCase {
                 confirmationRequired: false,
             };
         }
-        const evidence = this.onProgress
-            ? await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, this.onProgress, request.selectedProjectNumbers, ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]))
-            : await this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, undefined, request.selectedProjectNumbers, ...(request.includeConditionalWrites === undefined ? [] : [request.includeConditionalWrites]));
+        if (request.operatorToken !== undefined) {
+            const operator = await this.credentials.validateSetupPat(request.owner, request.repository, request.operatorToken);
+            if (operator.status !== 'valid') {
+                return {
+                    role: request.role, ...(identity.account ? { account: identity.account } : {}),
+                    identityStatus: 'valid', identityMessage: identity.message,
+                    checks: request.requirements.map(requirement => ({ ...requirement, status: 'unverifiable',
+                        message: 'The setup PAT could not authorize preparation or cleanup of the temporary Actions check.' })),
+                    ready: false, confirmationRequired: false,
+                };
+            }
+        }
+        const audit = (...options) => this.permissions.inspect(request.owner, request.repository, request.token, request.requirements, this.onProgress, request.selectedProjectNumbers, ...options);
+        const evidence = request.operatorToken !== undefined
+            ? await audit(request.includeConditionalWrites ?? false, request.operatorToken)
+            : request.includeConditionalWrites === undefined ? await audit() : await audit(request.includeConditionalWrites);
         const checks = (0, setup_token_permission_evidence_policy_1.reconcileSetupTokenPermissionEvidence)(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');
@@ -55488,6 +56023,7 @@ const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 const setup_token_permission_policy_1 = __nccwpck_require__(99590);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 class SetupWizardUseCase {
     constructor(dependencies) {
         this.dependencies = dependencies;
@@ -55595,7 +56131,13 @@ class SetupWizardUseCase {
         if (validationErrors.length > 0) {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
-        const configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
+        let configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
+        if (request.mode === 'interactive' && request.remoteTarget && remoteConfiguration && this.dependencies.workflowPatConflict) {
+            const resolved = await this.dependencies.workflowPatConflict.execute({ ...request.remoteTarget,
+                configuration, remote: remoteConfiguration });
+            configuration = resolved.configuration;
+            remoteConfiguration = resolved.remote;
+        }
         if (request.remoteTarget && remoteConfiguration) {
             let selectedWorkflowState = 'unavailable';
             try {
@@ -55677,6 +56219,9 @@ class SetupWizardUseCase {
             }
         }
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, approvalReadiness);
+        if (request.remoteTarget && remoteConfiguration && configuration.manageRepositorySecrets) {
+            plan.workflowPatStorage = (0, setup_configuration_storage_policy_1.setupWorkflowPatStorageNotice)(request.remoteTarget.owner, request.remoteTarget.repository, configuration.storage.secrets, remoteConfiguration.repositorySecrets, remoteConfiguration.organizationSecrets, remoteConfiguration.organizationWorkflowPat);
+        }
         plan.permissionProbes = (0, setup_token_permission_policy_1.buildConfiguredSetupPatPermissionRequirements)(configuration, remoteConfiguration)
             .filter(item => item.applicability === 'required' && item.level === 'write')
             .map(item => ({ scope: item.scope, permission: item.permission }));
@@ -55812,7 +56357,7 @@ function unavailableRemoteConfiguration() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VerifyGuidedWorkflowPatIdentityUseCase = void 0;
-const application_error_1 = __nccwpck_require__(75999);
+const setup_workflow_pat_identity_mismatch_error_1 = __nccwpck_require__(20805);
 /** Binds a guided runtime PAT to the bot account chosen before token entry. */
 class VerifyGuidedWorkflowPatIdentityUseCase {
     constructor(identities) {
@@ -55821,7 +56366,7 @@ class VerifyGuidedWorkflowPatIdentityUseCase {
     async execute(expected, workflowToken) {
         const actual = await this.identities.identify(workflowToken);
         if (actual.id !== expected.id) {
-            throw new application_error_1.ApplicationError('authorization.credential-invalid', `The workflow PAT belongs to @${actual.login}, not the selected bot @${expected.login}. No Secret was written. Delete the unintended PAT in GitHub and create one as @${expected.login}.`);
+            throw new setup_workflow_pat_identity_mismatch_error_1.SetupWorkflowPatIdentityMismatchError(expected, actual);
         }
         return expected;
     }
@@ -55846,21 +56391,24 @@ class VerifySetupPatBootstrapUseCase {
         this.ports = ports;
     }
     async execute(request) {
+        const requirements = request.guided
+            ? request.requirements.filter(requirement => requirement.applicability === 'required')
+            : request.requirements;
         const identityReport = await this.ports.permissions.inspect({
             role: 'setup', owner: request.owner, repository: request.repository,
-            token: request.token, requirements: request.requirements.filter(requirement => requirement.level === 'read'),
+            token: request.token, requirements: requirements.filter(requirement => requirement.level === 'read'),
         });
         this.ports.presenter.showReport(identityReport);
         this.requireReady(request, identityReport);
         if (!await this.ports.confirmAccount(identityReport.account)) {
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
         }
-        if (request.previewOnly || !request.requirements.some(requirement => requirement.level === 'write'))
+        if (request.previewOnly || !requirements.some(requirement => requirement.level === 'write'))
             return identityReport.account;
-        this.ports.presenter.showRequirements('setup', request.requirements);
+        this.ports.presenter.showRequirements('setup', requirements);
         const report = await this.ports.permissions.inspect({
             role: 'setup', owner: request.owner, repository: request.repository,
-            token: request.token, requirements: request.requirements, includeConditionalWrites: true,
+            token: request.token, requirements, includeConditionalWrites: true,
         });
         if (report.checks.some(check => check.cleanupPending || check.incident))
             request.onCleanupPending?.();
@@ -55873,7 +56421,7 @@ class VerifySetupPatBootstrapUseCase {
             if (request.guided)
                 this.ports.showCorrectedLink((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({
                     role: 'setup', owner: request.owner, repository: request.repository,
-                    expiresIn: 1, requirements: request.requirements,
+                    expiresIn: 1, requirements: request.requirements, includeConditionalSetupGrants: true,
                 }));
             throw new application_error_1.ApplicationError('authorization.credential-invalid', 'The setup PAT did not pass every required capability check. Review the failed permission and cleanup result, correct access, and retry.');
         }
@@ -65410,6 +65958,7 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_credential_collection_1 = __nccwpck_require__(19469);
+const resolve_setup_workflow_pat_conflict_use_case_1 = __nccwpck_require__(31830);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const setup_approval_readiness_adapter_1 = __nccwpck_require__(78572);
@@ -65435,6 +65984,7 @@ const web_setup_server_1 = __nccwpck_require__(63080);
 const web_setup_adapters_1 = __nccwpck_require__(60574);
 const setup_result_receipt_1 = __nccwpck_require__(44132);
 const setup_outcome_adapter_1 = __nccwpck_require__(9961);
+const setup_management_adapter_1 = __nccwpck_require__(12090);
 async function executeSetupCommand(options) {
     const terminal = options.nonInteractive || options.web ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
     const webBridge = options.web ? new web_setup_bridge_1.WebSetupBridge('Resolving repository…') : undefined;
@@ -65476,6 +66026,16 @@ async function executeSetupCommand(options) {
             throw new application_error_1.ApplicationError('configuration.invalid', '--confirm-unverifiable-write-permissions is no longer accepted. Setup tests Write capabilities with temporary resources during PAT verification.');
         }
         const session = new setup_session_coordinator_1.SetupSessionCoordinator({
+            ...(webBridge && !options.dryRun ? { manage: async (possibleMutation, record) => {
+                    const result = await (0, setup_management_adapter_1.manageWebSetup)(webBridge, checkoutRoot, gitInfo.owner, gitInfo.repo, () => {
+                        setupMutationStarted = true;
+                        setupApplyStarted = true;
+                        possibleMutation();
+                    }, record, Boolean(options.skipVariables));
+                    if (result === 'continue')
+                        journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge), setupMutationStarted);
+                    return result;
+                } } : {}),
             repository: async () => {
                 if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
                     || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
@@ -65625,6 +66185,7 @@ async function executeSetupCommand(options) {
                     finalPermissionAudit: auditConfiguredSetupPat,
                     onPermissionCleanupPending: () => { setupMutationStarted = true; cleanupPending(); },
                     remoteConfiguration: remoteConfigurationReader,
+                    workflowPatConflict: new resolve_setup_workflow_pat_conflict_use_case_1.ResolveSetupWorkflowPatConflictUseCase(credentialPrompt, remoteConfigurationReader),
                     mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
                     approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
                     approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
@@ -65728,10 +66289,14 @@ async function executeSetupCommand(options) {
             liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
                 : webBridge?.snapshot().outcome ? 'expired' : 'active',
             present: (stage, mutationStarted, outcome) => {
+                if (webBridge?.snapshot().surface === 'management') {
+                    webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, stage, mutationStarted, outcome));
+                    return;
+                }
                 if (!journey)
                     return;
                 journey.advance(stage);
-                if (mutationStarted)
+                if (mutationStarted && ['plan', 'credentials', 'apply'].includes(stage))
                     journey.markMutationStarted();
                 if (outcome)
                     journey.finish(outcome);
@@ -65746,7 +66311,7 @@ async function executeSetupCommand(options) {
             process.exitCode = 1;
     }
     catch (error) {
-        process.exitCode = (0, setup_outcome_adapter_1.reportSetupFailure)(error, { journey, bridge: webBridge,
+        process.exitCode = (0, setup_outcome_adapter_1.reportSetupFailure)(error, { journey: webBridge?.snapshot().surface === 'management' ? undefined : journey, bridge: webBridge,
             mutationStarted: setupMutationStarted, applyStarted: setupApplyStarted,
             guidedBotIdentity: Boolean(credentialPrompt.guidedWorkflowBotIdentity) });
     }
@@ -65776,10 +66341,8 @@ function buildSetupParams(options, gitInfo, token, configuration, credentials, a
         ...(configuration ? (0, setup_configuration_policy_1.buildSetupActionInputs)(configuration) : {}),
         [input_keys_1.INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
         [input_keys_1.INPUT_KEYS.SINGLE_ACTION]: action_types_1.ACTIONS.INITIAL_SETUP,
-        [input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]: 1,
         [input_keys_1.INPUT_KEYS.TOKEN]: token,
         repo: { owner: gitInfo.owner, repo: gitInfo.repo },
-        issue: { number: 1 },
         [input_keys_1.INPUT_KEYS.WELCOME_TITLE]: '⚙️  Initial Setup',
         [input_keys_1.INPUT_KEYS.WELCOME_MESSAGES]: [
             `Running initial setup for ${gitInfo.owner}/${gitInfo.repo}...`,
@@ -66203,7 +66766,6 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'ai',
     'pullRequestApproval',
     'projects',
-    'createInitialTag',
     'manageRepositoryVariables',
     'manageRepositorySecrets',
     'actionInputs',
@@ -66289,7 +66851,6 @@ function loadSetupConfigurationOverrides(filePath) {
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
     validateApprovalOverride(raw.pullRequestApproval);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
-    validateBooleanProperty(raw, 'createInitialTag');
     validateBooleanProperty(raw, 'manageRepositoryVariables');
     validateBooleanProperty(raw, 'manageRepositorySecrets');
     validateOptionalObject(raw.actionInputs, 'actionInputs');
@@ -66594,6 +67155,7 @@ exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = voi
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
 /** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
 exports.SetupTerminalCancelledError = setup_interaction_cancelled_error_1.SetupInteractionCancelledError;
 const AUTHENTICATION_GUIDE = 'https://docs.page/vypdev/copilot/authentication';
@@ -66686,7 +67248,7 @@ class SetupCredentialPromptAdapter {
             console.log(this.setupPatGuide);
             console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
         }
-        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.', 'Setup PAT', 33));
+        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.', 'Setup PAT', 33));
         console.log(`PAT creation and cleanup: ${AUTHENTICATION_GUIDE}\nGitHub PAT settings: ${GITHUB_PAT_SETTINGS}`);
         return this.readSecret('Setup PAT');
     }
@@ -66732,8 +67294,8 @@ class SetupCredentialPromptAdapter {
         console.log(`Credential options: ${requirements.map((requirement) => requirement.name).join(', ')}`);
         console.log(`Why these credentials are separate: ${AUTHENTICATION_GUIDE}`);
     }
-    async requestWorkflowPat(requirement, current) {
-        if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
+    async requestWorkflowPat(requirement, current, storage) {
+        if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide && !this.guidedBotIdentity) {
             let choice;
             do {
                 choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link', `Use a PAT from the dedicated bot account, not the operator setup PAT. Guided opens GitHub's form; manual keeps the permission table visible. The bot PAT is installed as an Actions Secret only after Apply.\nRead more: ${AUTHENTICATION_GUIDE}`);
@@ -66747,15 +67309,39 @@ class SetupCredentialPromptAdapter {
                 const identity = await this.resolveBotIdentity(login);
                 this.guidedBotIdentity = identity;
                 console.log(`Expected bot account resolved: @${identity.login} (GitHub account ID ${identity.id}).`);
-                console.log((0, setup_prompt_rendering_1.renderBox)(`Open this link in a separate/private browser session, sign in as @${login} (the bot account), and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`, 'Create bot PAT in GitHub', 33));
-                console.log(this.workflowPatGuide);
-                console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
             }
             else if (this.workflowPatRequirements) {
                 console.log((0, setup_token_permission_presenter_1.renderSetupTokenPermissionRequirements)('workflow', this.workflowPatRequirements));
             }
         }
+        if (this.guidedBotIdentity) {
+            console.log((0, setup_prompt_rendering_1.renderBox)(`You must open this link with the selected bot account: @${this.guidedBotIdentity.login}. Use a separate/private browser session and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`, 'Create bot PAT in GitHub', 33));
+            console.log(this.workflowPatGuide);
+            console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+        }
+        if (storage)
+            console.log((0, setup_prompt_rendering_1.renderBox)((0, setup_workflow_pat_storage_copy_1.workflowPatStorageCopy)(storage), 'Bot PAT storage', 33));
         return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
+    }
+    async resolveWorkflowPatConflict(repository, state) {
+        if (!this.terminal)
+            return 'cancel';
+        console.log((0, setup_prompt_rendering_1.renderBox)([
+            state === 'present' ? `Repository Secret PAT in ${repository} overrides the selected organization PAT.`
+                : 'GitHub Secret inventory could not be checked. The PAT conflict remains unresolved.',
+            'Remove the repository Secret PAT in GitHub and ask Copilot to check again, or store the new PAT in this repository instead. Your setup answers are retained. Copilot will not delete any Secret.',
+            `Repository Actions Secrets: https://github.com/${repository}/settings/secrets/actions`,
+        ].join('\n'), 'Bot PAT scope conflict', 33));
+        const choice = await this.readChoice('How would you like to continue?', ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'stop setup']);
+        return choice === 'I have deleted the repository PAT — check again' ? 'recheck'
+            : choice === 'Store PAT in the repository instead' ? 'repository' : 'cancel';
+    }
+    async recoverWorkflowPatIdentityMismatch(expected, actual) {
+        if (!this.terminal)
+            return 'cancel';
+        console.log((0, setup_prompt_rendering_1.renderBox)(`This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub and create another while signed in as @${expected.login}.`, 'Bot PAT account mismatch', 33));
+        const answer = await this.readChoice('How would you like to continue?', ['enter another bot PAT', 'stop setup']);
+        return answer === 'enter another bot PAT' ? 'retry' : 'cancel';
     }
     async readBotLogin() {
         while (true) {
@@ -66958,6 +67544,104 @@ function renderSetupJourney(view, maximumWidth) {
 
 /***/ }),
 
+/***/ 12090:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.manageWebSetup = manageWebSetup;
+const manage_setup_use_case_1 = __nccwpck_require__(10989);
+const setup_quick_settings_policy_1 = __nccwpck_require__(40582);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_question_guidance_policy_1 = __nccwpck_require__(42775);
+const setup_management_permissions_policy_1 = __nccwpck_require__(70371);
+const setup_pat_creation_url_policy_1 = __nccwpck_require__(54718);
+const setup_management_workspace_adapter_1 = __nccwpck_require__(75545);
+const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const github_identity_client_factory_1 = __nccwpck_require__(93081);
+const repository_variables_repository_1 = __nccwpck_require__(28493);
+const setup_token_permissions_composition_root_1 = __nccwpck_require__(64132);
+const web_setup_adapters_1 = __nccwpck_require__(60574);
+const cli_context_1 = __nccwpck_require__(21307);
+/** Composition and presentation only; the application owns the edit transaction. */
+function manageWebSetup(bridge, root, owner, repository, possibleMutation, record, readOnly = false) {
+    const workspace = new setup_management_workspace_adapter_1.SetupManagementWorkspaceAdapter(root, () => JSON.stringify([
+        (0, cli_context_1.getCurrentAttachedBranch)(root), (0, cli_context_1.getCurrentHeadSha)(), (0, cli_context_1.getGitInfo)(),
+    ]));
+    const reader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
+    const writer = new repository_variables_repository_1.RepositoryVariablesCommandRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
+    const presenter = new web_setup_adapters_1.WebSetupPermissionPresenter(bridge);
+    const auditor = (0, setup_token_permissions_composition_root_1.createSetupTokenPermissionsUseCase)(presenter);
+    bridge.setSurface('management');
+    let requiredScope;
+    let ownerType;
+    let approvalGeneration;
+    return new manage_setup_use_case_1.ManageSetupUseCase({
+        inspectLocal: () => workspace.inspect(),
+        inspectRemote: token => reader.inspect(owner, repository, token),
+        choose: async (management) => await bridge.ask({ kind: 'management', title: 'Copilot configuration', management }),
+        requestToken: async () => {
+            bridge.clearMessage();
+            const requirements = (0, setup_management_permissions_policy_1.managementPermissions)(requiredScope, ownerType);
+            presenter.showRequirements('setup', requirements);
+            const link = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({ role: 'setup', owner, repository, expiresIn: 1, requirements });
+            return bridge.ask({ kind: 'secret', title: 'Temporary setup PAT', optional: true, link,
+                copyId: requiredScope ? 'management.tokenWrite' : 'management.token',
+                description: requiredScope ? 'Use a setup PAT with Variables Write for the reviewed scope. Permission testing creates and removes one temporary Variable only after you approve the change. Leave blank to return to the panel.'
+                    : 'Read configuration from GitHub using a temporary setup PAT. Read access is sufficient for this panel; changes require Variables Write and a separate approval. Secrets are shown by name only. Leave blank to return to the panel.' });
+        },
+        requestValue: async (id, current) => {
+            bridge.clearMessage();
+            const setting = (0, setup_quick_settings_policy_1.quickSetting)(id);
+            const question = (0, setup_questionnaire_policy_1.setupQuestionContentInventory)().find(item => item.id === setting.questionId);
+            const value = await bridge.ask({ kind: 'quick-edit', title: 'Change a setting', id, current,
+                presentation: (0, setup_question_guidance_policy_1.setupQuestionPresentation)(question),
+                ...('choices' in setting ? { choices: setting.choices } : { min: setting.min, max: setting.max }) });
+            return value === 'cancel' ? undefined : value;
+        },
+        confirm: async (change) => {
+            const safeChange = { id: change.id, variable: change.variable, before: change.before, after: change.after, scope: change.scope };
+            const approved = await bridge.ask({ kind: 'quick-review', title: 'Review this change', change: safeChange }) === 'approve';
+            approvalGeneration = bridge.controllerGeneration();
+            return approved;
+        },
+        audit: async (change, token, remote) => {
+            bridge.managementMessage('checking');
+            requiredScope = change.scope;
+            ownerType = remote.ownerType;
+            const requirements = (0, setup_management_permissions_policy_1.managementPermissions)(change.scope, ownerType);
+            presenter.showRequirements('setup', requirements);
+            const report = await auditor.inspect({ role: 'setup', owner, repository, token, requirements });
+            presenter.showReport(report);
+            if (!report.ready)
+                bridge.resultReason('permissions');
+            return report.checks.some(check => check.cleanupPending || check.incident) ? 'cleanup-pending' : report.ready ? 'accepted' : 'blocked';
+        },
+        write: async (change, token, remote) => change.scope === 'repository'
+            ? writer.upsert(owner, repository, token, [{ name: change.variable, value: change.after }])
+            : writer.upsertScopedVariables(owner, repository, token, { scope: 'organization', organizationVisibility: 'selected',
+                repositoryId: remote.repositoryId }, [{ name: change.variable, value: change.after }]),
+        notify: state => bridge.managementMessage(state),
+        active: () => !bridge.snapshot().outcome,
+        approvalCurrent: () => approvalGeneration === bridge.controllerGeneration(),
+        possibleMutation,
+        recordWrite: (success, scope) => {
+            const effect = { id: 'variables', state: success ? 'completed' : 'needs-inspection', scope };
+            record(effect);
+            bridge.progress(effect);
+            if (!success)
+                bridge.resultReason('provider');
+        },
+    }, readOnly).execute().then(result => { if (result === 'continue') {
+        bridge.clearMessage();
+        bridge.setSurface('wizard');
+    } return result; });
+}
+
+
+/***/ }),
+
 /***/ 9961:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -67091,6 +67775,7 @@ exports.renderSetupPlan = renderSetupPlan;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
 class ConsoleSetupPlanPresenter {
     present(plan) {
         console.log(renderSetupPlan(plan));
@@ -67131,7 +67816,7 @@ function renderSetupPlan(plan) {
         `  Variable storage: ${storageLabel(plan.configuration.storage.variables)}`,
         `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
         '  Labels and issue types: always checked by Copilot setup',
-        `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+        `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'not needed by selected issue workflows'}`, '',
         (0, setup_prompt_rendering_1.color)('Temporary PAT write checks after approval', 33),
         ...(plan.permissionProbes?.length
             ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
@@ -67154,6 +67839,7 @@ function renderSetupPlan(plan) {
             '',
         ] : []),
         (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
+        ...(plan.workflowPatStorage ? ['', (0, setup_prompt_rendering_1.color)('Bot PAT storage', 33), (0, setup_workflow_pat_storage_copy_1.workflowPatStorageCopy)(plan.workflowPatStorage)] : []),
         ...(plan.warnings.length > 0 ? ['', (0, setup_prompt_rendering_1.color)('Important notes', 33), ...plan.warnings.map((warning) => `  ⚠ ${warning}`)] : []),
     ].join('\n');
     return (0, setup_prompt_rendering_1.renderBox)(content, 'Setup Plan', 32);
@@ -67450,7 +68136,7 @@ function discoveryNote(question) {
     const sample = status === 'observed' || status === 'empty' || status === 'no-recent-runs' || status === 'no-verifiable-checks'
         ? question.id === 'projects.ids'
             ? '\n  Search scope: at most 30 open, accessible organization Projects from two pages; up to 100 fields per Project. Closed Projects are excluded.'
-            : '\n  Search scope: up to 20 recent PR workflow runs; at most 15 runs and 100 checks per commit are inspected.'
+            : '\n  Search scope: select up to 20 PR runs from the latest 1,000 workflow runs (up to 10 pages) within 90 days; at most 15 runs and 100 checks per commit are inspected.'
         : '';
     return note ? `\n  ${note}${sample}${question.discoveryTruncated ? '\n  Only a bounded sample was inspected; use manual entry for missing items.' : ''}${question.discoveryRetryRemaining ? `\n  Type r to retry GitHub discovery (${question.discoveryRetryRemaining} read-only attempts left).` : ''}` : '';
 }
@@ -67987,6 +68673,27 @@ function capitalize(value) {
 
 /***/ }),
 
+/***/ 97798:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.workflowPatStorageCopy = workflowPatStorageCopy;
+function workflowPatStorageCopy(storage) {
+    return [
+        storage.replacesExisting
+            ? `Secret PAT already exists in ${storage.scope} ${storage.destination}. It will be replaced even when other existing Secrets are preserved.`
+            : `The bot PAT will be stored as Secret PAT in ${storage.scope} ${storage.destination}.`,
+        'The supplied bot PAT must pass identity, repository access and required permission checks before this Secret is written.',
+        ...(storage.scope === 'organization' && storage.replacesExisting
+            ? ['Replacing this organization Secret can affect other repositories that use it. Checks for this repository do not verify their requirements.'] : []),
+    ].join('\n');
+}
+
+
+/***/ }),
+
 /***/ 84473:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -68178,7 +68885,7 @@ class WebSetupCredentialPrompt {
             : answer === 'Enter a PAT manually' ? 'manual' : 'continue';
     }
     async requestSetupPat() {
-        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.', this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
+        return this.secret('Temporary setup PAT', 'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.', this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
     }
     async confirmGuidedSetupAccount(account) {
         if (!this.guidedSetup)
@@ -68188,6 +68895,7 @@ class WebSetupCredentialPrompt {
         return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop'], undefined, 'setupPat.confirmAccount', { account }) === 'Yes, continue';
     }
     showUpdatedSetupPatLink(url, stage, delta) {
+        this.bridge.setupPatCorrection(url, stage, delta);
         this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. Installation has not started. Resolve failed permission tests and any pending cleanup before retrying. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
     }
     showSetupPatCleanupReminder() {
@@ -68211,24 +68919,36 @@ class WebSetupCredentialPrompt {
     explainCredentialSeparation(requirements) {
         this.bridge.message(`The bot PAT is separate from your setup PAT. Runtime credentials (${requirements.map(item => item.name).join(', ')}) become GitHub Actions Secrets; existing Secret values cannot be read back. This browser flow will not dispatch or install a credential-health workflow before Apply. Re-enter an existing bot PAT so its grants can be audited.`, 'info', undefined, 'botPat.separation', { names: requirements.map(item => item.name).join(', ') });
     }
-    async requestWorkflowPat(requirement, current) {
+    async requestWorkflowPat(requirement, current, storage) {
         let guide;
         let botInfo = '';
-        if (this.workflowGuide) {
+        if (this.workflowGuide && !this.botIdentity) {
             const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT'], undefined, 'botPat.method');
             if (method === 'Guided GitHub link') {
                 const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.', 'botPat.login');
                 if (!login || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login))
                     throw new Error('Enter a valid GitHub bot login.');
                 this.botIdentity = await this.resolveBot(login);
-                guide = this.workflowGuide;
-                botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
             }
             else if (this.workflowRequirements)
                 this.bridge.requirements('workflow', this.workflowRequirements);
         }
-        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '' });
+        if (this.botIdentity) {
+            guide = this.workflowGuide;
+            botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
+        }
+        const value = await this.secret(`${requirement.name} — bot account PAT`, `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`, guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '',
+            ...(storage ? { storageScope: storage.scope, storageDestination: storage.destination, storageReplacesExisting: String(storage.replacesExisting) } : {}) });
         return value ? { name: requirement.name, value } : undefined;
+    }
+    async resolveWorkflowPatConflict(repository, state) {
+        const choice = await this.choice('Resolve the bot PAT scope conflict', ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'], 'The repository PAT overrides the selected organization PAT. Remove the repository Secret in GitHub and check again, or change the PAT scope. Your setup answers are retained. No Secret will be deleted by Copilot.', state === 'present' ? 'botPat.scopeConflict' : 'botPat.scopeConflictUnavailable', { repository });
+        return choice === 'I have deleted the repository PAT — check again' ? 'recheck'
+            : choice === 'Store PAT in the repository instead' ? 'repository' : 'cancel';
+    }
+    async recoverWorkflowPatIdentityMismatch(expected, actual) {
+        const answer = await this.choice('This PAT belongs to a different GitHub account', ['Enter another bot PAT', 'Stop setup'], `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub, switch to @${expected.login}, then choose whether to enter another PAT or stop setup.`, 'botPat.identityMismatch', { expected: expected.login, actual: actual.login });
+        return answer === 'Enter another bot PAT' ? 'retry' : 'cancel';
     }
     async requestApiKey(requirement, current) {
         const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length), 'credential.apiKey', { name: requirement.name, provider: requirement.provider ?? 'provider' });
@@ -68322,10 +69042,17 @@ class WebSetupBridge {
         this.revision = 0;
         this.subscribers = new Set();
         this.doctorAttempts = 0;
+        this.controlEpoch = 0;
         this.bootstrapped = false;
         this.view = { revision: 0, repository };
     }
     snapshot() { return this.view; }
+    clearMessage() { this.publish({ message: undefined }); }
+    setSurface(surface) { this.publish({ surface }); }
+    controllerGeneration() { return this.controlEpoch; }
+    managementMessage(state) {
+        this.publish({ message: { text: `Configuration management: ${state}.`, tone: state === 'checking' ? 'info' : state === 'updated' || state === 'connected' || state === 'unchanged' ? 'success' : 'warning', managementState: state } });
+    }
     setRepository(repository) { this.publish({ repository }); }
     subscribe(listener) {
         this.subscribers.add(listener);
@@ -68340,6 +69067,7 @@ class WebSetupBridge {
         return { controller: first, ...(first ? { capability: this.controller } : {}) };
     }
     takeOver() {
+        this.controlEpoch += 1;
         this.controller = (0, node_crypto_1.randomBytes)(32).toString('hex');
         this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.', copyId: 'session.controlMoved' } });
         return this.controller;
@@ -68400,6 +69128,11 @@ class WebSetupBridge {
         if (prompt?.kind === 'plan' && value !== 'approve' && value !== 'decline'
             && !prompt.editGroups?.some(group => value === `revise:${group}`))
             return false;
+        if (prompt?.kind === 'management' && !['wizard', 'connect', 'refresh', 'close'].includes(value)
+            && !prompt.management.settings.some(setting => setting.editable && value === `edit:${setting.id}`))
+            return false;
+        if (prompt?.kind === 'quick-review' && !['approve', 'cancel'].includes(value))
+            return false;
         const pending = this.pending;
         this.pending = undefined;
         this.lastAnsweredRevision = revision;
@@ -68454,6 +69187,21 @@ class WebSetupBridge {
     requirements(role, requirements) {
         this.publish({ permissions: { role, requirements, report: undefined, progress: [] } });
     }
+    setupPatCorrection(url, stage, addedGrants = []) {
+        if (this.view.outcome)
+            return;
+        let parsed;
+        try {
+            parsed = new URL(url);
+        }
+        catch {
+            return;
+        }
+        if (parsed.origin !== 'https://github.com' || parsed.pathname !== '/settings/personal-access-tokens/new'
+            || parsed.username || parsed.password || parsed.hash)
+            return;
+        this.publish({ setupPatCorrection: { url, stage, addedGrants: [...addedGrants] } });
+    }
     report(report) {
         this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements,
                 progress: this.view.permissions?.progress, report } });
@@ -68464,7 +69212,7 @@ class WebSetupBridge {
             return;
         const previous = this.view.permissions.progress ?? [];
         const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
-            || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'].includes(progress.detail))
+            || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported', 'contents-write', 'contents-workflows-write', 'dispatch-workflow'].includes(progress.detail))
             ? progress.detail : undefined;
         this.publish({ permissions: { ...this.view.permissions, progress: [
                     ...previous.filter(item => item.requirementId !== progress.requirementId),
@@ -68537,6 +69285,10 @@ function sameCapability(provided, expected) {
 }
 function toWebSetupPlan(plan) {
     return {
+        ...(plan.workflowPatStorage ? { workflowPatStorage: {
+                scope: plan.workflowPatStorage.scope, destination: plan.workflowPatStorage.destination,
+                replacesExisting: plan.workflowPatStorage.replacesExisting,
+            } } : {}),
         presentationDefaults: plan.presentationDefaults ?? [],
         permissionProbes: plan.permissionProbes ?? [],
         decisions: {
@@ -69803,21 +70555,6 @@ class Hotfix {
     }
 }
 exports.Hotfix = Hotfix;
-
-
-/***/ }),
-
-/***/ 50293:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.shouldSkipInitialLabelsFetch = shouldSkipInitialLabelsFetch;
-const action_types_1 = __nccwpck_require__(19625);
-function shouldSkipInitialLabelsFetch(isSingleAction, currentSingleAction) {
-    return isSingleAction && currentSingleAction === action_types_1.ACTIONS.INITIAL_SETUP;
-}
 
 
 /***/ }),
@@ -74167,6 +74904,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubActionsResourceCommands = void 0;
 const github_secret_encryption_1 = __nccwpck_require__(83725);
 const github_actions_resource_collection_1 = __nccwpck_require__(81189);
+const github_error_policy_1 = __nccwpck_require__(58791);
 /** GitHub Actions Secret encryption and scope-preserving resource writes. */
 class GithubActionsResourceCommands {
     constructor(githubClient) {
@@ -74259,6 +74997,7 @@ class GithubActionsResourceCommands {
         let created = 0;
         let updated = 0;
         const errors = [];
+        const failures = [];
         for (const variable of variables) {
             try {
                 if (existingValues.has(variable.name)) {
@@ -74272,11 +75011,12 @@ class GithubActionsResourceCommands {
                     created += 1;
                 }
             }
-            catch {
+            catch (error) {
+                failures.push(variableWriteFailure(variable.name, 'repository', existingValues.has(variable.name) ? 'update' : 'create', error));
                 errors.push(`Unable to configure repository Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
     async upsertScopedVariables(owner, repository, token, target, variables) {
         if (target.scope === 'repository')
@@ -74291,14 +75031,25 @@ class GithubActionsResourceCommands {
         }
         const existing = new Map((await (0, github_actions_resource_collection_1.listCollection)(client, actions.listOrgVariables, { org: owner, per_page: 30 }, 'variables'))
             .map(variable => [variable.name, variable]));
+        const accessible = new Set();
+        if (actions.listRepoOrganizationVariables && variables.some(variable => existing.get(variable.name)?.visibility === 'selected')) {
+            try {
+                const inherited = await (0, github_actions_resource_collection_1.listCollection)(client, actions.listRepoOrganizationVariables, { owner, repo: repository, per_page: 30 }, 'variables');
+                inherited.forEach(variable => accessible.add(variable.name));
+            }
+            catch { /* Unknown access still requires the grant operation below. */ }
+        }
         let created = 0;
         let updated = 0;
         const errors = [];
+        const failures = [];
         for (const variable of variables) {
+            let phase = existing.has(variable.name) ? 'update' : 'create';
             try {
                 const current = existing.get(variable.name);
                 const visibility = current?.visibility ?? target.organizationVisibility;
-                if (visibility === 'selected' && (target.repositoryId === undefined || !actions.addSelectedRepoToOrgVariable)) {
+                const needsGrant = visibility === 'selected' && current !== undefined && !accessible.has(variable.name);
+                if (visibility === 'selected' && (target.repositoryId === undefined || (needsGrant && !actions.addSelectedRepoToOrgVariable))) {
                     throw new Error('Selected organization Variable access cannot be granted to this repository.');
                 }
                 const write = current ? actions.updateOrgVariable : actions.createOrgVariable;
@@ -74306,12 +75057,13 @@ class GithubActionsResourceCommands {
                     org: owner,
                     name: variable.name,
                     value: variable.value,
-                    visibility,
+                    ...(!current ? { visibility } : {}),
                     ...(visibility === 'selected' && !current
                         ? { selected_repository_ids: [target.repositoryId] }
                         : {}),
                 });
-                if (visibility === 'selected') {
+                if (needsGrant) {
+                    phase = 'repository-access';
                     await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
                 }
                 if (current)
@@ -74319,14 +75071,24 @@ class GithubActionsResourceCommands {
                 else
                     created += 1;
             }
-            catch {
+            catch (error) {
+                failures.push(variableWriteFailure(variable.name, 'organization', phase, error));
                 errors.push(`Unable to configure organization Variable ${variable.name}.`);
             }
         }
-        return { created, updated, errors };
+        return { created, updated, errors, ...(failures.length ? { failures, unclassifiedErrors: [] } : {}) };
     }
 }
 exports.GithubActionsResourceCommands = GithubActionsResourceCommands;
+function variableWriteFailure(name, scope, phase, error) {
+    const status = (0, github_error_policy_1.getGithubErrorStatus)(error);
+    const reason = (0, github_error_policy_1.isGithubRateLimited)(error) ? 'rate-limited'
+        : status === 401 || status === 403 ? 'authorization'
+            : status === 400 || status === 422 ? 'invalid-input'
+                : status === 409 ? 'conflict'
+                    : 'unavailable';
+    return { name, scope, phase, reason };
+}
 
 
 /***/ }),
@@ -74375,6 +75137,7 @@ class GithubActionsResourceInspector {
         const repositorySecretsResult = await this.listRepositorySecretsForInspection(client, owner, repository);
         const repositoryVariablesResult = await this.listRepositoryVariablesForInspection(client, owner, repository);
         const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
+        const organizationWorkflowPat = ownerType === 'Organization' ? await this.inspectOrganizationWorkflowPat(client, owner) : undefined;
         const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
         const credentialHealthWorkflow = await this.inspectDefaultCredentialHealthWorkflow(client, owner, repository);
         return {
@@ -74386,6 +75149,7 @@ class GithubActionsResourceInspector {
             repositorySecrets: repositorySecretsResult.resources,
             repositorySecretsAccess: repositorySecretsResult.access,
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
             repositoryVariablesAccess: repositoryVariablesResult.access,
             organizationVariables: organizationVariablesResult.resources
@@ -74463,6 +75227,18 @@ class GithubActionsResourceInspector {
             return { resources: [], access: 'unavailable' };
         }
     }
+    async inspectOrganizationWorkflowPat(client, owner) {
+        const list = client.rest.actions.listOrgSecrets;
+        if (!list)
+            return 'unavailable';
+        try {
+            const resources = await (0, github_actions_resource_collection_1.listCollection)(client, list, { org: owner, per_page: 100 }, 'secrets');
+            return resources.some(resource => resource.name === 'PAT') ? 'present' : 'absent';
+        }
+        catch {
+            return 'unavailable';
+        }
+    }
 }
 exports.GithubActionsResourceInspector = GithubActionsResourceInspector;
 function normalizeOwnerType(value) {
@@ -74490,7 +75266,7 @@ function combineOrganizationAccess(secrets, variables) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubRateLimited = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
 const getGithubErrorStatus = (error) => {
     if (typeof error !== "object" || error === null)
         return undefined;
@@ -74500,6 +75276,21 @@ const getGithubErrorStatus = (error) => {
 exports.getGithubErrorStatus = getGithubErrorStatus;
 const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
 exports.isGithubNotFound = isGithubNotFound;
+const isGithubRateLimited = (error) => {
+    const status = (0, exports.getGithubErrorStatus)(error);
+    if (status === 429)
+        return true;
+    if (status !== 403)
+        return false;
+    const record = readRecord(error);
+    const response = readRecord(record?.response);
+    const headers = readRecord(response?.headers);
+    const message = readRecord(response?.data)?.message ?? record?.message;
+    return readHeader(headers, 'retry-after') !== undefined
+        || readHeader(headers, 'x-ratelimit-remaining') === '0'
+        || (typeof message === 'string' && /rate limit|secondary rate|abuse limit|too many requests/i.test(message));
+};
+exports.isGithubRateLimited = isGithubRateLimited;
 const isGithubPermissionDenied = (error) => {
     if ((0, exports.getGithubErrorStatus)(error) !== 403)
         return false;
@@ -77893,6 +78684,44 @@ class RepositoryTagRepository {
     }
 }
 exports.RepositoryTagRepository = RepositoryTagRepository;
+
+
+/***/ }),
+
+/***/ 4385:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RepositoryVersionTagsQueryRepository = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const version_policy_1 = __nccwpck_require__(8381);
+/** Remote-only setup query: never fetches or rewrites local moving Action tags. */
+class RepositoryVersionTagsQueryRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+    }
+    async getLatestTag(owner, repository, token) {
+        const client = this.githubClient.getClient(token);
+        const versions = [];
+        for (let page = 1; page <= 100; page += 1) {
+            const { data } = await client.rest.repos.listTags({ owner, repo: repository, per_page: 100, page });
+            if (!Array.isArray(data) || data.some(tag => !tag || typeof tag.name !== 'string')) {
+                throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub returned an invalid version-tag inventory. No initial tag was created.');
+            }
+            for (const tag of data) {
+                const match = /^v?((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(tag.name);
+                if (match && match[1].split('.').every(part => Number.isSafeInteger(Number(part))))
+                    versions.push(match[1]);
+            }
+            if (data.length < 100)
+                return (0, version_policy_1.getLatestVersion)(versions);
+        }
+        throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub version-tag inventory exceeded the setup inspection limit. No initial tag was created.');
+    }
+}
+exports.RepositoryVersionTagsQueryRepository = RepositoryVersionTagsQueryRepository;
 
 
 /***/ }),
@@ -82737,10 +83566,12 @@ exports.createPullRequestReviewCommentClient = createPullRequestReviewCommentCli
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createReleaseClient = void 0;
+exports.createRepositoryVersionTagsClient = exports.createReleaseClient = void 0;
 const octokit_release_adapters_1 = __nccwpck_require__(5334);
 const createReleaseClient = () => new octokit_release_adapters_1.OctokitReleaseClientAdapter();
 exports.createReleaseClient = createReleaseClient;
+const createRepositoryVersionTagsClient = () => new octokit_release_adapters_1.OctokitRepositoryVersionTagsClientAdapter();
+exports.createRepositoryVersionTagsClient = createRepositoryVersionTagsClient;
 
 
 /***/ }),
@@ -82777,7 +83608,7 @@ const issue_type_repository_1 = __nccwpck_require__(4858);
 const authenticated_user_repository_1 = __nccwpck_require__(11454);
 const repository_default_branch_repository_1 = __nccwpck_require__(96578);
 const repository_tag_repository_1 = __nccwpck_require__(58717);
-const git_cli_repository_1 = __nccwpck_require__(26331);
+const repository_version_tags_query_repository_1 = __nccwpck_require__(4385);
 const initial_setup_use_case_composition_1 = __nccwpck_require__(93141);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const repository_variables_repository_1 = __nccwpck_require__(28493);
@@ -82786,7 +83617,7 @@ const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 function createInitialSetupCompositionRoot(binding, progress) {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), new git_cli_repository_1.GitCliRepository(), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)((0, push_single_action_capability_port_binding_1.bindAuthenticatedUser)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), binding), (0, push_single_action_capability_port_binding_1.bindInitialLabels)(labelProvisioning, binding), (0, push_single_action_capability_port_binding_1.bindIssueTypes)(new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryVersionTags)(new repository_version_tags_query_repository_1.RepositoryVersionTagsQueryRepository((0, github_release_client_factory_1.createRepositoryVersionTagsClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryDefaultBranch)(new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindRepositoryTag)(new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), binding), (0, push_single_action_capability_port_binding_1.bindSetupWorkspace)(new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), binding), (0, push_single_action_capability_port_binding_1.bindSetupVariables)(new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupSecrets)(new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), binding), (0, push_single_action_capability_port_binding_1.bindSetupRemoteConfiguration)(new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient), binding), progress);
 }
 
 
@@ -83500,6 +84331,7 @@ exports.bindDeploymentIssues = bindDeploymentIssues;
 exports.bindRepositoryTag = bindRepositoryTag;
 exports.bindRepositoryRelease = bindRepositoryRelease;
 exports.bindRepositoryDefaultBranch = bindRepositoryDefaultBranch;
+exports.bindRepositoryVersionTags = bindRepositoryVersionTags;
 exports.bindIssueCommentPublication = bindIssueCommentPublication;
 exports.bindIssueReopen = bindIssueReopen;
 exports.bindBranchListQuery = bindBranchListQuery;
@@ -83600,6 +84432,11 @@ function bindRepositoryRelease(port, binding) {
 function bindRepositoryDefaultBranch(port, binding) {
     return Object.freeze({
         getDefaultBranch: () => port.getDefaultBranch(binding.owner, binding.repository, binding.token),
+    });
+}
+function bindRepositoryVersionTags(port, binding) {
+    return Object.freeze({
+        getLatestTag: () => port.getLatestTag(binding.owner, binding.repository, binding.token),
     });
 }
 function bindIssueCommentPublication(port, binding) {
@@ -84457,12 +85294,16 @@ exports.OctokitPullRequestReviewCommentClientAdapter = OctokitPullRequestReviewC
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OctokitReleaseClientAdapter = void 0;
+exports.OctokitRepositoryVersionTagsClientAdapter = exports.OctokitReleaseClientAdapter = void 0;
 const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitReleaseClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
 exports.OctokitReleaseClientAdapter = OctokitReleaseClientAdapter;
+class OctokitRepositoryVersionTagsClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitRepositoryVersionTagsClientAdapter = OctokitRepositoryVersionTagsClientAdapter;
 
 
 /***/ }),
@@ -84587,6 +85428,8 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubSetupApprovalCheckDiscoveryAdapter = void 0;
 const github = __importStar(__nccwpck_require__(78227));
+const discoveryLookbackMs = 90 * 24 * 60 * 60 * 1000;
+const discoveryPageLimit = 10;
 /** Bounded, read-only GitHub evidence. Unavailable permissions yield no suggestions, never invented identities. */
 class GithubSetupApprovalCheckDiscoveryAdapter {
     async discover(owner, repository, token, targetBranch) {
@@ -84615,19 +85458,46 @@ class GithubSetupApprovalCheckDiscoveryAdapter {
                 required = new Map();
             }
         }
-        let recent;
+        const observedAt = Date.now();
+        const earliestRun = observedAt - discoveryLookbackMs;
+        const recent = [];
+        let sawRuns = false;
+        let inventoryTruncated = false;
         try {
-            recent = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, event: 'pull_request', per_page: 20 });
+            // GitHub's filtered search can return historical samples on busy repositories.
+            // Scan bounded latest-run pages so non-PR events cannot fill the entire sample.
+            for (let page = 1; page <= discoveryPageLimit; page += 1) {
+                const response = await octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo: repository, per_page: 100, page });
+                if (!Array.isArray(response.data.workflow_runs))
+                    throw new Error('Workflow run inventory is unavailable.');
+                const returned = response.data.workflow_runs;
+                const pageRuns = returned.slice(0, 100);
+                sawRuns || (sawRuns = pageRuns.length > 0);
+                inventoryTruncated || (inventoryTruncated = returned.length > 100);
+                for (const run of pageRuns) {
+                    const createdAt = Date.parse(run.created_at ?? '');
+                    if (run.event === 'pull_request' && createdAt >= earliestRun && createdAt <= observedAt)
+                        recent.push(run);
+                }
+                if (recent.length >= 20 || pageRuns.length < 100
+                    || pageRuns.every(run => Date.parse(run.created_at ?? '') < earliestRun))
+                    break;
+                if (page === discoveryPageLimit)
+                    inventoryTruncated = true;
+            }
         }
         catch (error) {
             return { status: discoveryFailure(error), candidates: [] };
         }
-        if (recent.data.workflow_runs.length === 0)
+        if (!sawRuns)
             return { status: 'no-recent-runs', candidates: [] };
         const candidates = new Map();
         const checksByHead = new Map();
+        const runs = recent
+            .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+            .slice(0, 20);
         try {
-            for (const run of recent.data.workflow_runs.slice(0, 15)) {
+            for (const run of runs.slice(0, 15)) {
                 const headSha = run.head_sha;
                 if (!/^[a-f0-9]{40}$/iu.test(headSha))
                     continue;
@@ -84670,7 +85540,7 @@ class GithubSetupApprovalCheckDiscoveryAdapter {
             return { status: discoveryFailure(error), candidates: [] };
         }
         return { status: candidates.size > 0 ? 'observed' : 'no-verifiable-checks', candidates: [...candidates.values()],
-            ...(recent.data.workflow_runs.length > 15 ? { truncated: true } : {}) };
+            ...(inventoryTruncated || recent.length > 15 ? { truncated: true } : {}) };
     }
 }
 exports.GithubSetupApprovalCheckDiscoveryAdapter = GithubSetupApprovalCheckDiscoveryAdapter;
@@ -85710,6 +86580,129 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 
 /***/ }),
 
+/***/ 75545:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupManagementWorkspaceAdapter = void 0;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
+const js_yaml_1 = __nccwpck_require__(783);
+const sensitive_text_1 = __nccwpck_require__(47122);
+const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+const digest = (source) => (0, node_crypto_1.createHash)('sha256').update(source).digest('hex');
+function readDocument(path) {
+    const stat = (0, node_fs_1.lstatSync)(path);
+    if (!stat.isFile() || stat.size > 262144)
+        throw new Error('Unsafe YAML file.');
+    const source = (0, node_fs_1.readFileSync)(path, 'utf8');
+    return { source, document: object((0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA })) };
+}
+function workflowSteps(document) {
+    return Object.values(object(document.jobs)).map(object).flatMap(job => {
+        const steps = Array.isArray(job.steps) ? job.steps.map(object) : [];
+        return steps.map(step => ({ job, step }));
+    });
+}
+function installedInput(name, value) {
+    if (/token|secret|password|api[-_]key/iu.test(name))
+        return [];
+    if (!['string', 'boolean', 'number'].includes(typeof value))
+        return [{ name, unsupported: true }];
+    const text = String(value);
+    if (text.length > 4096 || (0, sensitive_text_1.redactSensitiveText)(text) !== text || /\bsecrets\./iu.test(text))
+        return [{ name, unsupported: true }];
+    const match = text.match(/^\$\{\{\s*vars\.([A-Z][A-Z0-9_]*)\s*(?:\|\|\s*'([^']*)')?\s*\}\}$/u);
+    if (match)
+        return [{ name, variable: match[1], ...(match[2] !== undefined ? { fallback: match[2] } : {}) }];
+    return text.includes('${{') ? [{ name, unsupported: true }] : [{ name, literal: text }];
+}
+function environmentScoped(document, job, step) {
+    return job.environment !== undefined || [document.env, job.env, step.env]
+        .some(env => Object.keys(object(env)).some(key => key.startsWith('INPUT_')));
+}
+/** Reads bounded regular workflow files. No Secret expression/value crosses this adapter. */
+class SetupManagementWorkspaceAdapter {
+    constructor(root, revision) {
+        this.root = root;
+        this.revision = revision;
+    }
+    inspect() {
+        let workflows = [];
+        let unreadable;
+        let localActionDigest;
+        const metadata = new Map();
+        const localAction = () => {
+            if (!metadata.has('action'))
+                metadata.set('action', this.localActionDigest());
+            localActionDigest = metadata.get('action');
+            return localActionDigest;
+        };
+        try {
+            const inspections = this.workflowFiles().map(file => this.inspectWorkflowSafely(file, localAction));
+            workflows = inspections.flatMap(result => result.workflows);
+            unreadable = inspections.some(result => result.unreadable);
+        }
+        catch {
+            unreadable = true;
+        }
+        return { revision: this.revision(), workflows, guidancePresent: (0, node_fs_1.existsSync)((0, node_path_1.join)(this.root, '.copilot', 'repository-profile.json')), unreadable,
+            ...(localActionDigest === undefined ? {} : { localActionDigest }) };
+    }
+    workflowFiles() {
+        const directory = (0, node_path_1.join)(this.root, '.github', 'workflows');
+        if (!(0, node_fs_1.existsSync)(directory))
+            return [];
+        if ((0, node_fs_1.lstatSync)((0, node_path_1.join)(this.root, '.github')).isSymbolicLink() || (0, node_fs_1.lstatSync)(directory).isSymbolicLink())
+            throw new Error('Linked workflow directory.');
+        const files = (0, node_fs_1.readdirSync)(directory).filter(file => /\.ya?ml$/u.test(file)).sort();
+        if (files.length > 100)
+            throw new Error('Workflow inventory exceeds its limit.');
+        return files;
+    }
+    localActionDigest() {
+        const path = (0, node_path_1.join)(this.root, 'action.yml');
+        if (!(0, node_fs_1.existsSync)(path))
+            return;
+        const { source, document } = readDocument(path);
+        if (document.name === 'Copilot - GitHub with super powers' && object(document.inputs)['bugbot-comment-limit'])
+            return digest(source);
+    }
+    inspectWorkflowSafely(file, localAction) {
+        try {
+            return { workflows: this.inspectWorkflow(file, localAction), unreadable: false };
+        }
+        catch {
+            return { workflows: [], unreadable: true };
+        }
+    }
+    inspectWorkflow(file, localAction) {
+        const { source, document } = readDocument((0, node_path_1.join)(this.root, '.github', 'workflows', file));
+        const steps = workflowSteps(document);
+        const knownLocalAction = steps.some(({ step }) => step.uses === './') ? Boolean(localAction()) : false;
+        return steps.flatMap(({ job, step }) => {
+            if (!this.isCopilotStep(step, knownLocalAction))
+                return [];
+            const inputs = Object.entries(object(step.with)).flatMap(([name, value]) => installedInput(name, value));
+            return [{ file, action: step.uses, digest: digest(source), environmentScoped: environmentScoped(document, job, step), inputs }];
+        });
+    }
+    isCopilotStep(step, knownLocalAction) {
+        if (typeof step.uses !== 'string')
+            return false;
+        if (step.uses === './')
+            return knownLocalAction;
+        return /^vypdev\/copilot@[^\s]+$/iu.test(step.uses) && (0, sensitive_text_1.redactSensitiveText)(step.uses) === step.uses;
+    }
+}
+exports.SetupManagementWorkspaceAdapter = SetupManagementWorkspaceAdapter;
+
+
+/***/ }),
+
 /***/ 66933:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -85761,57 +86754,61 @@ const MAX_WORKFLOW_FILE_CHECKS = 64;
 const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa6979dfda71446a54f607b18d61';
 /** Dispatches a disabled-job branch override of a workflow already registered on default. */
 async function probeActions(context) {
+    const preparationHttp = context.operatorHttp ?? context.http;
     const root = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`;
-    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(root, 'GET', [200]));
+    const metadata = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(root, 'GET', [200]));
     const base = metadata.default_branch;
     if (typeof base !== 'string' || !/^[A-Za-z0-9._/-]{1,255}$/u.test(base)
         || base.startsWith('/') || base.endsWith('/')) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not provide a safe default branch for the temporary Actions check.');
     }
-    const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
+    const ref = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(`${root}/git/ref/heads/${encodeURIComponent(base)}`, 'GET', [200]));
     const object = ref.object;
     const sha = object && typeof object === 'object' && !Array.isArray(object)
         ? object.sha : undefined;
     if (typeof sha !== 'string' || !/^[a-f0-9]{40}$/u.test(sha)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not return a valid default-branch commit for the Actions check.');
     }
-    const workflow = await findDispatchWorkflow(context, root, sha);
+    const workflow = await findDispatchWorkflow({ ...context, http: preparationHttp }, root, sha);
     if (!workflow) {
-        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.');
+        throw new setup_permission_probe_http_1.ProbeFailure('No active default-branch workflow with workflow_dispatch is available for an isolated Actions check.', undefined, false, false, 'dispatch-workflow');
     }
     const name = `copilot-permission-test-${(0, node_crypto_1.randomBytes)(16).toString('hex')}`;
-    const prior = await context.http.request(`${root}/git/ref/heads/${name}`);
+    const prior = await preparationHttp.request(`${root}/git/ref/heads/${name}`);
     if (prior.status !== 404)
         throw new setup_permission_probe_http_1.ProbeFailure(`Temporary branch absence was not confirmed (HTTP ${prior.status}).`, prior.status);
     const handle = await context.journal.begin({ owner: context.owner, repository: context.repository,
         scope: 'repository', probe: 'actions', name });
     let operationError;
-    const noOp = 'name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n';
+    const noOp = "name: Temporary permission check\non:\n  workflow_dispatch:\njobs:\n  noop:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'true'\n";
     context.phase('creating');
     try {
         await handle.setReferenceSha(sha);
         try {
-            await context.http.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
+            await preparationHttp.expect(`${root}/git/refs`, 'POST', [201], { ref: `refs/heads/${name}`, sha });
         }
         catch (error) {
             if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.httpStatus === 403) {
-                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403);
+                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not create its branch (HTTP 403); confirm repository Contents Write and organization authorization.', 403, false, false, 'contents-write');
             }
             throw error;
         }
         if (!workflow.trustedNoOp) {
             const file = `${root}/contents/${workflow.path}`;
             try {
-                const written = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(file, 'PUT', [200], {
+                const written = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(file, 'PUT', [200], {
                     message: 'chore: verify temporary Actions permission [skip ci]',
                     content: Buffer.from(noOp, 'utf8').toString('base64'), branch: name, sha: workflow.sha,
                 }));
                 await handle.setReferenceSha(written.commit?.sha);
             }
-            catch {
-                throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check needs repository Contents and Workflows Write when the packaged health workflow is absent or changed.');
+            catch (error) {
+                if (error instanceof setup_permission_probe_http_1.ProbeFailure && error.httpStatus === 403) {
+                    throw new setup_permission_probe_http_1.ProbeFailure('The isolated Actions check could not write its no-job override (HTTP 403); confirm repository Contents and Workflows Write and organization authorization.', 403, false, false, 'contents-workflows-write');
+                }
+                throw error;
             }
-            const observedFile = await (0, setup_permission_probe_http_1.probeJsonRecord)(await context.http.expect(`${file}?ref=${name}`, 'GET', [200]));
+            const observedFile = await (0, setup_permission_probe_http_1.probeJsonRecord)(await preparationHttp.expect(`${file}?ref=${name}`, 'GET', [200]));
             if (observedFile.path !== workflow.path || observedFile.encoding !== 'base64'
                 || typeof observedFile.content !== 'string'
                 || Buffer.from(observedFile.content, 'base64').toString('utf8') !== noOp) {
@@ -85844,7 +86841,7 @@ async function probeActions(context) {
     }
     context.phase('deleting');
     try {
-        await handle.cleanup(context.http);
+        await handle.cleanup(preparationHttp);
     }
     catch {
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions cleanup could not be confirmed; recovery is required before retrying.', undefined, true);
@@ -86206,11 +87203,12 @@ class SetupPermissionProbeHttp {
 }
 exports.SetupPermissionProbeHttp = SetupPermissionProbeHttp;
 class ProbeFailure extends Error {
-    constructor(message, httpStatus, cleanupPending = false, permissionDenied = false) {
+    constructor(message, httpStatus, cleanupPending = false, permissionDenied = false, prerequisite) {
         super(message);
         this.httpStatus = httpStatus;
         this.cleanupPending = cleanupPending;
         this.permissionDenied = permissionDenied;
+        this.prerequisite = prerequisite;
     }
 }
 exports.ProbeFailure = ProbeFailure;
@@ -86237,6 +87235,7 @@ function writeProbeFailure(requirement, error) {
         message: failure.message,
         ...(failure.cleanupPending ? { cleanupPending: true } : {}),
         ...(failure instanceof ProbeCollision ? { incident: 'secret-collision' } : {}),
+        ...(failure.prerequisite ? { prerequisite: failure.prerequisite } : {}),
     };
 }
 
@@ -86286,7 +87285,7 @@ class SetupPermissionProbeJournal {
         }
         return new ProbeJournalHandle(path, { ...entry, version: 2, pid: process.pid });
     }
-    async recover(owner, repository, http) {
+    async recover(owner, repository, http, operatorHttp) {
         let names;
         try {
             names = await (0, promises_1.readdir)(this.root);
@@ -86315,7 +87314,7 @@ class SetupPermissionProbeJournal {
             if (entry.pid !== process.pid && processIsRunning(entry.pid)) {
                 throw new setup_permission_probe_http_1.ProbeFailure('Another setup process has a temporary permission resource in progress.');
             }
-            await new ProbeJournalHandle((0, node_path_1.join)(this.root, name), entry).cleanup(http);
+            await new ProbeJournalHandle((0, node_path_1.join)(this.root, name), entry).cleanup(entry.probe === 'actions' ? operatorHttp ?? http : http);
         }
     }
     async assertPrivateRoot() {
@@ -86615,7 +87614,7 @@ async function cleanupProject(http, owner, title, recordedId) {
     const id = recordedId ?? await findProjectByTitle(http, owner, title);
     if (!id)
         return;
-    const before = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    const before = await projectNode(http, owner, title, id);
     if (before.node === null)
         return;
     if (!before.node || typeof before.node !== 'object' || Array.isArray(before.node)
@@ -86631,9 +87630,30 @@ async function cleanupProject(http, owner, title, recordedId) {
         || result.projectV2.id !== id) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub did not confirm deletion of the temporary Project.');
     }
-    const after = await projectGraphQl(http, 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', { id });
+    const after = await projectNode(http, owner, title, id);
     if (after.node !== null)
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup could not be confirmed.');
+}
+/** GitHub returns a node-scoped NOT_FOUND alongside node:null after deletion. */
+async function projectNode(http, owner, title, id) {
+    const response = await http.expect('https://api.github.com/graphql', 'POST', [200], {
+        query: 'query($id:ID!){node(id:$id){... on ProjectV2{id title}}}', variables: { id },
+    });
+    const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
+    const data = cleanupData(body);
+    if (Array.isArray(body.errors) && body.errors.length > 0 && data.node === null
+        && body.errors.every(error => error && typeof error === 'object' && !Array.isArray(error)
+            && error.type === 'NOT_FOUND' && Array.isArray(error.path)
+            && error.path.length === 1 && error.path[0] === 'node')) {
+        // A hidden node can also look missing. Require a complete, authorized
+        // organization title lookup before clearing its recovery record.
+        if (await findProjectByTitle(http, owner, title)) {
+            throw new setup_permission_probe_http_1.ProbeFailure('Temporary Project cleanup could not be confirmed.');
+        }
+        return data;
+    }
+    rejectGraphQlErrors(body);
+    return data;
 }
 async function findProjectByTitle(http, owner, title) {
     let after = null;
@@ -86683,8 +87703,15 @@ async function findProjectByTitle(http, owner, title) {
 async function projectGraphQl(http, query, variables) {
     const response = await http.expect('https://api.github.com/graphql', 'POST', [200], { query, variables });
     const body = await (0, setup_permission_probe_http_1.probeJsonRecord)(response);
-    if (Array.isArray(body.errors) && body.errors.length > 0)
+    rejectGraphQlErrors(body);
+    return cleanupData(body);
+}
+function rejectGraphQlErrors(body) {
+    if (body.errors !== undefined && (!Array.isArray(body.errors) || body.errors.length > 0)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub rejected temporary Project cleanup.');
+    }
+}
+function cleanupData(body) {
     const data = body.data;
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
         throw new setup_permission_probe_http_1.ProbeFailure('GitHub returned invalid temporary Project cleanup data.');
@@ -87452,6 +88479,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cleanupPullRequest = cleanupPullRequest;
 exports.cleanupActionRun = cleanupActionRun;
 const setup_permission_probe_http_1 = __nccwpck_require__(5110);
+// Even a skipped job can leave its run queued for several seconds. Allow 15
+// reads with 57.5s of bounded backoff; every HTTP request has its own deadline.
+const ACTIONS_CLEANUP_READ_ATTEMPTS = 15;
 async function cleanupPullRequest(http, root, owner, name) {
     const title = `Copilot permission test ${name.slice('copilot-permission-test-'.length)}`;
     const search = `${root}/pulls?state=all&head=${encodeURIComponent(`${owner}:${name}`)}&per_page=100`;
@@ -87523,9 +88553,10 @@ async function cleanupActionRun(http, root, branch, recordedId, attempted = fals
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions dispatch may have succeeded, but its run was not found for cleanup.');
     const exact = `${root}/actions/runs/${id}`;
     let run;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    let cancellationAccepted = false;
+    for (let attempt = 0; attempt < ACTIONS_CLEANUP_READ_ATTEMPTS; attempt += 1) {
         const response = await http.request(exact);
-        if (response.status === 404 && attempt === 7)
+        if (response.status === 404 && attempt >= 7)
             return;
         if (response.status !== 200) {
             if (response.status === 404 && attempt < 7) {
@@ -87541,13 +88572,19 @@ async function cleanupActionRun(http, root, branch, recordedId, attempted = fals
         }
         if (run.status === 'completed')
             break;
-        if (attempt === 0) {
+        // A queued run can reject cancellation with 409 before it is ready.
+        // Retry only that conflict, after checking ownership again. A 202 is
+        // asynchronous acceptance, so observe completion without cancel spam.
+        if (!cancellationAccepted) {
             const cancel = await http.request(`${exact}/cancel`, 'POST');
             if (cancel.status !== 202 && cancel.status !== 409) {
                 throw new setup_permission_probe_http_1.ProbeFailure(`Temporary Actions run cancellation returned HTTP ${cancel.status}.`, cancel.status);
             }
+            cancellationAccepted = cancel.status === 202;
         }
-        await new Promise(resolve => setTimeout(resolve, 500));
+        if (attempt < ACTIONS_CLEANUP_READ_ATTEMPTS - 1) {
+            await new Promise(resolve => setTimeout(resolve, Math.min(500 * 2 ** attempt, 5000)));
+        }
     }
     if (run?.status !== 'completed')
         throw new setup_permission_probe_http_1.ProbeFailure('Temporary Actions run did not finish before cleanup deadline.');
@@ -87933,25 +88970,25 @@ class SetupTokenPermissionQueryAdapter {
         this.timeoutMs = options.timeoutMs ?? 10000;
         this.journal = options.journal ?? new setup_permission_probe_journal_1.SetupPermissionProbeJournal();
     }
-    async inspect(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites = false) {
+    async inspect(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites = false, operatorToken) {
         const target = `${owner.toLowerCase()}/${repository.toLowerCase()}`;
         if (activeInspections.has(target)) {
             return requirements.map(requirement => (0, setup_permission_read_evidence_1.outcome)(requirement, 'unverifiable', 'Another permission inspection is in progress for this repository. Retry after it completes.'));
         }
         activeInspections.add(target);
         try {
-            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites);
+            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken);
         }
         finally {
             activeInspections.delete(target);
         }
     }
-    async inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites) {
+    async inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken) {
         try {
             // Read-only identity checks and previews must never perform recovery writes.
             if (requirements.some(item => item.level === 'write'
                 && (item.applicability === 'required' || includeConditionalWrites))) {
-                await this.journal.recover(owner, repository, new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs));
+                await this.journal.recover(owner, repository, new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs), operatorToken === undefined ? undefined : new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs));
             }
         }
         catch (error) {
@@ -87968,9 +89005,9 @@ class SetupTokenPermissionQueryAdapter {
                         ? { incident: 'secret-collision' } : {}) } : check;
             });
         }
-        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites)), SETUP_PERMISSION_PROBE_CONCURRENCY);
+        return (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)(requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken)), SETUP_PERMISSION_PROBE_CONCURRENCY);
     }
-    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites) {
+    async inspectOne(owner, repository, token, requirement, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken) {
         let acceptingProgress = true;
         const emit = (phase, detail) => {
             if (acceptingProgress)
@@ -87993,6 +89030,8 @@ class SetupTokenPermissionQueryAdapter {
                 }
                 await (0, setup_permission_resource_probes_1.probeDisposableResource)({ owner, repository, scope: requirement.scope, probe: requirement.probe,
                     http,
+                    ...(requirement.role === 'workflow' && requirement.probe === 'actions' && operatorToken !== undefined
+                        ? { operatorHttp: new setup_permission_probe_http_1.SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs) } : {}),
                     journal: this.journal, phase: emit });
                 const check = { ...requirement, status: 'verified', writeProof: 'transaction',
                     message: 'GitHub accepted temporary create, exact readback, and confirmed cleanup.' };
@@ -88070,6 +89109,8 @@ function probeDiagnostic(value) {
             }
             return 'cleanup-pending';
         }
+        if (value.prerequisite)
+            return value.prerequisite;
         if (value.httpStatus !== undefined)
             return `http-${value.httpStatus}`;
         if (value.message.startsWith('No isolated'))

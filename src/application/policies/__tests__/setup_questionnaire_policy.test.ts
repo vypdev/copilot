@@ -24,13 +24,57 @@ describe('setup questionnaire policy', () => {
     expect(skipped.length).toBeGreaterThan(20);
     for (const required of ['features.issues', 'features.pullRequests', 'projects.enabled', 'projects.ids',
       'repository.mainBranch', 'repository.developmentBranch', 'pullRequestApproval.mode',
-      'ai.membersOnly', 'ai.bugbotTelemetry', 'ai.bugbotDryRun', 'createInitialTag',
+      'ai.membersOnly', 'ai.bugbotTelemetry', 'ai.bugbotDryRun',
       'manageRepositoryVariables', 'manageRepositorySecrets', 'storage.secrets.defaultScope',
       'storage.variables.defaultScope']) expect(skipped).not.toContain(required);
     const configured = createDefaultSetupConfiguration();
     configured.ai.bugbotCommentLimit = 12;
     expect(setupBasicSkippedQuestionIds(configured)).not.toContain('ai.bugbotCommentLimit');
   });
+  it.each([
+    { issues: true, enabled: ['release'], expected: true },
+    { issues: true, enabled: ['hotfix'], expected: true },
+    { issues: true, enabled: ['feature', 'bugfix'], expected: false },
+    { issues: false, enabled: ['release', 'hotfix'], expected: false },
+  ] as const)('derives the initial version from workflow selection without an initial-tag question: %j', ({ issues, enabled, expected }) => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.features.issues = issues;
+    configuration.issueWorkflows = { enabled };
+    let state = createSetupQuestionnaire(configuration);
+    expect(state.draft.createInitialTag).toBe(expected);
+    const ids: string[] = [];
+    while (state.terminal === 'collecting') {
+      ids.push(state.question!.id);
+      state = transitionSetupQuestionnaire(state, { kind: 'answer', value: '' });
+    }
+    expect(ids).not.toContain('createInitialTag');
+    expect(state.draft.createInitialTag).toBe(expected);
+  });
+
+  it('keeps workflow selection unchanged after invalid input and supports the default and All answers', () => {
+    const state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration()), 'issueWorkflows.enabled');
+    const invalid = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'unknown-workflow' });
+    expect(invalid.validation).toContain('Unknown issue workflow');
+    expect(invalid.draft).toEqual(state.draft);
+    expect(invalid.question?.id).toBe('issueWorkflows.enabled');
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: '' }).draft.issueWorkflows.enabled).toEqual(state.draft.issueWorkflows.enabled);
+    expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'all' }).draft.issueWorkflows.enabled).toEqual(state.draft.issueWorkflows.enabled);
+    const none = createDefaultSetupConfiguration();
+    none.issueWorkflows = { enabled: [] };
+    const noneState = advanceTo(createSetupQuestionnaire(none), 'issueWorkflows.enabled');
+    const kept = transitionSetupQuestionnaire(noneState, { kind: 'answer', value: '' });
+    expect(kept.draft.issueWorkflows.enabled).toEqual([]);
+    expect(kept.draft.createInitialTag).toBe(false);
+  });
+
+  it('recomputes the initial version decision when a saved workflow answer changes', () => {
+    let state = advanceTo(createSetupQuestionnaire(createDefaultSetupConfiguration()), 'issueWorkflows.enabled');
+    state = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'feature' });
+    expect(state.draft.createInitialTag).toBe(false);
+    const back = transitionSetupQuestionnaire(state, { kind: 'back' });
+    expect(transitionSetupQuestionnaire(back, { kind: 'answer', value: 'feature,hotfix' }).draft.createInitialTag).toBe(true);
+  });
+
   it('reports truthful conditional progress and returns to a saved answer without resetting later values', () => {
     const first = createSetupQuestionnaire(createDefaultSetupConfiguration());
     expect(setupQuestionnaireProgress(first, {})).toMatchObject({ position: 1, groupPosition: 1, group: 'capabilities' });
@@ -188,7 +232,7 @@ describe('setup questionnaire policy', () => {
   it('enters review immediately when the permission-intent phase has no open questions', () => {
     const ids = [
       'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',
-      'projects.enabled', 'createInitialTag', 'manageRepositoryVariables', 'manageRepositorySecrets',
+      'projects.enabled', 'manageRepositoryVariables', 'manageRepositorySecrets',
       'storage.variables.defaultScope', 'storage.variables.preserveExisting',
       'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
     ];
@@ -409,7 +453,7 @@ describe('setup questionnaire policy', () => {
     expect(transitionSetupQuestionnaire(attestation, { kind: 'answer', value: '' }, context).validation)
       .toContain('Open every selected Project');
     expect(transitionSetupQuestionnaire(attestation, { kind: 'answer', value: 'yes' }, context).question?.id)
-      .toBe('createInitialTag');
+      .toBe('manageRepositoryVariables');
   });
 
   it('does not redirect an attestation refusal to a Project question hidden in this pass', () => {

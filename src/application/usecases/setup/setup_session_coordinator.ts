@@ -11,6 +11,7 @@ export interface SetupSessionReceipt {
 
 /** Semantic work only. Entrypoints adapt prompts, providers and process exit codes. */
 export interface SetupSessionPorts {
+  readonly manage?: (possibleMutation: () => void, record: (effect: SetupOperationEffect) => void) => Promise<'continue' | 'complete' | 'partial' | 'blocked' | 'cancelled'>;
   readonly repository: () => Promise<SetupSessionDecision>;
   readonly choices: () => Promise<SetupSessionDecision>;
   readonly setupPat: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
@@ -37,6 +38,7 @@ export class SetupSessionCoordinator {
   private mutationStarted = false;
   private stage: SetupJourneyStage = 'repository';
   private readonly effects = new Map<SetupOperationEffect['id'], SetupOperationEffect>();
+  private readonly installationEffects = new Set<SetupOperationEffect['id']>();
 
   constructor(private readonly ports: SetupSessionPorts) {}
 
@@ -61,6 +63,11 @@ export class SetupSessionCoordinator {
         const after = this.liveOutcome();
         if (after) return this.finish(after);
         if (decision !== 'continue') return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+        if (stage === 'repository' && this.ports.manage) {
+          const managed = await this.ports.manage(() => { this.stage = 'apply'; this.markPossibleMutation(); },
+            effect => this.effects.set(effect.id, Object.freeze({ ...effect })));
+          if (managed !== 'continue') return this.finish(managed);
+        }
       }
 
       // The authorization operation must finish while the live session is active.
@@ -92,7 +99,8 @@ export class SetupSessionCoordinator {
   }
 
   private record(effect: SetupOperationEffect): void {
-    const previous = this.effects.get(effect.id);
+    const previous = this.installationEffects.has(effect.id) ? this.effects.get(effect.id) : undefined;
+    this.installationEffects.add(effect.id);
     if (previous?.state === 'completed' && effect.state !== 'completed') return;
     this.effects.set(effect.id, Object.freeze({ ...effect }));
   }

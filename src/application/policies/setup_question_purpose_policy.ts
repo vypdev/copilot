@@ -49,7 +49,6 @@ export const setupQuestionPurposes: Readonly<Record<string, Purpose>> = {
   'projects.enabled': { en: 'Decide whether Copilot should add issues and pull requests to existing GitHub Projects; the setup PAT is needed to list private organization Projects later.', es: 'Decide si Copilot debe añadir issues y pull requests a Projects existentes; el PAT de setup hará falta después para consultar Projects privados de la organización.' },
   'projects.ids': { en: 'Choose existing Projects by title after PAT verification, or enter the positive number in each Project URL; PVT_ node IDs are not used.', es: 'Elige Projects existentes por título tras verificar el PAT o introduce el número positivo de cada URL; no se usan IDs de nodo PVT_.' },
   'projects.statusVerified': { en: 'Confirm that all four chosen Status options actually exist in every selected Project when GitHub could not verify their fields.', es: 'Confirma que las cuatro opciones Status existen en todos los Projects elegidos cuando GitHub no pudo comprobar sus campos.' },
-  createInitialTag: { en: 'Create v1.0.0 only if this repository has no version tag yet.', es: 'Crea v1.0.0 solo si este repositorio todavía no tiene un tag de versión.' },
   manageRepositoryVariables: { en: 'Allow setup to create or update GitHub Actions Variables required by selected workflows.', es: 'Permite a setup crear o actualizar Variables de GitHub Actions necesarias para los workflows elegidos.' },
   manageRepositorySecrets: { en: 'Allow setup to validate and install required GitHub Actions Secrets, including the bot PAT when needed.', es: 'Permite a setup validar e instalar Secrets de GitHub Actions, incluido el PAT del bot cuando haga falta.' },
 };
@@ -98,7 +97,11 @@ export function setupQuestionPurpose(question: SetupQuestion): Purpose | undefin
       preserveExisting: { en: `Keep effective existing ${resource} instead of overwriting them during setup.`, es: `Conserva los ${resource} existentes que ya se aplican, en lugar de sobrescribirlos durante setup.` },
       overrides: { en: `Select inherited organization ${resource} that should instead be set at repository scope.`, es: `Selecciona los ${resource} heredados de la organización que quieras definir en el repositorio.` },
     };
-    return setting[storageSetting[2]];
+    const purpose = setting[storageSetting[2]];
+    return storageSetting[1] === 'secrets' && storageSetting[2] === 'preserveExisting' ? {
+      en: `${purpose.en} The bot Secret PAT is always supplied, validated and replaced at its selected scope.`,
+      es: `${purpose.es} El Secret PAT del bot siempre se introduce, valida y sustituye en el ámbito elegido.`,
+    } : purpose;
   }
   return undefined;
 }

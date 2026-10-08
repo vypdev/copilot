@@ -111,6 +111,7 @@ export interface SetupConfiguration {
     ai: SetupAiConfiguration;
     pullRequestApproval: PullRequestApprovalPolicy;
     projects: SetupProjectConfiguration;
+    /** Derived from the enabled release/hotfix issue workflows, never prompted. */
     createInitialTag: boolean;
     manageRepositoryVariables: boolean;
     /** Whether setup should provision repository secrets after validating them. */
@@ -146,6 +147,13 @@ export interface SetupResourceTarget {
     scope: SetupResourceScope;
     organizationVisibility: SetupOrganizationVisibility;
     repositoryId?: number;
+}
+
+/** Storage facts only; the previous or replacement PAT value is never included. */
+export interface SetupWorkflowPatStorageNotice {
+    readonly scope: SetupResourceScope;
+    readonly destination: string;
+    readonly replacesExisting: boolean;
 }
 
 export interface SetupStorageConfiguration {
@@ -204,6 +212,8 @@ export interface SetupRemoteConfiguration {
     repositorySecrets: readonly string[];
     repositorySecretsAccess: 'available' | 'unavailable' | 'unknown';
     organizationSecrets: readonly string[];
+    /** Organization namespace PAT metadata, including a Secret not yet shared with this repository. */
+    organizationWorkflowPat?: 'present' | 'absent' | 'unavailable';
     repositoryVariables: readonly SetupVariable[];
     repositoryVariablesAccess: 'available' | 'unavailable' | 'unknown';
     organizationVariables: readonly SetupVariable[];
@@ -243,6 +253,7 @@ export interface SetupVariable {
 }
 
 export interface SetupPlan {
+    workflowPatStorage?: SetupWorkflowPatStorageNotice;
     /** Informational only: advanced defaults not asked in basic presentation. */
     presentationDefaults?: readonly { group: string; count: number }[];
     /** Temporary PAT write probes disclosed before final approval. */
@@ -264,4 +275,21 @@ export interface SetupOperationEffect {
     readonly id: 'files' | 'secrets' | 'labels' | 'issue-types' | 'variables' | 'initial-tag';
     readonly state: 'completed' | 'skipped' | 'needs-inspection' | 'not-started' | 'in-progress';
     readonly scope: 'local' | 'repository' | 'organization' | 'mixed';
+}
+
+/** Value-free failures crossing the Variable provisioning boundary. */
+export interface SetupVariableWriteFailure {
+    name: string;
+    scope: SetupResourceScope;
+    phase: 'create' | 'update' | 'repository-access';
+    reason: 'authorization' | 'invalid-input' | 'conflict' | 'rate-limited' | 'unavailable';
+}
+
+export interface SetupVariablesWriteResult {
+    created: number;
+    updated: number;
+    errors: string[];
+    failures?: readonly SetupVariableWriteFailure[];
+    /** Messages not represented by failures. If absent, consumers retain all errors. */
+    unclassifiedErrors?: readonly string[];
 }

@@ -117,3 +117,17 @@ describe('setup journey', () => {
     expect(() => journey.revisitChoices()).toThrow('pre-PAT');
   });
 });
+
+
+test('prior management changes permit a partial result but never certify full installation before Apply', () => {
+ const present=jest.fn(); const journey=new SetupJourneyUseCase('fixture/repo',{present},true);
+ expect(() => journey.finish('complete')).toThrow('before applying');
+ journey.advance('choices'); journey.finish('partial');
+ expect(present).toHaveBeenLastCalledWith(expect.objectContaining({outcome:'partial',mutationStarted:true}));
+});
+
+test('prior independent changes do not prevent reviewing the new full-assistant choices', () => {
+ const present=jest.fn(); const journey=new SetupJourneyUseCase('fixture/repo',{present},true);
+ journey.advance('setup-pat'); expect(journey.revisitChoices()).toBe(2);
+ expect(present).toHaveBeenLastCalledWith(expect.objectContaining({current:'Setup choices',mutationStarted:true,choiceReviewPass:2}));
+});

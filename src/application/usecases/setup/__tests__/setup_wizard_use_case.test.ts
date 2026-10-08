@@ -82,7 +82,7 @@ describe('SetupWizardUseCase', () => {
     });
     expect(result.status).toBe('completed');
     if (result.status === 'completed') {
-      expect(result.configuration.createInitialTag).toBe(false);
+      expect(result.configuration.createInitialTag).toBe(true);
       expect(result.configuration.manageRepositorySecrets).toBe(false);
     }
     expect(collect.mock.calls[0][0].question?.id).not.toBe('features.issues');

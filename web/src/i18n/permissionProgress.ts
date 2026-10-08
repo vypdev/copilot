@@ -1,5 +1,6 @@
 import type { WebSetupView } from '../../../src/application/contracts/web_setup_view';
 import type { SetupLocale } from './catalog';
+import { permissionPrerequisite } from './permissionPrerequisite';
 
 type SetupTokenPermissionProbePhase = NonNullable<NonNullable<NonNullable<WebSetupView['permissions']>['progress']>[number]>['phase'];
 
@@ -36,6 +37,8 @@ const httpError: Record<SetupLocale, (status: string) => string> = {
 };
 
 export function permissionProgressError(locale: SetupLocale, detail: string): string {
+  const prerequisite = permissionPrerequisite(detail, locale);
+  if (prerequisite) return prerequisite;
   const issue = /^issue-(closed|unresolved)-([1-9][0-9]*)$/u.exec(detail);
   if (issue) return issueResidue[locale][issue[1] as 'closed' | 'unresolved'](issue[2]);
   if (/^http-[1-5][0-9]{2}$/u.test(detail)) return httpError[locale](detail.slice(5));

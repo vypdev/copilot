@@ -58,6 +58,27 @@ describe('buildSetupPatCreationUrl', () => {
         expect(url.searchParams.get('contents')).toBe('write');
     });
 
+    it.each([false, true])('reviewed conditional setup writes override read grants regardless of order (reverse=%s)', reverse => {
+        const requirements = [
+            permission('setup', 'repository', 'Actions', 'read'),
+            permission('setup', 'repository', 'Contents', 'read'),
+            permission('setup', 'repository', 'Actions', 'write', 'conditional'),
+            permission('setup', 'repository', 'Contents', 'write', 'conditional'),
+            permission('setup', 'repository', 'Workflows', 'write', 'conditional'),
+        ];
+        const url = new URL(buildSetupPatCreationUrl({ role: 'setup', owner: 'owner', repository: 'repo', expiresIn: 1,
+            requirements: reverse ? requirements.reverse() : requirements, includeConditionalSetupGrants: true }));
+        for (const grant of ['actions', 'contents', 'workflows']) {
+            expect(url.searchParams.getAll(grant)).toEqual(['write']);
+        }
+    });
+
+    it('rejects conditional setup prefill on a workflow PAT', () => {
+        expect(() => buildSetupPatCreationUrl({ role: 'workflow', owner: 'owner', repository: 'repo', expiresIn: 90,
+            requirements: [permission('workflow', 'repository', 'Actions', 'write', 'conditional')],
+            includeConditionalSetupGrants: true })).toThrow('Conditional setup grants');
+    });
+
     it('keeps even the largest valid owner, repository, and grant set within a practical terminal URL', () => {
         const grants = [
             ...['Metadata', 'Contents', 'Secrets', 'Variables', 'Issues', 'Actions', 'Checks', 'Administration', 'Workflows', 'Pull requests']

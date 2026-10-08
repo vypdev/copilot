@@ -1,3 +1,4 @@
+import type { SetupVariablesWriteResult } from '../../domain/setup';
 import type {
     SetupRemoteConfigurationReadPort,
     SetupRepositoryVariablesQueryPort,
@@ -71,7 +72,7 @@ export class RepositoryVariablesCommandRepository implements SetupRepositoryVari
         repository: string,
         token: string,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }> {
+    ): Promise<SetupVariablesWriteResult> {
         return this.transport.upsert(owner, repository, token, variables);
     }
 
@@ -81,7 +82,7 @@ export class RepositoryVariablesCommandRepository implements SetupRepositoryVari
         token: string,
         target: SetupResourceTarget,
         variables: readonly SetupVariable[],
-    ): Promise<{ created: number; updated: number; errors: string[] }> {
+    ): Promise<SetupVariablesWriteResult> {
         return this.transport.upsertScopedVariables(owner, repository, token, target, variables);
     }
 }

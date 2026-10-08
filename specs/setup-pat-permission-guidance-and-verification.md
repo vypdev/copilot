@@ -3,7 +3,7 @@
 - Status: Implemented fixture baseline; live provider, accessibility, and Windows ACL gates remain open
 - Date: 2026-09-20
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-06 (automated fixtures and isolated live provider transactions)
+- Last verified: 2026-10-07 (automated fixtures and isolated live provider transactions)
 - Owners: Copilot maintainers and setup operators
 - Scope: show least-privilege permission requirements before collecting setup and workflow PATs, then prove each selected read or write capability with bounded, visible operations
 - Related issues/PRs: none recorded
@@ -38,12 +38,15 @@ See [bounded provider evidence](../docs/development/setup-pat-provider-audit-202
    Verified. The row names the failed phase and a bounded HTTP category,
    without raw provider body, headers, token, or secret value.
 3. PAT entry and environment-PAT selection MUST disclose isolated temporary
-   create/read/delete checks before planning, including displayed conditional
-   writes, notifications/audit history, and cleanup requirements. Bootstrap
+   create/read/delete checks before planning, notifications/audit history, and
+   cleanup requirements. Manual and supplied-token paths include displayed
+   conditional writes; guided intent defers its possible health prerequisites
+   until authenticated inspection and plan approval establish a requirement. Bootstrap
    first validates identity and required reads, confirms the intended guided
    operator account, and then executes the displayed write transactions.
-   Conditional applicability describes whether installation needs that grant;
-   it MUST NOT defer its initial permission test. Organization writes require
+   Guided conditional health grants MUST be prefilled when Secret management is
+   selected, but MUST NOT authorize an early write test or establish evidence.
+   Manual conditional rows retain their initial permission tests. Organization writes require
    metadata proving the exact selected repository's organization owner.
    Final review still approves persistent setup application and provisioning;
    its fresh configured audit runs before those operations. A revision or
@@ -158,6 +161,77 @@ See [bounded provider evidence](../docs/development/setup-pat-provider-audit-202
     This follows GitHub's [Issues REST permissions](https://docs.github.com/en/rest/issues/issues),
     [GraphQL `deleteIssue`](https://docs.github.com/en/graphql/reference/issues),
     and [deletion policy](https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue).
+
+### Actions prerequisite diagnostics — 2026-10-06
+
+An Actions WRITE check that stops before dispatch MUST remain `Unverifiable`;
+it MUST NOT claim an absent Actions grant from a failed supporting operation.
+The report and live progress carry only one of three bounded prerequisites:
+`contents-write` (temporary branch denied), `contents-workflows-write` (disabled
+workflow override denied), or `dispatch-workflow` (no eligible default-branch
+workflow found). The application accepts these codes only on repository Actions
+WRITE rows with `Unverifiable` status. Unknown codes and contradictory success
+are rejected. The CLI keeps a sanitized explanatory message; web progress,
+context and blocked result use the same localized explanation, never provider
+prose. Cleanup errors retain priority and their existing recovery contract.
+
+A 403 from the override preserves HTTP 403 and explains that Contents and
+Workflows WRITE, repository selection and organization authorization need review.
+A non-403 override failure preserves its actual HTTP/network classification; it
+MUST NOT invent a permission-denial cause. Workflows is tested independently;
+a permission-bound denial on that row remains `Missing`. GitHub's accepted
+permissions header cannot prove the token's grants. Before approval the plan
+explains the Actions prerequisites, including the difference between using the
+exact packaged workflow and preparing a disabled-job override. The override's
+`run` value is a YAML string, even though its job is disabled.
+
+```text
+No setup changes started
+Actions · repository · Write · Unverifiable
+  Actions was not tested because its temporary workflow could not be written.
+  Check Contents and Workflows Write, repository selection and organization authorization.
+Workflows · repository · Write · Missing
+  Review the PAT in GitHub, then start a fresh setup run.
+```
+
+Text equivalent: the Actions capability has not been exercised; its workflow
+preparation was denied. Correct the prerequisite rather than assuming Actions
+is absent. No setup plan is applied by these isolated checks.
+
+Incremental budget: **17 automated cases**: eight adapter/classification/progress
+cases, six application evidence/security cases and three bridge allowlist cases.
+The existing transaction/recovery and coverage gates remain required. The
+credential-free browser fixture and four-locale result tests in the web SDD
+establish presentation evidence. Authorized isolated provider transactions can
+establish denial and cleanup for the supplied PAT; fixture success never proves
+an unobserved live success. No new token scope is silently requested, no stored
+configuration or journal schema changes, and rollback drops optional diagnostic
+codes without weakening readiness. Authentication documentation describes the
+operator correction and keeps setup/workflow PAT roles separate.
+
+### Guided-link recovery after final inspection — 2026-10-07
+
+Following the provisional guided link does not prove that later requirements
+are already granted. An existing managed Secret plus a confirmed missing
+credential-health workflow can add repository Workflows WRITE only after GitHub
+inspection. The final audit MUST build its corrected link from final required
+grants and report the delta from the provisional requirements. A denied
+Workflows write remains Missing; Actions preparation failure remains
+Unverifiable with its bounded prerequisite. The updated link must remain visible
+on the blocked web result, independently of transient warning/cleanup messages.
+See the recovery flow, representative UI and suppression conditions in section
+9.1.2 of `specs/local-web-setup-assistant.md`. The user creates or corrects the PAT
+on GitHub, selects the repository, closes the old local session and starts a
+fresh setup run. No automatic retry or setup application is authorized here.
+
+The shared incremental regression budget is **20 automated cases**, counted
+once in the web SDD: seven bridge, twelve rendering and one final-requirements
+case. The existing credential adapter test is extended through finish. No
+additional grants are silently added by this recovery section. The reviewed
+initial intent separately prefills disclosed health prerequisites when managing
+Secrets, as specified in the operator-PAT SDD. Authentication
+documentation explains the later link and independent Actions prerequisite;
+isolated live denial/cleanup evidence remains distinct from fixture success.
 
 ### Implemented permission-specific operations
 
@@ -649,6 +723,83 @@ branches in the local merged coverage, followed by a fresh Codecov report.
 Provider references: [repository organization Secrets](https://docs.github.com/en/rest/actions/secrets#list-repository-organization-secrets)
 and [repository organization Variables](https://docs.github.com/en/rest/actions/variables#list-repository-organization-variables).
 
+### 14.2 Bot Actions preparation and Project absence correction (2026-10-07)
+
+The Actions probe accepts separately validated setup authority solely for
+fixture preparation, exact no-job workflow readback and cleanup. Dispatch and
+its first exact run read MUST use the bot candidate; a rejection cannot be
+retried with the operator token or promoted to verified. All other probes keep
+candidate authority. Recovery selects operator authority only for Actions
+entries. The final setup permission matrix discloses Contents, Actions and
+Workflows Write for bot release/hotfix validation when Secret management is
+selected, even with no existing credentials. The runtime matrix is unchanged.
+
+Project cleanup MUST accept a node-scoped `NOT_FOUND` with `data.node: null`
+only after a complete, error-free, authorized organization title lookup finds
+no exact private random title. Mixed errors, malformed data, forbidden/scoped
+responses, incomplete pagination or an exact title keep the journal pending.
+The existing five-page limit and ownership checks remain fixed. This permits
+recovery of earlier already-deleted Project entries without another mutation;
+the journal schema and live-process lock do not change.
+
+```text
+Setup PAT: prepare disabled-job fixture -> Bot PAT: dispatch + exact run read
+-> Setup PAT: verified cleanup -> bot permission verified
+```
+
+The web result MUST attribute a failed workflow-role audit to the bot PAT in
+all four locales, preserve bounded prerequisite and cleanup evidence, and
+avoid exposing provider prose. Example: “The bot PAT did not complete every
+required permission check. Check the failed grant and any preparation or
+cleanup prerequisite below.” Pending cleanup retains the existing blocking
+action; partial and successful states keep their existing semantics. No new
+public configuration or automatic setup Apply is introduced.
+
+This slice adds a **27-case minimum**: 12 Project absence/error/corroboration
+cases, six adapter/recovery cases proving credential separation and cleanup,
+three application authority/identity cases, two setup-versus-runtime policy
+cases, and four localized result cases. Its executable evidence is
+`setup_permission_cleanup_contract`, `setup_permission_operator_actions`,
+`setup_token_permissions_use_case`, `setup_token_permission_policy`, and
+`web_setup_components`; `docs/authentication.mdx` documents both corrections.
+Existing module coverage and human provider/UX gates remain in force.
+
+### 14.3 Asynchronous Actions completion correction (2026-10-07)
+
+An operator's isolated no-job run completed as `skipped` 11 seconds after
+creation, after the previous four-second cleanup wait. The matching run,
+workflow, branch and recorded commit remained intact. This read-only provider
+observation identifies completion latency; it does not establish the
+cancellation response or claim that the full permission audit passed.
+
+Actions cleanup MUST allow 15 exact-run observations with exponential delays
+of 0.5, 1, 2, 4 and then at most 5 seconds (57.5 seconds of maximum polling
+delay), in addition to the existing per-request HTTP deadline. A cancellation
+`202` is asynchronous acceptance: wait for `completed` before deletion, and
+do not repeat accepted cancellation. A queued cancellation `409` MAY be retried
+only after the next exact ownership check. Other errors stop cleanup. The
+existing eight-read, short-delay absence check remains valid for recovery.
+Ownership changes, an exhausted completion budget, denied cleanup or ambiguous
+deletion retain the journal, block Verified evidence and prevent a new audit
+until recovery succeeds. No force-cancel, user setting, token-role change or
+unbounded wait is introduced. CLI/web retain their deleting phase while pending.
+
+```text
+Queued -> cancellation accepted/conflict -> bounded owned-run observations
+-> Completed -> delete exact run -> confirm absence -> delete recorded branch
+-> confirm absence -> remove journal -> Verified
+```
+
+This slice requires **11 new automated cases**: nine timing, conflict, late
+absence, denial, changed ownership and deadline cases in
+`setup_permission_actions_cleanup_timing`; two adapter/journal scenarios in
+`setup_permission_operator_actions` prove delayed success and timeout followed
+by recovery before a new dispatch. Fake clocks avoid real polling waits.
+Existing cleanup, role separation, per-module coverage and human gates apply.
+`docs/authentication.mdx` explains waiting and fresh-session recovery; bounded
+provider evidence remains separate from fixture success. See
+[GitHub cancellation and deletion responses](https://docs.github.com/en/rest/actions/workflow-runs).
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Content and verification |
@@ -673,7 +824,8 @@ promoting any of its 42 open cases.
    late completion never emits verified progress or starts a dependent request.
 5. Every enabled runtime route requests Contents read or its stronger write.
 6. Initial displayed writes need create, exact readback and confirmed cleanup
-   after identity/account checks, including conditional writes. Preview/dry-run
+   after identity/account checks. Guided conditional health Writes wait for the
+   approved plan; manual/supplied-token conditional Writes remain initial checks. Preview/dry-run
    cannot start them or mutate recovery resources. Decline/revision does not
    start a final audit or persistent installation.
 7. Changed/legacy ref is retained; exact name and recorded SHA may be deleted.

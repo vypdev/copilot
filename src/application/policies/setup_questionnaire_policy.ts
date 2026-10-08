@@ -8,6 +8,7 @@ import type {
   SetupQuestionnaireStateId,
   SetupQuestionnaireProgress,
 } from '../../domain/setup_questionnaire';
+import { setupNeedsInitialVersion } from './setup_issue_workflow_policy';
 import { cloneSetupConfiguration } from './setup_configuration_clone_policy';
 import { createDefaultSetupConfiguration, SETUP_AGENT_TASKS, SETUP_FEATURE_DESCRIPTIONS } from './setup_configuration_defaults';
 import { ISSUE_WORKFLOW_KINDS, ISSUE_WORKFLOW_CATALOG, createIssueWorkflowProfile, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
@@ -17,7 +18,7 @@ const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'] as const;
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'] as const;
 const PERMISSION_INTENT_QUESTION_IDS = new Set([
   'features.issues', 'features.pullRequests', 'issueWorkflows.enabled',
-  'pullRequestApproval.mode', 'projects.enabled', 'createInitialTag',
+  'pullRequestApproval.mode', 'projects.enabled',
   'manageRepositoryVariables', 'manageRepositorySecrets',
   'storage.variables.defaultScope', 'storage.variables.preserveExisting',
   'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',
@@ -38,6 +39,7 @@ export function createSetupQuestionnaire(
   context: SetupQuestionnaireContext = {},
 ): SetupQuestionnaireState {
   const draft = cloneSetupConfiguration(configuration);
+  draft.createInitialTag = setupNeedsInitialVersion(draft);
   const independently = hasIndependentAgentSettings(draft);
   const question = questions(draft, independently, context, 'full')[0];
   return question
@@ -56,6 +58,7 @@ export function createSetupPermissionIntentQuestionnaire(
   context: SetupQuestionnaireContext = {},
 ): SetupQuestionnaireState {
   const draft = cloneSetupConfiguration(configuration);
+  draft.createInitialTag = setupNeedsInitialVersion(draft);
   const projectsWanted = context.projectsWanted ?? Boolean(draft.projects.ids.trim());
   const question = questions(draft, false, context, 'permission-intent')[0];
   return question
@@ -207,6 +210,7 @@ export function transitionSetupQuestionnaire(
     ? Boolean(parsed.value)
     : state.configureIndependently;
   const draft = applyAnswer(state.draft, state.question, parsed.value, state.configureIndependently);
+  draft.createInitialTag = setupNeedsInitialVersion(draft);
   const projectsWanted = state.question.id === 'projects.enabled' ? Boolean(parsed.value) : state.projectsWanted;
   const answeredQuestionIds = [...(state.answeredQuestionIds ?? []), state.question.id];
   const nextQuestions = questions(draft, configureIndependently, context, state.phase ?? 'full');
@@ -338,7 +342,6 @@ function definitions(): readonly QuestionDefinition[] {
       applies: (draft, _independently, context) => Boolean(draft.projects.ids.trim())
         && sharedProjectStatusOptions(draft.projects.ids, context.projectDiscovery?.candidates ?? []).state === 'unavailable',
     },
-    { stateId: 'provisioning', id: 'createInitialTag', label: 'Create v1.0.0 when no version tag exists?', kind: 'boolean' },
     { stateId: 'provisioning', id: 'manageRepositoryVariables', label: 'Create/update GitHub Actions Variables?', kind: 'boolean' },
     { stateId: 'provisioning', id: 'manageRepositorySecrets', label: 'Validate and provision required GitHub Actions Secrets?', kind: 'boolean' },
     ...storageQuestions('variables'),
@@ -451,16 +454,12 @@ function approvalQuestions(): QuestionDefinition[] {
     {
       stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.minDiffPercent',
       label: 'Minimum changed-line coverage percentage (0–100)', kind: 'number',
-      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
-        ? draft.pullRequestApproval.coverage.minDiffPercent : 80,
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
         && draft.pullRequestApproval.coverage.mode === 'numeric',
     },
     {
       stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.artifactWorkflowName',
       label: 'Exact workflow publishing copilot-diff-coverage-v1', kind: 'text',
-      read: draft => draft.pullRequestApproval.coverage.mode === 'numeric'
-        ? draft.pullRequestApproval.coverage.artifactWorkflowName : '',
       applies: draft => draft.features.pullRequests !== false && draft.pullRequestApproval.mode !== 'off'
         && draft.pullRequestApproval.coverage.mode === 'numeric',
     },
@@ -628,7 +627,7 @@ function parseAnswer(question: SetupQuestion, raw: string): { value: string | nu
     return choice ? { value: choice } : { error: 'Select one of the listed options.' };
   }
   if (question.kind === 'multi-select') {
-    const selected = parseWorkflowSelection(input || String(question.defaultValue));
+    const selected = parseWorkflowSelection(input);
     if ('error' in selected) return selected;
     return { value: selected.value.join(',') };
   }
@@ -729,8 +728,8 @@ function applyAnswer(
 
 function parseWorkflowSelection(raw: string): { value: IssueWorkflowKind[] } | { error: string } {
   const normalized = raw.trim().toLowerCase();
-  if (normalized === 'none') return { value: [] };
-  if (!normalized || normalized === 'all') return { value: [...ISSUE_WORKFLOW_KINDS] };
+  if (!normalized || normalized === 'none') return { value: [] };
+  if (normalized === 'all') return { value: [...ISSUE_WORKFLOW_KINDS] };
   const requested = normalized.split(',').map(item => item.trim()).filter(Boolean)
     .map(item => item.replace(/\s+—.*$/u, '').replace(/^\d+[.)]\s*/u, ''));
   const unknown = requested.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));

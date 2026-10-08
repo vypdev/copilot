@@ -1,10 +1,11 @@
 import type { TerminalDriver } from '../application/ports/setup_terminal_ports';
-import type { SetupCredentialPromptPort } from '../application/ports/setup_wizard_ports';
+import type { SetupCredentialPromptPort, SetupWorkflowPatConflictPromptPort } from '../application/ports/setup_wizard_ports';
 import type {
   SetupCredentialCheck,
   SetupCredentialDecision,
   SetupCredentialRequirement,
   SetupCredentialValue,
+  SetupWorkflowPatStorageNotice,
 } from '../domain/setup';
 import type { SetupTokenPermissionReport } from '../domain/setup_token_permissions';
 import type { SetupGithubIdentity } from '../application/ports/setup_pat_identity_ports';
@@ -12,6 +13,7 @@ import { color, renderBox, statusIcon } from './setup_prompt_rendering';
 import type { SetupTokenPermissionRequirement } from '../domain/setup_token_permissions';
 import { renderSetupTokenPermissionRequirements } from './setup_token_permission_presenter';
 import { SetupInteractionCancelledError } from '../application/errors/setup_interaction_cancelled_error';
+import { workflowPatStorageCopy } from './setup_workflow_pat_storage_copy';
 
 /** @deprecated Use the presentation-neutral cancellation signal in new adapters. */
 export const SetupTerminalCancelledError = SetupInteractionCancelledError;
@@ -19,7 +21,7 @@ export const SetupTerminalCancelledError = SetupInteractionCancelledError;
 const AUTHENTICATION_GUIDE = 'https://docs.page/vypdev/copilot/authentication';
 const GITHUB_PAT_SETTINGS = 'https://github.com/settings/personal-access-tokens';
 
-export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
+export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort, SetupWorkflowPatConflictPromptPort {
   private setupPatGuide?: string;
   private workflowPatGuide?: string;
   private resolveBotIdentity?: (login: string) => Promise<SetupGithubIdentity>;
@@ -131,7 +133,7 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
       console.log('Copy the one-time token from GitHub and paste it below. It is hidden and used only for this setup run.');
     }
     console.log(renderBox(
-      'Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.',
+      'Enter a GitHub setup PAT. After identity validation, permission verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history. Pending cleanup blocks setup. Installation still requires plan approval. The token stays in memory; the bot workflow PAT is requested separately.',
       'Setup PAT',
       33,
     ));
@@ -188,8 +190,9 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
   async requestWorkflowPat(
     requirement: SetupCredentialRequirement,
     current?: SetupCredentialCheck,
+    storage?: SetupWorkflowPatStorageNotice,
   ): Promise<SetupCredentialValue | undefined> {
-    if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide) {
+    if (this.terminal && !this.credentialValues[requirement.name]?.trim() && this.workflowPatGuide && !this.guidedBotIdentity) {
       let choice: string;
       do {
         choice = await this.readChoice('How would you like to provide the bot workflow PAT?', ['guided link', 'manual PAT', 'view full permission table'], 'guided link',
@@ -204,17 +207,44 @@ export class SetupCredentialPromptAdapter implements SetupCredentialPromptPort {
         const identity = await this.resolveBotIdentity!(login);
         this.guidedBotIdentity = identity;
         console.log(`Expected bot account resolved: @${identity.login} (GitHub account ID ${identity.id}).`);
-        console.log(renderBox(
-          `Open this link in a separate/private browser session, sign in as @${login} (the bot account), and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`,
-          'Create bot PAT in GitHub', 33,
-        ));
-        console.log(this.workflowPatGuide);
-        console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
       } else if (this.workflowPatRequirements) {
         console.log(renderSetupTokenPermissionRequirements('workflow', this.workflowPatRequirements));
       }
     }
+    if (this.guidedBotIdentity) {
+      console.log(renderBox(
+        `You must open this link with the selected bot account: @${this.guidedBotIdentity.login}. Use a separate/private browser session and complete its 2FA or SSO. Review every grant and select ONLY the intended repository manually. GitHub creates the PAT; Copilot does not store bot web credentials. The suggested expiry is 90 days—renew the token and update the Actions Secret before then.`,
+        'Create bot PAT in GitHub', 33,
+      ));
+      console.log(this.workflowPatGuide);
+      console.log('Copy the one-time bot token and paste it below. It will be validated before any Secret is written.');
+    }
+    if (storage) console.log(renderBox(workflowPatStorageCopy(storage), 'Bot PAT storage', 33));
     return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
+  }
+
+  async resolveWorkflowPatConflict(repository: string, state: 'present' | 'unavailable'): Promise<'recheck' | 'repository' | 'cancel'> {
+    if (!this.terminal) return 'cancel';
+    console.log(renderBox([
+      state === 'present' ? `Repository Secret PAT in ${repository} overrides the selected organization PAT.`
+        : 'GitHub Secret inventory could not be checked. The PAT conflict remains unresolved.',
+      'Remove the repository Secret PAT in GitHub and ask Copilot to check again, or store the new PAT in this repository instead. Your setup answers are retained. Copilot will not delete any Secret.',
+      `Repository Actions Secrets: https://github.com/${repository}/settings/secrets/actions`,
+    ].join('\n'), 'Bot PAT scope conflict', 33));
+    const choice = await this.readChoice('How would you like to continue?',
+      ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'stop setup']);
+    return choice === 'I have deleted the repository PAT — check again' ? 'recheck'
+      : choice === 'Store PAT in the repository instead' ? 'repository' : 'cancel';
+  }
+
+  async recoverWorkflowPatIdentityMismatch(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'> {
+    if (!this.terminal) return 'cancel';
+    console.log(renderBox(
+      `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub and create another while signed in as @${expected.login}.`,
+      'Bot PAT account mismatch', 33,
+    ));
+    const answer = await this.readChoice('How would you like to continue?', ['enter another bot PAT', 'stop setup']);
+    return answer === 'enter another bot PAT' ? 'retry' : 'cancel';
   }
 
   private async readBotLogin(): Promise<string> {

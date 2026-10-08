@@ -7,6 +7,8 @@ description: Detailed configuration options for Copilot
 
 Copilot provides extensive configuration options to customize your workflow. Use the tabs below to jump to the category you need.
 
+To inspect existing settings or change one independent parameter, use the [web configuration panel](/how-to-use#inspect-configuration-and-make-a-small-adjustment). Each quick adjustment shows its source and scope, preserves unrelated values, and verifies the written value from GitHub.
+
 PR bot approval uses the versioned `pullRequestApproval` setup object and `PR_APPROVAL_POLICY` Variable, not a free-form Action override. See the [guarded approval configuration reference](/pull-requests/guarded-approval) for every field, bound, and safety prerequisite.
 
 <Tabs sync={false}>
@@ -187,6 +189,17 @@ storage:
 
 Guided setup asks the permission-affecting Secret and Variable management and default-scope questions before the setup PAT is created. After token authentication, the remaining questionnaire inspects the repository and reports repository-scoped resources, organization resources available to that repository, visibility, and access errors. Remote-dependent inherited-resource overrides are asked then; they may require a corrected PAT. Each accepted answer creates a fresh configuration snapshot; defaults, overrides, prior answers, and the result do not share mutable nested references. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
 
+Secret `PAT` is the preservation exception: setup always collects and audits
+the bot PAT and writes it at `storage.secrets.overrides.PAT` or, if absent,
+`storage.secrets.defaultScope`. Other Secrets and Variables keep their existing
+preservation behavior. An existing PAT in that destination gets an explicit
+replacement notice; an organization replacement can affect other repositories.
+A repository PAT shadows an organization PAT. Interactive setup offers a manual
+GitHub deletion followed by **I have deleted the repository PAT — check again**,
+a PAT-only repository override, or stopping. The recheck must confirm available
+inventory without PAT before retaining the organization target. Unattended
+setup blocks on the conflict instead of silently changing scope or deleting it.
+
 Organization storage is available only for organization-owned repositories and requires organization Actions permissions on the setup PAT. If only one class should be global, set that class to `organization` and leave the other at `repository`. `--skip-secrets` and `--skip-variables` disable their respective setup operations without changing the other class.
 
 Interactive PAT guidance does not add configuration keys: it is a one-run
@@ -198,8 +211,11 @@ and `--config` keep their normal precedence; fields fixed by them are skipped
 by the questionnaire. A supplied environment setup PAT is never consumed
 silently in the web mode; the browser asks whether to use it without seeing
 its value. `--web` rejects unattended approval and secret-bearing flags.
-The link reflects reviewed local intent; remote-only conditions are disclosed separately
-and may require correction after inspection. The bot-PAT
+The link reflects reviewed local intent. Selected Secret management prefills
+repository Actions, Contents and Workflows write for possible health checks;
+these conditional checks wait until the approved plan requires them. With
+`--skip-secrets`, health-write grants are omitted. Inherited organization
+resources and changed choices may still require correction after inspection. The bot-PAT
 link is built from the final workflow permission policy and suggests a 90-day
 expiry; the bot account owner must renew it and replace Secret `PAT` before
 expiration. Manual and non-interactive token inputs keep their existing

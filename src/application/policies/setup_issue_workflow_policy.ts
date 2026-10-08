@@ -62,3 +62,8 @@ export function effectiveIssueFormLabels(
     release: Object.freeze([...labels.release, priority.medium]),
   });
 }
+
+/** Release and hotfix issue workflows need a version baseline; other kinds do not. */
+export function setupNeedsInitialVersion(configuration: Pick<SetupConfiguration, 'features' | 'issueWorkflows'>): boolean {
+  return effectiveIssueWorkflowProfile(configuration).enabled.some(kind => kind === 'release' || kind === 'hotfix');
+}

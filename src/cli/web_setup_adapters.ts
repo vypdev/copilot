@@ -1,9 +1,9 @@
 import type { SetupConfigurationCollectorPort, SetupDiscoveryRefreshPort, SetupPlanConfirmationPort, SetupPlanPresenterPort } from '../application/ports/setup_terminal_ports';
-import type { SetupCredentialPromptPort, SetupWorkflowUpdatePromptPort } from '../application/ports/setup_wizard_ports';
+import type { SetupCredentialPromptPort, SetupWorkflowUpdatePromptPort, SetupWorkflowPatConflictPromptPort } from '../application/ports/setup_wizard_ports';
 import type { SetupTokenPermissionPresenterPort } from '../application/ports/setup_token_permission_ports';
 import type { SetupJourneyPresenterPort } from '../application/usecases/setup/setup_journey_use_case';
 import type { SetupGithubIdentity } from '../application/ports/setup_pat_identity_ports';
-import type { SetupCredentialCheck, SetupCredentialDecision, SetupCredentialRequirement, SetupCredentialValue, SetupPlan, SetupWorkflowComparison } from '../domain/setup';
+import type { SetupCredentialCheck, SetupCredentialDecision, SetupCredentialRequirement, SetupCredentialValue, SetupPlan, SetupWorkflowComparison, SetupWorkflowPatStorageNotice } from '../domain/setup';
 import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement, SetupTokenRole } from '../domain/setup_token_permissions';
 import type { SetupQuestion, SetupQuestionnaireContext, SetupQuestionnaireState } from '../domain/setup_questionnaire';
 import { refreshSetupQuestionnaireQuestion, setupEditableGroups, setupQuestionnaireProgress, setupQuestionnaireStateLabel, transitionSetupQuestionnaire } from '../application/policies/setup_questionnaire_policy';
@@ -108,7 +108,7 @@ export class WebSetupJourneyPresenter implements SetupJourneyPresenterPort {
   present(view: Parameters<SetupJourneyPresenterPort['present']>[0]): void { this.bridge.setJourney(view); }
 }
 
-export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
+export class WebSetupCredentialPrompt implements SetupCredentialPromptPort, SetupWorkflowPatConflictPromptPort {
   private setupGuide?: string;
   private workflowGuide?: string;
   private guidedSetup = false;
@@ -136,7 +136,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
   }
   async requestSetupPat(): Promise<string | undefined> {
     return this.secret('Temporary setup PAT',
-      'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources, including displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.',
+      'Use the operator account in GitHub. Select this repository and enter the PAT. After identity validation, verification creates, reads and deletes isolated temporary resources for required grants. In guided mode, conditional health writes wait until the approved plan requires them. Manual PAT entry also tests displayed conditional writes. Tests may leave notifications and audit history; pending cleanup blocks setup. Installation requires plan approval. Delete the PAT afterwards.',
       this.guidedSetup ? this.setupGuide : undefined, false, 'setupPat.entry');
   }
   async confirmGuidedSetupAccount(account?: string): Promise<boolean> {
@@ -145,6 +145,7 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
     return await this.choice(`GitHub authenticated the setup PAT as @${account}. Is that the intended operator account?`, ['Yes, continue', 'No, stop'], undefined, 'setupPat.confirmAccount', { account }) === 'Yes, continue';
   }
   showUpdatedSetupPatLink(url: string, stage: 'bootstrap' | 'final', delta?: readonly string[]): void {
+    this.bridge.setupPatCorrection(url, stage, delta);
     this.bridge.message(`Setup PAT ${stage === 'final' ? 'permissions changed' : 'access failed'}. Installation has not started. Resolve failed permission tests and any pending cleanup before retrying. ${delta?.join(', ') ?? ''} Create a corrected PAT using the updated GitHub link.`, 'warning', url, stage === 'final' ? 'setupPat.corrected.final' : 'setupPat.corrected.bootstrap', { grants: delta?.join(', ') ?? '' });
   }
   showSetupPatCleanupReminder(): void {
@@ -164,23 +165,40 @@ export class WebSetupCredentialPrompt implements SetupCredentialPromptPort {
   explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void {
     this.bridge.message(`The bot PAT is separate from your setup PAT. Runtime credentials (${requirements.map(item => item.name).join(', ')}) become GitHub Actions Secrets; existing Secret values cannot be read back. This browser flow will not dispatch or install a credential-health workflow before Apply. Re-enter an existing bot PAT so its grants can be audited.`, 'info', undefined, 'botPat.separation', { names: requirements.map(item => item.name).join(', ') });
   }
-  async requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined> {
+  async requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck, storage?: SetupWorkflowPatStorageNotice): Promise<SetupCredentialValue | undefined> {
     let guide: string | undefined;
     let botInfo = '';
-    if (this.workflowGuide) {
+    if (this.workflowGuide && !this.botIdentity) {
       const method = await this.choice('How will you provide the bot PAT?', ['Guided GitHub link', 'Manual PAT'], undefined, 'botPat.method');
       if (method === 'Guided GitHub link') {
         const login = await this.text('Expected GitHub bot login', 'Enter the bot account login, without @. We will verify its numeric account ID against the token.', 'botPat.login');
         if (!login || !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login)) throw new Error('Enter a valid GitHub bot login.');
         this.botIdentity = await this.resolveBot!(login);
-        guide = this.workflowGuide;
-        botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
       } else if (this.workflowRequirements) this.bridge.requirements('workflow', this.workflowRequirements);
+    }
+    if (this.botIdentity) {
+      guide = this.workflowGuide;
+      botInfo = `Expected bot account: @${this.botIdentity.login} (GitHub ID ${this.botIdentity.id}). Open GitHub as this account, not the setup operator. `;
     }
     const value = await this.secret(`${requirement.name} — bot account PAT`,
       `${botInfo}Use the bot account, select only the intended repository and review all grants. Suggested expiry is 90 days. ${current ? `Existing Secret: ${current.status}; its value cannot be read back.` : ''}`,
-      guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '' });
+      guide, false, guide ? 'botPat.entry.guided' : 'botPat.entry.manual', { name: requirement.name, account: this.botIdentity?.login ?? '', accountId: String(this.botIdentity?.id ?? ''), existing: current?.status ?? '',
+        ...(storage ? { storageScope: storage.scope, storageDestination: storage.destination, storageReplacesExisting: String(storage.replacesExisting) } : {}) });
     return value ? { name: requirement.name, value } : undefined;
+  }
+  async resolveWorkflowPatConflict(repository: string, state: 'present' | 'unavailable'): Promise<'recheck' | 'repository' | 'cancel'> {
+    const choice = await this.choice('Resolve the bot PAT scope conflict',
+      ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'],
+      'The repository PAT overrides the selected organization PAT. Remove the repository Secret in GitHub and check again, or change the PAT scope. Your setup answers are retained. No Secret will be deleted by Copilot.',
+      state === 'present' ? 'botPat.scopeConflict' : 'botPat.scopeConflictUnavailable', { repository });
+    return choice === 'I have deleted the repository PAT — check again' ? 'recheck'
+      : choice === 'Store PAT in the repository instead' ? 'repository' : 'cancel';
+  }
+  async recoverWorkflowPatIdentityMismatch(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'> {
+    const answer = await this.choice('This PAT belongs to a different GitHub account', ['Enter another bot PAT', 'Stop setup'],
+      `This PAT belongs to @${actual.login}; the selected bot is @${expected.login}. No bot Secret was written. Your answers and approved plan are retained. Delete the unused PAT in GitHub, switch to @${expected.login}, then choose whether to enter another PAT or stop setup.`,
+      'botPat.identityMismatch', { expected: expected.login, actual: actual.login });
+    return answer === 'Enter another bot PAT' ? 'retry' : 'cancel';
   }
   async requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined> {
     const value = await this.secret(`${requirement.name} — ${requirement.provider ?? 'provider'} API key`, current?.message, undefined, Boolean(requirement.alternativeGroups?.length), 'credential.apiKey', { name: requirement.name, provider: requirement.provider ?? 'provider' });

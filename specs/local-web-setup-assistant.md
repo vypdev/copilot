@@ -3,7 +3,7 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-10-05 (PR #402 merge baseline and fixture-only follow-up evidence are recorded below; the operator incident is external evidence, not agent dogfooding)
+- Last verified: 2026-10-07 (PR #402 merge baseline, fixture follow-up and isolated permission-denial evidence are recorded below; no setup plan was applied by the agent)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
@@ -34,6 +34,16 @@ temporary resources retains the ordinary cancelled or blocked result. An
 unconfirmed cleanup produces a partial result and preserves the permission
 failure and local recovery journal, including during the final pre-Apply
 recheck. The browser must show the affected row and recovery action.
+
+## Configuration management entry (2026-10-08)
+
+Web mode now starts with an inspectable configuration panel and supports focused,
+independently approved runtime adjustments. The additive contract, state model,
+96-case budget, architecture and evidence gates live in
+[Configuration panel and focused adjustments](./setup-configuration-management.md).
+This supersedes the web-only assumption that every launch immediately starts the
+installation questionnaire. Terminal behavior and full-wizard guards remain.
+
 
 ## 1. Executive summary
 
@@ -318,10 +328,19 @@ exactly what completed and what remains.
    scopes, workflow updates, warnings, and credential **status only**. The
    operator reviews a plan revision. Then present the *distinct* bot PAT
    grants and resolved expected bot user ID. GitHub's form opens under the
-   bot account; the submitted bot PAT must pass the current guided numeric-ID
+   bot account. The link names the selected bot, with an adjacent account warning
+   and private-window/account-switching guidance. The submitted bot PAT must pass the current guided numeric-ID
    and grant checks before Secret `PAT` may be written. Manual and existing
    PAT handling retain the baseline's exact claims, not invented identity
-   assurances. An existing GitHub Secret value cannot be read back: when the
+   assurances. A confirmed bot-ID mismatch pauses for an explicit **Enter another
+   bot PAT** or **Stop setup** choice. Re-entry retains the approved plan, answers
+   and bot identity in this session, discards the rejected value and rechecks the
+   new hidden PAT before permission tests or Secret writes. No automatic retreat
+   or restart persistence is introduced. Generic provider, permission and cleanup
+   failures keep their existing behavior. The 22 new account-warning/recovery
+   regressions are specified in the [bot onboarding SDD](./guided-bot-pat-onboarding.md#14-testing-strategy-and-numeric-budget)
+   and do not close this SDD's human acceptance rows.
+   An existing GitHub Secret value cannot be read back: when the
    existing policy requires re-audit, ask for a new/re-entered bot PAT and
    show preserve-versus-replace consequences before Apply. Other credentials
    use masked local inputs. Unlike the terminal composition, the web
@@ -481,6 +500,17 @@ decision as an inline sequence. The subsequent mutation boundary remains
 single-flight and cannot be entered if the approval use case did not return an
 approved result. Deterministic fake-port tests cover every drift category,
 cancel/expiry interleavings, and audit outcomes.
+
+Apply installs a repository; it has no issue workflow admission prerequisite.
+The CLI action adapter must not supply a placeholder issue number. Application
+issue resolution ignores incidental issue/PR/push metadata for `initial_setup`,
+including the old explicit issue `1`, while preserving authentication and setup
+validation. The production local-action/installation fixture proves that an
+approved Codex plan with an omitted API key reaches scoped provisioning when
+runner authentication is the chosen alternative. Its **10-case incremental
+budget** is owned by [setup and doctor](./setup-configuration-credentials-and-doctor.md#14-testing-strategy-and-numeric-budget),
+shared here without adding a second count to the web acceptance ledger. Other
+issue-bound actions retain their admission checks.
 
 The follow-up extraction MUST introduce a frontend-neutral application session
 coordinator that owns the order and terminal classification of repository
@@ -698,6 +728,129 @@ button says `Apply to vypdev/copilot`; it is disabled until the current plan
 revision is accepted. After click, disable retries until the same operation
 returns; never imply progress based on elapsed time alone.
 
+### 9.1.1 Setup review layout correction — 2026-10-06
+
+All selectable lists, permission lists, plan inventories and warnings MUST grow
+with their visible content. They MUST NOT impose fixed-height internal scroll
+areas; narrow progress navigation wraps. The document is the scrolling surface.
+The four plan inventories use native `details`/`summary`, closed initially and
+labelled with their exact item counts. Opening one reveals every item in normal
+page flow. Warnings remain visible without disclosure. The plan occupies the
+workspace width; its context cards follow it. Key decisions use aligned label
+and value columns, separated rows and consistent body/list typography. At narrow
+widths those rows stack without clipping or horizontal page scrolling.
+
+Every question, credential and pairing navigation row MUST keep the primary
+Continue action on the right, including when Previous is absent. When present,
+Previous stays on the left. Plan approval retains the same alignment. No new
+configuration, mutation or persistence behavior is introduced.
+
+```text
+Review your setup plan
+[Temporary checks and their prerequisites]
+[Key decisions: label | value, with space between rows]
+[Files 29 ▸]                 [Workflows 15 ▸]
+[Variables 68 ▸]             [Secret names 1 ▸]
+[Before you continue: every warning visible]
+[Change your answers]
+Stop here                                  Approve this plan →
+```
+
+Text equivalent: review temporary checks and decisions first; expand any
+inventory to inspect all items, then read warnings and edit or approve. Pending
+and completed views retain their existing contracts. Blocked permission results
+show the bounded prerequisite explanation described by the PAT SDD; partial
+cleanup remains the primary recovery instruction.
+
+Incremental regression budget: **9 automated cases** (four locale result
+renders, four locale progress/evidence consistency cases, one credential/pairing
+navigation case), plus credential-free browser observations of plan inventories,
+CI cards, question navigation and blocked results in desktop/narrow layouts and
+light/dark themes. These supplement the existing ledger; they do not close
+independent accessibility or provider gates. Evidence lives in the component,
+catalog and browser-review fixtures; user guidance lives in authentication and
+`docs/development/setup-assistant-review.mdx`. Rollback restores presentation
+and optional diagnostics without changing stored answers or setup configuration.
+
+### Bot PAT destination and manual shadow recheck — 2026-10-07
+
+The [bot storage amendment](./guided-bot-pat-onboarding.md#existing-pat-replacement-and-scope-conflict-recovery--2026-10-07)
+is authoritative for mandatory PAT replacement and the 57-case regression
+floor. Before approval, the browser shows a repository/org PAT conflict as an
+active choice rather than a terminal error. **I have deleted the repository
+PAT — check again** triggers a fresh, read-only inventory query; it never
+trusts the declaration or deletes a Secret. Known presence and failed reads
+retain the draft and three choices. **Store PAT in the repository instead**
+adds only the PAT repository override and requires a rebuilt, approved plan.
+Stop/close and stale revisions retain the existing cancellation/controller
+contract. Plan and hidden credential views disclose exact destination,
+replacement despite preservation, and organization shared impact in all four
+locales. Organization namespace metadata catches a PAT not currently shared
+with this repository; unavailable reads cannot be treated as absence.
+No stored token is retrieved, no health Action is dispatched for the previous
+PAT, and no deletion/migration capability or flag is added. Web Apply rereads
+the approved facts, including namespace state and repository shadows.
+Credential-free review fixtures and semantic tests supplement the existing
+acceptance ledger without closing its separate live/accessibility gates.
+
+### 9.1.2 Guided setup PAT recovery after inspection — 2026-10-07
+
+The first guided PAT link includes disclosed conditional Actions, Contents and
+Workflows WRITE when Secret management is selected. GitHub inspection can
+confirm existing Secrets and a missing credential-health workflow, making
+those grants required in the final audit. Other remote-only scopes and changed
+choices can still need correction. When this final audit blocks setup, the updated
+official PAT creation link MUST survive cleanup reminders, permission updates
+and the terminal outcome message. `WebSetupView.setupPatCorrection` carries the
+generated URL, `bootstrap`/`final` stage and finite permission delta separately
+from transient messages. It contains no token, provider response or submitted
+answer. The bridge accepts only the HTTPS GitHub PAT creation endpoint without
+URL credentials or fragments; the application remains responsible for building
+the link from required grants. The browser does not derive permission scopes.
+
+```mermaid
+flowchart LR
+  A[Provisional guided PAT] --> B[GitHub inspection]
+  B --> C[Final permission audit]
+  C -->|Denied grant; cleanup confirmed| D[Blocked result with corrected PAT link]
+  D --> E[Operator selects repository and creates corrected PAT on GitHub]
+  E --> F[Close local session and start fresh setup]
+```
+
+Text equivalent: final inspection may require more grants than the first link;
+an unsuccessful audit stops before setup changes and exposes a corrected link.
+The operator creates the replacement in GitHub and starts a new local run.
+
+```text
+No setup changes started
+[PAT permission evidence: Actions prerequisite; Workflows Missing]
+Correct the setup PAT
+Select this repository before creating the PAT. Close this local session,
+then start a fresh setup run with the corrected PAT.
+Additional permissions discovered after inspection:
+  repository Workflows write
+Create corrected setup PAT ↗
+```
+
+Render this recovery section in all four web locales only for a blocked
+permission outcome with `mutationStarted: false` and a supplied correction.
+Pending probe cleanup, concurrent Secret collisions, partial setup or unrelated
+failures MUST keep their inspection instructions without offering this shortcut.
+Manual PAT entry and older views without the optional field retain the generic
+PAT settings action. Do not broaden the link from this recovery section, auto-retry an audit,
+reuse approvals, revoke credentials or apply setup from this recovery section.
+No configuration, persistent storage or journal schema changes are introduced;
+rollback drops the optional view field and restores the generic recovery UI.
+
+Incremental budget: **20 automated cases** shared with the PAT SDD: seven bridge
+retention/URL/lifecycle cases, twelve result rendering cases (four locales,
+seven suppression conditions and bootstrap wording), one application case for
+Workflows discovered after inspection. Extend the existing credential adapter
+test through cleanup and finish. Credential-free desktop/narrow browser review
+checks the correction panel spacing and link target; it does not close human
+or provider ledger rows. Authentication and fixture-review documentation must
+describe provisional grants, the persistent final link and a fresh run.
+
 ### 9.2 Browser, responsive, accessibility, and localization
 
 The visual system is a reusable set of tokens and patterns, not page-specific
@@ -901,12 +1054,61 @@ guarded mode fails closed until exact identities and human attestations pass.
 
 Discovery MUST return a semantic state (`observed`, `no-recent-runs`,
 `permission-denied`, `unavailable`) independently of its candidates. The web
-and terminal explain which state occurred, the bounded sample (20 recent PR
-workflow runs, at most 15 inspected; up to 30 Projects over two pages), and the
+and terminal explain which state occurred, the bounded sample (up to 20 PR
+runs selected from the latest 1,000 workflow runs within 90 days, at most 15
+inspected; up to 30 Projects over two pages), and the
 next action before asking for a manual tuple. A network/API failure must not
 masquerade as an empty repository. The manual path labels check name, numeric
 source App ID, and workflow name separately (or gives an equivalent CLI
 template), validates the exact tuple, and never treats it as verified.
+The adapter MUST read at most ten pages of 100 latest workflow runs
+without provider search filters and select only `pull_request` events locally.
+It MUST stop after collecting at least 20 recent PR runs, an exhausted page,
+or a page whose dates are all older than the lookback. It MUST report a
+truncated sample if it reaches ten full pages without those stopping conditions.
+Malformed inventories and failures on later pages MUST return an error state,
+never trusted partial candidates. It MUST retain at most 20 runs from the last
+90 days and discard dates outside
+that
+window (including future or malformed dates), sort the remaining sample by
+creation time descending before the 15-run inspection limit, and retain the
+newest evidence for each producer identity. This fixed discovery window is
+not configurable and does not expire an already configured producer; older
+checks remain available through manual entry. A retry refreshes the window
+without clearing answers or widening the sample. No extra PAT grants or
+GitHub writes are introduced. Existing sessions use their launching package;
+installing a new package requires a fresh session to use the changed lookup.
+
+The 2026-10-07 regression showed identical unbounded PR-run queries returning
+either current runs or a March-only sample. Adding a date filter still
+returned September runs in a later check. Listing latest runs without the
+remote event/date filters returned current CI Check, RepoWise and
+Ubuntu/Windows/macOS runs in read-only diagnostics; the exact upstream cause
+remains unknown. See GitHub's
+[workflow-run listing and search filters](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository).
+The initial incremental test budget is **5 distinct cases**: four adapter cases for
+the unfiltered query bound, stale/malformed/future and non-PR rejection,
+sorting before inspection
+with newest duplicate evidence, and the inclusive date/page limits; one
+offline real-SDK integration case verifies serialized parameters and the
+exact job/check/App join without inspecting stale or push-only runs. These
+supplement the existing permission, outage,
+retry-retention and four-language presentation coverage. The evidence is in
+`github_setup_approval_check_discovery_adapter.test.ts` and
+`setup_check_discovery_sdk_contract.integration.test.ts`; user guidance is in
+`docs/pull-requests/guarded-approval.mdx`, the CLI and all four web locales.
+Repository coverage and architecture budgets remain in force. The fixture
+performs no live setup or Apply; manual UX acceptance remains governed by the
+existing acceptance ledger.
+
+The bounded pagination correction adds **6 distinct adapter cases** for a
+PR hidden behind a full push-only page, stopping at an entirely stale page,
+exhausting a nonempty inventory, the ten-page cap, a later-page denial, and a
+malformed inventory. The existing newest-evidence case additionally asserts
+that 20 collected PR runs prevent further page reads. These cases are counted
+once outside the fixed 350-case web acceptance ledger; no new manual gate or
+live provider write is introduced.
+
 The web App ID field MUST remain string-bound (with a numeric keyboard hint)
 and normalize both string and numeric values before validation; an edited
 number MUST NOT throw or silently drop a valid producer. Observed check
@@ -1427,6 +1629,14 @@ still offers the terminal setup and doctor paths.
 
 ## 14. Testing strategy and numeric budget
 
+Bot permission failures select role-specific result copy from the authoritative
+permission report. A workflow-role failure MUST name the bot PAT, including
+when temporary cleanup is pending; stale reports cannot override unrelated
+storage/provider causes. The plan explains that the setup PAT prepares and
+cleans an Actions fixture while the bot PAT dispatches and reads it. Four
+localized component cases in `web_setup_components` cover this correction as
+part of the 27-case PAT regression slice in the permission-guidance SDD.
+
 The revised floor is **350 distinct cases** (the previous 274 plus 76
 first-run-completion cases), derived from shared-engine parity,
 six-stage transitions, two PAT roles, local HTTP abuse, packaged installs,
@@ -1535,6 +1745,16 @@ GitHub, wrong-account handling, narrow/200%-zoom keyboard and screen-reader
 pass, system/light/dark visual review including contrast/focus/error states,
 browser close/reopen, and truthful partial result. Controlled evidence
 uses test accounts outside this repository; no dogfooding is required.
+
+The initial tag is an automatic plan outcome governed by the effective release/
+hotfix issue workflow selection, not a provisioning question. Existing semantic
+version tags skip creation; only confirmed absence permits `v1.0.0`. Remote
+inspection uses the setup PAT without touching local moving Action tags. Named,
+value-free Variable failure diagnostics and partial outcomes are shared with
+terminal Apply. Existing organization Variable access is reused when the
+inherited inventory confirms it; new selected Variables include access during
+creation. The 48 incremental cases are counted in the setup-and-doctor
+SDD's 180-case budget; they do not add duplicate cases to the web ledger.
 
 ## 15. Documentation and discoverability
 

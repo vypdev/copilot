@@ -122,7 +122,7 @@ describe('Actions resource boundary edge cases', () => {
         await expect(new RepositoryVariablesCommandRepository(provider).upsertScopedVariables('owner', 'repo', 'fixture',
             { ...selectedTarget, organizationVisibility: 'all', repositoryId: 42 }, [{ name: 'EXISTING', value: 'new' }]))
             .resolves.toEqual({ created: 0, updated: 1, errors: [] });
-        expect(actions.updateOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'EXISTING', value: 'new', visibility: 'selected' });
+        expect(actions.updateOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'EXISTING', value: 'new' });
         expect(actions.addSelectedRepoToOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'EXISTING', repository_id: 42 });
         expect(actions.createOrgVariable).not.toHaveBeenCalled();
     });

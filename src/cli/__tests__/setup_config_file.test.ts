@@ -61,9 +61,15 @@ describe('setup configuration file loader', () => {
 
     it('accepts JSON because JSON is a YAML-compatible document', () => {
         const file = join(directory, 'setup.json');
-        writeFileSync(file, JSON.stringify({ createInitialTag: false }));
+        writeFileSync(file, JSON.stringify({ manageRepositoryVariables: false }));
 
-        expect(loadSetupConfigurationOverrides(file)).toEqual({ createInitialTag: false });
+        expect(loadSetupConfigurationOverrides(file)).toEqual({ manageRepositoryVariables: false });
+    });
+
+    it('rejects a manual initial-tag option because workflow selection owns that decision', () => {
+        const file = join(directory, 'tag.json');
+        writeFileSync(file, JSON.stringify({ createInitialTag: false }));
+        expect(() => loadSetupConfigurationOverrides(file)).toThrow('Unknown setup configuration field(s): createInitialTag');
     });
 
     it('accepts independent organization storage policies without credential values', () => {

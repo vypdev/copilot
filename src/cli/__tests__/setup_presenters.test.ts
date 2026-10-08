@@ -21,6 +21,73 @@ function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalD
 }
 
 describe('setup presenters and prompt-specific adapters', () => {
+  it('requires an explicit PAT conflict decision, rejects blank input and prints safe settings navigation', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '' }, { kind: 'value', value: '1' }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('recheck');
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('https://github.com/owner/repo/settings/secrets/actions');
+      expect(output.replace(/[│\s]+/gu, ' ')).toContain('Your setup answers are retained');
+      await expect(new SetupCredentialPromptAdapter(undefined, {}).resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('cancel');
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '2' }]), {})
+        .resolveWorkflowPatConflict('owner/repo', 'unavailable')).resolves.toBe('repository');
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '3' }]), {})
+        .resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('cancel');
+    } finally { log.mockRestore(); }
+  });
+
+  it('discloses bot PAT replacement in the CLI plan and before supplied credential collection', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const storage = { scope: 'organization' as const, destination: 'owner', replacesExisting: true };
+      const plan = buildSetupPlan(createDefaultSetupConfiguration()); plan.workflowPatStorage = storage;
+      const output = renderSetupPlan(plan).replace(/[│\s]+/gu, ' ');
+      expect(output).toContain('Secret PAT already exists in organization owner');
+      expect(output).toContain('affect other repositories');
+      await expect(new SetupCredentialPromptAdapter(undefined, { PAT: 'supplied-fixture' })
+        .requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Bot' }, undefined, storage))
+        .resolves.toEqual({ name: 'PAT', value: 'supplied-fixture' });
+      expect(log.mock.calls.flat().join('\n')).not.toContain('supplied-fixture');
+    } finally { log.mockRestore(); }
+  });
+
+  it('re-enters the guided bot PAT after an explicit choice without repeating method or bot identity input', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '1' }, { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'wrong-token' }, { kind: 'value', value: '' }, { kind: 'value', value: '1' },
+        { kind: 'value', value: 'correct-token' }]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      const expected = { id: 42, login: 'vypbot' };
+      const resolve = jest.fn().mockResolvedValue(expected);
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve);
+      const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime' };
+      await adapter.requestWorkflowPat(requirement);
+      await expect(adapter.recoverWorkflowPatIdentityMismatch(expected, { id: 99, login: 'operator' })).resolves.toBe('retry');
+      await expect(adapter.requestWorkflowPat(requirement)).resolves.toEqual({ name: 'PAT', value: 'correct-token' });
+      expect(resolve).toHaveBeenCalledTimes(1);
+      expect(input.readSecret).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('You must open this link with the selected bot account: @vypbot');
+      expect(output.replace(/[│\s]+/gu, ' ')).toContain('answers and approved plan are retained');
+      expect(output).toContain('retained');
+      expect(output).toContain('Select one of the listed options');
+      expect(output).not.toMatch(/wrong-token|correct-token/u);
+    } finally { log.mockRestore(); }
+  });
+
+  it('supports stopping at a bot mismatch and never prompts an unattended session for recovery', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const expected = { id: 42, login: 'vypbot' }, actual = { id: 99, login: 'operator' };
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '2' }]), {})
+        .recoverWorkflowPatIdentityMismatch(expected, actual)).resolves.toBe('cancel');
+      await expect(new SetupCredentialPromptAdapter(undefined, {})
+        .recoverWorkflowPatIdentityMismatch(expected, actual)).resolves.toBe('cancel');
+    } finally { log.mockRestore(); }
+  });
   it('renders complete and partial doctor reports with text statuses and the no-write guarantee', () => {
     const complete = renderDoctorReport(buildDoctorReport([
       doctorCheck({ id: 'configuration.valid', status: 'pass', summary: 'Valid.' }),
@@ -121,6 +188,25 @@ describe('setup presenters and prompt-specific adapters', () => {
     new ConsoleSetupPlanPresenter().present(plan);
     expect(log).toHaveBeenCalledWith(rendered);
     log.mockRestore();
+  });
+
+  it('does not promise an initial tag when versioned issue workflows are disabled', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.issueWorkflows.enabled = ['feature'];
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
+    configuration.createInitialTag = false;
+    const rendered = renderSetupPlan(buildSetupPlan(configuration)).replace(/[│\s]+/gu, ' ');
+    expect(rendered).toContain('Initial tag: not needed by selected issue workflows');
+  });
+
+  it('reports denied CI discovery as unavailable access and keeps a manual alternative', () => {
+    const rendered = new ConsoleSetupQuestionRenderer().renderPrompt({ stateId: 'pull-request-approval',
+      id: 'pullRequestApproval.testChecks', label: 'Trusted checks', kind: 'producer-select',
+      defaultValue: '', discoveryStatus: 'permission-denied' });
+    expect(rendered).toContain('GitHub denied CI discovery');
+    expect(rendered).toContain('verified producer manually');
+    expect(rendered).not.toContain('No recent PR CI runs');
   });
 
   it('renders bounded choices, defaults, and scope candidates independently of terminal I/O', () => {

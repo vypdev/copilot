@@ -12,7 +12,7 @@
 .result-icon { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 50%; background: var(--accent-tint); color: var(--accent-strong); font-size: 22px; }
 .result-card h2, .waiting-card h2 { font-size: 21px; margin: 18px 0 10px; }
 .result-card p, .waiting-card p { line-height: 1.6; color: var(--muted); font-size: 13px; }
-.result-facts { margin: 20px 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 17px; background: var(--surface-soft); }
+.result-facts { margin: 24px 0; border: 1px solid var(--line); border-radius: 8px; padding: 20px; background: var(--surface-soft); }
 .result-facts p { margin: 8px 0; }
 .result-facts strong { color: var(--text); }
 .result-effects { margin: 20px 0; border: 1px solid var(--line); border-radius: 8px; padding: 14px 17px; background: var(--surface-soft); }
@@ -23,3 +23,8 @@
 .result-links code { background: var(--surface-soft); padding: 8px; border-radius: 5px; }
 .spinner { width: 25px; height: 25px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.result-facts h3 { margin: 0 0 16px; font-size: 15px; line-height: 1.5; }
+.result-permissions { margin: 20px 0 0; padding-inline-start: 20px; font-size: 13px; line-height: 1.65; }
+.result-permissions li + li { margin-top: 16px; }
+.result-permissions p { margin: 6px 0 0; }

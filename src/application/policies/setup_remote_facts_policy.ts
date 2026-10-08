@@ -12,6 +12,7 @@ export function sameSetupRemoteFacts(left: SetupRemoteConfiguration, right: Setu
     repositorySecrets: [...facts.repositorySecrets].sort(),
     repositorySecretsAccess: facts.repositorySecretsAccess,
     organizationSecrets: [...facts.organizationSecrets].sort(),
+    organizationWorkflowPat: facts.organizationWorkflowPat,
     repositoryVariables: variables(facts.repositoryVariables),
     repositoryVariablesAccess: facts.repositoryVariablesAccess,
     organizationVariables: variables(facts.organizationVariables),

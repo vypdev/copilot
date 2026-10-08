@@ -148,12 +148,24 @@ describe('setup token permission policy', () => {
         expect(workflowPermissions.map(item => item.permission)).toEqual(['Metadata']);
     });
 
+    it('does not request health write grants only to inspect an existing bot PAT that must be supplied again', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing',
+        }).map(item => `${item.permission}:${item.level}`);
+        expect(permissions).not.toContain('Actions:write');
+        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).not.toContain('Workflows:write');
+    });
+
     it('detects repository credential health and selected organization Projects in the final setup plan', () => {
         const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
         configuration.projects.ids = 'PVT_kwDOExample';
         const configuredRemote = {
             ...organization,
-            repositorySecrets: ['PAT'],
+            repositorySecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'missing' as const,
         };
 
@@ -169,10 +181,11 @@ describe('setup token permission policy', () => {
 
     it('omits bootstrap-only workflow writes when credential health is already installed', () => {
         const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
         configuration.createInitialTag = false;
         const configuredRemote = {
             ...organization,
-            repositorySecrets: ['PAT'],
+            repositorySecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'installed' as const,
         };
 
@@ -186,13 +199,30 @@ describe('setup token permission policy', () => {
 
     it.each(['unavailable', 'unknown'] as const)('never requests bootstrap mutation grants for %s workflow status', state => {
         const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
         configuration.createInitialTag = false;
         const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
-            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: state,
+            ...organization, repositorySecrets: ['CODEX_API_KEY'], credentialHealthWorkflow: state,
         }).map(item => `${item.permission}:${item.level}`);
         expect(permissions).toContain('Actions:write');
         expect(permissions).toContain('Contents:write');
         expect(permissions).not.toContain('Workflows:write');
+    });
+
+    it('discloses setup Actions fixture grants for release/hotfix bot verification even without existing credentials', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, organization);
+        expect(permissions.map(item => `${item.permission}:${item.level}`)).toEqual(expect.arrayContaining([
+            'Contents:write', 'Actions:write', 'Workflows:write',
+        ]));
+        expect(permissions.find(item => item.permission === 'Workflows')?.reason).toContain('bot Actions check');
+        expect(buildWorkflowPatPermissionRequirements(configuration, organization).some(item => item.permission === 'Workflows')).toBe(false);
+    });
+    it('omits bot verification setup grants when Secret management is disabled', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        configuration.manageRepositorySecrets = false;
+        expect(buildConfiguredSetupPatPermissionRequirements(configuration, organization)
+            .map(item => `${item.permission}:${item.level}`)).not.toEqual(expect.arrayContaining(['Contents:write', 'Actions:write', 'Workflows:write']));
     });
 
     it('retains repository inventory grants for organization storage shadow checks', () => {
@@ -203,7 +233,7 @@ describe('setup token permission policy', () => {
         configuration.storage.variables.preserveExisting = false;
         const configuredRemote = {
             ...organization,
-            organizationSecrets: ['PAT'],
+            organizationSecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'missing' as const,
         };
 

@@ -6,6 +6,16 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 
 Guarded PR approval uses a separate trusted observer entrypoint, a pure domain decision (`pull_request_approval`), a read-before-write application use case, and a GitHub adapter. The adapter owns exact producer/rule/review queries and the `commit_id`-pinned native review. Its PR assessment card and supplemental Check are derived UI; GitHub's native review is authoritative. The observer has no PR-head checkout or agent invocation. See the [runtime SDD](../../specs/guarded-pull-request-approval.md) and [setup/doctor SDD](../../specs/guarded-pull-request-approval-setup-and-doctor.md).
 
+Web configuration management has its own `ManageSetupUseCase` over semantic
+ports. Pure policies resolve local workflow bindings, repository/organization
+precedence, edit bounds and approval fingerprints. A bounded YAML adapter reads
+regular files without executing expressions; the existing GitHub adapters read
+resource inventories and write one Variable. Svelte receives redacted typed
+views and cannot choose provider mutations. Each adjustment crosses explicit
+approval, narrow permission testing, drift recheck and read-back boundaries.
+A controller takeover invalidates the pending approval. See the
+[configuration management SDD](../../specs/setup-configuration-management.md).
+
 The repository separates semantic application ports from provider-specific adapters.
 
 Interactive setup milestones are tracked by the application-layer
@@ -172,9 +182,13 @@ Assisted PAT creation uses the existing permission policy as its only grant
 source. Guided setup runs a permission-intent phase of the same questionnaire
 before token entry, projects local choices through the setup permission policy,
 and carries the draft and answered IDs into the remaining questionnaire. The
-projection leaves remote-only grants unresolved for the final audit. The pure
-`setup_pat_creation_url_policy.ts` maps required grants to
-documented GitHub form parameters and rejects unsupported grants; it never
+projection retains local required grants and adds disclosed conditional health
+prerequisites when Secret management is selected. Guided links explicitly
+include those possible Actions, Contents and Workflows write grants; bootstrap
+audits only local requirements, while final audits derive required writes from
+authenticated remote facts. Other remote-only scopes remain unresolved. The pure
+`setup_pat_creation_url_policy.ts` maps required grants (and, only for reviewed
+setup intent, disclosed conditional grants) to documented GitHub form parameters and rejects unsupported grants; it never
 receives token material. `setup.ts` wires the terminal choice and hidden input
 to that policy. In guided bot mode, the identity query adapter resolves the
 chosen login through GitHub and identifies the supplied PAT through `/user`;
@@ -182,6 +196,29 @@ the application use case compares immutable numeric IDs before local setup
 can write Secrets. GitHub owns the browser session, 2FA, token generation, and
 deletion. Manual and unattended inputs retain the prior audit without the new
 bot-ID assertion.
+
+A confirmed guided bot-ID mismatch has a typed application error containing
+only the expected and actual identities. `SetupCredentialsUseCase` offers a
+semantic recovery choice through the credential prompt port. Only an explicit
+retry requests another hidden PAT; the rejected value is discarded and prior
+credentials, answers and plan remain in memory. Web and terminal adapters keep
+the selected bot and display its account beside the creation link. Other errors
+retain their existing failure behavior, and the installation-boundary identity
+recheck remains mandatory. No restart persistence or new configuration is added.
+
+`ResolveSetupWorkflowPatConflictUseCase` owns the pre-plan, read-only recovery
+loop for a repository PAT shadowing an organization target. It receives a
+semantic prompt port and the existing remote reader. Each explicit recheck reads
+fresh inventory; failed reads retain the last known conflict and the draft.
+Choosing repository scope creates only the PAT override before rebuilding and
+auditing the plan. The storage policy excludes PAT from preservation while
+other resource behavior remains intact. The inspector separately reads
+organization namespace metadata to detect a PAT outside the effective inherited
+list; unavailable namespace metadata blocks an organization PAT target. The
+plan/prompt carry only scope, destination and replacement facts, and the web
+Apply comparison includes namespace state. Credential collection always audits
+a supplied PAT and dispatches no health Action to validate its previous stored
+value. No delete, copy, migration or persistent recovery state is introduced.
 
 The optional `setup --web` presentation compiles Svelte/Vite into packaged
 `build/web` assets. The CLI serves those assets from a loopback-only Node HTTP

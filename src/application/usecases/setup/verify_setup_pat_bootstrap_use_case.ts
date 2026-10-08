@@ -26,9 +26,12 @@ export class VerifySetupPatBootstrapUseCase {
   constructor(private readonly ports: VerifySetupPatBootstrapPorts) {}
 
   async execute(request: VerifySetupPatBootstrapRequest): Promise<string | undefined> {
+    const requirements = request.guided
+      ? request.requirements.filter(requirement => requirement.applicability === 'required')
+      : request.requirements;
     const identityReport = await this.ports.permissions.inspect({
       role: 'setup', owner: request.owner, repository: request.repository,
-      token: request.token, requirements: request.requirements.filter(requirement => requirement.level === 'read'),
+      token: request.token, requirements: requirements.filter(requirement => requirement.level === 'read'),
     });
     this.ports.presenter.showReport(identityReport);
     this.requireReady(request, identityReport);
@@ -36,11 +39,11 @@ export class VerifySetupPatBootstrapUseCase {
       throw new ApplicationError('authorization.credential-invalid',
         'The setup PAT belongs to an unintended account. Revoke it in GitHub and retry with the correct account.');
     }
-    if (request.previewOnly || !request.requirements.some(requirement => requirement.level === 'write')) return identityReport.account;
-    this.ports.presenter.showRequirements('setup', request.requirements);
+    if (request.previewOnly || !requirements.some(requirement => requirement.level === 'write')) return identityReport.account;
+    this.ports.presenter.showRequirements('setup', requirements);
     const report = await this.ports.permissions.inspect({
       role: 'setup', owner: request.owner, repository: request.repository,
-      token: request.token, requirements: request.requirements, includeConditionalWrites: true,
+      token: request.token, requirements, includeConditionalWrites: true,
     });
     if (report.checks.some(check => check.cleanupPending || check.incident)) request.onCleanupPending?.();
     this.ports.presenter.showReport(report);
@@ -52,7 +55,7 @@ export class VerifySetupPatBootstrapUseCase {
     if (!report.ready || report.identityStatus !== 'valid' || report.checks.some(check => check.cleanupPending || check.incident)) {
       if (request.guided) this.ports.showCorrectedLink(buildSetupPatCreationUrl({
         role: 'setup', owner: request.owner, repository: request.repository,
-        expiresIn: 1, requirements: request.requirements,
+        expiresIn: 1, requirements: request.requirements, includeConditionalSetupGrants: true,
       }));
       throw new ApplicationError('authorization.credential-invalid',
         'The setup PAT did not pass every required capability check. Review the failed permission and cleanup result, correct access, and retry.');

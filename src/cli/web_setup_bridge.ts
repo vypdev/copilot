@@ -17,12 +17,19 @@ export class WebSetupBridge {
   private lastAnsweredRevision?: number;
   private readOnlyDoctor?: () => Promise<{ healthy: boolean; pass: number; warn: number; fail: number; skipped: number }>;
   private doctorAttempts = 0;
+  private controlEpoch = 0;
 
   constructor(repository: string) {
     this.view = { revision: 0, repository };
   }
 
   snapshot(): WebSetupView { return this.view; }
+  clearMessage(): void { this.publish({ message: undefined }); }
+  setSurface(surface: 'management' | 'wizard'): void { this.publish({ surface }); }
+  controllerGeneration(): number { return this.controlEpoch; }
+  managementMessage(state: NonNullable<WebSetupView['message']>['managementState']): void {
+    this.publish({ message: { text: `Configuration management: ${state}.`, tone: state === 'checking' ? 'info' : state === 'updated' || state === 'connected' || state === 'unchanged' ? 'success' : 'warning', managementState: state } });
+  }
   setRepository(repository: string): void { this.publish({ repository }); }
 
   subscribe(listener: (view: WebSetupView) => void): () => void {
@@ -41,6 +48,7 @@ export class WebSetupBridge {
   private bootstrapped = false;
 
   takeOver(): string {
+    this.controlEpoch += 1;
     this.controller = randomBytes(32).toString('hex');
     this.publish({ message: { tone: 'info', text: 'Control moved to this tab. The previous tab is now read-only.', copyId: 'session.controlMoved' } });
     return this.controller;
@@ -95,6 +103,9 @@ export class WebSetupBridge {
     if (prompt && (prompt.kind === 'choice' || prompt.kind === 'confirm') && !prompt.choices.includes(value)) return false;
     if (prompt?.kind === 'plan' && value !== 'approve' && value !== 'decline'
       && !prompt.editGroups?.some(group => value === `revise:${group}`)) return false;
+    if (prompt?.kind === 'management' && !['wizard', 'connect', 'refresh', 'close'].includes(value)
+      && !prompt.management.settings.some(setting => setting.editable && value === `edit:${setting.id}`)) return false;
+    if (prompt?.kind === 'quick-review' && !['approve', 'cancel'].includes(value)) return false;
     const pending = this.pending;
     this.pending = undefined;
     this.lastAnsweredRevision = revision;
@@ -147,6 +158,15 @@ export class WebSetupBridge {
   requirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
     this.publish({ permissions: { role, requirements, report: undefined, progress: [] } });
   }
+  setupPatCorrection(url: string, stage: 'bootstrap' | 'final', addedGrants: readonly string[] = []): void {
+    if (this.view.outcome) return;
+    let parsed: URL;
+    try { parsed = new URL(url); }
+    catch { return; }
+    if (parsed.origin !== 'https://github.com' || parsed.pathname !== '/settings/personal-access-tokens/new'
+      || parsed.username || parsed.password || parsed.hash) return;
+    this.publish({ setupPatCorrection: { url, stage, addedGrants: [...addedGrants] } });
+  }
   report(report: SetupTokenPermissionReport): void {
     this.publish({ permissions: { role: report.role, requirements: this.view.permissions?.requirements,
       progress: this.view.permissions?.progress, report } });
@@ -156,7 +176,7 @@ export class WebSetupBridge {
       || !this.view.permissions.requirements?.some(item => item.id === progress.requirementId)) return;
     const previous = this.view.permissions.progress ?? [];
     const detail = progress.detail && (/^http-[1-5][0-9]{2}$/u.test(progress.detail)
-      || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported'].includes(progress.detail))
+      || ['unavailable', 'cleanup-pending', 'secret-collision', 'unsupported', 'contents-write', 'contents-workflows-write', 'dispatch-workflow'].includes(progress.detail))
       ? progress.detail : undefined;
     this.publish({ permissions: { ...this.view.permissions, progress: [
       ...previous.filter(item => item.requirementId !== progress.requirementId),
@@ -222,6 +242,10 @@ function sameCapability(provided: string, expected: string): boolean {
 
 export function toWebSetupPlan(plan: SetupPlan): WebSetupPlan {
   return {
+    ...(plan.workflowPatStorage ? { workflowPatStorage: {
+      scope: plan.workflowPatStorage.scope, destination: plan.workflowPatStorage.destination,
+      replacesExisting: plan.workflowPatStorage.replacesExisting,
+    } } : {}),
     presentationDefaults: plan.presentationDefaults ?? [],
     permissionProbes: plan.permissionProbes ?? [],
     decisions: {

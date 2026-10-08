@@ -17,8 +17,49 @@ import { projectTransitionKey } from '../../../web/src/i18n/projectTransitions';
 import { validationCopy } from '../web_setup_adapters';
 import { translatedQuestionLabel } from '../../application/policies/setup_question_labels_fr_pt';
 import { permissionProgressCopy, permissionProgressError } from '../../../web/src/i18n/permissionProgress';
+import { permissionPrerequisite } from '../../../web/src/i18n/permissionPrerequisite';
 
 describe('web setup localization catalog', () => {
+  test.each(setupLocales)('%s explains failed PAT rechecks and retains all three explicit recovery choices', locale => {
+    const prompt = { kind: 'choice' as const, title: 'Conflict', copyId: 'botPat.scopeConflictUnavailable' as const,
+      copyValues: { repository: 'owner/repo' }, choices: ['recheck', 'repository', 'cancel'] };
+    const copy = localizedPromptCopy(prompt, locale)!;
+    expect(copy.choices).toHaveLength(3);
+    expect(copy.description).toContain('GitHub');
+    expect(copy.description).not.toMatch(/\{\w+\}/u);
+    for (let i = 0; i < 3; i++) expect(localizedPromptChoice(prompt, locale, i)).toBe(copy.choices![i]);
+    expect(tr('patOrganizationReplace', locale, { destination: 'owner' })).toContain('owner');
+    expect(tr('patOrganizationImpact', locale)).toBeTruthy();
+  });
+  test.each(setupLocales)('%s explains account mismatch and retained state with two explicit recovery choices', locale => {
+    const prompt = { kind: 'choice' as const, title: 'Mismatch', copyId: 'botPat.identityMismatch' as const,
+      copyValues: { expected: 'vypbot', actual: 'operator' }, choices: ['Enter another bot PAT', 'Stop setup'] };
+    const copy = localizedPromptCopy(prompt, locale)!;
+    expect(copy.description).toContain('@operator');
+    expect(copy.description).toContain('@vypbot');
+    expect(copy.description).toContain('GitHub');
+    expect(copy.description).toContain('Secret');
+    expect(copy.choices).toHaveLength(2);
+    expect(localizedPromptChoice(prompt, locale, 0)).toBe(copy.choices![0]);
+    expect(localizedPromptChoice(prompt, locale, 1)).toBe(copy.choices![1]);
+  });
+  test.each(setupLocales)('%s uses the same bounded prerequisite explanation in progress and result evidence', locale => {
+    for (const prerequisite of ['contents-write', 'contents-workflows-write', 'dispatch-workflow']) {
+      const copy = permissionPrerequisite(prerequisite, locale);
+      expect(copy).toBeTruthy();
+      expect(permissionProgressError(locale, prerequisite)).toBe(copy);
+      expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
+        applicability: 'required', status: 'unverifiable', prerequisite }, locale)).toBe(copy);
+    }
+    expect(permissionPrerequisite('provider-secret', locale)).toBeUndefined();
+    expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
+      applicability: 'required', status: 'verified', prerequisite: 'contents-write' }, locale))
+      .not.toBe(permissionPrerequisite('contents-write', locale));
+    expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
+      applicability: 'required', status: 'unverifiable', prerequisite: 'provider-secret' }, locale))
+      .toBe(tr('permissionEvidenceWrite', locale));
+  });
+
   test('permission progress and bounded errors have four complete localized paths', () => {
     for (const locale of setupLocales) {
       for (const phase of ['pending', 'checking', 'creating', 'reading', 'deleting', 'verified', 'failed', 'skipped'] as const) {

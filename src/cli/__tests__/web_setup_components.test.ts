@@ -13,6 +13,136 @@ function markup(name: string, props: Record<string, unknown>, locale = 'en'): st
 const noOp = async (): Promise<void> => undefined;
 
 describe('web setup component semantics', () => {
+  test.each([
+    ['en', 'The bot PAT did not complete', 'The setup PAT lacked'],
+    ['es', 'El PAT del bot no completó', 'Faltan permisos del PAT de configuración'],
+    ['fr', 'Le PAT du bot n’a pas terminé', 'Les droits nécessaires du PAT de configuration'],
+    ['pt', 'O PAT do bot não concluiu', 'Faltam permissões do PAT de configuração'],
+  ])('%s bot failure identifies the audited PAT without blaming the setup PAT', (locale, correct, wrong) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Bot PAT & credentials', mutationStarted: false },
+      permissionReport: { role: 'workflow', identityStatus: 'valid', checks: [{ permission: 'Projects', scope: 'organization',
+        level: 'write', applicability: 'required', status: 'unverifiable', cleanupPending: true }] } }, locale);
+    expect(html).toContain(correct);
+    expect(html).not.toContain(wrong);
+    expect(html).toContain('Projects');
+  });
+  test.each(['en', 'es', 'fr', 'pt'])('%s shows an explicit conflict recheck, scope choice and safe GitHub settings link', locale => {
+    const choices = ['I have deleted the repository PAT — check again', 'Store PAT in the repository instead', 'Stop setup'];
+    const prompt = { kind: 'choice', title: 'Conflict', copyId: 'botPat.scopeConflict',
+      copyValues: { repository: 'owner/repo' }, choices };
+    const html = markup('PromptCard', { prompt, promptRevision: 1, controller: true, busy: false }, locale);
+    expect(html).toContain('https://github.com/owner/repo/settings/secrets/actions');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html.match(/class="choice-card"/gu)).toHaveLength(3);
+    expect(html).toContain('owner/repo');
+    const readonly = markup('ChoicePrompt', { prompt, controller: false, busy: false }, locale);
+    expect(readonly.match(/disabled/gu)).toHaveLength(3);
+  });
+
+  test.each(['en', 'es', 'fr', 'pt'])('%s discloses existing organization PAT replacement and shared impact before hidden entry', locale => {
+    const html = markup('CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided',
+      copyValues: { account: 'fixture-bot', storageScope: 'organization', storageDestination: 'fixture-owner', storageReplacesExisting: 'true' },
+      link: 'https://github.com/settings/personal-access-tokens/new' }, controller: true, busy: false }, locale);
+    expect(html).toContain('fixture-owner');
+    expect(html).toContain('Secret PAT');
+    expect(html.indexOf('fixture-owner')).toBeLessThan(html.indexOf('type="password"'));
+    expect(html).toContain('role="note"');
+    expect(html).not.toContain('Keep existing');
+  });
+
+  test('escapes storage metadata and refuses arbitrary Secret-settings navigation', () => {
+    const html = markup('WorkflowPatStorageNotice', { storage: { scope: 'repository', destination: '<script>bad</script>', replacesExisting: true } });
+    expect(html).not.toContain('<script>bad</script>');
+    const choice = markup('ChoicePrompt', { prompt: { kind: 'choice', title: 'Conflict', copyId: 'botPat.scopeConflict',
+      copyValues: { repository: 'owner/repo?token=private' }, choices: ['Stop setup'] }, controller: true, busy: false });
+    expect(choice).not.toContain('href=');
+  });
+
+  test.each(['en', 'es', 'fr', 'pt'])('%s puts the selected bot account warning next to the creation link', locale => {
+    const html = markup('CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided',
+      copyValues: { account: 'vypbot' }, link: 'https://github.com/settings/personal-access-tokens/new?name=bot' },
+      controller: true, busy: false }, locale);
+    expect(html).toContain('class="banner warning"');
+    expect(html).toContain('aria-describedby="bot-account-warning"');
+    expect(html.indexOf('id="bot-account-warning"')).toBeLessThan(html.indexOf('class="github-link"'));
+    expect(html).toMatch(/<a[^>]*class="github-link"[^>]*>[^<]*@vypbot/su);
+    expect(html).toContain('type="password"');
+  });
+
+  test('escapes the bot account and does not claim account binding for a setup or manual PAT', () => {
+    const prompt = { kind: 'secret', title: 'PAT', copyId: 'botPat.entry.guided', copyValues: { account: '<script>test</script>' },
+      link: 'https://github.com/settings/personal-access-tokens/new' };
+    expect(markup('CredentialPrompt', { prompt, controller: true, busy: false })).not.toContain('<script>test</script>');
+    for (const copyId of ['setupPat.entry', 'botPat.entry.manual']) {
+      expect(markup('CredentialPrompt', { prompt: { ...prompt, copyId }, controller: true, busy: false }))
+        .not.toContain('bot-account-warning');
+    }
+  });
+  const correctedPat = { stage: 'final', addedGrants: ['repository Workflows write'],
+    url: 'https://github.com/settings/personal-access-tokens/new?contents=write&workflows=write' };
+  const permissionFailure = { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false };
+
+  test.each([
+    ['en', 'Create corrected setup PAT', 'start a fresh setup run'],
+    ['es', 'Crear PAT de configuración corregido', 'inicia una nueva configuración'],
+    ['fr', 'Créer un PAT de configuration corrigé', 'recommencez la configuration'],
+    ['pt', 'Criar PAT de configuração corrigido', 'inicie uma nova configuração'],
+  ])('%s blocked result preserves the updated guided PAT link and explains restarting', (locale, label, restart) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: permissionFailure, setupPatCorrection: correctedPat }, locale);
+    expect(html).toContain(label);
+    expect(html).toContain(restart);
+    expect(html).toContain('repository Workflows write');
+    expect(html).toContain('contents=write&amp;workflows=write');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  test.each([
+    ['missing correction', { setupPatCorrection: undefined }],
+    ['completed setup', { outcome: 'complete' }],
+    ['unrelated failure', { detail: { ...permissionFailure, reasonCode: 'storage' } }],
+    ['partial setup', { outcome: 'partial' }],
+    ['started mutations', { detail: { ...permissionFailure, mutationStarted: true } }],
+    ['pending cleanup', { permissionReport: { role: 'setup', checks: [{ cleanupPending: true }] } }],
+    ['concurrent Secret collision', { permissionReport: { role: 'setup', checks: [{ incident: 'secret-collision' }] } }],
+  ])('does not offer a new PAT before inspection for %s', (_, overrides) => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: permissionFailure, setupPatCorrection: correctedPat, ...overrides });
+    expect(html).not.toContain('Create corrected setup PAT');
+    expect(html).not.toContain('workflows=write');
+  });
+
+  test('bootstrap correction offers required permissions without claiming a later inspection delta', () => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { ...permissionFailure, stoppedStage: 'Setup PAT' },
+      setupPatCorrection: { ...correctedPat, stage: 'bootstrap', addedGrants: [] } });
+    expect(html).toContain('Create corrected setup PAT');
+    expect(html).not.toContain('Additional permissions discovered after inspection');
+  });
+
+  test.each(['en', 'es', 'fr', 'pt'])('%s blocked result explains the Actions workflow prerequisite without provider prose', locale => {
+    const html = markup('ResultPanel', { outcome: 'blocked', controller: true,
+      detail: { reasonCode: 'permissions', stoppedStage: 'Plan', mutationStarted: false },
+      permissionReport: { role: 'setup', identityStatus: 'valid', ready: false, confirmationRequired: false,
+        checks: [{ id: 'actions', role: 'setup', scope: 'repository', permission: 'Actions', probe: 'actions',
+          level: 'write', applicability: 'required', status: 'unverifiable', prerequisite: 'contents-workflows-write',
+          message: 'private provider prose token-marker' }] } }, locale);
+    expect(html).toContain('Contents');
+    expect(html).toContain('Workflows Write');
+    expect(html).not.toContain('private provider prose');
+    expect(html).not.toContain('token-marker');
+  });
+
+  test('credential and pairing primary actions share the navigation row', () => {
+    for (const [component, props] of [
+      ['CredentialPrompt', { prompt: { kind: 'secret', title: 'PAT' }, controller: true, busy: false }],
+      ['PairingPanel', { busy: false }],
+    ] as const) {
+      expect(markup(component, props)).toMatch(/class="button-row"[^>]*>.*?<button[^>]*class="primary"/su);
+    }
+  });
+
   test('bootstrap Contents read progress leaves the conditional write row pending', () => {
     const requirements = buildSetupPatPermissionRequirements().filter(item => item.permission === 'Contents');
     const html = markup('PermissionProgressPanel', { permissions: { requirements, progress: [
@@ -277,7 +407,8 @@ describe('web setup component semantics', () => {
 
   test('discovery scope is specific and unsupported personal Projects do not offer retry', () => {
     const checkNotice = markup('DiscoveryNotice', { kind: 'checks', status: 'observed' }, 'en');
-    expect(checkNotice).toContain('20 recent pull-request workflow runs');
+    expect(checkNotice).toContain('20 PR runs');
+    expect(checkNotice).toContain('latest 1,000 workflow runs (up to 10 pages) within 90 days');
     expect(checkNotice).toContain('15 runs');
     const projectNotice = markup('DiscoveryNotice', { kind: 'projects', status: 'observed' }, 'en');
     expect(projectNotice).toContain('30 open, accessible organization Projects');

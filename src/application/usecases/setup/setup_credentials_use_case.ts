@@ -3,6 +3,7 @@ import type {
     SetupCredentialCollection,
     SetupCredentialRequirement,
     SetupCredentialValue,
+    SetupWorkflowPatStorageNotice,
 } from '../../../domain/setup';
 import type {
     SetupCredentialPromptPort,
@@ -12,6 +13,8 @@ import type {
 } from '../../ports/setup_wizard_ports';
 import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 import { ApplicationError } from '../../errors/application_error';
+import { SetupWorkflowPatIdentityMismatchError } from '../../errors/setup_workflow_pat_identity_mismatch_error';
+import { SetupInteractionCancelledError } from '../../errors/setup_interaction_cancelled_error';
 import type {
     SetupRemoteConfiguration,
     SetupResourceScope,
@@ -24,6 +27,7 @@ import {
     findSetupOrganizationShadows,
     requiresSetupOrganizationInventory,
     requiresSetupRepositoryInventory,
+    setupWorkflowPatStorageNotice,
 } from '../../policies/setup_configuration_storage_policy';
 
 export interface SetupCredentialsRequest {
@@ -110,13 +114,17 @@ export class SetupCredentialsUseCase {
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
         const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
+        const workflowStorage = setupWorkflowPatStorageNotice(request.owner, request.repository, request.secretStoragePolicy,
+            existingSecretNames, existingOrganizationSecretNames, request.remoteConfiguration?.organizationWorkflowPat);
+        if (workflowStorage.scope === 'organization' && request.remoteConfiguration?.organizationWorkflowPat === 'unavailable') {
+            throw new ApplicationError('provider.unavailable', 'Organization PAT Secret inventory is unavailable; credential collection cannot confirm replacement safely.');
+        }
         this.prompt.explainCredentialSeparation(requirements);
         if (workflowTokenPermissions.length > 0) {
             this.permissionPresenter?.showRequirements('workflow', workflowTokenPermissions);
         }
-        const existingRequirements = requirements.filter(requirement =>
-            existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name),
-        );
+        const existingRequirements = requirements.filter(requirement => requirement.kind !== 'workflowPat'
+            && (existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name)));
         const remoteChecks = this.remoteHealth && existingRequirements.length > 0
             ? await this.remoteHealth.validateExisting(
                 request.owner,
@@ -150,11 +158,11 @@ export class SetupCredentialsUseCase {
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                const scopedCheck = workflowPermissionAuditRequired
-                    ? workflowPatReentryCheck(remoteCheck, sourceScope)
+                const scopedCheck = requirement.kind === 'workflowPat'
+                    ? workflowPatReentryCheck(requirement.name, sourceScope)
                     : { ...remoteCheck, sourceScope };
                 existingCheckIndex = checks.push(scopedCheck) - 1;
-                if (!workflowPermissionAuditRequired) {
+                if (requirement.kind !== 'workflowPat') {
                     const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
                     if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                         throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
@@ -162,7 +170,7 @@ export class SetupCredentialsUseCase {
                     if (decision === 'keep'
                         && remoteCheck.status !== 'invalid'
                         && canKeepExistingSetupResource(
-                            request.secretStoragePolicy,
+                            'secret', request.secretStoragePolicy,
                             requirement.name,
                             sourceScope,
                         )) {
@@ -173,11 +181,10 @@ export class SetupCredentialsUseCase {
                 }
             }
 
-            const value = requirement.kind === 'workflowPat'
-                ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
-                : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
+            const value = await this.requestCredential(requirement, existing ? checks[checks.length - 1] : undefined,
+                requirement.kind === 'workflowPat' ? workflowStorage : undefined);
             if (!value) {
-                if (existing && workflowPermissionAuditRequired) {
+                if (existing && requirement.kind === 'workflowPat') {
                     throw new ApplicationError(
                         'authorization.credential-invalid',
                         'Existing PAT cannot be permission-audited because GitHub does not reveal Secret values; re-enter or supply PAT before setup can continue.',
@@ -194,11 +201,6 @@ export class SetupCredentialsUseCase {
                 throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             let check: SetupCredentialCheck;
-            if (requirement.kind === 'workflowPat' && this.prompt.guidedWorkflowBotIdentity) {
-                if (!this.workflowIdentity) throw new ApplicationError('configuration.unsupported',
-                    'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
-                await this.workflowIdentity.execute(this.prompt.guidedWorkflowBotIdentity, value.value);
-            }
             if (workflowPermissionAuditRequired) {
                 if (!this.tokenPermissions) {
                     throw new ApplicationError(
@@ -211,6 +213,8 @@ export class SetupCredentialsUseCase {
                     owner: request.owner,
                     repository: request.repository,
                     token: value.value,
+                    ...(workflowTokenPermissions.some(permission => permission.probe === 'actions' && permission.level === 'write')
+                        ? { operatorToken: request.setupToken } : {}),
                     requirements: workflowTokenPermissions,
                     ...(request.selectedProjectNumbers ? { selectedProjectNumbers: request.selectedProjectNumbers } : {}),
                 });
@@ -259,17 +263,51 @@ export class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
+    private async requestCredential(
+        requirement: SetupCredentialRequirement,
+        current?: SetupCredentialCheck,
+        storage?: SetupWorkflowPatStorageNotice,
+    ): Promise<SetupCredentialValue | undefined> {
+        if (requirement.kind !== 'workflowPat') return this.prompt.requestApiKey(requirement, current);
+        while (true) {
+            const attempt = await this.requestVerifiedWorkflowPat(requirement, current, storage);
+            if (!(attempt instanceof SetupWorkflowPatIdentityMismatchError)) return attempt;
+            if (!this.prompt.recoverWorkflowPatIdentityMismatch) throw attempt;
+            const decision = await this.prompt.recoverWorkflowPatIdentityMismatch(attempt.expected, attempt.actual);
+            if (decision !== 'retry') throw new SetupInteractionCancelledError();
+        }
+    }
+
+    private async requestVerifiedWorkflowPat(
+        requirement: SetupCredentialRequirement,
+        current?: SetupCredentialCheck,
+        storage?: SetupWorkflowPatStorageNotice,
+    ): Promise<SetupCredentialValue | SetupWorkflowPatIdentityMismatchError | undefined> {
+        const value = await this.prompt.requestWorkflowPat(requirement, current, storage);
+        const expected = this.prompt.guidedWorkflowBotIdentity;
+        if (!value || !expected) return value;
+        if (!this.workflowIdentity) throw new ApplicationError('configuration.unsupported',
+            'Guided workflow PAT identity verification is not available. No permission test or Secret write started.');
+        try {
+            await this.workflowIdentity.execute(expected, value.value);
+            return value;
+        } catch (error) {
+            // The rejected token never leaves this attempt; recovery receives only identities.
+            if (error instanceof SetupWorkflowPatIdentityMismatchError) return error;
+            throw error;
+        }
+    }
 }
 
 function workflowPatReentryCheck(
-    check: SetupCredentialCheck,
+    name: string,
     sourceScope: SetupResourceScope | undefined,
 ): SetupCredentialCheck {
     return {
-        ...check,
+        name,
         sourceScope,
-        status: check.status === 'invalid' ? 'invalid' : 'unverifiable',
-        message: `${check.message} GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions.`,
+        status: 'unverifiable',
+        message: 'GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions before replacing Secret PAT.',
     };
 }
 

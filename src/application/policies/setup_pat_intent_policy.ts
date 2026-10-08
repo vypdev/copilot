@@ -15,7 +15,6 @@ export function fixedSetupPatIntentQuestionIds(
   if (overrides.issueWorkflows?.enabled !== undefined) fixed.push('issueWorkflows.enabled');
   if (overrides.pullRequestApproval?.mode !== undefined) fixed.push('pullRequestApproval.mode');
   if (overrides.projects?.ids !== undefined) fixed.push('projects.enabled', 'projects.ids');
-  if (overrides.createInitialTag !== undefined) fixed.push('createInitialTag');
   if (skipVariables || overrides.manageRepositoryVariables !== undefined) fixed.push('manageRepositoryVariables');
   if (skipSecrets || overrides.manageRepositorySecrets !== undefined) fixed.push('manageRepositorySecrets');
   for (const kind of ['variables', 'secrets'] as const) {

@@ -1,12 +1,12 @@
 # Assisted Setup PAT Creation
 
 - Status: Draft — permission-intent preflight implemented locally; controlled GitHub UX and full test budget remain unverified
-- Date: 2026-09-25
+- Date: 2026-10-07
 - Catalog capability ID: `temporary-setup-operator-authorization`
 - Last verified: Not applicable; prospective change
 - Owners: Copilot maintainers and setup operators
 - Scope: collect setup permission intent before the operator PAT link, then guide creation, verification, use, and user-owned deletion for one `copilot setup` run
-- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402); no Action dogfooding for this design
+- Related issues/PRs: [PR #402](https://github.com/vypdev/copilot/pull/402), [PR #411](https://github.com/vypdev/copilot/pull/411); no Action dogfooding for this design
 - Required review gates: product UX, architecture, testing, documentation, security, GitHub form compatibility
 - Open decisions blocking readiness: controlled browser UX and full test-budget evidence; remote-only facts cannot be known before authenticated inspection, so the link discloses residual uncertainty
 
@@ -26,7 +26,9 @@ credential. Guided mode first asks only the setup choices that determine PAT
 permissions, reusing answers from the existing questionnaire and local
 configuration. It shows a reviewable permission preview, then prints an
 official GitHub fine-grained PAT URL with every *locally determined* required
-grant preselected; it does not add all conditional grants for convenience.
+grant preselected. When Secret management is selected, it also prefills
+disclosed conditional Actions, Contents and Workflows WRITE for possible
+credential-health checks; it does not add unrelated conditional grants.
 The user chooses the browser account, selects the individual repository,
 reviews the form, generates the PAT, and pastes it into the existing masked
 prompt. Copilot verifies access, completes the plan and final audit, runs
@@ -36,9 +38,11 @@ revocation.
 
 Authenticated repository/organization inventory and credential-health
 workflow status are unavailable before the first PAT. The preview MUST name
-those unresolved grants, and a later verified need MUST block dependent
-mutation and produce a corrected link. This is a bounded exception to the
-one-link goal, not permission to request every possible grant up front.
+those unresolved conditions. Selected Secret management MUST prefill its
+possible health-write prerequisites in the first link, while guided bootstrap
+MUST defer their tests until the approved plan requires them. Other remote-only
+scopes and later choices may still need a corrected link before dependent
+mutation. Prefill is not permission evidence.
 
 The companion [bot PAT SDD](./guided-bot-pat-onboarding.md) covers the second,
 persistent token installed as Actions Secret `PAT` after the setup plan is
@@ -47,7 +51,8 @@ lifecycle.
 
 ```text
 resolve repository -> choose guided/manual -> collect permission-affecting intent
-  -> review exact known grants and remote unknowns -> prefilled GitHub form
+  -> review known grants, prefilled health prerequisites and remote unknowns
+  -> prefilled GitHub form
   -> masked PAT input -> verify -> complete plan and final grant audit
   -> correct link if remote facts add grants -> guide/verify bot PAT
   -> install Secret -> apply setup -> cleanup reminder
@@ -141,8 +146,12 @@ means authenticated remote facts may require a corrected grant after entry.
    URL MUST include the resulting required grants from the same policy as
    the terminal table and final audit. No selected choice may be silently
    reverted or asked a second time in the main questionnaire.
-3. Unknown remote-dependent grants MUST be listed beside the preview and
-   omitted by default, not silently overgranted. A changed plan or verified
+3. Unknown remote-dependent grants MUST be listed beside the preview. Selected
+   Secret management MUST prefill conditional repository Actions, Contents and
+   Workflows WRITE; guided bootstrap MUST NOT test those conditional grants
+   before authenticated inspection and final plan approval. With Secret
+   management disabled they are omitted; approval-only CI inspection keeps
+   Actions READ. Unrelated remote-dependent grants stay omitted by default. A changed plan or verified
    remote need MUST invalidate the old link and block dependent mutation until
    the supplied PAT passes the recalculated audit.
 4. The actual operator PAT MUST pass existing identity, repository-access, and
@@ -234,12 +243,14 @@ user to delete it on GitHub.
    The operator can explicitly revise the draft before PAT creation; after
    creation, a revision requires a new permission comparison before mutation.
 3. Render the intended choices, an exact required-grant preview, and a
-   separate **May need after GitHub inspection** list. Require explicit review
+   separate **May need after GitHub inspection** list. Selected Secret management
+   also adds visible conditional health Writes that the link prefills. Require explicit review
    of this preview; `--yes` does not waive it. Compute grants using the same
    permission policy as the final audit, projected over locally known facts.
    Include Metadata read and Contents read even when no optional capability
    is selected. Never turn every conditional row into a required row.
-4. Build the official URL from that reviewed required-grant set. Each
+4. Build the official URL from the reviewed required-grant set and disclosed
+   conditional health prerequisites selected by Secret management. Each
    permission MUST use its documented query name and level; a missing mapping
    blocks guided link generation and leaves manual setup available. If a
    remote-only grant is unresolved, label the link **provisional** and name
@@ -269,13 +280,13 @@ hard-coded permission table in the terminal adapter:
 | Pre-PAT intent question or local input | Grant projected into the URL when selected | Still unknown until GitHub inspection |
 |---|---|---|
 | Repository owner kind (`organization` or `personal`), asked only if an organization grant is a candidate | Enables valid organization grants for an asserted organization owner; never by itself adds a grant | Actual owner kind and organization PAT policy |
-| Create initial tag? | Repository Contents write instead of read | Whether tag creation is ultimately needed |
-| Manage Actions Secrets and their requested default scope, preservation, and known explicit overrides? | Repository Secrets write for selected managed names/inventory; organization Secrets write when an organization target or inventory is definitely selected | Existing effective scopes, inherited names, and conditional organization inventory |
+| Release/hotfix issue workflows enabled | Repository Contents write for the automatic initial-version baseline | Whether remote version tags already exist; no tag question |
+| Manage Actions Secrets and their requested default scope, preservation, and known explicit overrides? | Repository Secrets write for selected managed names/inventory; organization Secrets write when an organization target or inventory is definitely selected; conditional repository Actions, Contents and Workflows write for possible health checks | Existing effective scopes, inherited names, and conditional organization inventory |
 | Manage Actions Variables and their requested default scope, preservation, and known explicit overrides? | Repository Variables write for selected managed names/inventory; organization Variables write when an organization target or inventory is definitely selected | Existing effective scopes, inherited names, and conditional organization inventory |
 | Enable issue workflow types? | Repository Issues write; organization Issue Types write if owner is an organization | Verified owner kind |
 | Enable release/hotfix or guarded PR approval? | Repository Administration read | Final branch-rule readiness |
-| Configure organization Project IDs? | Organization Projects write when owner is an organization and IDs are selected | Project access and ownership |
-| Remote condition shown, not asked: existing managed Secrets need credential-health validation; workflow is confirmed missing on the selected branch | No grant from an unverified assertion; explain potential Actions write and, only for confirmed missing workflow, Contents write plus Workflows write | Authenticated inventory and independent selected-ref workflow proof |
+| Configure organization Project IDs? | Organization Projects read when owner is an organization and Projects are selected | Project access and ownership |
+| Remote condition shown, not asked: existing managed Secrets need credential-health validation; workflow is confirmed missing on the selected branch | Possible health-write grants are already prefilled when Secret management is selected. They remain conditional, unaudited and not evidence of a remote resource until the approved plan requires them | Authenticated inventory and independent selected-ref workflow proof |
 
 The last row is **not** a second questionnaire about facts the operator may
 not know. It is a preview of remote-only conditions; the CLI MUST NOT ask the
@@ -359,7 +370,7 @@ No new account or PAT configuration is persisted. Wrong owner, invalid grant,
 URL length outside a reviewed terminal bound, and contradictory permission
 grants block link generation. Existing `--token` and environment precedence
 remain; `--yes` does not choose an identity or waive checks. Expiry, host,
-secret-free URL, role separation, and omission of unverified remote-only grants
+secret-free URL, role separation, and deferral of unverified health conditions
 are not configurable in this release. The recommended example is interactive
 guided setup; the meaningful alternative is manual PAT creation and masked
 input. Existing configuration files need no migration; a supplied PAT follows
@@ -398,7 +409,7 @@ remote facts, reuses the intent in the full wizard, and renders any grant delta.
   duplicate/conflicting grants and unsupported scope/level pairs. The bot SDD
   reuses this contract with different role and expiry.
 - A preflight projection accepts normalized local setup overrides and bounded
-  questionnaire answers, returns `{draft, requiredGrants, unresolvedTriggers}`,
+  questionnaire answers, returns `{draft, requiredGrants, conditionalHealthPrerequisites, unresolvedTriggers}`,
   and has no provider token or GitHub DTO. The same draft is consumed by the
   full wizard; no second hard-coded permission matrix or duplicate prompts.
 - The final audit compares normalized grants by role, scope, permission, and
@@ -427,7 +438,8 @@ The [setup journey presentation contract](./setup-configuration-credentials-and-
 applies across both PAT roles. Before interactive guided intent, show the
 bootstrap grants compactly, not the complete conditional table. After choices,
 show every currently required grant and a count of conditional/remote-unknown
-grants. The review choices are `Continue to GitHub`, `Review all setup choices
+grants. Explain that selected Secret management prefills its conditional
+Actions, Contents and Workflows Writes; full detail shows their triggers. The review choices are `Continue to GitHub`, `Review all setup choices
 again`, `View full permission table`, and `Enter a PAT manually`, in precisely
 that numbered order. Selecting detail prints the same policy
 requirements with reasons and returns to review **without rerunning questions**.
@@ -446,7 +458,8 @@ No changes have been applied.
 ```
 
 Text equivalent: the URL will contain the exact required grants in the
-summary, while two remote-dependent grants are unresolved; the user can
+summary plus disclosed conditional health prerequisites, while other
+remote-dependent scopes are unresolved; the user can
 inspect reasons before accepting. Labels, counts, and detailed rows derive
 from the same requirement objects and may not be edited independently.
 Add five operator-specific cases to the journey budget: detail returns to
@@ -489,16 +502,16 @@ Secrets storage? [Repository]: Repository
 Create/update Actions Variables? [Yes]: Yes
 Variables storage? [Repository]: Repository
 Enable guarded approval or release/hotfix? [No from --config]: No
-Create an initial tag? [Yes]: No
+Initial version baseline: not needed by selected issue workflows (automatic)
 Organization-owned repository? [No answer yet]: Yes
 Configure organization Projects? [No]: No
 
 Review before opening GitHub:
   Required now: Metadata read, Contents read, repository Secrets write,
     repository Variables write, Issues write, organization Issue Types write.
-  May be needed after GitHub inspection: Actions write for existing managed
-    Secrets; Contents write + Workflows write only if the health workflow is
-    independently confirmed missing; organization Secret/Variable access
+  Prefilled for possible health checks: Actions write, Contents write,
+    Workflows write. Tests run only if the approved plan needs them.
+  May be needed after GitHub inspection: organization Secret/Variable access
     if preservation resolves to that scope.
 Confirm these choices and permission preview? [No]: Yes
 
@@ -520,7 +533,7 @@ automatically.
 | State | First visible text | Next action |
 |---|---|---|
 | Pending | `Collecting setup choices that determine the PAT permissions. No GitHub changes have started.` | answer/review intent |
-| Action required | `GitHub prefilled six grants. Change All repositories to Only select repositories → vypdev/copilot before Generate.` | complete GitHub form |
+| Action required | `GitHub prefilled eight grants, including disclosed health prerequisites. Change All repositories to Only select repositories → vypdev/copilot before Generate.` | complete GitHub form |
 | Blocked | `Setup has not changed the repository: authenticated inspection found an existing managed Secret, so Actions write is required. Create a replacement PAT with the corrected link and retry; delete the obsolete PAT in GitHub.` | correct PAT |
 | Partial | `Some setup changes were applied. The operator PAT may still be active in GitHub. Inspect the setup report, then delete the PAT.` | inspect/delete |
 | Complete | `Setup complete. The operator PAT was discarded locally, not deleted from GitHub. Delete it in GitHub Settings.` | delete PAT |
@@ -559,8 +572,12 @@ one-day expiry still permits use until expiry and may be shortened by policy.
 
 ## 11. Security, permissions, and privacy
 
-1. Least-privilege grants come from the same setup policy used by the final
-   permission audit. The link never adds every conditional grant by default.
+1. Required grants come from the same setup policy used by the final
+   permission audit. The reviewed intent also includes possible health-write
+   grants for selected Secret management. The final audit discloses those
+   prefilled grants as possible excess if the plan does not need them; the
+   initial link MUST NOT claim exact final least privilege. Unrelated
+   conditional grants remain excluded.
    The CLI must identify GitHub's initial **All repositories** selection as a
    separate, manual scope decision; `target_name` is not repository scoping.
 2. No password, cookie, browser profile, 2FA code, or PAT appears in a URL,
@@ -617,7 +634,7 @@ lines/statements and 90% branches/functions. Use deterministic GitHub fakes,
 fixed clock and no real PATs in CI. Contract tests compare the URL's parsed
 permission set with the reviewed preview and final policy fixtures; semantic
 UI assertions accompany, rather than rely only on, snapshots. Required
-coverage includes the exact six-grant example above, the twelve-grant
+coverage includes the eight-grant example above, the twelve-grant
 GitHub-form compatibility case, no optional grants selected, organization
 versus personal owner, preflight choice reuse, remote-only grant correction,
 and a plan that removes access. Human UX evidence includes a narrow terminal,
@@ -652,9 +669,13 @@ Secret renewal.
    release/hotfix/guarded approval, and organization Projects, the URL
    contains exactly the corresponding strongest-level grants; disabling
    those capabilities omits their grants.
-5. Given remote-only Secret inventory or health-workflow uncertainty, the
-   preview labels the corresponding possible grants provisional and does not
-   add them merely because they are conditional in the bootstrap table.
+5. Given selected Secret management with unresolved inventory or health-workflow
+   state, the first link contains `actions=write`, `contents=write` and
+   `workflows=write`. The preview marks them conditional, guided bootstrap
+   defers their write probes, and the final audit independently tests those
+   required by authenticated facts. Disabling Secret management omits those
+   health Writes; approval-only CI inspection keeps `actions=read`. Prefilled
+   grants that are not needed are disclosed as possible excess access.
 6. Given an unintended browser account, the CLI displays the actual login and
    the operator declines it; given a wrong repo, access verification fails.
    Either way, setup blocks before dependent mutation.
@@ -755,3 +776,40 @@ Secret renewal.
   Copilot; the URL never selects a repository. Browser prefill of twelve
   grants was checked without minting a PAT. Controlled browser acceptance,
   full numeric test budget, and security review remain open gates.
+
+### Initial health-write prefill correction — 2026-10-07
+
+Observed failure: with selected Secret management and PR approval, the initial
+link requested Actions READ and omitted Workflows WRITE; later discovery of
+existing Secrets and a missing health workflow forced a replacement PAT.
+The corrected contract prefills Actions/Contents/Workflows WRITE before the
+first PAT, conditional on Secret management. Required CI READ and conditional
+WRITE rows keep distinct IDs, and URL deduplication always selects WRITE.
+Guided bootstrap filters to local required rows, so these speculative grants
+do not trigger remote transactions. Manual and supplied-token paths retain
+their displayed conditional transactions. Final requirements still come from
+authenticated inventory/workflow facts and still require transaction proof.
+
+```text
+Manage Secrets -> review required + conditional health grants
+  -> first GitHub form: Actions WRITE, Contents WRITE, Workflows WRITE
+  -> identity + local required checks -> inspect GitHub -> approve plan
+  -> verify required health Writes -> continue, or corrected blocked result
+```
+
+Text equivalent: the operator creates a PAT with the possible health grants
+once; Copilot waits for the approved plan to establish which checks may run.
+No new public flags, stored configuration, credential or journal schema are
+introduced. Rollback restores required-only prefill and the preceding guided
+audit boundary; already created PATs remain user-owned in GitHub.
+
+Incremental regression floor: **12 distinct automated cases**, shared with the
+PAT/web SDDs: two intent cases (approval-only and unique read/write IDs), three
+URL cases (two duplicate orders and workflow-role rejection), two preparation
+cases (skip Secrets and revision), three bootstrap cases (deferred health,
+manual compatibility and corrected link), and two final audit cases (unused
+grants and independently required write proof). Existing first-link and
+eight-grant examples are strengthened without additional budget credit.
+Run full coverage, architecture/type/lint checks, four-locale checks, spec/docs
+validation, build/package validation and credential-free form review. Browser
+prefill does not establish live PAT sufficiency or close provider gates.

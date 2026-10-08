@@ -52,7 +52,7 @@ export class SetupPermissionProbeJournal {
         return new ProbeJournalHandle(path, { ...entry, version: 2, pid: process.pid });
     }
 
-    async recover(owner: string, repository: string, http: SetupPermissionProbeHttp): Promise<void> {
+    async recover(owner: string, repository: string, http: SetupPermissionProbeHttp, operatorHttp?: SetupPermissionProbeHttp): Promise<void> {
         let names: string[];
         try { names = await readdir(this.root); }
         catch (error) {
@@ -72,7 +72,7 @@ export class SetupPermissionProbeJournal {
             if (entry.pid !== process.pid && processIsRunning(entry.pid)) {
                 throw new ProbeFailure('Another setup process has a temporary permission resource in progress.');
             }
-            await new ProbeJournalHandle(join(this.root, name), entry).cleanup(http);
+            await new ProbeJournalHandle(join(this.root, name), entry).cleanup(entry.probe === 'actions' ? operatorHttp ?? http : http);
         }
     }
 
