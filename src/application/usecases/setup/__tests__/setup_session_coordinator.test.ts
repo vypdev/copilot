@@ -121,3 +121,13 @@ describe('configuration management handoff', () => {
   expect(await f.coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true, effects: [{ id: 'variables', state: 'needs-inspection', scope: 'organization' }] });
  });
 });
+
+
+test('a successful quick adjustment cannot hide an uncertain write by the subsequent full installer', async () => {
+ const effect:SetupOperationEffect={id:'variables',scope:'organization',state:'needs-inspection'};
+ const f=fixture({
+  manage:async (mutation,record) => { mutation(); record({...effect,state:'completed'}); return 'continue'; },
+  apply:async record => { record(effect); return {success:true,effects:[effect]}; },
+ });
+ expect(await f.coordinator.execute()).toMatchObject({outcome:'partial',mutationStarted:true,effects:[effect]});
+});

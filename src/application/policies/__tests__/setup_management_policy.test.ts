@@ -128,3 +128,11 @@ test('empty stored values with conflicting fallbacks remain unknown', () => {
 });
 
 test('personal-owner changes do not request organization permissions', () => expect(managementPermissions('repository', 'User').map(item => item.scope)).toEqual(['repository','repository']));
+
+
+test.each(['unknown','unavailable','not_applicable'] as const)('organization Secret access %s remains incomplete despite readable repository names', organizationSecretsAccess => {
+ expect(buildSetupManagementView(localInstallation(), { ...remoteConfiguration(), organizationSecretsAccess }).secretInventory).toBe('incomplete');
+});
+test('unknown ownership cannot turn readable Secret names into a complete scope inventory', () => {
+ expect(buildSetupManagementView(localInstallation(), { ...remoteConfiguration(), ownerType:'Unknown' }).secretInventory).toBe('incomplete');
+});

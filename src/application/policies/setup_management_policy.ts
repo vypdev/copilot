@@ -1,8 +1,13 @@
 import type { SetupRemoteConfiguration, SetupResourceScope } from '../../domain/setup';
-import type { SetupInstallation, SetupQuickChange } from '../../domain/setup_management';
+import type { SetupInstallation, SetupInstalledInput, SetupQuickChange } from '../../domain/setup_management';
 import type { SetupManagementView } from '../contracts/setup_management_view';
 import { redactSensitiveText } from '../../domain/security/sensitive_text';
 import { quickSetting, SETUP_QUICK_SETTINGS, validateQuickSetting } from './setup_quick_settings_policy';
+
+type Setting = typeof SETUP_QUICK_SETTINGS[number];
+type Binding = SetupInstalledInput & { environmentScoped: boolean };
+type Variable = SetupRemoteConfiguration['repositoryVariables'][number];
+const safe = (value: string) => redactSensitiveText(value.slice(0, 4096));
 
 export function managementFingerprint(local: SetupInstallation, remote: SetupRemoteConfiguration, variable: string): string {
   return JSON.stringify([local, remote.ownerType, remote.repositoryId, remote.repositoryVariablesAccess,
@@ -10,39 +15,70 @@ export function managementFingerprint(local: SetupInstallation, remote: SetupRem
     remote.organizationVariables.find(item => item.name === variable) ?? null]);
 }
 
-export function buildSetupManagementView(local: SetupInstallation, remote?: SetupRemoteConfiguration, changed = false): SetupManagementView {
-  const accessible = Boolean(remote?.repositoryVariablesAccess === 'available'
-    && (remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationVariablesAccess === 'available'));
-  const safe = (value: string) => redactSensitiveText(value.slice(0, 4096));
+function variablesAccessible(remote?: SetupRemoteConfiguration): boolean {
+  if (remote?.repositoryVariablesAccess !== 'available') return false;
+  return remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationVariablesAccess === 'available';
+}
+
+function resolvedValue(bindings: Binding[], bindingsSafe: boolean, stored: Variable | undefined, accessible: boolean): string | undefined {
+  const fallbacks = [...new Set(bindings.map(input => input.literal ?? input.fallback))];
+  const fallback = fallbacks.length === 1 ? fallbacks[0] : undefined;
+  if (stored && bindingsSafe) return stored.value || fallback;
+  if (bindings.length > 0 && bindings.every(input => !input.variable && !input.unsupported)) return fallback;
+  return accessible && bindingsSafe ? fallback : undefined;
+}
+
+function settingSource(stored: Variable | undefined, bindingsSafe: boolean, repository: boolean, value?: string): SetupManagementView['settings'][number]['source'] {
+  if (stored && bindingsSafe) return repository ? 'repository' : 'organization';
+  return value === undefined ? 'unknown' : 'workflow';
+}
+
+function settingView(local: SetupInstallation, remote: SetupRemoteConfiguration | undefined, setting: Setting, accessible: boolean): SetupManagementView['settings'][number] {
+  const bindings = local.workflows.flatMap(workflow => workflow.inputs.filter(input => input.name === setting.input)
+    .map(input => ({ ...input, environmentScoped: workflow.environmentScoped })));
+  const repository = remote?.repositoryVariables.find(item => item.name === setting.variable);
+  const organization = remote?.organizationVariables.find(item => item.name === setting.variable);
+  const stored = accessible ? repository ?? organization : undefined;
+  const bindingsSafe = bindings.length > 0 && bindings.every(input => input.variable === setting.variable && !input.environmentScoped);
+  const value = resolvedValue(bindings, bindingsSafe, stored, accessible);
+  const editable = accessible && bindingsSafe && !local.unreadable && value !== undefined && safe(value) === value;
+  return { id: setting.id, variable: setting.variable, ...(value === undefined ? {} : { value: safe(value) }),
+    source: settingSource(stored, bindingsSafe, Boolean(repository), value), editable };
+}
+
+function variableInventory(local: SetupInstallation, remote?: SetupRemoteConfiguration): SetupManagementView['variables'] {
   const referenced = new Set(local.workflows.flatMap(workflow => workflow.inputs.flatMap(input => input.variable ? [input.variable] : [])));
-  const settings = SETUP_QUICK_SETTINGS.map(setting => {
-    const bindings = local.workflows.flatMap(workflow => workflow.inputs.filter(input => input.name === setting.input)
-      .map(input => ({ ...input, environmentScoped: workflow.environmentScoped })));
-    const repo = remote?.repositoryVariables.find(item => item.name === setting.variable);
-    const org = remote?.organizationVariables.find(item => item.name === setting.variable);
-    const stored = accessible ? repo ?? org : undefined;
-    const bindingsSafe = bindings.length > 0 && bindings.every(input => input.variable === setting.variable && !input.environmentScoped);
-    const fallbacks = [...new Set(bindings.map(input => input.literal ?? input.fallback))];
-    const value = stored && bindingsSafe ? stored.value || (fallbacks.length === 1 ? fallbacks[0] : undefined) : bindings.length > 0 && bindings.every(input => !input.variable && !input.unsupported)
-      && fallbacks.length === 1 ? fallbacks[0] : accessible && bindingsSafe && fallbacks.length === 1 ? fallbacks[0] : undefined;
-    return { id: setting.id, variable: setting.variable, ...(value === undefined ? {} : { value: safe(value) }),
-      source: stored && bindingsSafe ? repo ? 'repository' as const : 'organization' as const
-        : value !== undefined ? 'workflow' as const : 'unknown' as const,
-      editable: accessible && bindingsSafe && !local.unreadable && value !== undefined && safe(value) === value };
-  });
-  const resources = (scope: SetupResourceScope) => {
-    const values = scope === 'repository' ? remote?.repositoryVariables : remote?.organizationVariables;
-    return (values ?? []).filter(item => referenced.has(item.name)).map(item => ({ name: item.name, value: safe(item.value), scope,
-      shadowed: scope === 'organization' && Boolean(remote?.repositoryVariables.some(repo => repo.name === item.name)) }));
-  };
-  const secrets = (scope: SetupResourceScope) => (scope === 'repository' ? remote?.repositorySecrets ?? [] : remote?.organizationSecrets ?? [])
-    .map(name => ({ name, scope, shadowed: scope === 'organization' && Boolean(remote?.repositorySecrets.includes(name)) }));
-  return { status: local.unreadable || local.guidancePresent && !local.workflows.length ? 'incomplete'
-    : local.workflows.length ? 'detected' : 'unconfigured', github: !remote ? 'not-connected' : accessible ? 'available' : 'incomplete',
-    workflows: local.workflows, settings, variables: [...resources('repository'), ...resources('organization')],
-    secrets: [...secrets('repository'), ...secrets('organization')],
-    secretInventory: !remote ? 'not-connected' : remote.repositorySecretsAccess === 'available'
-      && (remote.ownerType === 'User' || remote.organizationSecretsAccess === 'available') ? 'available' : 'incomplete', changed };
+  const repository = remote?.repositoryVariables ?? [];
+  const organization = remote?.organizationVariables ?? [];
+  const entries = (values: readonly Variable[], scope: SetupResourceScope) => values.filter(item => referenced.has(item.name))
+    .map(item => ({ name: item.name, value: safe(item.value), scope,
+      shadowed: scope === 'organization' && repository.some(repo => repo.name === item.name) }));
+  return [...entries(repository, 'repository'), ...entries(organization, 'organization')];
+}
+
+function secretInventory(remote?: SetupRemoteConfiguration): SetupManagementView['secrets'] {
+  const repository = remote?.repositorySecrets ?? [];
+  const organization = remote?.organizationSecrets ?? [];
+  return [...repository.map(name => ({ name, scope: 'repository' as const, shadowed: false })),
+    ...organization.map(name => ({ name, scope: 'organization' as const, shadowed: repository.includes(name) }))];
+}
+
+function secretAccess(remote?: SetupRemoteConfiguration): SetupManagementView['secretInventory'] {
+  if (!remote) return 'not-connected';
+  if (remote.repositorySecretsAccess !== 'available') return 'incomplete';
+  return remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationSecretsAccess === 'available' ? 'available' : 'incomplete';
+}
+
+function installationStatus(local: SetupInstallation): SetupManagementView['status'] {
+  if (local.unreadable || local.guidancePresent && !local.workflows.length) return 'incomplete';
+  return local.workflows.length ? 'detected' : 'unconfigured';
+}
+
+export function buildSetupManagementView(local: SetupInstallation, remote?: SetupRemoteConfiguration, changed = false): SetupManagementView {
+  const accessible = variablesAccessible(remote);
+  return { status: installationStatus(local), github: !remote ? 'not-connected' : accessible ? 'available' : 'incomplete',
+    workflows: local.workflows, settings: SETUP_QUICK_SETTINGS.map(setting => settingView(local, remote, setting, accessible)),
+    variables: variableInventory(local, remote), secrets: secretInventory(remote), secretInventory: secretAccess(remote), changed };
 }
 
 /** The effective scope stays fixed; a quick change cannot create a shadow or move resources. */

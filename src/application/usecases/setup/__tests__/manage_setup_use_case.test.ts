@@ -9,14 +9,14 @@ function fixture(choices: string[] = ['connect', 'edit:commentLimit', 'close']) 
 }
 describe('manage setup transaction', () => {
  test('inspection closes without requesting credentials or writing', async () => {
-  const f = fixture(['close']); expect(await f.useCase.execute()).toBe('cancelled'); expect(f.ports.requestToken).not.toHaveBeenCalled(); expect(f.ports.audit).not.toHaveBeenCalled(); expect(f.ports.write).not.toHaveBeenCalled();
+  const f = fixture(['close']); expect(await f.useCase.execute()).toBe('complete'); expect(f.ports.requestToken).not.toHaveBeenCalled(); expect(f.ports.audit).not.toHaveBeenCalled(); expect(f.ports.write).not.toHaveBeenCalled();
  });
  test('hands off explicitly to the full assistant', async () => expect(await fixture(['wizard']).useCase.execute()).toBe('continue'));
  test('connect and refresh read only, reusing the in-memory token', async () => {
   const f = fixture(['connect', 'refresh', 'close']); await f.useCase.execute(); expect(f.ports.requestToken).toHaveBeenCalledTimes(1); expect(f.ports.inspectRemote).toHaveBeenCalledTimes(2); expect(f.ports.write).not.toHaveBeenCalled();
  });
  test('a blank or dismissed token returns to the panel', async () => {
-  const f = fixture(['connect', 'close']); f.ports.requestToken.mockResolvedValue(undefined); expect(await f.useCase.execute()).toBe('cancelled'); expect(f.ports.inspectRemote).not.toHaveBeenCalled();
+  const f = fixture(['connect', 'close']); f.ports.requestToken.mockResolvedValue(undefined); expect(await f.useCase.execute()).toBe('complete'); expect(f.ports.inspectRemote).not.toHaveBeenCalled();
  });
  test('a rejected connection forgets the token and permits a fresh one', async () => {
   const f = fixture(['connect', 'connect', 'close']); f.ports.inspectRemote.mockRejectedValueOnce(new Error('private provider text')); await f.useCase.execute(); expect(f.ports.requestToken).toHaveBeenCalledTimes(2); expect(f.ports.notify).toHaveBeenCalledWith('blocked');
@@ -97,7 +97,7 @@ describe('manage setup transaction', () => {
 
 describe('management lifecycle boundaries', () => {
  test('skip-variables makes every edit unavailable even with an authorized PAT', async () => {
-  const f = fixture(); expect(await new ManageSetupUseCase(f.ports, true).execute()).toBe('cancelled');
+  const f = fixture(); expect(await new ManageSetupUseCase(f.ports, true).execute()).toBe('complete');
   expect(f.ports.choose.mock.calls[1][0].settings.every(setting => !setting.editable)).toBe(true); expect(f.ports.audit).not.toHaveBeenCalled();
  });
  test('a controller takeover invalidates the previous approval', async () => {

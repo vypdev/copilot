@@ -103,11 +103,11 @@ Text equivalent: a quick adjustment returns to inspection after successful verif
 6. After approval, test Metadata Read, Variables Read for scope precedence, and Variables Write only in the selected scope using the existing cleanup-verified permission transaction. No Actions, Issue, PR, Project or Secret write is requested.
 7. Read the selected Variable at both scopes and the checkout again. Any changed fingerprint invalidates approval and refreshes the panel.
 8. Write exactly one named Variable through the existing command port. Preserve existing organization visibility/access. Read it back and require matching value and scope before claiming success.
-9. Return to the panel with success feedback; additional edits require independent approvals. Close after a successful write reports complete.
+9. Return to the panel with success feedback; additional edits require independent approvals. An explicit Finish reports successful completion of inspection or adjustment. It never requires an installation mutation or certifies a full installation.
 
 ### 6.2 Alternatives
 
-A blank PAT, cancelled edit or declined preview returns to inspection. Permission denial permits a corrected token and new review. Unconfirmed cleanup or write/read-back failure stops as partial and requires inspection. The complete assistant uses the existing full workflow, including bot verification, storage conflicts, optional API keys, workflow overrides and automatic tag policy.
+A blank PAT, cancelled edit or declined preview returns to inspection. Permission denial permits a corrected token and new review. Unconfirmed cleanup or write/read-back failure stops as partial and requires inspection. Starting the complete assistant creates a fresh installation journey. Earlier verified quick changes remain recorded; cancelling that later journey cannot be reported as no changes. Earlier changes do not prevent revisiting the new local answers before PAT entry. The complete assistant uses the existing full workflow, including bot verification, storage conflicts, optional API keys, workflow overrides and automatic tag policy.
 
 ### 6.3 State machine
 
@@ -202,6 +202,8 @@ Blocked: “Access could not be confirmed. Reconnect with a corrected setup PAT;
 Stale: “The configuration changed during review. Review the refreshed value; nothing was written.”
 Partial: “The write could not be confirmed. Inspect GitHub before retrying; the previous value was not restored automatically.”
 Complete: “Adjustment applied and read back from GitHub. Make another adjustment or close.”
+Inspection finished: “Configuration inspection finished. No installed setting was changed.”
+An explicit Finish closes successfully even without edits; cancelling the session retains the cancellation result.
 
 ### 9.3 Issue, PR, and comment behavior
 
@@ -254,9 +256,11 @@ All new executable TypeScript modules MUST have 100% line/statement/function cov
 
 ### 14.1 Verification recorded on 2026-10-08
 
-The full macOS Node 24 suite passed: **557 suites, 6,807 tests passed, 26 explicitly skipped**, with every coverage budget passing. Each of the seven new runtime modules reaches **100% statements, branches, functions and lines**. Final presentation/handoff regressions also passed separately (45 cases). TypeScript, Svelte (zero errors/warnings), lint, workflow/documentation/specification contracts, package contents and isolated packaged CLI/API/web smoke passed. Local Node/V8 crashed during earlier large single-process attempts; the completed run used two workers with bounded recycling and allowed localhost test sockets.
+The full macOS Node 24 suite passed: **557 suites, 6,823 tests passed, 26 explicitly skipped**, with every coverage budget passing. Each of the seven new runtime modules reaches **100% statements, branches, functions and lines**. Presentation/handoff regressions also verify successful read-only Finish, preserved prior adjustments when entering a fresh wizard, conservative cancellation/exception results, and a later installation failure superseding a successful quick-write receipt. TypeScript, Svelte (zero errors/warnings), lint, workflow/documentation/specification contracts, package contents and isolated packaged CLI/API/web smoke passed. Local Node/V8 crashed during earlier large single-process attempts; the completed run used two workers with bounded recycling and allowed localhost test sockets.
 
 Live organization quick edits were read back and restored: comment limit **20 → 15 → 20**, reviewers **1 → 2 → 1**. Unchanged submission and cancelled preview performed no write. The final panel was inspected in English/Spanish, light/dark and at 320 pixels without horizontal overflow. Four-locale semantic rendering is automated; other platform, linguistic and screen-reader review remains explicitly unclaimed.
+
+A subsequent preserving-Variable full repetition completed successfully with organization Secrets/Variables, SDDs, inactive closure, both selected CI producers, Project #2 and an omitted Codex API key. Read-only doctor again reported 100 pass / 5 warn / 5 fail, independently of successful installation. Its generated configuration was archived and discarded.
 
 A repeated full assistant override was stopped before Apply because five existing repository `AGENT_*` Variables shadow the selected organization scope. This is an intentional conflict result; no installation change was made. Those existing values are retained pending explicit resolution. The earlier successful complete setup and its distinct doctor readiness limitations are recorded in the implementation PR. Every generated local configuration artifact was archived and discarded; `.github/` and `.copilot/` are unchanged in this implementation.
 

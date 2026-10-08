@@ -38,7 +38,7 @@ beforeEach(() => jest.clearAllMocks());
 afterEach(() => { roots.splice(0).forEach(root => rmSync(root,{ recursive:true, force:true })); });
 describe('web configuration management composition', () => {
  test('the full assistant handoff resets the surface and clears prior inspection feedback', async () => { const f = fixture(['connect','fixture-token','wizard']); expect(await f.run()).toBe('continue'); expect(f.bridge.snapshot().surface).toBe('wizard'); expect(f.bridge.snapshot().message).toBeUndefined(); expect(mockInspect).toHaveBeenCalledTimes(1); });
- test('a blank read-only PAT returns to the panel without provider calls', async () => { const f = fixture(['connect','','close']); expect(await f.run()).toBe('cancelled'); expect(mockInspect).not.toHaveBeenCalled(); expect(f.prompts[1]).toMatchObject({ kind:'secret', copyId:'management.token', optional:true }); });
+ test('a blank read-only PAT returns to the panel without provider calls', async () => { const f = fixture(['connect','','close']); expect(await f.run()).toBe('complete'); expect(mockInspect).not.toHaveBeenCalled(); expect(f.prompts[1]).toMatchObject({ kind:'secret', copyId:'management.token', optional:true }); });
  test.each(['repository','organization'] as const)('%s edit asks for one approval, writes one Variable and retains a receipt', async scope => {
   const f = fixture(['connect','fixture-token','edit:commentLimit','15','approve','close'],scope); expect(await f.run()).toBe('complete');
   expect(f.prompts.find(prompt => prompt.kind === 'quick-review')).toMatchObject({ change: { scope, before:'20',after:'15' } });
@@ -47,9 +47,9 @@ describe('web configuration management composition', () => {
   expect(scope === 'repository' ? mockRepoWrite : mockOrgWrite).toHaveBeenCalledTimes(1); expect(f.effects).toEqual([{ id:'variables',state:'completed',scope }]);
   expect(f.mutation).toHaveBeenCalledTimes(1);
  });
- test('dismissed edit returns to the panel without a probe', async () => { const f = fixture(['connect','fixture-token','edit:commentLimit','cancel','close']); expect(await f.run()).toBe('cancelled'); expect(mockAudit).not.toHaveBeenCalled(); });
+ test('dismissed edit returns to the panel without a probe', async () => { const f = fixture(['connect','fixture-token','edit:commentLimit','cancel','close']); expect(await f.run()).toBe('complete'); expect(mockAudit).not.toHaveBeenCalled(); });
  test('denied write permissions offer a link with just scoped Write and necessary cross-scope reads', async () => {
-  const f = fixture(['connect','fixture-token','edit:commentLimit','15','approve','connect','replacement-token','close']); mockAudit.mockResolvedValue(denied); expect(await f.run()).toBe('cancelled');
+  const f = fixture(['connect','fixture-token','edit:commentLimit','15','approve','connect','replacement-token','close']); mockAudit.mockResolvedValue(denied); expect(await f.run()).toBe('complete');
   const prompt = f.prompts.find(prompt => prompt.kind === 'secret' && prompt.copyId === 'management.tokenWrite'); expect(prompt).toMatchObject({ optional:true });
   if (prompt?.kind !== 'secret') throw new Error('Missing corrected PAT prompt'); const url = new URL(prompt.link!);
   expect(url.searchParams.get('organization_actions_variables')).toBe('write'); expect(url.searchParams.get('actions_variables')).toBe('read'); expect(url.searchParams.has('workflows')).toBe(false);
@@ -57,7 +57,7 @@ describe('web configuration management composition', () => {
  });
  test.each(['cleanupPending','incident'])('%s blocks installed changes and requires inspection', async field => { const f = fixture(['connect','fixture-token','edit:commentLimit','15','approve']); mockAudit.mockResolvedValue({ ...denied, checks:[{ [field]:true }] }); expect(await f.run()).toBe('partial'); expect(f.mutation).toHaveBeenCalledTimes(1); expect(mockOrgWrite).not.toHaveBeenCalled(); });
  test('an unconfirmed provider write keeps a needs-inspection receipt', async () => { const f = fixture(['connect','fixture-token','edit:commentLimit','15','approve']); mockOrgWrite.mockResolvedValue({ created:0,updated:0,errors:['safe failure'] }); expect(await f.run()).toBe('partial'); expect(f.effects).toEqual([{ id:'variables',state:'needs-inspection',scope:'organization' }]); expect(f.bridge.snapshot().resultDetail?.reasonCode).toBe('provider'); });
- test('skip-variables still supports inspection without editable settings', async () => { const f = fixture(['connect','fixture-token','close']); expect(await f.run(true)).toBe('cancelled'); expect(f.prompts[2]).toMatchObject({ management:{settings:expect.arrayContaining([expect.objectContaining({editable:false})])} }); expect(mockAudit).not.toHaveBeenCalled(); });
+ test('skip-variables still supports inspection without editable settings', async () => { const f = fixture(['connect','fixture-token','close']); expect(await f.run(true)).toBe('complete'); expect(f.prompts[2]).toMatchObject({ management:{settings:expect.arrayContaining([expect.objectContaining({editable:false})])} }); expect(mockAudit).not.toHaveBeenCalled(); });
  test('takeover during the audit requires a new review', async () => { const f = fixture(['connect','fixture-token','edit:commentLimit','15','approve','close']); mockAudit.mockImplementation(async () => { f.bridge.takeOver(); return { ...denied,ready:true }; }); await f.run(); expect(mockOrgWrite).not.toHaveBeenCalled(); expect(f.bridge.snapshot().message?.managementState).toBe('stale'); });
  test('refreshing does not write or request the PAT again', async () => { const f = fixture(['connect','fixture-token','refresh','close']); await f.run(); expect(f.prompts.filter(prompt => prompt.kind === 'secret')).toHaveLength(1); expect(mockInspect).toHaveBeenCalledTimes(2); expect(mockOrgWrite).not.toHaveBeenCalled(); });
 });

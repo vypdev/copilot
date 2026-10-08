@@ -69,3 +69,11 @@ describe('self-hosting repository Action inspection', () => {
  });
  test('missing uses and token-shaped Action references cannot enter the view', () => { const f=fixture('jobs:\n  job:\n    steps:\n      - run: echo nothing\n      - uses: vypdev/copilot@github_pat_'+ 'a'.repeat(30));expect(f.adapter.inspect().workflows).toEqual([]); });
 });
+
+
+test('multiple local workflows retain the same Action evidence and all input bindings', () => {
+ const source=workflow('bugbot-comment-limit: 20').replace('vypdev/copilot@v3','./');
+ const f=fixture(source); writeFileSync(join(f.directory,'second.yml'),source);
+ writeFileSync(join(f.root,'action.yml'), 'name: Copilot - GitHub with super powers\ninputs:\n  bugbot-comment-limit: {default: 20}\n');
+ expect(f.adapter.inspect()).toMatchObject({ unreadable:false, localActionDigest:expect.any(String), workflows:[{file:'copilot.yml',action:'./'},{file:'second.yml',action:'./'}] });
+});

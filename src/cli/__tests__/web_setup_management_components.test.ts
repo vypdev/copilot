@@ -12,7 +12,7 @@ const controls = { controller: true, busy: false };
 describe('human configuration management views', () => {
  test.each(['en','es','fr','pt'] as const)('%s new checkout explains the missing installation with one start action', locale => {
   const copy = managementCopy(locale); const view = buildSetupManagementView({ ...localInstallation(), workflows: [], guidancePresent: false });
-  const html = markup('SetupManagementPanel', { ...controls, view }, locale); expect(html).toContain(copy.unconfigured); expect(html).toContain(copy.start); expect(html).not.toContain(copy.connect); expect(html).not.toContain('type="password"');
+  const html = markup('SetupManagementPanel', { ...controls, view }, locale); expect(html).toContain(copy.unconfigured); expect(html).toContain(copy.startHelp); expect(html).toContain(copy.start); expect(html).not.toContain(copy.local); expect(html).not.toContain(copy.connect); expect(html).not.toContain('type="password"');
  });
  test.each(['en','es','fr','pt'] as const)('%s existing checkout shows source, credential limitation and progressive disclosure', locale => {
   const copy = managementCopy(locale); const html = markup('SetupManagementPanel', { ...controls, view: buildSetupManagementView(localInstallation(), remoteConfiguration()) }, locale);
@@ -65,9 +65,10 @@ test('display values translate known options without changing their submitted va
 
 test.each(['en','es','fr','pt'] as const)('%s management results distinguish an adjustment from a full installation', locale => {
  const copy=managementCopy(locale);
- for (const [outcome,key] of [['complete','finished'],['cancelled','inspectionFinished'],['partial','inspectAdjustment']] as const) {
-  const html=markup('ResultPanel',{management:true,outcome,controller:true},locale);expect(html).toContain(copy[key]);expect(html).not.toContain('Verify installed resources');
+ for (const [outcome,key] of [['complete','finished'],['cancelled','inspectionStopped'],['blocked','inspectionStopped'],['partial','inspectAdjustment']] as const) {
+  const html=markup('ResultPanel',{management:true,outcome,controller:true,detail:{effects:[{id:'variables',state:'completed',scope:'organization'}]}},locale);expect(html).toContain(copy[key]);expect(html).not.toContain('Verify installed resources');
  }
+ const inspection=markup('ResultPanel',{management:true,outcome:'complete',controller:true},locale);expect(inspection).toContain(copy.inspectionFinished);expect(inspection).toContain(copy.inspectionBody);expect(inspection).not.toContain('This setup was cancelled');
 });
 
 test('an unknown source does not repeat the same uncertainty label', () => { const html=markup('SetupManagementPanel',{...controls,view:buildSetupManagementView(localInstallation())});expect(html).not.toContain('Not verified · Not verified'); });

@@ -38,6 +38,7 @@ export class SetupSessionCoordinator {
   private mutationStarted = false;
   private stage: SetupJourneyStage = 'repository';
   private readonly effects = new Map<SetupOperationEffect['id'], SetupOperationEffect>();
+  private readonly installationEffects = new Set<SetupOperationEffect['id']>();
 
   constructor(private readonly ports: SetupSessionPorts) {}
 
@@ -98,7 +99,8 @@ export class SetupSessionCoordinator {
   }
 
   private record(effect: SetupOperationEffect): void {
-    const previous = this.effects.get(effect.id);
+    const previous = this.installationEffects.has(effect.id) ? this.effects.get(effect.id) : undefined;
+    this.installationEffects.add(effect.id);
     if (previous?.state === 'completed' && effect.state !== 'completed') return;
     this.effects.set(effect.id, Object.freeze({ ...effect }));
   }

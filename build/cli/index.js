@@ -45619,44 +45619,75 @@ exports.buildSetupManagementView = buildSetupManagementView;
 exports.planQuickChange = planQuickChange;
 const sensitive_text_1 = __nccwpck_require__(47122);
 const setup_quick_settings_policy_1 = __nccwpck_require__(40582);
+const safe = (value) => (0, sensitive_text_1.redactSensitiveText)(value.slice(0, 4096));
 function managementFingerprint(local, remote, variable) {
     return JSON.stringify([local, remote.ownerType, remote.repositoryId, remote.repositoryVariablesAccess,
         remote.organizationVariablesAccess, remote.repositoryVariables.find(item => item.name === variable) ?? null,
         remote.organizationVariables.find(item => item.name === variable) ?? null]);
 }
-function buildSetupManagementView(local, remote, changed = false) {
-    const accessible = Boolean(remote?.repositoryVariablesAccess === 'available'
-        && (remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationVariablesAccess === 'available'));
-    const safe = (value) => (0, sensitive_text_1.redactSensitiveText)(value.slice(0, 4096));
+function variablesAccessible(remote) {
+    if (remote?.repositoryVariablesAccess !== 'available')
+        return false;
+    return remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationVariablesAccess === 'available';
+}
+function resolvedValue(bindings, bindingsSafe, stored, accessible) {
+    const fallbacks = [...new Set(bindings.map(input => input.literal ?? input.fallback))];
+    const fallback = fallbacks.length === 1 ? fallbacks[0] : undefined;
+    if (stored && bindingsSafe)
+        return stored.value || fallback;
+    if (bindings.length > 0 && bindings.every(input => !input.variable && !input.unsupported))
+        return fallback;
+    return accessible && bindingsSafe ? fallback : undefined;
+}
+function settingSource(stored, bindingsSafe, repository, value) {
+    if (stored && bindingsSafe)
+        return repository ? 'repository' : 'organization';
+    return value === undefined ? 'unknown' : 'workflow';
+}
+function settingView(local, remote, setting, accessible) {
+    const bindings = local.workflows.flatMap(workflow => workflow.inputs.filter(input => input.name === setting.input)
+        .map(input => ({ ...input, environmentScoped: workflow.environmentScoped })));
+    const repository = remote?.repositoryVariables.find(item => item.name === setting.variable);
+    const organization = remote?.organizationVariables.find(item => item.name === setting.variable);
+    const stored = accessible ? repository ?? organization : undefined;
+    const bindingsSafe = bindings.length > 0 && bindings.every(input => input.variable === setting.variable && !input.environmentScoped);
+    const value = resolvedValue(bindings, bindingsSafe, stored, accessible);
+    const editable = accessible && bindingsSafe && !local.unreadable && value !== undefined && safe(value) === value;
+    return { id: setting.id, variable: setting.variable, ...(value === undefined ? {} : { value: safe(value) }),
+        source: settingSource(stored, bindingsSafe, Boolean(repository), value), editable };
+}
+function variableInventory(local, remote) {
     const referenced = new Set(local.workflows.flatMap(workflow => workflow.inputs.flatMap(input => input.variable ? [input.variable] : [])));
-    const settings = setup_quick_settings_policy_1.SETUP_QUICK_SETTINGS.map(setting => {
-        const bindings = local.workflows.flatMap(workflow => workflow.inputs.filter(input => input.name === setting.input)
-            .map(input => ({ ...input, environmentScoped: workflow.environmentScoped })));
-        const repo = remote?.repositoryVariables.find(item => item.name === setting.variable);
-        const org = remote?.organizationVariables.find(item => item.name === setting.variable);
-        const stored = accessible ? repo ?? org : undefined;
-        const bindingsSafe = bindings.length > 0 && bindings.every(input => input.variable === setting.variable && !input.environmentScoped);
-        const fallbacks = [...new Set(bindings.map(input => input.literal ?? input.fallback))];
-        const value = stored && bindingsSafe ? stored.value || (fallbacks.length === 1 ? fallbacks[0] : undefined) : bindings.length > 0 && bindings.every(input => !input.variable && !input.unsupported)
-            && fallbacks.length === 1 ? fallbacks[0] : accessible && bindingsSafe && fallbacks.length === 1 ? fallbacks[0] : undefined;
-        return { id: setting.id, variable: setting.variable, ...(value === undefined ? {} : { value: safe(value) }),
-            source: stored && bindingsSafe ? repo ? 'repository' : 'organization'
-                : value !== undefined ? 'workflow' : 'unknown',
-            editable: accessible && bindingsSafe && !local.unreadable && value !== undefined && safe(value) === value };
-    });
-    const resources = (scope) => {
-        const values = scope === 'repository' ? remote?.repositoryVariables : remote?.organizationVariables;
-        return (values ?? []).filter(item => referenced.has(item.name)).map(item => ({ name: item.name, value: safe(item.value), scope,
-            shadowed: scope === 'organization' && Boolean(remote?.repositoryVariables.some(repo => repo.name === item.name)) }));
-    };
-    const secrets = (scope) => (scope === 'repository' ? remote?.repositorySecrets ?? [] : remote?.organizationSecrets ?? [])
-        .map(name => ({ name, scope, shadowed: scope === 'organization' && Boolean(remote?.repositorySecrets.includes(name)) }));
-    return { status: local.unreadable || local.guidancePresent && !local.workflows.length ? 'incomplete'
-            : local.workflows.length ? 'detected' : 'unconfigured', github: !remote ? 'not-connected' : accessible ? 'available' : 'incomplete',
-        workflows: local.workflows, settings, variables: [...resources('repository'), ...resources('organization')],
-        secrets: [...secrets('repository'), ...secrets('organization')],
-        secretInventory: !remote ? 'not-connected' : remote.repositorySecretsAccess === 'available'
-            && (remote.ownerType === 'User' || remote.organizationSecretsAccess === 'available') ? 'available' : 'incomplete', changed };
+    const repository = remote?.repositoryVariables ?? [];
+    const organization = remote?.organizationVariables ?? [];
+    const entries = (values, scope) => values.filter(item => referenced.has(item.name))
+        .map(item => ({ name: item.name, value: safe(item.value), scope,
+        shadowed: scope === 'organization' && repository.some(repo => repo.name === item.name) }));
+    return [...entries(repository, 'repository'), ...entries(organization, 'organization')];
+}
+function secretInventory(remote) {
+    const repository = remote?.repositorySecrets ?? [];
+    const organization = remote?.organizationSecrets ?? [];
+    return [...repository.map(name => ({ name, scope: 'repository', shadowed: false })),
+        ...organization.map(name => ({ name, scope: 'organization', shadowed: repository.includes(name) }))];
+}
+function secretAccess(remote) {
+    if (!remote)
+        return 'not-connected';
+    if (remote.repositorySecretsAccess !== 'available')
+        return 'incomplete';
+    return remote.ownerType === 'User' || remote.ownerType === 'Organization' && remote.organizationSecretsAccess === 'available' ? 'available' : 'incomplete';
+}
+function installationStatus(local) {
+    if (local.unreadable || local.guidancePresent && !local.workflows.length)
+        return 'incomplete';
+    return local.workflows.length ? 'detected' : 'unconfigured';
+}
+function buildSetupManagementView(local, remote, changed = false) {
+    const accessible = variablesAccessible(remote);
+    return { status: installationStatus(local), github: !remote ? 'not-connected' : accessible ? 'available' : 'incomplete',
+        workflows: local.workflows, settings: setup_quick_settings_policy_1.SETUP_QUICK_SETTINGS.map(setting => settingView(local, remote, setting, accessible)),
+        variables: variableInventory(local, remote), secrets: secretInventory(remote), secretInventory: secretAccess(remote), changed };
 }
 /** The effective scope stays fixed; a quick change cannot create a shadow or move resources. */
 function planQuickChange(local, remote, id, raw) {
@@ -54882,115 +54913,140 @@ class ManageSetupUseCase {
         if (this.started)
             throw new Error('A management session can run only once.');
         this.started = true;
-        let token;
-        let remote;
-        let changed = false;
+        const state = { changed: false };
         while (this.ports.active()) {
             const local = this.ports.inspectLocal();
-            const view = (0, setup_management_policy_1.buildSetupManagementView)(local, remote, changed);
+            const view = (0, setup_management_policy_1.buildSetupManagementView)(local, state.connection?.remote, state.changed);
             const choice = await this.ports.choose(this.readOnly ? { ...view, settings: view.settings.map(setting => ({ ...setting, editable: false })) } : view);
-            if (!this.ports.active() || !choice || choice === 'close')
-                return changed ? 'complete' : 'cancelled';
+            if (!this.ports.active() || !choice)
+                break;
+            if (choice === 'close')
+                return 'complete';
             if (choice === 'wizard')
                 return 'continue';
-            if (choice === 'connect' || choice === 'refresh') {
-                if (!token)
-                    token = await this.ports.requestToken();
-                if (!token)
-                    continue;
-                try {
-                    remote = await this.ports.inspectRemote(token);
-                    this.ports.notify('connected');
-                }
-                catch {
-                    remote = undefined;
-                    token = undefined;
-                    this.ports.notify('blocked');
-                }
-                continue;
-            }
-            if (this.readOnly || !token || !remote || !choice.startsWith('edit:')) {
-                this.ports.notify('blocked');
-                continue;
-            }
-            const id = choice.slice(5);
-            const current = (0, setup_management_policy_1.buildSetupManagementView)(local, remote).settings.find(item => item.id === id);
-            if (!current?.editable || current.value === undefined) {
-                this.ports.notify('blocked');
-                continue;
-            }
-            const value = await this.ports.requestValue(id, current.value);
-            if (value === undefined)
-                continue;
-            const plan = (0, setup_management_policy_1.planQuickChange)(local, remote, id, value);
-            if (!plan) {
-                this.ports.notify('invalid');
-                continue;
-            }
-            if (plan.before === plan.after) {
-                this.ports.notify('unchanged');
-                continue;
-            }
-            if (!await this.ports.confirm(plan) || !this.ports.active())
-                continue;
-            let audit;
-            try {
-                audit = await this.ports.audit(plan, token, remote);
-            }
-            catch {
-                this.ports.possibleMutation();
-                this.ports.notify('partial');
+            if (choice === 'connect' || choice === 'refresh')
+                await this.connect(state);
+            else if (await this.adjust(state, local, choice) === 'partial')
                 return 'partial';
-            }
-            if (audit === 'cleanup-pending') {
-                this.ports.possibleMutation();
-                return 'partial';
-            }
-            if (audit !== 'accepted') {
-                this.ports.notify('blocked');
-                token = undefined;
-                remote = undefined;
-                continue;
-            }
-            if (!this.ports.active())
-                return changed ? 'complete' : 'cancelled';
-            let fresh;
-            try {
-                fresh = await this.ports.inspectRemote(token);
-            }
-            catch {
-                this.ports.notify('blocked');
-                continue;
-            }
-            if (!this.ports.active())
-                return changed ? 'complete' : 'cancelled';
-            if (!this.ports.approvalCurrent() || (0, setup_management_policy_1.managementFingerprint)(this.ports.inspectLocal(), fresh, plan.variable) !== plan.fingerprint) {
-                remote = fresh;
-                this.ports.notify('stale');
-                continue;
-            }
-            this.ports.possibleMutation();
-            try {
-                const result = await this.ports.write(plan, token, fresh);
-                remote = await this.ports.inspectRemote(token);
-                const observed = (0, setup_management_policy_1.buildSetupManagementView)(this.ports.inspectLocal(), remote).settings.find(item => item.id === id);
-                const success = result.errors.length === 0 && result.created + result.updated === 1
-                    && observed?.value === plan.after && observed.source === plan.scope;
-                this.ports.recordWrite(success, plan.scope);
-                if (!success) {
-                    this.ports.notify('partial');
-                    return 'partial';
-                }
-                changed = true;
-                this.ports.notify('updated');
-            }
-            catch {
-                this.ports.recordWrite(false, plan.scope);
-                this.ports.notify('partial');
-                return 'partial';
-            }
         }
-        return changed ? 'complete' : 'cancelled';
+        return state.changed ? 'complete' : 'cancelled';
+    }
+    async connect(state) {
+        const token = state.connection?.token ?? await this.ports.requestToken();
+        if (!token)
+            return;
+        try {
+            state.connection = { token, remote: await this.ports.inspectRemote(token) };
+            this.ports.notify('connected');
+        }
+        catch {
+            state.connection = undefined;
+            this.ports.notify('blocked');
+        }
+    }
+    async adjust(state, local, choice) {
+        if (this.readOnly || !state.connection || !choice.startsWith('edit:')) {
+            this.ports.notify('blocked');
+            return;
+        }
+        const connection = state.connection;
+        const plan = await this.review(connection, local, choice.slice(5));
+        if (!plan)
+            return;
+        const audit = await this.audit(state, connection, plan);
+        if (audit === 'partial')
+            return 'partial';
+        if (audit !== 'accepted' || !this.ports.active())
+            return;
+        const fresh = await this.inspectApprovedChange(state, connection, plan);
+        if (!fresh)
+            return;
+        return this.writeAndVerify(state, connection, plan, fresh);
+    }
+    async review(connection, local, id) {
+        const current = (0, setup_management_policy_1.buildSetupManagementView)(local, connection.remote).settings.find(item => item.id === id);
+        if (!current?.editable || current.value === undefined) {
+            this.ports.notify('blocked');
+            return;
+        }
+        const value = await this.ports.requestValue(id, current.value);
+        if (value === undefined)
+            return;
+        const plan = (0, setup_management_policy_1.planQuickChange)(local, connection.remote, id, value);
+        if (!plan) {
+            this.ports.notify('invalid');
+            return;
+        }
+        if (plan.before === plan.after) {
+            this.ports.notify('unchanged');
+            return;
+        }
+        if (await this.ports.confirm(plan) && this.ports.active())
+            return plan;
+    }
+    async audit(state, connection, plan) {
+        let audit;
+        try {
+            audit = await this.ports.audit(plan, connection.token, connection.remote);
+        }
+        catch {
+            this.ports.possibleMutation();
+            this.ports.notify('partial');
+            return 'partial';
+        }
+        if (audit === 'cleanup-pending') {
+            this.ports.possibleMutation();
+            return 'partial';
+        }
+        if (audit === 'blocked') {
+            this.ports.notify('blocked');
+            state.connection = undefined;
+        }
+        return audit;
+    }
+    async inspectApprovedChange(state, connection, plan) {
+        let fresh;
+        try {
+            fresh = await this.ports.inspectRemote(connection.token);
+        }
+        catch {
+            this.ports.notify('blocked');
+            return;
+        }
+        if (!this.ports.active())
+            return;
+        if (!this.ports.approvalCurrent() || (0, setup_management_policy_1.managementFingerprint)(this.ports.inspectLocal(), fresh, plan.variable) !== plan.fingerprint) {
+            state.connection = { ...connection, remote: fresh };
+            this.ports.notify('stale');
+            return;
+        }
+        return fresh;
+    }
+    async writeAndVerify(state, connection, plan, fresh) {
+        this.ports.possibleMutation();
+        try {
+            const result = await this.ports.write(plan, connection.token, fresh);
+            const remote = await this.ports.inspectRemote(connection.token);
+            state.connection = { ...connection, remote };
+            const success = this.matchesReceipt(result, remote, plan);
+            this.ports.recordWrite(success, plan.scope);
+            if (!success) {
+                this.ports.notify('partial');
+                return 'partial';
+            }
+            state.changed = true;
+            this.ports.notify('updated');
+        }
+        catch {
+            this.ports.recordWrite(false, plan.scope);
+            this.ports.notify('partial');
+            return 'partial';
+        }
+    }
+    matchesReceipt(result, remote, plan) {
+        const observed = (0, setup_management_policy_1.buildSetupManagementView)(this.ports.inspectLocal(), remote).settings.find(item => item.id === plan.id);
+        return result.errors.length === 0 && result.created + result.updated === 1
+            && observed?.value === plan.after && observed.source === plan.scope;
     }
 }
 exports.ManageSetupUseCase = ManageSetupUseCase;
@@ -55591,9 +55647,10 @@ exports.SetupJourneyUseCase = void 0;
 const setup_journey_policy_1 = __nccwpck_require__(53289);
 /** Tracks semantic milestones, independently of the CLI's rendering. */
 class SetupJourneyUseCase {
-    constructor(repository, presenter) {
+    constructor(repository, presenter, priorSessionMutation = false) {
         this.repository = repository;
         this.presenter = presenter;
+        this.priorSessionMutation = priorSessionMutation;
         this.stage = 'repository';
         this.mutationStarted = false;
         this.choiceReviewPass = 1;
@@ -55634,14 +55691,14 @@ class SetupJourneyUseCase {
         if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted)) {
             throw new Error('Setup cannot be complete before applying the plan.');
         }
-        if (outcome === 'partial' && !this.mutationStarted) {
+        if (outcome === 'partial' && !this.mutationStarted && !this.priorSessionMutation) {
             throw new Error('Setup cannot be partial before mutation starts.');
         }
         this.outcome = outcome;
         this.present();
     }
     present() {
-        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted, this.outcome, this.choiceReviewPass));
+        this.presenter.present((0, setup_journey_policy_1.buildSetupJourneyView)(this.repository, this.stage, this.mutationStarted || this.priorSessionMutation, this.outcome, this.choiceReviewPass));
     }
 }
 exports.SetupJourneyUseCase = SetupJourneyUseCase;
@@ -55776,6 +55833,7 @@ class SetupSessionCoordinator {
         this.mutationStarted = false;
         this.stage = 'repository';
         this.effects = new Map();
+        this.installationEffects = new Set();
     }
     async execute() {
         if (this.running || this.finished)
@@ -55839,7 +55897,8 @@ class SetupSessionCoordinator {
         this.ports.present(this.stage, true);
     }
     record(effect) {
-        const previous = this.effects.get(effect.id);
+        const previous = this.installationEffects.has(effect.id) ? this.effects.get(effect.id) : undefined;
+        this.installationEffects.add(effect.id);
         if (previous?.state === 'completed' && effect.state !== 'completed')
             return;
         this.effects.set(effect.id, Object.freeze({ ...effect }));
@@ -65964,11 +66023,16 @@ async function executeSetupCommand(options) {
             throw new application_error_1.ApplicationError('configuration.invalid', '--confirm-unverifiable-write-permissions is no longer accepted. Setup tests Write capabilities with temporary resources during PAT verification.');
         }
         const session = new setup_session_coordinator_1.SetupSessionCoordinator({
-            ...(webBridge && !options.dryRun ? { manage: async (possibleMutation, record) => (0, setup_management_adapter_1.manageWebSetup)(webBridge, checkoutRoot, gitInfo.owner, gitInfo.repo, () => {
-                    setupMutationStarted = true;
-                    setupApplyStarted = true;
-                    possibleMutation();
-                }, record, Boolean(options.skipVariables)) } : {}),
+            ...(webBridge && !options.dryRun ? { manage: async (possibleMutation, record) => {
+                    const result = await (0, setup_management_adapter_1.manageWebSetup)(webBridge, checkoutRoot, gitInfo.owner, gitInfo.repo, () => {
+                        setupMutationStarted = true;
+                        setupApplyStarted = true;
+                        possibleMutation();
+                    }, record, Boolean(options.skipVariables));
+                    if (result === 'continue')
+                        journey = new setup_journey_use_case_1.SetupJourneyUseCase(`${gitInfo.owner}/${gitInfo.repo}`, new web_setup_adapters_1.WebSetupJourneyPresenter(webBridge), setupMutationStarted);
+                    return result;
+                } } : {}),
             repository: async () => {
                 if (options.web && (options.nonInteractive || options.yes || options.token || options.workflowPat
                     || Object.keys(options.secret ?? {}).length || options.confirmUnverifiableWritePermissions)) {
@@ -66222,10 +66286,14 @@ async function executeSetupCommand(options) {
             liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
                 : webBridge?.snapshot().outcome ? 'expired' : 'active',
             present: (stage, mutationStarted, outcome) => {
+                if (webBridge?.snapshot().surface === 'management') {
+                    webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, stage, mutationStarted, outcome));
+                    return;
+                }
                 if (!journey)
                     return;
                 journey.advance(stage);
-                if (mutationStarted)
+                if (mutationStarted && ['plan', 'credentials', 'apply'].includes(stage))
                     journey.markMutationStarted();
                 if (outcome)
                     journey.finish(outcome);
@@ -66240,7 +66308,7 @@ async function executeSetupCommand(options) {
             process.exitCode = 1;
     }
     catch (error) {
-        process.exitCode = (0, setup_outcome_adapter_1.reportSetupFailure)(error, { journey, bridge: webBridge,
+        process.exitCode = (0, setup_outcome_adapter_1.reportSetupFailure)(error, { journey: webBridge?.snapshot().surface === 'management' ? undefined : journey, bridge: webBridge,
             mutationStarted: setupMutationStarted, applyStarted: setupApplyStarted,
             guidedBotIdentity: Boolean(credentialPrompt.guidedWorkflowBotIdentity) });
     }
@@ -86522,6 +86590,37 @@ const node_crypto_1 = __nccwpck_require__(6005);
 const js_yaml_1 = __nccwpck_require__(783);
 const sensitive_text_1 = __nccwpck_require__(47122);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+const digest = (source) => (0, node_crypto_1.createHash)('sha256').update(source).digest('hex');
+function readDocument(path) {
+    const stat = (0, node_fs_1.lstatSync)(path);
+    if (!stat.isFile() || stat.size > 262144)
+        throw new Error('Unsafe YAML file.');
+    const source = (0, node_fs_1.readFileSync)(path, 'utf8');
+    return { source, document: object((0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA })) };
+}
+function workflowSteps(document) {
+    return Object.values(object(document.jobs)).map(object).flatMap(job => {
+        const steps = Array.isArray(job.steps) ? job.steps.map(object) : [];
+        return steps.map(step => ({ job, step }));
+    });
+}
+function installedInput(name, value) {
+    if (/token|secret|password|api[-_]key/iu.test(name))
+        return [];
+    if (!['string', 'boolean', 'number'].includes(typeof value))
+        return [{ name, unsupported: true }];
+    const text = String(value);
+    if (text.length > 4096 || (0, sensitive_text_1.redactSensitiveText)(text) !== text || /\bsecrets\./iu.test(text))
+        return [{ name, unsupported: true }];
+    const match = text.match(/^\$\{\{\s*vars\.([A-Z][A-Z0-9_]*)\s*(?:\|\|\s*'([^']*)')?\s*\}\}$/u);
+    if (match)
+        return [{ name, variable: match[1], ...(match[2] !== undefined ? { fallback: match[2] } : {}) }];
+    return text.includes('${{') ? [{ name, unsupported: true }] : [{ name, literal: text }];
+}
+function environmentScoped(document, job, step) {
+    return job.environment !== undefined || [document.env, job.env, step.env]
+        .some(env => Object.keys(object(env)).some(key => key.startsWith('INPUT_')));
+}
 /** Reads bounded regular workflow files. No Secret expression/value crosses this adapter. */
 class SetupManagementWorkspaceAdapter {
     constructor(root, revision) {
@@ -86529,72 +86628,71 @@ class SetupManagementWorkspaceAdapter {
         this.revision = revision;
     }
     inspect() {
-        const workflows = [];
-        let unreadable = false;
+        let workflows = [];
+        let unreadable;
         let localActionDigest;
-        const directory = (0, node_path_1.join)(this.root, '.github', 'workflows');
+        const metadata = new Map();
+        const localAction = () => {
+            if (!metadata.has('action'))
+                metadata.set('action', this.localActionDigest());
+            localActionDigest = metadata.get('action');
+            return localActionDigest;
+        };
         try {
-            if ((0, node_fs_1.existsSync)(directory)) {
-                if ((0, node_fs_1.lstatSync)((0, node_path_1.join)(this.root, '.github')).isSymbolicLink() || (0, node_fs_1.lstatSync)(directory).isSymbolicLink())
-                    throw new Error('Linked workflow directory.');
-                const files = (0, node_fs_1.readdirSync)(directory).filter(file => /\.ya?ml$/u.test(file)).sort();
-                if (files.length > 100)
-                    throw new Error('Workflow inventory exceeds its limit.');
-                for (const file of files) {
-                    try {
-                        const path = (0, node_path_1.join)(directory, file);
-                        const stat = (0, node_fs_1.lstatSync)(path);
-                        if (!stat.isFile() || stat.size > 262144)
-                            throw new Error('Unsafe workflow file.');
-                        const source = (0, node_fs_1.readFileSync)(path, 'utf8');
-                        const document = object((0, js_yaml_1.load)(source, { schema: js_yaml_1.JSON_SCHEMA }));
-                        for (const job of Object.values(object(document.jobs)).map(object)) {
-                            for (const step of Array.isArray(job.steps) ? job.steps.map(object) : []) {
-                                if (typeof step.uses !== 'string')
-                                    continue;
-                                if (step.uses === './') {
-                                    const actionPath = (0, node_path_1.join)(this.root, 'action.yml');
-                                    if (!(0, node_fs_1.existsSync)(actionPath))
-                                        continue;
-                                    const actionStat = (0, node_fs_1.lstatSync)(actionPath);
-                                    if (!actionStat.isFile() || actionStat.size > 262144)
-                                        throw new Error('Unsafe local Action metadata.');
-                                    const actionSource = (0, node_fs_1.readFileSync)(actionPath, 'utf8');
-                                    const action = object((0, js_yaml_1.load)(actionSource, { schema: js_yaml_1.JSON_SCHEMA }));
-                                    if (action.name !== 'Copilot - GitHub with super powers' || !object(action.inputs)['bugbot-comment-limit'])
-                                        continue;
-                                    localActionDigest = (0, node_crypto_1.createHash)('sha256').update(actionSource).digest('hex');
-                                }
-                                else if (!/^vypdev\/copilot@[^\s]+$/iu.test(step.uses) || (0, sensitive_text_1.redactSensitiveText)(step.uses) !== step.uses)
-                                    continue;
-                                const inputs = Object.entries(object(step.with)).flatMap(([name, value]) => {
-                                    if (/token|secret|password|api[-_]key/iu.test(name))
-                                        return [];
-                                    if (!['string', 'boolean', 'number'].includes(typeof value))
-                                        return [{ name, unsupported: true }];
-                                    const text = String(value);
-                                    if (text.length > 4096 || (0, sensitive_text_1.redactSensitiveText)(text) !== text || /\bsecrets\./iu.test(text))
-                                        return [{ name, unsupported: true }];
-                                    const match = text.match(/^\$\{\{\s*vars\.([A-Z][A-Z0-9_]*)\s*(?:\|\|\s*'([^']*)')?\s*\}\}$/u);
-                                    return match ? [{ name, variable: match[1], ...(match[2] !== undefined ? { fallback: match[2] } : {}) }]
-                                        : text.includes('${{') ? [{ name, unsupported: true }] : [{ name, literal: text }];
-                                });
-                                workflows.push({ file, action: step.uses, digest: (0, node_crypto_1.createHash)('sha256').update(source).digest('hex'),
-                                    environmentScoped: job.environment !== undefined || [document.env, job.env, step.env].some(env => Object.keys(object(env)).some(key => key.startsWith('INPUT_'))), inputs });
-                            }
-                        }
-                    }
-                    catch {
-                        unreadable = true;
-                    }
-                }
-            }
+            const inspections = this.workflowFiles().map(file => this.inspectWorkflowSafely(file, localAction));
+            workflows = inspections.flatMap(result => result.workflows);
+            unreadable = inspections.some(result => result.unreadable);
         }
         catch {
             unreadable = true;
         }
         return { revision: this.revision(), workflows, guidancePresent: (0, node_fs_1.existsSync)((0, node_path_1.join)(this.root, '.copilot', 'repository-profile.json')), unreadable,
             ...(localActionDigest === undefined ? {} : { localActionDigest }) };
+    }
+    workflowFiles() {
+        const directory = (0, node_path_1.join)(this.root, '.github', 'workflows');
+        if (!(0, node_fs_1.existsSync)(directory))
+            return [];
+        if ((0, node_fs_1.lstatSync)((0, node_path_1.join)(this.root, '.github')).isSymbolicLink() || (0, node_fs_1.lstatSync)(directory).isSymbolicLink())
+            throw new Error('Linked workflow directory.');
+        const files = (0, node_fs_1.readdirSync)(directory).filter(file => /\.ya?ml$/u.test(file)).sort();
+        if (files.length > 100)
+            throw new Error('Workflow inventory exceeds its limit.');
+        return files;
+    }
+    localActionDigest() {
+        const path = (0, node_path_1.join)(this.root, 'action.yml');
+        if (!(0, node_fs_1.existsSync)(path))
+            return;
+        const { source, document } = readDocument(path);
+        if (document.name === 'Copilot - GitHub with super powers' && object(document.inputs)['bugbot-comment-limit'])
+            return digest(source);
+    }
+    inspectWorkflowSafely(file, localAction) {
+        try {
+            return { workflows: this.inspectWorkflow(file, localAction), unreadable: false };
+        }
+        catch {
+            return { workflows: [], unreadable: true };
+        }
+    }
+    inspectWorkflow(file, localAction) {
+        const { source, document } = readDocument((0, node_path_1.join)(this.root, '.github', 'workflows', file));
+        const steps = workflowSteps(document);
+        const knownLocalAction = steps.some(({ step }) => step.uses === './') ? Boolean(localAction()) : false;
+        return steps.flatMap(({ job, step }) => {
+            if (!this.isCopilotStep(step, knownLocalAction))
+                return [];
+            const inputs = Object.entries(object(step.with)).flatMap(([name, value]) => installedInput(name, value));
+            return [{ file, action: step.uses, digest: digest(source), environmentScoped: environmentScoped(document, job, step), inputs }];
+        });
+    }
+    isCopilotStep(step, knownLocalAction) {
+        if (typeof step.uses !== 'string')
+            return false;
+        if (step.uses === './')
+            return knownLocalAction;
+        return /^vypdev\/copilot@[^\s]+$/iu.test(step.uses) && (0, sensitive_text_1.redactSensitiveText)(step.uses) === step.uses;
     }
 }
 exports.SetupManagementWorkspaceAdapter = SetupManagementWorkspaceAdapter;

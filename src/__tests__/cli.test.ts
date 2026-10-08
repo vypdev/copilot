@@ -562,6 +562,63 @@ describe('CLI', () => {
         expect(bridge.snapshot().doctor).toEqual({ status: 'complete', healthy: true, pass: 0, warn: 0, fail: 0, skipped: 0 });
       });
 
+      it('retains a management mutation receipt and stops before the full installer after an uncertain quick write', async () => {
+        const management = require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
+        const manage = jest.spyOn(management, 'manageWebSetup').mockImplementation(async (bridge, _root, _owner, _repository, possibleMutation, record) => {
+          bridge.setSurface('management'); possibleMutation();
+          const effect = { id:'variables' as const,state:'needs-inspection' as const,scope:'organization' as const };
+          record(effect); bridge.progress(effect);
+          bridge.resultReason('provider');
+          return 'partial';
+        });
+        try {
+          await program.parseAsync(['node','cli','setup','--web']);
+          expect(webView().outcome).toBe('partial');
+          expect(webView().journey).toMatchObject({outcome:'partial',mutationStarted:true});
+          expect(webView().resultDetail).toMatchObject({reasonCode:'provider',effects:[{id:'variables',state:'needs-inspection',scope:'organization'}]});
+          expect(runLocalAction).not.toHaveBeenCalled(); expect(process.exitCode).toBe(1);
+          expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        } finally { manage.mockRestore(); }
+      });
+
+      it.each([false,true])('reports a management exception conservatively after prior mutation=%s', async changed => {
+        const management=require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
+        const manage=jest.spyOn(management,'manageWebSetup').mockImplementation(async (bridge,_root,_owner,_repository,possibleMutation) => {
+          bridge.setSurface('management'); if (changed) possibleMutation(); throw new Error('private-provider-detail');
+        });
+        try {
+          await program.parseAsync(['node','cli','setup','--web']);
+          expect(webView().outcome).toBe(changed ? 'partial' : 'blocked');
+          expect(JSON.stringify(webView())).not.toContain('private-provider-detail');
+          expect(runLocalAction).not.toHaveBeenCalled(); expect(process.exitCode).toBe(1);
+        } finally { manage.mockRestore(); }
+      });
+
+      it('finishes a configuration inspection successfully without certifying an installation', async () => {
+        ask.mockImplementation(async prompt => prompt.kind === 'management' ? 'close' : answerWebPrompt(prompt));
+        await program.parseAsync(['node','cli','setup','--web']);
+        expect(webView()).toMatchObject({surface:'management',outcome:'complete',journey:{outcome:'complete',mutationStarted:false}});
+        expect(runLocalAction).not.toHaveBeenCalled(); expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(process.exitCode).toBeUndefined();
+      });
+
+      it.each(['apply','cancel'] as const)('keeps prior quick changes while a fresh complete assistant proceeds to %s', async decision => {
+        const management = require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
+        const manage = jest.spyOn(management,'manageWebSetup').mockImplementation(async (bridge,_root,_owner,_repository,possibleMutation,record) => {
+          bridge.setSurface('management'); possibleMutation();
+          const effect={id:'variables' as const,state:'completed' as const,scope:'organization' as const}; record(effect); bridge.progress(effect);
+          bridge.setSurface('wizard'); return 'continue';
+        });
+        if (decision === 'cancel') ask.mockImplementation(async prompt => prompt.title === 'Choose setup detail' ? undefined : answerWebPrompt(prompt));
+        try {
+          await program.parseAsync(['node','cli','setup','--web','--pr-approval-mode','off','--skip-secrets']);
+          expect(webView().outcome).toBe(decision === 'apply' ? 'complete' : 'partial');
+          expect(webView().journey?.mutationStarted).toBe(true);
+          expect(runLocalAction).toHaveBeenCalledTimes(decision === 'apply' ? 1 : 0);
+          expect(process.exitCode).toBe(decision === 'apply' ? undefined : 130);
+        } finally { manage.mockRestore(); }
+      });
+
       it('prints the pairing code to stdout even without an interactive TTY', async () => {
         const descriptor = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
         Object.defineProperty(process.stdout, 'isTTY', { configurable: true, value: false });

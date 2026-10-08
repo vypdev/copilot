@@ -11,8 +11,8 @@
 </script>
 <h1>{copy.title}</h1>
 <p class="management-status" role="status">{copy[view.status]}</p>
-<p class="lede">{copy.intro}</p>
-{#if view.github === 'not-connected'}<p class="description">{copy.local}</p>{/if}
+<p class="lede">{view.status === 'unconfigured' ? copy.startHelp : copy.intro}</p>
+{#if view.github === 'not-connected' && view.status !== 'unconfigured'}<p class="description">{copy.local}</p>{/if}
 {#if view.github === 'incomplete'}<div class="banner warning" role="note">{copy.githubIncomplete}</div>{/if}
 <div class="management-actions">
   {#if view.status !== 'unconfigured'}<button class="button primary" onclick={() => onSubmit(view.github === 'not-connected' ? 'connect' : 'refresh')} disabled={!controller || busy}>{view.github === 'not-connected' ? copy.connect : copy.refresh}</button>{/if}

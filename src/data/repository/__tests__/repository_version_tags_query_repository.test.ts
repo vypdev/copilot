@@ -1,4 +1,8 @@
+import * as github from '@actions/github';
+import { createRepositoryVersionTagsClient } from '../../../infrastructure/composition/github_release_client_factory';
 import { RepositoryVersionTagsQueryRepository } from '../release/repository_version_tags_query_repository';
+
+jest.mock('@actions/github', () => ({ ...jest.requireActual('@actions/github'), __esModule:true, getOctokit:jest.fn() }));
 
 function fixture() {
   const listTags = jest.fn();
@@ -47,4 +51,16 @@ describe('remote setup version tags', () => {
     await expect(repository.getLatestTag('owner', 'repo', 'fixture')).rejects.toMatchObject({ code: 'provider.contract-invalid' });
     expect(listTags).toHaveBeenCalledTimes(100);
   });
+});
+
+
+test('the production version-tag composition uses the supplied PAT and authenticated remote inventory', async () => {
+ const listTags=jest.fn().mockResolvedValue({data:[{name:'v3.3.1'}]});
+ const client=jest.spyOn(github,'getOctokit').mockReturnValue({rest:{repos:{listTags}}} as unknown as ReturnType<typeof github.getOctokit>);
+ try {
+  const repository=new RepositoryVersionTagsQueryRepository(createRepositoryVersionTagsClient());
+  expect(await repository.getLatestTag('fixture-owner','fixture-repo','fixture-pat')).toBe('3.3.1');
+  expect(client).toHaveBeenCalledWith('fixture-pat');
+  expect(listTags).toHaveBeenCalledWith({owner:'fixture-owner',repo:'fixture-repo',per_page:100,page:1});
+ } finally { client.mockRestore(); }
 });

@@ -24,11 +24,12 @@
     cancelled: ['reasonCancelled', 'nextCancelled'], provider: ['reasonProvider', 'nextProvider'],
     'rate-limit': ['reasonRateLimit', 'nextRateLimit'], unknown: ['reasonUnknown', 'nextUnknown'],
   };
-  $: heading = management ? managementCopy($setupLocale)[outcome === 'complete' ? 'finished' : outcome === 'partial' ? 'inspectAdjustment' : 'inspectionFinished'] : outcome === 'complete' ? tr('resultApplied', $setupLocale)
+  $: managementChanged = detail?.effects?.some(effect => effect.state === 'completed') === true;
+  $: heading = management ? managementCopy($setupLocale)[outcome === 'complete' && managementChanged ? 'finished' : outcome === 'partial' ? 'inspectAdjustment' : outcome === 'complete' ? 'inspectionFinished' : 'inspectionStopped'] : outcome === 'complete' ? tr('resultApplied', $setupLocale)
     : outcome === 'dry-run' ? tr('resultNoChanges', $setupLocale)
     : outcome === 'cancelled' || outcome === 'blocked' ? tr('resultStopped', $setupLocale)
     : tr('resultPartial', $setupLocale);
-  $: explanation = management ? managementCopy($setupLocale)[outcome === 'complete' ? 'finishedBody' : outcome === 'partial' ? 'partial' : 'inspectionBody'] : outcome === 'complete'
+  $: explanation = management ? managementCopy($setupLocale)[outcome === 'complete' && managementChanged ? 'finishedBody' : outcome === 'partial' ? 'partial' : 'inspectionBody'] : outcome === 'complete'
     ? tr('resultCompleteBody', $setupLocale)
     : outcome === 'partial'
       ? tr('resultPartialBody', $setupLocale)
