@@ -178,7 +178,7 @@ export async function runInitialSetupWorkflow(
         if (variables.step) steps.push(variables.step);
         if (variables.errors.length > 0) {
             const variableErrors = variables.failures?.length
-                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors ?? [], 'provider.unavailable')]
+                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors, 'provider.unavailable')]
                 : fromMessages(variables.errors, 'provider.unavailable');
             variableErrors.forEach(error => logError(error.message));
             errors.push(...variableErrors);

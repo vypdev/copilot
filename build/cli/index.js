@@ -50299,7 +50299,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
             steps.push(variables.step);
         if (variables.errors.length > 0) {
             const variableErrors = variables.failures?.length
-                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors ?? [], 'provider.unavailable')]
+                ? [...variables.failures.map(variableFailureError), ...fromMessages(variables.unclassifiedErrors, 'provider.unavailable')]
                 : fromMessages(variables.errors, 'provider.unavailable');
             variableErrors.forEach(error => (0, logging_ports_1.logError)(error.message));
             errors.push(...variableErrors);
@@ -51290,8 +51290,11 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
-        if (result.errors.length > 0)
-            return { errors: result.errors, writes, ...(result.failures ? { failures: result.failures, unclassifiedErrors: result.unclassifiedErrors } : {}) };
+        if (result.errors.length > 0) {
+            return result.failures
+                ? { errors: result.errors, writes, failures: result.failures, unclassifiedErrors: result.unclassifiedErrors }
+                : { errors: result.errors, writes };
+        }
         return {
             step: writes > 0
                 ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`

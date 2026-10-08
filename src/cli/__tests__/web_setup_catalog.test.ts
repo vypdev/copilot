@@ -55,6 +55,9 @@ describe('web setup localization catalog', () => {
     expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
       applicability: 'required', status: 'verified', prerequisite: 'contents-write' }, locale))
       .not.toBe(permissionPrerequisite('contents-write', locale));
+    expect(permissionEvidence({ scope: 'repository', permission: 'Actions', level: 'write',
+      applicability: 'required', status: 'unverifiable', prerequisite: 'provider-secret' }, locale))
+      .toBe(tr('permissionEvidenceWrite', locale));
   });
 
   test('permission progress and bounded errors have four complete localized paths', () => {

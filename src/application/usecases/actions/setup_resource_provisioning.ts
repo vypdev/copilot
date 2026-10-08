@@ -36,7 +36,10 @@ export interface SetupRepositoryContext {
 
 export type SetupResource = { name: string; value: string };
 export type SetupResourceGroup = { target: SetupResourceTarget; resources: SetupResource[] };
-export type SetupResourceProvisioningOutcome = { step?: string; errors: string[]; writes: number; failures?: readonly SetupVariableWriteFailure[]; unclassifiedErrors?: readonly string[] };
+export type SetupResourceProvisioningOutcome = { step?: string; errors: string[]; writes: number } & (
+    | { failures: readonly SetupVariableWriteFailure[]; unclassifiedErrors: readonly string[] }
+    | { failures?: undefined; unclassifiedErrors?: undefined }
+);
 
 export const VARIABLE_PROVISIONING_UNAVAILABLE = 'GitHub Actions Variable provisioning is unavailable; no Variables were changed.';
 export const SECRET_PROVISIONING_UNAVAILABLE = 'GitHub Actions Secret provisioning is unavailable; no Secrets were changed.';
@@ -58,7 +61,11 @@ export async function ensureRepositoryVariables(
         const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
-        if (result.errors.length > 0) return { errors: result.errors, writes, ...(result.failures ? { failures: result.failures, unclassifiedErrors: result.unclassifiedErrors } : {}) };
+        if (result.errors.length > 0) {
+            return result.failures
+                ? { errors: result.errors, writes, failures: result.failures, unclassifiedErrors: result.unclassifiedErrors }
+                : { errors: result.errors, writes };
+        }
         return {
             step: writes > 0
                 ? `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`

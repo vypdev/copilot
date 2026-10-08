@@ -22,6 +22,44 @@ const emptyPlan = (): SetupPlan => ({
 });
 
 describe('semantic web setup adapters', () => {
+  test.each([
+    ['unavailable', 'Store PAT in the repository instead', 'repository'],
+    ['present', 'Stop setup', 'cancel'],
+  ] as const)('bot PAT conflict %s retains an explicit resolution %s', async (state, reply, expected) => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const pending = new WebSetupCredentialPrompt(bridge).resolveWorkflowPatConflict('owner/repo', state);
+    expect(bridge.snapshot().prompt?.copyId).toBe(state === 'present'
+      ? 'botPat.scopeConflict' : 'botPat.scopeConflictUnavailable');
+    answer(bridge, reply);
+    expect(await pending).toBe(expected);
+  });
+
+  test('manual bot PAT entry discloses replacement without claiming a guided bot identity', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const prompt = new WebSetupCredentialPrompt(bridge);
+    const pending = prompt.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime' },
+      { name: 'PAT', status: 'valid', message: 'Existing Secret' },
+      { scope: 'organization', destination: 'owner', replacesExisting: true });
+    expect(bridge.snapshot().prompt).toMatchObject({ kind: 'secret', copyId: 'botPat.entry.manual',
+      copyValues: { account: '', accountId: '', existing: 'valid', storageScope: 'organization',
+        storageDestination: 'owner', storageReplacesExisting: 'true' } });
+    answer(bridge, 'manual-fixture-token');
+    expect(await pending).toEqual({ name: 'PAT', value: 'manual-fixture-token' });
+    expect(prompt.guidedWorkflowBotIdentity).toBeUndefined();
+    expect(JSON.stringify(bridge.snapshot())).not.toContain('manual-fixture-token');
+  });
+
+  test('web plan preserves organization replacement notice without serializing credential values', async () => {
+    const bridge = new WebSetupBridge('owner/repo');
+    const plan = emptyPlan();
+    plan.workflowPatStorage = { scope: 'organization', destination: 'owner', replacesExisting: true };
+    const pending = new WebSetupPlanConfirmation(bridge).confirm(plan);
+    const review = bridge.snapshot().prompt;
+    expect(review?.kind).toBe('plan');
+    if (review?.kind === 'plan') expect(review.plan.workflowPatStorage).toEqual(plan.workflowPatStorage);
+    answer(bridge, 'decline');
+    expect(await pending).toEqual({ kind: 'declined' });
+  });
   test('collects policy-owned intent questions without terminal prompt parsing', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const collector = new WebSetupQuestionnaireCollector(bridge);

@@ -190,6 +190,25 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('does not promise an initial tag when versioned issue workflows are disabled', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.issueWorkflows.enabled = ['feature'];
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
+    configuration.createInitialTag = false;
+    const rendered = renderSetupPlan(buildSetupPlan(configuration)).replace(/[│\s]+/gu, ' ');
+    expect(rendered).toContain('Initial tag: not needed by selected issue workflows');
+  });
+
+  it('reports denied CI discovery as unavailable access and keeps a manual alternative', () => {
+    const rendered = new ConsoleSetupQuestionRenderer().renderPrompt({ stateId: 'pull-request-approval',
+      id: 'pullRequestApproval.testChecks', label: 'Trusted checks', kind: 'producer-select',
+      defaultValue: '', discoveryStatus: 'permission-denied' });
+    expect(rendered).toContain('GitHub denied CI discovery');
+    expect(rendered).toContain('verified producer manually');
+    expect(rendered).not.toContain('No recent PR CI runs');
+  });
+
   it('renders bounded choices, defaults, and scope candidates independently of terminal I/O', () => {
     const renderer = new ConsoleSetupQuestionRenderer();
     expect(renderer.renderPrompt({

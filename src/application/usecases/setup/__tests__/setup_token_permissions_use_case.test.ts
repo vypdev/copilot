@@ -33,15 +33,19 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'bot-fixture', [workflowWrite], undefined, '2', false, 'operator-fixture');
         expect(report).toMatchObject({ account: 'fixture-bot', role: 'workflow', ready: true });
     });
-    it.each(['invalid', 'unverifiable'])('does not start bot write probes when setup preparation authority is %s', async status => {
-        const validation = { validateSetupPat: jest.fn().mockResolvedValueOnce({ status: 'valid', account: 'fixture-bot', message: 'ok' })
+    it.each([
+        ['invalid', 'fixture-bot'], ['unverifiable', 'fixture-bot'],
+        ['invalid', undefined], ['unverifiable', undefined],
+    ])('does not start bot write probes when setup preparation authority is %s (account: %s)', async (status, account) => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValueOnce({ status: 'valid', account, message: 'ok' })
             .mockResolvedValueOnce({ status, message: 'unavailable' }) };
         const inspect = jest.fn();
         const report = await new SetupTokenPermissionsUseCase(validation, { inspect }).inspect({
             role: 'workflow', owner: 'owner', repository: 'repo', token: 'bot-fixture', operatorToken: 'operator-fixture', requirements: [requiredWrite],
         });
         expect(inspect).not.toHaveBeenCalled();
-        expect(report).toMatchObject({ identityStatus: 'valid', account: 'fixture-bot', ready: false });
+        expect(report).toMatchObject({ identityStatus: 'valid', ready: false });
+        expect(report.account).toBe(account);
         expect(report.checks[0]).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('setup PAT') });
     });
     it.each(['contents-write', 'contents-workflows-write', 'dispatch-workflow'])('retains the bounded Actions prerequisite %s while blocking setup', async prerequisite => {

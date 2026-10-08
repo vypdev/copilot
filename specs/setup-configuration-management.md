@@ -256,7 +256,7 @@ All new executable TypeScript modules MUST have 100% line/statement/function cov
 
 ### 14.1 Verification recorded on 2026-10-08
 
-The full macOS Node 24 suite passed: **557 suites, 6,823 tests passed, 26 explicitly skipped**, with every coverage budget passing. Each of the seven new runtime modules reaches **100% statements, branches, functions and lines**. Presentation/handoff regressions also verify successful read-only Finish, preserved prior adjustments when entering a fresh wizard, conservative cancellation/exception results, and a later installation failure superseding a successful quick-write receipt. TypeScript, Svelte (zero errors/warnings), lint, workflow/documentation/specification contracts, package contents and isolated packaged CLI/API/web smoke passed. Local Node/V8 crashed during earlier large single-process attempts; the completed run used two workers with bounded recycling and allowed localhost test sockets.
+The full macOS Node 24 suite passed: **557 suites, 6,833 tests passed, 26 explicitly skipped**, with every coverage budget passing. Each of the seven new runtime modules reaches **100% statements, branches, functions and lines**. All **612 changed executable lines** are covered locally, with **zero partially covered changed branches**. Presentation/handoff regressions also verify successful read-only Finish, preserved prior adjustments when entering a fresh wizard, conservative cancellation/exception results, and a later installation failure superseding a successful quick-write receipt. Boundary cases cover unavailable bot-PAT scope discovery, explicit scope correction/cancellation, denied CI discovery and full run pages without timestamps. Structured Variable failures always retain their unclassified errors through a typed application contract. TypeScript, Svelte (zero errors/warnings), lint, workflow/documentation/specification contracts, package contents and isolated packaged CLI/API/web smoke passed. Local Node/V8 crashed during earlier large single-process attempts; the completed run used two workers with bounded recycling and allowed localhost test sockets.
 
 Live organization quick edits were read back and restored: comment limit **20 → 15 → 20**, reviewers **1 → 2 → 1**. Unchanged submission and cancelled preview performed no write. The final panel was inspected in English/Spanish, light/dark and at 320 pixels without horizontal overflow. Four-locale semantic rendering is automated; other platform, linguistic and screen-reader review remains explicitly unclaimed.
 
@@ -308,8 +308,8 @@ Contracts and specification -> policies -> transaction use case -> bounded works
 - [ ] Repeated setup and quick-edit/restore evidence proves effective values and retained unrelated resources.
 - [x] Typecheck, Svelte, lint, full coverage, build/package, workflows, docs and specification/catalog gates pass.
 - [ ] Active PR findings are addressed on the final head; actual RepoWise/Codecov results are reviewed.
-- [ ] Graphify is updated and architectural metrics inspected; no metric is substituted for behavioral evidence.
-- [ ] External/default-branch/runner readiness remains accurately labelled; no absolute claim of error-free operation is made.
+- [x] Graphify is updated and architectural metrics inspected; no metric is substituted for behavioral evidence.
+- [x] External/default-branch/runner readiness remains accurately labelled; no absolute claim of error-free operation is made.
 
 ## 20. References and decisions
 
