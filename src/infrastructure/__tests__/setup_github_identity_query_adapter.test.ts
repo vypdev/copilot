@@ -21,6 +21,17 @@ describe('SetupGithubIdentityQueryAdapter', () => {
         expect(fetcher).not.toHaveBeenCalled();
     });
 
+    it('resolves and identifies a single-character login, including canonical casing', async () => {
+        const identity = { id: 42, login: 'A' };
+        const fetcher = jest.fn().mockResolvedValue({ ok: true, json: async () => identity });
+        const adapter = new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch);
+        await expect(adapter.resolve('a', 'setup-token')).resolves.toEqual(identity);
+        await expect(adapter.identify('workflow-token')).resolves.toEqual(identity);
+        expect(fetcher).toHaveBeenCalledTimes(2);
+        expect(fetcher.mock.calls[0][0]).toBe('https://api.github.com/users/a');
+        expect(fetcher.mock.calls[1][0]).toBe('https://api.github.com/user');
+    });
+
     it('rejects a valid identity for a different requested bot and accepts casing differences', async () => {
         const fetcher = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 42, login: 'vypbot' }) });
         const adapter = new SetupGithubIdentityQueryAdapter(fetcher as unknown as typeof fetch);

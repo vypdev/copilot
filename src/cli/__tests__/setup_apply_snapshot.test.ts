@@ -66,6 +66,20 @@ describe('web setup apply snapshot', () => {
     expect(paths).toContain('.github/ISSUE_TEMPLATE/config.yml');
   });
 
+  test('detects edits to a selected issue template outside the retirement catalog', () => {
+    const plan = buildSetupPlan(createDefaultSetupConfiguration());
+    const paths = setupPlanGuardPaths({ ...plan, selectedFiles: ['ISSUE_TEMPLATE/custom.yml'] });
+    const destination = '.github/ISSUE_TEMPLATE/custom.yml';
+    expect(paths).toContain(destination);
+    expect(paths).not.toContain('.github/ISSUE_TEMPLATE/ISSUE_TEMPLATE/custom.yml');
+    mkdirSync(join(root, '.github', 'ISSUE_TEMPLATE'), { recursive: true });
+    writeFileSync(join(root, destination), 'reviewed');
+    const reviewed = captureSetupApplySnapshot(root, paths);
+    expect(setupApplySnapshotMatches(root, paths, reviewed)).toBe(true);
+    writeFileSync(join(root, destination), 'edited after approval');
+    expect(setupApplySnapshotMatches(root, paths, reviewed)).toBe(false);
+  });
+
   test.each([
     '.copilot/setup-manifest.json',
     '.copilot/repository-profile.json',
