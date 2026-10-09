@@ -32,6 +32,9 @@ source App ID, workflow name, observed result, and link to its run. Inspect
 the job's workflow and coverage-enforcing step yourself before attesting;
 Copilot never infers a coverage budget from a green check or job name. If
 GitHub cannot provide candidates, use the manual exact tuple entry.
+Manual check and workflow names cannot contain `|`, `;`, commas, or line breaks;
+these delimit the questionnaire's identities and lists. Rename such a job or
+workflow before entering its identity manually.
 The coverage check dropdown is limited to your chosen trusted checks.
 You can retry the read-only GitHub lookup twice without restarting setup or
 re-entering the setup PAT. No recent runs, missing permissions and an API

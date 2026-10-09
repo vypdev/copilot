@@ -1,15 +1,22 @@
 import type { SetupConfigurationOverrides } from './setup_configuration_policy';
+import { SETUP_AGENT_TASKS } from './setup_configuration_defaults';
 
 /** Explicit CLI flags override only their fields; file-only settings remain intact. */
 export function mergeSetupOverrides(
   fileOverrides: SetupConfigurationOverrides,
   flagOverrides: SetupConfigurationOverrides,
 ): SetupConfigurationOverrides {
+  const agents = { ...fileOverrides.agents, ...flagOverrides.agents };
+  for (const task of SETUP_AGENT_TASKS) {
+    if (agents[task] !== undefined) {
+      agents[task] = { ...fileOverrides.agents?.[task], ...flagOverrides.agents?.[task] };
+    }
+  }
   return {
     ...fileOverrides,
     ...flagOverrides,
     features: { ...fileOverrides.features, ...flagOverrides.features },
-    agents: { ...fileOverrides.agents, ...flagOverrides.agents },
+    agents,
     repository: { ...fileOverrides.repository, ...flagOverrides.repository },
     ai: { ...fileOverrides.ai, ...flagOverrides.ai },
     pullRequestApproval: {

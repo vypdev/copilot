@@ -132,7 +132,7 @@ export const en = {
   projectStatusIncompatible: 'Selected Projects have no shared Status values. Choose compatible Projects before continuing.',
   producerName: 'Check/job name', producerAppId: 'Source GitHub App ID', producerWorkflow: 'Workflow name', producerAdd: 'Add exact check', producerRemove: 'Remove check',
   producerManualHelp: 'Use the exact identity shown on GitHub. Adding it does not attest that it enforces coverage.',
-  producerManualInvalid: 'Enter a check name, positive numeric App ID and workflow name. Do not use | or ; in names.',
+  producerManualInvalid: 'Enter a check name, positive numeric App ID and workflow name. Do not use |, ; or commas in names.',
   translationPreviewTitle: 'Translation review in progress', translationPreviewBody: 'First-party setup questions are translated. Some dynamic GitHub or provider diagnostics may still appear in English while localization review finishes. Changing language does not change your answers.',
   unknownLocalError: 'An unexpected local setup error occurred. Check the terminal for details, then refresh or restart setup.',
 } as const;

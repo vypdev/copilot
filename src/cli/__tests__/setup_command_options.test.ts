@@ -1,6 +1,7 @@
 import { collectApprovalCheck, collectScope, collectSecret, loadSetupOverrides } from '../setup_command_options';
 import { mergeSetupOverrides } from '../../application/policies/merge_setup_overrides_policy';
 import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
+import { createDefaultSetupConfiguration, mergeSetupConfiguration, SETUP_AGENT_TASKS } from '../../application/policies/setup_configuration_defaults';
 
 describe('setup command option adapter', () => {
   test('collects opaque Secrets without logging or altering their values', () => {
@@ -76,6 +77,25 @@ describe('setup command option adapter', () => {
 });
 
 describe('setup override merge policy', () => {
+  test.each(SETUP_AGENT_TASKS)('--agent preserves file model, effort and executable for %s', task => {
+    const fileRole = { provider: 'codex' as const, modelProvider: 'openai', model: 'custom-model', effort: 'high', executable: '/usr/local/bin/agent' };
+    const fromFile = { agents: { [task]: fileRole } };
+    const fromFlags = loadSetupOverrides({ agent: 'cursor' });
+    const merged = mergeSetupConfiguration(createDefaultSetupConfiguration(), mergeSetupOverrides(fromFile, fromFlags));
+    expect(merged.agents[task]).toEqual({ ...fileRole, provider: 'cursor' });
+    expect(SETUP_AGENT_TASKS.every(role => merged.agents[role].provider === 'cursor')).toBe(true);
+    expect(fileRole.provider).toBe('codex');
+  });
+
+  test('role flags replace explicit fields while preserving other fields and absent roles', () => {
+    const file = { agents: { findings: { model: 'file-model', effort: 'high' } } };
+    const flags = { agents: { findings: { model: 'flag-model' } } };
+    const merged = mergeSetupOverrides(file, flags);
+    expect(merged.agents).toEqual({ findings: { model: 'flag-model', effort: 'high' } });
+    expect(file.agents.findings.model).toBe('file-model');
+    expect(flags.agents.findings).toEqual({ model: 'flag-model' });
+    expect(mergeSetupOverrides({}, {}).agents).toEqual({});
+  });
   test('CLI storage scope, visibility and per-name flags override conflicting file values', () => {
     const merged = mergeSetupOverrides({ storage: {
       secrets: { defaultScope: 'repository', organizationVisibility: 'private', overrides: { PAT: 'repository' } },

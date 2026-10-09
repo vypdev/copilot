@@ -134,7 +134,7 @@ export const pt: Record<SetupMessageKey, string> = {
   projectStatusIncompatible: 'Os Projects escolhidos não partilham valores Status. Selecione Projects compatíveis antes de continuar.',
   producerName: 'Nome do check/job', producerAppId: 'ID da App GitHub de origem', producerWorkflow: 'Nome do workflow', producerAdd: 'Adicionar check exato', producerRemove: 'Remover check',
   producerManualHelp: 'Use a identidade exata apresentada no GitHub. Adicioná-la não prova que exige cobertura.',
-  producerManualInvalid: 'Indique nome, ID numérico positivo da App e workflow. Não use | ou ; nos nomes.',
+  producerManualInvalid: 'Indique nome, ID numérico positivo da App e workflow. Não use |, ; ou vírgulas nos nomes.',
   translationPreviewTitle: 'Revisão da tradução em curso', translationPreviewBody: 'As perguntas próprias da configuração já estão traduzidas. Alguns diagnósticos dinâmicos do GitHub ou do fornecedor ainda podem aparecer em inglês durante a revisão. Mudar de idioma não altera as suas respostas.',
   unknownLocalError: 'Ocorreu um erro inesperado na configuração local. Consulte o terminal e atualize a página ou reinicie a configuração.',
 };

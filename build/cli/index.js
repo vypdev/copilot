@@ -42001,19 +42001,26 @@ function boundedMergeQueueDiagnostic(value) {
 /***/ }),
 
 /***/ 39267:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mergeSetupOverrides = mergeSetupOverrides;
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 /** Explicit CLI flags override only their fields; file-only settings remain intact. */
 function mergeSetupOverrides(fileOverrides, flagOverrides) {
+    const agents = { ...fileOverrides.agents, ...flagOverrides.agents };
+    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
+        if (agents[task] !== undefined) {
+            agents[task] = { ...fileOverrides.agents?.[task], ...flagOverrides.agents?.[task] };
+        }
+    }
     return {
         ...fileOverrides,
         ...flagOverrides,
         features: { ...fileOverrides.features, ...flagOverrides.features },
-        agents: { ...fileOverrides.agents, ...flagOverrides.agents },
+        agents,
         repository: { ...fileOverrides.repository, ...flagOverrides.repository },
         ai: { ...fileOverrides.ai, ...flagOverrides.ai },
         pullRequestApproval: {

@@ -2,9 +2,9 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-10-07
+- Last updated: 2026-10-09
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-07 (shared-session, resource-progress and repository-only Apply fixture evidence; live GitHub path remains external)
+- Last verified: 2026-10-09 (PR #452 per-role override and native Metadata-response regressions; prior shared-session, resource-progress and repository-only Apply fixture evidence remains applicable; live GitHub path remains external)
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
@@ -264,6 +264,10 @@ scope, visibility (`selected` recommended), and per-resource overrides are
 validated. Branch names, counts, enum values, model identifiers, rule length,
 deployment combinations, and storage combinations reject invalid input. Safety
 rules, secret serialization, backups, and confirmation are not configurable.
+
+Explicit CLI flags override only the corresponding config-file fields.
+`--agent` changes the provider for each role while preserving its configured
+model provider, model, effort, and executable; defaults fill only absent fields.
 
 The initial-version decision is derived from the effective issue workflow profile,
 including the Issues switch. Neither frontend asks about it and `createInitialTag`
@@ -631,8 +635,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 | credential separation | credential use case/ports | credential tests | credentials |
 | policy-safe existing credentials | storage policy + credential use case | disabled-preservation and scope-move tests | credentials/provisioning |
 | authoritative resource snapshot | wizard, resource grouping + initial setup workflow | bounded pre-plan inspection and no remote mutation after failed inspection | troubleshooting/provisioning |
-| safe files | workspace adapter | workspace tests | initial version | automatic for enabled release/hotfix issues | not configurable; no question | remote version tags |
-| provisioning |
+| safe files | workspace adapter | workspace tests | provisioning |
+| initial version | setup issue-workflow policy, initial setup workflow, version-tags query | `initial_setup_use_case.test.ts` | how-to-use |
+| agent flag precedence | merge setup overrides policy | `setup_command_options.test.ts` per-role preservation cases | how-to-use |
 | read-only doctor | doctor use case/composition | doctor tests | workflow-and-cli |
 | readiness | readiness use case | readiness tests | checklist |
 

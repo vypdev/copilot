@@ -21,6 +21,7 @@ describe('setup question documentation', () => {
     ['ai.bugbotSeverity', 'bugbot', '/bugbot/configuration'],
     ['ai.bugbotFixVerifyCommands', 'bugbot', '/bugbot/verification-commands'],
     ['ai.pullRequestDescriptionMode', 'bugbot', '/pull-requests/ai-description'],
+    ['ai.provisioningMode', 'provisioning', '/agents/cli-configuration'],
     ['projects.enabled', 'projects', '/issues/assignees-and-projects'],
     ['manageRepositorySecrets', 'provisioning', '/how-to-use'],
   ])('%s has a related, locally documented destination', (id, stateId, path) => {

@@ -644,7 +644,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-07",
+      "lastVerified": "2026-10-09",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -672,6 +672,7 @@
         "src/application/policies/setup_token_permission_policy.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/application/policies/setup_configuration_plan.ts",
+        "src/application/policies/merge_setup_overrides_policy.ts",
         "src/application/policies/setup_configuration_storage_policy.ts",
         "src/application/policies/setup_doctor_message_catalog.ts",
         "src/application/policies/setup_doctor_report_policy.ts",
@@ -746,6 +747,7 @@
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
+        "src/cli/__tests__/setup_command_options.test.ts",
         "src/data/repository/__tests__/setup_variable_write_failures.test.ts",
         "src/infrastructure/composition/__tests__/initial_setup_composition_root.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -830,7 +832,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-08",
+      "lastVerified": "2026-10-09",
       "specs": [
         "specs/local-web-setup-assistant.md",
         "specs/setup-configuration-management.md"

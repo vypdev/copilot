@@ -438,7 +438,7 @@ approval before any new mutation.
 |---|---|---|---|
 | `--web` | boolean / off | interactive local setup only | command invocation; no stored preference |
 | `--dry-run --web` | boolean / off | no Apply, credentials optional only where existing plan needs evidence | one run; no mutation |
-| Existing non-secret flags and `--config` | existing typed values | same validators, skip/fixed semantics as CLI | flags > config > defaults; snapshot at launch |
+| Existing non-secret flags and `--config` | existing typed values | same validators, skip/fixed semantics as CLI | flags > config > defaults per field, including fields within each agent role; snapshot at launch |
 | Web answers | existing setup question types | existing bounded enums, names, counts, cross-field rules | editable defaults only; one-run memory |
 | Environment setup PAT | optional hidden choice / unused | only after explicit operator selection and audit | process memory; never a web response |
 | Bot login | explicit GitHub user / none | existing numeric-ID resolution and guided check | one run; non-secret only |
@@ -1061,6 +1061,10 @@ next action before asking for a manual tuple. A network/API failure must not
 masquerade as an empty repository. The manual path labels check name, numeric
 source App ID, and workflow name separately (or gives an equivalent CLI
 template), validates the exact tuple, and never treats it as verified.
+Manual check and workflow names MUST reject `|`, `;`, commas, and line breaks
+before adding a tuple, because the questionnaire uses those tuple/list
+delimiters. `web_setup_ui_helpers.test.ts` covers commas in either name;
+the four localized validation messages explain this restriction.
 The adapter MUST read at most ten pages of 100 latest workflow runs
 without provider search filters and select only `pull_request` events locally.
 It MUST stop after collecting at least 20 recent PR runs, an exhausted page,

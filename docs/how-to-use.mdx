@@ -240,6 +240,10 @@ or configure them separately. The assistant does not claim that a single value
 works in every Project when discovery shows otherwise. The bot PAT needs
 Project write access later, when the workflow runs.
 
+CLI flags override only their corresponding `--config` fields. For example,
+`--agent cursor` changes every role's provider while preserving its configured
+model provider, model, effort, and executable. Defaults fill omitted fields.
+
 Explicit `features.release` and `features.hotfix` values from `--config` or
 CLI flags remain fixed during the pre-PAT permission review. The issue-workflow
 question shows those fixed choices before you answer and rejects a selection

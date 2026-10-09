@@ -10,6 +10,20 @@ const requirement: SetupTokenPermissionRequirement = {
 };
 
 describe('read-only PAT probe boundaries', () => {
+    it.each([
+        { isPrivate: true, status: 'verified' },
+        { isPrivate: false, status: 'available' },
+    ])('reads native Metadata response bodies once for private=$isPrivate', async ({ isPrivate, status }) => {
+        const response = new Response(JSON.stringify({ private: isPrivate, default_branch: 'main' }));
+        const fetcher = jest.fn().mockResolvedValue(response);
+        const metadata = { ...requirement, permission: 'Metadata', probe: 'metadata' as const };
+        const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect('owner', 'repo', 'fixture', [metadata]);
+        expect(check).toMatchObject({ status });
+        expect(check.operationallyAvailable).toBe(isPrivate ? undefined : true);
+        expect(response.bodyUsed).toBe(true);
+        expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(fetcher).toHaveBeenCalledWith('https://api.github.com/repos/owner/repo', expect.objectContaining({ method: 'GET' }));
+    });
     it('surfaces actionable legacy Actions recovery to the CLI without making new requests', async () => {
         const journal = new SetupPermissionProbeJournal();
         jest.spyOn(journal, 'recover').mockRejectedValue(new LegacyActionsRecoveryRequired('internal record details'));

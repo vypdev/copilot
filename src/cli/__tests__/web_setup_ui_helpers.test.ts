@@ -76,6 +76,13 @@ describe('web setup presentation helpers', () => {
   });
 
   test.each([
+    ['Test, lint', 'CI'],
+    ['Test', 'CI, checks'],
+  ])('rejects comma delimiters in manual producer %s / %s before submission', (name, workflow) => {
+    expect(manualProducerIdentity(name, 42, workflow)).toBeUndefined();
+  });
+
+  test.each([
     ['https://github.com/acme/repo/rules/7', true],
     ['https://github.com/acme/repo/rules/7?token=x', false],
     ['https://evil.example/acme/repo/rules/7', false],
