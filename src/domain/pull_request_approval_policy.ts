@@ -99,6 +99,7 @@ export function validatePullRequestApprovalPolicy(value: unknown, allowIncomplet
         errors.push('guarded/recommend mode requires 1–8 exact test checks.');
     } else {
         const identities = new Set<string>();
+        const names = new Set<string>();
         for (const item of value.testChecks) {
             if (!isRecord(item)) { errors.push('Each test check must be an object.'); continue; }
             unknownKeys(item, PRODUCER_KEYS, 'test check', errors);
@@ -108,6 +109,8 @@ export function validatePullRequestApprovalPolicy(value: unknown, allowIncomplet
             const identity = `${item.name}:${item.sourceAppId}:${item.workflowName}`;
             if (identities.has(identity)) errors.push('Test checks cannot contain duplicate producer identities.');
             identities.add(identity);
+            if (value.mode !== 'off' && !allowIncomplete && names.has(String(item.name))) errors.push('Trusted check names must be unique because coverage stores only a check name.');
+            names.add(String(item.name));
         }
     }
     if (typeof value.producerAttested !== 'boolean') errors.push('producerAttested must be boolean.');

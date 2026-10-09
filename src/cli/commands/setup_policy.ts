@@ -10,22 +10,19 @@ export interface SetupCommandOptions {
 
 export function buildSetupParams(
   options: SetupCommandOptions,
-  gitInfo: GitInfo,
+  gitInfo: Extract<GitInfo, { owner: string }>,
   token: string,
   configuration?: SetupConfiguration,
   credentials?: SetupCredentialCollection,
   approvedWorkflowFiles: readonly string[] = [],
   remoteConfiguration?: SetupRemoteConfiguration,
-): Record<string, unknown> | undefined {
-  if ('error' in gitInfo) return undefined;
+): Record<string, unknown> {
   return {
     ...(configuration ? buildSetupActionInputs(configuration) : {}),
     [INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
     [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.INITIAL_SETUP,
-    [INPUT_KEYS.SINGLE_ACTION_ISSUE]: 1,
     [INPUT_KEYS.TOKEN]: token,
     repo: { owner: gitInfo.owner, repo: gitInfo.repo },
-    issue: { number: 1 },
     [INPUT_KEYS.WELCOME_TITLE]: '⚙️  Initial Setup',
     [INPUT_KEYS.WELCOME_MESSAGES]: [
       `Running initial setup for ${gitInfo.owner}/${gitInfo.repo}...`,

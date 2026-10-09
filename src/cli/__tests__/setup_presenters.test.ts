@@ -8,6 +8,7 @@ import { ConsoleSetupPlanPresenter, renderSetupPlan } from '../setup_plan_presen
 import { ConsoleSetupQuestionRenderer } from '../setup_question_renderer';
 import { SetupWorkflowUpdatePromptAdapter } from '../setup_workflow_update_prompt_adapter';
 import { resolveStaticSetupDoctorCatalog } from '../../application/policies/setup_doctor_message_catalog';
+import { setupEditableGroups } from '../../application/policies/setup_questionnaire_policy';
 
 function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalDriver> {
   let index = 0;
@@ -20,6 +21,73 @@ function terminal(results: readonly TerminalReadResult[]): jest.Mocked<TerminalD
 }
 
 describe('setup presenters and prompt-specific adapters', () => {
+  it('requires an explicit PAT conflict decision, rejects blank input and prints safe settings navigation', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '' }, { kind: 'value', value: '1' }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('recheck');
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('https://github.com/owner/repo/settings/secrets/actions');
+      expect(output.replace(/[│\s]+/gu, ' ')).toContain('Your setup answers are retained');
+      await expect(new SetupCredentialPromptAdapter(undefined, {}).resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('cancel');
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '2' }]), {})
+        .resolveWorkflowPatConflict('owner/repo', 'unavailable')).resolves.toBe('repository');
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '3' }]), {})
+        .resolveWorkflowPatConflict('owner/repo', 'present')).resolves.toBe('cancel');
+    } finally { log.mockRestore(); }
+  });
+
+  it('discloses bot PAT replacement in the CLI plan and before supplied credential collection', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const storage = { scope: 'organization' as const, destination: 'owner', replacesExisting: true };
+      const plan = buildSetupPlan(createDefaultSetupConfiguration()); plan.workflowPatStorage = storage;
+      const output = renderSetupPlan(plan).replace(/[│\s]+/gu, ' ');
+      expect(output).toContain('Secret PAT already exists in organization owner');
+      expect(output).toContain('affect other repositories');
+      await expect(new SetupCredentialPromptAdapter(undefined, { PAT: 'supplied-fixture' })
+        .requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Bot' }, undefined, storage))
+        .resolves.toEqual({ name: 'PAT', value: 'supplied-fixture' });
+      expect(log.mock.calls.flat().join('\n')).not.toContain('supplied-fixture');
+    } finally { log.mockRestore(); }
+  });
+
+  it('re-enters the guided bot PAT after an explicit choice without repeating method or bot identity input', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '1' }, { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'wrong-token' }, { kind: 'value', value: '' }, { kind: 'value', value: '1' },
+        { kind: 'value', value: 'correct-token' }]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      const expected = { id: 42, login: 'vypbot' };
+      const resolve = jest.fn().mockResolvedValue(expected);
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve);
+      const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime' };
+      await adapter.requestWorkflowPat(requirement);
+      await expect(adapter.recoverWorkflowPatIdentityMismatch(expected, { id: 99, login: 'operator' })).resolves.toBe('retry');
+      await expect(adapter.requestWorkflowPat(requirement)).resolves.toEqual({ name: 'PAT', value: 'correct-token' });
+      expect(resolve).toHaveBeenCalledTimes(1);
+      expect(input.readSecret).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('You must open this link with the selected bot account: @vypbot');
+      expect(output.replace(/[│\s]+/gu, ' ')).toContain('answers and approved plan are retained');
+      expect(output).toContain('retained');
+      expect(output).toContain('Select one of the listed options');
+      expect(output).not.toMatch(/wrong-token|correct-token/u);
+    } finally { log.mockRestore(); }
+  });
+
+  it('supports stopping at a bot mismatch and never prompts an unattended session for recovery', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const expected = { id: 42, login: 'vypbot' }, actual = { id: 99, login: 'operator' };
+      await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: '2' }]), {})
+        .recoverWorkflowPatIdentityMismatch(expected, actual)).resolves.toBe('cancel');
+      await expect(new SetupCredentialPromptAdapter(undefined, {})
+        .recoverWorkflowPatIdentityMismatch(expected, actual)).resolves.toBe('cancel');
+    } finally { log.mockRestore(); }
+  });
   it('renders complete and partial doctor reports with text statuses and the no-write guarantee', () => {
     const complete = renderDoctorReport(buildDoctorReport([
       doctorCheck({ id: 'configuration.valid', status: 'pass', summary: 'Valid.' }),
@@ -41,6 +109,22 @@ describe('setup presenters and prompt-specific adapters', () => {
     ]));
     expect(log).toHaveBeenCalledWith(expect.stringContaining('Copilot Doctor'));
     log.mockRestore();
+  });
+
+  it('distinguishes the first permission-intent pass from a deliberate second pass', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      new ConsoleSetupQuestionRenderer('permission-intent').showIntroduction();
+      expect(log.mock.calls.flat().join('\n')).toContain('later full wizard');
+      log.mockClear();
+      new ConsoleSetupQuestionRenderer('permission-intent', 2).showIntroduction();
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('Reviewing your setup choices again (pass 2)');
+      expect(output).toContain('same setup run');
+      expect(output).toContain('Press Enter to keep each answer');
+      expect(output).toContain('return to the setup PAT permission review');
+      expect(output).not.toContain('First, choose');
+    } finally { log.mockRestore(); }
   });
 
   it('renders every doctor presentation label in the resolved repository locale', () => {
@@ -106,6 +190,25 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('does not promise an initial tag when versioned issue workflows are disabled', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.issueWorkflows.enabled = ['feature'];
+    configuration.features.release = false;
+    configuration.features.hotfix = false;
+    configuration.createInitialTag = false;
+    const rendered = renderSetupPlan(buildSetupPlan(configuration)).replace(/[│\s]+/gu, ' ');
+    expect(rendered).toContain('Initial tag: not needed by selected issue workflows');
+  });
+
+  it('reports denied CI discovery as unavailable access and keeps a manual alternative', () => {
+    const rendered = new ConsoleSetupQuestionRenderer().renderPrompt({ stateId: 'pull-request-approval',
+      id: 'pullRequestApproval.testChecks', label: 'Trusted checks', kind: 'producer-select',
+      defaultValue: '', discoveryStatus: 'permission-denied' });
+    expect(rendered).toContain('GitHub denied CI discovery');
+    expect(rendered).toContain('verified producer manually');
+    expect(rendered).not.toContain('No recent PR CI runs');
+  });
+
   it('renders bounded choices, defaults, and scope candidates independently of terminal I/O', () => {
     const renderer = new ConsoleSetupQuestionRenderer();
     expect(renderer.renderPrompt({
@@ -131,12 +234,60 @@ describe('setup presenters and prompt-specific adapters', () => {
       kind: 'boolean',
       defaultValue: true,
     })).toContain('[Y]');
+    expect(renderer.renderPrompt({
+      stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '',
+    })).toContain('in text mode enter their URL numbers');
+    expect(renderer.renderPrompt({
+      stateId: 'capabilities', id: 'issueWorkflows.enabled', label: 'Issue workflows',
+      kind: 'multi-select', defaultValue: '', choices: ['feature — Feature'],
+    })).toContain('in text mode enter IDs');
+    const help = renderer.renderHelp({
+      stateId: 'agent-model-defaults', id: 'agents.findings.executable',
+      label: 'Validated executable for all tasks', kind: 'text', defaultValue: '',
+    });
+    for (const heading of ['What:', 'When:', 'Where:', 'How:', 'Why:', 'Example:', 'Effect:', 'Verify:', 'Read more']) {
+      expect(help).toContain(heading);
+    }
+    expect(help).toContain('https://docs.page/vypdev/copilot/agents/cli-configuration');
     const log = jest.spyOn(console, 'log').mockImplementation();
     renderer.showIntroduction();
     renderer.showState('capabilities');
     renderer.showValidation('Invalid.');
     renderer.showCancelled();
     expect(log).toHaveBeenCalledTimes(4);
+    log.mockRestore();
+  });
+
+  it('shows full check identities, bounded discovery evidence, and Project Status warnings', () => {
+    const renderer = new ConsoleSetupQuestionRenderer();
+    const coverage = renderer.renderPrompt({ stateId: 'pull-request-approval', id: 'pullRequestApproval.coverage.checkName',
+      label: 'Coverage check', kind: 'choice', defaultValue: 'coverage', choices: ['coverage', 'other'],
+      trustedProducers: [{ name: 'coverage', sourceAppId: 42, workflowName: 'CI' }] });
+    expect(coverage).toContain('coverage — CI · App 42');
+    const checks = renderer.renderPrompt({ stateId: 'pull-request-approval', id: 'pullRequestApproval.testChecks',
+      label: 'Trusted checks', kind: 'producer-select', defaultValue: '', discoveryStatus: 'observed',
+      discoveryTruncated: true, discoveryRetryRemaining: 1,
+      producerCandidates: [{ name: 'tests', sourceAppId: 42, workflowName: 'CI', conclusion: 'success',
+        headSha: 'abcdef123', runUrl: 'https://github.com/owner/repo/actions/runs/1',
+        requiredByRuleset: { branch: 'develop', sourceUrl: 'https://github.com/owner/repo/rules/1' } }] });
+    expect(checks).toContain('tests · App 42 · CI · success · abcdef1');
+    expect(checks).toContain('Required on develop by active ruleset');
+    expect(checks).toContain('Only a bounded sample was inspected');
+    expect(checks).toContain('Type r to retry GitHub discovery');
+    const projects = renderer.renderPrompt({ stateId: 'projects', id: 'projects.ids', label: 'Projects',
+      kind: 'project-select', defaultValue: '', discoveryStatus: 'empty' });
+    expect(projects).toContain('no open, accessible Projects');
+    expect(projects).toContain('at most 30 open, accessible organization Projects');
+    const status = renderer.renderPrompt({ stateId: 'projects', id: 'projects.issueCreatedColumn', label: 'Status',
+      kind: 'text', defaultValue: 'Todo', statusOptionState: 'unavailable',
+      projectStatusValues: [{ transition: 'issueCreated', value: 'Todo' }] });
+    expect(status).toContain('Verify these exact Status values');
+    expect(status).toContain('Status options could not be verified');
+    expect(renderer.renderPrompt({ stateId: 'projects', id: 'projects.issueCreatedColumn', label: 'Status',
+      kind: 'text', defaultValue: 'Todo', statusOptionState: 'incompatible' })).toContain('no common Status values');
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    renderer.showHelp({ stateId: 'projects', id: 'projects.ids', label: 'Projects', kind: 'project-select', defaultValue: '' });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('About this setup choice'));
     log.mockRestore();
   });
 
@@ -154,6 +305,38 @@ describe('setup presenters and prompt-specific adapters', () => {
     await expect(new SetupPlanConfirmationAdapter(undefined, true).confirm(plan)).resolves.toEqual({ kind: 'approved' });
     await expect(new SetupPlanConfirmationAdapter(undefined, false).confirm(plan)).resolves.toEqual({ kind: 'declined' });
     await expect(new DryRunSetupPlanConfirmation().confirm(plan)).resolves.toEqual({ kind: 'approved' });
+  });
+
+  it('explains final Apply on ? and re-asks without approving it', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '?' }, { kind: 'value', value: 'no' }]);
+      await expect(new SetupPlanConfirmationAdapter(input, false).confirm(buildSetupPlan(createDefaultSetupConfiguration())))
+        .resolves.toEqual({ kind: 'declined' });
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('This is the final approval');
+      expect(output).toContain('PATs created on GitHub are not deleted automatically');
+      expect(output).toContain('https://docs.page/vypdev/copilot/how-to-use');
+    } finally { log.mockRestore(); }
+  });
+
+  it('lists editable plan sections, rejects an invalid number, and returns the chosen group', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const plan = buildSetupPlan(createDefaultSetupConfiguration());
+      const input = terminal([{ kind: 'value', value: ':edit' }, { kind: 'value', value: '99' },
+        { kind: 'value', value: ':edit' }, { kind: 'value', value: '1' }]);
+      await expect(new SetupPlanConfirmationAdapter(input, false).confirm(plan))
+        .resolves.toEqual({ kind: 'revise', group: setupEditableGroups(plan.configuration)[0] });
+      expect(log.mock.calls.flat().join('\n')).toContain('Choose one of the listed section numbers');
+    } finally { log.mockRestore(); }
+  });
+
+  it('cancels rather than applying when section selection is interrupted', async () => {
+    const input = terminal([{ kind: 'value', value: ':edit' }, { kind: 'end-of-input' }]);
+    await expect(new SetupPlanConfirmationAdapter(input, false).confirm(buildSetupPlan(createDefaultSetupConfiguration())))
+      .resolves.toEqual({ kind: 'cancelled' });
   });
 
   it('keeps non-interactive credential values separate from questionnaire and plan state', async () => {
@@ -215,6 +398,22 @@ describe('setup presenters and prompt-specific adapters', () => {
     log.mockRestore();
   });
 
+  it('does not let the write-only CLI flag auto-confirm an unverified Projects read', async () => {
+    const report = {
+      role: 'setup' as const, identityStatus: 'valid' as const, identityMessage: 'checked',
+      ready: false, confirmationRequired: true,
+      checks: [{ id: 'setup.organization.projects', role: 'setup' as const,
+        scope: 'organization' as const, permission: 'Projects', level: 'read' as const,
+        applicability: 'required' as const, reason: 'Inspect Projects', probe: 'projects' as const,
+        status: 'unverifiable' as const, publicReadEvidence: 'public-organization-projects' as const,
+        message: 'Public list does not prove the grant' }],
+    };
+    await expect(new SetupCredentialPromptAdapter(undefined, {}, true)
+      .confirmUnverifiableTokenPermissions(report)).resolves.toBe(false);
+    await expect(new SetupCredentialPromptAdapter(terminal([{ kind: 'value', value: 'yes' }]), {}, true)
+      .confirmUnverifiableTokenPermissions(report)).resolves.toBe(true);
+  });
+
   it('collects hidden setup and runtime credentials without rendering their values', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();
     const setupInput = terminal([{ kind: 'value', value: 'setup-token' }]);
@@ -235,6 +434,268 @@ describe('setup presenters and prompt-specific adapters', () => {
     ]);
     expect(JSON.stringify(log.mock.calls)).not.toContain('api-key');
     log.mockRestore();
+  });
+
+  it('guides setup PAT creation, confirms the authenticated account, and gives an honest cleanup reminder', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '' },
+        { kind: 'value', value: 'setup-token' },
+        { kind: 'value', value: '' },
+      ]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new?expires_in=1');
+      await expect(adapter.requestSetupPat()).resolves.toBe('setup-token');
+      await expect(adapter.confirmGuidedSetupAccount('operator')).resolves.toBe(true);
+      adapter.showSetupPatCleanupReminder();
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('https://github.com/settings/personal-access-tokens/new?expires_in=1');
+      expect(output).toContain('Provisional');
+      expect(output).toContain('@operator');
+      expect(output).toContain('not revoked automatically');
+      expect(output).not.toContain('setup-token');
+      expect(input.readSecret).toHaveBeenCalledTimes(1);
+    } finally { log.mockRestore(); }
+  });
+
+  it('keeps missing-terminal setup choices on the manual path', async () => {
+    const adapter = new SetupCredentialPromptAdapter(undefined, {});
+    await expect(adapter.chooseSetupPatMethod()).resolves.toBe('manual');
+    await expect(adapter.chooseSetupOwnerKind()).resolves.toBe('unknown');
+    await expect(adapter.reviewSetupPatIntent()).resolves.toBe('manual');
+    await expect(adapter.requestSetupPat()).resolves.toBeUndefined();
+    await expect(adapter.confirmGuidedSetupAccount()).resolves.toBe(true);
+  });
+
+  it.each([
+    ['1', 'Organization'], ['2', 'User'], ['3', 'unknown'],
+  ] as const)('requires an explicit owner-kind selection %s', async (selection, expected) => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '' }, { kind: 'value', value: selection }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).chooseSetupOwnerKind()).resolves.toBe(expected);
+      expect(input.readText).toHaveBeenCalledTimes(2);
+    } finally { log.mockRestore(); }
+  });
+
+  it('opens credential choice help with ? and then asks the same unanswered question', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '?' }, { kind: 'value', value: '2' }]);
+      await expect(new SetupCredentialPromptAdapter(input, {}).chooseSetupOwnerKind()).resolves.toBe('User');
+      expect(input.readText).toHaveBeenCalledTimes(2);
+      expect(String(input.readText.mock.calls[0][0])).toContain('Type ? for more detail');
+      expect(log.mock.calls.flat().join('\n')).toContain('owner/repository');
+      expect(log.mock.calls.flat().join('\n')).toContain('https://docs.page/vypdev/copilot/authentication');
+    } finally { log.mockRestore(); }
+  });
+
+  it('explains a bot login on ? without treating it as an account', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '1' }, { kind: 'value', value: '?' },
+        { kind: 'value', value: 'vypbot' }, { kind: 'value', value: 'bot-token' },
+      ]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', async login => ({ login, id: 123 }));
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'runtime' }))
+        .resolves.toEqual({ name: 'PAT', value: 'bot-token' });
+      expect(log.mock.calls.flat().join('\n')).toContain('numeric account ID');
+      expect(input.readText).toHaveBeenCalledTimes(3);
+    } finally { log.mockRestore(); }
+  });
+
+  it('reviews intent explicitly, supports revision, and can fall back to manual input', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '1' },
+        { kind: 'value', value: '2' },
+        { kind: 'value', value: '4' },
+        { kind: 'value', value: 'manual-token' },
+      ]);
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      await expect(adapter.chooseSetupPatMethod()).resolves.toBe('guided');
+      await expect(adapter.reviewSetupPatIntent()).resolves.toBe('revise');
+      await expect(adapter.reviewSetupPatIntent()).resolves.toBe('manual');
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      adapter.useManualSetupPat();
+      await expect(adapter.requestSetupPat()).resolves.toBe('manual-token');
+      adapter.showSetupPatCleanupReminder();
+      expect(adapter.usedGuidedSetupPat).toBe(false);
+      expect(log.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');
+    } finally { log.mockRestore(); }
+  });
+
+  it('offers the full setup permission table as a review action', async () => {
+    const input = terminal([{ kind: 'value', value: '3' }]);
+    await expect(new SetupCredentialPromptAdapter(input, {}).reviewSetupPatIntent()).resolves.toBe('details');
+    expect(input.readText).toHaveBeenCalledWith(expect.stringContaining('view full permission table'));
+  });
+
+  it('lists PAT review actions in the same order as the numbered menu', async () => {
+    const input = terminal([{ kind: 'value', value: '3' }]);
+    await new SetupCredentialPromptAdapter(input, {}).reviewSetupPatIntent();
+    const prompt = String(input.readText.mock.calls[0][0]);
+    expect(prompt).toMatch(/1\) continue to GitHub[\s\S]*2\) review all setup choices again[\s\S]*3\) view full permission table[\s\S]*4\) enter a PAT manually/u);
+  });
+
+  it('rejects an invalid authenticated setup account without prompting', async () => {
+    const input = terminal([{ kind: 'value', value: '1' }]);
+    const adapter = new SetupCredentialPromptAdapter(input, {});
+    await adapter.chooseSetupPatMethod();
+    await expect(adapter.confirmGuidedSetupAccount('bad/account')).resolves.toBe(false);
+    expect(input.readText).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps manual setup PAT choice free of link and cleanup claims', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '2' },
+        { kind: 'value', value: 'manual-token' },
+      ]), {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      await expect(adapter.requestSetupPat()).resolves.toBe('manual-token');
+      adapter.showSetupPatCleanupReminder();
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).not.toContain('https://github.com/settings/personal-access-tokens/new');
+      expect(output).not.toContain('not revoked automatically');
+    } finally { log.mockRestore(); }
+  });
+
+  it('distinguishes an initial PAT failure from a blocked final plan', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '1' }, { kind: 'value', value: 'setup-token' },
+      ]), {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      await adapter.requestSetupPat();
+      log.mockClear();
+      adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=read', 'bootstrap');
+      expect(log.mock.calls.flat().join('\n')).toContain('no setup plan has been applied');
+      log.mockClear();
+      adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=write', 'final');
+      expect(log.mock.calls.flat().join('\n')).toContain('no plan mutation has started');
+      log.mockClear();
+      adapter.showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new?contents=write', 'final', ['repository Contents write']);
+      expect(log.mock.calls.flat().join('\n')).toContain('repository Contents write');
+    } finally { log.mockRestore(); }
+  });
+
+  it('does not show a correction link before guided mode is selected', () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      new SetupCredentialPromptAdapter(undefined, {}).showUpdatedSetupPatLink('https://github.com/settings/personal-access-tokens/new', 'final');
+      expect(log).not.toHaveBeenCalled();
+    } finally { log.mockRestore(); }
+  });
+
+  it('rejects an unintended setup account before continuing', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '1' },
+        { kind: 'value', value: 'setup-token' },
+        { kind: 'value', value: '2' },
+      ]), {});
+      adapter.configureSetupPatGuide('https://github.com/settings/personal-access-tokens/new');
+      await adapter.requestSetupPat();
+      await expect(adapter.confirmGuidedSetupAccount('wrong-account')).resolves.toBe(false);
+    } finally { log.mockRestore(); }
+  });
+
+  it('resolves the intended bot ID before accepting a guided workflow PAT', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '' },
+        { kind: 'value', value: 'bad/login' },
+        { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'bot-token' },
+      ]);
+      const resolve = jest.fn(async () => ({ id: 42, login: 'vypbot' }));
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new?expires_in=90', resolve);
+      const requirement = { name: 'PAT', kind: 'workflowPat' as const, description: 'Runtime token' };
+      await expect(adapter.requestWorkflowPat(requirement)).resolves.toEqual({ name: 'PAT', value: 'bot-token' });
+      expect(resolve).toHaveBeenCalledWith('vypbot');
+      expect(adapter.guidedWorkflowBotIdentity).toEqual({ id: 42, login: 'vypbot' });
+      const output = log.mock.calls.flat().join('\n');
+      expect(output).toContain('GitHub account ID 42');
+      expect(output).toContain('https://github.com/settings/personal-access-tokens/new?expires_in=90');
+      expect(output).not.toContain('bot-token');
+    } finally { log.mockRestore(); }
+  });
+
+  it('shows bot permission details on demand without asking for the bot identity twice', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([
+        { kind: 'value', value: '3' },
+        { kind: 'value', value: '1' },
+        { kind: 'value', value: 'vypbot' },
+        { kind: 'value', value: 'bot-token' },
+      ]);
+      const resolve = jest.fn(async () => ({ id: 42, login: 'vypbot' }));
+      const adapter = new SetupCredentialPromptAdapter(input, {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve, [{
+        id: 'workflow.repository.contents', role: 'workflow', scope: 'repository', permission: 'Contents',
+        level: 'write', applicability: 'required', reason: 'Manage branches.', probe: 'contents',
+      }]);
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .resolves.toEqual({ name: 'PAT', value: 'bot-token' });
+      expect(resolve).toHaveBeenCalledTimes(1);
+      expect(input.readText.mock.calls.filter(([prompt]) => String(prompt).includes('Expected GitHub bot login'))).toHaveLength(1);
+      expect(log.mock.calls.flat().join('\n')).toContain('Workflow PAT permissions required');
+    } finally { log.mockRestore(); }
+  });
+
+  it('propagates cancellation before a bot login can be resolved', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '1' }, { kind: 'cancel' },
+      ]), {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', jest.fn());
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .rejects.toBeInstanceOf(SetupTerminalCancelledError);
+    } finally { log.mockRestore(); }
+  });
+
+  it('manual bot PAT entry does not assert a guided bot identity', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '2' }, { kind: 'value', value: 'manual-bot-token' },
+      ]), {});
+      const resolve = jest.fn();
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', resolve, [{
+        id: 'workflow.repository.contents', role: 'workflow', scope: 'repository', permission: 'Contents',
+        level: 'write', applicability: 'required', reason: 'Manage branches.', probe: 'contents',
+      }]);
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .resolves.toEqual({ name: 'PAT', value: 'manual-bot-token' });
+      expect(resolve).not.toHaveBeenCalled();
+      expect(adapter.guidedWorkflowBotIdentity).toBeUndefined();
+      expect(log.mock.calls.flat().join('\n')).toContain('Workflow PAT permissions required');
+    } finally { log.mockRestore(); }
+  });
+
+  it('does not invent workflow PAT requirements when the manual guide has none', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const adapter = new SetupCredentialPromptAdapter(terminal([
+        { kind: 'value', value: '2' }, { kind: 'value', value: 'manual-bot-token' },
+      ]), {});
+      adapter.configureWorkflowPatGuide('https://github.com/settings/personal-access-tokens/new', async () => ({ login: 'bot', id: 1 }));
+      await expect(adapter.requestWorkflowPat({ name: 'PAT', kind: 'workflowPat', description: 'Runtime token' }))
+        .resolves.toEqual({ name: 'PAT', value: 'manual-bot-token' });
+      expect(log.mock.calls.flat().join('\n')).not.toContain('Workflow PAT permissions required');
+    } finally { log.mockRestore(); }
   });
 
   it('supports explicit existing-credential choices and propagates interrupted secret input', async () => {

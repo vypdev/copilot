@@ -1,0 +1,18 @@
+.management-status { color: var(--accent-strong); font-weight: 750; }
+.management-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-block: 24px 32px; }
+.management-section { border-top: 1px solid var(--line); padding-block: 26px; }
+.management-section h2 { margin-top: 0; }
+.management-section summary { cursor: pointer; font-weight: 700; color: var(--accent-strong); }
+.management-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.management-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.management-setting h3 { margin: 0 0 8px; font-size: 14px; }
+.management-setting p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.management-setting .button { flex-shrink: 0; }
+.management-values { display: grid; gap: 8px; }
+.management-values dt { font-weight: 650; margin-top: 12px; overflow-wrap: anywhere; }
+.management-values dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); line-height: 1.6; }
+.management-workflow { padding-block: 16px; }
+.workspace-grid:has(.management-settings), .workspace-grid:has(.management-status) { grid-template-columns: 1fr; }
+.workspace-grid:has(.management-status) .context-column { display: none; }
+@media (max-width: 800px) { .management-settings { grid-template-columns: 1fr; } }
+@media (max-width: 420px) { .management-setting { flex-direction: column; align-items: stretch; } .management-setting .button { align-self: flex-end; } }

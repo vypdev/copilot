@@ -36,6 +36,7 @@ describe('setup configuration policy', () => {
             { name: 'MERGE_QUEUE_CHECK_ATTESTATIONS', value: '[]' },
         ]));
         expect(plan.mergeQueueReadiness).toEqual([]);
+        expect(plan.variables.some(variable => variable.name === 'AGENT_PROVISIONING')).toBe(false);
         expect(buildSetupActionInputs(configuration)['bugbot-fail-on-unresolved']).toBe('false');
         expect(buildSetupActionInputs(configuration)['merge-queue-check-attestations']).toBe('[]');
         expect(plan.requiredSecrets).toEqual(['PAT']);
@@ -344,18 +345,27 @@ describe('setup configuration policy', () => {
             overrides: {},
         };
 
-        expect(canKeepExistingSetupResource(undefined, 'OPENAI_API_KEY', 'organization')).toBe(true);
-        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', 'organization')).toBe(true);
-        expect(canKeepExistingSetupResource({ ...base, preserveExisting: false }, 'OPENAI_API_KEY', 'organization')).toBe(false);
-        expect(canKeepExistingSetupResource({
+        expect(canKeepExistingSetupResource('secret', undefined, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', base, 'OPENAI_API_KEY', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', { ...base, preserveExisting: false }, 'OPENAI_API_KEY', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('secret', {
             ...base,
             overrides: { OPENAI_API_KEY: 'repository' },
         }, 'OPENAI_API_KEY', 'organization')).toBe(false);
-        expect(canKeepExistingSetupResource({
+        expect(canKeepExistingSetupResource('secret', {
             ...base,
             overrides: { OPENAI_API_KEY: 'organization' },
         }, 'OPENAI_API_KEY', 'organization')).toBe(true);
-        expect(canKeepExistingSetupResource(base, 'OPENAI_API_KEY', undefined)).toBe(false);
+        expect(canKeepExistingSetupResource('secret', base, 'OPENAI_API_KEY', undefined)).toBe(false);
+    });
+
+    it('preserves a Variable named PAT while requiring a replacement for the bot Secret', () => {
+        const policy = { defaultScope: 'repository' as const, organizationVisibility: 'selected' as const,
+            preserveExisting: true, overrides: {} };
+        expect(canKeepExistingSetupResource('variable', policy, 'PAT', 'organization')).toBe(true);
+        expect(canKeepExistingSetupResource('secret', policy, 'PAT', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('variable', { ...policy, preserveExisting: false }, 'PAT', 'organization')).toBe(false);
+        expect(canKeepExistingSetupResource('variable', { ...policy, overrides: { PAT: 'repository' } }, 'PAT', 'organization')).toBe(false);
     });
 
     it('keeps replacement credentials on the effective repository scope unless scope is explicitly overridden', () => {
@@ -366,16 +376,16 @@ describe('setup configuration policy', () => {
             ownerType: 'Organization' as const,
             repositoryId: 42,
             repositoryVisibility: 'private' as const,
-            repositorySecrets: ['PAT'], repositorySecretsAccess: 'available' as const,
+            repositorySecrets: ['OPENAI_API_KEY'], repositorySecretsAccess: 'available' as const,
             organizationSecrets: [], repositoryVariables: [], repositoryVariablesAccess: 'available' as const,
             organizationVariables: [],
             organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
             organizationVariablesAccess: 'available' as const,
         };
 
-        expect(resolveSetupResourceTarget(configuration, 'secret', 'PAT', remote).scope).toBe('repository');
-        const explicit = mergeSetupConfiguration(configuration, { storage: { secrets: { overrides: { PAT: 'organization' } } } });
-        expect(resolveSetupResourceTarget(explicit, 'secret', 'PAT', remote).scope).toBe('organization');
+        expect(resolveSetupResourceTarget(configuration, 'secret', 'OPENAI_API_KEY', remote).scope).toBe('repository');
+        const explicit = mergeSetupConfiguration(configuration, { storage: { secrets: { overrides: { OPENAI_API_KEY: 'organization' } } } });
+        expect(resolveSetupResourceTarget(explicit, 'secret', 'OPENAI_API_KEY', remote).scope).toBe('organization');
     });
 
     it('rejects organization storage for personal repositories or unavailable organization permissions', () => {
@@ -435,20 +445,20 @@ describe('setup configuration policy', () => {
 
         policy.defaultScope = 'repository';
         policy.preserveExisting = false;
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(false);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'])).toBe(false);
 
         policy.preserveExisting = true;
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(true);
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'], ['PAT'])).toBe(false);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'])).toBe(true);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'], ['OPENAI_API_KEY'])).toBe(false);
 
         policy.defaultScope = 'organization';
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'], ['PAT'])).toBe(false);
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'], ['OPENAI_API_KEY'])).toBe(false);
 
-        policy.overrides.PAT = 'repository';
-        expect(requiresSetupOrganizationInventory(policy, ['PAT'])).toBe(false);
+        policy.overrides.OPENAI_API_KEY = 'repository';
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY'])).toBe(false);
 
-        policy.overrides.OPENAI_API_KEY = 'organization';
-        expect(requiresSetupOrganizationInventory(policy, ['PAT', 'OPENAI_API_KEY'])).toBe(true);
+        policy.overrides.CODEX_API_KEY = 'organization';
+        expect(requiresSetupOrganizationInventory(policy, ['OPENAI_API_KEY', 'CODEX_API_KEY'])).toBe(true);
     });
 
     it('blocks unavailable repository inventory even when every selected resource is organization-only', () => {
@@ -511,7 +521,7 @@ describe('setup configuration policy', () => {
         };
 
         expect(validateSetupManagedResourceInventory(configuration, remote, {
-            secrets: ['PAT'],
+            secrets: ['OPENAI_API_KEY'],
             variables: ['AGENT_PROVIDER'],
         })).toEqual([
             expect.stringContaining('Organization Secret inventory is unavailable'),
@@ -550,19 +560,30 @@ describe('setup configuration policy', () => {
         ]);
     });
 
-    it('adds warnings for organization storage, projects, and always-provision mode', () => {
+    it('rejects opaque Project IDs and invalid Status option names before Apply', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.projects.ids = 'PVT_example';
+        expect(validateSetupConfiguration(configuration)).toContain(
+            'Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.',
+        );
+        configuration.projects.ids = '2';
+        configuration.projects.issueCreatedColumn = 'Invalid\nStatus';
+        expect(validateSetupConfiguration(configuration)).toContain(
+            'Project issueCreatedColumn must name one existing single-line Status option (1–100 characters).',
+        );
+    });
+
+    it('adds warnings for organization storage, projects, and Cursor readiness', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.features.release = false;
         configuration.features.hotfix = false;
         configuration.projects.ids = 'PVT_example';
-        configuration.ai.provisioningMode = 'always';
         configuration.storage.variables.defaultScope = 'organization';
         configuration.agents.findings.provider = 'cursor';
 
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
-            expect.stringContaining('Project IDs'),
-            expect.stringContaining('Always-provision mode reinstalls only default Codex/OpenCode runtimes'),
-            expect.stringContaining('no automatic Cursor installer'),
+            expect.stringContaining('Selected Project numbers'),
+            expect.stringContaining('Action installs the official CLI when the default executable is absent'),
             expect.stringContaining('Organization-level'),
         ]));
     });

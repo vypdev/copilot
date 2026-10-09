@@ -157,7 +157,7 @@ which resolves to the latest published compatible v3 release.
 
 ## Workflow: initial setup
 
-Run initial setup (labels, issue types, verify access). If the repo has no version tags, Copilot creates default tag **`v1.0.0`** so release/hotfix issues get a base version and do not get stuck in an "Unknown Version" loop:
+Run initial setup (labels, issue types, verify access). When release or hotfix issue workflows are enabled and the repo has no version tags, Copilot creates default tag **`v1.0.0`** so release/hotfix issues get a base version and do not get stuck in an "Unknown Version" loop:
 
 ```yaml
 - uses: vypdev/copilot@v3

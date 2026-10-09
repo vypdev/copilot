@@ -1,6 +1,8 @@
 import {
+    ConsoleSetupTokenPermissionPresenter,
     renderSetupTokenPermissionReport,
     renderSetupTokenPermissionRequirements,
+    renderSetupTokenPermissionSummary,
 } from '../setup_token_permission_presenter';
 import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_permissions';
 
@@ -15,6 +17,25 @@ const secrets: SetupTokenPermissionRequirement = {
 };
 
 describe('setup token permission presenter', () => {
+    it('uses the full requirement table by default and summary only when requested', () => {
+        const log = jest.spyOn(console, 'log').mockImplementation();
+        try {
+            new ConsoleSetupTokenPermissionPresenter().showRequirements('setup', [metadata, secrets]);
+            expect(log.mock.calls.flat().join('\n')).toContain('Provision Actions Secrets.');
+            log.mockClear();
+            new ConsoleSetupTokenPermissionPresenter('summary').showRequirements('setup', [metadata, secrets]);
+            expect(log.mock.calls.flat().join('\n')).toContain('Conditional permissions: 1');
+            expect(log.mock.calls.flat().join('\n')).not.toContain('Provision Actions Secrets.');
+        } finally { log.mockRestore(); }
+    });
+    it('summarizes only required URL grants and counts conditional rows without changing policy', () => {
+        const output = renderSetupTokenPermissionSummary('setup', [metadata, secrets], 80);
+        expect(output).toContain('Required now: Metadata read (repository)');
+        expect(output).toContain('Conditional permissions: 1');
+        expect(output).not.toContain('Provision Actions Secrets.');
+        expect(renderSetupTokenPermissionRequirements('setup', [metadata, secrets])).toContain('Provision Actions Secrets.');
+        expect(renderSetupTokenPermissionSummary('setup', [], 80)).toContain('Required now: none');
+    });
     it('renders the requirement matrix before setup PAT input', () => {
         const output = renderSetupTokenPermissionRequirements('setup', [metadata, secrets], 120);
         expect(output).toContain('Setup PAT permissions required');
@@ -52,7 +73,7 @@ describe('setup token permission presenter', () => {
             checks: [{ ...metadata, status: 'verified', message: 'available' }],
         }, 80);
         expect(output).not.toContain('github_pat_');
-        expect(output).toContain('All safely verifiable required permissions are available.');
+        expect(output).toContain('All required capability checks passed.');
     });
 
     it('explains an unverifiable-only report without presenting it as a pass', () => {
@@ -62,8 +83,8 @@ describe('setup token permission presenter', () => {
         }, 120);
 
         expect(output).toContain('? Unverifiable');
-        expect(output).toContain('Confirmation required');
-        expect(output).not.toContain('All safely verifiable required permissions are available.');
+        expect(output).toContain('Some capabilities could not be proven');
+        expect(output).not.toContain('All required capability checks passed.');
     });
 
     it('blocks an unverifiable required read without offering write confirmation', () => {
@@ -79,10 +100,10 @@ describe('setup token permission presenter', () => {
     it('shows a usable public read as unverifiable PAT evidence without asking to retry it', () => {
         const output = renderSetupTokenPermissionReport({
             role: 'setup', identityStatus: 'valid', identityMessage: 'verified', ready: true, confirmationRequired: false,
-            checks: [{ ...metadata, status: 'unverifiable', operationallyAvailable: true,
+            checks: [{ ...metadata, status: 'available', operationallyAvailable: true,
                 message: 'The public read is usable but does not prove the PAT grant.' }],
         }, 80);
-        expect(output).toContain('? Unverifiable');
+        expect(output).toContain('Read available');
         expect(output).toContain('Public repository reads are usable for setup');
         expect(output).not.toContain('Action required: retry the unverifiable read checks');
     });
@@ -93,7 +114,7 @@ describe('setup token permission presenter', () => {
             checks: [{ ...secrets, status: 'unverifiable', message: 'not selected by the approved plan' }],
         }, 100);
 
-        expect(output).toContain('Some access is unverifiable because GitHub offers no safe read-only proof.');
+        expect(output).toContain('Some capabilities could not be proven.');
         expect(output).not.toContain('Confirmation required:');
     });
 });

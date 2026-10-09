@@ -38,6 +38,13 @@ describe('guarded PR approval policy', () => {
     expect(validatePullRequestApprovalPolicy(policy)).toEqual([]);
     expect(parsePullRequestApprovalPolicy(JSON.stringify(policy))).toEqual(policy);
   });
+  it('allows an ambiguous legacy producer list only for interactive repair, never for final policy use', () => {
+    const ambiguous = { ...policy, testChecks: [...policy.testChecks,
+      { name: 'CI Check', sourceAppId: 123, workflowName: 'Another CI' }] };
+    expect(validatePullRequestApprovalPolicy(ambiguous, true)).toEqual([]);
+    expect(validatePullRequestApprovalPolicy(ambiguous)).toContain('Trusted check names must be unique because coverage stores only a check name.');
+    expect(() => parsePullRequestApprovalPolicy(JSON.stringify(ambiguous))).toThrow('unique');
+  });
   it.each([
     [{ ...policy, version: 2 }, 'version'],
     [{ ...policy, targetRoles: ['development', 'development'] }, 'targetRoles'],

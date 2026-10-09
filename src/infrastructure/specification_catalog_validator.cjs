@@ -159,8 +159,8 @@ function isInside(root, candidate) {
 function matchesFieldBoundary(field, relativePath) {
   if (field === 'specs') return /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/.test(relativePath);
   if (field === 'workflows') return /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/.test(relativePath);
-  if (field === 'entrypoints') return /^(?:src\/.+|action\.yml|package\.json)$/.test(relativePath);
-  if (field === 'code') return /^(?:src|scripts)\//.test(relativePath);
+  if (field === 'entrypoints') return /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/.test(relativePath);
+  if (field === 'code') return /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/.test(relativePath);
   if (field === 'tests') return /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/.test(relativePath);
   if (field === 'documentation') return /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/.test(relativePath);
   return false;
@@ -240,6 +240,10 @@ function renderCatalog(catalog) {
   ].join('\n');
 }
 
+function normalizeCheckoutLineEndings(content, platform = process.platform) {
+  return platform === 'win32' ? content.replace(/\r\n/g, '\n') : content;
+}
+
 function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
   return paths.map(relativePath => {
@@ -270,7 +274,7 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
-  if (current !== rendered) {
+  if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;
     return;
@@ -290,6 +294,7 @@ module.exports = {
   main,
   readCatalog,
   renderCatalog,
+  normalizeCheckoutLineEndings,
   validateAsBuiltSpecification,
   validateCatalog,
 };

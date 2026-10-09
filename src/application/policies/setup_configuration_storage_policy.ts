@@ -5,6 +5,7 @@ import type {
     SetupResourceStoragePolicy,
     SetupResourceTarget,
     SetupStorageConfiguration,
+    SetupWorkflowPatStorageNotice,
 } from '../../domain/setup';
 import { createDefaultSetupStorageConfiguration } from './setup_configuration_defaults';
 
@@ -29,10 +30,12 @@ export function resolveSetupResourceScope(
  * effective scope rather than silently moving or replacing the resource.
  */
 export function canKeepExistingSetupResource(
+    kind: SetupResourceKind,
     policy: Readonly<SetupResourceStoragePolicy> | undefined,
     name: string,
     existingScope: SetupResourceScope | undefined,
 ): boolean {
+    if (kind === 'secret' && name === 'PAT') return false;
     if (!existingScope) return false;
     if (!policy) return true;
     if (!policy.preserveExisting) return false;
@@ -76,9 +79,11 @@ export function requiresSetupOrganizationInventory(
     policy: Readonly<SetupResourceStoragePolicy>,
     names: readonly string[],
     repositoryExistingNames: readonly string[] = [],
+    kind: SetupResourceKind = 'secret',
 ): boolean {
     const repositoryExisting = new Set(repositoryExistingNames);
     return names.some(name => {
+        if (kind === 'secret' && name === 'PAT') return resolveSetupResourceScope(policy, name) === 'organization';
         if (Object.prototype.hasOwnProperty.call(policy.overrides, name)) {
             return policy.overrides[name] === 'organization';
         }
@@ -141,6 +146,7 @@ function selectSetupResourceScope(
     name: string,
     remote?: Readonly<SetupRemoteConfiguration>,
 ): SetupResourceScope {
+    if (kind === 'secret' && name === 'PAT') return resolveSetupResourceScope(policy, name);
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
     const existingScope = setupResourceExists(remote, kind, name).effective;
     return existingScope && policy.preserveExisting && !explicitOverride
@@ -154,6 +160,7 @@ export function shouldUpsertSetupResource(
     name: string,
     remote?: SetupRemoteConfiguration,
 ): boolean {
+    if (kind === 'secret' && name === 'PAT') return true;
     const policy = getSetupResourceStoragePolicy(configuration, kind);
     const state = setupResourceExists(remote, kind, name);
     if (!state.effective) return true;
@@ -185,6 +192,10 @@ export function validateSetupStorageAgainstRemote(
         const access = kind === 'secret' ? remote.organizationSecretsAccess : remote.organizationVariablesAccess;
         if (access !== 'available') {
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
+        }
+        if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
+            && remote.organizationWorkflowPat === 'unavailable') {
+            errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
         }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
             errors.push(`The repository ID is required for selected organization ${kind} access.`);
@@ -220,6 +231,7 @@ export function validateSetupManagedResourceInventory(
             getSetupResourceStoragePolicy(configuration, 'variable'),
             resources.variables,
             remote.repositoryVariables.map(variable => variable.name),
+            'variable',
         );
     if (secretsRequireRepositoryInventory && remote.repositorySecretsAccess !== 'available') {
         errors.push(`Repository Secret inventory is ${remote.repositorySecretsAccess}; setup cannot safely decide whether to preserve or replace existing Secrets.`);
@@ -244,6 +256,23 @@ export function validateSetupManagedResourceInventory(
         errors.push(`Organization Variable inventory is ${remote.organizationVariablesAccess}; setup cannot safely preserve existing Variable scopes and values.`);
     }
     return errors;
+}
+
+export function setupWorkflowPatStorageNotice(
+    owner: string,
+    repository: string,
+    policy: Readonly<SetupResourceStoragePolicy> | undefined,
+    repositorySecrets: readonly string[],
+    organizationSecrets: readonly string[],
+    organizationWorkflowPat?: SetupRemoteConfiguration['organizationWorkflowPat'],
+): SetupWorkflowPatStorageNotice {
+    const scope = policy ? resolveSetupResourceScope(policy, 'PAT') : 'repository';
+    return {
+        scope,
+        destination: scope === 'repository' ? `${owner}/${repository}` : owner,
+        replacesExisting: scope === 'repository' ? repositorySecrets.includes('PAT')
+            : organizationWorkflowPat === 'present' || organizationSecrets.includes('PAT'),
+    };
 }
 
 export function usesOrganizationStorage(configuration: SetupConfiguration): boolean {

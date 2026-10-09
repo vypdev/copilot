@@ -1,54 +1,95 @@
-import type { SetupTokenPermissionQueryPort } from '../application/ports/setup_token_permission_ports';
+import { bufferHttpResponse, withHttpDeadline } from './http_deadline';
+import { permissionProbeHeaders, resolveProbeTarget } from './setup_permission_read_probe';
+import { mapProbeResponse, outcome } from './setup_permission_read_evidence';
+import { inspectOrganizationProjectsRead, inspectSelectedOrganizationProjectsRead } from './setup_permission_projects_read';
+import type { SetupTokenPermissionInspectionPort } from '../application/ports/setup_token_permission_ports';
 import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionRequirement,
+    SetupTokenPermissionProgress,
 } from '../domain/setup_token_permissions';
-import { isGithubPermissionDenied } from '../data/repository/github/github_error_policy';
 import { runWithConcurrencyLimit } from '../application/policies/bounded_concurrency_policy';
-import { isOperationallyAvailableSetupRead } from '../application/policies/setup_token_permission_evidence_policy';
+import { probeDisposableResource } from './setup_permission_resource_probes';
+import { ProbeCollision, ProbeFailure, SetupPermissionProbeHttp, writeProbeFailure } from './setup_permission_probe_http';
+import { LegacyActionsRecoveryRequired, SetupPermissionProbeJournal } from './setup_permission_probe_journal';
+import { requireSelectedProjectsWriteAccess } from './setup_permission_projects_access';
+import { requireRepositoryOrganizationOwner } from './setup_permission_organization_owner';
 
 const SETUP_PERMISSION_PROBE_CONCURRENCY = 4;
-const MAX_GITHUB_DEFAULT_BRANCH_LENGTH = 255;
-
-type ProbeReadEvidence = 'permission-bound' | 'publicly-readable' | 'organization-membership';
-
-type ProbeTarget =
-    | Readonly<{
-        status: 'ready';
-        url: string;
-        readEvidence: ProbeReadEvidence;
-        response?: Response;
-    }>
-    | Readonly<{ status: 'complete'; check: SetupTokenPermissionCheck }>;
-
-interface RepositoryProbeMetadata {
-    readonly visibility?: 'private' | 'public';
-    readonly defaultBranch?: string;
-}
+const activeInspections = new Set<string>();
 
 export interface SetupTokenPermissionQueryOptions {
     fetcher?: typeof fetch;
     timeoutMs?: number;
+    journal?: SetupPermissionProbeJournal;
 }
 
-/** Maps safe GitHub reads to semantic permission evidence without test mutations. */
-export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQueryPort {
+/** Coordinates bounded reads and approved disposable writes, preserving requirement order. */
+export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionInspectionPort {
     private readonly fetcher: typeof fetch;
     private readonly timeoutMs: number;
+    private readonly journal: SetupPermissionProbeJournal;
 
     constructor(options: SetupTokenPermissionQueryOptions = {}) {
         this.fetcher = options.fetcher ?? fetch;
         this.timeoutMs = options.timeoutMs ?? 10_000;
+        this.journal = options.journal ?? new SetupPermissionProbeJournal();
     }
 
-    inspect(
+    async inspect(
         owner: string,
         repository: string,
         token: string,
         requirements: readonly SetupTokenPermissionRequirement[],
+        onProgress?: (progress: SetupTokenPermissionProgress) => void,
+        selectedProjectNumbers?: string,
+        includeConditionalWrites = false,
+        operatorToken?: string,
     ): Promise<readonly SetupTokenPermissionCheck[]> {
+        const target = `${owner.toLowerCase()}/${repository.toLowerCase()}`;
+        if (activeInspections.has(target)) {
+            return requirements.map(requirement => outcome(requirement, 'unverifiable',
+                'Another permission inspection is in progress for this repository. Retry after it completes.'));
+        }
+        activeInspections.add(target);
+        try {
+            return await this.inspectExclusive(owner, repository, token, requirements, onProgress, selectedProjectNumbers, includeConditionalWrites, operatorToken);
+        } finally { activeInspections.delete(target); }
+    }
+
+    private async inspectExclusive(owner: string, repository: string, token: string,
+        requirements: readonly SetupTokenPermissionRequirement[],
+        onProgress: ((progress: SetupTokenPermissionProgress) => void) | undefined,
+        selectedProjectNumbers: string | undefined,
+        includeConditionalWrites: boolean,
+        operatorToken: string | undefined,
+    ): Promise<readonly SetupTokenPermissionCheck[]> {
+        try {
+            // Read-only identity checks and previews must never perform recovery writes.
+            if (requirements.some(item => item.level === 'write'
+                && (item.applicability === 'required' || includeConditionalWrites))) {
+                await this.journal.recover(owner, repository,
+                    new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs),
+                    operatorToken === undefined ? undefined : new SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs));
+            }
+        } catch (error) {
+            return requirements.map(requirement => {
+                notifyProgress(onProgress, { role: requirement.role, requirementId: requirement.id, phase: 'failed',
+                    detail: error instanceof ProbeCollision ? 'secret-collision' : 'cleanup-pending' });
+                const check = outcome(requirement, 'unverifiable',
+                    error instanceof ProbeCollision
+                        ? 'An earlier Secret collision requires GitHub audit-trail review and reconciliation of its local incident record before retrying.'
+                        : error instanceof LegacyActionsRecoveryRequired
+                            ? 'A legacy Actions recovery record has no workflow identity. Inspect the temporary branch and recorded commit in the local recovery journal; manually cancel and delete only its verified workflow_dispatch run, then remove the verified branch. Remove only that journal file after confirming GitHub cleanup, and retry setup.'
+                            : 'An earlier temporary permission resource could not be cleaned up. Inspect the local recovery journal before retrying.');
+                return requirement.level === 'write' ? { ...check, cleanupPending: true,
+                    ...(error instanceof ProbeCollision && requirement.probe === 'secrets'
+                        ? { incident: 'secret-collision' as const } : {}) } : check;
+            });
+        }
         return runWithConcurrencyLimit(
-            requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement)),
+            requirements.map(requirement => () => this.inspectOne(owner, repository, token, requirement, onProgress,
+                selectedProjectNumbers, includeConditionalWrites, operatorToken)),
             SETUP_PERMISSION_PROBE_CONCURRENCY,
         );
     }
@@ -58,318 +99,123 @@ export class SetupTokenPermissionQueryAdapter implements SetupTokenPermissionQue
         repository: string,
         token: string,
         requirement: SetupTokenPermissionRequirement,
+        onProgress: ((progress: SetupTokenPermissionProgress) => void) | undefined,
+        selectedProjectNumbers: string | undefined,
+        includeConditionalWrites: boolean,
+        operatorToken: string | undefined,
     ): Promise<SetupTokenPermissionCheck> {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+        let acceptingProgress = true;
+        const emit = (phase: SetupTokenPermissionProgress['phase'], detail?: SetupTokenPermissionProgress['detail']) => {
+            if (acceptingProgress) notifyProgress(onProgress, { role: requirement.role, requirementId: requirement.id, phase, ...(detail ? { detail } : {}) });
+        };
+        if (requirement.level === 'write' && requirement.applicability === 'conditional' && !includeConditionalWrites) {
+            const check = outcome(requirement, 'unverifiable', 'Conditional write access will be tested if the selected plan requires it.');
+            emit('skipped');
+            return check;
+        }
+        emit('checking');
+        if (requirement.level === 'write') {
+            try {
+                const http = new SetupPermissionProbeHttp(this.fetcher, token, this.timeoutMs);
+                if (includeConditionalWrites && requirement.scope === 'organization') {
+                    await requireRepositoryOrganizationOwner(owner, repository, http);
+                }
+                if (requirement.probe === 'projects' && requirement.scope === 'organization' && selectedProjectNumbers) {
+                    await requireSelectedProjectsWriteAccess(owner, selectedProjectNumbers, http);
+                }
+                await probeDisposableResource({ owner, repository, scope: requirement.scope, probe: requirement.probe,
+                    http,
+                    ...(requirement.role === 'workflow' && requirement.probe === 'actions' && operatorToken !== undefined
+                        ? { operatorHttp: new SetupPermissionProbeHttp(this.fetcher, operatorToken, this.timeoutMs) } : {}),
+                    journal: this.journal, phase: emit });
+                const check: SetupTokenPermissionCheck = { ...requirement, status: 'verified', writeProof: 'transaction',
+                    message: 'GitHub accepted temporary create, exact readback, and confirmed cleanup.' };
+                emit('verified');
+                return check;
+            } catch (error) {
+                const check = writeProbeFailure(requirement, error);
+                emit('failed', probeDiagnostic(error));
+                return check;
+            }
+        }
         try {
-            const request = (url: string) => this.fetcher(url, {
-                method: 'GET',
-                headers: permissionProbeHeaders(token),
-                signal: controller.signal,
+            return await withHttpDeadline(this.timeoutMs, async signal => {
+                const request = async (url: string) => {
+                    signal.throwIfAborted();
+                    const response = await bufferHttpResponse(await this.fetcher(url, {
+                        method: 'GET',
+                        headers: permissionProbeHeaders(token, requirement),
+                        signal,
+                        redirect: 'error',
+                    }));
+                    signal.throwIfAborted();
+                    return response;
+                };
+                if (requirement.scope === 'organization' && requirement.probe === 'projects'
+                    && requirement.level === 'read' && requirement.applicability === 'required'
+                    && selectedProjectNumbers) {
+                    const check = await inspectSelectedOrganizationProjectsRead(
+                        requirement, owner, selectedProjectNumbers, request);
+                    emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed',
+                        check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                    return check;
+                }
+                const target = await resolveProbeTarget(owner, repository, requirement, request);
+                if (target.status === 'complete') {
+                    emit('failed', probeDiagnostic(target.check.message));
+                    return target.check;
+                }
+                const response = target.response ?? await request(target.url);
+                if (target.readEvidence === 'organization-projects' && requirement.level === 'read' && response.ok) {
+                    const check = await inspectOrganizationProjectsRead(requirement, response, owner, request);
+                    emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed',
+                        check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                    return check;
+                }
+                const check = await mapProbeResponse(
+                    requirement,
+                    response,
+                    target.readEvidence,
+                    owner,
+                );
+                emit(check.status === 'verified' || check.status === 'available' ? 'verified' : 'failed',
+                    check.status === 'verified' || check.status === 'available' ? undefined : probeDiagnostic(check.message));
+                return check;
             });
-            const target = await resolveProbeTarget(owner, repository, requirement, request);
-            if (target.status === 'complete') return target.check;
-            return mapProbeResponse(
-                requirement,
-                target.response ?? await request(target.url),
-                target.readEvidence,
-                owner,
-            );
         } catch {
+            emit('failed', 'unavailable');
             return outcome(requirement, 'unverifiable', 'The permission probe was unavailable or timed out.');
         } finally {
-            clearTimeout(timeout);
+            acceptingProgress = false;
         }
     }
 }
 
-function permissionProbeHeaders(token: string): Record<string, string> {
-    return {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-    };
+function notifyProgress(callback: ((progress: SetupTokenPermissionProgress) => void) | undefined,
+    progress: SetupTokenPermissionProgress): void {
+    // Progress is observational: a closed view or broken pipe must not interrupt cleanup.
+    try { callback?.(progress); } catch { /* Authoritative evidence and cleanup still complete. */ }
 }
 
-async function resolveProbeTarget(
-    owner: string,
-    repository: string,
-    requirement: SetupTokenPermissionRequirement,
-    request: (url: string) => Promise<Response>,
-): Promise<ProbeTarget> {
-    const url = requirement.scope === 'repository' && requirement.probe === 'checks'
-        ? repositoryRoot(owner, repository)
-        : probeUrl(owner, repository, requirement);
-    if (!url) {
-        return {
-            status: 'complete',
-            check: outcome(requirement, 'unverifiable', 'GitHub does not expose a safe read-only proof for this permission.'),
-        };
-    }
-    if (requirement.level === 'write') {
-        return { status: 'ready', url, readEvidence: 'permission-bound' };
-    }
-    if (requirement.scope === 'organization' && requirement.probe === 'members') {
-        return { status: 'ready', url, readEvidence: 'organization-membership' };
-    }
-    if (requiresRepositoryVisibilityProof(requirement)) {
-        const metadataResponse = await request(repositoryRoot(owner, repository));
-        if (!metadataResponse.ok) {
-            if (requirement.probe === 'metadata') {
-                return {
-                    status: 'ready',
-                    url,
-                    response: metadataResponse,
-                    readEvidence: 'publicly-readable',
-                };
+function probeDiagnostic(value: unknown): SetupTokenPermissionProgress['detail'] {
+    if (value instanceof ProbeFailure) {
+        if (value instanceof ProbeCollision) return 'secret-collision';
+        if (value.cleanupPending) {
+            const parsed = Number(/^Temporary Issue #([1-9][0-9]*)\b/u.exec(value.message)?.[1]);
+            if (Number.isSafeInteger(parsed) && parsed > 0) {
+                return value.message.startsWith(`Temporary Issue #${parsed} remains closed`)
+                    ? `issue-closed-${parsed}` : `issue-unresolved-${parsed}`;
             }
-            return {
-                status: 'complete',
-                check: outcome(
-                    requirement,
-                    'unverifiable',
-                    requirement.probe === 'checks'
-                        ? 'GitHub could not resolve a safe default branch for the Checks probe.'
-                        : 'GitHub could not establish repository visibility before the read-only capability probe.',
-                ),
-            };
+            return 'cleanup-pending';
         }
-        const metadata = await readRepositoryProbeMetadata(metadataResponse);
-        if (!metadata) {
-            return {
-                status: 'complete',
-                check: outcome(
-                    requirement,
-                    'unverifiable',
-                    requirement.probe === 'checks'
-                        ? 'GitHub repository metadata did not provide a safe default branch for the Checks probe.'
-                        : 'GitHub repository metadata could not establish safe permission evidence.',
-                ),
-            };
-        }
-        if (requirement.probe === 'checks' && !metadata.defaultBranch) {
-            return {
-                status: 'complete',
-                check: outcome(
-                    requirement,
-                    'unverifiable',
-                    'GitHub repository metadata did not provide a safe default branch for the Checks probe.',
-                ),
-            };
-        }
-        if (!metadata.visibility) {
-            return {
-                status: 'complete',
-                check: outcome(
-                    requirement,
-                    'unverifiable',
-                    'GitHub repository metadata did not establish whether this read was authentication-bound.',
-                ),
-            };
-        }
-        const readEvidence = metadata.visibility === 'private'
-            ? 'permission-bound'
-            : 'publicly-readable';
-        if (requirement.probe === 'metadata') {
-            return { status: 'ready', url, response: metadataResponse, readEvidence };
-        }
-        const targetUrl = requirement.probe === 'checks'
-            ? `${repositoryRoot(owner, repository)}/commits/${encodeURIComponent(metadata.defaultBranch!)}/check-runs?per_page=1`
-            : url;
-        return {
-            status: 'ready',
-            url: targetUrl,
-            readEvidence,
-        };
+        if (value.prerequisite) return value.prerequisite;
+        if (value.httpStatus !== undefined) return `http-${value.httpStatus}` as const;
+        if (value.message.startsWith('No isolated')) return 'unsupported';
+        return 'unavailable';
     }
-    return {
-        status: 'ready',
-        url,
-        readEvidence: isPubliclyReadableOrganizationProbe(requirement)
-            ? 'publicly-readable'
-            : 'permission-bound',
-    };
-}
-
-function requiresRepositoryVisibilityProof(requirement: SetupTokenPermissionRequirement): boolean {
-    return requirement.scope === 'repository'
-        && !['secrets', 'variables'].includes(requirement.probe);
-}
-
-function isPubliclyReadableOrganizationProbe(requirement: SetupTokenPermissionRequirement): boolean {
-    return requirement.scope === 'organization'
-        && requirement.probe === 'issue-types';
-}
-
-async function readRepositoryProbeMetadata(response: Response): Promise<RepositoryProbeMetadata | undefined> {
-    try {
-        const payload: unknown = await response.json();
-        if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined;
-        const record = payload as Record<string, unknown>;
-        const branch = record.default_branch;
-        const defaultBranch = typeof branch === 'string'
-            && branch.length > 0
-            && branch.length <= MAX_GITHUB_DEFAULT_BRANCH_LENGTH
-            && !containsAsciiControl(branch)
-            ? branch
-            : undefined;
-        const visibility = typeof record.private === 'boolean'
-            ? record.private ? 'private' : 'public'
-            : undefined;
-        return { visibility, defaultBranch };
-    } catch {
-        return undefined;
+    if (typeof value === 'string') {
+        const match = /HTTP ([1-5][0-9]{2})/u.exec(value);
+        return match ? `http-${Number(match[1])}` : 'unavailable';
     }
-}
-
-function containsAsciiControl(value: string): boolean {
-    return Array.from(value).some(character => {
-        const codePoint = character.codePointAt(0);
-        return codePoint !== undefined && (codePoint <= 31 || codePoint === 127);
-    });
-}
-
-async function mapProbeResponse(
-    requirement: SetupTokenPermissionRequirement,
-    response: Response,
-    readEvidence: ProbeReadEvidence,
-    owner: string,
-): Promise<SetupTokenPermissionCheck> {
-    if (response.ok) {
-        if (readEvidence === 'organization-membership') {
-            return response.status === 200 && await isActiveOrganizationMembership(response, owner)
-                ? outcome(requirement, 'verified', 'GitHub confirmed active organization membership through a permission-bound Members-read probe.')
-                : outcome(requirement, 'unverifiable', 'GitHub did not confirm active organization membership for the selected organization.');
-        }
-        if (requirement.level === 'write') {
-            return outcome(requirement, 'unverifiable', 'Read access is available, but GitHub exposes no safe proof of write access.');
-        }
-        if (readEvidence === 'permission-bound') {
-            return outcome(requirement, 'verified', 'GitHub accepted an authentication-bound read-only capability probe.');
-        }
-        const publiclyReadable = outcome(
-            requirement,
-            'unverifiable',
-            requirement.scope === 'repository'
-                ? 'This publicly readable repository read succeeded, but does not prove that the PAT has the named permission.'
-                : 'GitHub served a publicly readable organization resource, which does not prove that this token has the requested permission.',
-        );
-        const publicReadEvidence = 'public-repository' as const;
-        return isOperationallyAvailableSetupRead(requirement, publicReadEvidence)
-            ? { ...publiclyReadable, operationallyAvailable: true, publicReadEvidence }
-            : publiclyReadable;
-    }
-    if (response.status === 409
-        && requirement.scope === 'repository'
-        && requirement.probe === 'contents') {
-        if (requirement.level === 'read' && readEvidence === 'permission-bound') {
-            return outcome(requirement, 'verified', 'GitHub confirmed that the accessible Git repository is empty.');
-        }
-        return requirement.level === 'read' && readEvidence === 'publicly-readable'
-            ? { ...outcome(requirement, 'unverifiable', 'This public repository is empty; its read is operationally available, but does not prove the PAT permission.'), operationallyAvailable: true, publicReadEvidence: 'public-repository' }
-            : outcome(requirement, 'unverifiable', 'GitHub confirmed that the repository is empty, but this read-only response does not prove the requested token permission.');
-    }
-    if (response.status === 401) {
-        return outcome(requirement, 'missing', `GitHub rejected the read-only capability probe (HTTP ${response.status}).`);
-    }
-    if (response.status === 403) {
-        const status = await isDeterministicPermissionDenial(response)
-            ? 'missing'
-            : 'unverifiable';
-        const message = status === 'missing'
-            ? 'GitHub explicitly rejected the read-only capability probe because the token lacks permission.'
-            : 'GitHub returned an ambiguous forbidden response; rate limits, SSO, or permission state could not be distinguished safely.';
-        return outcome(requirement, status, message);
-    }
-    if (response.status === 404) {
-        return outcome(requirement, 'unverifiable', 'GitHub returned not found, which can mean absent data or hidden permission state.');
-    }
-    return outcome(requirement, 'unverifiable', `GitHub could not verify this permission safely (HTTP ${response.status}).`);
-}
-
-async function isActiveOrganizationMembership(response: Response, owner: string): Promise<boolean> {
-    try {
-        const payload: unknown = await response.json();
-        if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return false;
-        const membership = payload as Record<string, unknown>;
-        const organization = membership.organization;
-        return membership.state === 'active'
-            && typeof organization === 'object'
-            && organization !== null
-            && !Array.isArray(organization)
-            && typeof (organization as Record<string, unknown>).login === 'string'
-            && ((organization as Record<string, unknown>).login as string).toLowerCase() === owner.toLowerCase();
-    } catch {
-        return false;
-    }
-}
-
-async function isDeterministicPermissionDenial(response: Response): Promise<boolean> {
-    const message = await readProviderMessage(response);
-    if (message?.toLowerCase() === 'forbidden') return false;
-    let headers: Record<string, string>;
-    try {
-        headers = Object.fromEntries(
-            ['retry-after', 'x-ratelimit-remaining', 'x-github-sso']
-                .map(name => [name, response.headers.get(name) ?? undefined] as const)
-                .filter((entry): entry is readonly [string, string] => entry[1] !== undefined),
-        );
-    } catch {
-        return false;
-    }
-    return isGithubPermissionDenied({
-        status: response.status,
-        ...(message ? { message } : {}),
-        response: { headers },
-    });
-}
-
-async function readProviderMessage(response: Response): Promise<string | undefined> {
-    try {
-        const payload: unknown = await response.json();
-        if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined;
-        const message = (payload as Record<string, unknown>).message;
-        return typeof message === 'string' ? message.trim().slice(0, 256) : undefined;
-    } catch {
-        return undefined;
-    }
-}
-
-function outcome(
-    requirement: SetupTokenPermissionRequirement,
-    status: SetupTokenPermissionCheck['status'],
-    message: string,
-): SetupTokenPermissionCheck {
-    return { ...requirement, status, message };
-}
-
-function probeUrl(
-    owner: string,
-    repository: string,
-    requirement: SetupTokenPermissionRequirement,
-): string | undefined {
-    const root = repositoryRoot(owner, repository);
-    const encodedOwner = encodeURIComponent(owner);
-    if (requirement.scope === 'organization') {
-        const organizationRoot = `https://api.github.com/orgs/${encodedOwner}`;
-        if (requirement.probe === 'secrets') return `${organizationRoot}/actions/secrets?per_page=1`;
-        if (requirement.probe === 'variables') return `${organizationRoot}/actions/variables?per_page=1`;
-        if (requirement.probe === 'members') return `https://api.github.com/user/memberships/orgs/${encodedOwner}`;
-        if (requirement.probe === 'issue-types') return `${organizationRoot}/issue-types?per_page=1`;
-        return undefined;
-    }
-    if (requirement.probe === 'metadata') return root;
-    if (requirement.probe === 'contents') return `${root}/commits?per_page=1`;
-    if (requirement.probe === 'administration') return `${root}/rulesets?per_page=1`;
-    if (requirement.probe === 'issues') return `${root}/labels?per_page=1`;
-    if (requirement.probe === 'actions') return `${root}/actions/workflows?per_page=1`;
-    if (requirement.probe === 'pull-requests') return `${root}/pulls?state=open&per_page=1`;
-    if (requirement.probe === 'variables') return `${root}/actions/variables?per_page=1`;
-    if (requirement.probe === 'secrets') return `${root}/actions/secrets?per_page=1`;
-    if (requirement.probe === 'workflows') return `${root}/contents/.github/workflows`;
-    return undefined;
-}
-
-function repositoryRoot(owner: string, repository: string): string {
-    return `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
+    return 'unavailable';
 }

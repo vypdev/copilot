@@ -131,6 +131,7 @@
           "files": [
             "src/data/repository/agent_cli_execution.ts",
             "src/data/repository/agent_cli_provisioner.ts",
+            "src/infrastructure/agents/agent_executable_file.ts",
             "src/infrastructure/agents/agent_execution_planner.ts"
           ],
           "mode": "each",
@@ -440,6 +441,74 @@
         }
       ],
       "successMessage": "issue workflow and repository guidance coverage: PASS (domain/setup/rendering policies 100%; ownership reconciler 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "PAT capability audit",
+      "missingEntryLabel": "PAT capability audit",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_token_permission_policy.ts",
+            "src/application/policies/setup_token_permission_evidence_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/actions/github_action_input.ts",
+            "src/infrastructure/http_deadline.ts",
+            "src/infrastructure/setup_permission_denial.ts",
+            "src/infrastructure/setup_permission_read_probe.ts",
+            "src/infrastructure/setup_permission_read_evidence.ts",
+            "src/infrastructure/setup_permission_read_shape.ts",
+            "src/infrastructure/setup_permission_projects_read.ts",
+            "src/infrastructure/setup_permission_projects_access.ts",
+            "src/infrastructure/setup_permission_workflow_cleanup.ts",
+            "src/infrastructure/setup_permission_project_cleanup.ts",
+            "src/infrastructure/setup_token_permission_query_adapter.ts",
+            "src/infrastructure/setup_credential_validation_adapter.ts",
+            "src/infrastructure/setup_github_identity_query_adapter.ts",
+            "src/infrastructure/setup_permission_probe_http.ts",
+            "src/infrastructure/setup_permission_probe_journal.ts",
+            "src/infrastructure/setup_permission_probe_transaction.ts",
+            "src/infrastructure/setup_permission_actions_probe.ts",
+            "src/infrastructure/setup_permission_pull_request_probe.ts",
+            "src/infrastructure/setup_permission_resource_probes.ts",
+            "src/infrastructure/setup_permission_issue_probe.ts",
+            "src/infrastructure/setup_permission_issue_cleanup.ts",
+            "src/infrastructure/setup_permission_project_probe.ts",
+            "src/infrastructure/github_secret_encryption.ts",
+            "src/infrastructure/setup_permission_organization_owner.ts",
+            "src/data/repository/github/github_actions_resource_inspector.ts",
+            "src/data/repository/github/github_actions_resource_commands.ts",
+            "src/data/repository/github/github_actions_resource_collection.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "PAT capability audit coverage: PASS (pure permission policies 100%; each credential/HTTP/read/write/cleanup module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "setup configuration management",
+      "missingEntryLabel": "setup management",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_management_permissions_policy.ts",
+            "src/application/policies/setup_management_policy.ts",
+            "src/application/policies/setup_quick_settings_policy.ts",
+            "src/application/usecases/setup/manage_setup_use_case.ts",
+            "src/infrastructure/setup_management_workspace_adapter.ts",
+            "src/cli/setup_management_adapter.ts",
+            "web/src/i18n/managementCopy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "setup configuration management coverage: PASS (each new runtime module 100% lines/statements/branches/functions)"
     }
   ]
 }

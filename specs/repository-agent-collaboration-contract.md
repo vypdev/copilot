@@ -497,6 +497,36 @@ flowchart LR
 8. Architecture tests MUST prevent the internal Action agent prompt/context
    builders from importing or automatically ingesting generated collaborator
    instructions.
+9. The documentation validator MUST accept equivalent LF and CRLF MDX
+   frontmatter on Windows and Unix checkouts, and reject missing or malformed
+   frontmatter. Generated collaborator artifact hashes MUST use canonical LF
+   text. Only CRLF-to-LF normalization is allowed before hashing or comparing
+   a generated artifact with its desired rendering; any other content change,
+   missing marker, invalid profile, or malformed manifest remains drift.
+   Setup reruns MUST treat a CRLF-only checkout as unchanged, and doctor and
+   retirement MUST use the same ownership rule.
+10. CI MUST verify the generated guidance contract immediately after dependency
+    installation and again after the full test suite. On Windows, it MUST show
+    the checkout line-ending attributes for the hash-owned files. A failure at
+    checkout and a mutation during tests require different recovery actions;
+    neither may be treated as a passing guidance gate. The dedicated self-hosted
+    Windows setup fixture job MUST run the same checkout check before its build
+    and full coverage suite, so the Windows evidence does not depend on generic
+    CI runner assignment.
+
+The [self-hosted Windows checkout run](https://github.com/vypdev/copilot/actions/runs/37000932411)
+showed `i/lf w/crlf attr/text eol=lf` for all three tracked guidance artifacts
+immediately after checkout. The manifest still records LF digests. This is a
+checkout representation difference, not a source-content edit; the validator,
+doctor, reconcile, and retirement paths MUST apply the canonical text rule
+consistently. A fresh Windows run MUST prove the early validation and full
+suite pass before this platform gate closes.
+
+The [next Windows run](https://github.com/vypdev/copilot/actions/runs/37001792859)
+passed manifest hashing and exposed a path-separator false positive in the
+validator's allowlist for the setup plan. The allowlist MUST compare
+repository-relative paths with normalized separators while preserving the
+prohibition on internal Action code ingesting collaborator guidance.
 
 ## 9. UI/UX and content contract
 

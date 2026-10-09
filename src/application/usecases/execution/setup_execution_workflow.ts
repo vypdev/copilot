@@ -4,10 +4,10 @@ import type {
     SetupIssueQueryPort,
     SetupOrganizationQueryPort,
 } from '../../ports/setup_execution_ports';
-import { shouldSkipInitialLabelsFetch } from '../../../data/model/initial_labels_policy';
+import { ACTIONS } from '../../../data/model/action_types';
 import { restorePreviousBranchState } from '../../../data/model/previous_branch_state_policy';
 import { ALL_ISSUE_WORKFLOWS, classifyIssueWorkflow } from '../../../domain/issue_workflow_profile';
-import { logDebugInfo, setGlobalLoggerDebug } from '../../ports/logging_ports';
+import { setGlobalLoggerDebug } from '../../ports/logging_ports';
 import type { ExecutionBranchVersionResolution } from './execution_branch_version_resolver';
 import { resolveExecutionIssueNumber } from './resolve_execution_issue_number';
 import type {
@@ -33,7 +33,8 @@ export async function runSetupExecution(
     setGlobalLoggerDebug(context.debug, context.local);
     const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
     const issueResolution = await resolveExecutionIssueNumber(context, dependencies.issueSetupPort);
-    const canConfigureUnlinkedPullRequest = context.isPullRequest
+    const isRepositorySetup = context.isSingleAction && context.singleAction.currentAction === ACTIONS.INITIAL_SETUP;
+    const canConfigureUnlinkedPullRequest = context.isPullRequest && !isRepositorySetup
         && positiveIssueNumberOrUndefined(context.pullRequest.number) !== undefined;
     if (issueResolution.issueNumber === undefined && !canConfigureUnlinkedPullRequest) {
         return { status: 'issue-unresolved', tokenUser, issueResolution };
@@ -46,11 +47,7 @@ export async function runSetupExecution(
     );
     const currentIssueLabels = issueResolution.issueNumber === undefined
         ? []
-        : await loadIssueLabels(
-            context,
-            issueResolution.issueNumber,
-            dependencies.issueSetupPort,
-        );
+        : await dependencies.issueSetupPort.getLabels(issueResolution.issueNumber);
     const liveIssueBody = issueResolution.issueNumber === undefined
         ? undefined
         : await dependencies.issueSetupPort.getDescription(issueResolution.issueNumber);
@@ -192,20 +189,6 @@ async function loadPreviousConfiguration(
 ) {
     const issueNumber = configurationIssueNumber(context, resolvedIssueNumber);
     return issueNumber === undefined ? undefined : configurationPort.get(issueNumber);
-}
-
-async function loadIssueLabels(
-    context: SetupExecutionContext,
-    issueNumber: number,
-    issueSetupPort: SetupIssueQueryPort,
-): Promise<string[]> {
-    try {
-        return await issueSetupPort.getLabels(issueNumber);
-    } catch (error) {
-        if (!shouldSkipInitialLabelsFetch(context.isSingleAction, context.singleAction.currentAction)) throw error;
-        logDebugInfo('Skipping initial labels fetch for setup action.');
-        return [];
-    }
 }
 
 function configurationIssueNumber(

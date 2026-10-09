@@ -2,22 +2,47 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-24
+- Last updated: 2026-10-09
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-24
+- Last verified: 2026-10-09 (PR #452 per-role override and native Metadata-response regressions; prior shared-session, resource-progress and repository-only Apply fixture evidence remains applicable; live GitHub path remains external)
 - Owners: Copilot maintainers
-- Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
+- Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and metadata-only diagnosis
 - Related issues/PRs: merge-queue readiness SDD; architecture quality and
   scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
+
+The [PAT capability SDD](./setup-pat-permission-guidance-and-verification.md)
+is authoritative for the audited operator/runtime credential contract. Identity
+and reads precede temporary create/read/delete checks during initial PAT
+verification, including conditional writes. Preview/dry-run remains read-only,
+including recovery; persistent installation requires approval and
+require confirmed cleanup. Scope-sensitive inventory failures block before that
+approval. Guided bot identity is bound before its capability transactions, and
+the selected Project role is checked in addition to the disposable grant proof.
+Runtime routes include Contents read where they inspect branches/commits without
+writing. Local fixtures do not close live provider, accessibility or Windows ACL
+gates; this revision includes no dogfooding.
+
+## Configuration management entry (2026-10-08)
+
+Web mode now starts with an inspectable configuration panel and supports focused,
+independently approved runtime adjustments. The additive contract, state model,
+96-case budget, architecture and evidence gates live in
+[Configuration panel and focused adjustments](./setup-configuration-management.md).
+This supersedes the web-only assumption that every launch immediately starts the
+installation questionnaire. Terminal behavior and full-wizard guards remain.
+
 
 ## 1. Executive summary
 
 `copilot setup` builds and previews a validated installation plan before writing
 workflows, templates, Variables, Secrets, labels, issue types, projects, or the
 initial tag. `copilot doctor` inspects the expected contract without changing
-repository configuration. The setup PAT is separate from the workflow PAT and
+repository configuration, but its normal credential check may dispatch an
+installed GitHub Action. `copilot doctor --read-only` skips that dispatch,
+reports Secret values as unverified, and performs only read operations. The
+setup PAT is separate from the workflow PAT and
 provider credentials; secret values never enter config files or plan objects.
 
 ```text
@@ -41,8 +66,9 @@ but unusable, overwrite hand-maintained files, or expose credentials.
 3. An immutable questionnaire collects choices, inspects remote
    repository/organization state, chooses Secret and Variable storage, validates
    cross-field rules, and shows a plan without giving terminal code product policy.
-4. Credential collection validates the setup PAT, checks effective existing
-   credentials remotely where possible, and asks to keep/replace/skip.
+4. Credential collection validates the setup PAT, checks other effective existing
+   credentials remotely where possible, and asks to keep/replace/skip for those
+   credentials. The workflow PAT always requires a supplied, audited value.
 5. Only confirmed plans provision selected files and GitHub resources; changed
    managed files require approval and backups.
 6. Doctor compares the repository to the same expected configuration and emits
@@ -70,6 +96,12 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
   Role-specific PAT guidance and safe permission evidence are specified in
   [`setup-pat-permission-guidance-and-verification.md`](./setup-pat-permission-guidance-and-verification.md).
+  Assisted operator PAT creation is proposed in
+  [`temporary-setup-operator-authorization.md`](./temporary-setup-operator-authorization.md),
+  not an implemented setup path.
+  Guided creation of the separate persistent bot PAT is proposed in
+  [`guided-bot-pat-onboarding.md`](./guided-bot-pat-onboarding.md),
+  without a local account manager.
   Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology
@@ -121,7 +153,7 @@ organization value that GitHub Actions will expose.
 | Credentials | one ambiguous token | setup/workflow/provider separation | least privilege |
 | Remote state | overwrite assumptions | inspect + preserve/replace decision | controlled drift |
 | Readiness | discovered during release | setup and doctor checks | earlier action |
-| Diagnosis | mutation required | read-only doctor | safe audit |
+| Diagnosis | mutation required | explicit metadata-only `doctor --read-only`; ordinary doctor may dispatch the installed health Action | safe inspection or separately authorized active check |
 
 The architecture hardening preserves the product contract while making
 cancellation, skipped diagnosis, ordering, and read-only authority explicit.
@@ -150,10 +182,25 @@ cancellation, skipped diagnosis, ordering, and read-only authority explicit.
   converts `keep` into a replacement flow; setup MUST collect and validate the
   value before provisioning the selected target. An explicit override that
   names the already-effective scope does not require a redundant rewrite.
-- An existing workflow `PAT` is an exception: setup requires re-entry and a
-  complete permission audit before provisioning; credential health and storage
-  preservation do not authorize an unaudited keep path.
+- Workflow `PAT` is an exception: setup always requires a supplied value and a
+  complete permission audit before provisioning at its selected default/override
+  scope. An existing target gets a replacement warning in the plan and prompt,
+  even with preservation enabled. Organization warnings disclose shared impact
+  and inspect namespace presence independently of repository access. Interactive
+  repository shadows pause for manual deletion/recheck, an explicit PAT-only
+  repository override or cancellation; unavailable inventory never clears a
+  conflict. See the [57-case amendment](./guided-bot-pat-onboarding.md#existing-pat-replacement-and-scope-conflict-recovery--2026-10-07).
 - Invalid required credentials must be replaced.
+- Terminal credential-health validation MAY temporarily create and remove the
+  selected-branch health workflow before final Apply. As soon as the create
+  request is attempted, the journey MUST disclose a possible remote mutation;
+  a subsequent failure or cancellation MUST report a partial outcome and
+  direct the operator to inspect the selected branch, even if cleanup appeared
+  successful, because the create/delete commits remain in history. A failed
+  create request is conservatively classified as possible mutation when its
+  remote outcome is uncertain. The browser path does not bootstrap a workflow
+  before Apply. Initial PAT verification may already have completed and cleaned
+  isolated temporary resources; persistent installation retains its approval boundary.
 - A missing remote resource snapshot is never an empty inventory. Selected
   Secret/Variable management MUST stop before all remote resource, label,
   issue-type, and tag calls when inspection fails, its port is absent, or a
@@ -183,7 +230,15 @@ by policy when irrelevant; there is no legacy state alias or back-navigation
 mode. After questionnaire completion, credential validation and provisioning
 remain separate application flows.
 
-Cancellation before confirmation writes nothing. Partial remote provisioning
+The pre-PAT intent review may start a **new questionnaire pass** over the
+current in-memory draft. Each pass remains forward-only; this explicit review
+loop is not an implicit reset or back-navigation inside a questionnaire. The
+journey presentation reopens `Setup choices` only before PAT entry and returns
+to `Setup PAT` when that pass finishes.
+
+Cancellation before confirmation makes no setup Secret write; a Secret manually
+deleted in GitHub during conflict recovery is not restored.
+Cancellation before confirmation writes nothing through setup. Partial remote provisioning
 retains successful facts and reports remaining work; retries MUST preserve valid
 existing resources and avoid duplicate shadowing.
 
@@ -197,7 +252,8 @@ existing resources and avoid duplicate shadowing.
 | locales | repository `en-US`; issue/PR inherit | any valid canonical BCP-47 tag; reviewed `en`/`es`, dynamic otherwise | Variables; repository → issue/PR inheritance |
 | agent roles | `codex` / `openai/gpt-6-luna` | `codex`, `opencode`, `cursor` + allowed model | Variables |
 | Bugbot | low, smart in setup, non-blocking | bounded enums/1–100 comments | Variables |
-| storage | repository, preserve existing | repository/org per resource | remote GitHub |
+| storage | repository, preserve existing except the PAT Secret | repository/org per resource; PAT is always supplied and audited | remote GitHub |
+| initial version | automatic for enabled release/hotfix issues | not configurable; no question | remote version tags |
 | provisioning | `auto` | `always`, `disabled` | Variable |
 
 Repository values take precedence at runtime over organization values. Setup
@@ -209,16 +265,36 @@ validated. Branch names, counts, enum values, model identifiers, rule length,
 deployment combinations, and storage combinations reject invalid input. Safety
 rules, secret serialization, backups, and confirmation are not configurable.
 
+Explicit CLI flags override only the corresponding config-file fields.
+`--agent` changes the provider for each role while preserving its configured
+model provider, model, effort, and executable; defaults fill only absent fields.
+
+The initial-version decision is derived from the effective issue workflow profile,
+including the Issues switch. Neither frontend asks about it and `createInitialTag`
+is not an accepted config-file override. During Apply, a complete GitHub tag
+inventory is queried with the setup PAT; setup does not fetch or rewrite local
+`v1`, `v2` or `v3` moving references. Only exact `x.y.z`/`vx.y.z` version tags
+participate, with numeric version ordering across pages. Existing versions skip
+creation. A completed inventory without a version creates `v1.0.0` on the default
+branch only for release/hotfix issue workflows. Failed, malformed or truncated
+reads never authorize creation; the adapter caps inspection at 100 pages of
+100 tags. The existing immutable-tag create/verify boundary remains authoritative
+for a concurrent creation, and does not replace an existing tag.
+
+Example plan content: `Initial tag: v1.0.0 when no version tag exists` or
+`Initial tag: not needed by selected issue workflows`. No extra prompt precedes
+this decision.
+
 ## 8. Clean Architecture design
 
 | Boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain | setup plan/check/value types | prompts/Octokit/fs |
 | Policies | defaults, immutable clone/questionnaire, validation, storage, plans, typed message catalogs, doctor report | terminal I/O or language/provider selection |
-| Use cases | drive questionnaire, credential decisions, provision, doctor probes, resolve one complete doctor catalog | provider DTOs or feature-local language branches |
+| Use cases | drive one frontend-neutral setup session (repository through result), questionnaire, credential decisions, provision, doctor probes, resolve one complete doctor catalog | provider DTOs, terminal/browser objects, feature-local language branches |
 | Ports | raw terminal, render/present/confirm, workspace, narrow remote queries/commands, health | provider implementation |
 | Adapters | terminal mechanics, presenters, filesystem, narrow Octokit reads/writes, health query/bootstrap | product defaults/question order |
-| CLI composition | command flags and concrete wiring | duplicated validation |
+| CLI composition | command flags, concrete wiring, exit-code adaptation and terminal cleanup | duplicated validation, stage ordering, mutation classification |
 
 ```mermaid
 flowchart LR
@@ -233,7 +309,144 @@ adapter owns backups and writes; GitHub adapters own remote error mapping.
 Architecture tests and workflow/catalog validators enforce dependencies and
 asset parity.
 
+Repository installation is independent of issue workflow admission. CLI Apply
+passes repository identity, approved setup configuration and validated credentials
+to the shared action adapter without a fabricated issue or `single-action-issue`.
+The application issue-resolution policy treats `initial_setup` as repository
+work before reading configured issue numbers or event metadata. Even legacy
+callers supplying issue `1`, an issue event, a PR branch or a push branch cannot
+make installation load issue labels, descriptions, configuration or version
+metadata, including the unlinked-PR configuration fallback. The previous
+setup-only tolerance for failed issue-label reads is removed, since installation
+does not read issue labels. Authentication and all setup validation/provisioning ports still run;
+issue-bound actions retain their admission checks. `InitialSetupUseCase` receives
+its existing narrow repository setup context, rather than an issue-shaped input.
+An omitted Codex API key remains valid when runner authentication is the selected
+alternative; installation does not invoke Codex to validate an unrelated issue.
+
+The Actions resource facade delegates inventory reads to
+`GithubActionsResourceInspector` and scope-preserving mutations to
+`GithubActionsResourceCommands`, sharing only collection decoding. Provider
+protocols must match the installed Octokit: Secrets belong to `rest.actions`,
+effective organization inventory accepts `owner`/`repo`, and organization
+Variables use distinct create/update methods. Missing methods or malformed
+collections cannot masquerade as empty inventory. The SDK integration test
+uses an intercepted fixture transport, exercises organization inventory and
+Secret/Variable provisioning, and makes no live provider request.
+For effective `selected` visibility, provisioning requires repository identity.
+Secrets also require the selected-repository grant endpoint before writing.
+New Variables include that repository in their creation request. Existing
+Variables preserve visibility and reuse confirmed access from the paginated
+inherited organization inventory; unknown, unavailable or malformed inventory
+does not prove access. Without that evidence, the grant endpoint is required
+before writing and access is granted separately. Missing prerequisites produce
+a resource error without mutation. A rejected required grant cannot increment
+the success count; private/all visibility does not require that endpoint.
+
+
+The shared coordinator is the authority for stage order, cancellation before
+mutation, single-flight Apply, and the conservative partial outcome once a
+write may have started. Terminal and browser ports use the existing
+questionnaire, PAT, plan, credential, and provider use cases; neither adapter
+may substitute its own setup policy. An in-memory resource receipt records
+`not-started`, `in-progress`, `completed`, `skipped`, or
+`needs-inspection`; a crash or unknown remote response is not rollback
+evidence. The browser exposes only a redacted projection. See the acceptance
+ledger in [local web setup assistant](./local-web-setup-assistant.md#14-testing-strategy-and-numeric-budget).
+
+The setup composition binds remote version-tag inspection to the same explicit
+repository and operator credential as the other installation ports. The Git CLI
+adapter remains unchanged for runtime branch/version operations. A Variable
+named `PAT` follows normal preservation rules; only the workflow PAT Secret
+requires reentry and audit. Existing organization Variable updates send name and
+value, retaining visibility; selected repository access is granted separately
+only when inherited inventory does not already confirm it.
+Variable write failures cross the semantic port as value-free name, scope,
+phase and bounded reason (authorization, invalid input, conflict, rate limit or
+unavailability). Apply correlates these facts with the partial receipt and logs
+a named recovery message without provider response bodies or Variable values.
+The result contract MUST identify any unclassified messages separately from
+typed failures. Apply MUST retain those messages even in a mixed failure batch;
+if that explicit list is absent, it MUST conservatively retain all error
+messages rather than suppress evidence based on the presence of typed failures.
+The October 7 logs did not retain HTTP evidence, so the exact live Variable
+failure is still unconfirmed. This request shape follows the optional visibility
+contract in [GitHub's organization Variable update API](https://docs.github.com/en/rest/actions/variables#update-an-organization-variable).
+
 ## 9. UI/UX and content contract
+
+### Interactive journey presentation (2026-09-28 amendment)
+
+Interactive `copilot setup` MUST show a bounded, text-first six-stage journey:
+`Repository → Setup choices → Setup PAT → Plan → Bot PAT & credentials → Apply`.
+The active stage is named in words, previously completed stages are marked
+complete, and later stages remain pending. A stage number describes position,
+not a percentage or a count of questions. Show the journey at meaningful
+transitions, not after every answer. Never mark `Apply` complete until the
+action reports success; failure after application begins is **Partial**, not
+`No changes`. Before application begins, say `No changes have been applied`.
+Cancellation or a blocked audit does not advance the journey. Dry-run ends
+after plan review with an explicit `No changes` result; unattended input keeps
+its existing non-interactive output rather than receiving interactive prompts.
+
+```text
+Copilot setup · owner/repo
+Stage 2/6 · Setup choices
+Complete: Repository
+Now: Setup choices
+Next: Setup PAT → Plan → Bot PAT & credentials → Apply
+No changes have been applied.
+```
+
+Text equivalent: the named current phase follows repository detection; all
+other phases are explicitly complete or pending, and no remote mutation has
+started. In a narrow terminal, each status remains on its own wrapped line.
+Icons and color may reinforce the state but MUST NOT be its only carrier.
+The journey is a view of existing setup state, not a new questionnaire or
+source of permission truth. The application boundary owns stage ordering and
+transition validity; the terminal adapter owns width, wrapping, and ANSI.
+Do not persist phase state or print credentials. Detailed permission tables
+remain available on explicit request and for manual/unattended paths; the
+interactive guided review defaults to an exact compact grant summary.
+
+If the operator chooses to review intent again, the journey MUST visibly
+reopen `Setup choices`, label the review pass, and mark `Setup PAT` pending
+until the repeated questions finish. This is the only backwards journey
+transition and is allowed only before PAT entry and before mutation. The
+terminal MUST explain that existing answers remain as defaults, Enter keeps
+them, the flow returns to PAT review afterward, and no setup changes have
+been applied. It MUST NOT reuse the first-pass introduction. On completion,
+show an explicit return to `Setup PAT` and recalculate the permission preview.
+The later full wizard still does not re-ask the pre-PAT answers. No fixed
+question counter or percentage is displayed because the set is conditional.
+
+```text
+Copilot setup · owner/repo
+Stage 2/6 · Setup choices · review pass 2
+Complete: Repository
+Now: reviewing saved setup choices
+Next: Setup PAT → Plan → Bot PAT & credentials → Apply
+No changes have been applied.
+```
+
+Text equivalent: the operator deliberately returned to a second pass over
+saved choices, will reach PAT review afterward, and has not begun mutation.
+This amendment adds at least **eight distinct cases** beyond the original
+journey budget: three transition/guard cases, two introduction and narrow
+no-color presentation cases, and three CLI return/cancellation/permission
+preview integration cases. The existing coverage thresholds remain.
+
+The presentation introduces no new flags or persisted configuration. It has
+no effect on GitHub Actions, issues, PRs, comments, or checks. Rollback removes
+the stage renderer and restores the existing table-first presentation without
+changing saved setup state. The amendment adds a minimum **12 distinct tests**:
+four pure transition/view-model cases, three terminal width/color cases,
+three guided/manual detail cases, and two end-to-end dry-run/partial-state
+cases. Changed presentation code targets 95% line and 90% branch coverage.
+Acceptance requires stage ordering, accurate no-change/partial claims, no
+duplicate intent questions, exact summary-to-table grants, and secret-free
+output in both wide and narrow no-color terminals. User and contributor docs
+MUST describe the phases and where the full permission table can be opened.
 
 ```markdown
 Pending: **Inspecting existing Copilot resources.** No changes have been made.
@@ -265,7 +478,7 @@ arbitrary warning text into the pure plan builder.
 | unverifiable credential | feature may be unsafe | name/scope only | yes | run health/manual check | none |
 | denied changed file | file unchanged | backup status | yes | approve/adapt | remove unused backup manually |
 | partial GitHub writes | subset installed | resource names/status | yes | rerun preserve-existing | no destructive rollback |
-| doctor fail | no mutation | diagnostic report | yes | run setup/fix access | none |
+| read-only doctor fail | no mutation or Action dispatch | diagnostic report | yes | fix access and rerun | none |
 
 ## 11. Security, permissions, and privacy
 
@@ -302,13 +515,40 @@ manual reversal.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Defaults/config/storage policy | 27 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
-| Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
-| Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
-| Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
+| Defaults/config/storage policy | 29 | bounds, precedence, cross-fields, organization-target shadow detection, keep-versus-replace decisions for disabled preservation and scope-moving overrides |
+| Questionnaire/wizard/idempotency | 24 | transitions, immutability, cancel, preserve, replace |
+| Credentials/provider adapters | 49 | valid/invalid/missing/unverifiable/groups; selected-repository prerequisites, atomic Variable creation, confirmed inherited access and unavailable/malformed inventory |
+| Workflows/assets/schema | 26 | selection, parity, readiness, permissions; four repository-only installation cases reject incidental configured issue/event linkage; two mixed Variable error cases retain partial evidence |
 | Prompt/CLI UX/sanitization/localization | 18 | masking, status order, non-interactive, English default, Spanish exact/base, arbitrary locale, atomic fallback, hostile diagnostic suppression |
-| Integration/security/cutover | 17 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails |
-| **Total** | **112** | no double counting |
+| Integration/security/cutover | 34 | backup, org scope, doctor, no `.env`, bounded pre-plan inspection and no remote provisioning after selected inventory or shadow validation fails; execution bootstrap, Apply/authentication and real SDK paginated inherited Variable access |
+| **Total** | **180** | no double counting |
+
+The repository-only Apply correction adds **10 distinct automated cases**:
+four in `execution_issue_number_policy.test.ts`, two in
+`setup_execution_workflow.test.ts` and four in
+`local_setup_apply_contract.test.ts`. The last four exercise the production
+local action, execution setup, single-action dispatch and installation use case
+with fixture provider/workspace ports: an approved Codex plan without API keys,
+the same plan with legacy issue `1` or PR event metadata, and invalid setup authentication with zero
+installation writes. No live GitHub resources or runner authentication are tested.
+
+The automatic-version and Variable correction adds **40 distinct automated
+cases**: six questionnaire selection/revision/invalid-answer cases, one config rejection and
+one PAT resource-kind preservation case, eight Apply skip/failure-mapping cases
+(including mixed batches with and without explicit unclassified metadata),
+nine remote tag inventory/order/failure/bound cases, fourteen Variable request/grant/
+value-free failure cases (including 403 rate limits and non-HTTP redaction), and one composition credential-binding case. The
+existing intercepted Octokit transport case additionally checks remote tag
+reads and existing Variable update payloads; it is not counted again. Existing
+version detection and creation tests continue to assert the default tag and no
+creation after a failed query.
+
+The selected Variable access correction adds **8 distinct automated cases**:
+seven adapter cases cover confirmed access with and without the grant endpoint,
+atomic creation, denied inventory, a different inherited name and two malformed
+inventories. One intercepted real SDK case confirms access found on a later
+inventory page prevents redundant grant requests. These are fixture tests,
+not evidence of successful live GitHub writes.
 
 Global coverage thresholds remain; questionnaire, doctor catalog/report, shared
 merge-readiness message, and doctor presenter policies MUST reach 100%
@@ -332,9 +572,14 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 2. Given non-interactive missing required input, setup fails without prompting or writes.
 3. Given valid organization Secret and preserve-existing, no repository shadow is created.
 4. Given invalid required existing credential, setup requires replacement.
-5. Given canceled confirmation, local and GitHub state are unchanged.
+5. Given canceled confirmation without a prior credential-health bootstrap
+   attempt, local and GitHub state are unchanged. With such an attempt, setup
+   reports a partial result and requires branch/history inspection.
 6. Given a changed managed file, setup backs up before approved replacement.
-7. Given doctor, no mutation port is called and unhealthy state returns non-zero.
+7. Given `doctor --read-only`, no mutation or credential-health dispatch port
+   is called; installed Secret names are inspected but values are unverified,
+   and unhealthy state returns non-zero. Given ordinary doctor, any installed
+   credential-health dispatch is an explicit, separately chosen active check.
 8. Given merge-queue without proven support, setup/doctor reports fail closed.
 9. Given output inspection, no secret value appears.
 10. Given no explicit locale, doctor renders one complete English report.
@@ -358,10 +603,29 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
     Secret/Variable/label/issue-type/tag mutation; absence cannot be
     interpreted as an empty repository inventory. Pre-plan failures still
     reach the final audit as bounded unavailable access facts.
-18. Given an organization Secret or Variable target, repository inventory is
+18. Given terminal credential-health bootstrap was attempted and cleanup
+    fails, setup reports `partial` with branch-inspection guidance rather
+    than `blocked` or "no changes applied"; the same conservative outcome
+    applies when creation times out ambiguously. Without a bootstrap attempt,
+    pre-Apply cancellation remains `cancelled`.
+19. Given an organization Secret or Variable target, repository inventory is
     available and confirms that no same-name repository resource exists;
     otherwise setup blocks before credential collection or mutation, even with
     an explicit organization override or `preserveExisting: false`.
+20. Given a `selected` organization resource, missing repository identity
+    prevents writing. Secrets require the grant endpoint; a new Variable
+    includes repository access on creation, and an existing Variable with
+    confirmed inherited access needs no redundant grant. Unknown or malformed
+    inherited inventory still requires the endpoint. A denied required grant
+    never counts as created/updated; private visibility succeeds without it.
+    Execute the selected-resource, Variable-failure and real SDK suites.
+21. Given an approved setup plan with Codex runner authentication and no API
+    key, Apply reaches repository installation without looking up any issue.
+    A legacy explicit issue `1` or issue/PR/push event does not change that
+    scope. Invalid setup authentication still prevents file, Secret and Variable
+    writes. Execute `local_setup_apply_contract.test.ts` and the execution
+    issue-resolution/workflow suites; issue-bound actions keep their existing
+    admission regressions.
 
 ## 17. Requirements traceability
 
@@ -372,6 +636,8 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 | policy-safe existing credentials | storage policy + credential use case | disabled-preservation and scope-move tests | credentials/provisioning |
 | authoritative resource snapshot | wizard, resource grouping + initial setup workflow | bounded pre-plan inspection and no remote mutation after failed inspection | troubleshooting/provisioning |
 | safe files | workspace adapter | workspace tests | provisioning |
+| initial version | setup issue-workflow policy, initial setup workflow, version-tags query | `initial_setup_use_case.test.ts` | how-to-use |
+| agent flag precedence | merge setup overrides policy | `setup_command_options.test.ts` per-role preservation cases | how-to-use |
 | read-only doctor | doctor use case/composition | doctor tests | workflow-and-cli |
 | readiness | readiness use case | readiness tests | checklist |
 
@@ -386,8 +652,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 ## 19. Definition of Done
 
 - [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
-- [x] The 112-case budget and coverage thresholds pass.
-- [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
+- [x] The 180-case budget and coverage thresholds pass.
+- [x] Setup cancel/retry/partial state and metadata-only `doctor --read-only`
+      behavior pass; ordinary doctor dispatch is disclosed separately.
 - [x] Secrets are absent from plans, config, logs, errors, and backups.
 - [x] Workflow/assets, documentation, and catalog checks pass.
 - [ ] Human terminal and permission-path UX evidence is captured.
@@ -402,6 +669,10 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 - Permission companion: `setup-pat-permission-guidance-and-verification.md`
   owns the pre-prompt matrices, post-entry evidence states, and read-only probe
   boundary for setup and workflow PATs.
+- Future interface companion: [local web setup assistant](./local-web-setup-assistant.md)
+  specifies an optional, loopback-only `--web` adapter over the same setup
+  policies and application gates. This baseline describes the shipped CLI;
+  the web mode is not implemented by this amendment.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

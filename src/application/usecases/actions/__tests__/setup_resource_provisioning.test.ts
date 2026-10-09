@@ -101,6 +101,7 @@ describe('setup resource provisioning policy', () => {
         );
 
         expect(result.errors).toEqual([]);
+        expect(result.writes).toBe(2);
         expect(result.step).toContain('1 created, 1 updated');
         expect(upsertSecrets).toHaveBeenCalledWith([
             { name: 'PAT', value: 'workflow-token' },
@@ -109,14 +110,52 @@ describe('setup resource provisioning policy', () => {
     });
 
     it('reports when setup secrets are enabled without validated credentials', async () => {
+        const upsertSecrets = jest.fn();
         const result = await ensureRepositorySecrets(
             context,
-            { setupRepositorySecretsPort: { upsertSecrets: jest.fn() } },
+            { setupRepositorySecretsPort: { upsertSecrets } },
             createDefaultSetupConfiguration(),
         );
 
         expect(result.errors).toEqual([]);
+        expect(result.writes).toBe(0);
         expect(result.step).toContain('were not changed');
+        const empty = await ensureRepositorySecrets({ setupCredentials: { apiKeys: [] } },
+            { setupRepositorySecretsPort: { upsertSecrets } }, createDefaultSetupConfiguration());
+        expect(empty).toMatchObject({ writes: 0, errors: [], step: expect.stringContaining('kept unchanged') });
+        expect(upsertSecrets).not.toHaveBeenCalled();
+    });
+
+    it('fails closed when a managed resource has values to write but its provisioning port is absent', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        expect(await ensureRepositoryVariables(context, {}, configuration, repositorySnapshot)).toEqual({
+            errors: ['GitHub Actions Variable provisioning is unavailable; no Variables were changed.'],
+            writes: 0,
+        });
+        expect(await ensureRepositorySecrets({ setupCredentials: {
+            workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [],
+        } }, {}, configuration, repositorySnapshot)).toEqual({
+            errors: ['GitHub Actions Secret provisioning is unavailable; no Secrets were changed.'],
+            writes: 0,
+        });
+        configuration.manageRepositoryVariables = false;
+        configuration.manageRepositorySecrets = false;
+        expect(await ensureRepositoryVariables(context, {}, configuration, repositorySnapshot)).toEqual({ errors: [], writes: 0 });
+        expect(await ensureRepositorySecrets(context, {}, configuration, repositorySnapshot)).toEqual({ errors: [], writes: 0 });
+    });
+
+    it('returns zero writes and an unchanged explanation when all requested values are skipped', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        const variables = await ensureRepositoryVariables(context, { setupRepositoryVariablesPort: {
+            upsert: jest.fn().mockResolvedValue({ created: 0, updated: 0, errors: [] }),
+        } }, configuration, repositorySnapshot);
+        const secrets = await ensureRepositorySecrets({ setupCredentials: {
+            workflowPat: { name: 'PAT', value: 'fake-workflow-token' }, apiKeys: [],
+        } }, { setupRepositorySecretsPort: {
+            upsertSecrets: jest.fn().mockResolvedValue({ created: 0, updated: 0, skipped: 1, errors: [] }),
+        } }, configuration, repositorySnapshot);
+        expect(variables).toMatchObject({ writes: 0, errors: [], step: expect.stringContaining('kept unchanged') });
+        expect(secrets).toMatchObject({ writes: 0, errors: [], step: expect.stringContaining('kept unchanged') });
     });
 
     it('uses the organization variable port when the resolved target is organizational', async () => {
@@ -334,4 +373,15 @@ describe('setup resource provisioning policy', () => {
 
         expect(errors).toEqual(['Could not inspect existing GitHub Actions resource scopes.']);
     });
+});
+
+
+test('a missing organization Variable writer reports an unavailable operation without a repository fallback', async () => {
+ const configuration=createDefaultSetupConfiguration(); configuration.storage.variables.defaultScope='organization';
+ const upsert=jest.fn();
+ const result=await ensureRepositoryVariables(context,{setupRepositoryVariablesPort:{upsert}},configuration,{
+  ...repositorySnapshot,ownerType:'Organization',repositoryId:42,organizationAccess:'available',organizationSecretsAccess:'available',organizationVariablesAccess:'available',
+ });
+ expect(result).toEqual({writes:0,errors:['Organization Variable provisioning is not available in this installation.']});
+ expect(upsert).not.toHaveBeenCalled();
 });

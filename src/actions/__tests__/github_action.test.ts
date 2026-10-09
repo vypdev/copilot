@@ -25,6 +25,7 @@ jest.mock('@actions/github', () => ({
 
 jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
+  setSecret: jest.fn(),
   setFailed: jest.fn(),
   setOutput: jest.fn(),
   summary: { addRaw: jest.fn().mockReturnThis(), write: jest.fn().mockResolvedValue(undefined) },
@@ -101,7 +102,12 @@ const agentProvisioningSpy = jest.spyOn(agentRuntime, 'prepareGithubAgentRuntime
 const finishActionSpy = jest.spyOn(actionCompletion, 'finishGithubAction');
 
 describe('runGitHubAction', () => {
+  const previousOpenAiApiKey = process.env.OPENAI_API_KEY;
+  const previousCodexHome = process.env.CODEX_HOME;
+
   beforeEach(() => {
+    process.env.OPENAI_API_KEY = 'fixture-openai-key-not-a-credential';
+    process.env.CODEX_HOME = `${process.cwd()}/.fixture-no-codex-auth-${process.pid}`;
     jest.clearAllMocks();
     (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
       if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
@@ -122,6 +128,13 @@ describe('runGitHubAction', () => {
     mockIsActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(true);
     github.context.eventName = 'workflow_dispatch';
     github.context.payload = {};
+  });
+
+  afterAll(() => {
+    if (previousOpenAiApiKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAiApiKey;
+    if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = previousCodexHome;
   });
 
   it('builds Execution and calls mainRun', async () => {

@@ -45,6 +45,7 @@ export async function mainRun(
     lifecycleStateUseCase?: SynchronizeLifecycleStateUseCase,
     agentActivityUseCase?: SynchronizeAgentActivityUseCase,
     prepareRuntime?: PrepareExecutionRuntime,
+    setupProgress?: (effect: import('../domain/setup').SetupOperationEffect) => void,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
     setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
@@ -88,7 +89,7 @@ export async function mainRun(
     }
     await prepareRuntime?.(execution);
 
-    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface);
+    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface, setupProgress);
     
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => runTokenExecution(execution, routeHandlers), undefined, agentActivityUseCase);
