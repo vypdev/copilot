@@ -4,6 +4,9 @@ const sanitize = (title: string, removeVersions: boolean, allowedCharacters: Reg
         sanitized = sanitized.replace(/\b\d+(\.\d+){2,}\b/g, '').replace(/\bUnknown Version\b/gi, '');
     }
     return sanitized
+        // Keep word boundaries when removing punctuation so formatting a
+        // title cannot change the corresponding managed branch slug.
+        .replace(/([\p{L}\p{N}])-+(?=[\p{L}\p{N}])/gu, '$1 ')
         .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
         .replace(/\u200D/g, '')
         .replace(/[^\S\r\n]+/g, ' ')

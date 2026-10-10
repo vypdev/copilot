@@ -394,10 +394,10 @@ not altered.
 | Orchestration/idempotency | 20 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
 | Workflow/config contracts | 14 | event exclusion, identity, forks, permissions, inputs |
-| PR UX/localization/sanitization | 15 | concise body/status/links/template/output, evidence-backed optional notes |
+| PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
 | Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **107** | no double counting |
+| **Total** | **109** | no double counting |
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
 coverage. The P2-E context/orchestration path enforces 95% lines/statements and
@@ -496,3 +496,5 @@ body mutation that produces no follow-up PR workflow.
 - Decision: body ownership is explicit and marker-bounded outside replace mode.
 - Rejected: hidden fallback modes and unsafe fork execution.
 - Follow-up: changing the recommended description default needs product evidence.
+
+Hyphenated words retain their boundaries during automatic issue and PR title formatting. For example, `issue-to-pr` becomes the readable `issue to pr`; both map to the same managed branch slug. Formatting and replay MUST preserve that slug. Two title-policy cases cover the issue and PR renderers, including idempotent formatting and branch-name equivalence. Live evidence: issue #453 and PR #460 on 2026-10-10.
