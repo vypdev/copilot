@@ -1,3 +1,5 @@
+import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
+import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
 import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
 import { CommitUseCase } from "../../application/usecases/commit_use_case";
 import { IssueCommentUseCase } from "../../application/usecases/issue_comment_use_case";
@@ -235,6 +237,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
     createIssueUseCaseCompositionRoot(binding),
+    rememberBranchPorts(binding, bugbot.scm.context),
   );
 }
 
@@ -290,6 +293,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
+    rememberBranchPorts(binding, bugbot.scm.context),
   );
 }
 
@@ -359,5 +363,17 @@ function bugbotBinding(execution: {
     owner: execution.owner,
     repository: execution.repo,
     token: execution.tokens.token,
+  };
+}
+
+function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBranchQueryPorts['pullRequests']): RememberBranchQueryPorts {
+  const repository = new LinkedBranchReadinessRepository(createGraphqlTransportClient());
+  return {
+    pullRequests,
+    linkedBranches: {
+      getLinkedBranch: (issueNumber, branchName) => repository.getLinkedBranch(
+        binding.owner, binding.repository, issueNumber, branchName, binding.token,
+      ),
+    },
   };
 }

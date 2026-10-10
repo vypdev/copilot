@@ -165,7 +165,7 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
 
 6. **Review:** If the bot is mentioned and intent detection classifies the request as a review, the action runs the read-only Bugbot detection flow. It never edits files or commits.
 
-7. **Remember:** `/copilot remember <rule>` is an explicit authorized mutation. It checks out the PR head or linked issue branch before reading or writing rules; a branchless request is rejected. It appends a normalized, deduplicated rule to `.copilot/BUGBOT.learned.md`, then commits and pushes through the same guarded workflow. Repeating a rule creates no additional commit. It never changes model memory outside the repository.
+7. **Remember:** `/copilot remember <rule>` is an explicit authorized mutation. It checks out the PR head or linked issue branch before reading or writing rules; a branchless request is rejected. It appends a normalized, deduplicated rule to `.copilot/BUGBOT.learned.md`, then commits and pushes through the same guarded workflow. Repeating a rule creates no additional commit. Ordinary PR comments use the verified current same-repository PR head even when the event omits it; issue comments require a verified native branch link. Missing identity, closed PRs and forks are rejected before storage. It never changes model memory outside the repository.
 
 8. **Think (when no file-modifying action ran):** If the comment was not a fix/do/review request or the user was not allowed, the action runs **Think** (analysis role) and posts an **answer** as a comment (e.g. explanation or suggestion), without editing files.
 

@@ -10,6 +10,9 @@ import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user
 import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/commit/workspace_mutation_guard';
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 import { ApplicationError, toApplicationError } from '../errors/application_error';
+import { selectCanonicalBugbotPullRequest } from '../../domain/bugbot/context';
+import { projectBugbotContextRequest } from './steps/commit/bugbot/bugbot_context_request';
+import { canonicalGitObjectId } from '../../domain/git_object_id';
 import {
     withBugbotReviewOverrides,
 } from './steps/commit/bugbot/bugbot_review_operation_context';
@@ -51,13 +54,12 @@ async function runRememberCommand(
             steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
         })];
     }
-    const targetBranch = param.bugbot.fixIntent.target.headBranch.trim();
-    if (!targetBranch) {
-        return [rememberFailure(new ApplicationError('workflow.invalid-event',
-            'Remembering a Bugbot rule requires an authoritative PR/branch target.'))];
-    }
+    let targetBranch;
     let mutation;
     try {
+        targetBranch = await resolveRememberBranch(param, options);
+        if (!targetBranch) throw new ApplicationError('workflow.invalid-event',
+            'Remembering a Bugbot rule requires an authoritative PR/branch target.');
         mutation = await prepareWorkspaceMutation(options.bugbotGitMutationPort, {
             operation: 'Remember Bugbot rule',
             branch: targetBranch,
@@ -91,6 +93,38 @@ async function runRememberCommand(
         options.bugbotGitMutationPort,
     );
     return [...results, ...commitResults];
+}
+
+async function resolveRememberBranch(param: CommentAutomationContext, options: CommentAutomationOptions): Promise<string> {
+    const operation = param.bugbot.fixIntent;
+    if (!operation.target.isPullRequest) {
+        const branch = (param.status.branch || operation.target.headBranch).trim();
+        if (!branch) return '';
+        if (!options.rememberBranchPorts) throw new ApplicationError('configuration.unsupported', 'Canonical branch reads are unavailable for remember.');
+        const linked = await options.rememberBranchPorts.linkedBranches.getLinkedBranch(operation.target.issueNumber, branch);
+        if (linked?.name !== branch || !canonicalGitObjectId(linked.headSha)) {
+            throw new ApplicationError('workflow.stale', 'Remember requires a verified issue-linked branch.');
+        }
+        return branch;
+    }
+    const request = projectBugbotContextRequest(operation);
+    const selection = request.target.pullRequestSelection;
+    if (selection.kind !== 'event' || selection.number === undefined) {
+        throw new ApplicationError('workflow.invalid-event', 'Remember requires the exact pull-request conversation identity.');
+    }
+    if (!options.rememberBranchPorts) {
+        throw new ApplicationError('configuration.unsupported', 'Canonical pull-request reads are unavailable for remember.');
+    }
+    const candidate = await options.rememberBranchPorts.pullRequests.getPullRequest(selection.number);
+    const canonical = selectCanonicalBugbotPullRequest(request.target, [candidate], 'event');
+    if (canonical.kind !== 'canonical') {
+        throw new ApplicationError('workflow.stale', 'Remember requires a verified current pull request.');
+    }
+    if (canonical.pullRequest.headRepositoryOwner.toLowerCase() !== operation.repository.owner.toLowerCase()
+        || canonical.pullRequest.headRepositoryName?.toLowerCase() !== operation.repository.name.toLowerCase()) {
+        throw new ApplicationError('workflow.invalid-event', 'Remember cannot push to a fork pull request.');
+    }
+    return canonical.pullRequest.headRef.trim();
 }
 
 function rememberFailure(error: unknown): Result {

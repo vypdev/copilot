@@ -107,6 +107,22 @@ describe("PullRequestLifecycleRepository", () => {
             .resolves.toEqual(expect.objectContaining({ draft: true }));
     });
 
+    it('retains the exact head repository name for authorized write-target verification', async () => {
+        const identity = pullRequestIdentity(12);
+        mockGet.mockResolvedValue({ data: { ...identity, head: { ...identity.head, repo: { ...identity.head.repo, name: '  fork-repo  ' } } } });
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .getBugbotPullRequestIdentity('owner', 'repo', 12, 'token'))
+            .resolves.toEqual(expect.objectContaining({ headRepositoryName: 'fork-repo' }));
+    });
+
+    it('does not infer an absent head repository name from the base repository', async () => {
+        const identity = pullRequestIdentity(12);
+        mockGet.mockResolvedValue({ data: { ...identity, head: { ...identity.head, repo: { ...identity.head.repo, name: '  ' } } } });
+        const result = await new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .getBugbotPullRequestIdentity('owner', 'repo', 12, 'token');
+        expect(result).not.toHaveProperty('headRepositoryName');
+    });
+
     it.each([undefined, null, 'true'])('rejects an absent or malformed provider draft state: %s', async draft => {
         mockGet.mockResolvedValue({ data: { ...pullRequestIdentity(12), draft } });
         const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());

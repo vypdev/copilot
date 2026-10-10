@@ -53,6 +53,17 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 
 `/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
 
+When a finding ID contains spaces, quote the complete ID with double quotes:
+
+```text
+/copilot dismiss "docs/file.mdx:28:message with spaces"
+```
+
+You can combine plain and quoted IDs. Use JSON escapes for a literal double
+quote or backslash; malformed, empty or multiline quoted IDs are rejected.
+The command still accepts at most 20 IDs and 2,000 characters.
+
+
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
 resolved. If the stored workflow result owns malformed finding-state evidence,
@@ -164,7 +175,10 @@ that reply uses the complete English fallback so it cannot mix languages.
 - `/copilot dismiss` does not edit files, but it changes finding state and therefore uses the same authorization guard.
 - File-changing commands require an authoritative PR review-thread branch or an
   explicitly branch-scoped execution. Issue-only comments never scan open PRs
-  to guess a write target.
+  to guess a write target. `/copilot remember` verifies the exact current PR
+  through GitHub or the issue's native branch link before checking it out; a
+  missing event ref is allowed only when that verification supplies the ref.
+  Closed PRs, forks and unavailable identity are rejected before storage.
 - The workflow must grant `contents: write` for file-modifying actions. Verification failures prevent the commit.
 - Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
 - Branch synchronization accepts `--dry-run`, `--no-agent`, and `--from <branch>` and applies additional Git-state, path, verification, and remote-race guards. See [Branch synchronization](/issues/branch-synchronization).
