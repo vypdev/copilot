@@ -24,7 +24,7 @@ debt or convert unknown historic intent into a design decision.
 | `managed-issue-lifecycle` | As-built baseline | Convert typed issues into traceable work branches, project state, and lifecycle state | [Managed issue and branch lifecycle](./managed-issue-and-branch-lifecycle.md) | 31 paths · 2026-10-10 |
 | `comment-automation` | Implemented | Admit only explicit commands or exact mentions, then route them while protecting repository mutations | [Comment automation and authorization](./comment-automation-and-authorization.md) | 61 paths · 2026-10-10 |
 | `bugbot-analysis-and-autofix` | Implemented | Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes | [Bugbot analysis, finding publication, and autofix](./bugbot-analysis-publication-and-autofix.md) + 2 companion | 76 paths · 2026-09-24 |
-| `branch-synchronization` | Implemented | Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch | [Branch synchronization and conflict recovery](./branch-synchronization-and-conflict-recovery.md) | 30 paths · 2026-09-16 |
+| `branch-synchronization` | Implemented | Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch | [Branch synchronization and conflict recovery](./branch-synchronization-and-conflict-recovery.md) | 30 paths · 2026-10-11 |
 | `pull-request-lifecycle` | Implemented | Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence | [Pull request lifecycle and enrichment](./pull-request-lifecycle-and-enrichment.md) | 49 paths · 2026-10-10 |
 | `agent-runtime` | Implemented | Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run | [Agent runtime, provider, model, and role routing](./agent-runtime-provider-and-model-routing.md) + 1 companion | 83 paths · 2026-10-10 |
 | `cli-and-single-actions` | As-built baseline | Expose bounded local commands and workflow-dispatched operations through the shared application core | [CLI and single-action execution](./cli-and-single-action-execution.md) | 33 paths · 2026-09-16 |
@@ -191,7 +191,7 @@ debt or convert unknown historic intent into a design decision.
 ### `branch-synchronization` — Branch synchronization and conflict recovery
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-16
+- Last verified: 2026-10-11
 - Specifications: [`specs/branch-synchronization-and-conflict-recovery.md`](./branch-synchronization-and-conflict-recovery.md)
 - Workflows: [`.github/workflows/copilot_branch_sync.yml`](../.github/workflows/copilot_branch_sync.yml) · [`setup/workflows/copilot_branch_sync.yml`](../setup/workflows/copilot_branch_sync.yml)
 - Entrypoints: [`src/application/usecases/branch_sync/sync_branch_use_case.ts`](../src/application/usecases/branch_sync/sync_branch_use_case.ts) · [`src/application/usecases/actions/observe_branch_sync_use_case.ts`](../src/application/usecases/actions/observe_branch_sync_use_case.ts)

@@ -38350,6 +38350,7 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
     'branchSync.transition.required',
+    'branchSync.transition.requiredCompact',
     'branchSync.transition.openStatus',
     'branchSync.transition.duplicate',
     'branchSync.transition.viewOriginal',
@@ -38370,6 +38371,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
     'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
+    'branchSync.transition.requiredCompact': 'Branch synchronization needs attention.',
     'branchSync.transition.openStatus': 'Open the current status',
     'branchSync.transition.duplicate': 'A duplicate action notification was suppressed.',
     'branchSync.transition.viewOriginal': 'View the original notification',
@@ -38392,6 +38394,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
     'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
+    'branchSync.transition.requiredCompact': 'La sincronización de la rama necesita atención.',
     'branchSync.transition.openStatus': 'Abrir el estado actual',
     'branchSync.transition.duplicate': 'Se ha suprimido una notificación de acción duplicada.',
     'branchSync.transition.viewOriginal': 'Ver la notificación original',
@@ -38483,10 +38486,14 @@ function buildBranchSyncTransitionIntent(dependency, sourceHeadSha, locale) {
     });
 }
 function buildBranchSyncTransitionNotification(dependency, messages, statusUrl) {
-    return `${safeSentence(messages.message('branchSync.transition.required', {
+    const detailed = messages.message('branchSync.transition.required', {
         workingBranch: inlineRef(dependency.workingBranch),
         parentBranch: inlineRef(dependency.parentBranch),
-    }))} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
+    });
+    const sentence = detailed.length <= 120
+        ? detailed
+        : messages.message('branchSync.transition.requiredCompact');
+    return `${safeSentence(sentence)} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
 }
 function buildBranchSyncDuplicatePointer(messages, canonicalUrl) {
     return `${safeSentence(messages.message('branchSync.transition.duplicate'))} [${safeLinkLabel(messages.message('branchSync.transition.viewOriginal'))}](${canonicalUrl}).`;
@@ -38562,13 +38569,16 @@ function inlineRef(value) {
     return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
 }
 function safeSentence(value) {
-    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 120).replace(/[\r\n]+/gu, ' ').trim();
+    const sentence = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value.slice(0, 120), 1000)
+        .replace(/[\r\n]+/gu, ' ').trim();
+    return sentence.length <= 120 ? sentence : `${sentence.slice(0, 119).trimEnd()}…`;
 }
 function safeLinkLabel(value) {
-    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 40)
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value.slice(0, 40), 1000)
         .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
         .replace(/https?:\/\/\S+/giu, '')
         .replace(/[\r\n()[\]<>]/gu, '')
+        .slice(0, 40)
         .trim() || 'Open notification';
 }
 

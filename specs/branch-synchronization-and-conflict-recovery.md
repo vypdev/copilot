@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last verified: 2026-09-15
+- Last verified: 2026-10-11
 - Owners: Copilot maintainers
 - Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
 - Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
@@ -220,6 +220,14 @@ issue locale supplies one complete catalog for the card, transition, and
 duplicate pointer. Visual icons have text; untrusted refs, translated Markdown,
 paths, and diagnostics are sanitized.
 
+When the complete sentence with branch names exceeds its fixed 120-character
+copy budget, the notification uses a complete localized compact sentence and
+the same trusted status link. The status card retains both exact branch names.
+Visible notification and duplicate-pointer copy never contains internal
+untrusted-content truncation markers or a partially displayed branch reference.
+Provider-controlled copy remains sanitized and bounded before publication; this
+presentation choice adds no configuration or publication side effect.
+
 ## 10. Failure, recovery, and cleanup
 
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
@@ -271,9 +279,9 @@ any completed merge remains an auditable commit reverted normally if necessary.
 | State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 22 | clean/conflict/dry-run/verify/push |
 | Adapters/workflow contracts | 16 | pagination, git states, all-branch/no-agent |
-| UX/localization/sanitization | 14 | cards, transition/pointers, arbitrary locale, refs, translated controls, errors |
+| UX/localization/sanitization | 16 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors |
 | Integration/security/cutover | 16 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection |
-| **Total** | **116** | no double counting |
+| **Total** | **118** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -307,6 +315,10 @@ sticky card updates, transition notifications, chained branches, PR/issue render
     comment and delete or compact later duplicates without touching other users.
 12. A transition-publication failure preserves the already updated stale card,
     returns a sanitized publication failure, and does not replay branch work.
+13. A long Action-created ref or verbose localized copy produces a bounded,
+    complete compact notification with its trusted status link, no partial ref,
+    and no internal truncation marker; maximum refs and repository identifiers
+    remain within the 400-character budget.
 
 ## 17. Requirements traceability
 
@@ -328,7 +340,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The 116-case budget, coverage, architecture, and workflow gates pass.
+- [x] The 118-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.

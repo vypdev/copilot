@@ -80,10 +80,14 @@ export function buildBranchSyncTransitionNotification(
   messages: BranchSyncMessageCatalog,
   statusUrl: string,
 ): string {
-  return `${safeSentence(messages.message('branchSync.transition.required', {
+  const detailed = messages.message('branchSync.transition.required', {
     workingBranch: inlineRef(dependency.workingBranch),
     parentBranch: inlineRef(dependency.parentBranch),
-  }))} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
+  });
+  const sentence = detailed.length <= 120
+    ? detailed
+    : messages.message('branchSync.transition.requiredCompact');
+  return `${safeSentence(sentence)} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
 }
 
 export function buildBranchSyncDuplicatePointer(
@@ -203,13 +207,16 @@ function inlineRef(value: string): string {
 }
 
 function safeSentence(value: string): string {
-  return sanitizeAgentMarkdown(value, 120).replace(/[\r\n]+/gu, ' ').trim();
+  const sentence = sanitizeAgentMarkdown(value.slice(0, 120), 1_000)
+    .replace(/[\r\n]+/gu, ' ').trim();
+  return sentence.length <= 120 ? sentence : `${sentence.slice(0, 119).trimEnd()}…`;
 }
 
 function safeLinkLabel(value: string): string {
-  return sanitizeAgentMarkdown(value, 40)
+  return sanitizeAgentMarkdown(value.slice(0, 40), 1_000)
     .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
     .replace(/https?:\/\/\S+/giu, '')
     .replace(/[\r\n()[\]<>]/gu, '')
+    .slice(0, 40)
     .trim() || 'Open notification';
 }

@@ -1475,7 +1475,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],
