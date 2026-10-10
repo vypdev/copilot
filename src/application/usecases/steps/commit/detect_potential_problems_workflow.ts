@@ -79,11 +79,6 @@ export async function runDetectPotentialProblemsWorkflow(
             await publishTelemetry('skipped', 'admission');
             return [];
         }
-        if (reviewContext.target.isPullRequest && reviewContext.target.draft
-            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
-            return await complete(skippedDraftResult(), 'skipped');
-        }
-
         const contextOptions = resolveContextOptions(reviewContext);
         if (contextOptions === null) {
             logDebugInfo('No branch or pull request target available for potential-problems detection.');
@@ -106,6 +101,12 @@ export async function runDetectPotentialProblemsWorkflow(
             );
             await publishTelemetry('skipped', 'pull_request_ownership');
             return [];
+        }
+        // Comment events omit draft state, and delayed PR events may carry an
+        // obsolete value. The already verified provider identity is authoritative.
+        if (preflight.canonicalPullRequest?.draft
+            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
+            return await complete(skippedDraftResult(), 'skipped');
         }
         const context = await telemetry.measure('context', () =>
             loadBugbotContext(contextRequest, dependencies.scm.context, preflight));

@@ -223,6 +223,7 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
 function toBugbotPullRequestIdentity(value: {
     number?: number;
     state?: string;
+    draft?: boolean;
     head?: {
         ref?: string | null;
         sha?: string | null;
@@ -245,6 +246,7 @@ function toBugbotPullRequestIdentity(value: {
     const headSha = value.head?.sha?.trim().toLowerCase();
     if (!Number.isSafeInteger(number) || Number(number) <= 0
         || (state !== 'open' && state !== 'closed')
+        || typeof value.draft !== 'boolean'
         || !baseOwner || !baseName || !headOwner || !headRef
         || !headSha || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(headSha)) {
         throw new Error('Pull-request identity response is incomplete or invalid.');
@@ -253,6 +255,7 @@ function toBugbotPullRequestIdentity(value: {
     return {
         number: Number(number),
         state,
+        draft: value.draft,
         baseRepository: {
             owner: baseOwner,
             name: baseName,

@@ -37,6 +37,7 @@ export interface GithubPullRequestLifecycleClient {
       get?(parameters: Record<string, unknown>): Promise<{ data: {
         number?: number;
         state?: string;
+        draft?: boolean;
         body?: string | null;
         head?: {
           ref?: string | null;
@@ -59,6 +60,7 @@ export interface GithubPullRequestLifecycleClient {
 export interface GithubPullRequestSummary {
   number: number;
   state?: string;
+  draft?: boolean;
   body?: string | null;
   head?: {
     ref?: string | null;

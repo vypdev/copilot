@@ -39,6 +39,7 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
         canonicalPullRequest: {
             number: 5,
             state: 'open',
+            draft: false,
             baseRepository: { owner: 'test-owner', name: 'test-repo' },
             headRepositoryOwner: 'test-owner',
             headRef: 'feature/42-branch',

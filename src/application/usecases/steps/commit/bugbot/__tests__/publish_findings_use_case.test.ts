@@ -53,6 +53,7 @@ function baseContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
         canonicalPullRequest: {
             number: 50,
             state: 'open',
+            draft: false,
             baseRepository: { owner: 'o', name: 'r' },
             headRepositoryOwner: 'o',
             headRef: 'feature/42',

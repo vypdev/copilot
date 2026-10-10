@@ -146,7 +146,10 @@ the existing mutation, authorization and freshness contracts remain in force.
 
 ### 6.2 Alternative paths
 
-- Draft PRs skip unless `bugbot-review-drafts` is enabled.
+- Draft PRs skip unless `bugbot-review-drafts` is enabled. The canonical
+  provider identity supplies the current draft state even for comment events
+  and delayed PR events; skipped reviews perform no detailed context/model read
+  or finding mutation. The companion context SDD owns six draft-state regressions.
 - Dry run returns proposed state after freshness checks but mutates nothing.
 - Overflow remains summarized and counts in aggregate state.
 - Unaddressable lines become explicit file-level findings, never guessed anchors.

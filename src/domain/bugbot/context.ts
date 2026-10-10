@@ -49,6 +49,7 @@ export interface BugbotReviewTarget {
 export interface BugbotPullRequestIdentity {
   readonly number: number;
   readonly state: "open" | "closed";
+  readonly draft: boolean;
   readonly baseRepository: {
     readonly owner: string;
     readonly name: string;

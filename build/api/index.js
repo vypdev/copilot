@@ -4782,10 +4782,6 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             await publishTelemetry('skipped', 'admission');
             return [];
         }
-        if (reviewContext.target.isPullRequest && reviewContext.target.draft
-            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
-            return await complete(skippedDraftResult(), 'skipped');
-        }
         const contextOptions = resolveContextOptions(reviewContext);
         if (contextOptions === null) {
             (0, logging_ports_1.logDebugInfo)('No branch or pull request target available for potential-problems detection.');
@@ -4805,6 +4801,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             (0, logging_ports_1.logInfo)(`Skipping push Bugbot analysis because pull request #${owningPullRequest.number} owns review for this head.`);
             await publishTelemetry('skipped', 'pull_request_ownership');
             return [];
+        }
+        // Comment events omit draft state, and delayed PR events may carry an
+        // obsolete value. The already verified provider identity is authoritative.
+        if (preflight.canonicalPullRequest?.draft
+            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
+            return await complete(skippedDraftResult(), 'skipped');
         }
         const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context, preflight));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
