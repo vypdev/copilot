@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-10-10
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -347,6 +347,17 @@ configured MCP/app/plugin/hook authority. A provider-version smoke MUST prove th
 effective configuration rejects network, extra writes, escalation, user/project
 MCP/plugins, and subagents before the version enters the manifest.
 
+Live Linux dogfooding on 2026-10-10 reproduced a sandbox startup failure with
+an empty command environment. The same read-only `/bin/true` probe succeeded
+when only `PATH` was retained ([runner evidence](https://github.com/vypdev/copilot/actions/runs/38085012772)).
+Codex commands therefore use core inheritance followed by an exact inclusion
+list: `PATH`, `SystemRoot`, `WINDIR`, `PATHEXT`, `TMPDIR`, `TEMP`, `TMP`, `LANG`,
+and `LC_ALL`. Default credential exclusion remains enabled. Home, configuration,
+model/GitHub/Git/SSH/proxy credentials and all unlisted variables are denied.
+This fixed system list is not a repository setting; sandbox, network, write-role
+and approval boundaries remain enforced. The smoke proves startup on that VM,
+not all effective authority or live-provider acceptance gates.
+
 ### 6.5 OpenCode policy
 
 Managed argv is `opencode run --pure --agent <managed-name> --format json` plus
@@ -549,7 +560,7 @@ runtime identity and fixed-plan checks before spawn.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **20 distinct cases**; parameterized provider/role rows
+This SDD owns at least **22 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -557,11 +568,11 @@ count separately only when authority/argv differs.
 | Plan/executable pure policy | 4 | exhaustive roles/providers, removed/unknown inputs |
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
-| Provider adapters | 6 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, and fail-closed alternatives |
+| Provider adapters | 8 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, fail-closed alternatives, and fixed secret-free child environment for read-only and fixer roles |
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
-| **Total** | **20** | no double counting |
+| **Total** | **22** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -663,3 +674,5 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
   satisfy the fixed command contract at execution.
 - Decision: agents edit/analyze; trusted Copilot code verifies, commits, pushes,
   publishes, and calls GitHub.
+
+Repository verification on Windows retains only the fixed non-secret OS metadata needed by system tools and official installer fixtures (`SystemRoot`, `WINDIR`, `OS`, `ComSpec`, `PATHEXT`). The verification environment still removes credentials and live workflow identity. Queue tests provide explicit fixture identity, and unsafe local Action metadata is exercised with an unprivileged directory junction rather than requiring file-symlink privilege.

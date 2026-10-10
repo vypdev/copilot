@@ -36,6 +36,20 @@ function execution(overrides: Record<string, unknown> = {}) {
 }
 
 describe('status command policy', () => {
+    it('reports the linked issue separately from the PR number present in a conversation payload', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            issueNumber: 17, issue: { number: 21 }, eventName: 'issue_comment',
+        }) as never);
+        expect(snapshot.issueNumber).toBe(17);
+        expect(formatCopilotStatus(snapshot)).toContain('pull-request / PR #21 / issue #17');
+    });
+
+    it('does not invent a linked issue from an unlinked PR conversation number', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({ issueNumber: -1, issue: { number: 21 } }) as never);
+        expect(snapshot.issueNumber).toBeUndefined();
+        expect(formatCopilotStatus(snapshot)).toContain('pull-request / PR #21');
+        expect(formatCopilotStatus(snapshot)).not.toContain('/ issue #21');
+    });
     it('uses the linked working branch for a conversation whose event has no branch', () => {
         const snapshot = buildCopilotStatusSnapshot(execution({
             eventName: 'issue_comment', commit: { branch: '' },
@@ -178,7 +192,7 @@ describe('status command policy', () => {
             findingStates: { open: 1, reopened: 2, verificationRequired: 3, unknown: 4, resolved: 5 },
         }, 'es-ES');
 
-        expect(body).toContain('pull-request #17 / PR #21');
+        expect(body).toContain('pull-request / PR #21 / issue #17');
         expect(body).toContain('1 abiertos, 2 reabiertos, 3 requieren verificación, 4 desconocidos, 5 resueltos');
     });
 });

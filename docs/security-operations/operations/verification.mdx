@@ -19,3 +19,5 @@ Run `copilot doctor --config <setup.yml>` to verify repository configuration and
 ## Repository verification commands
 
 The repository prepares Node 24, pnpm 10.12.4 and frozen dependencies for explicit file-changing or branch-sync commands with configured verification. This is separate from standalone agent CLI installation. Read-only commands and dry runs do not need that preparation. Verification runs without agent or GitHub credentials; trusted automation commits use an empty hooks directory for that invocation after the required checks pass. Contributor hooks remain configured. Use checks that leave tracked files unchanged, such as typecheck, tests, lint and contract validators; generating platform-specific checked-in bundles during verification can correctly block publication.
+
+On Windows, the isolated verification environment preserves the fixed non-secret operating-system metadata `SystemRoot`, `WINDIR`, `OS`, `ComSpec` and `PATHEXT`. Tests must provide their own workflow identity; production credentials and live workflow identity are not passed to repository commands.

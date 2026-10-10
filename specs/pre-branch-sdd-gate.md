@@ -10,7 +10,7 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none in the SDD-only policy; live provider review remains pending
 
-Live dogfooding on 2026-10-10 (#454) exposed a runner checkout hook that required `node` from the service PATH and prevented the already validated SDD commit. SDD publication now uses an empty hooks directory for that single Git invocation; contributor hook configuration is retained. The Action's own SDD and catalog validation remains mandatory before staging and publication. This recovery has one additional real Git regression case, bringing the minimum budget to 67.
+Live dogfooding on 2026-10-10 (#454) exposed a runner checkout hook that required `node` from the service PATH and prevented the already validated SDD commit. SDD publication now uses an empty hooks directory for that single Git invocation; contributor hook configuration is retained. The Action's own SDD and catalog validation remains mandatory before staging and publication. Subsequent review found that a generated update had replaced the owning capability's previous contract with the new feature's scope. Automated updates now preserve the existing owner verbatim and append a proposed change. Publication retries reuse their validated owner without spending another clarification round. These protections bring the minimum budget to 72.
 
 ## 1. Executive summary
 
@@ -506,6 +506,18 @@ or status update failed. A retry reads the exact remote SHA before writing.
 
 A failed first publication persists the exact linked branch and original base in the bot-owned awaiting-answer record without claiming a published commit. Replay may reuse an empty retained branch only when its head belongs to the parent history; implementation commits before the first SDD block recovery. Advancing develop does not rebase, recreate, or force-push that branch. A pushed first SDD is recovered only through the existing author, subject, catalog, path, parent and remote ancestry verification. Action-owned hidden configuration is excluded from human issue freshness. Published records still require the exact verified first commit.
 
+An unchanged awaiting-publication record with no pending questions reuses its
+validated owner and answers, drafts again, and repeats validation and freshness
+checks. It does not reenter analysis or increment the clarification round.
+Automated `update` drafts are proposed appendices, not replacements: trusted
+composition retains the complete original Markdown, shifts only prose heading
+levels in the appendix, and preserves fenced examples. An appendix has a fixed
+18,000-character limit; the combined document retains the 70,000-character
+limit. Overflow fails before publication without truncation. Contributors review
+and integrate proposals explicitly; new distinct concerns may use a catalogued
+companion before branch creation. Existing requirements and test budgets cannot
+be silently erased by model output.
+
 ## 12. Observability and operational UX
 
 The issue status reports gate stage, SDD path/owner, answer owners, branch
@@ -535,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **67 distinct cases** are a floor derived from eligibility,
+The following **72 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -550,7 +562,8 @@ ownership/validation.
 | Integration/security/recovery | 8 | First commit, partial effects, abuse |
 | Pending-branch recovery | 6 | Retained base, intervening commits, managed metadata, pending card, replay, post-push recovery |
 | Automation hook isolation | 1 | Validated SDD publication ignores failing checkout hooks; configuration preserved |
-| **Total** | **67** | No case counted twice |
+| Owner preservation and publication replay | 5 | Original contract and fenced examples, appendix bound, combined bound, real Git publication of narrower output, retry after the third clarification round |
+| **Total** | **72** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the

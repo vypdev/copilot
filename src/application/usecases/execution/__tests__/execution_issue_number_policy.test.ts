@@ -28,6 +28,15 @@ describe('live PR conversation issue resolution', () => {
     }), issueRepository);
     expect(result.issueNumber).toBeUndefined();
   });
+
+  it('does not infer branch authority when the live PR head is unavailable', async () => {
+    issueRepository.getHeadBranch.mockResolvedValueOnce(undefined);
+    const result = await resolveExecutionIssueNumber(context({
+      eventName: 'issue_comment', isPullRequest: true, pullRequest: { number: 91, head: '', base: '' },
+    }), issueRepository);
+    expect(result.issueNumber).toBeUndefined();
+    expect(result).not.toHaveProperty('pullRequestHeadBranch');
+  });
 });
 
 function context(overrides: Partial<SetupExecutionContext> = {}): SetupExecutionContext {

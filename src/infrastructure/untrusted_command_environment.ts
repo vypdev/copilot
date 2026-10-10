@@ -27,6 +27,8 @@ const ALLOWED_VARIABLES = [
     'TMP',
     'TEMP',
     'SystemRoot',
+    'WINDIR',
+    'OS',
     'ComSpec',
     'PATHEXT',
 ] as const;

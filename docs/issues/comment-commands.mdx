@@ -5,6 +5,11 @@ description: Use @vypbot from issues and pull requests for help, analysis, plann
 
 # Comment commands
 
+Branchless help requests stay on the read-only answer route even when natural
+language classification suggests a repository task. File changes require an
+authoritative branch from a supported surface, such as a PR review comment;
+a general conversation cannot infer one from the checkout's current branch.
+
 Copilot can act as a project assistant directly from an issue or pull-request comment. With the default workflow PAT, the bot user is `@vypbot`; if your installation uses another account, replace that mention with the configured PAT user.
 
 A comment must begin with `/copilot` or contain the exact bot mention. All

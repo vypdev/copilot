@@ -210,6 +210,26 @@ export function validateSddMarkdown(markdown: string): void {
   }
 }
 
+/** Automated extensions retain the owning contract verbatim; contributors integrate revisions explicitly. */
+export function composeSddUpdate(existing: string, change: string): string {
+  validateSddMarkdown(existing);
+  validateSddMarkdown(change);
+  if (change.length > 18_000) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+  let fence: string | undefined;
+  const appendix = change.split('\n').map(line => {
+    const boundary = line.match(/^\s*(`{3,}|~{3,})/);
+    if (boundary) {
+      if (!fence) fence = boundary[1];
+      else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length) fence = undefined;
+      return line;
+    }
+    return !fence && /^#{1,5} /.test(line) ? `#${line}` : line;
+  }).join('\n');
+  const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
+  validateSddMarkdown(merged);
+  return merged;
+}
+
 function sanitize(value: string): string {
   return value.replace(/\r?\n/g, ' ').trim()
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

@@ -5,6 +5,14 @@ description: Clarify and publish a specification before implementation starts.
 
 # Pre-branch SDDs
 
+When an existing SDD owns the change, automated drafting adds a proposed change
+appendix while preserving the previous contract verbatim. Each appendix is
+limited to 18,000 characters and the complete SDD to 70,000. If the document
+would exceed that limit, use a companion SDD before branch creation or review
+and integrate existing proposals as a normal contributor on the linked branch.
+Publication retries keep the validated owner and do not consume another
+clarification round. Review the generated specification before implementation.
+
 `pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. It does not generate PRDs or ADRs in this flow.

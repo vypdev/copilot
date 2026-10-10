@@ -63,6 +63,24 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('retries a pending publication without consuming another clarification round or changing the owner', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('Expected draft');
+    h.publish.mockRejectedValueOnce(new Error('Hook failure'));
+    await h.useCase.publish(context(), { ...first, record: { ...first.record, round: 3 } }, 'feature/42-change');
+    h.query.mockClear();
+    h.query.mockResolvedValueOnce({ markdown: '# Retried appendix' });
+
+    const retry = await h.useCase.begin(context());
+
+    expect(retry.status).toBe('drafted');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.query.mock.calls[0][0].agentId).toBe('pre-branch-sdd-draft');
+    if (retry.status === 'drafted') expect(retry.record).toMatchObject({ round: 3, plan, branchName: 'feature/42-change' });
+  });
+
   it('retains the original empty linked branch base when develop advances during recovery', async () => {
     const h = harness();
     const parentSha = 'c'.repeat(40);

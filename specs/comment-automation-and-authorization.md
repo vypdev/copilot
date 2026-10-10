@@ -320,8 +320,10 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
 | UX/localization/sanitization | 19 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery, internally consistent mutation-authority copy across all Bugbot pages |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| PR conversation context/runtime | 8 | Three live-head resolution cases, two status branch cases, three specialist preparation cases |
-| **Total** | **115** | no double counting |
+| PR conversation context/runtime | 9 | Four live-head resolution cases including unavailable authority, two status branch cases, three specialist preparation cases |
+| PR status identity | 2 | Linked issue differs from PR; unlinked PR never invents an issue |
+| Conversation branch authority | 3 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn |
+| **Total** | **121** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -402,7 +404,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 115-case budget, coverage, and architecture checks pass.
+- [x] The 121-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.
@@ -415,3 +417,7 @@ English/non-English requests.
 - Decision: deterministic commands precede agent intent; authorization is fixed.
 - Rejected: model-only command parsing and silent unauthorized mutation.
 - Follow-up: localized deterministic command errors are outside this baseline.
+
+Live status recovery for #459 uses the setup-resolved issue #453 rather than the PR number carried in an issue-comment payload. The target line names PR and linked issue separately; absent linkage does not fabricate an issue.
+
+Branchless help conversations remain on the read-only answer route regardless of classified mutation intent. A file-changing use case requires an authoritative branch before agent or Git execution. No changed paths after an admitted agent maps to agent.failed, preserving the distinction from a pre-spawn policy rejection.

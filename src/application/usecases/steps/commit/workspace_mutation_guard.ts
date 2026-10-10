@@ -68,7 +68,7 @@ export async function finalizeWorkspaceMutation(
 
     const workspacePaths = selectWorkspacePathsToCommit([...before], workspacePathsAfter);
     if (workspacePaths.length === 0) {
-        throw new ApplicationError('agent.policy-rejected', `${operation} produced no safe workspace paths to commit.`);
+        throw new ApplicationError('agent.failed', `${operation} produced no safe workspace paths to commit.`);
     }
     if (workspacePaths.length > MAX_AUTOMATED_CHANGED_PATHS) {
         throw new ApplicationError(

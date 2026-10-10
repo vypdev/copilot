@@ -10,7 +10,7 @@ import type {
   SddCatalogSnapshot,
   SddPreparedDraft,
 } from '../application/ports/pre_branch_sdd_ports';
-import { isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
+import { composeSddUpdate, isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
 import { withoutGitHooks } from './git_hook_isolation';
 
@@ -89,7 +89,10 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       if (fs.existsSync(target) !== (plan.action === 'update')) {
         throw new Error('The SDD owner changed since analysis; restart clarification.');
       }
-      if (plan.action === 'update') assertRegularSpecFile(target);
+      if (plan.action === 'update') {
+        assertRegularSpecFile(target);
+        markdown = composeSddUpdate(fs.readFileSync(target, 'utf8'), markdown);
+      }
       else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
       writeSpecFile(target, markdown, plan.action === 'update');
       const catalog: Catalog = {
