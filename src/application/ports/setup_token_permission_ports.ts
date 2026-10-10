@@ -2,6 +2,7 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
     SetupTokenPermissionRequirement,
+    SetupTokenPermissionProgress,
     SetupTokenRole,
 } from '../../domain/setup_token_permissions';
 
@@ -10,22 +11,33 @@ export interface SetupTokenPermissionsRequest {
     owner: string;
     repository: string;
     token: string;
+    /** Already authorized setup PAT, kept in memory only, for Actions fixture preparation and cleanup. */
+    operatorToken?: string;
     requirements: readonly SetupTokenPermissionRequirement[];
+    /** Canonical comma-separated Project numbers from the approved setup plan. */
+    selectedProjectNumbers?: string;
+    /** Initial PAT verification tests displayed conditional writes as well as required writes. */
+    includeConditionalWrites?: boolean;
 }
 
-/** Read-only capability boundary. Implementations must never probe with mutations. */
-export interface SetupTokenPermissionQueryPort {
+/** Capability boundary. Writes use isolated, cleanup-verified transactions. */
+export interface SetupTokenPermissionInspectionPort {
     inspect(
         owner: string,
         repository: string,
         token: string,
         requirements: readonly SetupTokenPermissionRequirement[],
+        onProgress?: (progress: SetupTokenPermissionProgress) => void,
+        selectedProjectNumbers?: string,
+        includeConditionalWrites?: boolean,
+        operatorToken?: string,
     ): Promise<readonly SetupTokenPermissionCheck[]>;
 }
 
 export interface SetupTokenPermissionPresenterPort {
     showRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void;
     showReport(report: SetupTokenPermissionReport): void;
+    showProgress?(progress: SetupTokenPermissionProgress): void;
 }
 
 export interface SetupTokenPermissionAuditPort {

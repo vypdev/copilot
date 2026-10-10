@@ -1,0 +1,15 @@
+import type { planWarningsEn } from './en';
+
+export const planWarningsPt: Readonly<Record<keyof typeof planWarningsEn, string>> = {
+  'No issue workflow kind is enabled; issue events will remain unmanaged until a supported Issue Form and profile entry are enabled.': 'Não está ativo nenhum tipo de fluxo de trabalho para issues. Os respetivos eventos não serão geridos até ativar um formulário de issue suportado e a entrada correspondente no perfil.',
+  'Help / question issues remain branchless even when issue-managed-branches is enabled.': 'As issues de ajuda ou perguntas não criam ramos, mesmo com os ramos geridos por issues ativados.',
+  'Release automation is installed, but release issue events are disabled by the selected issue workflow profile.': 'A automação de versões já está instalada, mas o perfil escolhido desativa os eventos das issues de versão.',
+  'Hotfix automation is installed, but hotfix issue events are disabled by the selected issue workflow profile.': 'A automação de correções urgentes já está instalada, mas o perfil escolhido desativa os eventos das respetivas issues.',
+  'Repository agent guidance generation is disabled; collaborators will not receive the generated profile or workflow skill.': 'A criação de orientações para agentes do repositório está desativada. Os colaboradores não receberão o perfil nem o guia do fluxo de trabalho gerados.',
+  'Release and hotfix workflows require the workflow PAT Secret and a writable token.': 'Os fluxos de versão e correção urgente exigem o Secret com o PAT da Action e um token com permissão de escrita.',
+  'Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.': 'A fila de integração bloqueia a operação se cada produtor obrigatório não for verificado automaticamente ou coberto por uma declaração exata e revista.',
+  'Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.': 'O fecho de issues inativas está ativado. As que aguardam resposta serão fechadas após o prazo configurado e poderão ser reabertas com um novo comentário.',
+  'Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.': 'O PAT do bot tem de ter acesso aos Projects selecionados, e os quatro valores de Status configurados têm de existir em cada Project.',
+  'Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.': 'O Cursor é um ambiente experimental no Copilot e requer um CLI compatível e CURSOR_API_KEY; a Action instala o CLI oficial se o executável padrão não estiver disponível.',
+  'Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.': 'Os Secrets e Variables da organização exigem permissões nessa organização. Restringir o acesso aos repositórios selecionados é a opção mais segura; os valores do repositório prevalecem.',
+};

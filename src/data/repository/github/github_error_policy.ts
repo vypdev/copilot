@@ -12,6 +12,19 @@ export const getGithubErrorStatus = (error: unknown): number | undefined => {
 
 export const isGithubNotFound = (error: unknown): boolean => getGithubErrorStatus(error) === 404;
 
+export const isGithubRateLimited = (error: unknown): boolean => {
+    const status = getGithubErrorStatus(error);
+    if (status === 429) return true;
+    if (status !== 403) return false;
+    const record = readRecord(error);
+    const response = readRecord(record?.response);
+    const headers = readRecord(response?.headers);
+    const message = readRecord(response?.data)?.message ?? record?.message;
+    return readHeader(headers, 'retry-after') !== undefined
+        || readHeader(headers, 'x-ratelimit-remaining') === '0'
+        || (typeof message === 'string' && /rate limit|secondary rate|abuse limit|too many requests/i.test(message));
+};
+
 export const isGithubPermissionDenied = (error: unknown): boolean => {
     if (getGithubErrorStatus(error) !== 403) return false;
     const errorRecord = readRecord(error);

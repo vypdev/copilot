@@ -46,6 +46,8 @@ export interface DoctorRequest {
   repository: string;
   setupToken: string;
   configuration: SetupConfiguration;
+  /** Inspect installed resources without dispatching credential-health Actions. */
+  readOnly?: boolean;
 }
 
 export interface SetupDoctorDependencies {
@@ -257,7 +259,7 @@ export class SetupDoctorUseCase {
     const remoteSecrets = new Set([...remote.repositorySecrets, ...remote.organizationSecrets]);
     const present = requirements.filter((requirement) => remoteSecrets.has(requirement.name));
     let health: readonly SetupCredentialCheck[] | undefined;
-    if (present.length > 0) {
+    if (present.length > 0 && !request.readOnly) {
       try {
         health = await this.dependencies.remoteHealth.validateExisting(
           request.owner,

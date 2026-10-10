@@ -40,15 +40,7 @@ OpenCode supports many providers and local models. That flexibility does not cha
 
 ## Runtime and provisioning
 
-The Action prepares only the selected runtime. An available `opencode`
-executable is operator-owned and is not replaced. When the default executable is
-missing, Copilot uses the reviewed pinned installation:
-
-```bash
-npm install --global "opencode-ai@1.18.3"
-```
-
-The binary must pass version and headless-help checks before use:
+The Action reuses an available `opencode` executable. If the default command is missing, it uses the [official standalone installer](https://opencode.ai/docs) on Unix or the official release archive on Windows. The installation is private to the job and uses no npm or pnpm. Any non-empty version is accepted subject to the normal guarded preflight; the reviewed `1.18.3` identity is a historical smoke baseline.
 
 ```bash
 opencode --version
@@ -59,8 +51,7 @@ See [Agent CLI provisioning](/security-operations/operations/cli-provisioning) a
 
 ## OpenCode behavior controlled by Copilot
 
-- The reviewed known-good version and pinned installation are `1.18.3`;
-  compatible operator-owned versions are recorded and run through the same fixed command contract.
+- The reviewed known-good smoke baseline is `1.18.3`; other versions must pass the same fixed command contract.
 - `--pure`, the managed role, JSON event output, model, and optional `--variant` are reconstructed by policy.
 - The isolated config has wildcard default deny. It allows read/glob/grep/list, allows edit only for `fixer`, and denies bash, LSP, web, tasks, skills, questions, external directories, plugins, MCP, subagent depth, and session sharing.
 - The config directory and contents are ephemeral and hashed; repository OpenCode configuration is rejected.
@@ -83,7 +74,7 @@ The expected evidence is `READY` and exit code `0`. A successful binary/help che
 
 ### Missing executable
 
-Install the manifest OpenCode version with the runner's `npm`, then rerun:
+Check the official installer or provide a compatible CLI on the runner, then rerun:
 
 ```bash
 command -v opencode

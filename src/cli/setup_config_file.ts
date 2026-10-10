@@ -15,7 +15,6 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'ai',
     'pullRequestApproval',
     'projects',
-    'createInitialTag',
     'manageRepositoryVariables',
     'manageRepositorySecrets',
     'actionInputs',
@@ -110,7 +109,6 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
     validateApprovalOverride(raw.pullRequestApproval);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
-    validateBooleanProperty(raw, 'createInitialTag');
     validateBooleanProperty(raw, 'manageRepositoryVariables');
     validateBooleanProperty(raw, 'manageRepositorySecrets');
     validateOptionalObject(raw.actionInputs, 'actionInputs');

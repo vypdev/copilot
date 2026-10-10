@@ -26,6 +26,9 @@ export interface AgentExecutionPlan {
     readonly provider: AgentProvider;
     readonly capability: AgentCapability;
     readonly executable: string;
+    /** Trusted direct-launch prefix, such as a reviewed npm package's JS bin. */
+    readonly launcherArgv?: readonly string[];
+    readonly launcherSha256?: string;
     readonly argv: readonly string[];
     readonly promptMode: AgentPromptMode;
     readonly outputProtocol: AgentOutputProtocol;

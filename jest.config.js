@@ -6,6 +6,8 @@ module.exports = {
   passWithNoTests: true,
   collectCoverageFrom: [
     'src/**/*.ts',
+    'web/src/**/*.ts',
+    '!web/src/main.ts',
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
     '!src/**/*.test.ts'
@@ -16,10 +18,16 @@ module.exports = {
       statements: 90,
       functions: 88,
       branches: 82
+    },
+    './web/src/': {
+      lines: 98,
+      statements: 95,
+      functions: 100,
+      branches: 85
     }
   },
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'text-summary', 'lcov', 'json-summary'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'json-summary', 'json'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
     // @actions/github v8 exposes an ESM Octokit dependency. The published
@@ -30,5 +38,12 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },
-  verbose: true
+  verbose: true,
+  ...(process.platform === 'win32' ? {
+    maxWorkers: 2,
+    // Both Windows jobs cap concurrency. Only service runners recycle workers:
+    // recycling also slowed hosted Windows beyond its job timeout.
+    ...(process.env.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE === '1'
+      ? { workerIdleMemoryLimit: '512MB' } : {})
+  } : {})
 };

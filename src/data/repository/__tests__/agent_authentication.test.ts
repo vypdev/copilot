@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildAgentCliEnvironment, checkAgentAuthentication } from '../agent_authentication';
@@ -205,6 +205,27 @@ describe('checkAgentAuthentication', () => {
                 status: 'available',
                 message: 'Preinitialized Codex CLI login is operational on the runner.',
             });
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    (process.platform === 'win32' ? it.skip : it)('validates a login launcher before executing it', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-login-trust-'));
+        const executable = join(directory, 'codex');
+        const marker = join(directory, 'login-ran');
+        try {
+            writeFileSync(executable, `#!/bin/sh\n: > "${marker}"\n`);
+            chmodSync(executable, 0o700);
+            const configuration = { provider: 'codex' as const, model: 'fixture' };
+            const environment = { PATH: directory, HOME: directory };
+            expect(checkAgentAuthentication(configuration, environment).status).toBe('available');
+            expect(existsSync(marker)).toBe(true);
+
+            rmSync(marker);
+            chmodSync(executable, 0o777);
+            expect(checkAgentAuthentication(configuration, environment).status).toBe('missing');
+            expect(existsSync(marker)).toBe(false);
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }

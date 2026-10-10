@@ -4,18 +4,45 @@ import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
     SetupTokenPermissionRequirement,
+    SetupTokenPermissionProgress,
     SetupTokenRole,
 } from '../domain/setup_token_permissions';
 import { renderBox } from './setup_prompt_rendering';
+import { summarizeSetupPermissions } from '../application/policies/setup_permission_summary_policy';
 
 export class ConsoleSetupTokenPermissionPresenter implements SetupTokenPermissionPresenterPort {
+    constructor(private readonly mode: 'full' | 'summary' = 'full') {}
+
     showRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
+        console.log(this.mode === 'summary'
+            ? renderSetupTokenPermissionSummary(role, requirements)
+            : renderSetupTokenPermissionRequirements(role, requirements));
+    }
+
+    showDetailedRequirements(role: SetupTokenRole, requirements: readonly SetupTokenPermissionRequirement[]): void {
         console.log(renderSetupTokenPermissionRequirements(role, requirements));
     }
 
     showReport(report: SetupTokenPermissionReport): void {
         console.log(renderSetupTokenPermissionReport(report));
     }
+
+    showProgress(progress: SetupTokenPermissionProgress): void {
+        const phase = progress.phase === 'verified' ? '✓' : progress.phase === 'failed' ? '✗' : '…';
+        console.log(`${phase} ${progress.requirementId}: ${progress.phase}${progress.detail ? ` (${progress.detail})` : ''}`);
+    }
+}
+
+export function renderSetupTokenPermissionSummary(
+    role: SetupTokenRole,
+    requirements: readonly SetupTokenPermissionRequirement[],
+    maximumWidth = stdout.columns ?? 120,
+): string {
+    const summary = summarizeSetupPermissions(requirements);
+    return renderBox([
+        `Required now: ${summary.required.join(' · ') || 'none'}`,
+        `Conditional permissions: ${summary.conditionalCount}. View the full table for reasons and triggers.`,
+    ].join('\n'), `${roleTitle(role)} PAT permission summary`, 36, maximumWidth);
 }
 
 export function renderSetupTokenPermissionRequirements(
@@ -57,18 +84,16 @@ export function renderSetupTokenPermissionReport(
         && check.status === 'unverifiable'
         && check.operationallyAvailable !== true);
     const usablePublicReads = report.checks.filter(check => check.applicability === 'required'
-        && check.level === 'read' && check.status === 'unverifiable'
+        && check.level === 'read' && check.status === 'available'
         && check.operationallyAvailable === true);
     const unverifiable = report.checks.filter(check => check.status === 'unverifiable');
     const action = missing.length > 0
         ? `Action required: grant ${missing.map(check => `${check.permission} ${check.level}`).join(', ')} and retry. No dependent mutation started.`
         : unverifiableRequiredReads.length > 0
             ? `Action required: retry the unverifiable read checks for ${unverifiableRequiredReads.map(check => check.permission).join(', ')}. No dependent mutation started.`
-            : report.confirmationRequired
-                ? 'Confirmation required: inspect the PAT settings for every Unverifiable write row. Continue only by explicitly confirming the displayed access; no test mutation was performed.'
         : unverifiable.length > 0
-            ? 'Some access is unverifiable because GitHub offers no safe read-only proof. No test mutation was performed.'
-            : 'All safely verifiable required permissions are available.';
+            ? 'Some capabilities could not be proven. Review each failed phase and retry after correcting access or provider availability.'
+            : 'All required capability checks passed.';
     const publicReadLimitation = usablePublicReads.length > 0
         ? 'Public repository reads are usable for setup, but do not prove the PAT has those permissions. Protected operations remain independently checked.'
         : undefined;
@@ -116,6 +141,7 @@ function row(first: string, second: string, third: string, fourth: string): stri
 
 function statusLabel(check: SetupTokenPermissionCheck): string {
     if (check.status === 'verified') return '✅ Verified';
+    if (check.status === 'available') return '✓ Read available';
     if (check.status === 'missing') return '❌ Missing';
     return '? Unverifiable';
 }

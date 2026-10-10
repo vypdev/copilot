@@ -4,6 +4,7 @@ import {
     buildSetupPatPermissionRequirements,
     buildWorkflowPatPermissionRequirements,
     normalizePermissionRequirements,
+    requiredSetupPatPermissionDelta,
 } from '../setup_token_permission_policy';
 import type { SetupRemoteConfiguration } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
@@ -23,14 +24,40 @@ function disabledRuntimeConfiguration() {
 }
 
 describe('setup token permission policy', () => {
+    it('preserves required applicability and strongest access when a duplicate weaker row follows', () => {
+        const read = buildSetupPatPermissionRequirements().find(row => row.permission === 'Contents' && row.level === 'read')!;
+        const write = { ...read, level: 'write' as const };
+        expect(normalizePermissionRequirements([write, read, write])).toEqual([write]);
+    });
+    it('reports only newly required or upgraded grants after guided review', () => {
+        const baseline = buildSetupPatPermissionRequirements();
+        const metadata = baseline.find(item => item.permission === 'Metadata')!;
+        const contents = baseline.find(item => item.permission === 'Contents')!;
+        const secrets = baseline.find(item => item.permission === 'Secrets' && item.scope === 'repository')!;
+        const final = [metadata, { ...contents, permission: 'contents', level: 'write' as const },
+            { ...secrets, applicability: 'required' as const }];
+        expect(requiredSetupPatPermissionDelta([metadata, contents, secrets], final)).toEqual([
+            'repository contents write', 'repository Secrets write',
+        ]);
+        expect(requiredSetupPatPermissionDelta(final, [metadata, contents, secrets])).toEqual([]);
+    });
+
     it('describes the complete setup PAT permission catalog before the prompt', () => {
         const requirements = buildSetupPatPermissionRequirements();
+        expect(new Set(requirements.map(item => item.id)).size).toBe(requirements.length);
+        expect(requirements.filter(item => item.permission === 'Contents').map(item => item.id)).toEqual([
+            'setup.repository.contents', 'setup.repository.contents-write',
+        ]);
+        expect(requirements.filter(item => item.permission === 'Actions').map(item => item.id)).toEqual([
+            'setup.repository.actions', 'setup.repository.actions-read',
+        ]);
         expect(requirements.map(item => `${item.scope}:${item.permission}:${item.level}`)).toEqual([
-            'repository:Metadata:read', 'repository:Contents:read', 'repository:Secrets:write',
-            'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write',
+            'repository:Metadata:read', 'repository:Contents:read', 'repository:Contents:write', 'repository:Secrets:write',
+            'repository:Variables:write', 'repository:Issues:write', 'repository:Actions:write', 'repository:Actions:read',
+            'repository:Checks:read',
             'repository:Administration:read', 'repository:Workflows:write',
             'organization:Secrets:write', 'organization:Variables:write',
-            'organization:Issue Types:write', 'organization:Projects:write',
+            'organization:Issue Types:write', 'organization:Projects:read',
         ]);
     });
 
@@ -44,6 +71,8 @@ describe('setup token permission policy', () => {
     it('keeps feature-dependent setup grants conditional with visible conditions', () => {
         const administration = buildSetupPatPermissionRequirements().find(item => item.permission === 'Administration');
         expect(administration).toMatchObject({ applicability: 'conditional', condition: expect.stringContaining('Release') });
+        const approvalRead = buildSetupPatPermissionRequirements().find(item => item.permission === 'Actions' && item.level === 'read');
+        expect(approvalRead).toMatchObject({ applicability: 'conditional', condition: 'Pull-request approval enabled' });
     });
 
     it('recomputes only repository setup mutations selected by the approved configuration', () => {
@@ -63,6 +92,22 @@ describe('setup token permission policy', () => {
             'repository:Contents:read',
             'repository:Variables:write',
         ]);
+    });
+
+    it('keeps possible organization grants visible when remote owner type is unknown', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.projects.ids = 'PVT_example';
+        configuration.storage.secrets.defaultScope = 'organization';
+        const unknown = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, ownerType: 'Unknown',
+        }).map(item => `${item.scope}:${item.permission}:${item.level}`);
+        expect(unknown).toEqual(expect.arrayContaining([
+            'organization:Secrets:write', 'organization:Issue Types:write', 'organization:Projects:read',
+        ]));
+        const personal = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, ownerType: 'User',
+        });
+        expect(personal.some(item => item.scope === 'organization')).toBe(false);
     });
 
     it('omits stale disabled issue workflows from the configured setup PAT plan', () => {
@@ -103,12 +148,24 @@ describe('setup token permission policy', () => {
         expect(workflowPermissions.map(item => item.permission)).toEqual(['Metadata']);
     });
 
+    it('does not request health write grants only to inspect an existing bot PAT that must be supplied again', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
+            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: 'missing',
+        }).map(item => `${item.permission}:${item.level}`);
+        expect(permissions).not.toContain('Actions:write');
+        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).not.toContain('Workflows:write');
+    });
+
     it('detects repository credential health and selected organization Projects in the final setup plan', () => {
         const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
         configuration.projects.ids = 'PVT_kwDOExample';
         const configuredRemote = {
             ...organization,
-            repositorySecrets: ['PAT'],
+            repositorySecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'missing' as const,
         };
 
@@ -118,16 +175,17 @@ describe('setup token permission policy', () => {
         expect(permissions).toEqual(expect.arrayContaining([
             'repository:Actions:write',
             'repository:Workflows:write',
-            'organization:Projects:write',
+            'organization:Projects:read',
         ]));
     });
 
     it('omits bootstrap-only workflow writes when credential health is already installed', () => {
         const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
         configuration.createInitialTag = false;
         const configuredRemote = {
             ...organization,
-            repositorySecrets: ['PAT'],
+            repositorySecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'installed' as const,
         };
 
@@ -135,19 +193,36 @@ describe('setup token permission policy', () => {
             .map(item => `${item.permission}:${item.level}`);
 
         expect(permissions).toContain('Actions:write');
-        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).toContain('Contents:write');
         expect(permissions).not.toContain('Workflows:write');
     });
 
     it.each(['unavailable', 'unknown'] as const)('never requests bootstrap mutation grants for %s workflow status', state => {
         const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false; configuration.features.hotfix = false; configuration.issueWorkflows.enabled = ['feature'];
         configuration.createInitialTag = false;
         const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, {
-            ...organization, repositorySecrets: ['PAT'], credentialHealthWorkflow: state,
+            ...organization, repositorySecrets: ['CODEX_API_KEY'], credentialHealthWorkflow: state,
         }).map(item => `${item.permission}:${item.level}`);
         expect(permissions).toContain('Actions:write');
-        expect(permissions).not.toContain('Contents:write');
+        expect(permissions).toContain('Contents:write');
         expect(permissions).not.toContain('Workflows:write');
+    });
+
+    it('discloses setup Actions fixture grants for release/hotfix bot verification even without existing credentials', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        const permissions = buildConfiguredSetupPatPermissionRequirements(configuration, organization);
+        expect(permissions.map(item => `${item.permission}:${item.level}`)).toEqual(expect.arrayContaining([
+            'Contents:write', 'Actions:write', 'Workflows:write',
+        ]));
+        expect(permissions.find(item => item.permission === 'Workflows')?.reason).toContain('bot Actions check');
+        expect(buildWorkflowPatPermissionRequirements(configuration, organization).some(item => item.permission === 'Workflows')).toBe(false);
+    });
+    it('omits bot verification setup grants when Secret management is disabled', () => {
+        const configuration = createDefaultSetupConfiguration(); configuration.createInitialTag = false;
+        configuration.manageRepositorySecrets = false;
+        expect(buildConfiguredSetupPatPermissionRequirements(configuration, organization)
+            .map(item => `${item.permission}:${item.level}`)).not.toEqual(expect.arrayContaining(['Contents:write', 'Actions:write', 'Workflows:write']));
     });
 
     it('retains repository inventory grants for organization storage shadow checks', () => {
@@ -158,7 +233,7 @@ describe('setup token permission policy', () => {
         configuration.storage.variables.preserveExisting = false;
         const configuredRemote = {
             ...organization,
-            organizationSecrets: ['PAT'],
+            organizationSecrets: ['CODEX_API_KEY'],
             credentialHealthWorkflow: 'missing' as const,
         };
 
@@ -239,11 +314,11 @@ describe('setup token permission policy', () => {
     it.each([
         ['managed issues', 'issues', ['Metadata', 'Actions', 'Contents', 'Issues']],
         ['issue comments', 'issueComments', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests']],
-        ['pull requests', 'pullRequests', ['Metadata', 'Actions', 'Pull requests']],
+        ['pull requests', 'pullRequests', ['Metadata', 'Actions', 'Contents', 'Pull requests']],
         ['PR comments', 'pullRequestComments', ['Metadata', 'Actions', 'Contents', 'Pull requests']],
-        ['commit progress and Bugbot', 'commits', ['Metadata', 'Actions', 'Issues', 'Pull requests']],
+        ['commit progress and Bugbot', 'commits', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests']],
         ['release dispatch', 'release', ['Metadata', 'Actions', 'Contents', 'Issues', 'Pull requests', 'Administration']],
-        ['inactive issue closure', 'inactiveIssueClosure', ['Metadata', 'Actions', 'Issues']],
+        ['inactive issue closure', 'inactiveIssueClosure', ['Metadata', 'Actions', 'Contents', 'Issues']],
     ] as const)('projects only the writes consumed by %s', (_label, feature, expected) => {
         const configuration = disabledRuntimeConfiguration();
         configuration.issueWorkflows.enabled = ['help'];
@@ -260,7 +335,7 @@ describe('setup token permission policy', () => {
         configuration.repository.issueManagedBranches = false;
         configuration.issueWorkflows.enabled = ['help'];
         expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
-            'Metadata', 'Actions', 'Issues',
+            'Metadata', 'Actions', 'Contents', 'Issues',
         ]);
     });
 
@@ -292,7 +367,7 @@ describe('setup token permission policy', () => {
         const configuration = disabledRuntimeConfiguration();
         configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
         expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
-            'Metadata', 'Actions', 'Pull requests', 'Administration', 'Checks', 'Variables',
+            'Metadata', 'Actions', 'Contents', 'Pull requests', 'Administration', 'Checks', 'Variables',
         ]);
     });
 

@@ -24,6 +24,7 @@ interface Catalog {
 interface CatalogValidator {
   readCatalog(root: string): Catalog;
   renderCatalog(catalog: Catalog): string;
+  normalizeCheckoutLineEndings(content: string, platform?: string): string;
   validateCatalog(root: string, catalog: Catalog): string[];
   isSafeRelativePath(value: unknown): boolean;
   isIsoDate(value: unknown): boolean;
@@ -42,10 +43,16 @@ describe('specification catalog validator', () => {
     expect(validator.validateCatalog(root, cloneCatalog())).toEqual([]);
   });
 
-  it('keeps the human catalog byte-for-byte generated from metadata', () => {
+  it('keeps the human catalog equivalent to metadata across checkout line endings', () => {
     const catalog = cloneCatalog();
-    expect(readFileSync(path.join(root, 'specs/CATALOG.md'), 'utf8'))
+    expect(validator.normalizeCheckoutLineEndings(readFileSync(path.join(root, 'specs/CATALOG.md'), 'utf8')))
       .toBe(validator.renderCatalog(catalog));
+  });
+
+  it('normalizes only Windows checkout line endings', () => {
+    expect(validator.normalizeCheckoutLineEndings('first\r\nsecond\r\n', 'win32')).toBe('first\nsecond\n');
+    expect(validator.normalizeCheckoutLineEndings('first\r\nsecond\r\n', 'linux')).toBe('first\r\nsecond\r\n');
+    expect(validator.normalizeCheckoutLineEndings('changed\r\n', 'win32')).not.toBe('original\n');
   });
 
   it('rejects duplicate capability ownership and duplicate specification ownership', () => {
@@ -70,6 +77,16 @@ describe('specification catalog validator', () => {
     const errors = validator.validateCatalog(root, catalog);
     expect(errors.some(error => error.includes('outside the documentation boundary'))).toBe(true);
     expect(errors.some(error => error.includes('does not resolve to an existing file'))).toBe(true);
+  });
+
+  it('catalogues shipped browser sources but rejects browser paths outside the source tree', () => {
+    const catalog = cloneCatalog();
+    const capability = catalog.capabilities.find(item => item.id === 'local-web-setup-assistant')!;
+    expect(capability.entrypoints).toContain('web/src/main.ts');
+    expect(capability.code).toContain('web/src/components/PromptCard.svelte');
+    capability.code.push('web/vite.config.mts');
+    const errors = validator.validateCatalog(root, catalog);
+    expect(errors.some(error => error.includes('outside the code boundary: web/vite.config.mts'))).toBe(true);
   });
 
   it('rejects an invalid status and verification date', () => {

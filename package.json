@@ -30,6 +30,7 @@
   "files": [
     "action.yml",
     "build/cli/index.js",
+    "build/web/",
     "build/github_action/index.js",
     "build/api/index.js",
     "build/api/src/",
@@ -48,13 +49,15 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/clean-generated-bundles.cjs && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
+    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && node scripts/set-cli-executable.cjs",
+    "build:web": "vite build --config web/vite.config.mts",
+    "check:web": "svelte-check --tsconfig web/tsconfig.json && vite build --config web/vite.config.mts",
     "validate:build": "node scripts/validate-build.cjs",
     "validate:npm-package": "node scripts/validate-npm-package.cjs",
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage && node scripts/validate-coverage-budgets.cjs",
+    "test:coverage": "jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json && node scripts/validate-coverage-budgets.cjs && node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json",
     "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts --runInBand",
     "typecheck": "tsc --noEmit",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
@@ -65,6 +68,7 @@
     "validate:workflows": "node scripts/validate-workflow-contract.cjs",
     "generate:specifications": "node scripts/validate-specification-catalog.cjs --write && node scripts/validate-github-communication-test-budget.cjs",
     "validate:specifications": "node scripts/validate-specification-catalog.cjs && node scripts/validate-github-communication-test-budget.cjs",
+    "validate:setup-acceptance": "node scripts/validate-setup-assistant-acceptance.cjs",
     "lint:fix": "eslint src --fix",
     "postinstall": "node scripts/install-git-hooks.cjs"
   },
@@ -79,18 +83,22 @@
     "chalk": "^5.4.1",
     "commander": "^12.0.0",
     "js-yaml": "^5.4.1",
-    "shell-quote": "^1.8.3",
-    "tweetnacl": "^1.0.3"
+    "libsodium-wrappers": "^0.8.4",
+    "shell-quote": "^1.12.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.9.1",
     "@vercel/ncc": "^0.36.1",
     "eslint": "^10.10.0",
     "jest": "^30.5.1",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
     "ts-jest": "^29.4.5",
     "typescript": "^5.2.2",
-    "typescript-eslint": "^8.70.0"
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.3.1"
   }
 }

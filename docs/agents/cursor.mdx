@@ -15,8 +15,7 @@ Copilot invokes Cursor non-interactively:
 agent -p --output-format text --sandbox enabled --model <model> [--mode ask|--force] <prompt>
 ```
 
-Cursor must be preinstalled on the controlled runner. The current reviewed
-known-good identity is:
+The Action reuses an available Cursor Agent or installs it from the [official Cursor CLI source](https://cursor.com/docs/cli/installation) when the default command is absent. The reviewed smoke baseline is:
 
 ```text
 2026.09.10-fd3934a
@@ -24,9 +23,7 @@ CURSOR_API_KEY
 ```
 
 Copilot records any non-empty operator-owned runtime identity without replacing
-the executable. Automatic installation is unsupported because no reviewed,
-reproducible package recipe exists. Unofficial npm packages, shell fallbacks,
-and unverified downloads are not supported.
+the executable. A missing default CLI is installed in a private job directory without npm or pnpm. On Windows the Action extracts the official Cursor archive without changing the runner user PATH or replacing an existing installation. Any non-empty version must still pass the guarded command checks.
 
 ## Configuration
 

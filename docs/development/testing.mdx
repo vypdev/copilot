@@ -104,6 +104,17 @@ local topology before an architecture review with Graphify, and use the
 RepoWise index-only health/dead-code reports to distinguish current complexity
 from history-based churn signals:
 
+The required `RepoWise code health` workflow publishes its index and health
+reports. Its dead-code and history-security scans have separate time and memory limits;
+the Job Summary and artifact status identify an incomplete advisory scan
+instead of claiming that it passed.
+Repository-owned PRs, pushes and merge groups run RepoWise and `CI Check` on
+self-hosted Ubuntu `codex` runners. Fork PRs use GitHub-hosted Ubuntu for
+these checks. The automatic setup fixture matrix remains hosted on three
+operating systems, with service-runner fixtures available by manual dispatch.
+Runner routing is contract-checked, but actual runner availability and remote
+results require evidence from the corresponding Actions runs.
+
 ```bash
 graphify update .
 repowise init . --no-workspace --no-prose --no-agents --no-editor-setup \

@@ -205,7 +205,7 @@ function parseLcovInventory(content, repositoryRoot) {
         throw new Error(`LCOV source is outside the repository: ${sourcePath}`);
       }
       current = {
-        path: path.relative(resolvedRoot, resolvedSource),
+        path: path.relative(resolvedRoot, resolvedSource).split(path.sep).join('/'),
         lineNumbers: new Map(),
         branches: new Map(),
         functions: new Map(),

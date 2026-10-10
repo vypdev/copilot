@@ -56,6 +56,21 @@ describe('execution issue number policy', () => {
     jest.clearAllMocks();
   });
 
+  it.each([
+    { configuredSingleActionIssue: 1 },
+    { isIssue: true, issue: { number: 1 } },
+    { isPullRequest: true, pullRequest: { number: 7, head: 'feature/1-work', base: 'develop' } },
+    { isPush: true, commit: { branch: 'feature/1-work' } },
+  ])('keeps repository installation independent of supplied issue context %j', async overrides => {
+    const result = await resolveSingleActionIssueNumber(context({ ...overrides, isSingleAction: true,
+      singleAction: { issue: 1, currentAction: 'initial_setup', isIssue: true, isPullRequest: true, isPush: true },
+    }), issueRepository);
+    expect(result).toEqual({ singleAction: { issue: 0, isIssue: false, isPullRequest: false, isPush: false } });
+    expect(issueRepository.isIssue).not.toHaveBeenCalled();
+    expect(issueRepository.isPullRequest).not.toHaveBeenCalled();
+    expect(issueRepository.getHeadBranch).not.toHaveBeenCalled();
+  });
+
   it('uses the explicit pull-request number for check-suite events', () => {
     const result = resolveEventIssueNumber(context({
       eventName: 'check_suite',

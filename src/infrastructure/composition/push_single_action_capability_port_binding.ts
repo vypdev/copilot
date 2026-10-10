@@ -219,6 +219,15 @@ export function bindRepositoryDefaultBranch(
   });
 }
 
+export function bindRepositoryVersionTags(
+  port: RepositoryVersionTagsQueryPort,
+  binding: RepositoryCredentialBinding,
+): LatestTagQueryPort {
+  return Object.freeze<LatestTagQueryPort>({
+    getLatestTag: () => port.getLatestTag(binding.owner, binding.repository, binding.token),
+  });
+}
+
 export function bindIssueCommentPublication(
   port: IssueCommentPublicationPort,
   binding: RepositoryCredentialBinding,
@@ -426,3 +435,4 @@ export function bindSetupRemoteConfiguration(
 ): BoundSetupRemoteConfigurationReadPort {
   return Object.freeze<BoundSetupRemoteConfigurationReadPort>({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
 }
+import type { LatestTagQueryPort, RepositoryVersionTagsQueryPort } from '../../application/ports/branch_tag_ports';

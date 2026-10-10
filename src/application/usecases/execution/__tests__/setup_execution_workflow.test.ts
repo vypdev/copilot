@@ -48,6 +48,24 @@ function dependencies(labels: string[], body: string, previousConfiguration?: ob
 }
 
 describe('setup execution live issue admission', () => {
+  it.each([
+    { configuredSingleActionIssue: 1 },
+    { isIssue: false, isPullRequest: true, pullRequest: { number: 7, head: 'feature/1-work', base: 'develop' } },
+  ])('authenticates repository installation without loading incidental issue/PR metadata %j', async overrides => {
+    const ports = dependencies(['bug'], 'incomplete old issue', { workingBranch: 'bugfix/1-old' });
+    ports.organizationSetupPort.getTokenUser.mockResolvedValue('operator');
+    const result = await runSetupExecution(context({ tokenUser: undefined, isSingleAction: true,
+      ...overrides,
+      singleAction: { issue: 1, currentAction: 'initial_setup', isIssue: true, isPullRequest: false, isPush: false },
+    }), ports);
+    expect(result).toMatchObject({ status: 'issue-unresolved', tokenUser: 'operator',
+      issueResolution: { singleAction: { issue: 0, isIssue: false } } });
+    expect(ports.organizationSetupPort.getTokenUser).toHaveBeenCalledTimes(1);
+    expect(ports.issueSetupPort.getLabels).not.toHaveBeenCalled();
+    expect(ports.issueSetupPort.getDescription).not.toHaveBeenCalled();
+    expect(ports.configurationPort.get).not.toHaveBeenCalled();
+    expect(ports.branchVersionResolver.resolve).not.toHaveBeenCalled();
+  });
   it('uses live labels and body rather than the event payload', async () => {
     const liveBody = [
       '## Description of the idea or improvement\nAdd it',

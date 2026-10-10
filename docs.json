@@ -288,6 +288,11 @@
           "icon": "vial"
         },
         {
+          "title": "Local setup assistant review",
+          "href": "/development/setup-assistant-review",
+          "icon": "clipboard"
+        },
+        {
           "title": "Product specifications",
           "href": "/development/specifications",
           "icon": "diagram-project"

@@ -1,25 +1,31 @@
 {
-  "revision": "2026-09-24.p1-c.3",
+  "revision": "2026-10-02.standalone.1",
   "providers": {
     "codex": {
       "executable": "codex",
       "reviewedVersion": "codex-cli 0.156.1",
+      "legacyNpmPackage": "@openai/codex",
       "installation": {
-        "package": "@openai/codex",
-        "version": "0.156.1"
+        "unixScript": "https://chatgpt.com/codex/install.sh",
+        "windowsScript": "https://chatgpt.com/codex/install.ps1"
       }
     },
     "opencode": {
       "executable": "opencode",
       "reviewedVersion": "1.18.3",
+      "legacyNpmPackage": "opencode-ai",
       "installation": {
-        "package": "opencode-ai",
-        "version": "1.18.3"
+        "unixScript": "https://opencode.ai/install",
+        "windowsReleaseApi": "https://api.github.com/repos/anomalyco/opencode/releases/latest"
       }
     },
     "cursor": {
       "executable": "agent",
-      "reviewedVersion": "2026.09.10-fd3934a"
+      "reviewedVersion": "2026.09.10-fd3934a",
+      "installation": {
+        "unixScript": "https://cursor.com/install",
+        "windowsScript": "https://cursor.com/install?win32=true"
+      }
     }
   }
 }

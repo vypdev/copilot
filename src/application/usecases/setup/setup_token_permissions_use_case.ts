@@ -1,22 +1,21 @@
 import type { SetupCredentialValidationPort } from '../../ports/setup_wizard_ports';
 import type {
-    SetupTokenPermissionQueryPort,
+    SetupTokenPermissionInspectionPort,
     SetupTokenPermissionsRequest,
 } from '../../ports/setup_token_permission_ports';
 import type {
     SetupTokenPermissionCheck,
     SetupTokenPermissionReport,
+    SetupTokenPermissionProgress,
 } from '../../../domain/setup_token_permissions';
-import {
-    isOperationallyAvailableSetupRead,
-    reconcileSetupTokenPermissionEvidence,
-} from '../../policies/setup_token_permission_evidence_policy';
+import { isOperationallyAvailableSetupRead, reconcileSetupTokenPermissionEvidence } from '../../policies/setup_token_permission_evidence_policy';
 
-/** Validates PAT identity first, then runs only read-only permission probes. */
+/** Validates PAT identity first, then runs scoped capability probes. */
 export class SetupTokenPermissionsUseCase {
     constructor(
         private readonly credentials: Pick<SetupCredentialValidationPort, 'validateSetupPat'>,
-        private readonly permissions: SetupTokenPermissionQueryPort,
+        private readonly permissions: SetupTokenPermissionInspectionPort,
+        private readonly onProgress?: (progress: SetupTokenPermissionProgress) => void,
     ) {}
 
     async inspect(request: SetupTokenPermissionsRequest): Promise<SetupTokenPermissionReport> {
@@ -40,25 +39,37 @@ export class SetupTokenPermissionsUseCase {
             };
         }
 
-        const evidence = await this.permissions.inspect(
-            request.owner,
-            request.repository,
-            request.token,
-            request.requirements,
-        );
+        if (request.operatorToken !== undefined) {
+            const operator = await this.credentials.validateSetupPat(request.owner, request.repository, request.operatorToken);
+            if (operator.status !== 'valid') {
+                return {
+                    role: request.role, ...(identity.account ? { account: identity.account } : {}),
+                    identityStatus: 'valid', identityMessage: identity.message,
+                    checks: request.requirements.map(requirement => ({ ...requirement, status: 'unverifiable',
+                        message: 'The setup PAT could not authorize preparation or cleanup of the temporary Actions check.' })),
+                    ready: false, confirmationRequired: false,
+                };
+            }
+        }
+        const audit = (...options: [boolean?, string?]) => this.permissions.inspect(
+            request.owner, request.repository, request.token, request.requirements,
+            this.onProgress, request.selectedProjectNumbers, ...options);
+        const evidence = request.operatorToken !== undefined
+            ? await audit(request.includeConditionalWrites ?? false, request.operatorToken)
+            : request.includeConditionalWrites === undefined ? await audit() : await audit(request.includeConditionalWrites);
         const checks = reconcileSetupTokenPermissionEvidence(request.requirements, evidence);
         const requiredChecks = checks.filter(check => check.applicability === 'required');
         const requiredReads = requiredChecks.filter(check => check.level === 'read');
         const requiredWrites = requiredChecks.filter(check => check.level === 'write');
         const readUsable = (check: SetupTokenPermissionCheck) => (check.status === 'verified' && check.level === 'read')
-            || (check.status === 'unverifiable' && check.level === 'read'
+            || (check.status === 'available' && check.level === 'read'
                 && isOperationallyAvailableSetupRead(check, check.publicReadEvidence)
                 && check.operationallyAvailable === true);
         const readsUsable = requiredReads.every(readUsable);
-        const ready = readsUsable && requiredWrites.length === 0;
-        const confirmationRequired = readsUsable
-            && requiredWrites.length > 0
-            && requiredWrites.every(check => check.status === 'unverifiable');
+        const ready = !checks.some(check => check.cleanupPending || check.incident)
+            && readsUsable && requiredWrites.every(check => check.status === 'verified'
+            && check.writeProof === 'transaction');
+        const confirmationRequired = false;
         return {
             role: request.role,
             ...(identity.account ? { account: identity.account } : {}),

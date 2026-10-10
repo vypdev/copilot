@@ -1,5 +1,5 @@
 import { SetupTokenPermissionsUseCase } from '../setup_token_permissions_use_case';
-import type { SetupTokenPermissionRequirement } from '../../../../domain/setup_token_permissions';
+import type { SetupTokenPermissionRequirement, SetupTokenPermissionProgress } from '../../../../domain/setup_token_permissions';
 
 const required: SetupTokenPermissionRequirement = {
     id: 'setup.repository.metadata', role: 'setup', scope: 'repository', permission: 'Metadata',
@@ -17,6 +17,124 @@ const requiredWrite: SetupTokenPermissionRequirement = {
 };
 
 describe('SetupTokenPermissionsUseCase', () => {
+    it('validates both identities and forwards setup authority without changing the bot report identity', async () => {
+        const validation = { validateSetupPat: jest.fn()
+            .mockResolvedValueOnce({ status: 'valid', account: 'fixture-bot', message: 'ok' })
+            .mockResolvedValueOnce({ status: 'valid', account: 'fixture-operator', message: 'ok' }) };
+        const workflowWrite = { ...requiredWrite, role: 'workflow' as const };
+        const inspect = jest.fn().mockResolvedValue([{ ...workflowWrite, status: 'verified', writeProof: 'transaction', message: 'ok' }]);
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect }).inspect({
+            role: 'workflow', owner: 'owner', repository: 'repo', token: 'bot-fixture', operatorToken: 'operator-fixture',
+            requirements: [workflowWrite], selectedProjectNumbers: '2',
+        });
+        expect(validation.validateSetupPat.mock.calls).toEqual([
+            ['owner', 'repo', 'bot-fixture'], ['owner', 'repo', 'operator-fixture'],
+        ]);
+        expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'bot-fixture', [workflowWrite], undefined, '2', false, 'operator-fixture');
+        expect(report).toMatchObject({ account: 'fixture-bot', role: 'workflow', ready: true });
+    });
+    it.each([
+        ['invalid', 'fixture-bot'], ['unverifiable', 'fixture-bot'],
+        ['invalid', undefined], ['unverifiable', undefined],
+    ])('does not start bot write probes when setup preparation authority is %s (account: %s)', async (status, account) => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValueOnce({ status: 'valid', account, message: 'ok' })
+            .mockResolvedValueOnce({ status, message: 'unavailable' }) };
+        const inspect = jest.fn();
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect }).inspect({
+            role: 'workflow', owner: 'owner', repository: 'repo', token: 'bot-fixture', operatorToken: 'operator-fixture', requirements: [requiredWrite],
+        });
+        expect(inspect).not.toHaveBeenCalled();
+        expect(report).toMatchObject({ identityStatus: 'valid', ready: false });
+        expect(report.account).toBe(account);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', message: expect.stringContaining('setup PAT') });
+    });
+    it.each(['contents-write', 'contents-workflows-write', 'dispatch-workflow'])('retains the bounded Actions prerequisite %s while blocking setup', async prerequisite => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requiredWrite, status: 'unverifiable', prerequisite, message: 'The Actions check stopped before dispatch.' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requiredWrite] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', prerequisite });
+    });
+
+    it.each([
+        { status: 'verified', writeProof: 'transaction', prerequisite: 'contents-write' },
+        { status: 'missing', prerequisite: 'contents-write' },
+        { status: 'unverifiable', prerequisite: 'private provider prose' },
+    ])('rejects contradictory or unbounded Actions prerequisite evidence %j', async evidence => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requiredWrite, ...evidence, message: 'unsafe evidence' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requiredWrite] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0].prerequisite).toBeUndefined();
+    });
+
+    it.each([true, false])('forwards explicit conditional-write intent with optional progress (%s)', async includeConditionalWrites => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const inspect = jest.fn().mockResolvedValue([{ ...required, status: 'verified', message: 'ok' }]);
+        const progress = includeConditionalWrites ? jest.fn() : undefined;
+        await new SetupTokenPermissionsUseCase(validation, { inspect }, progress).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [required], includeConditionalWrites,
+        });
+        expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'fixture', [required], progress, undefined, includeConditionalWrites);
+    });
+    it('forwards live progress only after identity validation and preserves the selected Project context', async () => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const progress = jest.fn();
+        const inspect = jest.fn(async (_owner: string, _repository: string, _token: string,
+            _requirements: readonly SetupTokenPermissionRequirement[], emit?: (progress: SetupTokenPermissionProgress) => void) => {
+            emit?.({ role: 'setup', requirementId: required.id, phase: 'checking' });
+            return [{ ...required, status: 'verified' as const, message: 'Read succeeded.' }];
+        });
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect }, progress).inspect({
+            role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [required], selectedProjectNumbers: '7',
+        });
+        expect(report.ready).toBe(true);
+        expect(progress).toHaveBeenCalledWith({ role: 'setup', requirementId: required.id, phase: 'checking' });
+        expect(inspect).toHaveBeenCalledWith('owner', 'repo', 'fixture', [required], progress, '7');
+        expect(validation.validateSetupPat.mock.invocationCallOrder[0]).toBeLessThan(inspect.mock.invocationCallOrder[0]);
+    });
+    it.each([false, true])('preserves a Secret collision as a blocking incident even on a conditional row (duplicate: %s)', async duplicate => {
+        const requirement = { ...conditional, permission: 'Secrets', probe: 'secrets' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const evidence = { ...requirement, status: 'unverifiable', cleanupPending: true, incident: 'secret-collision', message: 'Collision reported.' };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue(
+            duplicate ? [evidence, evidence] : [evidence],
+        ) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ cleanupPending: true, incident: 'secret-collision' });
+    });
+
+    it.each(['duplicate', 'contradictory'] as const)('retains cleanup facts when %s write evidence is rejected', async kind => {
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const evidence = { ...conditional, status: kind === 'duplicate' ? 'unverifiable' : 'verified',
+            cleanupPending: true, message: 'Cleanup pending.' };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue(
+            kind === 'duplicate' ? [evidence, evidence] : [evidence],
+        ) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [conditional] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', cleanupPending: true });
+    });
+
+    it('rejects public-read provenance for the protected Administration probe', async () => {
+        const requirement = { ...required, permission: 'Administration', probe: 'administration' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requirement, status: 'available', publicReadEvidence: 'public-repository', operationallyAvailable: true, message: 'Forged usability.' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0].operationallyAvailable).toBeUndefined();
+    });
+    it('retains a matching collision incident when contradictory evidence omits its cleanup flag', async () => {
+        const requirement = { ...conditional, permission: 'Secrets', probe: 'secrets' as const };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([
+            { ...requirement, status: 'verified', incident: 'secret-collision', message: 'Contradictory success.' },
+        ]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report.ready).toBe(false);
+        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', cleanupPending: true, incident: 'secret-collision' });
+    });
     it('keeps report order even when the query returns reversed checks', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok', account: 'operator' }) };
         const query = { inspect: jest.fn().mockResolvedValue([
@@ -110,7 +228,7 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0]).toMatchObject({ status: 'unverifiable' });
     });
 
-    it('downgrades claimed verified write evidence to the explicit acknowledgement path', async () => {
+    it('downgrades claimed verified write evidence without a completed transaction', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const report = await new SetupTokenPermissionsUseCase(validation, {
             inspect: jest.fn().mockResolvedValue([{
@@ -120,13 +238,25 @@ describe('SetupTokenPermissionsUseCase', () => {
             role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [requiredWrite],
         });
 
-        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
         expect(report.checks[0]).toEqual(expect.objectContaining({
             ...requiredWrite,
             status: 'unverifiable',
-            message: 'Write access cannot be verified with a safe read-only permission probe.',
+            message: 'Write access requires a completed temporary create/read/delete check.',
         }));
         expect(report.checks[0]).not.toHaveProperty('operationallyAvailable');
+    });
+
+    it.each(['setup', 'workflow'] as const)('accepts a matching completed %s PAT write transaction', async role => {
+        const requirement = { ...requiredWrite, id: `${role}.repository.actions-required`, role };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, {
+            inspect: jest.fn().mockResolvedValue([{
+                ...requirement, status: 'verified', writeProof: 'transaction', message: 'create/read/delete passed',
+            }]),
+        }).inspect({ role, owner: 'owner', repository: 'repo', token: 'fixture', requirements: [requirement] });
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({ status: 'verified', writeProof: 'transaction' });
     });
 
     it('accepts exactly matching verified organization-read evidence', async () => {
@@ -203,7 +333,7 @@ describe('SetupTokenPermissionsUseCase', () => {
         expect(report.checks[0]).toEqual(exact);
     });
 
-    it('requires explicit confirmation when only required write evidence is unverifiable', async () => {
+    it('blocks when only required write evidence is unverifiable', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([
             { ...required, status: 'verified', message: 'verified' },
@@ -213,10 +343,10 @@ describe('SetupTokenPermissionsUseCase', () => {
             role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required, requiredWrite],
         });
 
-        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
     });
 
-    it('never marks a write-only required plan ready without explicit acknowledgement', async () => {
+    it('never marks a write-only required plan ready without transaction evidence', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([
             { ...requiredWrite, status: 'unverifiable', message: 'no safe write proof' },
@@ -225,20 +355,68 @@ describe('SetupTokenPermissionsUseCase', () => {
             role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [requiredWrite],
         });
 
-        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
     });
 
     it('accepts a usable public repository read without misreporting its PAT permission as verified', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([{
-            ...required, status: 'unverifiable', operationallyAvailable: true,
+            ...required, status: 'available', operationallyAvailable: true,
             publicReadEvidence: 'public-repository', message: 'public read usable',
         }]) };
         const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({
             role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required],
         });
         expect(report).toMatchObject({ ready: true, confirmationRequired: false, identityStatus: 'valid' });
-        expect(report.checks[0]).toMatchObject({ status: 'unverifiable', operationallyAvailable: true });
+        expect(report.checks[0]).toMatchObject({ status: 'available', operationallyAvailable: true });
+    });
+
+    it('accepts an empty successful organization Projects read as available', async () => {
+        const projects: SetupTokenPermissionRequirement = {
+            ...required, id: 'setup.organization.projects', scope: 'organization',
+            permission: 'Projects', probe: 'projects',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
+            ...projects, status: 'available', operationallyAvailable: true,
+            publicReadEvidence: 'public-organization-projects', message: 'public Projects list usable',
+        }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [projects] });
+        expect(report).toMatchObject({ ready: true, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({ status: 'available', publicReadEvidence: 'public-organization-projects' });
+        expect(report.checks[0].operationallyAvailable).toBe(true);
+    });
+
+    it.each(['verified', 'unverifiable'] as const)(
+        'rejects a %s organization Projects marker on an unrelated permission', async status => {
+            const other = { ...required, id: 'setup.organization.secrets', scope: 'organization' as const,
+                permission: 'Secrets', probe: 'secrets' as const };
+            const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+            const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
+                ...other, status, operationallyAvailable: true,
+                publicReadEvidence: 'public-organization-projects', message: 'forged public marker',
+            }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [other] });
+            expect(report.ready).toBe(false);
+            expect(report.checks[0]).toMatchObject({
+                status: 'unverifiable', message: 'No safe permission evidence was returned for this requirement.',
+            });
+            expect(report.checks[0].operationallyAvailable).toBeUndefined();
+        });
+
+    it('rejects a verified result that carries only public organization Projects evidence', async () => {
+        const projects: SetupTokenPermissionRequirement = {
+            ...required, id: 'setup.organization.projects', scope: 'organization',
+            permission: 'Projects', probe: 'projects',
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
+        const report = await new SetupTokenPermissionsUseCase(validation, { inspect: jest.fn().mockResolvedValue([{
+            ...projects, status: 'verified', publicReadEvidence: 'public-organization-projects',
+            message: 'forged verified Projects read',
+        }]) }).inspect({ role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [projects] });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
+        expect(report.checks[0]).toMatchObject({
+            status: 'unverifiable', message: 'No safe permission evidence was returned for this requirement.',
+        });
+        expect(report.checks[0].publicReadEvidence).toBeUndefined();
     });
 
     it('does not trust an operational flag without public-read provenance', async () => {
@@ -294,14 +472,14 @@ describe('SetupTokenPermissionsUseCase', () => {
     it('allows write acknowledgement after a usable public read but never promotes the write', async () => {
         const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }) };
         const query = { inspect: jest.fn().mockResolvedValue([
-            { ...required, status: 'unverifiable', operationallyAvailable: true,
+            { ...required, status: 'available', operationallyAvailable: true,
                 publicReadEvidence: 'public-repository', message: 'public read usable' },
             { ...requiredWrite, status: 'unverifiable', message: 'write unproven' },
         ]) };
         const report = await new SetupTokenPermissionsUseCase(validation, query).inspect({
             role: 'setup', owner: 'owner', repository: 'repo', token: 'secret', requirements: [required, requiredWrite],
         });
-        expect(report).toMatchObject({ ready: false, confirmationRequired: true });
+        expect(report).toMatchObject({ ready: false, confirmationRequired: false });
     });
 
     it.each(['organization', 'repository'] as const)('rejects a forged usable %s write/read scope', scope => {

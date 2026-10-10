@@ -1,0 +1,135 @@
+# Local setup assistant acceptance review
+
+The [350-case acceptance ledger](../../specs/local-web-setup-assistant-acceptance.json)
+is the source of truth for case status. Automated tests establish structural
+and behavioral facts. The 40 human rows remain **open** until a reviewer
+records the environment and observation for each row. Do not infer a visual,
+linguistic, assistive-technology, or operating-system pass from Jest, SSR HTML,
+or a screenshot alone.
+
+## Safe fixture setup
+
+1. Build the package with `pnpm run build` in a disposable checkout. Do not
+   run `copilot setup` against this or any other real repository for review.
+2. Run `node scripts/serve-web-setup-review.cjs pending`. The script serves
+   the compiled browser UI and canned redacted views on `127.0.0.1`. It has
+   no GitHub, filesystem mutation, PAT, Issue, or Action adapter. Open the
+   printed local URL and enter the printed **fixture** pairing code.
+3. Repeat with `action-required`, `blocked`, `partial`, `completed`,
+   `cancelled`, and `expired`. Stop the previous fixture before switching.
+   The fixture rejects answer and close commands; use it to review visible
+   content, navigation, focus and contrast, not to claim a successful setup.
+4. Keep the browser console and network panel available. Record any missing
+   static asset or unintended external request. The GitHub PAT settings link
+   is informational; do not follow it to create a token for this review.
+
+For setup layout regressions, the same fixture supports `plan`, `checks`,
+`question`, `credential`, and `blocked-permissions`. `plan` has 29 files, 15
+workflows and 68 Variables: open each inventory and verify that every item
+appears in page flow, with no internal scrolling. Check that warnings remain
+visible, decision rows align, and the page has consistent spacing. `checks`
+shows 12 selectable CI cards without a fixed-height scroller. `question` has no
+Previous button; Continue must remain on the right. `credential` uses the same
+navigation row. `blocked-permissions` explains the Workflows prerequisite for
+Actions separately from the independently denied Workflows grant. Review each
+at desktop and narrow widths in both themes; these fixtures contain no PAT and
+reject all setup commands.
+
+The `blocked-permissions` fixture also retains the corrected guided PAT link
+after the result replaces transient messages. Verify that the additional
+Workflows grant, repository selection and fresh-run instructions are visible
+in English, Spanish, French and Portuguese, with consistent spacing and no
+internal scroller. Inspect the link target without following it: it must point
+to GitHub's PAT creation form with `workflows=write`. The fixture cannot prove
+that a real token has that grant or that a live Actions dispatch succeeds.
+
+## Required observations
+
+The `bot-credential` fixture displays the selected account warning immediately
+above **Create bot PAT as @fixture-bot**. Check that the account and private-window
+guidance remain readable at narrow widths and that the link's accessible
+description references the warning. `bot-account-mismatch` shows both accounts,
+the no-Secret-write and retained-plan facts, and explicit re-entry/stop choices.
+Review both states in all four locales and themes. These read-only fixtures
+cannot exercise recovery; the application/bridge integration tests use fake
+identities to verify explicit correction, cancellation, stale-answer rejection
+and token redaction without creating a PAT or applying a setup plan.
+
+The `bot-scope-conflict` and `bot-scope-conflict-unavailable` fixtures show the
+manual deletion/recheck, repository scope and stop actions, plus the exact
+repository Actions Secrets settings link. Check all four locales, 320 px and
+both themes without following the link or deleting a Secret. `bot-credential`
+and `plan` also disclose an existing organization PAT replacement and its shared
+impact. Verify the destination, preservation exception and validation boundary
+are readable. These read-only fixtures cannot prove removal; fake-port tests
+exercise fresh reads, still-present/failed states, stale clicks and cancellation.
+
+For each of the seven states above, review light and dark modes (`U041–U054`).
+At 320 px, tablet width, desktop width, and 200% browser zoom, check that the
+status, completed facts, next action, affected resource and inspection action
+remain visible without horizontal page scrolling. Verify the focus indicator,
+contrast, reduced-motion behavior, headings and landmarks. A screenshot may
+supplement the recorded observation but cannot replace keyboard or screen
+reader inspection.
+
+For each of English, Spanish, French and Portuguese, review keyboard order,
+screen reader announcements, 200% zoom, 320 px and tablet layouts (`U075–U094`).
+Check the pairing field, action-required prompt, progress changes, error text,
+resource receipt and PAT cleanup link. Use a named screen reader and browser;
+record actual announcements and any field whose label or correction is unclear.
+English is the CLI language. Review the CLI's English prompts and result
+wording separately. Review the meaning and consistency of the four web
+languages with a fluent reviewer; automated key parity is not linguistic
+approval. No other web language is in scope.
+
+On macOS, Linux and Windows, inspect packaged `--web` launch and browser-open
+fallback (`I037–I042`) in an isolated fixture repository with fake ports and
+no network credentials. Record the package version, OS, Node version,
+browser, launcher output, URL, pairing behavior and whether fallback
+instructions are usable. `pnpm run smoke:npm-package` exercises the extracted
+CLI against a disposable Git fixture with a simulated browser-open failure,
+loopback page and asset requests, pairing, cancellation, and a clean-checkout
+assertion. The CI fixture jobs run it on each available platform. It does not
+replace desktop observations. Do not use this project or a live GitHub
+repository as a setup target.
+
+Controlled GitHub account switching, 2FA on GitHub, wrong-account handling,
+and PAT deletion require a separate authorized human review with test accounts
+outside this repository. They remain open here. Never create a real PAT, test
+Issue, or Action run to fill a ledger row in this task.
+
+## Evidence record
+
+For each human row, record:
+
+| Field | Required content |
+|---|---|
+| Case ID | Exact `U` or `I` ID from the ledger |
+| Reviewer and date | Person who performed the observation and local date |
+| Environment | OS/version, browser/version, viewport, zoom, palette, locale, screen reader/version when relevant |
+| Fixture | One of the seven states and the local build/commit ID |
+| Observation | What was read, announced, focused or blocked; include the expected next action |
+| Result | Pass or fail with a link to a redacted screenshot/recording if useful |
+
+Update the ledger row only after direct observation. A pass needs all fields;
+leave it open when a platform, assistive technology or language reviewer is
+unavailable. Run `pnpm run validate:setup-acceptance` after editing it.
+
+## Configuration panel review
+
+The management tests use fake ports and bounded filesystem fixtures. They cover
+unconfigured/detected/incomplete states, source precedence, unknown expressions,
+read-only access, organization impact, preview cancellation, controller takeover,
+concurrent drift, single-variable writes, uncertain read-back, repeated edits
+and restoring the original value. These cases supplement the existing 350-case
+ledger rather than changing its human review status.
+
+For authorized live review, record the selected scope, baseline value, changed
+value, restored value, remote read-back, unchanged workflow hashes and absence
+of pending permission journals. Never persist PATs in review evidence. Review
+both themes, narrow layouts, keyboard labels, focus and status messages. A live
+macOS browser pass does not establish Windows/Linux or screen-reader approval.
+
+Archive and inspect generated workflows, forms and collaborator guidance after
+each setup iteration, then discard those generated changes. Never commit the
+dogfooding output over this repository's checked-in configuration baseline.

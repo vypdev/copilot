@@ -19,41 +19,40 @@ permissions:
 jobs:
   code-health:
     name: RepoWise code health
-    runs-on: [self-hosted, coolify]
+    # A merge group can contain fork code without exposing the originating PR here.
+    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
     timeout-minutes: 30
+    env:
+      REPOWISE_VENV_NAME: repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health
+      REPOWISE_REPORT_NAME: repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health
     steps:
+      - name: Verify Ubuntu runner
+        shell: bash
+        run: . /etc/os-release && test "$ID" = ubuntu
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Select system Python
+      - name: Set up Python 3.12 for RepoWise
         id: python
-        shell: bash
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Verify isolated Python toolchain
+        env:
+          PYTHON_BIN: ${{ steps.python.outputs.python-path }}
         run: |
-          set -euo pipefail
-          python_bin=""
-          for candidate in python3.11 python3 python; do
-            if command -v "$candidate" >/dev/null 2>&1 && \
-              "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
-              python_bin="$(command -v "$candidate")"
-              break
-            fi
-          done
-          if [[ -z "$python_bin" ]]; then
-            echo "::error::RepoWise requires Python 3.11 or newer on the self-hosted runner."
-            exit 1
-          fi
-          "$python_bin" -c 'import sys; print(f"Using Python {sys.version.split()[0]}")'
-          echo "path=$python_bin" >> "$GITHUB_OUTPUT"
+          "$PYTHON_BIN" -c 'import sys; print(f"Using Python {sys.version.split()[0]}")'
+          "$PYTHON_BIN" -m ensurepip --version
       - name: Create isolated RepoWise environment
         env:
-          PYTHON_BIN: "${{ steps.python.outputs.path }}"
+          PYTHON_BIN: ${{ steps.python.outputs.python-path }}
         run: |
-          "$PYTHON_BIN" -m venv "$RUNNER_TEMP/repowise-venv"
+          "$PYTHON_BIN" -m venv "$RUNNER_TEMP/$REPOWISE_VENV_NAME"
       - name: Install RepoWise
         run: |
-          "$RUNNER_TEMP/repowise-venv/bin/python" -m pip install \
+          "$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/python" -m pip install \
             --disable-pip-version-check \
             --no-cache-dir \
             'repowise==0.45.0'
@@ -62,8 +61,8 @@ jobs:
           REPOWISE_SKIP_EDITOR_SETUP: '1'
         run: |
           set -euo pipefail
-          report_dir="$RUNNER_TEMP/repowise-report"
-          repowise_bin="$RUNNER_TEMP/repowise-venv/bin/repowise"
+          report_dir="$RUNNER_TEMP/$REPOWISE_REPORT_NAME"
+          repowise_bin="$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/repowise"
           mkdir -p "$report_dir"
           cleanup() {
             rm -rf .repowise .mcp.json
@@ -76,20 +75,38 @@ jobs:
             --no-onboarding --no-distill-hook --no-workspace . > "$report_dir/index.log"
           "$repowise_bin" health --no-workspace --refactoring-targets --format md . | tee "$report_dir/health.md"
           "$repowise_bin" health --no-workspace --refactoring-targets --format json . > "$report_dir/health.json"
-          "$repowise_bin" dead-code --safe-only --no-workspace --format json . > "$report_dir/dead-code.json" || true
-          "$repowise_bin" security scan --history --path . --format json > "$report_dir/security.json" || true
+          advisory_scan() {
+            local name="$1"
+            shift
+            if (ulimit -v 2097152; timeout --kill-after=10s 90s "$@") > "$report_dir/$name.json"; then
+              printf '%s: complete\n' "$name" >> "$report_dir/advisory-status.txt"
+            else
+              local status="$?"
+              rm -f "$report_dir/$name.json"
+              printf '%s: incomplete (exit %s)\n' "$name" "$status" >> "$report_dir/advisory-status.txt"
+              echo "::warning::RepoWise $name advisory scan incomplete (exit $status); completed health reports remain available."
+            fi
+          }
+          advisory_scan dead-code "$repowise_bin" dead-code --safe-only --no-workspace --format json .
+          advisory_scan security "$repowise_bin" security scan --history --path . --format json
           {
             echo '## RepoWise code health'
             echo
             echo 'Advisory reports are retained as workflow artifacts for this commit.'
             echo
             sed -n '1,100p' "$report_dir/health.md"
+            echo
+            echo '### Advisory scan status'
+            cat "$report_dir/advisory-status.txt"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload RepoWise reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v6
         with:
           name: repowise-code-health
-          path: ${{ runner.temp }}/repowise-report/
+          path: ${{ runner.temp }}/${{ env.REPOWISE_REPORT_NAME }}/
           if-no-files-found: warn
           retention-days: 14
+      - name: Remove RepoWise temporary files
+        if: ${{ always() }}
+        run: rm -rf -- "$RUNNER_TEMP/$REPOWISE_VENV_NAME" "$RUNNER_TEMP/$REPOWISE_REPORT_NAME"

@@ -1,5 +1,9 @@
 name: Task - Hotfix
 
+defaults:
+  run:
+    shell: bash
+
 on:
   workflow_dispatch:
     inputs:
@@ -92,6 +96,7 @@ jobs:
         with:
           version: 10.12.4
           standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Update version
@@ -129,6 +134,7 @@ jobs:
         with:
           version: 10.12.4
           standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24.x'

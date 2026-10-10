@@ -16,6 +16,7 @@ import { buildLocalActionExecution } from './local_action_execution';
 import { requireRepositoryCoordinates } from './repository_context';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 import type { Result } from '../data/model/result';
+import type { SetupOperationEffect } from '../domain/setup';
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { assertLocalSingleActionAllowed } from '../application/policies/local_single_action_policy';
@@ -23,7 +24,7 @@ import { resolvePublicationCatalog } from '../application/policies/publication_m
 
 export async function runLocalAction(
     additionalParams: Record<string, unknown>,
-    options: { render?: boolean } = {},
+    options: { render?: boolean; onSetupProgress?: (effect: SetupOperationEffect) => void } = {},
 ): Promise<Result[]> {
     return runAtApplicationErrorBoundary(async () => {
         const requestedAction = additionalParams[INPUT_KEYS.SINGLE_ACTION];
@@ -46,6 +47,8 @@ export async function runLocalAction(
                 repository: execution.repo,
                 token: execution.tokens.token,
             }),
+            undefined,
+            options.onSetupProgress,
         );
 
         if (options.render !== false) {

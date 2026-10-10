@@ -7,9 +7,13 @@ export function validateAgentExecutableSelection(configuration: Pick<AgentConfig
     if (!selected) return;
     const expected = AGENT_EXECUTABLE_BASENAMES[configuration.provider];
     const isExpectedBareName = selected === expected;
-    const isAbsolutePath = selected.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(selected);
+    const isWindowsAbsolutePath = /^[a-zA-Z]:[\\/]/.test(selected);
+    const isAbsolutePath = selected.startsWith('/') || isWindowsAbsolutePath;
     const selectedBasename = selected.split(/[\\/]/).at(-1);
-    const isExpectedAbsolutePath = isAbsolutePath && selectedBasename === expected;
+    const isExpectedAbsolutePath = isAbsolutePath && (
+        selectedBasename === expected
+        || (isWindowsAbsolutePath && selectedBasename?.toLowerCase() === `${expected}.exe`)
+    );
     if (!isExpectedBareName && !isExpectedAbsolutePath) {
         throw new ApplicationError(
             'agent.policy-rejected',

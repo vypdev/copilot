@@ -2,8 +2,19 @@ export type SetupTokenRole = 'setup' | 'workflow';
 export type SetupTokenPermissionScope = 'repository' | 'organization';
 export type SetupTokenPermissionLevel = 'read' | 'write';
 export type SetupTokenPermissionApplicability = 'required' | 'conditional';
-export type SetupTokenPermissionStatus = 'verified' | 'missing' | 'unverifiable';
-export type SetupTokenPublicReadEvidence = 'public-repository';
+export type SetupTokenPermissionStatus = 'verified' | 'available' | 'missing' | 'unverifiable';
+export type SetupTokenPermissionProbePhase = 'checking' | 'creating' | 'reading' | 'deleting' | 'verified' | 'failed' | 'skipped';
+export type SetupActionsProbePrerequisite = 'contents-write' | 'contents-workflows-write' | 'dispatch-workflow';
+export type SetupTokenPermissionProgressDetail = 'unavailable' | 'cleanup-pending' | 'secret-collision' | 'unsupported' | SetupActionsProbePrerequisite | `http-${number}` | `issue-closed-${number}` | `issue-unresolved-${number}`;
+
+/** Secret-free, bounded progress for one permission. Never contains provider prose. */
+export interface SetupTokenPermissionProgress {
+    readonly role: SetupTokenRole;
+    readonly requirementId: string;
+    readonly phase: SetupTokenPermissionProbePhase;
+    readonly detail?: SetupTokenPermissionProgressDetail;
+}
+export type SetupTokenPublicReadEvidence = 'public-repository' | 'public-organization-projects';
 
 export type SetupTokenPermissionProbe =
     | 'metadata'
@@ -40,6 +51,14 @@ export interface SetupTokenPermissionCheck extends SetupTokenPermissionRequireme
     operationallyAvailable?: true;
     /** Adapter-derived public-read provenance, never a PAT permission claim. */
     publicReadEvidence?: SetupTokenPublicReadEvidence;
+    /** Set only after a matching temporary create/read/delete cycle completed. */
+    writeProof?: 'transaction';
+    /** A disposable resource may remain or a concurrent Secret may have changed. */
+    cleanupPending?: true;
+    /** GitHub's upsert-only Secret endpoint reported an existing object. */
+    incident?: 'secret-collision';
+    /** An Actions check stopped before dispatch; this is not evidence against Actions Write. */
+    prerequisite?: SetupActionsProbePrerequisite;
 }
 
 export interface SetupTokenPermissionReport {
@@ -48,8 +67,8 @@ export interface SetupTokenPermissionReport {
     identityStatus: 'valid' | 'invalid' | 'unverifiable';
     identityMessage: string;
     checks: readonly SetupTokenPermissionCheck[];
-    /** True only when every required row is a verified or positively usable read. */
+    /** All required reads are usable, writes have transaction proof, and no cleanup or incident remains. */
     ready: boolean;
-    /** True only when required reads are verified/usable and writes need explicit acknowledgement. */
+    /** Compatibility field; permission assertions cannot replace transaction proof and this stays false. */
     confirmationRequired: boolean;
 }

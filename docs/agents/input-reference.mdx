@@ -27,7 +27,6 @@ The isolated PR approval observer uses `pr-approval-observer` (`false` by defaul
 | --- | --- | --- |
 | `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Comma-separated provider allowlist |
 | `AGENT_ALLOWED_MODELS` | `openai/gpt-6-luna` | Exact qualified-model allowlist |
-| `AGENT_PROVISIONING` | `auto` | `auto`, `always`, or `disabled`; only Copilot-owned installations are manifest-pinned |
 
 Allowlists authorize a selection; they do not select runtime, model, executable, or credential.
 
@@ -41,19 +40,15 @@ Allowlists authorize a selection; they do not select runtime, model, executable,
 
 Values must be supplied through the runner's secret/environment mechanism and scoped to the action step. Never put them in `with`, prompts, repository files, or logs.
 
-## Reviewed runtime and pinned installation manifest
+## Reviewed runtime identities and official installation sources
 
-| Runtime | Executable | Reviewed identity / pinned installation |
+| Runtime | Executable | Reviewed smoke identity / installer |
 | --- | --- | --- |
-| OpenCode | `opencode` | `1.18.3` / `opencode-ai@1.18.3` |
-| Codex | `codex` | `codex-cli 0.156.1` / `@openai/codex@0.156.1` |
-| Cursor | `agent` | `2026.09.10-fd3934a` / no automatic installer |
+| OpenCode | `opencode` | `1.18.3` / official standalone installer or release archive |
+| Codex | `codex` | `codex-cli 0.156.1` / official OpenAI standalone installer |
+| Cursor | `agent` | `2026.09.10-fd3934a` / official Cursor installer or archive |
 
-An available operator-owned runtime is recorded and never replaced merely
-because its version differs from the reviewed baseline. Missing default Codex
-and OpenCode executables may be installed only from their exact pinned packages,
-and the new installation is verified exactly. Cursor must already be installed.
-Repository variables cannot override the installation manifest.
+An available selected CLI is reused without exact-version matching. A missing default CLI is installed only from its provider's official source, and the new executable must report a non-empty version. An explicitly selected executable is never installed or replaced. The Action does not use a repository Variable to select a provisioning mode or version.
 
 ## Configuration ownership
 

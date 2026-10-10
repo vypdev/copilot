@@ -13,9 +13,10 @@ import { SetupCredentialPromptAdapter, SetupTerminalCancelledError } from '../se
 export function registerDoctorCommand(program: Command): void {
     program
         .command('doctor')
-        .description('Verify Copilot workflows, Variables, Secrets, and setup PAT without changing repository configuration')
+        .description('Verify Copilot resources; use --read-only to avoid dispatching credential-health Actions')
         .option('-t, --token <token>', 'Setup PAT (or PERSONAL_ACCESS_TOKEN from the environment)')
         .option('--config <path>', 'YAML or JSON setup configuration used as the expected contract')
+        .option('--read-only', 'Inspect metadata and installed resources without dispatching credential-health Actions', false)
         .option('--non-interactive', 'Do not prompt; use --token or PERSONAL_ACCESS_TOKEN', false)
         .action(async options => {
             const terminal = options.nonInteractive ? undefined : createInteractiveTerminalDriver();
@@ -39,6 +40,7 @@ export function registerDoctorCommand(program: Command): void {
                     repository: gitInfo.repo,
                     setupToken: token,
                     configuration: expected,
+                    readOnly: Boolean(options.readOnly),
                 });
                 new SetupDoctorPresenter(diagnosis.catalog).present(diagnosis.report);
                 if (!diagnosis.report.healthy) process.exitCode = 1;

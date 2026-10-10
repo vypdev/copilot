@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const yaml = require('js-yaml');
+const { hasValidMdxFrontmatter } = require('./mdx-frontmatter.cjs');
 
 const root = path.resolve(__dirname, '..');
 const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
@@ -59,7 +60,7 @@ for (const value of [
 ]) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }
-for (const value of ['model_reasoning_effort', '--variant', 'AGENT_PROVISIONING']) {
+for (const value of ['model_reasoning_effort', '--variant', 'official standalone']) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }
 
@@ -86,7 +87,7 @@ for (const file of requiredPages) {
   const absolute = path.join(docsRoot, file);
   if (!fs.existsSync(absolute)) throw new Error(`Missing required documentation page: ${file}`);
   const content = fs.readFileSync(absolute, 'utf8');
-  if (!content.startsWith('---\n') || !content.includes('\ntitle:')) {
+  if (!hasValidMdxFrontmatter(content)) {
     throw new Error(`Invalid MDX frontmatter: ${file}`);
   }
 }
@@ -112,7 +113,7 @@ for (const [relative, role] of Object.entries(generatedArtifactPaths)) {
   const hashedContent = role === 'pointer'
     ? content.match(/<!-- copilot:agent-guidance:start -->[\s\S]*?<!-- copilot:agent-guidance:end -->/)?.[0]
     : content;
-  if (!hashedContent || createHash('sha256').update(hashedContent, 'utf8').digest('hex') !== record.sha256) {
+  if (!hashedContent || createHash('sha256').update(hashedContent.replace(/\r\n/g, '\n'), 'utf8').digest('hex') !== record.sha256) {
     throw new Error(`Dogfood ${role} content does not match its manifest hash: ${relative}.`);
   }
 }
@@ -156,7 +157,7 @@ const internalGuidanceImports = fs.readdirSync(path.join(root, 'src'), { recursi
   .filter(file => file.endsWith('.ts')
     && !file.includes('__tests__')
     && !file.includes('repository_agent_guidance')
-    && file !== 'application/policies/setup_configuration_plan.ts')
+    && file.replaceAll('\\', '/') !== 'application/policies/setup_configuration_plan.ts')
   .filter(file => {
     const content = fs.readFileSync(path.join(root, 'src', file), 'utf8');
     return content.includes('.copilot/AGENT_GUIDE.md') || content.includes('copilot-repository-workflow');

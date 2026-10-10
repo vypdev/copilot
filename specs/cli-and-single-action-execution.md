@@ -60,7 +60,9 @@ unmaintainable interfaces.
   validated inputs, semantic results, explicit internal operation boundary, and no legacy aliases.
 - Known debt and limitations: command output schemas are not uniform across all
   older commands; some local operations still require GitHub PAT/agent environment;
-  no shell-completion contract exists; live Windows runner support is not claimed.
+  no shell-completion contract exists. Windows setup fixtures and Git Bash service
+  health are observed, but Windows agent provisioning/execution is not yet proven;
+  PR #403 fails during Codex provisioning and issue #404 tracks the runtime gate.
 - Unknown rationale: historic command names are current compatibility, not proof
   of ideal information architecture.
 - Proposed improvements: uniform versioned JSON output or shell completion needs a separate spec.

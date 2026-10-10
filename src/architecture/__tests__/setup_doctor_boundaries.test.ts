@@ -36,10 +36,20 @@ describe('setup and doctor architecture boundaries', () => {
       'src/application/policies/merge_queue_message_catalog.ts',
       'src/application/policies/setup_doctor_message_catalog.ts',
       'src/application/policies/setup_doctor_report_policy.ts',
+      'src/application/policies/setup_journey_policy.ts',
+      'src/application/policies/setup_permission_summary_policy.ts',
     ]) {
       const source = read(file);
       expect(source).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|octokit|Execution/);
     }
+  });
+
+  it('keeps setup journey decisions in the application and terminal rendering in the CLI', () => {
+    const journey = read('src/application/usecases/setup/setup_journey_use_case.ts');
+    const renderer = read('src/cli/setup_journey_presenter.ts');
+    expect(journey).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|console\.|process\./u);
+    expect(renderer).toContain('renderBox(');
+    expect(renderer).not.toMatch(/buildSetupPatCreationUrl|buildWorkflowPatPermissionRequirements/u);
   });
 
   it('resolves one doctor catalog and reuses it through readiness and presentation', () => {
@@ -66,17 +76,34 @@ describe('setup and doctor architecture boundaries', () => {
     expect(sources).not.toMatch(/producer\.reason|problem\.message|result\.message|check\.message/u);
   });
 
-  it('keeps PAT permission decisions pure and permission inspection read-only', () => {
+  it('keeps PAT decisions pure and isolates approved transactions behind a semantic inspection port', () => {
     const policy = read('src/application/policies/setup_token_permission_policy.ts');
     const ports = read('src/application/ports/setup_token_permission_ports.ts');
     const adapter = read('src/infrastructure/setup_token_permission_query_adapter.ts');
-    const queryPort = ports.match(/export interface SetupTokenPermissionQueryPort \{([\s\S]*?)\n\}/u)?.[1] ?? '';
+    const queryPort = ports.match(/export interface SetupTokenPermissionInspectionPort \{([\s\S]*?)\n\}/u)?.[1] ?? '';
 
     expect(policy).not.toMatch(/from ['"]node:|\/cli\/|\/infrastructure\/|octokit|fetch\(/u);
     expect(queryPort).toContain('inspect(');
     expect(queryPort).not.toMatch(/\b(?:create|update|delete|upsert|dispatch|write)\w*\s*\(/iu);
     expect(adapter).toContain("method: 'GET'");
     expect(adapter).not.toMatch(/method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/u);
+    expect(adapter).toContain('probeDisposableResource(');
+    expect(adapter).toContain("requirement.applicability === 'conditional'");
+  });
+
+  it('keeps PAT infrastructure modules bounded and permission policies provider-independent', () => {
+    for (const file of [
+      'setup_token_permission_query_adapter', 'setup_permission_read_probe',
+      'setup_permission_read_evidence', 'setup_permission_projects_read',
+      'setup_permission_probe_journal', 'setup_permission_resource_probes',
+      'setup_permission_workflow_cleanup', 'setup_permission_project_cleanup',
+      'setup_permission_actions_probe',
+    ]) {
+      expect(read(`src/infrastructure/${file}.ts`).split('\n').length).toBeLessThanOrEqual(300);
+    }
+    for (const file of ['setup_token_permission_policy', 'setup_token_permission_evidence_policy']) {
+      expect(read(`src/application/policies/${file}.ts`)).not.toMatch(/from ['"]node:|\/infrastructure\/|fetch\(|process\./u);
+    }
   });
 });
 

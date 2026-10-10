@@ -3,7 +3,7 @@
 - Status: Implemented — automated local gates complete; controlled live GitHub UX evidence remains pending
 - Date: 2026-09-16
 - Catalog capability ID: `configurable-issue-workflows`
-- Last verified: 2026-09-16
+- Last verified: 2026-09-29
 - Owners: Copilot maintainers
 - Scope: one selectable issue-workflow catalog that drives setup assets, runtime admission, branch behavior, release dependencies, diagnosis, and user guidance
 - Related issues/PRs: none yet; related SDDs are listed in section 20
@@ -281,7 +281,12 @@ domain changes.
 2. When issue handling is enabled, the terminal presents the multi-select. Up
    and Down move, Space toggles, and Enter confirms. Selecting `All` checks every
    kind; toggling it while all are checked clears them. A child toggle
-   recomputes the `All` state.
+   recomputes the `All` state. Enter without changing the default confirms all
+   kinds. After explicitly clearing every kind, Enter submits the `none`
+   sentinel, not an empty answer that would restore the default. If issue
+   automation remains enabled, validation explains that at least one kind is
+   required and no setup changes start; disabling issue automation permits an
+   empty selection.
 3. The catalog expands the selection into Issue Forms, effective configured
    labels, native Issue Type projections, required workflow files, branch roles,
    body schemas, runtime routes, and documentation/guidance facts.
@@ -558,6 +563,10 @@ Runtime profile: COPILOT_ISSUE_WORKFLOW_PROFILE (schema 1)
 
 TTY rendering MUST remain usable without color and at 80 columns. Cursor state
 uses both `❯` and text/checkbox state; color is never the only indicator.
+Clearing `All` and pressing Enter must visibly retain the empty selection and
+surface the existing cross-field validation message while issues are enabled;
+an untouched Enter must retain the default selection. The text-input fallback
+accepts `none` for the same explicit empty selection.
 
 ### 9.3 Representative runtime views
 
@@ -731,12 +740,12 @@ rows count only when they assert a distinct decision branch.
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Catalog, profile, configuration, classifier | 26 | seven kinds, aliases, all/empty/unknown/duplicate/schema cases, zero/one/multiple groups, no fallback, cross-field rules |
-| Setup planning, selection, rendering, reconciliation | 24 | Space/Enter/All, fallback input, cancel/EOF, dependencies, effective labels, managed/unmanaged drift, retire/backup, idempotency |
+| Setup planning, selection, rendering, reconciliation | 27 | unchanged Enter/default All, Space clearing All then Enter/explicit none, empty-selection validation, fallback input, cancel/EOF, dependencies, effective labels, managed/unmanaged drift, retire/backup, idempotency |
 | Runtime admission, state, replay, continuation | 32 | passive/explicit matrix, queue/live state, disabled/unmanaged/conflict, body validation, legacy, continuation, durable operations, unlinked PR, zero-count assignment before target validation, deferred members-only lookup for every requested provider task, denied/failing authorization with fail-closed task configuration |
 | Adapters and provider contracts | 12 | Variable, issue snapshot, state, labels, org/no-org Issue Types, permission/rate-limit/error mapping |
 | Workflows, packaging, doctor, architecture | 16 | all workflow inputs, package contents, npm smoke, query-only doctor, mutation reachability, single catalog, parser/form contract |
 | UI, localization, security, integration, migration | 18 | five UI states, no-color/narrow, sanitization, comment budget, no secrets, old config/profile migration, dogfood and rollback |
-| **Total** | **128** | No double counting |
+| **Total** | **131** | No double counting |
 
 The issue-workflow domain and setup/rendering decision policies named by the
 `Configurable issue workflows and repository agent guidance` coverage budget
@@ -771,6 +780,11 @@ validated against setup forms and profile fixtures.
 
 1. Given a fresh interactive setup, when the selector opens, then all seven kinds
    are checked and Space/Enter produces the canonical ordered selection.
+1a. Given the default selection, when the owner presses Enter without toggling,
+    then all seven kinds remain selected. Given the owner toggles `All` off and
+    presses Enter, then the terminal submits explicit `none`, never the default;
+    with issue automation still enabled, setup explains that at least one kind
+    is required before applying changes.
 2. Given release and hotfix are deselected, when setup is confirmed, then their
    forms/workflows/resources are absent or safely retired, the explicit profile
    omits them, and all other selected forms remain.
@@ -823,7 +837,7 @@ validated against setup forms and profile fixtures.
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
 | single seven-kind catalog | domain catalog | catalog completeness and uniqueness tests | configurable workflows page |
-| multi-select default All | questionnaire policy + terminal adapter | key-sequence, fallback, cancel tests | setup guide |
+| multi-select default All and explicit empty | questionnaire policy + terminal adapter + validation | unchanged Enter, Space/Enter clear-all, `none` parsing and empty-selection validation, fallback, cancel tests | setup guide and configurable workflows page |
 | deterministic setup expansion | planning/reconciliation use cases | plan, effective-label, drift tests | setup and config pages |
 | optional native Issue Types | capability adapter | org/no-org/permission tests | permissions section |
 | pre-mutation admission | admission use case + composition | zero-reachable-mutation and deferred-authorization integration tests | operator decision tree |

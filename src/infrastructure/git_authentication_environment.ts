@@ -13,7 +13,7 @@ export function buildGitAuthenticationEnvironment(
             Object.entries(environment).filter((entry): entry is [string, string] => entry[1] !== undefined),
         ),
         GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: 'http.extraheader',
+        GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
         GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${authorization}`,
     };
 }

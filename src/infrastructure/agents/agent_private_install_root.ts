@@ -1,0 +1,197 @@
+import { accessSync, chmodSync, constants, lstatSync, mkdtempSync, readlinkSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { makeWindowsRuntimePathPrivate, verifyWindowsAgentExecutableAcl } from './windows_runtime_acl';
+
+const INSTALL_PREFIX = 'copilot-agent-install-';
+
+export type PrivateInstalledAgentFailureReason =
+    | 'invalid-file' | 'unsafe-link' | 'acl-hardening' | 'acl-ancestor' | 'acl-file' | 'acl-inspection' | 'access-denied';
+
+export class PrivateInstalledAgentValidationError extends Error {
+    constructor(readonly reason: PrivateInstalledAgentFailureReason, message: string, cause?: unknown) {
+        super(message);
+        this.name = 'PrivateInstalledAgentValidationError';
+        if (cause !== undefined) Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+
+class TransientWindowsAclTimeout extends Error {
+    constructor() {
+        super('Windows private installation ACL check timed out.');
+    }
+}
+
+/** Keep a failed candidate from preventing a safer profile-local fallback. */
+export function selectPrivateInstallRoot(
+    parents: readonly string[],
+    prepare: (parent: string) => string,
+): string {
+    const tried = new Set<string>();
+    for (const parent of parents) {
+        const key = parent.toLowerCase();
+        if (tried.has(key)) continue;
+        tried.add(key);
+        try {
+            return prepare(parent);
+        } catch {
+            // The candidate is cleaned by prepare before another parent is tried.
+        }
+    }
+    throw new Error('No protected agent installation directory is available.');
+}
+
+export function prepareWindowsInstallRoot(
+    parent: string,
+    verify: (path: string) => void = verifyWindowsAgentExecutableAcl,
+): string {
+    try {
+        return prepareWindowsInstallRootOnce(parent, verify);
+    } catch (error) {
+        // Cold Windows services can time out a read-only ACL query once.
+        // Every other failure remains final for this candidate.
+        if (!(error instanceof TransientWindowsAclTimeout)) throw error;
+        return prepareWindowsInstallRootOnce(parent, verify);
+    }
+}
+
+function prepareWindowsInstallRootOnce(parent: string, verify: (path: string) => void): string {
+    const root = mkdtempSync(join(parent, INSTALL_PREFIX));
+    const probe = join(root, '.acl-probe');
+    let checkingAcl = false;
+    try {
+        chmodSync(root, 0o700);
+        checkingAcl = true;
+        makeWindowsRuntimePathPrivate(root, true);
+        checkingAcl = false;
+        writeFileSync(probe, '', { flag: 'wx' });
+        checkingAcl = true;
+        makeWindowsRuntimePathPrivate(probe, false);
+        verify(probe);
+        checkingAcl = false;
+        rmSync(probe);
+        return root;
+    } catch (error) {
+        rmSync(root, { recursive: true, force: true });
+        if (checkingAcl && error && typeof error === 'object' && 'code' in error && error.code === 'ETIMEDOUT') {
+            throw new TransientWindowsAclTimeout();
+        }
+        throw error;
+    }
+}
+
+export function createPrivateAgentInstallRoot(): string {
+    if (process.platform === 'win32') {
+        return selectPrivateInstallRoot([
+            process.env.RUNNER_TEMP || tmpdir(),
+            join(homedir(), 'AppData', 'Local', 'Temp'),
+        ], prepareWindowsInstallRoot);
+    }
+    const root = mkdtempSync(join(process.env.RUNNER_TEMP || tmpdir(), INSTALL_PREFIX));
+    chmodSync(root, 0o700);
+    return root;
+}
+
+/** This may change ACLs only for a newly installed file contained in our root. */
+export function securePrivateInstalledAgent(root: string, path: string): string {
+    const canonicalRoot = realpathSync(root);
+    const relation = relative(root, path);
+    if (!isWithinPrivateRoot(relation)) throw new PrivateInstalledAgentValidationError(
+        'unsafe-link', 'Official agent installer output escaped its private directory.');
+    const canonicalPath = resolvePrivateInstalledFile(root, canonicalRoot, relation);
+    if (process.platform === 'win32' && lstatSync(path).isSymbolicLink()) {
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
+    }
+    if (process.platform === 'win32') {
+        const directories: string[] = [];
+        let parent = dirname(canonicalPath);
+        while (parent !== canonicalRoot) {
+            const parentRelation = relative(canonicalRoot, parent);
+            if (!parentRelation || parentRelation.startsWith('..') || isAbsolute(parentRelation)) {
+                throw new PrivateInstalledAgentValidationError(
+                    'unsafe-link', 'Official agent installer output escaped its private directory.');
+            }
+            directories.unshift(parent);
+            parent = dirname(parent);
+        }
+        try {
+            for (const directory of directories) makeWindowsRuntimePathPrivate(directory, true);
+            makeWindowsRuntimePathPrivate(canonicalPath, false);
+        } catch (error) {
+            throw new PrivateInstalledAgentValidationError('acl-hardening', 'Could not protect the installed agent ACL.', error);
+        }
+        try {
+            verifyWindowsAgentExecutableAcl(canonicalPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            const reason = message.startsWith('Unsafe Windows executable ancestor ')
+                ? 'acl-ancestor' : /^(?:Unsafe executable ACL owner|Agent executable is writable)/u.test(message)
+                    ? 'acl-file' : 'acl-inspection';
+            throw new PrivateInstalledAgentValidationError(reason, 'Could not verify the installed agent ACL.', error);
+        }
+    }
+    try {
+        accessSync(canonicalPath, constants.X_OK);
+    } catch (error) {
+        throw new PrivateInstalledAgentValidationError('access-denied', 'Installed agent is not executable.', error);
+    }
+    return canonicalPath;
+}
+
+function isWithinPrivateRoot(relation: string): boolean {
+    return Boolean(relation) && relation !== '..' && !relation.startsWith(`..${sep}`) && !isAbsolute(relation);
+}
+
+/** Follow installer launch links only while each hop stays under our private root. */
+function resolvePrivateInstalledFile(root: string, canonicalRoot: string, relation: string): string {
+    let current = canonicalRoot;
+    let pending = relation.split(sep).filter(Boolean);
+    let links = 0;
+    while (pending.length > 0) {
+        const next = resolve(current, pending.shift()!);
+        if (!isWithinPrivateRoot(relative(canonicalRoot, next))) {
+            throw new PrivateInstalledAgentValidationError('unsafe-link',
+                'Official agent installer output escaped its private directory.');
+        }
+        const entry = lstatSync(next);
+        if (entry.isSymbolicLink()) {
+            // The official Windows Codex installer publishes bin and current as
+            // directory junctions. Never admit a linked executable itself.
+            if (process.platform === 'win32' && pending.length === 0) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link',
+                    'Official agent installer output is a Windows symlink.');
+            }
+            if (++links > 32) throw new PrivateInstalledAgentValidationError('unsafe-link',
+                'Official agent installer output has too many links.');
+            const target = resolve(dirname(next), normalizedLinkTarget(readlinkSync(next)));
+            const canonicalRelation = relative(canonicalRoot, target);
+            const targetRelation = isWithinPrivateRoot(canonicalRelation)
+                ? canonicalRelation : relative(root, target);
+            if (!isWithinPrivateRoot(targetRelation)) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link',
+                    'Official agent installer output escaped its private directory.');
+            }
+            pending = [...targetRelation.split(sep).filter(Boolean), ...pending];
+            current = canonicalRoot;
+        } else if (pending.length > 0 && !entry.isDirectory()) {
+            throw new PrivateInstalledAgentValidationError('unsafe-link',
+                'Official agent installer output has a non-directory ancestor.');
+        } else {
+            current = next;
+            if (pending.length === 0 && !entry.isFile()) {
+                throw new PrivateInstalledAgentValidationError('invalid-file',
+                    'Official agent installer did not create a file.');
+            }
+        }
+    }
+    return current;
+}
+
+function normalizedLinkTarget(target: string): string {
+    if (process.platform !== 'win32') return target;
+    // Node may return the NT namespaced form of a junction target. Compare its
+    // ordinary drive path with the private root before following any next hop.
+    const namespaced = target.startsWith('\\\\?\\') || target.startsWith('\\??\\');
+    const ordinary = namespaced ? target.slice(4) : target;
+    return /^[A-Za-z]:\\/u.test(ordinary) ? ordinary : target;
+}

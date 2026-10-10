@@ -68,7 +68,8 @@ Use a repository checkout when testing unreleased changes or developing Copilot:
 ```bash
 git clone https://github.com/vypdev/copilot.git
 cd copilot
-corepack pnpm install . --global
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 The repository includes the generated `build/` directory. If you are installing from a checkout where `build/` is missing, build it first:
@@ -76,7 +77,8 @@ The repository includes the generated `build/` directory. If you are installing 
 ```bash
 corepack pnpm install
 corepack pnpm run build
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
 ### Update the global pnpm installation
@@ -111,8 +113,13 @@ Pull the version you want into the Copilot checkout, then reinstall the local pa
 ```bash
 cd /path/to/copilot
 git pull --ff-only origin master
-corepack pnpm install . --global --force
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
+
+Use the tarball produced by this checkout even when its version matches an
+existing global installation. Remove the tarball after installation if it is
+no longer needed.
 
 Verify that the executable is on `PATH` and that the installed package is the expected one:
 
@@ -176,7 +183,7 @@ Setup is the profile-creation surface, so its questionnaire, plan, confirmation,
 | `--config <path>` | No | Load non-secret YAML/JSON setup overrides. Interactive answers can still refine them. |
 | `--non-interactive` | No | Use defaults, flags, config-file values, and explicit credentials without creating a terminal or prompting. |
 | `--yes` | No | Approve only the final plan; it does not fill missing configuration or credentials. |
-| `--confirm-unverifiable-write-permissions` | No | Explicitly acknowledge, after inspecting the PAT settings, required write rows that safe read-only probes cannot verify. It never accepts missing access or unverifiable required reads. |
+| `--confirm-unverifiable-write-permissions` | No | Deprecated and rejected. Required Write permissions must pass their own temporary create/read/delete checks after plan approval. |
 | `--dry-run` | No | Print the complete plan without changing files or GitHub. A token is not required. |
 | `--skip-variables` | No | Copy files and provision metadata without changing Repository Variables. |
 | `--skip-secrets` | No | Do not validate or create/update repository Secrets. |
@@ -198,7 +205,7 @@ Run it from the target repository root. Existing setup files are not overwritten
 
 The questionnaire is forward-only and immutable. Its stable stages are capabilities, issue workflow multi-select, agent runtime, model defaults, optional role overrides, repository, deployment, Bugbot, optional Projects, provisioning, storage, review, and confirmation. The issue workflow selector uses the usual `Space` to toggle and `Enter` to confirm; `All` is selected by default. `Ctrl-C` or end-of-input closes the prompt once, exits 130, and writes nothing. Declining the final plan exits 0 and also writes nothing; rerun setup or edit the config file to change earlier answers.
 
-The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueComments`, `pullRequestComments`, `release`, `hotfix`, `agentProvisioning`, `credentialHealth`, `inactiveIssueClosure`, `issueTemplates`, and `pullRequestTemplate`. It also asks whether to generate repository agent guidance; this is enabled by default. The agent tasks are `planner`, `findings`, `reviewer`, `fixer`, and `tester`; each can use any of the three supported runtimes independently. Model provider, model, effort, branch strategy, locales, AI ignore patterns, project columns, Bugbot policy, provisioning mode, and initial-tag creation are also configurable. Cursor is available as an experimental runtime and is called out in the review plan with its extra credential/checksum requirements.
+The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueComments`, `pullRequestComments`, `release`, `hotfix`, `agentProvisioning`, `credentialHealth`, `inactiveIssueClosure`, `issueTemplates`, and `pullRequestTemplate`. It also asks whether to generate repository agent guidance; this is enabled by default. The agent tasks are `planner`, `findings`, `reviewer`, `fixer`, and `tester`; each can use any of the three supported runtimes independently. Model provider, model, effort, branch strategy, locales, AI ignore patterns, project columns, Bugbot policy, and initial-tag creation are also configurable. Cursor is available as an experimental runtime and is called out in the review plan with its extra credential/checksum requirements.
 
 For automation, use the same defaults without prompts:
 
@@ -209,17 +216,19 @@ copilot setup --non-interactive --yes --features issues,pullRequests,commits,iss
 copilot setup --non-interactive --yes --issue-workflows feature,bugfix,help
 ```
 
-Run these commands without a permission exception first. If the audit stops
-only because required write rows are `Unverifiable`, inspect the displayed
-requirements against both PATs' settings. Only after confirming every required
-row may you explicitly acknowledge that limitation. Repeat the same selections
-if the original run was interactive; for automation, append the flag to the
-original invocation with the same configuration file, flags, and credentials.
-For example, preserving the feature and agent flags from the command above:
+These commands perform required read checks before plan approval. After the
+plan is approved, setup performs a temporary create/read/delete cycle on a disposable resource for
+each required Write permission. A failed or unconfirmed check blocks setup;
+`--yes` cannot bypass it. Repeat the same selections, configuration file,
+flags, and credentials after correcting the PAT. Actions and Pull request
+checks can leave GitHub run or PR history and notifications despite cleanup;
+review those effects in the plan before approving it.
 
-```bash
-copilot setup --non-interactive --yes --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex --confirm-unverifiable-write-permissions
-```
+Setup installs the selected repository and does not require an existing issue
+or an issue workflow label. Its Apply step does not inspect issue `#1` or derive
+an issue from the current branch. Codex API credentials may be left empty when
+the target runners already have a working Codex login; runtime preflight checks
+that authentication when an agent task runs.
 
 Without an explicit `--agent-guidance` or config value, non-interactive setup
 still generates the profile, guide, and skill, but it uses
@@ -302,10 +311,11 @@ Checks: 1 pass, 0 warn, 1 fail, 0 skipped.
 No repository configuration was changed.
 ```
 
-Doctor's composition contains query ports only: it never creates, updates, deletes, or overwrites repository configuration. The credential health query may dispatch the already-installed `copilot_credential_health.yml` workflow, which creates an Actions run but does not modify repository configuration or expose Secret values. Only setup owns the separate temporary health-workflow bootstrap capability.
+Doctor never creates, updates, deletes, or overwrites repository configuration. Plain `copilot doctor` may dispatch the already-installed `copilot_credential_health.yml` workflow, creating an Actions run to check otherwise unreadable Secret values. For metadata-only inspection without any Action dispatch, use `--read-only`; Secret values are then reported as unverified. Only setup owns the separate temporary health-workflow bootstrap capability.
 
 ```bash
 copilot doctor
+copilot doctor --read-only
 copilot doctor --token "$SETUP_PAT"
 copilot doctor --config .copilot-setup.yml --non-interactive
 ```
@@ -351,7 +361,6 @@ ai:
     Treat payment idempotency regressions as high severity
   ignoreFiles: node_modules/*,build/*,dist/*
   pullRequestDescriptionMode: append
-createInitialTag: true
 manageRepositoryVariables: true
 
 # Secrets and Variables are configured independently. Organization resources

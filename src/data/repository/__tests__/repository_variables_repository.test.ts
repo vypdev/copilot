@@ -17,11 +17,10 @@ function remoteInspectionClient(getWorkflow: jest.Mock, getContent?: jest.Mock) 
                 getWorkflow,
                 listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
                 createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
-            },
-            secrets: {
-                listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
-                getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
-            },
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn()
+                },
         },
     };
 }
@@ -71,9 +70,7 @@ describe('narrow GitHub Actions resource repositories', () => {
                     createRepoVariable: jest.fn(),
                     updateRepoVariable: jest.fn(),
                     listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
-                    createOrUpdateOrgVariable: jest.fn().mockRejectedValue(new Error(marker)),
-                },
-                secrets: {
+                    updateOrgVariable: jest.fn(), createOrgVariable: jest.fn().mockRejectedValue(new Error(marker)),
                     listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
                     getRepoPublicKey: jest.fn().mockResolvedValue({
                         data: { key_id: 'repo-key', key: randomBytes(32).toString('base64') },
@@ -83,7 +80,7 @@ describe('narrow GitHub Actions resource repositories', () => {
                     getOrgPublicKey: jest.fn().mockResolvedValue({
                         data: { key_id: 'org-key', key: randomBytes(32).toString('base64') },
                     }),
-                    createOrUpdateOrgSecret: jest.fn().mockRejectedValue(new Error(marker)),
+                    createOrUpdateOrgSecret: jest.fn().mockRejectedValue(new Error(marker))
                 },
             },
         };
@@ -114,9 +111,11 @@ describe('narrow GitHub Actions resource repositories', () => {
 
     it('lists repository secret names without requesting their values', async () => {
         const listRepoSecrets = jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'PAT' }, { name: 'OPENAI_API_KEY' }] } });
-        const client = { rest: { actions: { listRepoVariables: jest.fn(), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() }, secrets: {
-            listRepoSecrets, getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
-        } } };
+        const client = { rest: { actions: { listRepoVariables: jest.fn(), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() ,
+                    listRepoSecrets,
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn()
+                }, } };
         const repository = new RepositorySecretNamesQueryRepository({ getClient: jest.fn(() => client) });
         await expect(repository.list('owner', 'repo', 'token')).resolves.toEqual(['PAT', 'OPENAI_API_KEY']);
         expect(listRepoSecrets).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', per_page: 100 });
@@ -125,9 +124,11 @@ describe('narrow GitHub Actions resource repositories', () => {
     it('encrypts and upserts secret values using the repository public key', async () => {
         const listRepoSecrets = jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'PAT' }] } });
         const createOrUpdateRepoSecret = jest.fn().mockResolvedValue(undefined);
-        const client = { rest: { actions: { listRepoVariables: jest.fn(), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() }, secrets: {
-            listRepoSecrets, getRepoPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'key-id', key: randomBytes(32).toString('base64') } }), createOrUpdateRepoSecret,
-        } } };
+        const client = { rest: { actions: { listRepoVariables: jest.fn(), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() ,
+                    listRepoSecrets,
+                    getRepoPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'key-id', key: randomBytes(32).toString('base64') } }),
+                    createOrUpdateRepoSecret
+                }, } };
         const repository = new RepositorySecretsCommandRepository({ getClient: jest.fn(() => client) });
         const result = await repository.upsertSecrets('owner', 'repo', 'token', [{ name: 'PAT', value: 'workflow-token' }, { name: 'OPENAI_API_KEY', value: 'api-key' }]);
         expect(result).toEqual({ created: 1, updated: 1, skipped: 0, errors: [] });
@@ -149,11 +150,10 @@ describe('narrow GitHub Actions resource repositories', () => {
                     listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'REPO_VAR', value: 'repo' }] } }),
                     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
                     listRepoOrganizationVariables,
-                },
-                secrets: {
                     listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'REPO_SECRET' }] } }),
                     listRepoOrganizationSecrets,
-                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn()
                 },
             },
         };
@@ -171,8 +171,8 @@ describe('narrow GitHub Actions resource repositories', () => {
         expect(getWorkflow).toHaveBeenCalledWith({
             owner: 'owner', repo: 'repo', workflow_id: 'copilot_credential_health.yml',
         });
-        expect(listRepoOrganizationSecrets).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
-        expect(listRepoOrganizationVariables).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
+        expect(listRepoOrganizationSecrets).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', per_page: 30 });
+        expect(listRepoOrganizationVariables).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', per_page: 30 });
     });
 
     it('records the workflow as missing only after Contents visibility and an exact-file 404', async () => {
@@ -290,10 +290,9 @@ describe('narrow GitHub Actions resource repositories', () => {
                 actions: {
                     listRepoVariables: jest.fn().mockRejectedValue(new Error('variables forbidden')),
                     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
-                },
-                secrets: {
                     listRepoSecrets: jest.fn().mockRejectedValue(new Error('secrets forbidden')),
-                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn()
                 },
             },
         };
@@ -327,7 +326,7 @@ describe('narrow GitHub Actions resource repositories', () => {
     it('upserts selected organization secrets and variables with the repository access grant', async () => {
         const createOrUpdateOrgSecret = jest.fn().mockResolvedValue(undefined);
         const addSelectedRepoToOrgSecret = jest.fn().mockResolvedValue(undefined);
-        const createOrUpdateOrgVariable = jest.fn().mockResolvedValue(undefined);
+        const createOrgVariable = jest.fn().mockResolvedValue(undefined);
         const addSelectedRepoToOrgVariable = jest.fn().mockResolvedValue(undefined);
         const client = {
             rest: {
@@ -335,14 +334,14 @@ describe('narrow GitHub Actions resource repositories', () => {
                     listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
                     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
                     listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
-                    createOrUpdateOrgVariable, addSelectedRepoToOrgVariable,
-                },
-                secrets: {
+                    createOrgVariable, updateOrgVariable: jest.fn(), addSelectedRepoToOrgVariable,
                     listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
-                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn(),
                     listOrgSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
                     getOrgPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'org-key', key: randomBytes(32).toString('base64') } }),
-                    createOrUpdateOrgSecret, addSelectedRepoToOrgSecret,
+                    createOrUpdateOrgSecret,
+                    addSelectedRepoToOrgSecret
                 },
             },
         };
@@ -356,16 +355,19 @@ describe('narrow GitHub Actions resource repositories', () => {
             .resolves.toEqual({ created: 1, updated: 0, errors: [] });
         expect(createOrUpdateOrgSecret).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
         expect(addSelectedRepoToOrgSecret).toHaveBeenCalledWith({ org: 'owner', secret_name: 'PAT', repository_id: 42 });
-        expect(createOrUpdateOrgVariable).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
-        expect(addSelectedRepoToOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'MODE', repository_id: 42 });
+        expect(createOrgVariable).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
+        expect(addSelectedRepoToOrgVariable).not.toHaveBeenCalled();
     });
 
     it('reports unavailable organization inspection separately from personal repositories', async () => {
         const personalClient = {
             rest: {
                 repos: { get: jest.fn().mockResolvedValue({ data: { id: 1, visibility: 'public', owner: { type: 'User' } } }) },
-                actions: { listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() },
-                secrets: { listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }), getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn() },
+                actions: { listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() ,
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn()
+                },
             },
         };
         const personal = new SetupRemoteConfigurationQueryRepository({ getClient: jest.fn(() => personalClient) });
@@ -380,10 +382,10 @@ describe('narrow GitHub Actions resource repositories', () => {
                 actions: {
                     listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
                     listRepoOrganizationVariables: jest.fn().mockRejectedValue(new Error('variables forbidden')),
-                },
-                secrets: {
-                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }), getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
-                    listRepoOrganizationSecrets: jest.fn().mockRejectedValue(new Error('secrets forbidden')),
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn(),
+                    listRepoOrganizationSecrets: jest.fn().mockRejectedValue(new Error('secrets forbidden'))
                 },
             },
         };
@@ -397,18 +399,20 @@ describe('narrow GitHub Actions resource repositories', () => {
     it('uses the paginated client path and preserves existing organization visibility', async () => {
         const paginate = jest.fn().mockResolvedValue([{ name: 'EXISTING', visibility: 'selected' }]);
         const createOrUpdateOrgSecret = jest.fn().mockResolvedValue(undefined);
+        const addSelectedRepoToOrgSecret = jest.fn().mockResolvedValue(undefined);
         const client = {
             paginate,
             rest: {
                 actions: {
                     listRepoVariables: jest.fn(), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
                     listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'EXISTING_VAR', visibility: 'selected' }] } }),
-                    createOrUpdateOrgVariable: jest.fn().mockResolvedValue(undefined),
-                },
-                secrets: {
-                    listRepoSecrets: jest.fn(), getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
-                    listOrgSecrets: jest.fn(), getOrgPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'key', key: randomBytes(32).toString('base64') } }),
-                    createOrUpdateOrgSecret,
+                    updateOrgVariable: jest.fn(), createOrgVariable: jest.fn().mockResolvedValue(undefined),
+                    listRepoSecrets: jest.fn(),
+                    getRepoPublicKey: jest.fn(),
+                    createOrUpdateRepoSecret: jest.fn(),
+                    listOrgSecrets: jest.fn(),
+                    getOrgPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'key', key: randomBytes(32).toString('base64') } }),
+                    createOrUpdateOrgSecret, addSelectedRepoToOrgSecret
                 },
             },
         };
@@ -418,5 +422,6 @@ describe('narrow GitHub Actions resource repositories', () => {
         await repository.upsertScopedSecrets('owner', 'repo', 'token', target, [{ name: 'EXISTING', value: 'new' }]);
         expect(paginate).toHaveBeenCalled();
         expect(createOrUpdateOrgSecret).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'selected' }));
+        expect(addSelectedRepoToOrgSecret).toHaveBeenCalledWith({ org: 'owner', secret_name: 'EXISTING', repository_id: 9 });
     });
 });

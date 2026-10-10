@@ -2,6 +2,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { WorkspaceBugbotRulesRepository } from '../workspace_bugbot_rules_repository';
+import { canCreateFileSymlink } from '../../../testing/file_symlink_capability';
+
+const fileSymlinkIt = canCreateFileSymlink() ? it : it.skip;
 
 describe('WorkspaceBugbotRulesRepository', () => {
     it('loads rules in increasing path specificity and learned rules last', async () => {
@@ -31,7 +34,7 @@ describe('WorkspaceBugbotRulesRepository', () => {
         }
     });
 
-    it('does not load a rule through a symbolic link outside the workspace', async () => {
+    fileSymlinkIt('does not load a rule through a symbolic link outside the workspace', async () => {
         const root = mkdtempSync(join(tmpdir(), 'copilot-bugbot-rules-'));
         const outside = mkdtempSync(join(tmpdir(), 'copilot-bugbot-outside-'));
         try {
@@ -51,7 +54,7 @@ describe('WorkspaceBugbotRulesRepository', () => {
         const root = mkdtempSync(join(tmpdir(), 'copilot-bugbot-rules-'));
         const outside = mkdtempSync(join(tmpdir(), 'copilot-bugbot-outside-'));
         try {
-            symlinkSync(outside, join(root, '.copilot'));
+            symlinkSync(outside, join(root, '.copilot'), process.platform === 'win32' ? 'junction' : 'dir');
 
             await expect(new WorkspaceBugbotRulesRepository(root).rememberRule(
                 'Never cross repository boundaries',

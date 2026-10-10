@@ -7,6 +7,8 @@ description: Select Issue Forms and understand live runtime admission.
 
 `copilot setup` uses one ordered workflow catalog for Issue Forms, routing labels, native Issue Types, branch roles, release dependencies, runtime admission, and generated agent guidance. Interactive setup starts with **All** selected: use Space to toggle a kind and Enter to confirm.
 
+In the terminal, Enter without toggling keeps **All**. Pressing Space while **All** is selected clears every kind; Enter then submits that empty selection explicitly instead of restoring the default. If issue automation is still enabled, setup stops before applying changes and explains that you must select at least one kind. To configure no issue workflows, turn off issue automation at the earlier question. In the text-only fallback, type `none` to submit an empty selection explicitly.
+
 For non-interactive setup, pass stable IDs:
 
 ```bash

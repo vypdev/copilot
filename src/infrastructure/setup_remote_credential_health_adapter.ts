@@ -45,6 +45,8 @@ export interface CredentialHealthQueryOptions {
 
 export interface CredentialHealthBootstrapOptions extends CredentialHealthQueryOptions {
   workflowContent?: string;
+  /** Invoked before the create request: an ambiguous transport failure may still have committed the file. */
+  onTemporaryWorkflowMutationAttempt?: () => void;
 }
 
 /** Doctor boundary: dispatches and reads an existing health workflow; it has no repository mutation client. */
@@ -80,6 +82,7 @@ export class SetupRemoteCredentialHealthQueryAdapter implements SetupRemoteCrede
 export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteCredentialHealthPort {
   private readonly options: Required<CredentialHealthQueryOptions>;
   private readonly workflowContent: string;
+  private readonly onTemporaryWorkflowMutationAttempt?: () => void;
 
   constructor(
     private readonly githubClient: GithubClientPort<GithubCredentialHealthClient>,
@@ -87,6 +90,7 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
   ) {
     this.options = resolveOptions(options);
     this.workflowContent = options.workflowContent ?? readHealthWorkflow();
+    this.onTemporaryWorkflowMutationAttempt = options.onTemporaryWorkflowMutationAttempt;
   }
 
   async validateExisting(
@@ -123,6 +127,7 @@ export class SetupRemoteCredentialHealthBootstrapAdapter implements SetupRemoteC
   ): Promise<string> {
     if (!this.workflowContent) throw new Error('Credential health workflow template is unavailable.');
     let created: Awaited<ReturnType<GithubCredentialHealthClient['repos']['createOrUpdateFileContents']>>;
+    this.onTemporaryWorkflowMutationAttempt?.();
     try {
       created = await client.repos.createOrUpdateFileContents({
         owner,

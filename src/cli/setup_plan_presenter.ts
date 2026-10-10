@@ -3,6 +3,7 @@ import { SETUP_AGENT_TASKS, SETUP_FEATURE_DESCRIPTIONS } from '../application/po
 import type { SetupPlan } from '../domain/setup';
 import { color, doctorIcon, formatTask, renderBox } from './setup_prompt_rendering';
 import { FIXED_APPROVAL_EXCLUSIONS } from '../domain/pull_request_approval_policy';
+import { workflowPatStorageCopy } from './setup_workflow_pat_storage_copy';
 
 export class ConsoleSetupPlanPresenter implements SetupPlanPresenterPort {
   present(plan: SetupPlan): void {
@@ -36,13 +37,26 @@ export function renderSetupPlan(plan: SetupPlan): string {
     `  Outcome: ${approval.mode === 'off' ? 'disabled' : approval.mode === 'recommend' ? 'recommendation only' : 'eligible PRs may be approved after default-branch installation and live evidence'}`,
     '  Native approval still requires readable stale-dismissal rules and a distinct runtime PAT bot.', '',
     color('Repository changes', 36),
+    `  Production/development branches: ${plan.configuration.repository.mainBranch} / ${plan.configuration.repository.developmentBranch}`,
+    `  Projects: ${plan.configuration.projects.ids || '(none)'}`,
     `  Files selected: ${plan.selectedFiles.length}`,
     `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
     `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
     `  Variable storage: ${storageLabel(plan.configuration.storage.variables)}`,
     `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
     '  Labels and issue types: always checked by Copilot setup',
-    `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+    `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'not needed by selected issue workflows'}`, '',
+    color('Temporary PAT write checks after approval', 33),
+    ...(plan.permissionProbes?.length
+      ? plan.permissionProbes.map(item => `  ${item.scope} ${item.permission}: create, read, remove a disposable resource`)
+      : ['  (none)']),
+    '  Issues checks create a visible Issue. If GitHub denies deletion, setup closes it, reports its number, and stops.',
+    '  Actions, Issues, and Pull request checks may leave history or notifications after cleanup.', '',
+    ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
+      ? ['  GitHub Secret writes are upserts. A private random name and absence check reduce collision risk, but GitHub offers no atomic create-only guarantee; an unexpected update stops setup for inspection.', '']
+      : []),
+    ...(plan.presentationDefaults?.length ? [color('Advanced defaults retained in basic setup', 36),
+      ...plan.presentationDefaults.map(item => `  ${item.group}: ${item.count} settings not asked; use :edit at plan confirmation to review or change.`), ''] : []),
     ...(plan.mergeQueueReadiness.length > 0 ? [
       color('Merge queue readiness', 36),
       ...plan.mergeQueueReadiness.map((check) => `  ${doctorIcon(check.status)} ${check.id}: ${check.summary}`),
@@ -54,6 +68,7 @@ export function renderSetupPlan(plan: SetupPlan): string {
       '',
     ] : []),
     color('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
+    ...(plan.workflowPatStorage ? ['', color('Bot PAT storage', 33), workflowPatStorageCopy(plan.workflowPatStorage)] : []),
     ...(plan.warnings.length > 0 ? ['', color('Important notes', 33), ...plan.warnings.map((warning) => `  ⚠ ${warning}`)] : []),
   ].join('\n');
   return renderBox(content, 'Setup Plan', 32);

@@ -137,6 +137,45 @@ describe('setup remote credential health adapters', () => {
         expect(github.repos.deleteFile).toHaveBeenCalledWith(expect.objectContaining({ sha: 'created-sha', branch: 'main' }));
     });
 
+    it('reports the remote mutation risk before sending the temporary workflow create request', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockRejectedValueOnce({ status: 404 })
+            .mockResolvedValueOnce({ data: { sha: 'created-sha' } });
+        const onTemporaryWorkflowMutationAttempt = jest.fn(() => {
+            expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+        });
+        await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0, onTemporaryWorkflowMutationAttempt,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        expect(onTemporaryWorkflowMutationAttempt).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports possible mutation when creation has an ambiguous transport failure', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] }).mockRejectedValueOnce({ status: 404 });
+        github.repos.createOrUpdateFileContents.mockRejectedValueOnce(new Error('connection lost after request'));
+        const onTemporaryWorkflowMutationAttempt = jest.fn();
+        await expect(new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', onTemporaryWorkflowMutationAttempt,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements))
+            .rejects.toThrow('Could not create the temporary credential health workflow safely');
+        expect(onTemporaryWorkflowMutationAttempt).toHaveBeenCalledTimes(1);
+        expect(github.repos.deleteFile).not.toHaveBeenCalled();
+    });
+
+    it('does not mark a remote workflow mutation when only an installed workflow is dispatched', async () => {
+        const github = client();
+        github.repos.getContent.mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({ data: { sha: 'installed-sha' } });
+        const onTemporaryWorkflowMutationAttempt = jest.fn();
+        await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            waitMs: 0, pollMs: 0, onTemporaryWorkflowMutationAttempt,
+        }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        expect(onTemporaryWorkflowMutationAttempt).not.toHaveBeenCalled();
+        expect(github.repos.createOrUpdateFileContents).not.toHaveBeenCalled();
+    });
+
     it('bootstraps a missing selected ref even when Actions finds the workflow on the default branch', async () => {
         const github = client();
         github.repos.getContent.mockResolvedValueOnce({ data: [] })

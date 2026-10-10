@@ -1,3 +1,4 @@
+import type { SetupVariablesWriteResult } from '../../domain/setup';
 import type {
     SetupConfiguration,
     SetupCredentialCheck,
@@ -8,9 +9,11 @@ import type {
     SetupCredentialRequirement,
     SetupResourceTarget,
     SetupRemoteConfiguration,
+    SetupWorkflowPatStorageNotice,
 } from '../../domain/setup';
 import type { SetupDoctorMessageCatalog } from '../policies/setup_doctor_message_catalog';
 import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
+import type { SetupGithubIdentity } from './setup_pat_identity_ports';
 
 export interface SetupRemoteConfigurationReadPort {
     inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
@@ -23,17 +26,24 @@ export interface SetupFinalPermissionAuditPort {
     audit(
         configuration: Readonly<SetupConfiguration>,
         remoteConfiguration?: Readonly<SetupRemoteConfiguration>,
-    ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[] }>;
+        onCleanupPending?: () => void,
+    ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[]; cleanupPending?: true }>;
 }
 
 export interface SetupCredentialPromptPort {
+    readonly guidedWorkflowBotIdentity?: SetupGithubIdentity;
     requestSetupPat(): Promise<string | undefined>;
     confirmUnverifiableTokenPermissions?(report: SetupTokenPermissionReport): Promise<boolean>;
     explainCredentialSeparation(requirements: readonly SetupCredentialRequirement[]): void;
-    requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
+    requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck, storage?: SetupWorkflowPatStorageNotice): Promise<SetupCredentialValue | undefined>;
+    recoverWorkflowPatIdentityMismatch?(expected: SetupGithubIdentity, actual: SetupGithubIdentity): Promise<'retry' | 'cancel'>;
     requestApiKey(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined>;
     chooseExistingCredential(requirement: SetupCredentialRequirement, check: SetupCredentialCheck): Promise<SetupCredentialDecision>;
     showCredentialChecks(checks: readonly SetupCredentialCheck[]): void;
+}
+
+export interface SetupWorkflowPatConflictPromptPort {
+    resolveWorkflowPatConflict(repository: string, state: 'present' | 'unavailable'): Promise<'recheck' | 'repository' | 'cancel'>;
 }
 
 export interface SetupRepositorySecretNamesQueryPort {
@@ -98,14 +108,14 @@ export interface SetupRepositoryVariablesCommandPort {
         repository: string,
         token: string,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    ): Promise<SetupVariablesWriteResult>;
     upsertScopedVariables?(
         owner: string,
         repository: string,
         token: string,
         target: SetupResourceTarget,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    ): Promise<SetupVariablesWriteResult>;
 }
 
 export interface BoundSetupRemoteConfigurationReadPort {
@@ -121,9 +131,9 @@ export interface BoundSetupRepositorySecretsCommandPort {
 }
 
 export interface BoundSetupRepositoryVariablesCommandPort {
-    upsert(variables: readonly { name: string; value: string }[]): Promise<{ created: number; updated: number; errors: string[] }>;
+    upsert(variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsertScopedVariables?(
         target: SetupResourceTarget,
         variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    ): Promise<SetupVariablesWriteResult>;
 }

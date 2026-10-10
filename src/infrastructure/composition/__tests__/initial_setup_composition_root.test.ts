@@ -1,3 +1,8 @@
+const mockLatestTag = jest.fn();
+jest.mock('../../../data/repository/release/repository_version_tags_query_repository', () => ({
+  RepositoryVersionTagsQueryRepository: jest.fn(() => ({ getLatestTag: mockLatestTag })),
+}));
+
 const mockComposeInitialSetupUseCase = jest.fn(
   (..._dependencies: unknown[]) => ({ taskId: 'composed' }),
 );
@@ -50,7 +55,8 @@ describe('initial setup composition root', () => {
     );
     expect(mockComposeInitialSetupUseCase).toHaveBeenCalledTimes(1);
     const dependencies = mockComposeInitialSetupUseCase.mock.calls[0];
-    expect(dependencies).toHaveLength(10);
+    expect(dependencies).toHaveLength(11);
+    expect(dependencies[10]).toBeUndefined();
     const labels = dependencies[1] as { ensureInitialLabels(value: unknown): Promise<unknown> };
     await labels.ensureInitialLabels({ lifecycle: {} });
     expect(mockLabelProvisioning.ensureInitialLabels).toHaveBeenCalledWith(
@@ -58,3 +64,10 @@ describe('initial setup composition root', () => {
     );
   });
 });
+
+  it('binds remote version inspection to the same repository and setup PAT as installation', async () => {
+    createInitialSetupCompositionRoot({ owner: 'owner', repository: 'repo', token: 'setup-fixture' });
+    const dependencies = mockComposeInitialSetupUseCase.mock.calls.at(-1)!;
+    await (dependencies[3] as { getLatestTag(): Promise<unknown> }).getLatestTag();
+    expect(mockLatestTag).toHaveBeenCalledWith('owner', 'repo', 'setup-fixture');
+  });

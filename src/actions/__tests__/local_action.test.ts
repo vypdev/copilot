@@ -68,6 +68,12 @@ describe('runLocalAction', () => {
     expect(execution.welcome).toBeDefined();
   });
 
+  it('passes only an optional semantic setup progress observer to the local route', async () => {
+    const onSetupProgress = jest.fn();
+    await runLocalAction({ repo: { owner: 'o', repo: 'r' }, [INPUT_KEYS.TOKEN]: 'fixture-token' }, { onSetupProgress });
+    expect(mockMainRun.mock.calls[0][7]).toBe(onSetupProgress);
+  });
+
   it('uses additionalParams over actionInputs defaults', async () => {
     mockGetActionInputsWithDefaults.mockReturnValue({
       ...minimalActionInputs(),

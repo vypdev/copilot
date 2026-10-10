@@ -1,0 +1,16 @@
+export const optionLabelsEs = {
+  All: 'Todos', prompt: 'Preguntar antes de crear el enlace', 'create-if-missing': 'Crear el enlace si falta', disabled: 'Desactivado',
+  replace: 'Sustituir', append: 'Añadir', preserve: 'Conservar',
+  info: 'Informativa', low: 'Baja', medium: 'Media', high: 'Alta',
+  smart: 'Adaptativa', default: 'Predeterminado', auto: 'Automático', always: 'Reinstalar siempre',
+  recommend: 'Recomendar aprobación', guarded: 'Aprobar solo con garantías', off: 'Desactivado',
+  check: 'Check de CI que exige la cobertura', numeric: 'Informe numérico verificable',
+  repository: 'Repositorio', organization: 'Organización', selected: 'Repositorios seleccionados', private: 'Repositorios privados', all: 'Todos los repositorios',
+  'production-lineage': 'Conservar el linaje de producción', 'canonical-gitflow': 'Git-Flow canónico', manual: 'Manual',
+  'auto-merge': 'Fusionar automáticamente', 'merge-queue': 'Cola de integración', 'create-only': 'Solo crear PR',
+  direct: 'Integración directa', 'sync-branch': 'Mediante rama de sincronización', 'prefer-release': 'Priorizar la release', development: 'Desarrollo', both: 'Ambos destinos',
+  'source-only': 'Solo rama de origen', 'sync-only': 'Solo rama de sincronización', none: 'Ninguna',
+  close: 'Cerrar el issue', 'keep-open': 'Mantener abierto', guided: 'Guiado', compact: 'Compacto', quiet: 'Mínimo',
+  update: 'Actualizar el comentario', milestones: 'Publicar en hitos',
+  feature: 'Funcionalidad', bugfix: 'Corrección', documentation: 'Documentación', chore: 'Mantenimiento', help: 'Ayuda o pregunta', hotfix: 'Arreglo urgente', release: 'Release',
+} as const;

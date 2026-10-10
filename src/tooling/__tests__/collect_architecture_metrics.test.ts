@@ -271,7 +271,7 @@ describe("collect architecture metrics", () => {
       "reports",
     );
     mkdirSync(reportsDirectory);
-    symlinkSync(reportsDirectory, outputDirectory, "dir");
+    symlinkSync(reportsDirectory, outputDirectory, process.platform === 'win32' ? 'junction' : 'dir');
 
     expect(() =>
       collectArchitectureMetrics({
@@ -320,7 +320,7 @@ describe("collect architecture metrics", () => {
         kind === "existing"
           ? externalDirectory
           : join(externalDirectory, "missing-target");
-      symlinkSync(target, join(repositoryRoot, "coverage"), "dir");
+      symlinkSync(target, join(repositoryRoot, "coverage"), process.platform === 'win32' ? 'junction' : 'dir');
       const commands: string[][] = [];
 
       expect(() =>

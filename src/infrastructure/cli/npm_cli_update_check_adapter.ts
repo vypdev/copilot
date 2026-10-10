@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, posix, win32 } from 'node:path';
 import type { CliUpdateCheckPort } from '../../application/ports/cli_update_check_ports';
 import { COPILOT_PACKAGE_NAME } from './copilot_package';
 
@@ -23,10 +23,11 @@ export function resolveUpdateCheckCachePath(
     environment: NodeJS.ProcessEnv = process.env,
     homeDirectory: string = homedir(),
 ): string {
+    const paths = platform === 'win32' ? win32 : posix;
     const cacheRoot = platform === 'win32'
-        ? environment.LOCALAPPDATA || join(homeDirectory, 'AppData', 'Local')
-        : environment.XDG_CACHE_HOME || join(homeDirectory, '.cache');
-    return join(cacheRoot, 'copilot', 'update-check.json');
+        ? environment.LOCALAPPDATA || paths.join(homeDirectory, 'AppData', 'Local')
+        : environment.XDG_CACHE_HOME || paths.join(homeDirectory, '.cache');
+    return paths.join(cacheRoot, 'copilot', 'update-check.json');
 }
 
 export class FileCliUpdateCheckCache implements CliUpdateCheckCache {

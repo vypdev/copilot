@@ -15,7 +15,7 @@ on:
 jobs:
   observe-approval:
     name: Copilot - Pull Request Approval
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, codex, Linux]
     timeout-minutes: 15
     concurrency:
       group: copilot-approval-${{ github.repository }}

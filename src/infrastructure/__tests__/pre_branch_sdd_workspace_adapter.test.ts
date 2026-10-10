@@ -1,11 +1,14 @@
-import * as fs from 'node:fs';
+import fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
 import type { SddPlan } from '../../domain/pre_branch_sdd';
+import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 
 jest.setTimeout(30_000);
+const fileSymlinkIt = canCreateFileSymlink() ? it : it.skip;
+const windowsIt = process.platform === 'win32' ? it : it.skip;
 
 const plan: SddPlan = {
   action: 'update', path: 'specs/payments.md', capabilityId: 'payments',
@@ -20,9 +23,13 @@ function fixture() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-sdd-workspace-test-'));
   const remote = path.join(temp, 'remote.git');
   const repo = path.join(temp, 'repo');
+  const hooks = path.join(temp, 'empty-hooks');
+  fs.mkdirSync(hooks);
   fs.mkdirSync(repo);
   git(temp, 'init', '--bare', remote);
+  git(remote, 'config', 'core.hooksPath', hooks);
   git(repo, 'init');
+  git(repo, 'config', 'core.hooksPath', hooks);
   git(repo, 'config', 'user.name', 'Test Maintainer');
   git(repo, 'config', 'user.email', 'maintainer@example.test');
   fs.mkdirSync(path.join(repo, 'specs'));
@@ -139,6 +146,34 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(await workspace.recoverPublished('feature/42-change', prepared)).toBe(commitSha);
   });
 
+  windowsIt('does not replace a competing new SDD created at the atomic link boundary', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const companion: SddPlan = { ...plan, action: 'companion', path: 'specs/payments-extension.md' };
+    const nativeLink = fs.linkSync;
+    let temporary = '';
+    let detachedRoot = '';
+    let competingBytes = '';
+    const link = jest.spyOn(fs, 'linkSync').mockImplementation((source, destination) => {
+      temporary = String(source);
+      detachedRoot = path.dirname(path.dirname(temporary));
+      fs.writeFileSync(destination, 'competing SDD bytes', { flag: 'wx' });
+      try { nativeLink(source, destination); } finally {
+        competingBytes = fs.readFileSync(destination, 'utf8');
+      }
+    });
+    try {
+      await expect(workspace.validateDraft(snapshot, companion, draft())).rejects.toThrow('already occupied');
+    } finally {
+      link.mockRestore();
+    }
+    expect(competingBytes).toBe('competing SDD bytes');
+    expect(temporary).not.toBe('');
+    expect(fs.existsSync(temporary)).toBe(false);
+    expect(fs.existsSync(detachedRoot)).toBe(false);
+    expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
+  });
+
   it('registers a new proposed capability and recovers its validated first commit', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
@@ -176,7 +211,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(await workspace.recoverPublished('feature/42-change', prepared)).toBeUndefined();
   });
 
-  it('rejects a symlinked generated catalog before writing metadata', async () => {
+  fileSymlinkIt('rejects a symlinked generated catalog before writing metadata', async () => {
     const external = path.join(temp, 'outside-catalog.md');
     fs.copyFileSync(path.join(repo, 'specs/CATALOG.md'), external);
     fs.rmSync(path.join(repo, 'specs/CATALOG.md'));
@@ -191,7 +226,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(fs.readFileSync(external, 'utf8')).toBe('# Catalog\n');
   });
 
-  it('rejects a symlinked owning SDD before writing to its target', async () => {
+  fileSymlinkIt('rejects a symlinked owning SDD before writing to its target', async () => {
     const external = path.join(temp, 'outside.md');
     fs.writeFileSync(external, '# Protected external file\n');
     fs.rmSync(path.join(repo, 'specs/payments.md'));

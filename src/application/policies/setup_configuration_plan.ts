@@ -13,8 +13,15 @@ import {
 import { usesOrganizationStorage } from './setup_configuration_storage_policy';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
 import { resolveLocaleProfile } from '../../domain/locale';
-import { issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
+import { ISSUE_WORKFLOW_CATALOG, ISSUE_WORKFLOW_KINDS, issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowFeatures, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import {
+    REPOSITORY_AGENT_GUIDE_PATH,
+    REPOSITORY_AGENT_MANIFEST_PATH,
+    REPOSITORY_AGENT_POINTER_PATH,
+    REPOSITORY_AGENT_PROFILE_PATH,
+    REPOSITORY_AGENT_SKILL_PATH,
+} from './repository_agent_guidance_policy';
 
 export { buildSetupCredentialRequirements };
 
@@ -61,6 +68,37 @@ export function buildSetupPlan(
     };
 }
 
+/** Actual checkout destinations covered by a web Apply drift check.
+ * The presentation plan uses package-source labels for workflows/forms;
+ * comparing those labels as checkout paths would silently miss local edits.
+ */
+export function setupPlanGuardPaths(plan: Readonly<SetupPlan>): string[] {
+    const selected = plan.selectedFiles.map(file => {
+        if (file.startsWith('workflows/')) return `.github/${file}`;
+        if (file.startsWith('ISSUE_TEMPLATE/')) return `.github/${file}`;
+        if (file === 'pull_request_template.md') return '.github/pull_request_template.md';
+        if (file === 'AGENTS.md (managed pointer only)') return 'AGENTS.md';
+        return file;
+    });
+    // Deselected managed assets can be retired to setup-backups during Apply.
+    const retiredCandidates = [
+        ...['config.yml', ...ISSUE_WORKFLOW_KINDS.map(kind => ISSUE_WORKFLOW_CATALOG[kind].formFile)]
+            .map(file => `.github/ISSUE_TEMPLATE/${file}`),
+        ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
+            .map(file => `.github/workflows/${file}`),
+    ];
+    // The manifest can authorize retirement even when guidance is disabled and
+    // its artifacts are absent from the presentation plan.
+    const guidanceCandidates = [
+        REPOSITORY_AGENT_MANIFEST_PATH,
+        REPOSITORY_AGENT_PROFILE_PATH,
+        REPOSITORY_AGENT_GUIDE_PATH,
+        REPOSITORY_AGENT_SKILL_PATH,
+        REPOSITORY_AGENT_POINTER_PATH,
+    ];
+    return [...new Set([...selected, ...retiredCandidates, ...guidanceCandidates])].sort();
+}
+
 export function buildSetupRepositoryVariables(configuration: SetupConfiguration): SetupVariable[] {
     const variables: SetupVariable[] = [];
     const add = (name: string, value: string | number | boolean | undefined) => {
@@ -73,7 +111,6 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_EXECUTABLE', base.executable);
-    add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
     for (const task of SETUP_AGENT_TASKS) {
@@ -259,17 +296,14 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
-    if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
-    }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
     }
     if (configuration.projects.ids.trim()) {
-        warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
+        warnings.push('Selected Project numbers must be accessible to the bot PAT, and all four configured Status values must exist in every selected Project.');
     }
     if (setupAgentTasksForFeatures(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible CLI plus CURSOR_API_KEY; the Action installs the official CLI when the default executable is absent.');
     }
     if (usesOrganizationStorage(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');

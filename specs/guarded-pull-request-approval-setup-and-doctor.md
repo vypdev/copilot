@@ -102,6 +102,27 @@ Not applicable: prospective capability. The observed setup/doctor baseline is no
 
 `S5` Add a conditional `pull-request-approval` questionnaire stage after `bugbot` and before `projects`. Skip it when `features.pullRequests=false`; set policy `off` in that case. The recommended answers are `recommend`, development target, selected routine branch kinds, distinct linked issue required, fixed protected-path exclusions, and no acceptance of dismissed findings. Setup asks for exact producer tuples and an explicit operator attestation of their App identity and coverage-enforcing step; it does not silently infer coverage from a green workflow. In non-interactive mode missing explicit producer data is an error with no writes, not an invented default. The plan states that a freshly copied observer will not run until committed on the default branch.
 
+For the web presentation, replace raw `name|App ID|workflow` entry with
+read-only discovery of *observed GitHub Actions job check runs* linked to
+workflow run attempts and source App IDs. Offer 1–8 checkboxes with exact
+identities, recency, required-by-branch evidence and links. The operator may
+enter an exact tuple manually when discovery is absent or fails. The operator
+can explicitly re-run the read-only query twice without restarting setup or
+re-entering the PAT; no result means no *accessible observed* run, not proof
+that CI is absent. A selected coverage check is one of those entries, not a
+second free-text name. Because `coverage.checkName` stores only the name, the
+trusted producer list must not contain two checks with the same name; setup
+rejects this ambiguity and directs the operator to select one or rename the
+jobs. The UI shows exact workflow/App identity and the run link, and calls
+branch-required status `not checked` unless inspected separately. Neither
+an observed green check nor a workflow file containing `coverage` sets
+`producerAttested` or `reporterAttested`: the UI must show what the human
+still needs to inspect and confirm. The current observer does not consume
+legacy commit statuses as test producers; do not propose them as selectable
+equivalents. Private-repository discovery may require conditional setup PAT
+`Checks: read` and `Actions: read`, disclosed before PAT creation; refusal
+keeps the manual path without falsely identifying an App.
+
 The setup plan MUST display, in order: configured mode; PR scope and fixed exclusions; selected test/coverage producer names and source IDs; Bugbot review floor and path exclusions; effective branch-rule/stale-dismissal readiness for each selected target; workflow files and event names; runtime PAT identity/permission status; Secret/Variable names only; and a one-line outcome (`can approve after installation`, `installed but recommendation only`, or `setup blocked`). `--dry-run` performs no writes and needs no token for local-only preview, marking remote facts `unverified` rather than passing them. `--non-interactive --yes` approves only the complete plan and cannot choose an ambiguous producer or credential.
 
 ### 6.2 Doctor sequence
@@ -234,6 +255,17 @@ AST tests reject provider imports in the policy/doctor layers and mutation-port 
 ## 9. UI/UX and content contract
 
 ### 9.1 Setup plan and doctor hierarchy
+
+The beginner-facing web card explains `recommend`, `guarded`, and `off` in
+terms of whether Copilot only advises or can submit a native approval. For
+each producer it shows the exact job, workflow, App, and evidence link before
+requesting attestation. Coverage mode explains `check` as CI-enforced pass/fail
+and `numeric` as the reviewed `copilot-diff-coverage-v1` artifact plus a
+threshold. All these instructions are localized in the four supported web setup
+catalogs (English, Spanish, French, and Portuguese) defined by the local-web SDD; stable producer names, IDs, workflow names, and
+policy values are never translated. A blocked result must identify the
+failed prerequisite and mutation facts in the browser, not only in terminal
+output. See [local web setup assistant](./local-web-setup-assistant.md#93-first-time-comprehension-and-progressive-disclosure).
 
 Setup's first view says what will be enabled, which PRs could receive a native review, and which prerequisites remain. It then shows changed files/Variables/Secret names, one confirmation, and technical details. Doctor's first line says whether native approvals can occur now; each check has stable ID, status, safe evidence, one action, and a link. Setup stays in English while creating the repository profile; doctor uses `repository-locale` (reviewed English/Spanish, complete dynamic catalog or atomic English fallback), consistent with [existing setup/doctor behavior](./setup-configuration-credentials-and-doctor.md).
 

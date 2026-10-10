@@ -25,12 +25,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Set up Node.js 24 for pinned agent installation
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24.x'
-
       - name: Fetch push review range
+        shell: bash
         if: github.event.after != '0000000000000000000000000000000000000000'
         env:
           BEFORE_SHA: ${{ github.event.before }}
@@ -104,7 +100,6 @@ jobs:
           AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           AGENT_MODEL: ${{ vars.AGENT_MODEL }}
           AGENT_EFFORT: ${{ vars.AGENT_EFFORT }}
-          AGENT_PROVISIONING: ${{ vars.AGENT_PROVISIONING || 'auto' }}
           AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
           AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-6-luna' }}
           AGENT_EXECUTABLE: ${{ vars.AGENT_EXECUTABLE }}

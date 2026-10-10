@@ -5,10 +5,46 @@ function response(body: unknown, ok = true, status = 200): Response {
 }
 
 describe('SetupCredentialValidationAdapter', () => {
+    it.each([
+        ['ANTHROPIC_API_KEY', 'anthropic', 'x-api-key', 'fixture-key'],
+        ['CURSOR_API_KEY', 'cursor', 'Authorization', `Basic ${Buffer.from('fixture-key:').toString('base64')}`],
+        ['OPENCODE_API_KEY', 'opencode', 'Authorization', 'Bearer fixture-key'],
+    ])('uses the provider-specific credential boundary for %s', async (name, provider, header, expected) => {
+        const fetcher = jest.fn().mockResolvedValue(response({}));
+        const result = await new SetupCredentialValidationAdapter({ fetcher }).validateCredential({
+            name, provider, kind: 'apiKey', description: 'fixture', model: 'fixture-model',
+        }, 'fixture-key');
+        expect(result.status).toBe('valid');
+        expect(fetcher).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            redirect: 'error', headers: expect.objectContaining({ [header]: expected,
+                ...(provider === 'anthropic' ? { 'anthropic-version': '2023-06-01' } : {}) }),
+        }));
+    });
+
+    it('ignores malformed model entries while matching a Google resource suffix', async () => {
+        const fetcher = jest.fn().mockResolvedValue(response({ models: [null, {}, { name: 'publishers/google/models/fixture' }] }));
+        expect((await new SetupCredentialValidationAdapter({ fetcher }).validateCredential({
+            name: 'GOOGLE_API_KEY', provider: 'google', model: 'fixture', kind: 'apiKey', description: 'fixture',
+        }, 'fixture-key')).status).toBe('valid');
+    });
+
+    it('treats an explicitly hidden repository as invalid without exposing provider data', async () => {
+        const fetcher = jest.fn().mockResolvedValueOnce(response({ id: 1, login: 'operator' }))
+            .mockResolvedValueOnce(response({ private: 'fixture-token' }, false, 404));
+        expect(await new SetupCredentialValidationAdapter({ fetcher }).validateSetupPat('owner', 'repo', 'fixture-token'))
+            .toMatchObject({ status: 'invalid', message: 'Provider rejected the credential (HTTP 404).' });
+    });
+
+    it('maps an aborted transport to a bounded timeout message', async () => {
+        const fetcher = jest.fn().mockRejectedValue(new DOMException('fixture-token', 'AbortError'));
+        expect(await new SetupCredentialValidationAdapter({ fetcher }).validateSetupPat('owner', 'repo', 'fixture-token'))
+            .toMatchObject({ status: 'unverifiable', message: 'Validation timed out.' });
+    });
+
     it('validates setup identity and repository access without logging the token', async () => {
         const fetcher = jest.fn()
-            .mockResolvedValueOnce(response({ login: 'operator' }))
-            .mockResolvedValueOnce(response({ full_name: 'repo' }));
+            .mockResolvedValueOnce(response({ id: 1, login: 'operator' }))
+            .mockResolvedValueOnce(response({ id: 2, full_name: 'owner/repo' }));
         const check = await new SetupCredentialValidationAdapter({ fetcher }).validateSetupPat('owner', 'repo', 'secret-token');
 
         expect(check).toMatchObject({ name: 'SETUP_PAT', status: 'valid', account: 'operator' });

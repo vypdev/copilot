@@ -39,7 +39,7 @@ describe('GitCommitAdapter', () => {
             ['push', 'origin', 'feature/secure'],
         ]);
         for (const call of calls) {
-            expect(call.options?.env?.GIT_CONFIG_KEY_0).toBe('http.extraheader');
+            expect(call.options?.env?.GIT_CONFIG_KEY_0).toBe('http.https://github.com/.extraheader');
             expect(call.options?.env?.GIT_CONFIG_VALUE_0).toMatch(/^AUTHORIZATION: basic /);
             expect(JSON.stringify(call.args)).not.toContain('secret-token');
         }
