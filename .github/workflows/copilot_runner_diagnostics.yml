@@ -28,7 +28,10 @@ jobs:
           fi
           if command -v codex >/dev/null; then
             codex --version
-            codex sandbox linux --config 'shell_environment_policy.inherit="none"' -- /bin/true || true
+            echo 'Codex sandbox with an empty command environment'
+            codex sandbox --config 'sandbox_mode="read-only"' --config 'shell_environment_policy.inherit="none"' -- /bin/true || true
+            echo 'Codex sandbox with only the system executable search path'
+            codex sandbox --config 'sandbox_mode="read-only"' --config 'shell_environment_policy.inherit="core"' --config 'shell_environment_policy.ignore_default_excludes=false' --config 'shell_environment_policy.include_only=["PATH"]' -- /bin/true || true
           fi
           for setting in /proc/sys/kernel/unprivileged_userns_clone /proc/sys/kernel/apparmor_restrict_unprivileged_userns; do
             if [ -f "$setting" ]; then echo "$setting: $(cat "$setting")"; fi
