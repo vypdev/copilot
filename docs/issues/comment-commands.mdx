@@ -146,7 +146,7 @@ prose protect every argument, including an arbitrary value passed to `--from`.
 The provider must return every operand exactly once. Copilot restores them only
 after validating that none was removed, duplicated, reordered, changed, or
 introduced, so a translation cannot turn `src/cache.ts` into another path or add
-`--force`. A failed validation performs no requested repository change.
+`--force`. A failed validation performs no requested repository change. Reconstructed commands also retain the fixed 2,000-character and 20-argument limits; an expansion beyond either limit returns an interpretation error before answering or writing. Rephrase the request more briefly to retry.
 
 An explicit command or mention that fails receives one correlated semantic
 error reply with impact, recovery action, retained state, stable error code,

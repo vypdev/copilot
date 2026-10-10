@@ -5,7 +5,7 @@ import { runCommentAutomation as runCommentAutomationImpl } from "../comment_aut
 import type { CommentAutomationOptions } from '../comment_automation_contracts';
 import type { ActorAuthorizationPort } from '../../ports/actor_authorization_ports';
 import { projectCommentAutomationContext } from '../comment_automation_context';
-import { projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
+import { CommentLanguageTranslationWorkflow, projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
 
 type TestActorAuthorizationPort = Pick<ActorAuthorizationPort, 'isActorAllowedToModifyFiles'>
   & Partial<Pick<ActorAuthorizationPort, 'isActorAllowedToUseMemberOnlyAutomation'>>;
@@ -106,6 +106,7 @@ function runCommentAutomation(
       locale: 'en-US',
       issueNumber: source.issue.number ?? source.pullRequest.number,
       commentId: source.issue.commentId ?? source.pullRequest.commentId ?? -1,
+      trustedBotLogin: source.tokenUser,
       configuration: source.ai.getAgentConfiguration('findings'),
     }),
     userComment,
@@ -632,6 +633,58 @@ describe("runCommentAutomation", () => {
     expect(results.map(result => result.id)).toEqual(['intent', 'review']);
     expect(review.invoke).toHaveBeenCalledTimes(1);
     expect(think.invoke).not.toHaveBeenCalled();
+  });
+
+  it('stops an expanded translated command before intent, answer, or mutation', async () => {
+    const workflow = new CommentLanguageTranslationWorkflow({ query: jest.fn().mockResolvedValue({
+      status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+      adaptedText: 'word '.repeat(21).trim(), reasonCode: 'none',
+    }) });
+    const intent = { invoke: jest.fn() };
+    const think = { invoke: jest.fn() };
+    const mutation = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { actor: 'actor', tokenUser: 'vypbot', isPullRequest: true, tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { taskId: 'language', invoke: request => workflow.invoke({ ...request, taskId: 'language' }) },
+        intentUseCase: intent as never, thinkUseCase: think as never,
+        autofixUseCase: mutation as never, doUserRequestUseCase: mutation as never,
+        userComment: '/copilot implement aclara el requisito',
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+    );
+    expect(results[0].success).toBe(false);
+    expect(intent.invoke).not.toHaveBeenCalled();
+    expect(think.invoke).not.toHaveBeenCalled();
+    expect(mutation.invoke).not.toHaveBeenCalled();
+  });
+
+  it('retains the trusted mention through context projection and real language adaptation', async () => {
+    const workflow = new CommentLanguageTranslationWorkflow({ query: jest.fn().mockResolvedValue({
+      status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+      adaptedText: 'add a test', reasonCode: 'none',
+    }) });
+    const intent = { invoke: jest.fn().mockResolvedValue([successfulResult('intent', {
+      isFixRequest: false, isDoRequest: true, targetFindingIds: [], requestText: 'add a test',
+    })]) };
+    const mutation = { invoke: jest.fn().mockResolvedValue([]) };
+    const results = await runCommentAutomation(
+      { actor: 'actor', tokenUser: 'vypbot', isPullRequest: true, tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { taskId: 'language', invoke: request => workflow.invoke({ ...request, taskId: 'language' }) },
+        intentUseCase: intent as never, thinkUseCase: { invoke: jest.fn() } as never,
+        autofixUseCase: {} as never, doUserRequestUseCase: mutation as never,
+        userComment: '@vypbot añade una prueba',
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+    );
+    expect(intent.invoke).toHaveBeenCalledWith(expect.objectContaining({
+      comment: expect.objectContaining({ body: '@vypbot add a test' }),
+    }));
+    expect(results).toEqual([expect.objectContaining({ id: 'language' }), expect.objectContaining({ id: 'intent' })]);
+    expect(mutation.invoke).toHaveBeenCalledTimes(1);
   });
 
   it('keeps an explicit implement request on the authorized mutation route', async () => {

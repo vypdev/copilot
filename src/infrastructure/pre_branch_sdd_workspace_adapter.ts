@@ -91,7 +91,8 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       }
       if (plan.action === 'update') {
         assertRegularSpecFile(target);
-        markdown = composeSddUpdate(fs.readFileSync(target, 'utf8'), markdown);
+        const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
+        markdown = composeSddUpdate(owner, markdown);
       }
       else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
       writeSpecFile(target, markdown, plan.action === 'update');

@@ -40259,7 +40259,8 @@ function rebuildAdaptedComment(input, adaptedText) {
         return undefined;
     const safeText = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(restored, MAX_TRANSLATED_COMMENT_LENGTH).trim();
     if (input.kind === 'command' && input.commandName) {
-        return `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
+        const command = `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
+        return (0, copilot_command_1.parseCopilotCommand)(command).kind === 'command' ? command : undefined;
     }
     if (input.kind === 'mention' && input.trustedBotLogin) {
         return `@${input.trustedBotLogin}${safeText ? ` ${safeText}` : ''}`;
@@ -52185,6 +52186,7 @@ function projectCommentAutomationContext(source, language, userComment) {
             locale: language.locale,
             issueNumber: language.issueNumber,
             commentId: language.commentId,
+            trustedBotLogin: language.trustedBotLogin,
             configuration: language.configuration === undefined
                 ? undefined
                 : { ...language.configuration },
@@ -52385,6 +52387,9 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
         if (adaptation)
             param = (0, comment_automation_context_1.withCommentLanguageAdaptation)(param, adaptation);
         const adaptedCommand = (0, copilot_command_1.parseCopilotCommand)(param.userComment);
+        if (adaptedCommand.kind === 'invalid') {
+            return [...languageResults, (0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, adaptedCommand.reason)];
+        }
         if (adaptedCommand.kind === 'command') {
             const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, adaptedCommand.command, actorAuthorizationPort);
             if (explicitResults)
@@ -57512,7 +57517,7 @@ const untrusted_content_1 = __nccwpck_require__(67057);
 const bugbot_diff_partition_policy_1 = __nccwpck_require__(31601);
 const MAX_CONVERSATION_LENGTH = 24000;
 const MAX_CONVERSATION_ITEMS = 50;
-const MAX_CONVERSATION_ITEM_LENGTH = 2000;
+const MAX_CONVERSATION_ITEM_LENGTH = 4000;
 function buildReviewDiffBlock(context, ignorePatterns = []) {
     return (0, bugbot_diff_partition_policy_1.buildReviewDiffPlan)(context, ignorePatterns).partitions.map((partition) => partition.block).join('\n\n');
 }
@@ -61727,7 +61732,7 @@ class CommentLanguageTranslationWorkflow {
             const restoredProse = (0, comment_translation_policy_1.restoreLanguageAdaptationOutput)(input, adaptedText);
             const interpretedComment = (0, comment_translation_policy_1.rebuildAdaptedComment)(input, adaptedText);
             if (restoredProse === undefined || interpretedComment === undefined) {
-                return [failedAdaptation(context, targetLocale, 'The language adapter changed or introduced a protected technical operand.')];
+                return [failedAdaptation(context, targetLocale, 'The language adapter changed a protected technical operand or exceeded command limits.')];
             }
             const publication = (0, comment_translation_policy_1.composeTranslatedComment)(restoredProse, context.commentBody, {
                 sourceLocale,
@@ -86190,7 +86195,8 @@ class PreBranchSddWorkspaceAdapter {
             }
             if (plan.action === 'update') {
                 assertRegularSpecFile(target);
-                markdown = (0, pre_branch_sdd_1.composeSddUpdate)(fs.readFileSync(target, 'utf8'), markdown);
+                const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
+                markdown = (0, pre_branch_sdd_1.composeSddUpdate)(owner, markdown);
             }
             else if (pathExists(target))
                 throw new Error('The new SDD path is already occupied.');

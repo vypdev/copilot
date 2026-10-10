@@ -113,7 +113,8 @@ export function rebuildAdaptedComment(input: LanguageAdaptationInput, adaptedTex
     if (restored === undefined) return undefined;
     const safeText = sanitizeAgentMarkdown(restored, MAX_TRANSLATED_COMMENT_LENGTH).trim();
     if (input.kind === 'command' && input.commandName) {
-        return `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
+        const command = `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
+        return parseCopilotCommand(command).kind === 'command' ? command : undefined;
     }
     if (input.kind === 'mention' && input.trustedBotLogin) {
         return `@${input.trustedBotLogin}${safeText ? ` ${safeText}` : ''}`;

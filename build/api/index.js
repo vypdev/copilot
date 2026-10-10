@@ -2562,7 +2562,7 @@ const untrusted_content_1 = __nccwpck_require__(7057);
 const bugbot_diff_partition_policy_1 = __nccwpck_require__(1601);
 const MAX_CONVERSATION_LENGTH = 24000;
 const MAX_CONVERSATION_ITEMS = 50;
-const MAX_CONVERSATION_ITEM_LENGTH = 2000;
+const MAX_CONVERSATION_ITEM_LENGTH = 4000;
 function buildReviewDiffBlock(context, ignorePatterns = []) {
     return (0, bugbot_diff_partition_policy_1.buildReviewDiffPlan)(context, ignorePatterns).partitions.map((partition) => partition.block).join('\n\n');
 }

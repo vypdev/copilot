@@ -547,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **79 distinct cases** are a floor derived from eligibility,
+The following **80 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -563,8 +563,9 @@ ownership/validation.
 | Pending-branch recovery | 6 | Retained base, intervening commits, managed metadata, pending card, replay, post-push recovery |
 | Automation hook isolation | 1 | Validated SDD publication ignores failing checkout hooks; configuration preserved |
 | Owner preservation and publication replay | 5 | Original contract and fenced examples, appendix bound, combined bound, real Git publication of narrower output, retry after the third clarification round |
+| Canonical owner line endings | 1 | CRLF scratch checkout preserves the exact committed owner prefix and verified publication |
 | Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
-| **Total** | **79** | No case counted twice |
+| **Total** | **80** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -704,3 +705,5 @@ this feature introduces no PRD/ADR documentation or catalog schema.
   branch creation before validated SDD content, and label-only readiness.
 
 When GitHub opens a PR for an issue-linked branch, it removes the direct branch connection and retains the native issue-to-PR connection. Readiness MUST preserve this evidence only for an open PR associated with the exact issue, from the same repository, whose exact head name and full commit SHA match the current remote ref. The bounded query reads at most 100 direct linked branches and 100 native associated PRs; no repository-wide search, branch-name inference, PR-body parsing or configurable expansion is permitted. A closed PR, fork, stale head or missing remote ref never proves readiness. Live evidence: issue #453 and PR #460 on 2026-10-10. Primary source: [GitHub branch-to-issue behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue).
+
+Automated SDD extension reads the existing owner from the selected immutable Git commit after checking the scratch file boundary. Checkout line-ending conversion cannot change the retained contract or introduce mixed line endings. A real Git fixture with core.autocrlf=true exercises validation, publication, and first-commit verification.

@@ -102,6 +102,19 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'rev-parse', `${commitSha}^`)).toBe(snapshot.baseSha);
   });
 
+  it('preserves canonical owner bytes when the scratch checkout converts line endings', async () => {
+    git(repo, 'config', 'core.autocrlf', 'true');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const owner = git(repo, 'show', `${snapshot.baseSha}:${plan.path}`);
+    const prepared = await workspace.validateDraft(snapshot, plan, draft());
+    expect(prepared.markdown.startsWith(owner)).toBe(true);
+    expect(prepared.markdown).not.toContain('\r');
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const sha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, plan.path)).toBe(true);
+  });
+
   it('publishes the validated SDD without running or changing inherited contributor hooks', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');

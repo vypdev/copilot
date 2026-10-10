@@ -98,7 +98,7 @@ export class CommentLanguageTranslationWorkflow {
                 return [failedAdaptation(
                     context,
                     targetLocale,
-                    'The language adapter changed or introduced a protected technical operand.',
+                    'The language adapter changed a protected technical operand or exceeded command limits.',
                 )];
             }
             const publication = composeTranslatedComment(restoredProse, context.commentBody, {
