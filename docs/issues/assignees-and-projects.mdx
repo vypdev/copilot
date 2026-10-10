@@ -73,7 +73,12 @@ verification. See [GitHub Project fields](https://docs.github.com/en/rest/projec
 The column update uses the exact ProjectV2 item returned by GitHub when the
 issue is added. It does not wait and re-list the board, so normal Project
 propagation delay cannot turn a successful link into a failed run. Replays reuse
-the existing item and do not create duplicates.
+the existing item and do not create duplicates. Linking initializes the created
+Status only if it is unset; edits and reopening retain an existing value, so an
+issue in In Progress does not return to Todo. After verified branch creation,
+the normal lifecycle transition selects the configured in-progress Status.
+If initialization fails, retrying reads the same item and can fill its unset
+Status without adding another item.
 
 ### How many boards?
 

@@ -29,10 +29,20 @@ describe('LinkPullRequestProjectUseCase', () => {
     useCase = new LinkPullRequestProjectUseCase({
       resolveIssueContentId: jest.fn(),
       linkContentId: mockLinkContentId,
-      moveContent: mockMoveContent,
+      initializeStatus: mockMoveContent,
     });
     mockLinkContentId.mockResolvedValue('project-item-1');
-    mockMoveContent.mockResolvedValue(true);
+    mockMoveContent.mockResolvedValue('initialized');
+  });
+
+  it('retains an existing project status and publishes truthful replay evidence', async () => {
+    mockMoveContent.mockResolvedValue('retained');
+    const results = await useCase.invoke(baseParam());
+    expect(results).toEqual([expect.objectContaining({
+      success: true, executed: true,
+      steps: [expect.stringContaining('existing status was retained')],
+    })]);
+    expect(results[0].steps[0]).not.toContain('with status');
   });
 
   it('uses the authoritative project item ID to set the configured status immediately', async () => {
@@ -48,7 +58,7 @@ describe('LinkPullRequestProjectUseCase', () => {
   });
 
   it('reports the retained link when setting the project status fails', async () => {
-    mockMoveContent.mockResolvedValue(false);
+    mockMoveContent.mockResolvedValue('failed');
 
     const results = await useCase.invoke(baseParam());
 
