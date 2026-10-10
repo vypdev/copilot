@@ -1,4 +1,4 @@
-import { activeAgentTasks } from '../agent_task_activation_policy';
+import { activeAgentTasks, isUnaddressedCommentEvent } from '../agent_task_activation_policy';
 import { SingleAction } from '../../../data/model/single_action';
 import { ACTIONS } from '../../../data/model/action_types';
 import type { GithubActionEventInputs } from '../../../actions/github_event_inputs';
@@ -25,6 +25,31 @@ describe('activeAgentTasks', () => {
         expect(activeAgentTasks(event('pull_request', '', { action: 'edited' }), noSingleAction())).toEqual([]);
         expect(activeAgentTasks(event('pull_request', '', { action: 'closed' }), noSingleAction())).toEqual([]);
         expect(activeAgentTasks(event('pull_request_review', '', { action: 'submitted' }), noSingleAction())).toEqual([]);
+    });
+
+    it('prepares the planner when a maintainer starts an issue, and when an enabled SDD resumes', () => {
+        const started = event('issues', '', { action: 'labeled', label: { name: 'in-progress' } });
+        expect(activeAgentTasks(started, noSingleAction())).toEqual(['planner']);
+        const reopened = event('issues', '', { action: 'reopened', issue: { labels: [{ name: 'in-progress' }] } });
+        expect(activeAgentTasks(reopened, noSingleAction(), 'vypbot', true, true)).toEqual(['planner']);
+        expect(activeAgentTasks(reopened, noSingleAction())).toEqual([]);
+    });
+
+    it('admits explicit SDD answers only on issues with the gate enabled', () => {
+        const answer = event('issue_comment', 'SDD Q1: Show verified state and pending questions.');
+        expect(isUnaddressedCommentEvent(answer, 'vypbot', true)).toBe(false);
+        expect(activeAgentTasks(answer, noSingleAction(), 'vypbot', true, true)).toEqual(['planner']);
+        expect(isUnaddressedCommentEvent(answer, 'vypbot')).toBe(true);
+        expect(activeAgentTasks(answer, noSingleAction(), 'vypbot')).toEqual([]);
+        for (const other of [
+            event('issue_comment', 'SDD Q1: An ordinary PR comment.', { issue: { pull_request: {} } }),
+            event('pull_request_review_comment', 'SDD Q1: A review comment.'),
+            event('issue_comment', 'The report mentions SDD Q1: without answering it.'),
+            event('issue_comment', 'SDD Q9: An unsupported question.'),
+        ]) {
+            expect(isUnaddressedCommentEvent(other, 'vypbot', true)).toBe(true);
+            expect(activeAgentTasks(other, noSingleAction(), 'vypbot', true, true)).toEqual([]);
+        }
     });
 
     it('does not activate planner when automatic PR descriptions are disabled', () => {

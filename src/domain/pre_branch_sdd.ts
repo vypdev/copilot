@@ -180,6 +180,10 @@ function sddPublicationLinks(record: SddGateRecord, issueUrl: string | undefined
   }
 }
 
+export function isSddAnswerComment(body: string): boolean {
+  return /^\s*SDD\s+Q[1-8]:/im.test(body);
+}
+
 export function parseSddAnswer(body: string, questionId: string): string | undefined {
   const line = body.split(/\r?\n/).find(candidate => new RegExp(`^\\s*SDD\\s+${questionId}:\\s*`, 'i').test(candidate));
   if (!line) return undefined;

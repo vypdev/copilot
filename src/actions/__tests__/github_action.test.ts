@@ -246,6 +246,38 @@ describe('runGitHubAction', () => {
     expect(mockMainRun.mock.calls[0][6]).toEqual(expect.any(Function));
   });
 
+  it('prepares the planner after live admission for an in-progress label event', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = {
+      action: 'labeled', label: { name: 'in-progress' },
+      issue: { number: 42, labels: [{ name: 'documentation' }, { name: 'in-progress' }] },
+    };
+
+    await runGitHubAction();
+
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({ activeAgentTasks: ['planner'] }));
+    expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), ['planner']);
+  });
+
+  it('routes an SDD answer to the enabled gate with a prepared planner', async () => {
+    github.context.eventName = 'issue_comment';
+    github.context.payload = {
+      action: 'created', issue: { number: 42, labels: [{ name: 'feature' }, { name: 'in-progress' }] },
+      comment: { id: 101, body: 'SDD Q1: Display pending questions and verified commit evidence.' },
+    };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      if (key === INPUT_KEYS.PRE_BRANCH_SDD) return 'true';
+      return '';
+    });
+
+    await runGitHubAction();
+
+    expect(mockMainRun).toHaveBeenCalledTimes(1);
+    expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), ['planner']);
+    expect(executionBuilderSpy).toHaveBeenCalledWith(expect.objectContaining({ activeAgentTasks: ['planner'] }));
+  });
+
   it('does not query membership or prepare an agent for continuation-only live-state admission', async () => {
     github.context.eventName = 'issues';
     github.context.payload = {
