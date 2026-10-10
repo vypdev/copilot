@@ -65,6 +65,7 @@ function contextWithFindings(ids: string[]) {
         canonicalPullRequest: {
             number: 50,
             state: 'open',
+            draft: false,
             baseRepository: { owner: 'o', name: 'r' },
             headRepositoryOwner: 'o',
             headRef: 'feature/42-foo',

@@ -40305,7 +40305,12 @@ function exactPlaceholderIndex(value, placeholder) {
     const before = index > 0 ? value[index - 1] : '';
     const afterIndex = index + placeholder.length;
     const after = afterIndex < value.length ? value[afterIndex] : '';
-    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after)
+    // A sentence-ending period beside an opaque code span is punctuation;
+    // extensions or other appended operands still fail this and the final scan.
+    const sentencePeriod = after === '.'
+        && (afterIndex + 1 === value.length || /\s/u.test(value[afterIndex + 1]));
+    return !OPERAND_ADJACENCY_PATTERN.test(before)
+        && (!OPERAND_ADJACENCY_PATTERN.test(after) || sentencePeriod)
         ? index
         : undefined;
 }
@@ -50531,6 +50536,7 @@ function projectTarget(source) {
             labels: Object.freeze([...source.labels.currentIssueLabels]),
             opened: source.issue.opened,
             descriptionEdited: source.issue.descriptionEdited,
+            ...(source.issueWorkflowKind === 'help' ? { branchlessHelp: true } : {}),
         });
     }
     return undefined;
@@ -52021,10 +52027,15 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
                 steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
             })];
     }
+    const targetBranch = param.bugbot.fixIntent.target.headBranch.trim();
+    if (!targetBranch) {
+        return [rememberFailure(new application_error_1.ApplicationError('workflow.invalid-event', 'Remembering a Bugbot rule requires an authoritative PR/branch target.'))];
+    }
     let mutation;
     try {
         mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(options.bugbotGitMutationPort, {
             operation: 'Remember Bugbot rule',
+            branch: targetBranch,
         });
     }
     catch (error) {
@@ -52040,12 +52051,12 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
         }
         const last = results.at(-1);
         if (last)
-            last.payload = { workspacePaths };
+            last.payload = { workspacePaths, branchCheckedOut: mutation.branchCheckedOut };
     }
     catch (error) {
         return [...results, rememberFailure(error)];
     }
-    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, undefined, results, options.bugbotGitMutationPort);
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, targetBranch, results, options.bugbotGitMutationPort);
     return [...results, ...commitResults];
 }
 function rememberFailure(error) {
@@ -60914,10 +60925,6 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             await publishTelemetry('skipped', 'admission');
             return [];
         }
-        if (reviewContext.target.isPullRequest && reviewContext.target.draft
-            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
-            return await complete(skippedDraftResult(), 'skipped');
-        }
         const contextOptions = resolveContextOptions(reviewContext);
         if (contextOptions === null) {
             (0, logging_ports_1.logDebugInfo)('No branch or pull request target available for potential-problems detection.');
@@ -60937,6 +60944,12 @@ async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
             (0, logging_ports_1.logInfo)(`Skipping push Bugbot analysis because pull request #${owningPullRequest.number} owns review for this head.`);
             await publishTelemetry('skipped', 'pull_request_ownership');
             return [];
+        }
+        // Comment events omit draft state, and delayed PR events may carry an
+        // obsolete value. The already verified provider identity is authoritative.
+        if (preflight.canonicalPullRequest?.draft
+            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
+            return await complete(skippedDraftResult(), 'skipped');
         }
         const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context, preflight));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
@@ -77852,6 +77865,7 @@ function toBugbotPullRequestIdentity(value) {
     const headSha = value.head?.sha?.trim().toLowerCase();
     if (!Number.isSafeInteger(number) || Number(number) <= 0
         || (state !== 'open' && state !== 'closed')
+        || typeof value.draft !== 'boolean'
         || !baseOwner || !baseName || !headOwner || !headRef
         || !headSha || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(headSha)) {
         throw new Error('Pull-request identity response is incomplete or invalid.');
@@ -77860,6 +77874,7 @@ function toBugbotPullRequestIdentity(value) {
     return {
         number: Number(number),
         state,
+        draft: value.draft,
         baseRepository: {
             owner: baseOwner,
             name: baseName,

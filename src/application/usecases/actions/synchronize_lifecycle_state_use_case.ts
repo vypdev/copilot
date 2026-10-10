@@ -40,6 +40,7 @@ export class SynchronizeLifecycleStateUseCase {
             isPullRequest: target.kind === 'pull-request',
             issueOpened: target.kind === 'issue' && target.opened,
             issueDescriptionEdited: target.kind === 'issue' && target.descriptionEdited,
+            issueBranchlessHelp: target.kind === 'issue' && target.branchlessHelp === true,
             pullRequestMerged: target.kind === 'pull-request' && target.merged,
             pullRequestClosed: target.kind === 'pull-request' && target.closed,
             externalEvidence,

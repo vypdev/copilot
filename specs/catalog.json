@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-23",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -1242,7 +1242,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -1267,7 +1267,10 @@
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/data/repository/branch_lifecycle_repository.ts",
-        "src/domain/copilot_lifecycle.ts"
+        "src/domain/copilot_lifecycle.ts",
+        "src/application/policies/lifecycle_state_policy.ts",
+        "src/application/usecases/actions/lifecycle_synchronization_context.ts",
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1279,13 +1282,17 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/branch_lifecycle_repository.test.ts",
-        "src/domain/__tests__/copilot_lifecycle.test.ts"
+        "src/domain/__tests__/copilot_lifecycle.test.ts",
+        "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
+        "src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts",
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/assignees-and-projects.mdx",
-        "docs/issues/notifications-and-auto-close.mdx"
+        "docs/issues/notifications-and-auto-close.mdx",
+        "docs/issues/index.mdx"
       ]
     },
     {
@@ -1428,7 +1435,9 @@
         "src/infrastructure/composition/bugbot_composition_root.ts",
         "scripts/coverage-budgets.json",
         "scripts/validate-coverage-budgets.cjs",
-        "src/application/usecases/comment_automation_action_workflow.ts"
+        "src/application/usecases/comment_automation_action_workflow.ts",
+        "src/data/repository/pull_request/pull_request_lifecycle_repository.ts",
+        "src/application/usecases/comment_automation_command_workflow.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1456,7 +1465,10 @@
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
-        "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts"
+        "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts",
+        "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts",
+        "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

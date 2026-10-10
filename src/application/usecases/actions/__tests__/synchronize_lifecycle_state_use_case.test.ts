@@ -33,6 +33,20 @@ function ports(labels?: readonly string[]) {
 describe('SynchronizeLifecycleStateUseCase', () => {
     afterEach(() => resetApplicationLogger());
 
+    it('recovers a blocked branchless help issue after a successful answer and preserves other labels', async () => {
+        const dependencies = ports(['help', 'in-progress', 'state:blocked', 'state:awaiting-maintainer']);
+        const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
+        const outcome = await useCase.invoke({
+            context: context({
+                eventName: 'issue_comment', action: 'created',
+                target: { kind: 'issue', number: 7, labels: [], opened: false, descriptionEdited: false, branchlessHelp: true },
+            }),
+            results: [{ id: 'ThinkUseCase', success: true, executed: true, steps: ['Answer'], errors: [] } as never],
+        });
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(7, ['help', 'in-progress', 'state:working']);
+        expect(outcome.labelPatch?.labels).toEqual(['help', 'in-progress', 'state:working']);
+    });
+
     it('replaces only managed labels and returns an explicit frozen patch', async () => {
         const dependencies = ports();
         const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);

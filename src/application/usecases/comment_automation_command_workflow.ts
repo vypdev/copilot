@@ -51,10 +51,16 @@ async function runRememberCommand(
             steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
         })];
     }
+    const targetBranch = param.bugbot.fixIntent.target.headBranch.trim();
+    if (!targetBranch) {
+        return [rememberFailure(new ApplicationError('workflow.invalid-event',
+            'Remembering a Bugbot rule requires an authoritative PR/branch target.'))];
+    }
     let mutation;
     try {
         mutation = await prepareWorkspaceMutation(options.bugbotGitMutationPort, {
             operation: 'Remember Bugbot rule',
+            branch: targetBranch,
         });
     } catch (error) {
         return [rememberFailure(error)];
@@ -74,13 +80,13 @@ async function runRememberCommand(
             ))];
         }
         const last = results.at(-1);
-        if (last) last.payload = { workspacePaths };
+        if (last) last.payload = { workspacePaths, branchCheckedOut: mutation.branchCheckedOut };
     } catch (error) {
         return [...results, rememberFailure(error)];
     }
     const commitResults = await commitUserRequestIfSuccessful(
         param.bugbot.commit,
-        undefined,
+        targetBranch,
         results,
         options.bugbotGitMutationPort,
     );

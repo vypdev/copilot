@@ -872,45 +872,122 @@ describe("runCommentAutomation", () => {
     expect(results[0]).toMatchObject({ success: true, executed: false });
   });
 
-  it('commits an explicitly remembered rule using only its exact guarded path', async () => {
-    const remember = { invoke: jest.fn().mockResolvedValue([successfulResult('remember')]) };
-    const statusOutputs = ['', '?? .copilot/BUGBOT.learned.md\n', '?? .copilot/BUGBOT.learned.md\n'];
-    const bugbotGitMutationPort = {
-      execute: jest.fn((_program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
-        if (args[0] === 'status') options?.stdout?.(Buffer.from(statusOutputs.shift() ?? ''));
-        return Promise.resolve();
+  function rememberFixture(settings: {
+    duplicate?: boolean;
+    changedPaths?: string;
+    checkoutFails?: boolean;
+    verificationFails?: boolean;
+  } = {}) {
+    let changed = false;
+    const remember = { invoke: jest.fn(async () => {
+      changed = !settings.duplicate;
+      return [new Result({ id: 'remember', success: true, executed: changed })];
+    }) };
+    const git = {
+      execute: jest.fn(async (program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
+        if (args[0] === 'status') {
+          options?.stdout?.(Buffer.from(changed
+            ? settings.changedPaths ?? '?? .copilot/BUGBOT.learned.md\n'
+            : ''));
+        }
+        return program === 'pnpm' && settings.verificationFails ? 1 : 0;
       }),
+      fetch: jest.fn(async () => { if (settings.checkoutFails) throw new Error('fetch unavailable'); }),
       configureAuthor: jest.fn().mockResolvedValue(undefined),
       stagePaths: jest.fn().mockResolvedValue(undefined),
       stageAll: jest.fn().mockResolvedValue(undefined),
       commit: jest.fn().mockResolvedValue(undefined),
       push: jest.fn().mockResolvedValue(undefined),
     };
-    const results = await runCommentAutomation(
+    const run = (execution: Partial<Execution> = {}) => runCommentAutomation(
       {
         owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' },
         commit: { branch: 'feature/1-safe' }, issueNumber: 1,
-        ai: configuredAi({ fixVerifyCommands: [] }),
+        ai: configuredAi({ fixVerifyCommands: ['pnpm run typecheck'] }),
+        ...execution,
       } as unknown as Execution,
       {
         taskId: 'CommentAutomation',
-        languageUseCase: {} as never,
-        intentUseCase: {} as never,
-        thinkUseCase: {} as never,
-        autofixUseCase: {} as never,
+        languageUseCase: {} as never, intentUseCase: {} as never,
+        thinkUseCase: {} as never, autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         rememberBugbotRuleUseCase: remember as never,
         userComment: '/copilot remember Prefer exact path validation',
-        bugbotGitMutationPort: bugbotGitMutationPort as never,
+        bugbotGitMutationPort: git as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
-      { getTokenUserDetails: jest.fn().mockResolvedValue({ name: 'Bot', email: 'bot@example.com' }) } as never,
     );
+    return { remember, git, run };
+  }
 
-    expect(remember.invoke).toHaveBeenCalledTimes(1);
-    expect(bugbotGitMutationPort.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
-    expect(bugbotGitMutationPort.stageAll).not.toHaveBeenCalled();
+  it.each([
+    { label: 'issue branch', execution: {}, branch: 'feature/1-safe' },
+    {
+      label: 'PR head with no commit-event branch',
+      execution: {
+        isPullRequest: true, commit: { branch: '' }, issueNumber: 453,
+        pullRequest: { number: 460, head: 'docs/453-workflow' },
+      } as unknown as Partial<Execution>,
+      branch: 'docs/453-workflow',
+    },
+  ])('checks out the $label before remembering and verifies only the guarded path', async ({ execution, branch }) => {
+    const { remember, git, run } = rememberFixture();
+    const results = await run(execution);
+    const checkoutIndex = git.execute.mock.calls.findIndex(([, args]) => args[0] === 'checkout');
+    expect(git.fetch).toHaveBeenCalledWith(branch);
+    expect(git.execute).toHaveBeenCalledWith('git', ['checkout', branch]);
+    expect(git.execute.mock.invocationCallOrder[checkoutIndex]).toBeLessThan(remember.invoke.mock.invocationCallOrder[0]);
+    expect(git.execute.mock.calls.filter(([, args]) => args[0] === 'checkout')).toHaveLength(1);
+    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true });
+    expect(git.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
+    expect(git.stageAll).not.toHaveBeenCalled();
+    expect(git.push).toHaveBeenCalledWith(branch);
     expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: true });
+  });
+
+  it('rejects branchless remember before inspecting or writing a workspace', async () => {
+    const { remember, git, run } = rememberFixture();
+    const results = await run({ commit: { branch: '' } as never });
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.execute).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.invalid-event' })] });
+  });
+
+  it('does not store a rule when target checkout fails', async () => {
+    const { remember, git, run } = rememberFixture({ checkoutFails: true });
+    const results = await run();
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'provider.unavailable' })] });
+  });
+
+  it('does not verify or commit an already remembered rule', async () => {
+    const { git, run } = rememberFixture({ duplicate: true });
+    const results = await run();
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(git.execute.mock.calls.some(([program]) => program === 'pnpm')).toBe(false);
+    expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
+  it('rejects unexpected paths written while remembering a rule', async () => {
+    const { git, run } = rememberFixture({ changedPaths: '?? .copilot/BUGBOT.learned.md\n M docs/unrelated.mdx\n' });
+    const results = await run();
+    expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'agent.policy-rejected' })] });
+    expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
+  it('does not publish a learned rule when verification fails', async () => {
+    const { git, run } = rememberFixture({ verificationFails: true });
+    const results = await run();
+    expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: false });
+    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true });
+    expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
   });
 
   it('refuses to remember a rule when the workspace is already dirty', async () => {
@@ -922,7 +999,7 @@ describe("runCommentAutomation", () => {
       }),
     };
     const results = await runCommentAutomation(
-      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' }, commit: { branch: 'feature/1-safe' } } as Execution,
       {
         taskId: 'CommentAutomation',
         languageUseCase: {} as never,

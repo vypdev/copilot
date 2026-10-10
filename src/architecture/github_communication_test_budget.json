@@ -31,15 +31,15 @@
     {
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
-      "requiredCases": 141,
-      "allocatedCases": 144,
+      "requiredCases": 144,
+      "allocatedCases": 147,
       "files": [
         { "path": "src/actions/__tests__/github_action_locale_inputs.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/action_summary_message_catalog.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/agent_output_locale_policy.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/application_error_message_catalog.test.ts", "qualifyingCases": 5 },
         { "path": "src/application/policies/__tests__/bugbot_message_catalog.test.ts", "qualifyingCases": 4 },
-        { "path": "src/application/policies/__tests__/comment_translation_policy.test.ts", "qualifyingCases": 15 },
+        { "path": "src/application/policies/__tests__/comment_translation_policy.test.ts", "qualifyingCases": 18 },
         { "path": "src/application/policies/__tests__/deployment_message_catalog.test.ts", "qualifyingCases": 5 },
         { "path": "src/application/policies/__tests__/inactivity_message_catalog.test.ts", "qualifyingCases": 5 },
         { "path": "src/application/policies/__tests__/publication_message_catalog.test.ts", "qualifyingCases": 6 },

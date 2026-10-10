@@ -17,6 +17,7 @@ const sha = 'a'.repeat(40);
 const identity: BugbotPullRequestIdentity = {
   number: 50,
   state: 'open',
+  draft: false,
   baseRepository: { owner: 'acme', name: 'repo', id: 7 },
   headRepositoryOwner: 'acme',
   headRef: 'feature/42',

@@ -49,6 +49,7 @@ describe('Bugbot review telemetry', () => {
             canonicalPullRequest: {
                 number: 9,
                 state: 'open',
+                draft: false,
                 baseRepository: { owner: 'org', name: 'repo' },
                 headRepositoryOwner: 'org',
                 headRef: 'feature',

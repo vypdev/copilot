@@ -55,6 +55,7 @@ const mockAskAgent = jest.fn();
 const mockPublishTelemetry = jest.fn();
 const mockResolveCatalog = jest.fn();
 let issueCoverageOverride: BugbotSourceCoverage | undefined;
+let providerDraft = false;
 
 function completeCoverage(source: BugbotContextSource, items: number) {
   return {
@@ -110,6 +111,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   let useCase: DetectPotentialProblemsUseCase;
 
   beforeEach(() => {
+    providerDraft = false;
     const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
     const mockListPullRequestReviewThreadStates = jest.fn().mockResolvedValue({});
     const issueComments = {
@@ -173,6 +175,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       getPullRequest: async (pullRequestNumber: number) => ({
         number: pullRequestNumber,
         state: 'open' as const,
+        draft: providerDraft,
         baseRepository: { owner: 'owner', name: 'repo' },
         headRepositoryOwner: 'owner',
         headRef: 'feature/head',
@@ -183,6 +186,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         return Promise.all(numbers.map(async (number: number) => ({
           number,
           state: 'open' as const,
+          draft: providerDraft,
           baseRepository: { owner: 'owner', name: 'repo' },
           headRepositoryOwner: headOwner,
           headRef,
@@ -431,17 +435,74 @@ describe("DetectPotentialProblemsUseCase", () => {
   });
 
   it('skips draft pull requests when draft reviews are disabled', async () => {
+    providerDraft = true;
     const results = await invokeUseCase(useCase, baseParam({
       issueNumber: -1,
       isPullRequest: true,
       eventName: 'pull_request',
-      pullRequest: { number: 17, head: 'feature/draft', action: 'opened' },
+      pullRequest: { number: 17, head: 'feature/head', action: 'opened' },
       inputs: { pull_request: { draft: true, head: { sha: 'a'.repeat(40) } } },
     }));
 
     expect(results[0]).toEqual(expect.objectContaining({ success: true, executed: false }));
     expect(results[0].payload).toEqual(expect.objectContaining({ skipped: 'draft' }));
     expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it.each(['issue_comment', 'pull_request_review_comment'])('uses the live draft state when %s omits it', async eventName => {
+    providerDraft = true;
+    const results = await invokeUseCase(useCase, baseParam({
+      isPullRequest: true, eventName,
+      pullRequest: { number: 17, head: 'feature/head', action: 'created' },
+      inputs: {},
+    }));
+
+    expect(results[0].payload).toEqual(expect.objectContaining({ skipped: 'draft' }));
+    expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(mockListPullRequestReviewComments).not.toHaveBeenCalled();
+    expect(mockGetReviewDiffSnapshot).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+  });
+
+  it('reviews a live draft only when draft reviews are explicitly enabled', async () => {
+    providerDraft = true;
+    const operation = projectBugbotReviewOperationContext(baseParam({
+      isPullRequest: true, eventName: 'issue_comment',
+      pullRequest: { number: 17, head: 'feature/head', action: 'created' },
+      inputs: {},
+    }));
+    const results = await useCase.invoke({
+      ...operation,
+      analysis: { ...operation.analysis, reviewConfiguration: { ...operation.analysis.reviewConfiguration, reviewDrafts: true } },
+    });
+
+    expect(results[0].success).toBe(true);
+    expect(results[0].payload).not.toEqual(expect.objectContaining({ skipped: 'draft' }));
+    expect(mockGetReviewDiffSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a live ready state instead of a delayed event draft value', async () => {
+    const results = await invokeUseCase(useCase, baseParam({
+      isPullRequest: true, eventName: 'pull_request',
+      pullRequest: { number: 17, head: 'feature/head', action: 'opened' },
+      inputs: { pull_request: { draft: true, head: { sha: 'a'.repeat(40) } } },
+    }));
+
+    expect(results[0].success).toBe(true);
+    expect(results[0].payload).not.toEqual(expect.objectContaining({ skipped: 'draft' }));
+    expect(mockGetReviewDiffSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips a canonical draft selected by exact head before detail reads', async () => {
+    providerDraft = true;
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([17]);
+    const results = await invokeUseCase(useCase, baseParam({ eventName: 'workflow_dispatch' }));
+
+    expect(results[0].payload).toEqual(expect.objectContaining({ skipped: 'draft' }));
+    expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(mockGetReviewDiffSnapshot).not.toHaveBeenCalled();
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
@@ -1012,6 +1073,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       getPullRequest: async (pullRequestNumber: number) => ({
         number: pullRequestNumber,
         state: 'open' as const,
+        draft: false,
         baseRepository: { owner: 'owner', name: 'repo' },
         headRepositoryOwner: 'owner',
         headRef: 'feature/head',
@@ -1022,6 +1084,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         return Promise.all(numbers.map(async (number: number) => ({
           number,
           state: 'open' as const,
+          draft: false,
           baseRepository: { owner: 'owner', name: 'repo' },
           headRepositoryOwner: headOwner,
           headRef,

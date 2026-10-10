@@ -80,6 +80,7 @@ describe("PullRequestLifecycleRepository", () => {
         )).resolves.toEqual({
             number: 12,
             state: 'open',
+            draft: false,
             baseRepository: { owner: 'owner', name: 'repo', id: 7 },
             headRepositoryOwner: 'fork-owner',
             headRef: 'feature/12',
@@ -97,6 +98,20 @@ describe("PullRequestLifecycleRepository", () => {
             code: 'provider.unavailable',
             message: 'Unable to verify pull request #12.',
         });
+    });
+
+    it('retains the provider draft state on the canonical identity', async () => {
+        mockGet.mockResolvedValue({ data: { ...pullRequestIdentity(12), draft: true } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+        await expect(repository.getBugbotPullRequestIdentity('owner', 'repo', 12, 'token'))
+            .resolves.toEqual(expect.objectContaining({ draft: true }));
+    });
+
+    it.each([undefined, null, 'true'])('rejects an absent or malformed provider draft state: %s', async draft => {
+        mockGet.mockResolvedValue({ data: { ...pullRequestIdentity(12), draft } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+        await expect(repository.getBugbotPullRequestIdentity('owner', 'repo', 12, 'token'))
+            .rejects.toMatchObject({ code: 'provider.unavailable' });
     });
 
     it('maps Bugbot identity and exact-head failures to sanitized provider errors', async () => {
@@ -189,6 +204,7 @@ function pullRequestIdentity(number: number) {
     return {
         number,
         state: 'open',
+        draft: false,
         head: {
             ref: 'feature/12',
             sha: 'a'.repeat(40),
