@@ -401,6 +401,9 @@ function assertRunner(file, workflow) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
+    } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {
+      if (!['linux', 'windows'].includes(jobId)) throw new Error(`${relativeFile} contains an unexpected diagnostic job.`);
+      expected = ['self-hosted', 'codex', jobId === 'linux' ? 'Linux' : 'Windows'];
     } else if (relativeFile === '.github/workflows/ci_check.yml'
       || relativeFile === '.github/workflows/repowise.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];

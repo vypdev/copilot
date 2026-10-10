@@ -34,6 +34,7 @@ export interface SddPreparedDraft {
 /** The Action owns all Git and file writes; the drafting agent has read-only structured access. */
 export interface PreBranchSddWorkspacePort {
   loadSnapshot(baseBranch: string): Promise<SddCatalogSnapshot>;
+  isAncestor(ancestorSha: string, descendantSha: string): Promise<boolean>;
   readSdd(baseSha: string, path: string): Promise<string | undefined>;
   validateDraft(snapshot: SddCatalogSnapshot, plan: SddPlan, markdown: string, newCapability?: SddCatalogCapability): Promise<SddPreparedDraft>;
   publish(branchName: string, prepared: SddPreparedDraft): Promise<string>;

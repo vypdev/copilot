@@ -124,9 +124,12 @@ describe('lifecycle capability repository bindings', () => {
 
     const updateDescription = jest.fn().mockResolvedValue(undefined);
     const getDetails = jest.fn().mockResolvedValue({ body: 'body', headBranch: 'feature/9', baseBranch: 'develop' });
-    const description = bindPullRequestDescription({ updateDescription, getDetails }, binding);
+    const snapshot = { baseSha: 'base', headSha: 'head', changes: [], coverage: { status: 'complete' } };
+    const getDiff = jest.fn().mockResolvedValue(snapshot);
+    const description = bindPullRequestDescription({ updateDescription, getDetails }, binding, { getBoundedBugbotReviewDiffSnapshot: getDiff });
     await description.updateDescription(9, 'generated');
     await description.getDetails(9);
+    await expect(description.getDiff(9)).resolves.toEqual(snapshot);
 
     expect(isLinked).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
     expect(getLinkDetails).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
@@ -134,6 +137,7 @@ describe('lifecycle capability repository bindings', () => {
     expect(updateLinkDescription).toHaveBeenCalledWith('acme', 'demo', 9, 'linked', 'secret');
     expect(updateDescription).toHaveBeenCalledWith('acme', 'demo', 9, 'generated', 'secret');
     expect(getDetails).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
+    expect(getDiff).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
     expect(Object.isFrozen(link)).toBe(true);
     expect(Object.isFrozen(description)).toBe(true);
   });

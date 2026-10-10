@@ -126,10 +126,11 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
     if ((value.branchName !== undefined || value.commitSha !== undefined)
       && (typeof value.branchName !== 'string' || !BRANCH_NAME.test(value.branchName)
         || value.branchName.includes('..') || value.branchName.includes('//') || value.branchName.endsWith('.lock')
-        || typeof value.commitSha !== 'string' || !SHA.test(value.commitSha))) return undefined;
+        || (value.commitSha !== undefined && (typeof value.commitSha !== 'string' || !SHA.test(value.commitSha))))) return undefined;
     if (value.revisionSha !== undefined && (typeof value.revisionSha !== 'string' || !SHA.test(value.revisionSha))) return undefined;
     if (value.revisionBaseSha !== undefined && (typeof value.revisionBaseSha !== 'string' || !SHA.test(value.revisionBaseSha))) return undefined;
     if (value.revisionSha && !value.revisionBaseSha) return undefined;
+    if ((value.revisionSha || value.revisionBaseSha) && !value.commitSha) return undefined;
     if (value.answers !== undefined && (!Array.isArray(value.answers) || value.answers.length > 24
       || value.answers.some((answer: unknown) => !isRecord(answer)
         || !/^Q[1-8]$/.test(String(answer.questionId))
@@ -154,14 +155,22 @@ export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', iss
   const questions = record.plan.questions.map(question =>
     `- **${question.id} · ${question.owner === 'maintainer' ? (spanish ? 'Mantenimiento' : 'Maintainer') : (spanish ? 'Autor de la issue' : 'Issue author')}:** ${sanitize(question.text)}${question.suggestion ? `\n  ${spanish ? 'Respuesta sugerida' : 'Suggested answer'}: ${sanitize(question.suggestion)}` : ''}`,
   ).join('\n');
-  const retained = record.branchName
+  const retained = record.branchName && !record.commitSha
+    ? spanish
+      ? `Se conserva la rama vinculada \`${record.branchName}\`; la publicación del primer commit del SDD está pendiente. La implementación sigue bloqueada.`
+      : `The linked branch \`${record.branchName}\` is retained; its first SDD commit is pending. Implementation remains blocked.`
+    : record.branchName
     ? spanish
       ? `Se conservan la rama vinculada \`${record.branchName}\` y el primer commit del SDD; la implementación espera esta revisión.`
       : `The linked branch \`${record.branchName}\` and its first SDD commit are retained; implementation waits for this revision.`
     : spanish ? 'Todavía no existe ningún borrador del SDD ni ninguna rama.' : 'No SDD draft or branch exists yet.';
+  const pendingPublication = Boolean(record.branchName && !record.commitSha && record.plan.questions.length === 0);
+  const nextStep = pendingPublication
+    ? spanish ? 'Vuelve a ejecutar el workflow de la issue para reintentar la publicación en esta misma rama.' : 'Run the issue workflow again to retry publication on this same branch.'
+    : spanish ? 'Responde con `SDD Q1: tu respuesta` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.' : 'Reply with `SDD Q1: your answer` (one line per question). The Action will continue after the required people answer every question.';
   return spanish
-    ? `## Estado del SDD\n\n**Estado actual:** A la espera de respuestas para la especificación. ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n${questions}\n\nResponde con \`SDD Q1: tu respuesta\` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.\n\n${marker}`
-    : `## SDD work status\n\n**Current status:** Waiting for specification answers. ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n${questions}\n\nReply with \`SDD Q1: your answer\` (one line per question). The Action will continue after the required people answer every question.\n\n${marker}`;
+    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n${questions}\n\n${nextStep}\n\n${marker}`
+    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n${questions}\n\n${nextStep}\n\n${marker}`;
 }
 
 function sddPublicationLinks(record: SddGateRecord, issueUrl: string | undefined, spanish: boolean): string {

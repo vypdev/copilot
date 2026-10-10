@@ -50,6 +50,18 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     return Object.freeze({ baseSha, capabilities: Object.freeze(catalog.capabilities), template, standard });
   }
 
+  async isAncestor(ancestorSha: string, descendantSha: string): Promise<boolean> {
+    assertSha(ancestorSha);
+    assertSha(descendantSha);
+    try {
+      await this.git(['merge-base', '--is-ancestor', ancestorSha, descendantSha]);
+      return true;
+    } catch (error) {
+      if ((error as { code?: unknown }).code === 1) return false;
+      throw error;
+    }
+  }
+
   async readSdd(baseSha: string, relativePath: string): Promise<string | undefined> {
     assertSha(baseSha);
     if (!isSafeSddPath(relativePath)) throw new Error('SDD path is outside the specification boundary.');

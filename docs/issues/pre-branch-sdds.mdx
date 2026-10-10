@@ -23,6 +23,8 @@ The status comment uses the effective issue locale (Spanish and English are bund
 
 If the issue body, human title, or source branch changes while an SDD is being prepared, the Action reanalyzes or blocks publication so it cannot publish a stale contract. A duplicate event reuses the status comment and branch. A push that succeeded before the comment update can be recovered from the same remote branch.
 
+If the branch was created but the first SDD commit could not be published, the status comment retains that exact branch and keeps implementation blocked. A retry uses its original base, even if `develop` has advanced. The Action rejects a branch containing implementation commits before the first SDD commit. Updates to the Action's hidden issue configuration do not invalidate the human specification answers.
+
 If the issue materially changes after publication, the Action retains the linked branch and its first commit, removes `branched` while the revision is pending, clarifies the changed contract, and publishes a validated SDD revision on that branch. `branched` returns only after the remote revision is verified. Resolve a blocked status on the existing issue and rerun its workflow; a new branch is not needed.
 
 ## Configuration example

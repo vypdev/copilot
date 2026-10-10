@@ -80,6 +80,7 @@ jest.mock("../github_project_client_factory", () => ({
 
 jest.mock("../github_pull_request_client_factory", () => ({
   createPullRequestLifecycleClient: mockCreatePullRequestLifecycleClient,
+  createPullRequestChangesClient: jest.fn(() => ({})),
 }));
 
 jest.mock("../agent_capability_composition_root", () => ({

@@ -159,7 +159,7 @@ export async function runGitHubAction(): Promise<void> {
                 projectQuery: projectBoard.query,
                 token,
             });
-            if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
+            if (admittedExecution.isIssue && admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
             if (memberOnlyAgentTaskAuthorizationRequired) {
                 // Agent-task admission is intentionally membership-based. File-changing
                 // commands enforce their separate repository-write authorization later.

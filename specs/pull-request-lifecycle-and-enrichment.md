@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-15
-- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
+- Last verified: 2026-10-10 on `master`; PR #459 exposed missing agent workspace access during dogfooding
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
 - Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), [PR #393](https://github.com/vypdev/copilot/pull/393), and [PR #394](https://github.com/vypdev/copilot/pull/394)
@@ -248,6 +248,8 @@ P2-E makes this boundary executable: issue/PR leaves import no `Execution`
 aggregate, application requests contain facts rather than credentials, and
 composition exposes operation-only bound ports. Automatic and explicit PR
 description generation share one discriminated request instead of dual methods.
+The description read port supplies the GitHub merge-base diff and current body as untrusted evidence before the agent query. Complete evidence is limited to 100 changed files and 120,000 serialized characters. Missing nonempty text patches, empty diffs, partial provider coverage, or exceeded budgets retain the existing body without an agent call or write. Credentials remain confined to the read adapter. Optional agent workspace reads do not gate generation. These bounds are fixed rather than configuration inputs.
+
 The agent returns bounded semantic fields, not arbitrary body Markdown. A pure
 application presentation policy validates cardinality, sentence count,
 duplicates, optional notes, trusted linkage, unsafe Markdown controls, and the
@@ -394,7 +396,8 @@ not altered.
 | Workflow/config contracts | 14 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 15 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
-| **Total** | **101** | no double counting |
+| Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
+| **Total** | **107** | no double counting |
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
 coverage. The P2-E context/orchestration path enforces 95% lines/statements and
@@ -449,6 +452,8 @@ body mutation that produces no follow-up PR workflow.
     null for removed state/configuration contracts, even when the diff uses
     `legacy`, `deprecated`, migration, strict-reader, or fail-closed wording.
 
+18. A complete GitHub diff permits description generation even when agent shell commands fail; partial/missing/oversized evidence performs zero body writes and retains the existing body.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
@@ -475,7 +480,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 101-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 107-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.

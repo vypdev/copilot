@@ -502,6 +502,8 @@ or status update failed. A retry reads the exact remote SHA before writing.
    separate regular-file checks. This closes the race found by [Bugbot on PR
    #403](https://github.com/vypdev/copilot/pull/403).
 
+A failed first publication persists the exact linked branch and original base in the bot-owned awaiting-answer record without claiming a published commit. Replay may reuse an empty retained branch only when its head belongs to the parent history; implementation commits before the first SDD block recovery. Advancing develop does not rebase, recreate, or force-push that branch. A pushed first SDD is recovered only through the existing author, subject, catalog, path, parent and remote ancestry verification. Action-owned hidden configuration is excluded from human issue freshness. Published records still require the exact verified first commit.
+
 ## 12. Observability and operational UX
 
 The issue status reports gate stage, SDD path/owner, answer owners, branch
@@ -531,7 +533,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **60 distinct cases** are a floor derived from eligibility,
+The following **66 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -544,7 +546,8 @@ ownership/validation.
 | Workflow/setup/SDD schema | 8 | Forms, profile, template, catalog |
 | UX/localization/accessibility/sanitization | 6 | Five states, links, notification budget |
 | Integration/security/recovery | 8 | First commit, partial effects, abuse |
-| **Total** | **60** | No case counted twice |
+| Pending-branch recovery | 6 | Retained base, intervening commits, managed metadata, pending card, replay, post-push recovery |
+| **Total** | **66** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the

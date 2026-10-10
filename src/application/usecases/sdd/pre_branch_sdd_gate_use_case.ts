@@ -21,6 +21,8 @@ import {
   type SddGateRecord,
   type SddPlan,
 } from '../../../domain/pre_branch_sdd';
+import { getVisibleIssueDescription } from '../../policies/recommendation_policy';
+import { logError } from '../../ports/logging_ports';
 import { toApplicationError } from '../../errors/application_error';
 
 export interface PreBranchSddContext {
@@ -33,6 +35,7 @@ export interface PreBranchSddContext {
   readonly admittedKind: string;
   readonly profileDigest?: string;
   readonly baseBranch: string;
+  readonly workingBranch?: string;
   readonly tokenUser: string;
   readonly agentConfiguration?: AgentConfiguration;
 }
@@ -105,10 +108,29 @@ export class PreBranchSddGateUseCase {
       if (!context.agentConfiguration) throw new Error('An agent must be configured to analyze and draft SDDs.');
       const allComments = await this.comments.listIssueComments(context.issueNumber);
       const card = latestOwnedCard(allComments, context.issueNumber, context.tokenUser);
-      const sourceBranch = card?.record.branchName ?? context.baseBranch;
+      const retainedBranch = card?.record.branchName ?? context.workingBranch;
+      const sourceBranch = retainedBranch ?? context.baseBranch;
+      if (retainedBranch && !await this.linkedBranch.getLinkedBranch(context.issueNumber, retainedBranch)) {
+        throw new Error('The retained SDD branch is no longer linked to this issue.');
+      }
       const snapshot = await this.workspace.loadSnapshot(sourceBranch);
+      if (retainedBranch && !card?.record.commitSha) {
+        if (card?.record.branchName && snapshot.baseSha !== card.record.baseSha) {
+          const recovered = await this.workspace.recoverPublished(retainedBranch, {
+            plan: card.record.plan, baseSha: card.record.baseSha, markdown: '', changedPaths: [],
+          });
+          if (!recovered) throw new Error('The unpublished SDD branch changed; its first commit cannot be rewritten.');
+          const published: SddGateRecord = { ...card.record, phase: 'published', commitSha: recovered };
+          await this.writeCard(context.issueNumber, card.id, published, context.issueLocale, context.issueUrl);
+          return this.begin(context);
+        }
+        const parent = await this.workspace.loadSnapshot(context.baseBranch);
+        if (!await this.workspace.isAncestor(snapshot.baseSha, parent.baseSha)) {
+          throw new Error('The retained branch contains changes before its first SDD commit; maintainer recovery is required.');
+        }
+      }
       const staleAwaiting = card?.record.phase === 'awaiting-answer' && (
-        card.record.branchName
+        card.record.commitSha
           ? card.record.revisionBaseSha !== snapshot.baseSha
           : card.record.baseSha !== snapshot.baseSha
       );
@@ -137,7 +159,8 @@ export class PreBranchSddGateUseCase {
 
       let answers: readonly SddAnswer[] = [];
       if (card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting) {
-        answers = await this.collectAnswers(card.record, card.id, allComments, context);
+        answers = card.record.plan.questions.length === 0 ? card.record.answers ?? []
+          : await this.collectAnswers(card.record, card.id, allComments, context);
         if (answers.length < card.record.plan.questions.length) {
           return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
         }
@@ -161,9 +184,9 @@ export class PreBranchSddGateUseCase {
       const record: SddGateRecord = {
         version: 1, issueNumber: context.issueNumber, phase: 'awaiting-answer', issueDigest: digest,
         baseSha: card?.record.branchName ? card.record.baseSha : snapshot.baseSha, round, plan, answers,
-        ...(card?.record.branchName ? { branchName: card.record.branchName, commitSha: card.record.commitSha,
-          revisionBaseSha: snapshot.baseSha,
-          ...(card.record.revisionSha ? { revisionSha: card.record.revisionSha } : {}) } : {}),
+        ...(retainedBranch ? { branchName: retainedBranch,
+          ...(card?.record.commitSha ? { commitSha: card.record.commitSha, revisionBaseSha: snapshot.baseSha } : {}),
+          ...(card?.record.revisionSha ? { revisionSha: card.record.revisionSha } : {}) } : {}),
       };
       if (plan.questions.length > 0) {
         await this.writeCard(context.issueNumber, card?.id, record, context.issueLocale, context.issueUrl);
@@ -216,7 +239,13 @@ export class PreBranchSddGateUseCase {
         results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`)],
       };
     } catch (error) {
-      return { status: 'blocked', results: [this.failure(error)] };
+      const failure = this.failure(error);
+      try {
+        await this.writeCard(context.issueNumber, draft.cardId, { ...draft.record, branchName }, context.issueLocale, context.issueUrl);
+      } catch (publicationError) {
+        return { status: 'blocked', results: [failure, this.failure(publicationError)] };
+      }
+      return { status: 'blocked', results: [failure] };
     }
   }
 
@@ -262,7 +291,7 @@ export class PreBranchSddGateUseCase {
       this.workspace.loadSnapshot(sourceBranch),
     ]);
     if (snapshot.baseSha !== expectedBaseSha
-      || (liveBody ?? '').trim() !== context.issueBody.trim()
+      || getVisibleIssueDescription(liveBody ?? '') !== getVisibleIssueDescription(context.issueBody)
       || normalizeSddIssueTitle(liveTitle ?? '') !== normalizeSddIssueTitle(context.issueTitle)) {
       throw new Error('The issue or development base changed during SDD preparation; rerun analysis before publishing.');
     }
@@ -273,6 +302,8 @@ export class PreBranchSddGateUseCase {
   }
 
   private failure(error: unknown): Result {
+    // The runtime logger redacts credentials and makes workflow-command text inert.
+    logError(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
     const semanticError = toApplicationError(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
     return new Result({ id: this.taskId, success: false, executed: true, steps: [semanticError.message], errors: [semanticError] });
   }
@@ -290,7 +321,7 @@ function latestOwnedCard(comments: readonly IssueCommentPublicationTarget[], iss
 
 function issueDigest(context: PreBranchSddContext, baseSha: string): string {
   return createHash('sha256').update(JSON.stringify([
-    context.issueNumber, normalizeSddIssueTitle(context.issueTitle), context.issueBody.trim(), context.admittedKind,
+    context.issueNumber, normalizeSddIssueTitle(context.issueTitle), getVisibleIssueDescription(context.issueBody), context.admittedKind,
     context.profileDigest ?? '', baseSha,
   ])).digest('hex');
 }
