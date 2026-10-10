@@ -1242,7 +1242,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -1267,7 +1267,10 @@
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/data/repository/branch_lifecycle_repository.ts",
-        "src/domain/copilot_lifecycle.ts"
+        "src/domain/copilot_lifecycle.ts",
+        "src/application/policies/lifecycle_state_policy.ts",
+        "src/application/usecases/actions/lifecycle_synchronization_context.ts",
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1279,13 +1282,17 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/branch_lifecycle_repository.test.ts",
-        "src/domain/__tests__/copilot_lifecycle.test.ts"
+        "src/domain/__tests__/copilot_lifecycle.test.ts",
+        "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
+        "src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts",
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/assignees-and-projects.mdx",
-        "docs/issues/notifications-and-auto-close.mdx"
+        "docs/issues/notifications-and-auto-close.mdx",
+        "docs/issues/index.mdx"
       ]
     },
     {

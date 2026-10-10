@@ -50536,6 +50536,7 @@ function projectTarget(source) {
             labels: Object.freeze([...source.labels.currentIssueLabels]),
             opened: source.issue.opened,
             descriptionEdited: source.issue.descriptionEdited,
+            ...(source.issueWorkflowKind === 'help' ? { branchlessHelp: true } : {}),
         });
     }
     return undefined;

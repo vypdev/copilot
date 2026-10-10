@@ -43,6 +43,7 @@ export interface LifecycleStateDecisionInput {
     readonly isPullRequest: boolean;
     readonly issueOpened: boolean;
     readonly issueDescriptionEdited: boolean;
+    readonly issueBranchlessHelp?: boolean;
     readonly pullRequestMerged: boolean;
     readonly pullRequestClosed: boolean;
     readonly externalEvidence?: LifecycleExternalEvidence;
@@ -83,6 +84,8 @@ export function resolveLifecycleState(
     if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
+    if (input.issueBranchlessHelp && input.eventName === 'issue_comment'
+        && hasSuccessfulResult(input.results, 'ThinkUseCase')) return 'working';
     return undefined;
 }
 

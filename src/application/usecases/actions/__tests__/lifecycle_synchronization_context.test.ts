@@ -26,6 +26,17 @@ function source(
 }
 
 describe('lifecycle synchronization context', () => {
+    it('projects the admitted branchless help kind as an immutable fact', () => {
+        expect(projectLifecycleSynchronizationContext(source({ issueWorkflowKind: 'help' })).target)
+            .toMatchObject({ kind: 'issue', branchlessHelp: true });
+    });
+
+    it('does not infer branchless help from raw labels without admitted workflow identity', () => {
+        const labels = { ...source().labels, currentIssueLabels: ['help', 'question'] };
+        expect(projectLifecycleSynchronizationContext(source({ labels })).target)
+            .not.toHaveProperty('branchlessHelp');
+    });
+
     it('projects and freezes an issue snapshot without repository authority or provider DTOs', () => {
         const currentIssueLabels = ['bug'];
         const context = projectLifecycleSynchronizationContext(source({
@@ -57,6 +68,7 @@ describe('lifecycle synchronization context', () => {
             eventName: 'issue_comment',
             isIssue: false,
             isPullRequest: true,
+            issueWorkflowKind: 'help',
             inputs: { action: 'created' },
             pullRequest: { number: 11, isMerged: false, isClosed: false },
             labels: {

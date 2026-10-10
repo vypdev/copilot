@@ -44531,6 +44531,9 @@ function resolveLifecycleState(input) {
         return 'planned';
     if (hasExplicitPlanningCommand(input.results))
         return 'planned';
+    if (input.issueBranchlessHelp && input.eventName === 'issue_comment'
+        && hasSuccessfulResult(input.results, 'ThinkUseCase'))
+        return 'working';
     return undefined;
 }
 /** Extracts only stable review/check facts from GitHub event payloads. */
@@ -50228,6 +50231,7 @@ function projectTarget(source) {
             labels: Object.freeze([...source.labels.currentIssueLabels]),
             opened: source.issue.opened,
             descriptionEdited: source.issue.descriptionEdited,
+            ...(source.issueWorkflowKind === 'help' ? { branchlessHelp: true } : {}),
         });
     }
     return undefined;
@@ -51324,6 +51328,7 @@ class SynchronizeLifecycleStateUseCase {
             isPullRequest: target.kind === 'pull-request',
             issueOpened: target.kind === 'issue' && target.opened,
             issueDescriptionEdited: target.kind === 'issue' && target.descriptionEdited,
+            issueBranchlessHelp: target.kind === 'issue' && target.branchlessHelp === true,
             pullRequestMerged: target.kind === 'pull-request' && target.merged,
             pullRequestClosed: target.kind === 'pull-request' && target.closed,
             externalEvidence,

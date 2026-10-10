@@ -13,6 +13,21 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('lifecycle state policy', () => {
+    it.each([
+        { label: 'successful help answer', help: true, event: 'issue_comment', results: [result('ThinkUseCase')], expected: 'working' },
+        { label: 'ordinary issue answer', help: false, event: 'issue_comment', results: [result('ThinkUseCase')], expected: undefined },
+        { label: 'skipped help answer', help: true, event: 'issue_comment', results: [{ ...result('ThinkUseCase'), executed: false }], expected: undefined },
+        { label: 'failed help answer', help: true, event: 'issue_comment', results: [result('ThinkUseCase', false)], expected: 'blocked' },
+        { label: 'explicit help plan', help: true, event: 'issue_comment', results: [result('ThinkUseCase'), { ...result('ExplicitCommand'), payload: { explicitCommand: 'plan' } }], expected: 'planned' },
+        { label: 'unrelated issue event', help: true, event: 'issues', results: [result('ThinkUseCase')], expected: undefined },
+    ])('resolves $label without inferring a branch-bearing issue recovery', ({ help, event, results, expected }) => {
+        expect(resolveLifecycleState({
+            eventName: event, action: 'created', isIssue: true, isPullRequest: false,
+            issueOpened: false, issueDescriptionEdited: false, issueBranchlessHelp: help,
+            pullRequestMerged: false, pullRequestClosed: false, results,
+        })).toBe(expected);
+    });
+
     it('moves an issue to planned and working only after branch readiness is verified', () => {
         expect(resolveLifecycleState({ eventName: 'issues', action: 'opened', isIssue: true, isPullRequest: false, issueOpened: true, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [] })).toBeUndefined();
         expect(resolveLifecycleState({ eventName: 'issues', action: 'edited', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: true, pullRequestMerged: false, pullRequestClosed: false, results: [result('RecommendStepsUseCase')] })).toBe('planned');

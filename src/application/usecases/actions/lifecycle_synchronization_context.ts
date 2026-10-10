@@ -1,6 +1,7 @@
 import type { Result } from '../../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../../domain/copilot_lifecycle';
 import type { LifecycleExternalEvidenceSource } from '../../policies/lifecycle_state_policy';
+import type { IssueWorkflowKind } from '../../../domain/issue_workflow_profile';
 
 export type LifecycleSynchronizationTarget =
     | {
@@ -9,6 +10,7 @@ export type LifecycleSynchronizationTarget =
         readonly labels: readonly string[];
         readonly opened: boolean;
         readonly descriptionEdited: boolean;
+        readonly branchlessHelp?: boolean;
     }
     | {
         readonly kind: 'pull-request';
@@ -45,6 +47,7 @@ export interface LifecycleSynchronizationContextSource {
     readonly issueNumber: number;
     readonly isIssue: boolean;
     readonly isPullRequest: boolean;
+    readonly issueWorkflowKind?: IssueWorkflowKind;
     readonly inputs?: {
         readonly action?: string;
         readonly review?: { readonly state?: string; readonly commit_id?: string };
@@ -134,6 +137,7 @@ function projectTarget(source: LifecycleSynchronizationContextSource): Lifecycle
             labels: Object.freeze([...source.labels.currentIssueLabels]),
             opened: source.issue.opened,
             descriptionEdited: source.issue.descriptionEdited,
+            ...(source.issueWorkflowKind === 'help' ? { branchlessHelp: true } : {}),
         });
     }
 
