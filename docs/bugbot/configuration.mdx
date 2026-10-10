@@ -112,7 +112,7 @@ Bugbot loads rules in deterministic precedence order:
 3. `.copilot/BUGBOT.md` from parent directories of changed files, shallow to deep;
 4. `.copilot/BUGBOT.learned.md`.
 
-Every file and the combined rule set are bounded. Symlinked rule files and paths outside the repository are rejected. Rule text is placed in explicit untrusted-data boundaries and cannot weaken sandbox, credential, permission, schema, or publication policy. With `bugbot-trace-rules`, the review summary reports included/truncated sources and the number omitted by empty, duplicate, or budget policy without exposing rule contents. Authorized maintainers can add a deduplicated, auditable learned rule with `/copilot remember <rule>`; it is written atomically inside the repository and then follows the normal verified commit/push path.
+Every file and the combined rule set are bounded. Symlinked rule files and paths outside the repository are rejected. Rule text is placed in explicit untrusted-data boundaries and cannot weaken sandbox, credential, permission, schema, or publication policy. With `bugbot-trace-rules`, the review summary reports included/truncated sources and the number omitted by empty, duplicate, or budget policy without exposing rule contents. Authorized maintainers can add a deduplicated, auditable learned rule with `/copilot remember <rule>`; the Action first checks out the PR head or linked issue branch, writes the rule atomically inside that checkout, and follows the normal verified commit/push path. Branchless requests are rejected before writing; repeating the same rule creates no additional commit.
 
 ## ai-ignore-files
 

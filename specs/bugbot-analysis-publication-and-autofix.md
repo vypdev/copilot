@@ -130,6 +130,12 @@ not verified; it is not clean.
 | Fix | model edits/pushes | guarded edit + trusted verify/git | least authority |
 | Resolution | fixer claims success | independent provider re-read/review | no false clean |
 
+Learned rules use the same authoritative branch boundary as implementation:
+`/copilot remember <rule>` checks out the current PR head or issue branch before
+reading/writing rules, then verifies and commits only `.copilot/BUGBOT.learned.md`
+to that exact ref. A branchless request fails before touching the workspace; a
+duplicate rule succeeds without verification, commit or push.
+
 Post-autofix recovery adds one bounded read-only retry for superseded evidence;
 the existing mutation, authorization and freshness contracts remain in force.
 
@@ -307,11 +313,11 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 |---|---:|---|
 | Finding/config/identity policy | 36 | schema, fingerprint, rank, limits |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
-| Use cases/autofix | 31 | context, publish, verify, commit, bounded re-review, canonical result |
+| Use cases/autofix | 37 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification |
 | Provider/workflow contracts | 22 | diffs, reviews, threads, checks, ranges |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
 | Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **159** | no double counting |
+| **Total** | **165** | no double counting |
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
 coverage and security/identity policy 100% for enumerated branches. Fakes replace
@@ -350,6 +356,11 @@ screen reader, and controlled live model samples.
     aggregate; failed/partial evidence and a second superseded result remain
     truthful and never produce an assumed clean state.
 
+15. An authorized remember command selects the PR head even when the comment
+    event has no commit branch, or selects the linked issue branch. Checkout
+    precedes rule storage; failed checkout, unrelated changed paths or failed
+    verification prevents publication. Repeating the same rule creates no commit.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
@@ -359,6 +370,7 @@ screen reader, and controlled live model samples.
 | stable identity | finding identity domain | identity tests | publication |
 | safe publication | publish/reconciliation use cases | publication/reconciliation tests | publication |
 | guarded autofix | autofix/workspace/git use cases | autofix/security tests | autofix |
+| versioned learned rule | explicit command/workspace/git use cases | seven command-level branch, replay and failure cases | configuration/how it works |
 | current truth | reconciliation spec/policies | projection tests | detection/quality |
 
 ## 18. Maintenance sequence
@@ -371,7 +383,7 @@ screen reader, and controlled live model samples.
 
 ## 19. Definition of Done
 
-- [ ] The 159-case budget, coverage, quality eval, and architecture gates pass.
+- [ ] The 165-case budget, coverage, quality eval, and architecture gates pass.
 - [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.

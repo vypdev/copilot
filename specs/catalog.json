@@ -1429,7 +1429,8 @@
         "scripts/coverage-budgets.json",
         "scripts/validate-coverage-budgets.cjs",
         "src/application/usecases/comment_automation_action_workflow.ts",
-        "src/data/repository/pull_request/pull_request_lifecycle_repository.ts"
+        "src/data/repository/pull_request/pull_request_lifecycle_repository.ts",
+        "src/application/usecases/comment_automation_command_workflow.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1459,7 +1460,8 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts",
         "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts",
-        "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts"
+        "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
