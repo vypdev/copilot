@@ -70,6 +70,14 @@ resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
 result; it never substitutes zero or a clean state. In a PR conversation, setup reads that exact PR head to resolve its linked issue and working branch. An unlinked PR remains separate from an issue with the same number.
 
+Read-only commands answer the current comment, using the issue or PR as
+background. Add the file, symbol, failure or requested work after the command to
+make the subject explicit. For example, `/copilot explain src/domain/copilot_command.ts`
+asks for that file's behavior. If the agent cannot inspect it, its answer should
+state the limitation. `diagnose` separates evidence from hypotheses, `clarify`
+asks for missing information, `estimate` includes uncertainty, and `test-plan`
+provides test cases and observable acceptance criteria.
+
 Every explicit answer uses a correlated reply marker. A webhook retry with the
 same source comment updates or reuses that response instead of creating another.
 These replies contain only their requested content; they are never wrapped in an

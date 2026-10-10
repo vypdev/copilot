@@ -18,12 +18,14 @@ interface MergeWorkspaceSnapshot {
 export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
   private snapshot: MergeWorkspaceSnapshot | undefined;
   private mergeInProgress = false;
+  private resolutionValidated = false;
 
   constructor(private readonly git: GitCommitPort) {}
 
   async prepare(parentBranch: string, workingBranch: string, token: string): Promise<BranchMergePreparation> {
     this.snapshot = undefined;
     this.mergeInProgress = false;
+    this.resolutionValidated = false;
     await this.assertValidBranch(parentBranch);
     await this.assertValidBranch(workingBranch);
     if ((await this.listWorkspacePaths()).length > 0) throw new Error("Branch synchronization requires a clean workspace.");
@@ -71,9 +73,15 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     if (!snapshot || !sameSet(snapshot.conflictPaths, conflictPaths)) return invalid("Merge state does not match the expected conflict set.");
     if (await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha) return invalid("The agent changed HEAD.");
     if (await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha) return invalid("The agent changed the merge parent.");
-    if ((await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"])).length > 0) return invalid("Unresolved merge conflicts remain.");
+    const unresolved = await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"]);
+    if (unresolved.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unresolved.length > 0)) {
+      return invalid("Unresolved merge conflicts remain.");
+    }
     if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths)) return invalid("The agent changed paths outside the prepared merge.");
-    if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0) return invalid("The prepared merge contains unstaged changes.");
+    const unstaged = await this.readPaths(["diff", "--name-only", "-z"]);
+    if (unstaged.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unstaged.length > 0)) {
+      return invalid("The prepared merge contains unstaged changes.");
+    }
 
     const indexEntries = await this.readIndexEntries();
     for (const [path, entry] of snapshot.protectedIndexEntries) {
@@ -81,10 +89,23 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     }
     try {
       await this.git.execute("git", ["diff", "--check"]);
+      // The agent edits files without Git write authority. Only this trusted
+      // adapter stages the verified original conflict set, once before checks.
+      if (unresolved.length > 0) {
+        try { await this.git.stagePaths([...new Set(unresolved)]); }
+        catch { return invalid("Trusted staging of the conflict resolution failed."); }
+      }
+      if ((await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"])).length > 0) {
+        return invalid("Unresolved merge conflicts remain.");
+      }
+      if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0) {
+        return invalid("The prepared merge contains unstaged changes.");
+      }
       await this.git.execute("git", ["diff", "--cached", "--check"]);
     } catch {
       return invalid("The resolution contains whitespace errors or conflict markers.");
     }
+    this.resolutionValidated = true;
     return { valid: true };
   }
 

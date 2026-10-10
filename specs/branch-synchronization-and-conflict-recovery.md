@@ -49,7 +49,13 @@ while blind automated merges can overwrite concurrent work or expose credentials
 5. `--dry-run`, `--no-agent`, and `--from` alter only documented bounded behavior.
 6. Workspace preparation fetches exact remote heads and performs a no-ff merge.
 7. Conflicts are eligible for fixer only at ≤20 non-sensitive conflicted paths.
-8. Verification, merge-state validation, and remote-head recheck precede trusted commit/push.
+8. The fixer edits conflict files without staging or Git index write authority.
+   Trusted workspace code validates HEAD/merge parent, original paths, protected
+   index entries and worktree markers, then stages only the original unresolved
+   conflict paths before verification. It rechecks unresolved/unstaged paths and
+   cached markers. Once validated, later verification-induced worktree/index
+   changes are rejected rather than staged again. Staging failure aborts safely.
+9. Verification, merge-state validation, and remote-head recheck precede trusted commit/push.
 
 ### 2.3 Evidence and contract classification
 
@@ -277,11 +283,11 @@ any completed merge remains an auditable commit reverted normally if necessary.
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 22 | clean/conflict/dry-run/verify/push |
+| Use cases/workspace | 28 | clean/conflict/dry-run/verify/push; four real-Git conflict cases (unstaged resolution, markers, outside edit, verification mutation) and two trusted-staging failures |
 | Adapters/workflow contracts | 16 | pagination, git states, all-branch/no-agent |
 | UX/localization/sanitization | 16 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors |
 | Integration/security/cutover | 16 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection |
-| **Total** | **118** | no double counting |
+| **Total** | **124** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -320,6 +326,12 @@ sticky card updates, transition notifications, chained branches, PR/issue render
     and no internal truncation marker; maximum refs and repository identifiers
     remain within the 400-character budget.
 
+14. An agent can resolve a real merge by editing its allowed file without
+    staging. Trusted code stages that file, runs all configured verification
+    commands and performs the ordinary race-checked commit/push. Remaining
+    markers, outside edits, staging failure and verification mutation produce
+    no commit/push. This ownership is fixed and has no opt-out configuration.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
@@ -327,7 +339,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 | dependency discovery | policy/repository | dependency tests | detection flow |
 | sticky observer and actionable transition | observe use case + shared transition workflow | observer/policy/reconciliation tests | branch sync lifecycle |
 | safe merge | sync use case/workspace | sync/workspace tests | align branch |
-| conflict boundary | eligibility/workspace policies | security/path tests | conflict boundary |
+| conflict boundary | eligibility/workspace policies | security/path tests and six trusted-staging regressions including real Git | conflict boundary |
 | workflow separation | workflow validator | contract tests | why separate |
 
 ## 18. Maintenance sequence

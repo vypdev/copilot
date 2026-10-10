@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-10-10
+- Last updated: 2026-10-11
 - Owners: Copilot maintainers
 - Scope: parsing and routing issue/PR comments to read-only or mutation-capable use cases
 - Related issues/PRs: Bugbot and branch synchronization SDDs
@@ -42,7 +42,13 @@ modify the wrong branch.
 1. Commands are recognized only at the beginning, case-insensitively, with a
    2,000-character and 20-argument maximum.
 2. Unknown commands and missing required arguments return validation errors.
-3. `help` and `status` are public metadata. Read-only plan/explain/diagnose/test
+3. Explicit read-only tasks use fixed command-specific instructions: explain
+   inspects the supplied file/symbol/behavior or states an access limitation;
+   diagnose separates evidence from hypotheses; clarify identifies missing
+   information; estimate states effort/uncertainty; test-plan defines observable
+   tests. The current comment owns the task; the issue description is background
+   and MUST NOT replace it. Operands and issue content remain untrusted data.
+   `help` and `status` are public metadata. Read-only plan/explain/diagnose/test
    and review commands invoke their assigned agent role.
 4. `fix`, `implement`, `remember`, `dismiss`, `description`, and `sync-branch`
    apply command-specific authorization and availability checks.
@@ -54,9 +60,12 @@ modify the wrong branch.
    authenticated commit, and push before publication.
 8. Unaddressed comments are successful no-ops before project/provider reads, so
    documentation, coverage, and other machine-authored reports cannot activate agents.
-9. Comment-triggered file mutation requires a PR review-comment event with its
+9. `fix` and `implement` require a PR review-comment event with its
    authoritative branch, or an explicitly branch-scoped execution. An
    `issue_comment` never scans open PRs or selects a first matching branch.
+   The deterministic `remember` route verifies the exact current same-repository
+   PR or native issue branch link before checkout, under the companion Bugbot
+   SDD's canonical-write-target contract.
 10. Issue and PR comment routes project one frozen, credential-free
     `CommentAutomationContext`; shared workflows receive only capability facts
     and repository-bound semantic ports.
@@ -323,7 +332,10 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | PR conversation context/runtime | 9 | Four live-head resolution cases including unavailable authority, two status branch cases, three specialist preparation cases |
 | PR status identity | 2 | Linked issue differs from PR; unlinked PR never invents an issue |
 | Conversation branch authority | 3 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn |
-| **Total** | **121** | no double counting |
+| Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
+| **Total** | **130** | no double counting |
+
+The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -350,7 +362,7 @@ English/non-English requests.
 7. A verification or remote-head failure aborts without push and reports recovery.
 8. A duplicated delivery does not silently duplicate the mutation.
 9. Untrusted comment text cannot inject shell, marker, mention, or secret output.
-10. An issue-only or general PR-conversation mutation request performs no
+10. An issue-only or general PR-conversation `fix`/`implement` request performs no
     workspace operation and never scans open PRs for a branch.
 11. An unaddressed human or machine comment exits before project lookup, AI
     configuration, runtime provisioning, translation, or publication.
@@ -380,11 +392,18 @@ English/non-English requests.
     rule for organization and personal repositories; membership alone never
     grants mutation authority in examples or comparison tables.
 
+19. Given an explicit explanation of `src/domain/copilot_command.ts` on an
+    issue about SDDs, the agent receives the file explanation as its fixed task
+    and the issue as untrusted background. A live response explains that file or
+    truthfully states that it could not inspect it; it never answers the older
+    issue question instead. No configuration can remove this focus/trust boundary.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | bounded grammar | command domain | command tests | comment commands |
+| current command focus | fixed Think task + answer workflow | eight task-key cases and unrelated issue-context integration | comment commands |
 | safe routing/admission | request/route/workflow policies | entrypoint and use-case tests | comment commands |
 | authorization | authorization port/adapter | organization, user, unknown-owner, and collaborator repository tests | permissions |
 | consistent authorization guidance | documentation contract | required authority sentences across all Bugbot pages and retired contradictory-copy checks | autofix/permissions/examples/do request |
@@ -404,7 +423,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 121-case budget, coverage, and architecture checks pass.
+- [x] The 130-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

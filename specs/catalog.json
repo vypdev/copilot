@@ -1301,7 +1301,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -1340,7 +1340,8 @@
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/data/repository/actor_modification_policy.ts",
-        "src/data/repository/organization/actor_authorization_repository.ts"
+        "src/data/repository/organization/actor_authorization_repository.ts",
+        "src/prompts/think.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
@@ -1365,7 +1366,8 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/actor_modification_policy.test.ts",
-        "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts"
+        "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts",
+        "src/prompts/__tests__/think.test.ts"
       ],
       "documentation": [
         "docs/issues/comment-commands.mdx",
@@ -1523,7 +1525,8 @@
         "src/data/repository/branch_sync/branch_dependency_repository.ts",
         "src/infrastructure/composition/main_run_route_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
-        "src/infrastructure/branch_sync_workspace_adapter.ts"
+        "src/infrastructure/branch_sync_workspace_adapter.ts",
+        "src/prompts/branch_sync_conflicts.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
