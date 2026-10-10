@@ -46,7 +46,7 @@ export class RemoveNotNeededBranchesUseCase implements ParamUseCase<RemoveObsole
         return param.managedBranchTypes.flatMap((type) => {
             const prefix = `${type}/${param.issueNumber}-`;
             return branches.filter((branch) => {
-                if (!branch.includes(prefix)) return false;
+                if (!branch.startsWith(prefix)) return false;
                 return type !== param.managementBranch || branch !== finalBranch;
             });
         });

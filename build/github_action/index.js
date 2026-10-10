@@ -36987,13 +36987,14 @@ async function runGitHubAction() {
         (0, logger_1.logInfo)('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }
-    if ((0, agent_task_activation_policy_1.isUnaddressedCommentEvent)(eventInputs, admission.tokenUser)) {
+    const preBranchSddEnabled = (0, input_boolean_policy_1.parseIssueWorkflowBoolean)((0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD), input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD, false);
+    if ((0, agent_task_activation_policy_1.isUnaddressedCommentEvent)(eventInputs, admission.tokenUser, preBranchSddEnabled)) {
         (0, logger_1.logInfo)('GitHub Action: comment does not address Copilot. Skipping before project, AI, and agent runtime work.');
         return;
     }
     const localeInputs = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput);
     const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(github_action_input_1.getGithubActionInput);
-    const activeRuntimeAgentTasks = (0, agent_task_activation_policy_1.activeAgentTasks)(eventInputs, singleAction, admission.tokenUser, aiInputs.pullRequestDescriptionMode !== 'disabled');
+    const activeRuntimeAgentTasks = (0, agent_task_activation_policy_1.activeAgentTasks)(eventInputs, singleAction, admission.tokenUser, aiInputs.pullRequestDescriptionMode !== 'disabled', preBranchSddEnabled);
     const requestedActiveAgentTasks = [...new Set([
             ...activeRuntimeAgentTasks,
             ...([localeInputs.repository, localeInputs.issue, localeInputs.pullRequest]
@@ -38498,6 +38499,7 @@ function applySetupState(target, state) {
     target.labels.currentIssueLabels = [...state.currentIssueLabels];
     target.labels.currentPullRequestLabels = [...state.currentPullRequestLabels];
     target.issue.liveBody = state.liveIssueBody;
+    target.issue.liveTitle = state.liveIssueTitle;
     target.currentIssueWorkflowAdmission = state.issueWorkflowAdmission;
     target.release.active = state.release.active;
     target.release.type = state.release.type;
@@ -40186,9 +40188,11 @@ const copilot_command_1 = __nccwpck_require__(11771);
 const copilot_comment_request_1 = __nccwpck_require__(86819);
 const branch_sync_command_1 = __nccwpck_require__(51114);
 const github_comment_target_1 = __nccwpck_require__(21486);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const COMMENT_TASKS = ['findings', 'fixer', 'planner', 'reviewer', 'tester'];
 /** Returns only roles that can be reached by the current event or single action. */
-function activeAgentTasks(event, singleAction, botLogin = '', pullRequestDescriptionEnabled = true) {
+function activeAgentTasks(event, singleAction, botLogin = '', pullRequestDescriptionEnabled = true, preBranchSddEnabled = false) {
     if (singleAction.enabledSingleAction) {
         switch (singleAction.currentSingleAction) {
             case action_types_1.ACTIONS.THINK:
@@ -40206,7 +40210,7 @@ function activeAgentTasks(event, singleAction, botLogin = '', pullRequestDescrip
     }
     switch (event.eventName) {
         case 'issues':
-            return ['opened', 'edited'].includes(eventAction(event)) ? ['planner'] : [];
+            return activeIssueTasks(event, preBranchSddEnabled);
         case 'pull_request':
             if (!['opened', 'reopened', 'synchronize'].includes(eventAction(event)))
                 return [];
@@ -40217,13 +40221,29 @@ function activeAgentTasks(event, singleAction, botLogin = '', pullRequestDescrip
             return ['findings'];
         case 'issue_comment':
         case 'pull_request_review_comment':
-            return activeCommentTasks(event, botLogin);
+            return activeCommentTasks(event, botLogin, preBranchSddEnabled);
         default:
             return [];
     }
 }
-function activeCommentTasks(event, botLogin) {
+function activeIssueTasks(event, preBranchSddEnabled) {
+    const action = eventAction(event);
+    if (['opened', 'edited'].includes(action))
+        return ['planner'];
+    if (action === 'labeled' && event.label?.name === issue_start_policy_1.ISSUE_START_LABEL)
+        return ['planner'];
+    // A started SDD may resume on metadata changes or reopen, after live admission.
+    if (preBranchSddEnabled && ['reopened', 'labeled', 'unlabeled', 'assigned', 'unassigned'].includes(action)
+        && Array.isArray(event.issue?.labels)
+        && event.issue.labels.some(label => typeof label === 'object' && label?.name === issue_start_policy_1.ISSUE_START_LABEL)) {
+        return ['planner'];
+    }
+    return [];
+}
+function activeCommentTasks(event, botLogin, preBranchSddEnabled) {
     const body = commentBody(event);
+    if (isSddContinuationComment(event, preBranchSddEnabled))
+        return ['planner'];
     if (!(0, copilot_comment_request_1.isCopilotCommentRequest)(body, botLogin))
         return [];
     const command = (0, copilot_command_1.parseCopilotCommand)(body);
@@ -40265,10 +40285,16 @@ function activeCommentTasks(event, botLogin) {
         : ['findings', 'fixer', 'planner'];
 }
 /** Discards passive comment traffic before project, AI, and runtime composition. */
-function isUnaddressedCommentEvent(event, botLogin) {
+function isUnaddressedCommentEvent(event, botLogin, preBranchSddEnabled = false) {
     if (!['issue_comment', 'pull_request_review_comment'].includes(event.eventName))
         return false;
+    if (isSddContinuationComment(event, preBranchSddEnabled))
+        return false;
     return !(0, copilot_comment_request_1.isCopilotCommentRequest)(commentBody(event), botLogin);
+}
+function isSddContinuationComment(event, preBranchSddEnabled) {
+    return preBranchSddEnabled && event.eventName === 'issue_comment'
+        && !isPullRequestComment(event) && (0, pre_branch_sdd_1.isSddAnswerComment)(commentBody(event));
 }
 function branchSyncAgentTasks(args) {
     const parsed = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(args);
@@ -46186,6 +46212,7 @@ function hasPrimaryIssuePublication(results) {
             return false;
         const payload = (0, result_1.getResultPayload)(result.payload);
         return Boolean(payload && (isPlanPayload(result.id, payload)
+            || implementationPlanReplyProjection(payload)
             || directAnswerProjection(payload)));
     });
 }
@@ -46203,7 +46230,7 @@ function hasOwnedPrimaryIssuePublication(comments, issueNumber, botLogin) {
             return true;
         const reply = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
         if (reply?.target === expectedTarget
-            && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome'))
+            && ['direct-answer', 'implementation-plan', 'copilot-welcome'].includes(reply.messageKey))
             return true;
         return false;
     });
@@ -46223,6 +46250,9 @@ function selectSemanticReplyIntents(context) {
             return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
         if (!result.executed)
             return [];
+        const planReply = implementationPlanReplyProjection(payload);
+        if (planReply)
+            return [replyIntent(context, correlationId, 'implementation-plan', planReply)];
         const directAnswer = directAnswerProjection(payload);
         if (directAnswer)
             return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
@@ -46277,6 +46307,11 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
     return `${marker}\n\n${body}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'implementation-plan') {
+        return [renderImplementationPlanCard(intent.projection.plan, catalog),
+            intent.projection.translation ? (0, comment_translation_policy_1.renderTranslationContext)(intent.projection.translation, catalog) : '']
+            .filter(Boolean).join('\n\n');
+    }
     if (intent.projection.kind === 'direct-answer')
         return renderDirectAnswer(intent.projection, catalog);
     if (intent.projection.kind === 'help') {
@@ -46348,21 +46383,7 @@ function renderAccessPolicyReply(messages) {
 function renderSemanticStatus(intent, messages = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(intent.locale).catalog) {
     const marker = (0, publication_identity_policy_1.buildPublicationMarker)(intent);
     if (intent.projection.kind === 'plan') {
-        const plan = renderImplementationPlan(intent.projection.plan);
-        const acceptance = safePlanField(intent.projection.plan.acceptance, 800);
-        return [
-            marker,
-            '',
-            `## ${messages.implementationPlan}`,
-            '',
-            `> **${messages.currentStatus}:** ${messages.planReady}`,
-            '',
-            plan,
-            '',
-            `**${messages.planAcceptance}:** ${acceptance}`,
-            '',
-            messages.commandsHint,
-        ].join('\n').trim();
+        return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
     }
     const progress = intent.projection.progress;
     const state = progress <= 0 ? 'not-started' : progress >= 100 ? 'complete' : 'in-progress';
@@ -46380,6 +46401,26 @@ function renderSemanticStatus(intent, messages = (0, publication_message_catalog
         lines.push('', messages.noActionRequired);
     }
     return lines.join('\n').trim();
+}
+function renderImplementationPlanCard(plan, messages) {
+    return [
+        `## ${messages.implementationPlan}`,
+        `> **${messages.currentStatus}:** ${messages.planReady}`,
+        renderImplementationPlan(plan),
+        `**${messages.planAcceptance}:** ${safePlanField(plan.acceptance, 800)}`,
+        messages.commandsHint,
+    ].join('\n\n').trim();
+}
+function implementationPlanReplyProjection(payload) {
+    const publication = (0, result_1.getResultPayload)(payload.publication);
+    if (publication?.kind !== 'implementation-plan')
+        return undefined;
+    const plan = (0, implementation_plan_1.parseImplementationPlan)(publication.plan);
+    if (!plan)
+        return undefined;
+    const translation = translationProjection(publication.translation);
+    return Object.freeze({ kind: 'implementation-plan', plan,
+        ...(translation ? { translation } : {}), });
 }
 function planIntent(id, payload, locale) {
     if (!isPlanPayload(id, payload))
@@ -50701,6 +50742,7 @@ function appendCommentContent(previous, addition) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildRecommendationResult = buildRecommendationResult;
+exports.extractImplementationPlan = extractImplementationPlan;
 const result_1 = __nccwpck_require__(73817);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -50827,6 +50869,7 @@ exports.RecommendStepsUseCase = RecommendStepsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runRecommendStepsWorkflow = runRecommendStepsWorkflow;
+exports.queryImplementationPlan = queryImplementationPlan;
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
@@ -50888,12 +50931,7 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
         });
         (0, logging_ports_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
         (0, logging_ports_1.logInfo)('🤖 Recommending steps using the configured agent...');
-        const response = await dependencies.aiRepository.query({
-            configuration,
-            agentId: agent_task_policy_1.AGENT_PLAN,
-            prompt,
-            options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('recommend-steps', agent_response_schemas_1.RECOMMEND_STEPS_RESPONSE_SCHEMA),
-        });
+        const response = await queryImplementationPlan(configuration, prompt, dependencies.aiRepository);
         return (0, recommend_steps_result_policy_1.buildRecommendationResult)(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     }
     catch (error) {
@@ -50908,6 +50946,12 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
             }),
         ]);
     }
+}
+/** Shared structured planning capability for issue start and explicit /copilot plan. */
+function queryImplementationPlan(configuration, prompt, repository) {
+    return repository.query({ configuration, agentId: agent_task_policy_1.AGENT_PLAN, prompt,
+        options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('recommend-steps', agent_response_schemas_1.RECOMMEND_STEPS_RESPONSE_SCHEMA),
+    });
 }
 function replayExistingPlan(taskId, issueNumber, recommendationState) {
     return outcome([new result_1.Result({
@@ -52543,6 +52587,9 @@ async function runSetupExecution(context, dependencies) {
     const liveIssueBody = issueResolution.issueNumber === undefined
         ? undefined
         : await dependencies.issueSetupPort.getDescription(issueResolution.issueNumber);
+    const liveIssueTitle = issueResolution.issueNumber === undefined
+        ? undefined
+        : await dependencies.issueSetupPort.getTitle(issueResolution.issueNumber);
     const issueAdmission = issueResolution.issueNumber !== undefined
         ? (0, issue_workflow_profile_1.classifyIssueWorkflow)(currentIssueLabels, context.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, {
             feature: [context.labelNames.feature, context.labelNames.enhancement],
@@ -52606,7 +52653,7 @@ async function runSetupExecution(context, dependencies) {
                 status: 'version-unresolved',
                 tokenUser,
                 issueResolution,
-                state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueAdmission),
+                state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueAdmission, liveIssueTitle),
             };
         }
     }
@@ -52632,7 +52679,7 @@ async function runSetupExecution(context, dependencies) {
         branchType: issueAdmission && issueAdmission.status !== 'eligible'
             ? ''
             : resolveIssueType(context, issueAdmission),
-        state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueAdmission),
+        state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueAdmission, liveIssueTitle),
     };
 }
 async function loadTokenUser(context, organizationSetupPort) {
@@ -52669,7 +52716,7 @@ function resolveIssueType(context, admission) {
         release: context.branches.releaseTree,
     })[admission.kind];
 }
-function setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueWorkflowAdmission) {
+function setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueWorkflowAdmission, liveIssueTitle) {
     return {
         previousConfiguration,
         currentIssueLabels: [...currentIssueLabels],
@@ -52678,6 +52725,7 @@ function setupState(previousConfiguration, currentIssueLabels, currentPullReques
         hotfix: { ...hotfix },
         configuration: { ...configuration },
         liveIssueBody,
+        liveIssueTitle,
         issueWorkflowAdmission,
     };
 }
@@ -52700,6 +52748,7 @@ const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
 class IssueCommentUseCase {
     constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation) {
         this.languageUseCase = languageUseCase;
@@ -52726,7 +52775,7 @@ class IssueCommentUseCase {
         }
         if (this.preBranchSddContinuation
             && param.issueStartDecision.sddRequired
-            && /^\s*SDD\s+Q[1-8]:/im.test(param.issue.commentBody)
+            && (0, pre_branch_sdd_1.isSddAnswerComment)(param.issue.commentBody)
             && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
             return this.preBranchSddContinuation.invoke(param);
         }
@@ -53112,7 +53161,9 @@ function projectIssueWorkflowStepContexts(source) {
     const managedBranchTypes = Object.freeze([
         source.branches.featureTree,
         source.branches.bugfixTree,
-    ]);
+        source.branches.docsTree,
+        source.branches.choreTree,
+    ].filter(value => value.length > 0));
     const branchPreparationTypes = Object.freeze([
         source.branches.featureTree,
         source.branches.bugfixTree,
@@ -60457,12 +60508,34 @@ const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_1 = __nccwpck_require__(75999);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const recommend_steps_result_policy_1 = __nccwpck_require__(65928);
+const recommend_steps_workflow_1 = __nccwpck_require__(77522);
 async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
     const issueDescription = await loadIssueDescription(request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
     const contextBlock = issueDescription
         ? `\n\nContext (issue #${request.issueNumberForContext} description):\n${issueDescription}\n\n`
         : '\n\n';
     (0, logging_ports_1.logDebugInfo)(`Think: question length=${request.question.length}, issue context length=${issueDescription.length}.`);
+    if (request.command?.name === 'plan') {
+        const response = await (0, recommend_steps_workflow_1.queryImplementationPlan)(param.agentConfiguration, (0, prompts_1.getRecommendStepsPrompt)({
+            projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
+            issueNumber: String(request.issueNumberForContext),
+            issueDescription: `${issueDescription}\n\nUser request (untrusted data):\n${request.question}`,
+            targetLocale: param.targetLocale,
+        }), dependencies.aiRepository);
+        const extracted = (0, recommend_steps_result_policy_1.extractImplementationPlan)(response, param.targetLocale);
+        if (extracted?.kind !== 'recommendation') {
+            throw new application_error_1.ApplicationError('agent.failed', 'The configured agent returned an invalid implementation plan.');
+        }
+        return [new result_1.Result({
+                id: taskId, success: true, executed: true,
+                payload: Object.freeze({ publication: Object.freeze({
+                        kind: 'implementation-plan',
+                        plan: extracted.plan,
+                        ...(param.translationPublication ? { translation: param.translationPublication } : {}),
+                    }) }),
+            })];
+    }
     const prompt = (0, prompts_1.getThinkPrompt)({
         projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
@@ -62350,7 +62423,7 @@ class RemoveNotNeededBranchesUseCase {
         return param.managedBranchTypes.flatMap((type) => {
             const prefix = `${type}/${param.issueNumber}-`;
             return branches.filter((branch) => {
-                if (!branch.includes(prefix))
+                if (!branch.startsWith(prefix))
                     return false;
                 return type !== param.managementBranch || branch !== finalBranch;
             });
@@ -63994,7 +64067,7 @@ exports.Issue = void 0;
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 class Issue {
     get title() {
-        return this.inputs?.issue?.title ?? '';
+        return this.liveTitle ?? this.inputs?.issue?.title ?? '';
     }
     get number() {
         return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.issue?.number) ?? -1;
@@ -69139,6 +69212,7 @@ class ExecutionIssueSetupRepository {
         this.isPullRequest = (...args) => this.metadataRepository.isPullRequest(...args);
         this.isIssue = (...args) => this.metadataRepository.isIssue(...args);
         this.getHeadBranch = (...args) => this.metadataRepository.getHeadBranch(...args);
+        this.getTitle = (...args) => this.metadataRepository.getTitle(...args);
         this.getLabels = (...args) => this.labelRepository.getLabels(...args);
         this.getDescription = (...args) => this.contentRepository.getDescription(...args);
         this.updateDescription = (...args) => this.contentRepository.updateDescription(...args);
@@ -75498,6 +75572,7 @@ exports.isSafeSddPath = isSafeSddPath;
 exports.parseSddPlan = parseSddPlan;
 exports.readSddGateRecord = readSddGateRecord;
 exports.renderSddGateRecord = renderSddGateRecord;
+exports.isSddAnswerComment = isSddAnswerComment;
 exports.parseSddAnswer = parseSddAnswer;
 exports.validateSddMarkdown = validateSddMarkdown;
 exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
@@ -75646,6 +75721,9 @@ function sddPublicationLinks(record, issueUrl, spanish) {
     catch {
         return '';
     }
+}
+function isSddAnswerComment(body) {
+    return /^\s*SDD\s+Q[1-8]:/im.test(body);
 }
 function parseSddAnswer(body, questionId) {
     const line = body.split(/\r?\n/).find(candidate => new RegExp(`^\\s*SDD\\s+${questionId}:\\s*`, 'i').test(candidate));
@@ -77931,6 +78009,7 @@ function createSetupExecutionUseCase(latestTagQueryPort, credentials) {
         isIssue: (issueNumber) => rawIssueSetupPort.isIssue(credentials.owner, credentials.repository, issueNumber, credentials.token),
         getHeadBranch: (issueNumber) => rawIssueSetupPort.getHeadBranch(credentials.owner, credentials.repository, issueNumber, credentials.token),
         getLabels: (issueNumber) => rawIssueSetupPort.getLabels(credentials.owner, credentials.repository, issueNumber, credentials.token),
+        getTitle: (issueNumber) => rawIssueSetupPort.getTitle(credentials.owner, credentials.repository, issueNumber, credentials.token),
         getDescription: (issueNumber) => rawIssueSetupPort.getDescription(credentials.owner, credentials.repository, issueNumber, credentials.token),
     };
     const organizationSetupPort = {

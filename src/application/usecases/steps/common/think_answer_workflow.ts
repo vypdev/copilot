@@ -3,7 +3,7 @@ import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import { getThinkPrompt } from '../../../../prompts';
+import { getRecommendStepsPrompt, getThinkPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { extractStructuredAnswer } from './agent_answer_policy';
@@ -14,6 +14,8 @@ import type { AgentConfiguration } from '../../../../data/model/agent';
 import type { AgentTask } from '../../../../domain/agent';
 import type { TranslationPublication } from '../../../policies/comment_translation_policy';
 import { productFacingAgentQueryOptions } from '../../../policies/agent_output_locale_policy';
+import { extractImplementationPlan } from '../../actions/recommend_steps_result_policy';
+import { queryImplementationPlan } from '../../actions/recommend_steps_workflow';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -45,6 +47,28 @@ export async function runThinkAnswerWorkflow(
         ? `\n\nContext (issue #${request.issueNumberForContext} description):\n${issueDescription}\n\n`
         : '\n\n';
     logDebugInfo(`Think: question length=${request.question.length}, issue context length=${issueDescription.length}.`);
+
+    if (request.command?.name === 'plan') {
+        const response = await queryImplementationPlan(param.agentConfiguration,
+            getRecommendStepsPrompt({
+                projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
+                issueNumber: String(request.issueNumberForContext),
+                issueDescription: `${issueDescription}\n\nUser request (untrusted data):\n${request.question}`,
+                targetLocale: param.targetLocale,
+            }), dependencies.aiRepository);
+        const extracted = extractImplementationPlan(response, param.targetLocale);
+        if (extracted?.kind !== 'recommendation') {
+            throw new ApplicationError('agent.failed', 'The configured agent returned an invalid implementation plan.');
+        }
+        return [new Result({
+            id: taskId, success: true, executed: true,
+            payload: Object.freeze({ publication: Object.freeze({
+                kind: 'implementation-plan' as const,
+                plan: extracted.plan,
+                ...(param.translationPublication ? { translation: param.translationPublication } : {}),
+            }) }),
+        })];
+    }
 
     const prompt = getThinkPrompt({
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,

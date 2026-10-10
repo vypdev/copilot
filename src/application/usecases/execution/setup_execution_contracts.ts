@@ -118,6 +118,7 @@ export interface SetupExecutionState {
     readonly hotfix: SetupHotfixState;
     readonly configuration: SetupConfigurationPatch;
     readonly liveIssueBody?: string;
+    readonly liveIssueTitle?: string;
     readonly issueWorkflowAdmission?: IssueWorkflowAdmission;
 }
 

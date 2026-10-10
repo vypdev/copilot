@@ -211,6 +211,7 @@ const setupIssuePort = {
   isIssue: mockIsIssue,
   getHeadBranch: mockGetHeadBranch,
   getDescription: mockGetDescription,
+  getTitle: jest.fn(async () => undefined),
   updateDescription: jest.fn(),
 };
 const setupOrganizationPort = { getTokenUser: mockGetUserFromToken };

@@ -86,6 +86,7 @@ export interface SetupExecutionTarget {
     };
     issue: {
         liveBody?: string;
+        liveTitle?: string;
     };
     currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
     release: {
@@ -205,6 +206,7 @@ function applySetupState(target: SetupExecutionTarget, state: SetupExecutionStat
     target.labels.currentIssueLabels = [...state.currentIssueLabels];
     target.labels.currentPullRequestLabels = [...state.currentPullRequestLabels];
     target.issue.liveBody = state.liveIssueBody;
+    target.issue.liveTitle = state.liveIssueTitle;
     target.currentIssueWorkflowAdmission = state.issueWorkflowAdmission;
     target.release.active = state.release.active;
     target.release.type = state.release.type;

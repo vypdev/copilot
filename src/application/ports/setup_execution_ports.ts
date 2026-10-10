@@ -5,6 +5,7 @@ export interface SetupIssueQueryPort {
     isIssue(issueNumber: number): Promise<boolean>;
     getHeadBranch(issueNumber: number): Promise<string | undefined>;
     getLabels(issueNumber: number): Promise<string[]>;
+    getTitle(issueNumber: number): Promise<string | undefined>;
     getDescription(issueNumber: number): Promise<string | undefined>;
 }
 

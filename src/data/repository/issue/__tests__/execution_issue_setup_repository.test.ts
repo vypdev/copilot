@@ -3,10 +3,11 @@ import { ExecutionIssueSetupRepository } from '../execution_issue_setup_reposito
 
 describe('ExecutionIssueSetupRepository', () => {
     it('composes setup capabilities without depending on concrete repositories', async () => {
-        const metadata: Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue' | 'getHeadBranch'> = {
+        const metadata: Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue' | 'getHeadBranch' | 'getTitle'> = {
             isPullRequest: jest.fn().mockResolvedValue(true),
             isIssue: jest.fn().mockResolvedValue(false),
             getHeadBranch: jest.fn().mockResolvedValue('feature/7'),
+            getTitle: jest.fn().mockResolvedValue('Current title'),
         };
         const content: Pick<ExecutionIssueSetupPort, 'getDescription' | 'updateDescription'> = {
             getDescription: jest.fn().mockResolvedValue('description'),

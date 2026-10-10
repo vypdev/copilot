@@ -130,6 +130,26 @@ describe('semantic result publication policy', () => {
     expect(body.match(/<!-- copilot:publication/gu)).toHaveLength(1);
   });
 
+  it.each(['en-US', 'es-ES'])('renders one correlated explicit plan using the automatic plan card in %s', locale => {
+    const result = new Result({ id: 'ThinkUseCase', success: true, executed: true,
+      payload: { publication: { kind: 'implementation-plan', plan: implementationPlan() } },
+    });
+    const [reply] = selectSemanticReplyIntents({ locale, results: [result],
+      target: { kind: 'issue', number: 7 }, correlationId: 'comment:42',
+    });
+    const [status] = selectSemanticStatusIntents({ locale, results: [new Result({
+      id: 'RecommendStepsUseCase', success: true, executed: true,
+      payload: { issueNumber: 7, implementationPlan: implementationPlan() },
+    })] });
+    expect(reply).toMatchObject({ messageKey: 'implementation-plan', projection: { kind: 'implementation-plan' } });
+    const body = renderSemanticReply(reply);
+    expect(body.split('\n\n').slice(1).join('\n\n')).toBe(renderSemanticStatus(status).split('\n\n').slice(1).join('\n\n'));
+    expect(body).toContain('1. **Define the public contract**');
+    expect(body).toContain(locale === 'es-ES' ? '**Aceptación:**' : '**Acceptance:**');
+    expect(hasPrimaryIssuePublication([result])).toBe(true);
+    expect(hasOwnedPrimaryIssuePublication([{ body, user: { login: 'vypbot' } }], 7, 'vypbot')).toBe(true);
+  });
+
   it('keeps the maximum valid structured plan below the 8,000 visible-character budget', () => {
     const maximumPlan = {
       steps: Array.from({ length: IMPLEMENTATION_PLAN_MAX_STEPS }, () => ({

@@ -4,6 +4,7 @@ const issueSetupPort = {
   getHeadBranch: jest.fn(),
   getLabels: jest.fn(),
   getDescription: jest.fn(),
+  getTitle: jest.fn(),
 };
 const organizationSetupPort = { getUserFromToken: jest.fn() };
 const configurationPort = { get: jest.fn() };
@@ -95,6 +96,7 @@ describe('execution setup composition root', () => {
     await semanticIssuePort.getHeadBranch(42);
     await semanticIssuePort.getLabels(42);
     await semanticIssuePort.getDescription(42);
+    await semanticIssuePort.getTitle(42);
     await semanticOrganizationPort.getTokenUser();
     await semanticConfigurationPort.get(42);
 
@@ -103,6 +105,7 @@ describe('execution setup composition root', () => {
     expect(issueSetupPort.getHeadBranch).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
     expect(issueSetupPort.getLabels).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
     expect(issueSetupPort.getDescription).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
+    expect(issueSetupPort.getTitle).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
     expect(organizationSetupPort.getUserFromToken).toHaveBeenCalledWith('secret-token');
     expect(configurationPort.get).toHaveBeenCalledWith({
       owner: 'owner',

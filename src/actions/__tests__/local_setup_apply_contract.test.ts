@@ -56,7 +56,7 @@ describe('local setup Apply through production execution and provisioning workfl
             { workflowPat: { name: 'PAT', value: 'bot-fixture' }, apiKeys: [] }, [], remote);
         const forbidden = jest.fn(async () => { throw new Error('Repository installation must not inspect an issue or run an agent.'); });
         const issuePort = { isIssue: forbidden, isPullRequest: forbidden, getHeadBranch: forbidden,
-            getLabels: forbidden, getDescription: forbidden };
+            getLabels: forbidden, getDescription: forbidden, getTitle: forbidden };
         const getUser = jest.fn(async () => 'operator');
         const latestTag = { getLatestTag: jest.fn(async () => '1.0.0') };
         mockExecutionComposition.mockReturnValue(new SetupExecutionUseCase(issuePort,
