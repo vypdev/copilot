@@ -37,7 +37,10 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
 
     let mergeFailed = false;
     try {
-      await this.git.execute("git", ["merge", "--no-ff", "--no-commit", parentSha]);
+      // Git requires an identity even for --no-commit. Keep preview identity
+      // process-local; commitAndPush supplies the authorized final author.
+      await this.git.execute("git", ["-c", "user.name=Copilot", "-c", "user.email=copilot@users.noreply.github.com",
+        "merge", "--no-ff", "--no-commit", parentSha]);
     } catch {
       mergeFailed = true;
     }

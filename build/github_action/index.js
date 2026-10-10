@@ -77574,7 +77574,10 @@ class BranchSyncWorkspaceAdapter {
             return { kind: "aligned", parentSha, childSha };
         let mergeFailed = false;
         try {
-            await this.git.execute("git", ["merge", "--no-ff", "--no-commit", parentSha]);
+            // Git requires an identity even for --no-commit. Keep preview identity
+            // process-local; commitAndPush supplies the authorized final author.
+            await this.git.execute("git", ["-c", "user.name=Copilot", "-c", "user.email=copilot@users.noreply.github.com",
+                "merge", "--no-ff", "--no-commit", parentSha]);
         }
         catch {
             mergeFailed = true;
@@ -80941,6 +80944,12 @@ Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` a
 **Answer in this single response:** Give a complete, direct answer. Do not reply that you need to explore the repository, read documentation first, or gather more information—use the project (README, docs/, code, .cursor/rules) to answer now. For "how do I…" or tutorial-style questions (e.g. how to implement or configure this project), provide concrete steps or guidance based on the project's actual documentation and structure.
 
 {{projectContextInstruction}}
+
+When the question concerns Copilot's issue workflow, use these fixed product facts:
+- Creating or admitting an issue does not start work. An authorized maintainer adds \`in-progress\`.
+- With \`pre-branch-sdd: true\`, features and \`contract-change\` issues must resolve blocking clarification questions before an SDD is drafted. Answers use \`SDD Q1: ...\` with the IDs on the current card.
+- The Action creates or links the branch, validates and commits the SDD when required, and applies \`branched\` only after verifying the remote evidence. Do not claim an SDD or branch already exists while clarification is pending.
+- Help issues remain branchless. Inspect the repository's actual configuration before claiming optional SDD behavior is enabled.
 
 **Issue description (user's question or request):**
 {{description}}

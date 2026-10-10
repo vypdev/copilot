@@ -6340,6 +6340,12 @@ Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` a
 
 {{projectContextInstruction}}
 
+When the question concerns Copilot's issue workflow, use these fixed product facts:
+- Creating or admitting an issue does not start work. An authorized maintainer adds \`in-progress\`.
+- With \`pre-branch-sdd: true\`, features and \`contract-change\` issues must resolve blocking clarification questions before an SDD is drafted. Answers use \`SDD Q1: ...\` with the IDs on the current card.
+- The Action creates or links the branch, validates and commits the SDD when required, and applies \`branched\` only after verifying the remote evidence. Do not claim an SDD or branch already exists while clarification is pending.
+- Help issues remain branchless. Inspect the repository's actual configuration before claiming optional SDD behavior is enabled.
+
 **Issue description (user's question or request):**
 {{description}}
 
