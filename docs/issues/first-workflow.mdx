@@ -24,10 +24,12 @@ branch creation and PR review without changing application behavior.
   </Step>
   <Step title="Check readiness and recover failures">
     Comment `/copilot status` to inspect the current lifecycle and branch, or
-    `/copilot help` for the command reference. A missing branch, `state:blocked`
-    or an awaiting-maintainer label means you should inspect the failed run and
-    its **Job Summary**, correct the reported cause, and retry the workflow.
-    A branch created before a later failure may already be retained: verify the
+    `/copilot help` for the command reference. If the branch is missing or the
+    issue is `state:blocked`, inspect the failed run and its **Job Summary**,
+    correct the reported cause, and retry the workflow. If the issue is awaiting
+    a maintainer and no run failed, follow the status card's next-action guidance
+    or wait for the maintainer. A branch created before a later failure may
+    already be retained: verify the
     existing link before contributing.
   </Step>
   <Step title="Contribute on the linked branch">
