@@ -51740,9 +51740,20 @@ async function runAutofixAction(param, options, intentPayload) {
     }
     if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
         (0, logging_ports_1.logInfo)('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
-        autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review));
+        let reviewResults = await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
+        if (reviewResults.some(isSupersededReviewResult)) {
+            (0, logging_ports_1.logInfo)('Post-autofix review was superseded; reloading the current PR for one bounded read-only retry.');
+            reviewResults = await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
+        }
+        autofixResults.push(...reviewResults);
     }
     return autofixResults;
+}
+function isSupersededReviewResult(result) {
+    const payload = result.payload;
+    return result.success && result.executed
+        && payload !== null && typeof payload === 'object' && !Array.isArray(payload)
+        && payload.superseded === true;
 }
 async function runDoUserRequestAction(param, options, intentPayload) {
     if (!intentPayload)

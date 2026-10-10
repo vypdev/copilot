@@ -114,6 +114,8 @@ So verify commands act as a gate: only passing runs produce a commit. They still
 3. The action runs **git add**, **commit** (message: `fix(#N): bugbot autofix - resolve <finding ids>`), and **push** to the branch.
 4. The action leaves the findings open, pushes, and then starts a fresh read-only review in the same authorized workflow. Bot-authored push events are intentionally discarded before queueing; only the independent post-push analysis may update markers and resolve PR threads.
 
+If that review is superseded by the current PR revision, Copilot reloads the same PR and retries its read-only review once. It does not repeat the fixer, verification, commit or push. If the second review is also superseded, the pushed fix remains and findings stay unverified; use `/copilot recheck` to verify the current revision. Partial or failed review evidence never becomes a clean result through this retry.
+
 This prevents a successful edit or test command from being mistaken for proof that the original defect no longer exists.
 
 ---

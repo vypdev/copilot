@@ -1376,7 +1376,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-24",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -1427,7 +1427,8 @@
         "src/infrastructure/composition/bugbot_scm_port_factory.ts",
         "src/infrastructure/composition/bugbot_composition_root.ts",
         "scripts/coverage-budgets.json",
-        "scripts/validate-coverage-budgets.cjs"
+        "scripts/validate-coverage-budgets.cjs",
+        "src/application/usecases/comment_automation_action_workflow.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1454,7 +1455,8 @@
         "src/application/policies/__tests__/action_summary_policy.test.ts",
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
