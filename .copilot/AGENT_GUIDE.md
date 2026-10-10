@@ -27,7 +27,7 @@ The GitHub Action exclusively owns creation, naming, base selection, rename, syn
 
 An authorized maintainer starts every admitted issue by adding `in-progress`. The Action applies `branched` only after its linked branch and any required SDD commit are verified.
 
-The pre-branch SDD gate is disabled in this repository.
+For features and issues marked contract-change, answer the Action's blocking questions in the issue before it drafts the SDD. Wait for branch readiness before implementing.
 
 If the expected branch is absent or delayed, inspect the Action result and wait or ask a maintainer. Exceptional recovery requires all of: an explicit Action branch-management error, explicit maintainer authorization, the exact expected ref and base from diagnostics, and a recorded reconciliation plan.
 

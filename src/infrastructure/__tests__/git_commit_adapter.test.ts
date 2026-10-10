@@ -1,4 +1,8 @@
 import { GitCommitAdapter } from '../git_commit_adapter';
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 describe('GitCommitAdapter', () => {
     it('configures author, stages, commits and pushes through the port', async () => {
@@ -19,9 +23,36 @@ describe('GitCommitAdapter', () => {
             ['git', 'config', 'user.email', 'efra@example.test'],
             ['git', 'add', '--', 'src/file.ts'],
             ['git', 'add', '-A'],
-            ['git', 'commit', '-m', 'fix: test'],
+            ['git', '-c', expect.stringContaining('core.hooksPath='), 'commit', '-m', 'fix: test'],
             ['git', 'push', 'origin', 'master'],
         ]);
+    });
+
+    it('commits verified changes without executing an inherited hook or persisting its override', async () => {
+        const root = fs.mkdtempSync(path.join(tmpdir(), 'copilot-git-commit-test-'));
+        const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+        try {
+            git('init');
+            git('config', 'user.name', 'Test');
+            git('config', 'user.email', 'test@example.test');
+            const hooks = path.join(root, 'contributor-hooks');
+            fs.mkdirSync(hooks);
+            fs.writeFileSync(path.join(hooks, 'pre-commit'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+            git('config', 'core.hooksPath', hooks);
+            fs.writeFileSync(path.join(root, 'verified.txt'), 'verified change\n');
+            git('add', 'verified.txt');
+            const adapter = new GitCommitAdapter(async (program, args, options) => {
+                execFileSync(program, args, { cwd: root, env: options?.env });
+                return 0;
+            });
+
+            await adapter.commit('test: verified change');
+
+            expect(git('show', 'HEAD:verified.txt')).toBe('verified change');
+            expect(git('config', 'core.hooksPath')).toBe(hooks);
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
     });
 
     it('scopes token authentication to the fetch and push subprocess environments', async () => {

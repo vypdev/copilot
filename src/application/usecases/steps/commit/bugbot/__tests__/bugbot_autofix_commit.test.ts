@@ -400,11 +400,11 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(mockExec).toHaveBeenCalledWith("git", ["config", "user.name", "Test User"]);
         expect(mockExec).toHaveBeenCalledWith("git", ["config", "user.email", "test@users.noreply.github.com"]);
         expect(mockExec).toHaveBeenCalledWith("git", ["add", "-A"]);
-        expect(mockExec).toHaveBeenCalledWith("git", [
+        expect(mockExec).toHaveBeenCalledWith("git", ["-c", expect.stringMatching(/^core\.hooksPath=/),
             "commit",
             "-m",
             "fix(#42): bugbot autofix - resolve reported findings",
-        ]);
+        ], expect.any(Object));
         expect(mockExec.mock.calls).toContainEqual(["git", ["push", "origin", "feature/42-foo"], expect.any(Object)]);
     });
 
@@ -414,7 +414,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
             if (a[0] === "status" && opts?.listeners?.stdout) {
                 opts.listeners.stdout(Buffer.from(" M x"));
             }
-            if (a[0] === "commit") return Promise.reject(new Error("commit failed"));
+            if (a.includes("commit")) return Promise.reject(new Error("commit failed"));
             return Promise.resolve(0);
         });
         mockGetTokenUserDetails.mockResolvedValue({ name: "U", email: "u@x.com" });
@@ -461,11 +461,11 @@ describe("runBugbotAutofixCommitAndPush", () => {
 
         expect(result.success).toBe(true);
         expect(result.committed).toBe(true);
-        expect(mockExec).toHaveBeenCalledWith("git", [
+        expect(mockExec).toHaveBeenCalledWith("git", ["-c", expect.stringMatching(/^core\.hooksPath=/),
             "commit",
             "-m",
             "fix(#42): bugbot autofix - resolve finding-1, finding-2",
-        ]);
+        ], expect.any(Object));
     });
 
     it("sanitizes finding IDs in commit message (newlines, control chars, length)", async () => {
@@ -484,9 +484,9 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(result.success).toBe(true);
         expect(result.committed).toBe(true);
         const commitCall = mockExec.mock.calls.find(
-            (c: [string, string[]]) => c[0] === "git" && c[1]?.[0] === "commit" && c[1]?.[1] === "-m"
+            (c: [string, string[]]) => c[0] === "git" && c[1]?.includes("commit") && c[1]?.includes("-m")
         );
-        const commitMessage = commitCall?.[1]?.[2] ?? "";
+        const commitMessage = commitCall?.[1]?.at(-1) ?? "";
         expect(commitMessage).toContain("fix(#42): bugbot autofix - resolve ");
         expect(commitMessage).not.toMatch(/\n/);
         expect(commitMessage).toContain("normal-id");
@@ -510,9 +510,9 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(result.success).toBe(true);
         expect(result.committed).toBe(true);
         const commitCall = mockExec.mock.calls.find(
-            (c: [string, string[]]) => c[0] === "git" && c[1]?.[0] === "commit" && c[1]?.[1] === "-m"
+            (c: [string, string[]]) => c[0] === "git" && c[1]?.includes("commit") && c[1]?.includes("-m")
         );
-        const commitMessage = commitCall?.[1]?.[2] ?? "";
+        const commitMessage = commitCall?.[1]?.at(-1) ?? "";
         expect(commitMessage).toContain("resolve reported findings");
     });
 
@@ -535,9 +535,9 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(result.success).toBe(true);
         expect(result.committed).toBe(true);
         const commitCall = mockExec.mock.calls.find(
-            (c: [string, string[]]) => c[0] === "git" && c[1]?.[0] === "commit" && c[1]?.[1] === "-m"
+            (c: [string, string[]]) => c[0] === "git" && c[1]?.includes("commit") && c[1]?.includes("-m")
         );
-        const commitMessage = commitCall?.[1]?.[2] ?? "";
+        const commitMessage = commitCall?.[1]?.at(-1) ?? "";
         expect(commitMessage).toContain("fix(#42): bugbot autofix - resolve ");
         expect(commitMessage).toMatch(/\.\.\.$/);
         expect(commitMessage.length).toBeLessThanOrEqual(550);
@@ -631,11 +631,11 @@ describe("runUserRequestCommitAndPush", () => {
         expect(result.committed).toBe(true);
         expect(mockGetTokenUserDetails).toHaveBeenCalledWith("t");
         expect(mockExec).toHaveBeenCalledWith("git", ["add", "-A"]);
-        expect(mockExec).toHaveBeenCalledWith("git", [
+        expect(mockExec).toHaveBeenCalledWith("git", ["-c", expect.stringMatching(/^core\.hooksPath=/),
             "commit",
             "-m",
             "chore(#42): apply user request",
-        ]);
+        ], expect.any(Object));
         expect(mockExec.mock.calls).toContainEqual(["git", ["push", "origin", "feature/42-foo"], expect.any(Object)]);
     });
 
@@ -653,7 +653,7 @@ describe("runUserRequestCommitAndPush", () => {
         );
 
         expect(result.committed).toBe(true);
-        expect(mockExec).toHaveBeenCalledWith("git", ["commit", "-m", "chore: apply user request"]);
+        expect(mockExec).toHaveBeenCalledWith("git", ["-c", expect.stringMatching(/^core\.hooksPath=/), "commit", "-m", "chore: apply user request"], expect.any(Object));
     });
 
     it("treats non-array getBugbotFixVerifyCommands as empty in user request", async () => {

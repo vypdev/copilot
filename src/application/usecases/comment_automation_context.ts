@@ -91,6 +91,7 @@ export function projectCommentAutomationContext(
             locale: language.locale,
             issueNumber: language.issueNumber,
             commentId: language.commentId,
+            trustedBotLogin: language.trustedBotLogin,
             configuration: language.configuration === undefined
                 ? undefined
                 : { ...language.configuration },

@@ -10,8 +10,9 @@ import type {
   SddCatalogSnapshot,
   SddPreparedDraft,
 } from '../application/ports/pre_branch_sdd_ports';
-import { isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
+import { composeSddUpdate, isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
+import { withoutGitHooks } from './git_hook_isolation';
 
 const runFile = promisify(execFile);
 const SHA = /^[a-f0-9]{40}$/i;
@@ -50,6 +51,18 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     return Object.freeze({ baseSha, capabilities: Object.freeze(catalog.capabilities), template, standard });
   }
 
+  async isAncestor(ancestorSha: string, descendantSha: string): Promise<boolean> {
+    assertSha(ancestorSha);
+    assertSha(descendantSha);
+    try {
+      await this.git(['merge-base', '--is-ancestor', ancestorSha, descendantSha]);
+      return true;
+    } catch (error) {
+      if ((error as { code?: unknown }).code === 1) return false;
+      throw error;
+    }
+  }
+
   async readSdd(baseSha: string, relativePath: string): Promise<string | undefined> {
     assertSha(baseSha);
     if (!isSafeSddPath(relativePath)) throw new Error('SDD path is outside the specification boundary.');
@@ -76,7 +89,11 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       if (fs.existsSync(target) !== (plan.action === 'update')) {
         throw new Error('The SDD owner changed since analysis; restart clarification.');
       }
-      if (plan.action === 'update') assertRegularSpecFile(target);
+      if (plan.action === 'update') {
+        assertRegularSpecFile(target);
+        const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
+        markdown = composeSddUpdate(owner, markdown);
+      }
       else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
       writeSpecFile(target, markdown, plan.action === 'update');
       const catalog: Catalog = {
@@ -152,11 +169,12 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       if (staged.join('\n') !== [...prepared.changedPaths].sort().join('\n')) {
         throw new Error('The staged paths differ from the validated SDD draft.');
       }
-      await this.git([
+      await withoutGitHooks(emptyHooks => this.git([
         '-c', 'user.name=copilot-action[bot]',
         '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+        '-c', `core.hooksPath=${emptyHooks}`,
         'commit', '-m', `docs(sdd): specify issue contract in ${prepared.plan.path}`,
-      ], root);
+      ], root));
       const commitSha = (await this.git(['rev-parse', 'HEAD'], root)).trim();
       assertSha(commitSha);
       await this.git(['push', 'origin', `HEAD:refs/heads/${branchName}`], root, this.token);

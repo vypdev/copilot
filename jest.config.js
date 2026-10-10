@@ -39,8 +39,10 @@ module.exports = {
     '^.+\\.ts$': 'ts-jest'
   },
   verbose: true,
+  // Self-hosted machines also run live agents. Bound test processes so Vite
+  // renderers and terminal child-process fixtures retain CPU and memory.
+  maxWorkers: 2,
   ...(process.platform === 'win32' ? {
-    maxWorkers: 2,
     // Both Windows jobs cap concurrency. Only service runners recycle workers:
     // recycling also slowed hosted Windows beyond its job timeout.
     ...(process.env.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE === '1'

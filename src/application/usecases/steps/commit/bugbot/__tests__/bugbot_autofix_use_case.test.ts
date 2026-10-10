@@ -403,5 +403,6 @@ describe("BugbotAutofixUseCase", () => {
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
         expect(results[0].errors?.[0].message).toContain("no safe workspace paths");
+        expect(results[0].errors?.[0].code).toBe('agent.failed');
     });
 });

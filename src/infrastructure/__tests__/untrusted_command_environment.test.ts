@@ -7,6 +7,8 @@ describe('prepareUntrustedCommandEnvironment', () => {
             PATH: '/usr/bin',
             CI: 'true',
             GITHUB_WORKSPACE: '/workspace',
+            OS: 'Windows_NT',
+            WINDIR: 'C:\\Windows',
             GITHUB_TOKEN: 'github-secret',
             PAT: 'pat-secret',
             OPENAI_API_KEY: 'openai-secret',
@@ -20,6 +22,8 @@ describe('prepareUntrustedCommandEnvironment', () => {
                 PATH: '/usr/bin',
                 CI: 'true',
                 GITHUB_WORKSPACE: '/workspace',
+                OS: 'Windows_NT',
+                WINDIR: 'C:\\Windows',
             });
             expect(runtime.environment.HOME).toContain('copilot-verify-runtime-');
             expect(JSON.stringify(runtime.environment)).not.toContain('secret');

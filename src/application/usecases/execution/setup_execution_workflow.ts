@@ -51,6 +51,9 @@ export async function runSetupExecution(
     const liveIssueBody = issueResolution.issueNumber === undefined
         ? undefined
         : await dependencies.issueSetupPort.getDescription(issueResolution.issueNumber);
+    const liveIssueTitle = issueResolution.issueNumber === undefined
+        ? undefined
+        : await dependencies.issueSetupPort.getTitle(issueResolution.issueNumber);
     const issueAdmission = issueResolution.issueNumber !== undefined
         ? classifyIssueWorkflow(currentIssueLabels, context.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, {
             feature: [context.labelNames.feature, context.labelNames.enhancement],
@@ -129,6 +132,7 @@ export async function runSetupExecution(
                     configuration,
                     liveIssueBody,
                     issueAdmission,
+                    liveIssueTitle,
                 ),
             };
         }
@@ -146,6 +150,7 @@ export async function runSetupExecution(
         };
         configuration = {
             ...configuration,
+            workingBranch: issueResolution.pullRequestHeadBranch || context.pullRequest.head || configuration.workingBranch,
             parentBranch: configuration.parentBranch ?? context.pullRequest.base,
         };
     }
@@ -166,6 +171,7 @@ export async function runSetupExecution(
             configuration,
             liveIssueBody,
             issueAdmission,
+            liveIssueTitle,
         ),
     };
 }
@@ -225,6 +231,7 @@ function setupState(
     configuration: SetupConfigurationPatch,
     liveIssueBody?: string,
     issueWorkflowAdmission?: SetupExecutionState['issueWorkflowAdmission'],
+    liveIssueTitle?: string,
 ): SetupExecutionState {
     return {
         previousConfiguration,
@@ -234,6 +241,7 @@ function setupState(
         hotfix: { ...hotfix },
         configuration: { ...configuration },
         liveIssueBody,
+        liveIssueTitle,
         issueWorkflowAdmission,
     };
 }

@@ -211,6 +211,7 @@ const setupIssuePort = {
   isIssue: mockIsIssue,
   getHeadBranch: mockGetHeadBranch,
   getDescription: mockGetDescription,
+  getTitle: jest.fn(async () => undefined),
   updateDescription: jest.fn(),
 };
 const setupOrganizationPort = { getTokenUser: mockGetUserFromToken };
@@ -547,7 +548,8 @@ describe('Execution', () => {
       expect(mockGetLabels).toHaveBeenCalledWith(314);
     });
 
-    it('sets up a PR conversation comment from its exact payload number', async () => {
+    it('resolves the linked issue separately from the exact PR conversation number', async () => {
+      mockGetHeadBranch.mockResolvedValueOnce('docs/42-work');
       const e = buildExecution({
         eventName: 'issue_comment',
         repo: { owner: 'owner', repo: 'repository' },
@@ -557,7 +559,9 @@ describe('Execution', () => {
 
       await setupExecution(e);
 
-      expect(e.issueNumber).toBe(362);
+      expect(e.issueNumber).toBe(42);
+      expect(e.currentConfiguration.workingBranch).toBe('docs/42-work');
+      expect(mockGetHeadBranch).toHaveBeenCalledWith(362);
       expect(mockConfigGet).toHaveBeenCalledWith(362);
       expect(mockGetLabels).toHaveBeenCalledWith(362);
       expect(mockGetReleaseVersionInvoke).not.toHaveBeenCalled();

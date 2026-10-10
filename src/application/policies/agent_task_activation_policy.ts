@@ -6,6 +6,8 @@ import { parseCopilotCommand } from '../../domain/copilot_command';
 import { containsBotMention, isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import { isNaturalLanguageBranchSyncRequest, parseBranchSyncCommandArguments } from '../../domain/branch_sync_command';
 import { isPullRequestConversationComment } from '../../domain/github_comment_target';
+import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
+import { isSddAnswerComment } from '../../domain/pre_branch_sdd';
 
 const COMMENT_TASKS: readonly AgentTask[] = ['findings', 'fixer', 'planner', 'reviewer', 'tester'];
 
@@ -15,6 +17,7 @@ export function activeAgentTasks(
     singleAction: SingleAction,
     botLogin = '',
     pullRequestDescriptionEnabled = true,
+    preBranchSddEnabled = false,
 ): AgentTask[] {
     if (singleAction.enabledSingleAction) {
         switch (singleAction.currentSingleAction) {
@@ -34,7 +37,7 @@ export function activeAgentTasks(
 
     switch (event.eventName) {
         case 'issues':
-            return ['opened', 'edited'].includes(eventAction(event)) ? ['planner'] : [];
+            return activeIssueTasks(event, preBranchSddEnabled);
         case 'pull_request':
             if (!['opened', 'reopened', 'synchronize'].includes(eventAction(event))) return [];
             return pullRequestDescriptionEnabled ? ['planner', 'reviewer'] : ['reviewer'];
@@ -44,14 +47,28 @@ export function activeAgentTasks(
             return ['findings'];
         case 'issue_comment':
         case 'pull_request_review_comment':
-            return activeCommentTasks(event, botLogin);
+            return activeCommentTasks(event, botLogin, preBranchSddEnabled);
         default:
             return [];
     }
 }
 
-function activeCommentTasks(event: GithubActionEventInputs, botLogin: string): AgentTask[] {
+function activeIssueTasks(event: GithubActionEventInputs, preBranchSddEnabled: boolean): AgentTask[] {
+    const action = eventAction(event);
+    if (['opened', 'edited'].includes(action)) return ['planner'];
+    if (action === 'labeled' && event.label?.name === ISSUE_START_LABEL) return ['planner'];
+    // A started SDD may resume on metadata changes or reopen, after live admission.
+    if (preBranchSddEnabled && ['reopened', 'labeled', 'unlabeled', 'assigned', 'unassigned'].includes(action)
+        && Array.isArray(event.issue?.labels)
+        && event.issue.labels.some(label => typeof label === 'object' && label?.name === ISSUE_START_LABEL)) {
+        return ['planner'];
+    }
+    return [];
+}
+
+function activeCommentTasks(event: GithubActionEventInputs, botLogin: string, preBranchSddEnabled: boolean): AgentTask[] {
     const body = commentBody(event);
+    if (isSddContinuationComment(event, preBranchSddEnabled)) return ['planner'];
     if (!isCopilotCommentRequest(body, botLogin)) return [];
     const command = parseCopilotCommand(body);
     if (command.kind === 'invalid') return [];
@@ -90,9 +107,15 @@ function activeCommentTasks(event: GithubActionEventInputs, botLogin: string): A
 }
 
 /** Discards passive comment traffic before project, AI, and runtime composition. */
-export function isUnaddressedCommentEvent(event: GithubActionEventInputs, botLogin: string): boolean {
+export function isUnaddressedCommentEvent(event: GithubActionEventInputs, botLogin: string, preBranchSddEnabled = false): boolean {
     if (!['issue_comment', 'pull_request_review_comment'].includes(event.eventName)) return false;
+    if (isSddContinuationComment(event, preBranchSddEnabled)) return false;
     return !isCopilotCommentRequest(commentBody(event), botLogin);
+}
+
+function isSddContinuationComment(event: GithubActionEventInputs, preBranchSddEnabled: boolean): boolean {
+    return preBranchSddEnabled && event.eventName === 'issue_comment'
+        && !isPullRequestComment(event) && isSddAnswerComment(commentBody(event));
 }
 
 function branchSyncAgentTasks(args: readonly string[]): AgentTask[] {

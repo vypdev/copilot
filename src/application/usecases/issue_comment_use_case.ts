@@ -19,6 +19,7 @@ import type { ThinkContext } from './steps/common/think_workflow';
 import { projectIssueCommentLanguageRequest } from './steps/issue_comment/check_issue_comment_language_use_case';
 import { projectCommentAutomationContext } from './comment_automation_context';
 import { projectPullRequestDescriptionContext } from './pull_request_workflow_context';
+import { isSddAnswerComment } from '../../domain/pre_branch_sdd';
 
 export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
   taskId = "IssueCommentUseCase";
@@ -51,7 +52,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     }
     if (this.preBranchSddContinuation
       && param.issueStartDecision.sddRequired
-      && /^\s*SDD\s+Q[1-8]:/im.test(param.issue.commentBody)
+      && isSddAnswerComment(param.issue.commentBody)
       && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
       return this.preBranchSddContinuation.invoke(param);
     }

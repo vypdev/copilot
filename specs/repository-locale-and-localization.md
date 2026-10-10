@@ -1066,11 +1066,11 @@ and irreversible facts.
 
 ## 14. Testing strategy and numeric budget
 
-The implementation requires at least **138 distinct new or materially rewritten
+The implementation requires at least **141 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 141 qualifying
+`src/architecture/github_communication_test_budget.json` records 144 qualifying
 localization cases from the implementation diff against the specification
 baseline. No listed test file appears in the semantic allocation, and the
 contract is enforced by `pnpm run validate:specifications`.
@@ -1079,11 +1079,11 @@ contract is enforced by `pnpm run validate:specifications`.
 |---|---:|---|
 | Domain/configuration/pure planning | 26 | defaults, inheritance, canonicalization, invalid tags including underscores, 255-char bound, scope/snapshot, locale equality, unified provider-task authorization for locale-only planner and user-content tasks |
 | Catalog/renderer contracts | 28 | completeness, exact/base/dynamic/fallback, atomicity, placeholders, plurals, number formatting, expansion, missing/hostile IDs |
-| Translation/application state | 26 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request |
+| Translation/application state | 27 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request |
 | Adapters/provider contracts | 16 | static/dynamic adapters, schema errors, timeouts, cache key, error mapping, no comment update capability |
 | Workflows/setup/generated schemas | 18 | action defaults, strict setup validation, doctor, issue/PR/run/CLI surface propagation, agent task inventory, release snapshot |
-| UI/UX/security/integration | 24 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths, post-live-admission membership lookup and non-executable no-lookup behavior |
-| **Total** | **138** | No double counting |
+| UI/UX/security/integration | 26 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths, post-live-admission membership lookup and non-executable no-lookup behavior |
+| **Total** | **141** | No double counting |
 
 Required quality gates:
 
@@ -1194,7 +1194,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 21. Given repository-aware CLI `--json`, then human terminal prose may localize
     but JSON keys, codes, and enums remain stable English machine contracts.
 22. Given implementation completion, then related SDDs, catalog, action/setup
-    defaults, generated bundles, 138-case budget, coverage, documentation, and
+    defaults, generated bundles, 141-case budget, coverage, documentation, and
     all repository validations agree without stale en/es conditionals.
 23. Given an unchanged issue whose valid current plan was produced in a
     different locale, when planning runs in the current effective issue locale,
@@ -1230,7 +1230,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 | §11 privacy/security | sanitizer, minimizer, telemetry projection | injection/bidi/secret/body-absence tests | security operations |
 | §12 observability/cost | summary/log/metric projections and run cache | fields, one-call, no-body assertions | quality observability |
 | §13 greenfield cutover | strict readers and required locale state | removed-name/invalid-marker/state/rollback tests | configuration guide |
-| §14 quality budget | coverage scripts and disjoint communication test ledger | 141 allocated localization cases plus CI coverage evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 144 allocated localization cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1285,7 +1285,7 @@ hyphenated tags and never imply that fallback is a successful translation.
       and bidi tests/manual evidence pass.
 - [x] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
       update constraints are executable and blocking.
-- [x] The 138-case numeric budget and changed-module coverage gates pass without
+- [x] The 141-case numeric budget and changed-module coverage gates pass without
       double counting semantic publication tests.
 - [x] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
       bundles, examples, and defaults agree.
@@ -1361,3 +1361,5 @@ implementation change.
 - Automatic repair of historic v2-mutated human comments is intentionally not
   attempted because exact user intent and later edits cannot be reconstructed
   safely.
+
+Live dogfooding on PR #460 (2026-10-10) exposed a translated command expanding beyond the fixed 20-argument grammar. Reconstructed commands must pass the same 2,000-character/20-argument parser before intent, answer, or mutation; failure retains the source and publishes locale.translation-failed. Invalid adapter-produced commands also fail before natural-language routing. Context projection retains the trusted bot login so translated mentions preserve their original admission authority. Three additional conservative test declarations cover grammar rejection and both application paths; parameterized length/argument boundaries count once.

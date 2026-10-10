@@ -89,7 +89,11 @@ describe('ThinkUseCase', () => {
   });
 
   it('executes an explicit command without requiring a bot username', async () => {
-    mockAskAgent.mockResolvedValue({ answer: 'Plan ready.' });
+    const plan = {
+      steps: ['Define the rollout', 'Implement the rollout', 'Verify the rollout'].map(title => ({ title, details: [] })),
+      acceptance: 'All rollout checks pass.',
+    };
+    mockAskAgent.mockResolvedValue({ status: 'recommendation', ...plan });
     const param = baseParam({
       tokenUser: '',
       issue: { ...baseParam().issue, commentBody: '/copilot plan the rollout' },
@@ -105,6 +109,21 @@ describe('ThinkUseCase', () => {
     expect('tokenUser' in context).toBe(false);
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(results[0]).toMatchObject({ success: true, executed: true });
+    expect(results[0].payload).toMatchObject({ publication: { kind: 'implementation-plan', plan } });
+    expect(mockAskAgent.mock.calls[0][2]).toContain('three to eight');
+    expect(mockAskAgent.mock.calls[0][3]).toMatchObject({ schemaName: 'recommend_steps_response' });
+  });
+
+  it.each([
+    { answer: 'A freeform plan cannot satisfy the structured contract.' },
+    { status: 'unchanged', steps: null, acceptance: null },
+    { status: 'recommendation', steps: [], acceptance: 'Done.' },
+  ])('rejects invalid or empty explicit implementation plans', async response => {
+    mockAskAgent.mockResolvedValue(response);
+    const results = await invoke(baseParam({ issue: { ...baseParam().issue, commentBody: '/copilot plan' } }));
+    expect(results[0].success).toBe(false);
+    expect(results[0].payload).toBeUndefined();
+    expect(results[0].errors[0].code).toBe('agent.failed');
   });
 
   it('returns a local semantic answer without an issue, mention, or publication target', async () => {

@@ -40,6 +40,7 @@ function dependencies(labels: string[], body: string, previousConfiguration?: ob
       getHeadBranch: jest.fn(),
       getLabels: jest.fn(async () => labels),
       getDescription: jest.fn(async () => body),
+      getTitle: jest.fn(async () => 'Current normalized title'),
     },
     organizationSetupPort: { getTokenUser: jest.fn() },
     configurationPort: { get: jest.fn(async () => previousConfiguration as never) },
@@ -81,7 +82,7 @@ describe('setup execution live issue admission', () => {
     expect(result).toMatchObject({
       status: 'configured',
       branchType: 'feature',
-      state: { liveIssueBody: liveBody, issueWorkflowAdmission: { status: 'eligible', kind: 'feature' } },
+      state: { liveIssueBody: liveBody, liveIssueTitle: 'Current normalized title', issueWorkflowAdmission: { status: 'eligible', kind: 'feature' } },
     });
   });
 

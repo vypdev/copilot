@@ -4,7 +4,7 @@
     "name": "@vypdev/copilot",
     "contractVersion": 1
   },
-  "profileDigest": "d686ee71939ddd8d5ec331cd12f562f9e5fedd20f6c54873422268d324b265df",
+  "profileDigest": "014d927932f9315b0506890f17c646ed759294bb85135338a4b28d8fa23a2a55",
   "artifacts": {
     ".agents/skills/copilot-repository-workflow/SKILL.md": {
       "role": "skill",
@@ -12,11 +12,11 @@
     },
     ".copilot/AGENT_GUIDE.md": {
       "role": "guide",
-      "sha256": "081a9797237d14e225c0b9b96aac843d4c3da523389d70c7845f3e1524117095"
+      "sha256": "7065adc3383f2b05abda31ea533fe8490c7bde7f003bf12cdfa9516420163ef1"
     },
     ".copilot/repository-profile.json": {
       "role": "profile",
-      "sha256": "d686ee71939ddd8d5ec331cd12f562f9e5fedd20f6c54873422268d324b265df"
+      "sha256": "014d927932f9315b0506890f17c646ed759294bb85135338a4b28d8fa23a2a55"
     },
     "AGENTS.md": {
       "role": "pointer",

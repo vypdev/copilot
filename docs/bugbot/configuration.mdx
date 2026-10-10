@@ -93,7 +93,7 @@ and 64,000-character per-partition diff budgets, exact partition/head
 attestation, sole resolution owner, atomic aggregation, and reviewer concurrency
 of two are fixed correctness boundaries. A plan is capped at 64 partitions and
 2,000 aggregate candidate findings; exceeding either cap fails before publication
-and requires splitting the PR. These limits require no input, secret, or
+and requires splitting the PR. Human discussion uses fixed bounds of 4,000 characters per item, 24,000 characters overall, and 50 retained items. Clipped or omitted discussion keeps the review partial; account names never exempt a report. These limits require no input, secret, or
 permission. Increasing `bugbot-comment-limit` changes publication volume, not
 diff coverage or the number of analysis partitions.
 

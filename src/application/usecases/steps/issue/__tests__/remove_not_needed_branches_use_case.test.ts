@@ -83,4 +83,12 @@ describe('RemoveNotNeededBranchesUseCase', () => {
     expect(mockRemoveBranch).toHaveBeenCalledWith('feature/42-old-name');
     expect(results.some((r) => r.steps?.some((s) => s.includes('feature/42-old-name')))).toBe(true);
   });
+
+  it('cleans an obsolete docs ref without matching an unrelated branch containing the issue prefix', async () => {
+    mockGetListOfBranches.mockResolvedValue(['docs/42-add-login', 'docs/42-old-name', 'archive/docs/42-old-name']);
+    mockRemoveBranch.mockClear();
+    await useCase.invoke(baseParam({ managementBranch: 'docs', managedBranchTypes: ['feature', 'bugfix', 'docs', 'chore'] }));
+    expect(mockRemoveBranch).toHaveBeenCalledTimes(1);
+    expect(mockRemoveBranch).toHaveBeenCalledWith('docs/42-old-name');
+  });
 });

@@ -30,6 +30,15 @@ describe('Issue', () => {
     expect(i.isIssue).toBe(false);
   });
 
+  it('prefers live title and body when processing a stale queued event', () => {
+    const issue = new Issue(true, false, 1, { action: 'opened', issue: issuePayload, eventName: 'issues' });
+    issue.liveTitle = 'Current normalized title';
+    issue.liveBody = 'Current description';
+    expect(issue.title).toBe('Current normalized title');
+    expect(issue.body).toBe('Current description');
+    expect(issue.inputs?.issue?.title).toBe('Add feature');
+  });
+
   it('labeled and labelAdded when action is labeled', () => {
     const inputs = { action: 'labeled', issue: issuePayload, label: { name: 'bug' } };
     const i = new Issue(false, false, 1, inputs);

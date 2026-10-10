@@ -401,6 +401,9 @@ function assertRunner(file, workflow) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
+    } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {
+      if (!['linux', 'windows'].includes(jobId)) throw new Error(`${relativeFile} contains an unexpected diagnostic job.`);
+      expected = ['self-hosted', 'codex', jobId === 'linux' ? 'Linux' : 'Windows'];
     } else if (relativeFile === '.github/workflows/ci_check.yml'
       || relativeFile === '.github/workflows/repowise.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];
@@ -487,6 +490,12 @@ function assertAgentInstallationPrerequisites(file, workflow) {
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const steps = job.steps ?? [];
     for (const step of steps) {
+      const repositoryVerificationStep = ['.github/workflows/copilot_issue_comment.yml', '.github/workflows/copilot_pull_request_comment.yml'].includes(relativeFile)
+        && step.if === "env.COPILOT_PREPARE_VERIFICATION == 'true'"
+        && ((step.name === 'Prepare repository Node' && step.uses === 'actions/setup-node@v7' && step.with?.['node-version'] === '24.x')
+          || (step.name === 'Prepare repository pnpm' && step.uses === 'pnpm/action-setup@v5' && step.with?.version === '10.12.4')
+          || (step.name === 'Install repository verification dependencies' && step.run === 'pnpm install --frozen-lockfile --ignore-scripts'));
+      if (repositoryVerificationStep) continue;
       if (/^(?:actions\/setup-node|pnpm\/action-setup)@/u.test(String(step?.uses ?? ''))
         || /\b(?:npm|pnpm|npx)\s+(?:install|add|ci|i)\b/u.test(String(step?.run ?? ''))
         || Object.hasOwn(step?.env ?? {}, 'AGENT_PROVISIONING')) {

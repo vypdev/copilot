@@ -79,6 +79,7 @@ export interface ResolvedSingleActionState {
 }
 
 export interface ExecutionIssueResolution {
+    readonly pullRequestHeadBranch?: string;
     readonly issueNumber?: number;
     readonly singleAction: ResolvedSingleActionState;
 }
@@ -118,6 +119,7 @@ export interface SetupExecutionState {
     readonly hotfix: SetupHotfixState;
     readonly configuration: SetupConfigurationPatch;
     readonly liveIssueBody?: string;
+    readonly liveIssueTitle?: string;
     readonly issueWorkflowAdmission?: IssueWorkflowAdmission;
 }
 

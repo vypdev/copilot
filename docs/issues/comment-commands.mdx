@@ -5,6 +5,11 @@ description: Use @vypbot from issues and pull requests for help, analysis, plann
 
 # Comment commands
 
+Branchless help requests stay on the read-only answer route even when natural
+language classification suggests a repository task. File changes require an
+authoritative branch from a supported surface, such as a PR review comment;
+a general conversation cannot infer one from the checkout's current branch.
+
 Copilot can act as a project assistant directly from an issue or pull-request comment. With the default workflow PAT, the bot user is `@vypbot`; if your installation uses another account, replace that mention with the configured PAT user.
 
 A comment must begin with `/copilot` or contain the exact bot mention. All
@@ -52,7 +57,7 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
 resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
-result; it never substitutes zero or a clean state.
+result; it never substitutes zero or a clean state. In a PR conversation, setup reads that exact PR head to resolve its linked issue and working branch. An unlinked PR remains separate from an issue with the same number.
 
 Every explicit answer uses a correlated reply marker. A webhook retry with the
 same source comment updates or reuses that response instead of creating another.
@@ -141,7 +146,7 @@ prose protect every argument, including an arbitrary value passed to `--from`.
 The provider must return every operand exactly once. Copilot restores them only
 after validating that none was removed, duplicated, reordered, changed, or
 introduced, so a translation cannot turn `src/cache.ts` into another path or add
-`--force`. A failed validation performs no requested repository change.
+`--force`. A failed validation performs no requested repository change. Reconstructed commands also retain the fixed 2,000-character and 20-argument limits; an expansion beyond either limit returns an interpretation error before answering or writing. Rephrase the request more briefly to retry.
 
 An explicit command or mention that fails receives one correlated semantic
 error reply with impact, recovery action, retained state, stable error code,

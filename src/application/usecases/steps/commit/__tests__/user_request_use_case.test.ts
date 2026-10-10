@@ -58,6 +58,13 @@ describe("DoUserRequestUseCase", () => {
         mockCopilotMessage.mockReset();
     });
 
+    it('rejects an ambiguous conversation before starting an agent or inspecting Git', async () => {
+        const results = await useCase.invoke({ context: baseContext({ headBranch: '' }), userComment: 'Update the guide' });
+        expect(results[0].errors?.[0].code).toBe('workflow.invalid-event');
+        expect(mockCopilotMessage).not.toHaveBeenCalled();
+        expect(mockGitExecute).not.toHaveBeenCalled();
+    });
+
     it("returns empty results when OpenCode not configured", async () => {
         const context = baseContext({ agentConfiguration: { provider: 'opencode', model: '' } });
 

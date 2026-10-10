@@ -103,7 +103,9 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
-    timeout-minutes: 20
+    # Includes build, isolated fixtures and the full coverage suite. Windows
+    # service runners exceeded 20 minutes in the 2026-10-10 live smoke test.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

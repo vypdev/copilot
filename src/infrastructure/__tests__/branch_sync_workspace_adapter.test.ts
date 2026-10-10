@@ -1,5 +1,9 @@
 import type { GitCommitPort } from "../../application/ports/git_ports";
 import { BranchSyncWorkspaceAdapter } from "../branch_sync_workspace_adapter";
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 type Reply = string | number | Error;
 
@@ -27,6 +31,7 @@ function createGit(replies: Record<string, Reply[]> = {}) {
 const STATUS = "status --porcelain";
 const UNRESOLVED = "diff --name-only --diff-filter=U -z";
 const INDEX = "ls-files -s -z";
+const MERGE = "-c user.name=Copilot -c user.email=copilot@users.noreply.github.com merge --no-ff --no-commit parent";
 
 async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
   const stableIndex = "100644 sha 0\tsrc/a.ts\0";
@@ -46,6 +51,53 @@ async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
 }
 
 describe("BranchSyncWorkspaceAdapter", () => {
+  it('prepares and aborts a real merge without runner identity or persistent author configuration', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'copilot-sync-identity-'));
+    const remote = join(directory, 'remote.git');
+    const workspace = join(directory, 'workspace');
+    const globalConfig = join(directory, 'empty-gitconfig');
+    writeFileSync(globalConfig, '');
+    const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+      !key.startsWith('GIT_AUTHOR_') && !key.startsWith('GIT_COMMITTER_')));
+    env.GIT_CONFIG_GLOBAL = globalConfig;
+    env.GIT_CONFIG_NOSYSTEM = '1';
+    const gitAt = (cwd: string, args: readonly string[]) => execFileSync('git', [...args], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    try {
+      gitAt(directory, ['init', '--bare', remote]);
+      gitAt(directory, ['init', '--initial-branch=develop', workspace]);
+      const commit = (message: string) => gitAt(workspace, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.com', 'commit', '-m', message]);
+      writeFileSync(join(workspace, 'base.txt'), 'base\n');
+      gitAt(workspace, ['add', '.']);
+      commit('base');
+      gitAt(workspace, ['branch', 'feature/42']);
+      writeFileSync(join(workspace, 'parent.txt'), 'parent\n');
+      gitAt(workspace, ['add', '.']);
+      commit('parent');
+      gitAt(workspace, ['checkout', 'feature/42']);
+      writeFileSync(join(workspace, 'child.txt'), 'child\n');
+      gitAt(workspace, ['add', '.']);
+      commit('child');
+      gitAt(workspace, ['remote', 'add', 'origin', remote]);
+      gitAt(workspace, ['push', 'origin', 'develop', 'feature/42']);
+      const { git } = createGit();
+      git.execute.mockImplementation(async (program, args, options) => {
+        const output = execFileSync(program, [...args], { cwd: workspace, env, stdio: ['ignore', 'pipe', 'pipe'] });
+        options?.stdout?.(output);
+        return 0;
+      });
+      git.fetch.mockImplementation(async branch => { gitAt(workspace, ['fetch', 'origin', branch]); });
+      const adapter = new BranchSyncWorkspaceAdapter(git);
+      await expect(adapter.prepare('develop', 'feature/42', 'fixture')).resolves.toMatchObject({ kind: 'clean' });
+      await expect(adapter.validatePreparedMerge([])).resolves.toEqual({ valid: true });
+      await adapter.abort();
+      expect(gitAt(workspace, ['status', '--porcelain']).toString()).toBe('');
+      expect(() => gitAt(workspace, ['config', '--local', '--get', 'user.name'])).toThrow();
+      expect(git.configureAuthor).not.toHaveBeenCalled();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("returns an idempotent preparation when the parent is already an ancestor", async () => {
     const { git } = createGit({
       [STATUS]: [""],
@@ -103,7 +155,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
       "rev-parse HEAD": ["child\n", "child\n"],
       "rev-parse FETCH_HEAD": ["parent\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],
-      "merge --no-ff --no-commit parent": [new Error("conflicts")],
+      [MERGE]: [new Error("conflicts")],
       [UNRESOLVED]: ["src/a.ts\0", ""],
       [INDEX]: [conflictedIndex, resolvedIndex],
       "rev-parse MERGE_HEAD": ["parent\n"],
@@ -183,7 +235,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
       "rev-parse HEAD": ["child\n"],
       "rev-parse FETCH_HEAD": ["parent\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],
-      "merge --no-ff --no-commit parent": [new Error("failed")],
+      [MERGE]: [new Error("failed")],
       [UNRESOLVED]: [""],
     });
     const failedAdapter = new BranchSyncWorkspaceAdapter(failed.git);

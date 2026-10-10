@@ -1169,7 +1169,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-17",
+      "lastVerified": "2026-10-10",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md"
@@ -1294,7 +1294,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-21",
+      "lastVerified": "2026-10-10",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -1526,7 +1526,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-10",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1559,7 +1559,8 @@
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/domain/pull_request_description.ts",
-        "src/data/repository/pull_request/pull_request_lifecycle_repository.ts"
+        "src/data/repository/pull_request/pull_request_lifecycle_repository.ts",
+        "src/application/usecases/steps/pull_request/update_pull_request_description_workflow.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -1595,7 +1596,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-05",
+      "lastVerified": "2026-10-10",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"

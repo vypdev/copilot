@@ -5,6 +5,14 @@ description: Clarify and publish a specification before implementation starts.
 
 # Pre-branch SDDs
 
+When an existing SDD owns the change, automated drafting adds a proposed change
+appendix while preserving the previous contract verbatim. Each appendix is
+limited to 18,000 characters and the complete SDD to 70,000. If the document
+would exceed that limit, use a companion SDD before branch creation or review
+and integrate existing proposals as a normal contributor on the linked branch.
+Publication retries keep the validated owner and do not consume another
+clarification round. Review the generated specification before implementation.
+
 `pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. It does not generate PRDs or ADRs in this flow.
@@ -19,9 +27,13 @@ The repository must already contain a valid `specs/catalog.json`, `specs/README.
 
 The status comment uses the effective issue locale (Spanish and English are bundled, with English fallback). It shows the owning SDD, each question and its owner, the retained branch if one exists, and the verified commit. The first branch commit contains the SDD; implementation starts afterward.
 
+The Action validates the SDD itself and publishes its commit without running contributor Git hooks from the runner checkout. Your hook configuration is preserved for normal contributor commits.
+
 ## Edits, retries, and revisions
 
 If the issue body, human title, or source branch changes while an SDD is being prepared, the Action reanalyzes or blocks publication so it cannot publish a stale contract. A duplicate event reuses the status comment and branch. A push that succeeded before the comment update can be recovered from the same remote branch.
+
+If the branch was created but the first SDD commit could not be published, the status comment retains that exact branch and keeps implementation blocked. A retry uses its original base, even if `develop` has advanced. The Action rejects a branch containing implementation commits before the first SDD commit. Updates to the Action's hidden issue configuration do not invalidate the human specification answers.
 
 If the issue materially changes after publication, the Action retains the linked branch and its first commit, removes `branched` while the revision is pending, clarifies the changed contract, and publishes a validated SDD revision on that branch. `branched` returns only after the remote revision is verified. Resolve a blocked status on the existing issue and rerun its workflow; a new branch is not needed.
 
@@ -37,3 +49,7 @@ If the issue materially changes after publication, the Action retains the linked
 ```
 
 See [Branch management](/issues/branch-management) for the standard flow and [Specifications](/development/specifications) for the catalog format.
+
+Opening a PR replaces GitHub's direct issue-to-branch connection with its issue-to-PR connection. Copilot retains branch readiness by verifying that the associated open PR belongs to this repository and its exact head name and commit still match the live remote branch. Closed PRs, forks and missing or stale heads cannot establish readiness.
+
+Automatic updates retain the owning SDD from its original Git commit, including when Windows converts checkout line endings.

@@ -7,9 +7,10 @@ export class Issue {
     desiredAssigneesCount: number;
     inputs: ExecutionInputs | undefined = undefined;
     liveBody: string | undefined;
+    liveTitle: string | undefined;
 
     get title(): string {
-        return this.inputs?.issue?.title ?? '';
+        return this.liveTitle ?? this.inputs?.issue?.title ?? '';
     }
 
     get number(): number {

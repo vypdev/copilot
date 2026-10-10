@@ -87,6 +87,7 @@ type BranchSyncReplyProjection =
 export type SemanticReplyProjection =
     | { readonly kind: 'help'; readonly botLogin: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
+    | { readonly kind: 'implementation-plan'; readonly plan: ImplementationPlan; readonly translation?: TranslationPublication }
     | {
         readonly kind: 'direct-answer';
         readonly answer: string;
@@ -130,6 +131,7 @@ export function hasPrimaryIssuePublication(results: readonly Result[]): boolean 
         const payload = getResultPayload(result.payload);
         return Boolean(payload && (
             isPlanPayload(result.id, payload)
+            || implementationPlanReplyProjection(payload)
             || directAnswerProjection(payload)
         ));
     });
@@ -150,7 +152,7 @@ export function hasOwnedPrimaryIssuePublication(
             && publicationTargetToken(status.identity.target) === expectedTarget) return true;
         const reply = parsePublicationReplyMarker(comment.body);
         if (reply?.target === expectedTarget
-            && (reply.messageKey === 'direct-answer' || reply.messageKey === 'copilot-welcome')) return true;
+            && ['direct-answer', 'implementation-plan', 'copilot-welcome'].includes(reply.messageKey)) return true;
         return false;
     });
 }
@@ -165,6 +167,8 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
         if (branchSync) return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
         if (!result.executed) return [];
+        const planReply = implementationPlanReplyProjection(payload);
+        if (planReply) return [replyIntent(context, correlationId, 'implementation-plan', planReply)];
         const directAnswer = directAnswerProjection(payload);
         if (directAnswer) return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = getResultPayload(payload.publication);
@@ -220,6 +224,11 @@ export function renderSemanticReply(
 }
 
 function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessageCatalog): string {
+    if (intent.projection.kind === 'implementation-plan') {
+        return [renderImplementationPlanCard(intent.projection.plan, catalog),
+            intent.projection.translation ? renderTranslationContext(intent.projection.translation, catalog) : '']
+            .filter(Boolean).join('\n\n');
+    }
     if (intent.projection.kind === 'direct-answer') return renderDirectAnswer(intent.projection, catalog);
     if (intent.projection.kind === 'help') {
         return buildCopilotHelpMessage(intent.projection.botLogin, intent.locale, catalog);
@@ -311,21 +320,7 @@ export function renderSemanticStatus(
 ): string {
     const marker = buildPublicationMarker(intent);
     if (intent.projection.kind === 'plan') {
-        const plan = renderImplementationPlan(intent.projection.plan);
-        const acceptance = safePlanField(intent.projection.plan.acceptance, 800);
-        return [
-            marker,
-            '',
-            `## ${messages.implementationPlan}`,
-            '',
-            `> **${messages.currentStatus}:** ${messages.planReady}`,
-            '',
-            plan,
-            '',
-            `**${messages.planAcceptance}:** ${acceptance}`,
-            '',
-            messages.commandsHint,
-        ].join('\n').trim();
+        return `${marker}\n\n${renderImplementationPlanCard(intent.projection.plan, messages)}`;
     }
     const progress = intent.projection.progress;
     const state = progress <= 0 ? 'not-started' : progress >= 100 ? 'complete' : 'in-progress';
@@ -342,6 +337,27 @@ export function renderSemanticStatus(
         lines.push('', messages.noActionRequired);
     }
     return lines.join('\n').trim();
+}
+
+function renderImplementationPlanCard(plan: ImplementationPlan, messages: PublicationMessageCatalog): string {
+    return [
+        `## ${messages.implementationPlan}`,
+        `> **${messages.currentStatus}:** ${messages.planReady}`,
+        renderImplementationPlan(plan),
+        `**${messages.planAcceptance}:** ${safePlanField(plan.acceptance, 800)}`,
+        messages.commandsHint,
+    ].join('\n\n').trim();
+}
+
+function implementationPlanReplyProjection(payload: Record<string, unknown>): SemanticReplyProjection | undefined {
+    const publication = getResultPayload(payload.publication);
+    if (publication?.kind !== 'implementation-plan') return undefined;
+    const plan = parseImplementationPlan(publication.plan);
+    if (!plan) return undefined;
+    const translation = translationProjection(publication.translation);
+    return Object.freeze({ kind: 'implementation-plan' as const, plan,
+        ...(translation ? { translation } : {}),
+    });
 }
 
 function planIntent(id: string, payload: Record<string, unknown>, locale: string): SemanticStatusIntent | undefined {

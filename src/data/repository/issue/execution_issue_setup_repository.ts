@@ -3,7 +3,7 @@ import type { ExecutionIssueSetupPort } from '../../../application/ports/executi
 /** Composes the issue capabilities required to initialize an Execution. */
 export class ExecutionIssueSetupRepository implements ExecutionIssueSetupPort {
     constructor(
-        private readonly metadataRepository: Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue' | 'getHeadBranch'>,
+        private readonly metadataRepository: Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue' | 'getHeadBranch' | 'getTitle'>,
         private readonly contentRepository: Pick<ExecutionIssueSetupPort, 'getDescription' | 'updateDescription'>,
         private readonly labelRepository: Pick<ExecutionIssueSetupPort, 'getLabels'>,
     ) {}
@@ -11,6 +11,7 @@ export class ExecutionIssueSetupRepository implements ExecutionIssueSetupPort {
     isPullRequest = (...args: Parameters<ExecutionIssueSetupPort['isPullRequest']>) => this.metadataRepository.isPullRequest(...args);
     isIssue = (...args: Parameters<ExecutionIssueSetupPort['isIssue']>) => this.metadataRepository.isIssue(...args);
     getHeadBranch = (...args: Parameters<ExecutionIssueSetupPort['getHeadBranch']>) => this.metadataRepository.getHeadBranch(...args);
+    getTitle = (...args: Parameters<ExecutionIssueSetupPort['getTitle']>) => this.metadataRepository.getTitle(...args);
     getLabels = (...args: Parameters<ExecutionIssueSetupPort['getLabels']>) => this.labelRepository.getLabels(...args);
     getDescription = (...args: Parameters<ExecutionIssueSetupPort['getDescription']>) => this.contentRepository.getDescription(...args);
     updateDescription = (...args: Parameters<ExecutionIssueSetupPort['updateDescription']>) => this.contentRepository.updateDescription(...args);

@@ -54,6 +54,9 @@ export async function runCommentAutomation(
     if (adaptation?.status === 'failed') return languageResults;
     if (adaptation) param = withCommentLanguageAdaptation(param, adaptation);
     const adaptedCommand = parseCopilotCommand(param.userComment);
+    if (adaptedCommand.kind === 'invalid') {
+      return [...languageResults, invalidCommentCommandResult(options.taskId, adaptedCommand.reason)];
+    }
     if (adaptedCommand.kind === 'command') {
       const explicitResults = await runExplicitCommentCommand(param, options, adaptedCommand.command, actorAuthorizationPort);
       if (explicitResults) return [...languageResults, ...explicitResults];

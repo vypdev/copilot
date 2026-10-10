@@ -49,6 +49,24 @@ describe('CommentLanguageTranslationWorkflow', () => {
         expect(payload?.publication).toMatchObject({ sourceLocale: 'es-ES', targetLocale: 'en-US' });
     });
 
+    it.each([
+        'word '.repeat(21).trim(),
+        'x'.repeat(2_000),
+    ])('rejects translations that exceed the original command grammar', async adaptedText => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+            adaptedText, reasonCode: 'none',
+        });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
+            ...context, commentBody: '/copilot implement aclara el requisito',
+        });
+        expect(results[0].success).toBe(false);
+        expect(results[0].errors[0].code).toBe('locale.translation-failed');
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
+            status: 'failed', interpretedComment: '/copilot implement aclara el requisito',
+        });
+    });
+
     it('preserves a deterministic command while adapting only its arguments', async () => {
         const query = jest.fn().mockResolvedValue({
             status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',

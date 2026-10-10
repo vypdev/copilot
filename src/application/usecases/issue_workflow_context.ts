@@ -243,7 +243,9 @@ export function projectIssueWorkflowStepContexts(source: IssueWorkflowContextSou
   const managedBranchTypes = Object.freeze([
     source.branches.featureTree,
     source.branches.bugfixTree,
-  ]);
+    source.branches.docsTree,
+    source.branches.choreTree,
+  ].filter(value => value.length > 0));
   const branchPreparationTypes = Object.freeze([
     source.branches.featureTree,
     source.branches.bugfixTree,

@@ -39,6 +39,9 @@ export function createSetupExecutionUseCase(
         getLabels: (issueNumber) => rawIssueSetupPort.getLabels(
             credentials.owner, credentials.repository, issueNumber, credentials.token,
         ),
+        getTitle: (issueNumber) => rawIssueSetupPort.getTitle(
+            credentials.owner, credentials.repository, issueNumber, credentials.token,
+        ),
         getDescription: (issueNumber) => rawIssueSetupPort.getDescription(
             credentials.owner, credentials.repository, issueNumber, credentials.token,
         ),

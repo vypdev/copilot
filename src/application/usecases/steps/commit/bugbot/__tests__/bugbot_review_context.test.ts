@@ -328,9 +328,19 @@ describe('Bugbot review context', () => {
     expect(context.block).toContain('1 older discussion item omitted');
   });
 
+  it('retains an ordinary coverage report from a provider-classified human account', () => {
+    const body = `## Codecov report\n${'coverage '.repeat(234)}`;
+    expect(body.length).toBeGreaterThan(2_000);
+    const context = buildReviewConversationContext([
+      { id: 1, user: { login: 'codecov-commenter' }, body, isAutomatedAuthor: false },
+    ], new Map());
+    expect(context).toMatchObject({ retained: 1, omitted: 0, truncated: 0 });
+    expect(context.block).toContain(body.trim());
+  });
+
   it('splits oversized patches without allowing any partition past its cap', () => {
     const conversation = buildReviewConversationContext(
-      [{ id: 1, user: { login: 'maintainer' }, body: 'x'.repeat(3_000) }],
+      [{ id: 1, user: { login: 'maintainer' }, body: 'x'.repeat(4_001) }],
       new Map(),
     );
     const diff = buildReviewDiffPlan({

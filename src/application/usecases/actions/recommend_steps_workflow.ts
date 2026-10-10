@@ -17,6 +17,8 @@ import { ApplicationError, toApplicationError } from '../../errors/application_e
 import { RECOMMEND_STEPS_RESPONSE_SCHEMA } from '../../policies/agent_response_schemas';
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 import { implementationPlanFingerprintInput } from '../../../domain/implementation_plan';
+import type { AgentConfiguration } from '../../../domain/agent';
+import type { AgentQueryResult } from '../../ports/agent_query_ports';
 
 export interface RecommendStepsWorkflowDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -86,12 +88,7 @@ export async function runRecommendStepsWorkflow(
         );
         logInfo('🤖 Recommending steps using the configured agent...');
 
-        const response = await dependencies.aiRepository.query({
-            configuration,
-            agentId: AGENT_PLAN,
-            prompt,
-            options: productFacingAgentQueryOptions('recommend-steps', RECOMMEND_STEPS_RESPONSE_SCHEMA),
-        });
+        const response = await queryImplementationPlan(configuration, prompt, dependencies.aiRepository);
         return buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     } catch (error) {
         const semanticError = toApplicationError(error, 'agent.failed', `Unable to complete ${taskId}.`);
@@ -105,6 +102,17 @@ export async function runRecommendStepsWorkflow(
             }),
         ]);
     }
+}
+
+/** Shared structured planning capability for issue start and explicit /copilot plan. */
+export function queryImplementationPlan(
+    configuration: Readonly<AgentConfiguration>,
+    prompt: string,
+    repository: FindingsQueryPort,
+): Promise<AgentQueryResult> {
+    return repository.query({ configuration, agentId: AGENT_PLAN, prompt,
+        options: productFacingAgentQueryOptions('recommend-steps', RECOMMEND_STEPS_RESPONSE_SCHEMA),
+    });
 }
 
 function replayExistingPlan(

@@ -6,7 +6,7 @@ import { createIssueContentCompositionRoot } from '../infrastructure/composition
 import { createProjectBoardCompositionRoot } from '../infrastructure/composition/project_board_composition_root';
 import { finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
-import { isEnabledInput } from './input_boolean_policy';
+import { isEnabledInput, parseIssueWorkflowBoolean } from './input_boolean_policy';
 import { buildGithubActionExecution, hydrateGithubActionExecutionProjects, readGithubActionSingleAction } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
@@ -77,7 +77,10 @@ export async function runGitHubAction(): Promise<void> {
         logInfo('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }
-    if (isUnaddressedCommentEvent(eventInputs, admission.tokenUser)) {
+    const preBranchSddEnabled = parseIssueWorkflowBoolean(
+        getGithubActionInput(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false,
+    );
+    if (isUnaddressedCommentEvent(eventInputs, admission.tokenUser, preBranchSddEnabled)) {
         logInfo('GitHub Action: comment does not address Copilot. Skipping before project, AI, and agent runtime work.');
         return;
     }
@@ -89,6 +92,7 @@ export async function runGitHubAction(): Promise<void> {
         singleAction,
         admission.tokenUser,
         aiInputs.pullRequestDescriptionMode !== 'disabled',
+        preBranchSddEnabled,
     );
     const requestedActiveAgentTasks = [...new Set([
         ...activeRuntimeAgentTasks,
@@ -155,7 +159,7 @@ export async function runGitHubAction(): Promise<void> {
                 projectQuery: projectBoard.query,
                 token,
             });
-            if (admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
+            if (admittedExecution.isIssue && admittedExecution.issueWorkflowRuntimeMode !== 'execute') return;
             if (memberOnlyAgentTaskAuthorizationRequired) {
                 // Agent-task admission is intentionally membership-based. File-changing
                 // commands enforce their separate repository-write authorization later.

@@ -2,6 +2,7 @@ import * as exec from '@actions/exec';
 import type { GitCommitPort } from '../application/ports/git_ports';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
 import { prepareUntrustedCommandEnvironment } from './untrusted_command_environment';
+import { withoutGitHooks } from './git_hook_isolation';
 
 type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
@@ -48,7 +49,7 @@ export class GitCommitAdapter implements GitCommitPort {
     }
 
     async commit(message: string): Promise<void> {
-        await this.execute('git', ['commit', '-m', message]);
+        await withoutGitHooks(emptyHooks => this.execute('git', ['-c', `core.hooksPath=${emptyHooks}`, 'commit', '-m', message], { untrusted: true }));
     }
 
     async push(branch: string, token?: string): Promise<void> {

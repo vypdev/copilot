@@ -87,7 +87,7 @@ type ExtractedImplementationPlan =
     | { readonly kind: 'unchanged'; readonly locale: string }
     | { readonly kind: 'recommendation'; readonly locale: string; readonly plan: ImplementationPlan };
 
-function extractImplementationPlan(
+export function extractImplementationPlan(
     response: string | Record<string, unknown> | undefined,
     targetLocale: string,
 ): ExtractedImplementationPlan | undefined {

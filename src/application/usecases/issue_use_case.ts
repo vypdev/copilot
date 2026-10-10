@@ -134,6 +134,7 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
       issueLocale: param.locale.issue,
       admittedKind: param.issueWorkflowKind ?? 'unknown',
       profileDigest: param.issueWorkflowProfileDigest,
+      workingBranch: param.currentConfiguration.workingBranch,
       baseBranch: param.labels.isHotfix ? (param.hotfix.baseBranch ?? param.branches.main) : param.branches.development,
       tokenUser: param.tokenUser ?? '',
       agentConfiguration: recommendSteps.agentConfiguration,
