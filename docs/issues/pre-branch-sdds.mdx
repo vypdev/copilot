@@ -49,3 +49,5 @@ If the issue materially changes after publication, the Action retains the linked
 ```
 
 See [Branch management](/issues/branch-management) for the standard flow and [Specifications](/development/specifications) for the catalog format.
+
+Opening a PR replaces GitHub's direct issue-to-branch connection with its issue-to-PR connection. Copilot retains branch readiness by verifying that the associated open PR belongs to this repository and its exact head name and commit still match the live remote branch. Closed PRs, forks and missing or stale heads cannot establish readiness.
