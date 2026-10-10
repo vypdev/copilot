@@ -4,6 +4,7 @@ import type { GithubGraphqlTransportClient } from '../../../infrastructure/githu
 import { PROJECT_BOARD_ITEM_PAGE_LIMIT } from '../../../infrastructure/github/project_board_provider_limits';
 import { logDebugInfo, logError } from '../../../utils/logger';
 import type { ProjectDetail } from '../../model/project_detail';
+import type { ProjectStatusInitialization } from '../../../application/ports/project_board_link_ports';
 import { paginateCursor, type CursorPage } from '../github/github_pagination_adapter';
 
 interface SingleSelectFieldNode {
@@ -136,6 +137,39 @@ export async function setProjectBoardSingleSelectFieldByItemId(
     const client = graphqlClient.getClient(token);
     const target = await findFieldOption(client, project, fieldName, fieldValue);
     return updateProjectBoardSingleSelectField(client, project, projectItemId, target);
+}
+
+/** Reads the authoritative item directly, so replay and failed initialization never reset an existing status. */
+export async function initializeProjectBoardItemStatus(
+    graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
+    project: ProjectDetail,
+    projectItemId: string,
+    columnName: string,
+    token: string,
+): Promise<ProjectStatusInitialization> {
+    const client = graphqlClient.getClient(token);
+    const result = await client.graphql<{
+        node?: { project?: { id?: string }; fieldValueByName?: { optionId?: string } | null } | null;
+    }>(`query($itemId: ID!) {
+        node(id: $itemId) {
+            ... on ProjectV2Item {
+                project { id }
+                fieldValueByName(name: "Status") {
+                    ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                }
+            }
+        }
+    }`, { itemId: projectItemId });
+    const item = result.node;
+    if (item?.project?.id !== project.id || !Object.prototype.hasOwnProperty.call(item, 'fieldValueByName')) {
+        throw new Error('The linked project item has no verified status evidence.');
+    }
+    if (item.fieldValueByName !== null) {
+        if (!item.fieldValueByName?.optionId?.trim()) throw new Error('The linked project item status is malformed.');
+        return 'retained';
+    }
+    const target = await findFieldOption(client, project, 'Status', columnName);
+    return await updateProjectBoardSingleSelectField(client, project, projectItemId, target) ? 'initialized' : 'failed';
 }
 
 async function updateProjectBoardSingleSelectField(

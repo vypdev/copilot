@@ -40855,6 +40855,7 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
     'branchSync.transition.required',
+    'branchSync.transition.requiredCompact',
     'branchSync.transition.openStatus',
     'branchSync.transition.duplicate',
     'branchSync.transition.viewOriginal',
@@ -40875,6 +40876,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
     'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
+    'branchSync.transition.requiredCompact': 'Branch synchronization needs attention.',
     'branchSync.transition.openStatus': 'Open the current status',
     'branchSync.transition.duplicate': 'A duplicate action notification was suppressed.',
     'branchSync.transition.viewOriginal': 'View the original notification',
@@ -40897,6 +40899,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
     'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
+    'branchSync.transition.requiredCompact': 'La sincronización de la rama necesita atención.',
     'branchSync.transition.openStatus': 'Abrir el estado actual',
     'branchSync.transition.duplicate': 'Se ha suprimido una notificación de acción duplicada.',
     'branchSync.transition.viewOriginal': 'Ver la notificación original',
@@ -40988,10 +40991,14 @@ function buildBranchSyncTransitionIntent(dependency, sourceHeadSha, locale) {
     });
 }
 function buildBranchSyncTransitionNotification(dependency, messages, statusUrl) {
-    return `${safeSentence(messages.message('branchSync.transition.required', {
+    const detailed = messages.message('branchSync.transition.required', {
         workingBranch: inlineRef(dependency.workingBranch),
         parentBranch: inlineRef(dependency.parentBranch),
-    }))} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
+    });
+    const sentence = detailed.length <= 120
+        ? detailed
+        : messages.message('branchSync.transition.requiredCompact');
+    return `${safeSentence(sentence)} [${safeLinkLabel(messages.message('branchSync.transition.openStatus'))}](${statusUrl}).`;
 }
 function buildBranchSyncDuplicatePointer(messages, canonicalUrl) {
     return `${safeSentence(messages.message('branchSync.transition.duplicate'))} [${safeLinkLabel(messages.message('branchSync.transition.viewOriginal'))}](${canonicalUrl}).`;
@@ -41067,13 +41074,16 @@ function inlineRef(value) {
     return `\`${value.replace(/[\r\n`<>]/gu, '').replace(/@/gu, '@\u200b').slice(0, 255)}\``;
 }
 function safeSentence(value) {
-    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 120).replace(/[\r\n]+/gu, ' ').trim();
+    const sentence = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value.slice(0, 120), 1000)
+        .replace(/[\r\n]+/gu, ' ').trim();
+    return sentence.length <= 120 ? sentence : `${sentence.slice(0, 119).trimEnd()}…`;
 }
 function safeLinkLabel(value) {
-    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 40)
+    return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value.slice(0, 40), 1000)
         .replace(/\[([^\]]*)\]\([^)]*\)/gu, '$1')
         .replace(/https?:\/\/\S+/giu, '')
         .replace(/[\r\n()[\]<>]/gu, '')
+        .slice(0, 40)
         .trim() || 'Open notification';
 }
 
@@ -51730,9 +51740,20 @@ async function runAutofixAction(param, options, intentPayload) {
     }
     if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
         (0, logging_ports_1.logInfo)('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
-        autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review));
+        let reviewResults = await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
+        if (reviewResults.some(isSupersededReviewResult)) {
+            (0, logging_ports_1.logInfo)('Post-autofix review was superseded; reloading the current PR for one bounded read-only retry.');
+            reviewResults = await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
+        }
+        autofixResults.push(...reviewResults);
     }
     return autofixResults;
+}
+function isSupersededReviewResult(result) {
+    const payload = result.payload;
+    return result.success && result.executed
+        && payload !== null && typeof payload === 'object' && !Array.isArray(payload)
+        && payload.superseded === true;
 }
 async function runDoUserRequestAction(param, options, intentPayload) {
     if (!intentPayload)
@@ -60013,7 +60034,7 @@ function projectIssueContentLinkContext(source) {
 function projectPullRequestContentLinkContext(source) {
     return projectContext(source, 'pull request', source.pullRequest.number, source.project.getProjectColumnPullRequestCreated(), source.pullRequest.id);
 }
-/** Links issue-like content to each configured project and updates the returned item directly. */
+/** Links content and initializes only an unset status on the exact returned item. */
 async function runProjectContentLinkWorkflow(param, taskId, port) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     if (param.projects.length === 0) {
@@ -60025,14 +60046,16 @@ async function runProjectContentLinkWorkflow(param, taskId, port) {
         const results = [];
         for (const project of param.projects) {
             const projectItemId = await port.linkContentId(project, contentId);
-            const moved = await port.moveContent(project, projectItemId, param.columnName);
-            if (moved) {
+            const status = await port.initializeStatus(project, projectItemId, param.columnName);
+            if (status === 'initialized' || status === 'retained') {
                 results.push(new result_1.Result({
                     id: taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`,
+                        status === 'initialized'
+                            ? `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`
+                            : `The ${param.contentType} is linked to [**${project.title}**](${project.url}); its existing status was retained.`,
                     ],
                 }));
             }
@@ -70592,6 +70615,7 @@ class ProjectBoardCommandRepository {
         this.setTaskSize = (project, owner, repo, issueOrPullRequestNumber, sizeLabel, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.sizeField, sizeLabel, token);
         this.moveIssueToColumn = (project, owner, repo, issueOrPullRequestNumber, columnName, token) => this.setField(project, owner, repo, issueOrPullRequestNumber, this.statusField, columnName, token);
         this.moveProjectItemToColumn = (project, projectItemId, columnName, token) => (0, project_board_field_update_1.setProjectBoardSingleSelectFieldByItemId)(this.graphqlClient, project, projectItemId, this.statusField, columnName, token);
+        this.initializeProjectItemStatus = (project, projectItemId, columnName, token) => (0, project_board_field_update_1.initializeProjectBoardItemStatus)(this.graphqlClient, project, projectItemId, columnName, token);
     }
     setField(project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token) {
         return (0, project_board_field_update_1.setProjectBoardSingleSelectField)(this.projectBoardContentQueryPort, this.graphqlClient, project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token);
@@ -70683,6 +70707,7 @@ function validateProjectId(projectId) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setProjectBoardSingleSelectField = setProjectBoardSingleSelectField;
 exports.setProjectBoardSingleSelectFieldByItemId = setProjectBoardSingleSelectFieldByItemId;
+exports.initializeProjectBoardItemStatus = initializeProjectBoardItemStatus;
 const project_board_provider_limits_1 = __nccwpck_require__(96997);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_adapter_1 = __nccwpck_require__(2761);
@@ -70760,6 +70785,31 @@ async function setProjectBoardSingleSelectFieldByItemId(graphqlClient, project, 
     const client = graphqlClient.getClient(token);
     const target = await findFieldOption(client, project, fieldName, fieldValue);
     return updateProjectBoardSingleSelectField(client, project, projectItemId, target);
+}
+/** Reads the authoritative item directly, so replay and failed initialization never reset an existing status. */
+async function initializeProjectBoardItemStatus(graphqlClient, project, projectItemId, columnName, token) {
+    const client = graphqlClient.getClient(token);
+    const result = await client.graphql(`query($itemId: ID!) {
+        node(id: $itemId) {
+            ... on ProjectV2Item {
+                project { id }
+                fieldValueByName(name: "Status") {
+                    ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                }
+            }
+        }
+    }`, { itemId: projectItemId });
+    const item = result.node;
+    if (item?.project?.id !== project.id || !Object.prototype.hasOwnProperty.call(item, 'fieldValueByName')) {
+        throw new Error('The linked project item has no verified status evidence.');
+    }
+    if (item.fieldValueByName !== null) {
+        if (!item.fieldValueByName?.optionId?.trim())
+            throw new Error('The linked project item status is malformed.');
+        return 'retained';
+    }
+    const target = await findFieldOption(client, project, 'Status', columnName);
+    return await updateProjectBoardSingleSelectField(client, project, projectItemId, target) ? 'initialized' : 'failed';
 }
 async function updateProjectBoardSingleSelectField(client, project, projectItemId, target) {
     const mutationResult = await client.graphql(UPDATE_FIELD_MUTATION, {
@@ -79338,7 +79388,7 @@ function bindProjectContent(identity, commands, links, binding) {
     return {
         resolveIssueContentId: (issueNumber) => identity.getId(binding.owner, binding.repository, issueNumber, binding.token),
         linkContentId: (project, contentId) => links.linkContentId(toProjectDetail(project), contentId, binding.token),
-        moveContent: (project, projectItemId, columnName) => commands.moveProjectItemToColumn(toProjectDetail(project), projectItemId, columnName, binding.token),
+        initializeStatus: (project, projectItemId, columnName) => commands.initializeProjectItemStatus(toProjectDetail(project), projectItemId, columnName, binding.token),
     };
 }
 function toProjectDetail(project) {

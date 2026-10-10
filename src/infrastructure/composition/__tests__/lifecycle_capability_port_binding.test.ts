@@ -94,6 +94,7 @@ describe('lifecycle capability repository bindings', () => {
       setTaskPriority,
       moveIssueToColumn,
       moveProjectItemToColumn: jest.fn(),
+      initializeProjectItemStatus: jest.fn(),
       setTaskSize: jest.fn(),
     }, binding);
     await projects.setTaskPriority(project, 7, 'P0');

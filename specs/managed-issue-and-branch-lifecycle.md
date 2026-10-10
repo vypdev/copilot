@@ -129,8 +129,7 @@ the route only after the preparation step returns.
 7. Commits and a linked PR advance review state; merge closes the issue.
 
 Project enrichment is immediate and deterministic: the existing-item query or
-add mutation returns the exact ProjectV2 item ID, and the status mutation uses
-that ID directly without a fixed sleep or a second board-list lookup.
+add mutation returns the exact ProjectV2 item ID. A direct read of that node verifies its Project and current Status. Linking initializes the configured created status only when the field is null; an existing status is retained on edits, replay, and reopening. No fixed sleep or second board-list lookup is used. Missing, foreign, or malformed status evidence fails before mutation. A failed initialization leaves the valid item linked and can retry while the field remains unset. Explicit lifecycle transitions still move the issue to the configured in-progress status after branch readiness.
 
 ### 6.2 Alternative paths
 
@@ -197,8 +196,7 @@ Architecture tests MUST keep policies provider-free, application ports semantic,
 and composition as the only concrete wiring owner.
 The project-link semantic port returns a required ProjectV2 item ID. An add
 response without that ID fails explicitly; the application never treats it as
-an already-linked skip. The project command adapter updates the returned item
-directly, while credentials and GraphQL details remain outside the use case.
+an already-linked skip. The bound semantic initializer returns initialized, retained, or failed; the application publishes truthful copy for each outcome. The command adapter checks and initializes the exact returned item directly, while credentials and GraphQL details remain outside the use case. GitHub offers a separate read and write rather than a conditional field mutation, so concurrent native automation can still race a first initialization; serialized Copilot replay never intentionally overwrites a populated field.
 
 ## 9. UI/UX and content contract
 
@@ -256,12 +254,12 @@ managed branches after exact validation; merged commits are not erased.
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Strategy/name/lifecycle policy | 22 | precedence, origins, labels, names |
-| Issue sequencing/idempotency | 18 | permission, reuse, replay, cleanup |
-| Branch/project/provider adapters | 16 | linking, pagination, errors |
+| Issue sequencing/idempotency | 20 | permission, reuse, replay, cleanup |
+| Branch/project/provider adapters | 24 | linking, pagination, errors |
 | Workflow/template/config contract | 10 | events, inputs, issue types |
 | Issue UX/localization/sanitization | 12 | views, links, one welcome |
 | Integration/security/migration | 12 | issue→branch→PR, stale state, injection |
-| **Total** | **90** | no double counting |
+| **Total** | **100** | no double counting |
 
 Global coverage remains mandatory; changed pure branch/lifecycle policy SHOULD
 reach 95% branch coverage. The P2-E issue/PR context path additionally enforces
@@ -331,3 +329,5 @@ dark/light, and non-English fallback.
 - Decision: semantic origins are fixed; surface naming remains bounded configuration.
 - Rejected: arbitrary branch graphs and inferred release origin.
 - Follow-up: event-driven branch propagation is outside this baseline.
+
+Live evidence on 2026-10-10: issue #456 reopening/title change preserved the original branch SHA and removed the obsolete ref, but the later edit reset Project #2 from In Progress to Todo. Ten additional cases cover unset initialization, existing Todo/In Progress, null/foreign/missing/malformed item evidence, failed initialization, and truthful retained-state issue/PR rendering. The direct Status read follows [GitHub ProjectV2Item fieldValueByName](https://docs.github.com/en/graphql/reference/projects#projectv2item).

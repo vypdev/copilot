@@ -167,7 +167,7 @@ export function bindProjectContent(
       contentId,
       binding.token,
     ),
-    moveContent: (project, projectItemId, columnName) => commands.moveProjectItemToColumn(
+    initializeStatus: (project, projectItemId, columnName) => commands.initializeProjectItemStatus(
       toProjectDetail(project),
       projectItemId,
       columnName,

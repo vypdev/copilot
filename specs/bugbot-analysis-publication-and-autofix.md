@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-09-21
+- Last updated: 2026-10-11
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-21 on `develop`
+- Last verified: 2026-10-11 on `master`
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -56,6 +56,9 @@ comments can also disagree after partial mutations.
    the separate reconciliation contract.
 8. Authorized autofix resolves a target branch, applies guarded edits, verifies,
    commits/pushes, and reruns independent review while findings remain open until proved.
+   If that post-push review is superseded, orchestration reloads the same canonical
+   PR once and retains only the final review result. It never repeats the edit,
+   verification, commit or push, and every review retains its head guards.
 
 ### 2.3 Evidence and contract classification
 
@@ -127,7 +130,8 @@ not verified; it is not clean.
 | Fix | model edits/pushes | guarded edit + trusted verify/git | least authority |
 | Resolution | fixer claims success | independent provider re-read/review | no false clean |
 
-No behavior change is proposed.
+Post-autofix recovery adds one bounded read-only retry for superseded evidence;
+the existing mutation, authorization and freshness contracts remain in force.
 
 ## 6. Functional behavior and state model
 
@@ -154,6 +158,11 @@ No behavior change is proposed.
   validation failure may be retried twice for that same partition only; a
   missing/invalid partition after this fixed bound aborts the whole aggregate
   before mutation. A plan over 64 partitions does not start.
+- A superseded independent post-autofix review permits exactly one fresh
+  read-only review attempt (at most two complete review attempts). Failed,
+  unexecuted, partial or malformed evidence does not activate that retry.
+  A second superseded outcome remains non-clean and requires `/copilot recheck`;
+  it does not start an unbounded loop or repeat any file mutation.
 
 ### 6.3 Finding state model
 
@@ -189,6 +198,9 @@ lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 ch
 24,000 characters, 1,000 diff files, 12,000-character fragments, 64,000
 characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
+The one-retry post-autofix bound is fixed and adds no user setting. Only the
+final attempt enters the returned canonical review evidence; the discarded
+superseded attempt remains observable in content-free telemetry and run logs.
 
 ## 8. Clean Architecture design
 
@@ -247,6 +259,7 @@ discussion, paths, Markdown, mentions, markers, and URLs are sanitized.
 | canonical PR ambiguous/stale | no analysis or mutation | target and bounded candidate fact | new event | close obsolete PR/retry current head | none |
 | autofix verification fail | no commit | findings remain open | yes | repair code/tests | abort workspace |
 | push race | no stale push | remote heads/open findings | yes | rerun | abort workspace |
+| post-autofix review superseded | pushed fix retained; old status is not treated as current | pushed commit and open findings | one fresh read-only attempt | `/copilot recheck` if still superseded | discard stale review result; no repeated write |
 
 ## 11. Security, permissions, and privacy
 
@@ -291,11 +304,11 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 |---|---:|---|
 | Finding/config/identity policy | 36 | schema, fingerprint, rank, limits |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
-| Use cases/autofix | 28 | context, publish, verify, commit, re-review |
+| Use cases/autofix | 31 | context, publish, verify, commit, bounded re-review, canonical result |
 | Provider/workflow contracts | 22 | diffs, reviews, threads, checks, ranges |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
 | Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **156** | no double counting |
+| **Total** | **159** | no double counting |
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
 coverage and security/identity policy 100% for enumerated branches. Fakes replace
@@ -329,6 +342,10 @@ screen reader, and controlled live model samples.
 12. Fixed cap reach is partial and omitted findings are not resolution-eligible.
 13. All canonical diff partitions attest one SHA and aggregate before a single
     publication; one failed partition produces no finding-state mutation.
+14. A superseded post-autofix review reloads the canonical PR once without
+    repeating the fixer or commit path. Only its final evidence reaches the
+    aggregate; failed/partial evidence and a second superseded result remain
+    truthful and never produce an assumed clean state.
 
 ## 17. Requirements traceability
 
@@ -351,7 +368,7 @@ screen reader, and controlled live model samples.
 
 ## 19. Definition of Done
 
-- [ ] The 156-case budget, coverage, quality eval, and architecture gates pass.
+- [ ] The 159-case budget, coverage, quality eval, and architecture gates pass.
 - [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.
