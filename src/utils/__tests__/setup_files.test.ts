@@ -173,9 +173,10 @@ describe('setup_files', () => {
     expect(fs.existsSync(path.join(tmpDir, '.copilot/setup-manifest.json'))).toBe(false);
   });
 
-  it('keeps this repository agent artifacts equivalent to the default renderer', () => {
+  it('keeps this repository agent artifacts equivalent to its SDD-enabled configuration', () => {
     const repositoryRoot = path.resolve(__dirname, '../../..');
     const configuration = createDefaultSetupConfiguration();
+    configuration.repository.preBranchSdd = true;
 
     for (const artifact of renderRepositoryAgentArtifacts(configuration)) {
       const checkedOut = fs.readFileSync(path.join(repositoryRoot, artifact.path), 'utf8');

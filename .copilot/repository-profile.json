@@ -164,7 +164,7 @@
   "branches": {
     "remoteLifecycleOwner": "github-action",
     "issueManagedBranches": true,
-    "preBranchSdd": false,
+    "preBranchSdd": true,
     "startLabel": "in-progress",
     "readyLabel": "branched",
     "helpCreatesBranch": false
