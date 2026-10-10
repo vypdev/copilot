@@ -40305,7 +40305,12 @@ function exactPlaceholderIndex(value, placeholder) {
     const before = index > 0 ? value[index - 1] : '';
     const afterIndex = index + placeholder.length;
     const after = afterIndex < value.length ? value[afterIndex] : '';
-    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after)
+    // A sentence-ending period beside an opaque code span is punctuation;
+    // extensions or other appended operands still fail this and the final scan.
+    const sentencePeriod = after === '.'
+        && (afterIndex + 1 === value.length || /\s/u.test(value[afterIndex + 1]));
+    return !OPERAND_ADJACENCY_PATTERN.test(before)
+        && (!OPERAND_ADJACENCY_PATTERN.test(after) || sentencePeriod)
         ? index
         : undefined;
 }

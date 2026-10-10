@@ -3,7 +3,7 @@
 - Status: Implemented — automated gates and controlled pull-request UX evidence complete
 - Date: 2026-09-14
 - Catalog capability ID: github-communication-experience
-- Last verified: 2026-09-15 against the strict greenfield locale contract, the
+- Last verified: 2026-10-11 against the strict greenfield locale contract, the
   executable disjoint test budget, and the multilingual fixture evidence
   described in §13
 - Owners: Copilot maintainers
@@ -1036,6 +1036,15 @@ text reports localized semantic status and result counts without replaying
 internal step or reminder prose. Catalog version 3 owns the added reply and CLI
 descriptors.
 
+Dogfooding issue #455 reproduced a sentence-punctuation failure in runs
+`38088541152` and `38092334726`: Spanish prose ending in an inline
+`/copilot status` code span followed by a period failed operand restoration.
+A period followed by end of text or whitespace is now accepted as sentence
+punctuation. Extensions, non-sentence adjacency, generated flags and reordered
+operands remain rejected, and the final exact operand scan still runs. Three
+distinct policy regressions cover terminal punctuation, hostile suffixes and
+ordered operands across sentence boundaries.
+
 Native Check presentation now follows the surface-locale row in §6.1. The
 branch-protection Check name remains stable, while its bounded title and summary
 resolve from one complete issue, pull-request, or repository catalog. The same
@@ -1066,11 +1075,11 @@ and irreversible facts.
 
 ## 14. Testing strategy and numeric budget
 
-The implementation requires at least **141 distinct new or materially rewritten
+The implementation requires at least **144 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 144 qualifying
+`src/architecture/github_communication_test_budget.json` records 147 qualifying
 localization cases from the implementation diff against the specification
 baseline. No listed test file appears in the semantic allocation, and the
 contract is enforced by `pnpm run validate:specifications`.
@@ -1079,11 +1088,11 @@ contract is enforced by `pnpm run validate:specifications`.
 |---|---:|---|
 | Domain/configuration/pure planning | 26 | defaults, inheritance, canonicalization, invalid tags including underscores, 255-char bound, scope/snapshot, locale equality, unified provider-task authorization for locale-only planner and user-content tasks |
 | Catalog/renderer contracts | 28 | completeness, exact/base/dynamic/fallback, atomicity, placeholders, plurals, number formatting, expansion, missing/hostile IDs |
-| Translation/application state | 27 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request |
+| Translation/application state | 30 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request; sentence punctuation, hostile suffixes and ordered operands |
 | Adapters/provider contracts | 16 | static/dynamic adapters, schema errors, timeouts, cache key, error mapping, no comment update capability |
 | Workflows/setup/generated schemas | 18 | action defaults, strict setup validation, doctor, issue/PR/run/CLI surface propagation, agent task inventory, release snapshot |
 | UI/UX/security/integration | 26 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths, post-live-admission membership lookup and non-executable no-lookup behavior |
-| **Total** | **141** | No double counting |
+| **Total** | **144** | No double counting |
 
 Required quality gates:
 
@@ -1194,7 +1203,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 21. Given repository-aware CLI `--json`, then human terminal prose may localize
     but JSON keys, codes, and enums remain stable English machine contracts.
 22. Given implementation completion, then related SDDs, catalog, action/setup
-    defaults, generated bundles, 141-case budget, coverage, documentation, and
+    defaults, generated bundles, 144-case budget, coverage, documentation, and
     all repository validations agree without stale en/es conditionals.
 23. Given an unchanged issue whose valid current plan was produced in a
     different locale, when planning runs in the current effective issue locale,
@@ -1230,7 +1239,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 | §11 privacy/security | sanitizer, minimizer, telemetry projection | injection/bidi/secret/body-absence tests | security operations |
 | §12 observability/cost | summary/log/metric projections and run cache | fields, one-call, no-body assertions | quality observability |
 | §13 greenfield cutover | strict readers and required locale state | removed-name/invalid-marker/state/rollback tests | configuration guide |
-| §14 quality budget | coverage scripts and disjoint communication test ledger | 144 allocated localization cases plus CI coverage evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 147 allocated localization cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1285,7 +1294,7 @@ hyphenated tags and never imply that fallback is a successful translation.
       and bidi tests/manual evidence pass.
 - [x] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
       update constraints are executable and blocking.
-- [x] The 141-case numeric budget and changed-module coverage gates pass without
+- [x] The 144-case numeric budget and changed-module coverage gates pass without
       double counting semantic publication tests.
 - [x] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
       bundles, examples, and defaults agree.

@@ -143,7 +143,8 @@ code spans, paths (including bare names such as `README.md`), recognizable Git
 refs and versions, issue or PR references, URLs, quoted literals, option flags,
 and commit IDs with opaque operands. Commands whose grammar has no translatable
 prose protect every argument, including an arbitrary value passed to `--from`.
-The provider must return every operand exactly once. Copilot restores them only
+The provider must return every operand exactly once. Sentence-ending periods
+beside code spans remain ordinary punctuation. Copilot restores operands only
 after validating that none was removed, duplicated, reordered, changed, or
 introduced, so a translation cannot turn `src/cache.ts` into another path or add
 `--force`. A failed validation performs no requested repository change. Reconstructed commands also retain the fixed 2,000-character and 20-argument limits; an expansion beyond either limit returns an interpretation error before answering or writing. Rephrase the request more briefly to retry.
