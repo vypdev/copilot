@@ -13,3 +13,5 @@ pnpm run build, pnpm test, pnpm run lint
 Commands are parsed without a shell. Shell operators and empty commands are rejected. Commands run after the agent changes and before staging. If any command fails, the action MUST NOT commit, push, or mark findings resolved.
 
 This repository's comment workflows prepare Node, pnpm and dependencies for configured verification when an explicit `fix`, `implement`, `remember`, or non-dry-run `sync-branch` command is requested. Learned-rule commits pass the same verification gate as other authorized file changes.
+
+For this repository's full suite, configure `pnpm run test` without `--runInBand`. The comment workflows enable the same 512 MB Jest worker recycling used by the self-hosted Windows smoke job, while limiting concurrency to two workers. A serial run bypasses recycling and can exhaust the service runner's Node heap before verification completes.

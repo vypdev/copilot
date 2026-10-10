@@ -13,6 +13,8 @@ jobs:
     permissions:
       contents: read
     env:
+      # Recycle Jest workers on Windows service runners during full verification.
+      COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
       COPILOT_PREPARE_VERIFICATION: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((startsWith(github.event.comment.body, '/copilot sync-branch') && !contains(github.event.comment.body, '--dry-run')) || startsWith(github.event.comment.body, '/copilot implement ') || startsWith(github.event.comment.body, '/copilot fix') || startsWith(github.event.comment.body, '/copilot remember ')) }}
     steps:
       - name: Checkout Repository
