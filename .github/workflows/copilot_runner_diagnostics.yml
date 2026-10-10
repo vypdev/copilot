@@ -15,7 +15,7 @@ jobs:
         shell: bash
         run: |
           uname -sr
-          for tool in node npm pnpm git bwrap unshare; do
+          for tool in node npm pnpm git bwrap unshare codex; do
             command -v "$tool" || true
           done
           if command -v bwrap >/dev/null; then bwrap --version; fi
@@ -24,6 +24,11 @@ jobs:
           fi
           if command -v bwrap >/dev/null; then
             bwrap --unshare-user --unshare-net --ro-bind / / --proc /proc --dev /dev /bin/true || true
+            bwrap --unshare-user --uid 0 --gid 0 --unshare-net --ro-bind / / --proc /proc --dev /dev /bin/true || true
+          fi
+          if command -v codex >/dev/null; then
+            codex --version
+            codex sandbox linux --config 'shell_environment_policy.inherit="none"' -- /bin/true || true
           fi
           for setting in /proc/sys/kernel/unprivileged_userns_clone /proc/sys/kernel/apparmor_restrict_unprivileged_userns; do
             if [ -f "$setting" ]; then echo "$setting: $(cat "$setting")"; fi

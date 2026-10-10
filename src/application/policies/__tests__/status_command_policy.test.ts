@@ -36,6 +36,22 @@ function execution(overrides: Record<string, unknown> = {}) {
 }
 
 describe('status command policy', () => {
+    it('uses the linked working branch for a conversation whose event has no branch', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            eventName: 'issue_comment', commit: { branch: '' },
+            currentConfiguration: { workingBranch: 'docs/17-demo', results: [] },
+        }) as never);
+        expect(snapshot.branch).toBe('docs/17-demo');
+    });
+
+    it('keeps the actual push branch authoritative over restored issue metadata', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            isPush: true, commit: { branch: 'docs/17-actual' },
+            currentConfiguration: { workingBranch: 'docs/17-stale', results: [] },
+        }) as never);
+        expect(snapshot.branch).toBe('docs/17-actual');
+    });
+
     it('builds a read-only snapshot from setup facts', () => {
         const snapshot = buildCopilotStatusSnapshot(execution() as never);
         expect(snapshot).toMatchObject({

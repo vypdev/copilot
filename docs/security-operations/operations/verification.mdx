@@ -15,3 +15,7 @@ The verifier MUST report the selected binary, version/help result, credential-re
 For a provider smoke test, use a bounded prompt that requests exactly `READY`, read-only workspace permissions, and the explicit qualified model. Record exit status and sanitized diagnostics only.
 
 Run `copilot doctor --config <setup.yml>` to verify repository configuration and locale behavior without changing repository configuration. The human report uses `repository-locale` (`en-US` by default); issue and pull-request locale overrides appear as diagnosed facts but do not select terminal language. A non-bundled valid locale requires a ready planner/language agent and otherwise produces one complete English fallback report. Verify that stable check IDs and enums remain unchanged and that no raw provider response or credential value appears.
+
+## Repository verification commands
+
+The repository prepares Node 24, pnpm 10.12.4 and frozen dependencies for explicit file-changing or branch-sync commands with configured verification. This is separate from standalone agent CLI installation. Read-only commands and dry runs do not need that preparation. Verification runs without agent or GitHub credentials; trusted automation commits use an empty hooks directory for that invocation after the required checks pass. Contributor hooks remain configured. Use checks that leave tracked files unchanged, such as typecheck, tests, lint and contract validators; generating platform-specific checked-in bundles during verification can correctly block publication.

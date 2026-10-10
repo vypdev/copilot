@@ -1294,7 +1294,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-21",
+      "lastVerified": "2026-10-10",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],

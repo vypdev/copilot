@@ -27,7 +27,7 @@ export interface CopilotStatusExecutionContext {
         readonly currentPullRequestLabels?: readonly string[];
         readonly lifecycle?: CopilotLifecycleLabels;
     };
-    readonly currentConfiguration: { readonly results?: readonly { readonly payload: unknown }[] };
+    readonly currentConfiguration: { readonly workingBranch?: string; readonly results?: readonly { readonly payload: unknown }[] };
     readonly ai: {
         readonly getPullRequestDescriptionMode: () => string;
     };
@@ -79,6 +79,8 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
     }).find(([, label]) => label && targetLabels.includes(label))?.[0];
     const findingStateProjection = projectBugbotResultFindingStates(execution.currentConfiguration?.results ?? []);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
+    const branch = execution.isPush ? execution.commit?.branch
+        : execution.currentConfiguration?.workingBranch || execution.commit?.branch;
 
     return Object.freeze({
         owner: execution.owner,
@@ -94,7 +96,7 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
                     : 'repository',
         ...(execution.issue?.number > 0 ? { issueNumber: execution.issue.number } : {}),
         ...(execution.pullRequest?.number > 0 ? { pullRequestNumber: execution.pullRequest.number } : {}),
-        ...(execution.commit?.branch ? { branch: execution.commit.branch } : {}),
+        ...(branch ? { branch } : {}),
         ...(lifecycle ? { lifecycle } : {}),
         ...(waitingFor ? { waitingFor } : {}),
         issueLabels: Object.freeze(issueLabels),

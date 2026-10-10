@@ -100,6 +100,22 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'rev-parse', `${commitSha}^`)).toBe(snapshot.baseSha);
   });
 
+  it('publishes the validated SDD without running or changing inherited contributor hooks', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const prepared = await workspace.validateDraft(snapshot, plan, draft());
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const hooks = git(repo, 'config', 'core.hooksPath');
+    const hook = path.join(hooks, 'pre-commit');
+    fs.writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+
+    const commitSha = await workspace.publish('feature/42-change', prepared);
+
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, commitSha, plan.path)).toBe(true);
+    expect(git(repo, 'config', 'core.hooksPath')).toBe(hooks);
+    expect(fs.readFileSync(hook, 'utf8')).toBe('#!/bin/sh\nexit 1\n');
+  });
+
   it('retains an existing branch with unrelated commits and blocks an SDD first-commit rewrite', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');

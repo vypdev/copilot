@@ -10,6 +10,8 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none in the SDD-only policy; live provider review remains pending
 
+Live dogfooding on 2026-10-10 (#454) exposed a runner checkout hook that required `node` from the service PATH and prevented the already validated SDD commit. SDD publication now uses an empty hooks directory for that single Git invocation; contributor hook configuration is retained. The Action's own SDD and catalog validation remains mandatory before staging and publication. This recovery has one additional real Git regression case, bringing the minimum budget to 67.
+
 ## 1. Executive summary
 
 A repository can enable a pre-branch SDD gate for feature issues and other
@@ -533,7 +535,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **66 distinct cases** are a floor derived from eligibility,
+The following **67 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -547,7 +549,8 @@ ownership/validation.
 | UX/localization/accessibility/sanitization | 6 | Five states, links, notification budget |
 | Integration/security/recovery | 8 | First commit, partial effects, abuse |
 | Pending-branch recovery | 6 | Retained base, intervening commits, managed metadata, pending card, replay, post-push recovery |
-| **Total** | **66** | No case counted twice |
+| Automation hook isolation | 1 | Validated SDD publication ignores failing checkout hooks; configuration preserved |
+| **Total** | **67** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the

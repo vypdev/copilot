@@ -12,6 +12,7 @@ import type {
 } from '../application/ports/pre_branch_sdd_ports';
 import { isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
+import { withoutGitHooks } from './git_hook_isolation';
 
 const runFile = promisify(execFile);
 const SHA = /^[a-f0-9]{40}$/i;
@@ -164,11 +165,12 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       if (staged.join('\n') !== [...prepared.changedPaths].sort().join('\n')) {
         throw new Error('The staged paths differ from the validated SDD draft.');
       }
-      await this.git([
+      await withoutGitHooks(emptyHooks => this.git([
         '-c', 'user.name=copilot-action[bot]',
         '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
+        '-c', `core.hooksPath=${emptyHooks}`,
         'commit', '-m', `docs(sdd): specify issue contract in ${prepared.plan.path}`,
-      ], root);
+      ], root));
       const commitSha = (await this.git(['rev-parse', 'HEAD'], root)).trim();
       assertSha(commitSha);
       await this.git(['push', 'origin', `HEAD:refs/heads/${branchName}`], root, this.token);

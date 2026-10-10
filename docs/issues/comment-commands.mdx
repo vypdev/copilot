@@ -52,7 +52,7 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
 resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
-result; it never substitutes zero or a clean state.
+result; it never substitutes zero or a clean state. In a PR conversation, setup reads that exact PR head to resolve its linked issue and working branch. An unlinked PR remains separate from an issue with the same number.
 
 Every explicit answer uses a correlated reply marker. A webhook retry with the
 same source comment updates or reuses that response instead of creating another.

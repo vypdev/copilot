@@ -19,6 +19,8 @@ The repository must already contain a valid `specs/catalog.json`, `specs/README.
 
 The status comment uses the effective issue locale (Spanish and English are bundled, with English fallback). It shows the owning SDD, each question and its owner, the retained branch if one exists, and the verified commit. The first branch commit contains the SDD; implementation starts afterward.
 
+The Action validates the SDD itself and publishes its commit without running contributor Git hooks from the runner checkout. Your hook configuration is preserved for normal contributor commits.
+
 ## Edits, retries, and revisions
 
 If the issue body, human title, or source branch changes while an SDD is being prepared, the Action reanalyzes or blocks publication so it cannot publish a stale contract. A duplicate event reuses the status comment and branch. A push that succeeded before the comment update can be recovered from the same remote branch.
