@@ -46,12 +46,40 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 | `/copilot recheck` | Re-run the review against the current branch. | No |
 | `/copilot status` | Show the current Copilot status. | No |
 | `/copilot description` | Refresh the PR description when that action is configured. | No |
-| `/copilot fix <finding-id>` | Fix one or more existing Bugbot findings. | Yes, if authorized |
-| `/copilot dismiss <finding-id>` | Dismiss one or more findings. | No file changes |
-| `/copilot implement <request>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
-| `/copilot sync-branch [options]` | Merge the issue/PR parent into its working branch; use the fixer only if eligible conflicts occur. | Yes, if authorized |
+| `/copilot fix <finding-id> [finding-id ...]` | Fix one or more existing Bugbot findings. | Yes, if authorized |
+| `/copilot dismiss <finding-id> [finding-id ...]` | Dismiss one or more findings. | No file changes |
+| `/copilot implement <request...>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
+| `/copilot remember <rule...>` | Save a learned Bugbot rule. | Yes, if authorized |
+| `/copilot sync-branch [--dry-run] [--no-agent] [--from <branch>]` | Merge the issue/PR parent into its working branch; use the fixer only if eligible conflicts occur. | Yes, if authorized |
 
-`/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
+`/copilot fix`, `/copilot dismiss`, `/copilot implement`, and `/copilot remember`
+require at least one argument. Give `fix` and `dismiss` one or more finding IDs;
+give `implement` a concrete request and `remember` the rule text. For
+`sync-branch`, `--from` must be followed by a branch name. Arguments are
+whitespace-separated, and commands are limited to 2,000 characters and 20
+arguments. Missing or malformed required arguments produce a validation reply;
+they never mean “all” or authorize a broad change.
+
+### Where command results persist
+
+Read-only commands publish a correlated GitHub reply and do not change repository
+files. Retrying the same source comment updates or reuses that reply. Results
+that change repository state are retained in the repository or GitHub resource
+they operate on:
+
+- `/copilot fix` and `/copilot implement` apply changes to the authoritative
+  working branch, run configured verification, then commit and push through the
+  trusted workflow. A verification failure prevents the commit.
+- `/copilot remember` appends the rule to `.copilot/BUGBOT.learned.md` and
+  commits it to the repository.
+- `/copilot dismiss` records dismissal against the existing Bugbot finding in
+  GitHub review state; it does not edit repository files.
+- `/copilot sync-branch` merges the parent into the working branch and pushes
+  the result unless `--dry-run` was supplied.
+
+The agent runtime does not retain a session between runs. Repository changes
+that are committed and pushed, plus finding/review state stored by GitHub, are
+the durable record. A prepared but uncommitted workspace is not durable.
 
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
@@ -164,7 +192,7 @@ that reply uses the complete English fallback so it cannot mix languages.
 - File-changing commands require an authoritative PR review-thread branch or an
   explicitly branch-scoped execution. Issue-only comments never scan open PRs
   to guess a write target.
-- The workflow must grant `contents: write` for file-modifying actions. Verification failures prevent the commit.
+- Comment workflow templates declare `contents: read` and disable checkout credential persistence. Repository mutation is performed with the configured `PAT` Secret; that token must have repository contents write access. Actor authorization is checked separately, so a capable token does not grant the commenter permission. Verification failures prevent the commit.
 - Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
 - Branch synchronization accepts `--dry-run`, `--no-agent`, and `--from <branch>` and applies additional Git-state, path, verification, and remote-race guards. See [Branch synchronization](/issues/branch-synchronization).
 
