@@ -63,6 +63,61 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  async function twoClarificationRounds(owner = 'issue-author') {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    await h.useCase.begin(context());
+    h.comments.push({ id: 101, body: 'SDD Q1: Preserve strict authorization for existing callers', user: { login: 'maintainer' } });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [{ id: 'Q1', text: 'Which chronology should the report use?', owner }], newCapability: null });
+    await h.useCase.begin(context());
+    return h;
+  }
+
+  it('retains earlier decisions with their round and question when Q IDs are reused', async () => {
+    const h = await twoClarificationRounds();
+    h.comments.push({ id: 102, body: 'SDD Q1: Show newest operations first', user: { login: 'alice' } });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Complete draft' });
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('drafted');
+    if (outcome.status !== 'drafted') throw new Error('Expected draft');
+    expect(outcome.record.answers).toEqual([
+      expect.objectContaining({ round: 1, questionId: 'Q1', questionText: question.text, text: 'Preserve strict authorization for existing callers' }),
+      expect.objectContaining({ round: 2, questionId: 'Q1', questionText: 'Which chronology should the report use?', text: 'Show newest operations first' }),
+    ]);
+    for (const call of h.query.mock.calls.slice(2)) {
+      expect(call[0].prompt).toContain('Preserve strict authorization');
+      expect(call[0].prompt).toContain('Show newest operations first');
+    }
+  });
+
+  it('does not count a retained Q1 answer as satisfying a new round Q1', async () => {
+    const h = await twoClarificationRounds();
+    h.query.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.query).not.toHaveBeenCalled();
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('still requires current maintainer authorization despite approved historical answers', async () => {
+    const h = await twoClarificationRounds('maintainer');
+    h.comments.push({ id: 102, body: 'SDD Q1: Show newest operations first', user: { login: 'mallory' } });
+    h.isActorAllowedToModifyFiles.mockResolvedValue(false);
+    h.query.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.query).not.toHaveBeenCalled();
+    expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('does not automatically adopt historical answers after the base changes', async () => {
+    const h = await twoClarificationRounds();
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'd'.repeat(40) });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.query.mock.calls[2][0].prompt).not.toContain('Preserve strict authorization');
+    expect(readSddGateRecord(h.comments[0].body, 42)?.answers).toEqual([]);
+  });
+
   it('validates a regenerated bounded draft before any publication', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null })

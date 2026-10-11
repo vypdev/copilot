@@ -54635,11 +54635,12 @@ class PreBranchSddGateUseCase {
             }
             let answers = [];
             if (card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting) {
-                answers = card.record.plan.questions.length === 0 ? card.record.answers ?? []
+                const currentAnswers = card.record.plan.questions.length === 0 ? []
                     : await this.collectAnswers(card.record, card.id, allComments, context);
-                if (answers.length < card.record.plan.questions.length) {
+                if (currentAnswers.length < card.record.plan.questions.length) {
                     return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
                 }
+                answers = (0, pre_branch_sdd_1.retainSddAnswers)(card.record.answers ?? [], currentAnswers);
             }
             const publicationRetry = card?.record.phase === 'awaiting-answer'
                 && card.record.issueDigest === digest && !staleAwaiting
@@ -54743,7 +54744,8 @@ class PreBranchSddGateUseCase {
                     : await this.actors.isActorAllowedToModifyFiles(author);
                 if (!authorized)
                     continue;
-                answers.push({ questionId: question.id, author, commentId: candidate.id, text });
+                answers.push({ questionId: question.id, author, commentId: candidate.id, text,
+                    round: record.round, questionText: question.text });
                 break;
             }
         }
@@ -82112,6 +82114,7 @@ function parsePositiveSafeInteger(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
+exports.retainSddAnswers = retainSddAnswers;
 exports.normalizeSddIssueTitle = normalizeSddIssueTitle;
 exports.isSafeSddPath = isSafeSddPath;
 exports.parseSddPlan = parseSddPlan;
@@ -82125,6 +82128,14 @@ exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
 exports.SDD_MIN_DRAFT_CHARACTERS = 1800;
 exports.SDD_MAX_DRAFT_CHARACTERS = 70000;
 exports.SDD_MAX_UPDATE_CHARACTERS = 18000;
+/** Prior answers are context only; the use case must independently satisfy the current questions. */
+function retainSddAnswers(previous, current) {
+    const answers = [...previous, ...current];
+    if (answers.length > 24 || serializeSddGateValue(answers).length > 64000) {
+        throw new Error('The retained SDD answer history exceeds its supported bound; use concise explicit answers.');
+    }
+    return Object.freeze(answers);
+}
 const SDD_PATH = /^specs\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.md$/;
 const CAPABILITY_ID = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const SHA = /^[a-f0-9]{40}$/i;
@@ -82228,7 +82239,10 @@ function readSddGateRecord(body, issueNumber) {
                 || !/^Q[1-8]$/.test(String(answer.questionId))
                 || typeof answer.author !== 'string' || answer.author.length > 100
                 || !Number.isInteger(answer.commentId) || answer.commentId <= 0
-                || typeof answer.text !== 'string' || answer.text.length > 3000)))
+                || typeof answer.text !== 'string' || answer.text.length > 3000
+                || ((answer.round !== undefined || answer.questionText !== undefined)
+                    && (!Number.isInteger(answer.round) || answer.round < 1 || answer.round > 3
+                        || typeof answer.questionText !== 'string' || answer.questionText.length < 12 || answer.questionText.length > 1000)))))
             return undefined;
         return value;
     }
@@ -82238,7 +82252,7 @@ function readSddGateRecord(body, issueNumber) {
 }
 function renderSddGateRecord(record, locale = 'en-US', issueUrl) {
     const spanish = /^es(?:-|$)/i.test(locale);
-    const marker = `<!-- ${exports.SDD_GATE_MARKER}\n${JSON.stringify(record)}\n-->`;
+    const marker = `<!-- ${exports.SDD_GATE_MARKER}\n${serializeSddGateValue(record)}\n-->`;
     if (record.phase === 'published') {
         const links = sddPublicationLinks(record, issueUrl, spanish);
         return spanish
@@ -82260,8 +82274,8 @@ function renderSddGateRecord(record, locale = 'en-US', issueUrl) {
         ? spanish ? 'Vuelve a ejecutar el workflow de la issue para reintentar la publicación en esta misma rama.' : 'Run the issue workflow again to retry publication on this same branch.'
         : spanish ? 'Responde con `SDD Q1: tu respuesta` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.' : 'Reply with `SDD Q1: your answer` (one line per question). The Action will continue after the required people answer every question.';
     return spanish
-        ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n${questions}\n\n${nextStep}\n\n${marker}`
-        : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n${questions}\n\n${nextStep}\n\n${marker}`;
+        ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n**Ronda de aclaración:** ${record.round}\n\n${questions}\n\n${nextStep}\n\n${marker}`
+        : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n**Clarification round:** ${record.round}\n\n${questions}\n\n${nextStep}\n\n${marker}`;
 }
 function sddPublicationLinks(record, issueUrl, spanish) {
     if (!issueUrl || !record.branchName || !record.commitSha)
@@ -82323,6 +82337,10 @@ function composeSddUpdate(existing, change) {
     const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
     validateSddMarkdown(merged);
     return merged;
+}
+function serializeSddGateValue(value) {
+    // Human answer text must never terminate its hidden state comment.
+    return JSON.stringify(value).replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
 }
 function sanitize(value) {
     return value.replace(/\r?\n/g, ' ').trim()

@@ -547,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **92 distinct cases** are a floor derived from eligibility,
+The following **106 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -566,7 +566,8 @@ ownership/validation.
 | Canonical owner line endings | 1 | CRLF scratch checkout preserves the exact committed owner prefix and verified publication |
 | Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
 | Bounded draft generation and recovery | 12 | Three action-specific schema boundaries, one safe regeneration, one exhausted size repair, three malformed outputs, one provider failure, two validation/freshness integration routes and one closed localized recovery presentation |
-| **Total** | **92** | No case counted twice |
+| Answer history and state encoding | 14 | Four cumulative/current-authorization/base-reset routes, one legacy/new provenance roundtrip with visible round, six invalid-provenance cases, count/encoded-size bounds and comment-terminator isolation |
+| **Total** | **106** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -730,3 +731,27 @@ Flow: analysis and required answers -> bounded draft -> optional single size
 regeneration -> unchanged validation/freshness -> publication, or blocked.
 Acceptance: the provider schema for an update has maxLength 18000; two oversized
 responses publish no draft; a base change after regeneration remains blocked.
+
+
+### Clarification history and safe durable state (2026-10-11)
+
+A later clarification round may reuse Q1–Q8. Previously, collecting the new
+answers replaced the prior resolved decisions. The gate MUST retain the ordered
+answer history for the same issue digest and base, with optional legacy-compatible
+round and exact question text provenance. Historical answers are context only:
+each current question independently needs a fresh authorized answer after the
+prior-answer cutoff. Reused IDs cannot satisfy a new question or overwrite an
+earlier decision. Legacy records retain their known text/source without invented
+question provenance. Changed issue/base restarts clarification without implicitly
+adopting historical decisions.
+
+The fixed history bounds are 24 answers and 64,000 encoded characters; exceeded
+bounds stop before draft/publication without truncating decisions. State encoding
+escapes angle brackets so an answer cannot terminate its hidden HTML record.
+The visible question card names the clarification round in English/Spanish.
+
+Acceptance: after Q1 in rounds one and two, analysis and drafting receive both
+distinct decisions with their question/round; the old Q1 alone leaves round two
+waiting; an unauthorized current answer cannot progress; state roundtrips
+malicious comment terminators without exposing them as markup. These fourteen
+new cases belong only to this gate budget.

@@ -17,6 +17,7 @@ import {
   renderSddGateRecord,
   SDD_GATE_MARKER,
   normalizeSddIssueTitle,
+  retainSddAnswers,
   type SddAnswer,
   type SddGateRecord,
   type SddPlan,
@@ -154,11 +155,12 @@ export class PreBranchSddGateUseCase {
 
       let answers: readonly SddAnswer[] = [];
       if (card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting) {
-        answers = card.record.plan.questions.length === 0 ? card.record.answers ?? []
+        const currentAnswers = card.record.plan.questions.length === 0 ? []
           : await this.collectAnswers(card.record, card.id, allComments, context);
-        if (answers.length < card.record.plan.questions.length) {
+        if (currentAnswers.length < card.record.plan.questions.length) {
           return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
         }
+        answers = retainSddAnswers(card.record.answers ?? [], currentAnswers);
       }
 
       const publicationRetry = card?.record.phase === 'awaiting-answer'
@@ -257,7 +259,8 @@ export class PreBranchSddGateUseCase {
           ? author.toLowerCase() === context.issueAuthor.toLowerCase()
           : await this.actors.isActorAllowedToModifyFiles(author);
         if (!authorized) continue;
-        answers.push({ questionId: question.id, author, commentId: candidate.id, text });
+        answers.push({ questionId: question.id, author, commentId: candidate.id, text,
+          round: record.round, questionText: question.text });
         break;
       }
     }

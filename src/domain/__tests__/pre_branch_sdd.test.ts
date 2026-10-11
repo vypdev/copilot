@@ -7,6 +7,7 @@ import {
   validateSddMarkdown,
   composeSddUpdate,
   normalizeSddIssueTitle,
+  retainSddAnswers,
   type SddGateRecord,
 } from '../pre_branch_sdd';
 
@@ -158,5 +159,46 @@ describe('pre-branch SDD policy', () => {
     const text = `${'context '.repeat(300)}\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n## 16. Acceptance\n`;
     expect(() => validateSddMarkdown(text)).toThrow('numeric test budget');
     expect(() => validateSddMarkdown(`${text}\nAt least 24 distinct cases.`)).not.toThrow();
+  });
+});
+
+describe('retained SDD answer provenance', () => {
+  const answer = { questionId: 'Q1', author: 'alice', commentId: 101, text: 'Keep strict authorization' };
+  const record: SddGateRecord = { version: 1, issueNumber: 42, phase: 'awaiting-answer', issueDigest: 'a'.repeat(64), baseSha: 'b'.repeat(40), round: 2,
+    plan: { ...plan, action: 'update', questions: [] } };
+  const questionText = 'Who may invoke this operation?';
+
+  it('reads new question provenance together with retained legacy answers without guessing their round', () => {
+    const answers = [answer, { ...answer, commentId: 102, round: 2, questionText }];
+    expect(renderSddGateRecord({ ...record, answers })).toContain('**Clarification round:** 2');
+    expect(renderSddGateRecord({ ...record, answers }, 'es-ES')).toContain('**Ronda de aclaración:** 2');
+    expect(readSddGateRecord(renderSddGateRecord({ ...record, answers }), 42)?.answers).toEqual(answers);
+    expect(readSddGateRecord(renderSddGateRecord({ ...record, answers }), 42)?.answers?.[0].round).toBeUndefined();
+  });
+
+  it.each([
+    { round: 0, questionText }, { round: 4, questionText }, { round: 1.5, questionText },
+    { round: 1 }, { round: 1, questionText: 'short' }, { round: 1, questionText: 'x'.repeat(1001) },
+  ])('rejects malformed optional question provenance: %j', fields => {
+    expect(readSddGateRecord(renderSddGateRecord({ ...record, answers: [{ ...answer, ...fields }] }), 42)).toBeUndefined();
+  });
+
+  it('rejects more than 24 retained answers without dropping any decision', () => {
+    const previous = Array.from({ length: 24 }, (_, i) => ({ ...answer, commentId: i + 1 }));
+    expect(() => retainSddAnswers(previous, [answer])).toThrow('history exceeds');
+    expect(previous).toHaveLength(24);
+  });
+
+  it('bounds the encoded history including comment-terminator escapes', () => {
+    const previous = Array.from({ length: 12 }, (_, i) => ({ ...answer, commentId: i + 1, text: '<>'.repeat(1400) }));
+    expect(() => retainSddAnswers(previous, [])).toThrow('history exceeds');
+  });
+
+  it('keeps untrusted answer and question markup inside the hidden record while roundtripping exactly', () => {
+    const malicious = { ...answer, text: '--><script>@team</script><!--', round: 1, questionText: 'Should --> @team be displayed?' };
+    const rendered = renderSddGateRecord({ ...record, answers: [malicious] });
+    expect(rendered).not.toContain('--><script>');
+    expect(rendered.match(/-->/g)).toHaveLength(1);
+    expect(readSddGateRecord(rendered, 42)?.answers).toEqual([malicious]);
   });
 });
