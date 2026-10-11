@@ -1054,3 +1054,32 @@ Hosted run `38159744824`, head `c62f303a`, passed 92 isolated runtime cases but 
 The shell fixtures now disable automatic module discovery and import the absolute system `Microsoft.PowerShell.Utility.psd1` manifest before their hash operation, using .NET path construction. They still exercise the actual private parent and Codex shell environments, both presence/absence of host application data, correct hash-module operation, checkout cleanliness, private-directory ACLs, cleanup and the unchanged 15-second boundary. They neither inherit host profiles nor require ambient module caches. This measures bounded startup with an explicitly selected system module; it does not promise that arbitrary first-time cmdlet discovery fits the same boundary. Fresh hosted acceptance remains pending.
 
 Cache-free native Windows job `114530212856` finished successfully, including all post steps, on master `45d8aeeb`. Ubuntu also completed. The macOS job lost runner communication during build and supplied no final log, so the run is not classified as cross-platform success; recovery and a fresh macOS execution are required.
+
+### Explicit Windows sandbox selection and fresh diagnostics (2026-10-11)
+
+Actual `/copilot fix` run `38162629567` and two read-only diagnosis commands on
+Windows could not execute shell tools. Explicit `login=false` did not repair the
+rejection. The official Codex 0.162.1 implementation returns a forbidden decision
+when Windows filesystem restrictions have no selected backend and approvals are
+disabled. Ignoring user configuration removes a user-supplied backend selection.
+This supports a configuration cause, but does not prove successful native agent
+access on these runners.
+
+The hermetic Codex policy MUST select `windows.sandbox="elevated"` explicitly,
+retain its capability's read-only/workspace-write scope, never load operator rules
+or configuration, and retain network denial, empty extra writable roots and
+disabled approvals. Runner administrators own provisioning; the Action adds no
+setup invocation or full-access recovery. Two distinct policy cases exercise
+read-only and fixer authority; live shell access and verified edit/push remain
+required acceptance evidence. Primary sources:
+[exact Codex exec policy](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/core/src/exec_policy.rs)
+and [Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox).
+
+Hosted run `38164031391` still failed three hash fixtures, now in approximately
+five seconds rather than at their timeout. Their failure assertions now expose
+only closed diagnostic tokens (timeout, command-not-found, or failed), never raw
+stderr. Two additional fixed, read-only startup probes compare the hash with an
+explicit system Utility manifest against Utility plus Management. The probe count
+is eight and every process remains capped at 20 seconds; fixture subprocesses
+remain capped at 15 seconds. No probe result is counted as a unit test or native
+agent acceptance. A successful diagnostic job can still contain failed probes.

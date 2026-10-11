@@ -470,7 +470,7 @@ describe('isolated Windows agent runtime', () => {
             for(const key of keys){if(process.env[key]!==undefined)env[key]=process.env[key]}
             for(const key of ['APPDATA','LOCALAPPDATA','PSModuleAnalysisCachePath']){const value=args.find(x=>x.startsWith('shell_environment_policy.set.'+key+'='));env[key]=JSON.parse(value.slice(value.indexOf('=')+1))}
             const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env,encoding:'utf8',timeout:15000,windowsHide:true});
-            if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
+            if(result.status!==0){process.stdout.write(result.error?.code==='ETIMEDOUT'?'fixture-shell-timeout':/CommandNotFoundException/.test(result.stderr)?'fixture-command-not-found':'fixture-shell-failed')}else{process.stdout.write(result.stdout.trim())}process.stdin.resume();
         }`;
         const fixture = fakeRuntime(source);
         try {
@@ -498,7 +498,7 @@ describe('isolated Windows agent runtime', () => {
             const {spawnSync}=require('node:child_process');const {join}=require('node:path');
             if(!process.env.PSModuleAnalysisCachePath.includes('copilot-agent-runtime-'))process.exit(3);
             const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env:process.env,encoding:'utf8',timeout:15000,windowsHide:true});
-            if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
+            if(result.status!==0){process.stdout.write(result.error?.code==='ETIMEDOUT'?'fixture-shell-timeout':/CommandNotFoundException/.test(result.stderr)?'fixture-command-not-found':'fixture-shell-failed')}else{process.stdout.write(result.stdout.trim())}process.stdin.resume();
         }`;
         const fixture = fakeRuntime(source);
         try {
