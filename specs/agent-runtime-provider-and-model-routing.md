@@ -956,11 +956,11 @@ fixtures. This difference does not identify a root cause or prove the
 authenticated fixer works on either runner.
 
 The existing platform smoke workflow now offers a bounded, read-only
-`windows_startup_probe` dispatch. One hosted Windows job compares six fixed 20-second probes in order: isolated
-runner baseline, isolated ACL environment, isolated runner PATH, allowlisted
-metadata with runner PATH, runner baseline with the isolated system PATH, and
-runner baseline with isolated module/cache settings. Disposable directories are removed after
-the comparison and are never passed to an agent. It records only the fixed
+`windows_startup_probe` dispatch. One hosted Windows job compares six fixed
+20-second probes: runner baseline, baseline with cache-off only, baseline with
+system module path only, minimal environment without module overrides, and that
+minimal environment with cache-off or system module path independently.
+It records only the fixed
 environment label, closed status and elapsed milliseconds. It never records
 stdout, stderr, errors, environment values, credentials or paths. It does not
 change process permissions, ACL policy, sandboxing or verification requirements.
@@ -998,3 +998,9 @@ disposable profiles and the runner module path did not remove the difference.
 The next six probes separate PATH from module/cache settings in both directions.
 This remains diagnosis only: no production process environment or trust check
 is relaxed, and process output/environment values are never reported.
+
+PATH comparison run 38153237008 preserved a ready baseline when PATH alone was
+replaced by the isolated system PATH (311 ms). Replacing the module-path/cache
+pair in the baseline instead caused a 20-second timeout. All three isolated
+PATH variants also timed out. This narrows the next comparison to the two
+module settings independently; it does not yet identify which causes the delay.
