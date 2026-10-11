@@ -82,7 +82,7 @@ export class BugbotScmPortFactory {
           commentId,
           token,
         ),
-      loadRules: (paths: readonly string[]) => this.rules.loadRules(paths),
+      loadRules: (paths: readonly string[], revision?: string) => this.rules.loadRules(paths, revision),
     };
     const issueComments = {
       addComment: (issueNumber: number, body: string, options?: { commitSha?: string }) =>

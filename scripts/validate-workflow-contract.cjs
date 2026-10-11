@@ -631,7 +631,7 @@ function assertDirectEventTriggers(file, workflow) {
     const pullRequestTypes = triggers.pull_request.types;
     if (!Array.isArray(pullRequestTypes)
       || pullRequestTypes.includes('edited')
-      || ['opened', 'reopened', 'closed', 'synchronize'].some(type => !pullRequestTypes.includes(type))) {
+      || ['opened', 'reopened', 'closed', 'synchronize', 'ready_for_review'].some(type => !pullRequestTypes.includes(type))) {
       throw new Error(`${relativeFile} must handle code/lifecycle PR events without subscribing to metadata-only edited events.`);
     }
     if (triggers.merge_group || workflow.jobs?.['copilot-merge-group']) {

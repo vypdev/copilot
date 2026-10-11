@@ -141,6 +141,16 @@ describe('loadBugbotContext', () => {
     expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
   });
 
+  it('loads PR rules using its provider-verified head rather than the comment workflow checkout', async () => {
+    const reader = ports({ loadRules: jest.fn().mockResolvedValue([
+      { source: '.copilot/BUGBOT.learned.md', scope: 'learned', content: 'Verified branch rule' },
+    ]) });
+    const context = await loadBugbotContext(request({ triggerKind: 'issue_comment', expectedHeadSha: undefined }), reader);
+    expect(reader.loadRules).toHaveBeenCalledWith(['src/example.ts'], sha);
+    expect(context.reviewRuleSources).toEqual(['learned:.copilot/BUGBOT.learned.md']);
+    expect(context.reviewRulesBlock).toContain('Verified branch rule');
+  });
+
   it('selects one exact-head PR when no event candidate exists', async () => {
     const reader = ports();
     const context = await loadBugbotContext(

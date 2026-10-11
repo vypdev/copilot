@@ -7,7 +7,7 @@ export interface BugbotReviewRule {
 }
 
 export interface BugbotRuleFileQueryPort {
-    loadRules(changedFiles: readonly string[]): Promise<readonly BugbotReviewRule[]>;
+    loadRules(changedFiles: readonly string[], revision?: string): Promise<readonly BugbotReviewRule[]>;
 }
 
 export interface BugbotLearnedRuleCommandPort {

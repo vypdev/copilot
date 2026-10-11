@@ -188,6 +188,45 @@ describe("PullRequestUseCase", () => {
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
 
+  it.each([true, false])('reviews a ready PR only when its actor is authorized (%s), without repeating enrichment', async allowed => {
+    const authorization = {
+      isActorAllowedToModifyFiles: jest.fn(),
+      isActorAllowedToUseMemberOnlyAutomation: jest.fn().mockResolvedValue(allowed),
+    };
+    const useCase = new PullRequestUseCase(
+      { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+      authorization,
+    );
+    await useCase.invoke(minimalExecution({
+      actor: 'alice',
+      ai: new Ai('', 'model', true, [], false, 'low', 20),
+      pullRequest: { action: 'ready_for_review', isOpened: false },
+    }));
+    expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('alice');
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(allowed ? 1 : 0);
+    for (const invoke of [mockUpdateDescriptionInvoke, ...Object.values(workflowSteps).map(step => step.invoke)]) {
+      expect(invoke).not.toHaveBeenCalled();
+    }
+  });
+
+  it('returns a semantic failure when ready-for-review analysis rejects', async () => {
+    mockReviewPotentialProblemsInvoke.mockRejectedValue(new Error('private provider diagnostic'));
+    const useCase = new PullRequestUseCase(
+      { taskId: 'UpdatePullRequestDescriptionUseCase', invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      { taskId: 'DetectPotentialProblemsUseCase', invoke: mockReviewPotentialProblemsInvoke },
+    );
+    const results = await useCase.invoke(minimalExecution({
+      pullRequest: { action: 'ready_for_review', isOpened: false },
+    }));
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(false);
+    expect(results[0].steps).toEqual(['Unable to process the pull request.']);
+    expect(results[0].errors[0]).toMatchObject({ code: 'workflow.failed' });
+  });
+
   it('authorizes the projected actor before member-only PR review', async () => {
     const authorization = {
       isActorAllowedToModifyFiles: jest.fn(),

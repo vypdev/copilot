@@ -3276,7 +3276,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
     const conversationContext = (0, bugbot_review_context_1.buildReviewConversationContext)(issueComments, pullRequestCommentsByNumber, request.trustedAuthorLogin);
     const repositoryRules = await ports.loadRules(prContext?.prFiles
         .map((file) => file.filename)
-        .filter((file) => !(0, file_ignore_policy_1.fileMatchesIgnorePatterns)(file, request.ignorePatterns)) ?? []);
+        .filter((file) => !(0, file_ignore_policy_1.fileMatchesIgnorePatterns)(file, request.ignorePatterns)) ?? [], canonicalPullRequest?.headSha);
     const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(request.organizationRules, repositoryRules);
     const coverage = (0, context_1.summarizeBugbotCoverage)([
         selectionCoverage,

@@ -39389,6 +39389,8 @@ function shouldTrackAgentActivity(execution, route) {
                     || isAgentReady(execution, 'findings')
                     || isAgentReady(execution, 'fixer'));
         case 'pull-request':
+            if (execution.pullRequest.action === 'ready_for_review')
+                return isAgentReady(execution, 'reviewer');
             return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
                 && (isAgentReady(execution, 'reviewer')
                     || (['replace', 'append'].includes(execution.ai.getPullRequestDescriptionMode())
@@ -40214,6 +40216,8 @@ function activeAgentTasks(event, singleAction, botLogin = '', pullRequestDescrip
         case 'issues':
             return activeIssueTasks(event, preBranchSddEnabled);
         case 'pull_request':
+            if (eventAction(event) === 'ready_for_review')
+                return ['reviewer'];
             if (!['opened', 'reopened', 'synchronize'].includes(eventAction(event)))
                 return [];
             return pullRequestDescriptionEnabled ? ['planner', 'reviewer'] : ['reviewer'];
@@ -44517,7 +44521,7 @@ function resolveLifecycleState(input) {
             return 'reviewing';
         if (input.externalEvidence?.review !== undefined)
             return 'reviewing';
-        if (['opened', 'reopened', 'synchronize'].includes(input.action))
+        if (['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(input.action))
             return 'reviewing';
         return undefined;
     }
@@ -53872,7 +53876,7 @@ function projectPullRequestWorkflowRouteContext(param) {
         closed: param.pullRequest.isClosed,
         merged: param.pullRequest.isMerged,
         automaticDescription: mode === 'replace' || mode === 'append',
-        reviewable: ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action),
+        reviewable: ['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(param.pullRequest.action),
         review: (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param),
     });
 }
@@ -53923,6 +53927,9 @@ async function runPullRequestWorkflow(context, taskId, ports) {
             if (agentAllowed)
                 results.push(...(await runPullRequestReview(context, ports)));
             return results;
+        }
+        if (context.action === 'ready_for_review') {
+            return agentAllowed ? await runPullRequestReview(context, ports) : [];
         }
         if (context.action === 'edited') {
             return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
@@ -57008,7 +57015,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
     const conversationContext = (0, bugbot_review_context_1.buildReviewConversationContext)(issueComments, pullRequestCommentsByNumber, request.trustedAuthorLogin);
     const repositoryRules = await ports.loadRules(prContext?.prFiles
         .map((file) => file.filename)
-        .filter((file) => !(0, file_ignore_policy_1.fileMatchesIgnorePatterns)(file, request.ignorePatterns)) ?? []);
+        .filter((file) => !(0, file_ignore_policy_1.fileMatchesIgnorePatterns)(file, request.ignorePatterns)) ?? [], canonicalPullRequest?.headSha);
     const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(request.organizationRules, repositoryRules);
     const coverage = (0, context_1.summarizeBugbotCoverage)([
         selectionCoverage,
@@ -78254,7 +78261,7 @@ class BugbotScmPortFactory {
             },
             getPullRequestHeadSha: (pullRequestNumber) => this.changes.getPullRequestHeadSha(owner, repository, pullRequestNumber, token),
             getPullRequestReviewCommentBody: (pullRequestNumber, commentId) => this.pullRequests.getPullRequestReviewCommentBody(owner, repository, pullRequestNumber, commentId, token),
-            loadRules: (paths) => this.rules.loadRules(paths),
+            loadRules: (paths, revision) => this.rules.loadRules(paths, revision),
         };
         const issueComments = {
             addComment: (issueNumber, body, options) => this.issues.addComment(owner, repository, issueNumber, body, token, options),
@@ -79631,15 +79638,21 @@ exports.WorkspaceBugbotRulesRepository = void 0;
 const promises_1 = __nccwpck_require__(93977);
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_path_1 = __nccwpck_require__(49411);
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_util_1 = __nccwpck_require__(47261);
+const application_error_1 = __nccwpck_require__(75999);
 const RULE_FILE = (0, node_path_1.join)('.copilot', 'BUGBOT.md');
 const LEARNED_RULE_FILE = (0, node_path_1.join)('.copilot', 'BUGBOT.learned.md');
+const executeFile = (0, node_util_1.promisify)(node_child_process_1.execFile);
 class WorkspaceBugbotRulesRepository {
     constructor(root = process.cwd()) {
         this.root = (0, node_path_1.resolve)(root);
     }
-    async loadRules(changedFiles) {
+    async loadRules(changedFiles, revision) {
         const files = orderedRuleFiles(changedFiles);
         const canonicalRoot = await (0, promises_1.realpath)(this.root);
+        if (revision !== undefined)
+            return this.loadRevisionRules(files, revision, canonicalRoot);
         const rules = await Promise.all(files.map(async ({ path, scope }) => {
             const absolute = (0, node_path_1.resolve)(this.root, path);
             if (!isWithin(this.root, absolute))
@@ -79665,6 +79678,51 @@ class WorkspaceBugbotRulesRepository {
             }
         }));
         return rules.filter((rule) => rule !== undefined);
+    }
+    async loadRevisionRules(files, revision, root) {
+        if (!/^[a-f0-9]{40}$/u.test(revision)) {
+            throw new application_error_1.ApplicationError('workflow.failed', 'Review rules require a full verified commit identity.');
+        }
+        const selected = files.filter(file => isWithin(root, (0, node_path_1.resolve)(root, file.path)))
+            .map(file => ({ ...file, path: file.path.split(node_path_1.sep).join('/') }));
+        try {
+            const blobs = new Map();
+            for (const paths of ruleReadBatches(selected.map(file => file.path))) {
+                const tree = await this.readGit(root, ['ls-tree', '-z', revision, '--', ...paths]);
+                for (const entry of tree.split('\0')) {
+                    const match = /^(?:100644|100755) blob ([a-f0-9]{40})\t([\s\S]+)$/u.exec(entry);
+                    if (match)
+                        blobs.set(match[2], match[1]);
+                }
+            }
+            const rules = [];
+            for (const file of selected) {
+                const object = blobs.get(file.path);
+                if (object)
+                    rules.push({
+                        source: file.path,
+                        scope: file.scope,
+                        content: await this.readGit(root, ['cat-file', 'blob', object]),
+                    });
+            }
+            return rules;
+        }
+        catch {
+            throw new application_error_1.ApplicationError('workflow.failed', 'Review rules could not be read at the verified commit. Fetch that commit and check the fixed rule-source limits before retrying.');
+        }
+    }
+    async readGit(root, arguments_) {
+        const { stdout } = await executeFile('git', [
+            '--no-optional-locks', '--no-replace-objects', '--literal-pathspecs', ...arguments_,
+        ], {
+            cwd: root,
+            encoding: 'utf8',
+            windowsHide: true,
+            timeout: 30000,
+            maxBuffer: 2 * 1024 * 1024,
+            env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('GIT_'))),
+        });
+        return stdout;
     }
     async rememberRule(rule) {
         const normalizedRule = normalizeLearnedRule(rule);
@@ -79717,6 +79775,25 @@ class WorkspaceBugbotRulesRepository {
     }
 }
 exports.WorkspaceBugbotRulesRepository = WorkspaceBugbotRulesRepository;
+function ruleReadBatches(paths) {
+    const batches = [];
+    let current = [];
+    let characters = 0;
+    for (const path of paths) {
+        if (path.length > 12000)
+            throw new Error('Rule source path exceeds the fixed argument limit.');
+        if (current.length > 0 && (current.length === 64 || characters + path.length + 1 > 12000)) {
+            batches.push(current);
+            current = [];
+            characters = 0;
+        }
+        current.push(path);
+        characters += path.length + 1;
+    }
+    if (current.length > 0)
+        batches.push(current);
+    return batches;
+}
 function normalizeLearnedRule(rule) {
     const normalized = Array.from(rule.normalize('NFKC'))
         .map((character) => {

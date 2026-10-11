@@ -56,6 +56,7 @@ export function shouldTrackAgentActivity(
                     || isAgentReady(execution, 'findings')
                     || isAgentReady(execution, 'fixer'));
         case 'pull-request':
+            if (execution.pullRequest.action === 'ready_for_review') return isAgentReady(execution, 'reviewer');
             return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
                 && (isAgentReady(execution, 'reviewer')
                     || (['replace', 'append'].includes(execution.ai.getPullRequestDescriptionMode())

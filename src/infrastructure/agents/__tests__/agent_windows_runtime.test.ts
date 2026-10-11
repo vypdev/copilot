@@ -119,8 +119,8 @@ describe('isolated Windows agent runtime', () => {
             writeFileSync(file, 'dummy');
             expect(() => securePrivateInstalledAgent(root, file)).toThrow('escaped its private directory');
         } finally {
-            rmSync(root, { recursive: true, force: true });
-            rmSync(other, { recursive: true, force: true });
+            rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+            rmSync(other, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -138,7 +138,7 @@ describe('isolated Windows agent runtime', () => {
             expect(checks).toBe(1);
             expect(existsSync(candidate)).toBe(false);
         } finally {
-            rmSync(parent, { recursive: true, force: true });
+            rmSync(parent, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -157,7 +157,7 @@ describe('isolated Windows agent runtime', () => {
             expect(prepared).toBe(candidates[1]);
             expect(prepared).not.toBe(candidates[0]);
         } finally {
-            rmSync(parent, { recursive: true, force: true });
+            rmSync(parent, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -171,7 +171,7 @@ describe('isolated Windows agent runtime', () => {
             expect(securePrivateInstalledAgent(root, file)).toBe(file);
             expect(() => verifyWindowsAgentExecutableAcl(file)).not.toThrow();
         } finally {
-            rmSync(root, { recursive: true, force: true });
+            rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 90_000);
 
@@ -189,7 +189,7 @@ describe('isolated Windows agent runtime', () => {
             expect(securePrivateInstalledAgent(root, visible)).toBe(realpathSync(binary));
             expect(() => verifyWindowsAgentExecutableAcl(binary)).not.toThrow();
         } finally {
-            rmSync(root, { recursive: true, force: true });
+            rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 45_000);
 
@@ -202,8 +202,8 @@ describe('isolated Windows agent runtime', () => {
             expect(() => securePrivateInstalledAgent(root, join(root, 'bin', 'codex.exe')))
                 .toThrow('escaped its private directory');
         } finally {
-            rmSync(root, { recursive: true, force: true });
-            rmSync(outside, { recursive: true, force: true });
+            rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+            rmSync(outside, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 45_000);
 
@@ -227,7 +227,7 @@ describe('isolated Windows agent runtime', () => {
                 createHash('sha256').update('isolated installer module fixture').digest('hex'),
             );
         } finally {
-            rmSync(root, { recursive: true, force: true });
+            rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 75_000);
 
@@ -250,7 +250,7 @@ describe('isolated Windows agent runtime', () => {
             execFileSync('icacls.exe', [directory, '/grant', '*S-1-1-0:R'], { stdio: 'ignore' });
             expect(() => verifyWindowsRuntimePathPrivate(directory, true)).toThrow();
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -268,7 +268,7 @@ describe('isolated Windows agent runtime', () => {
             makeWindowsRuntimePathPrivate(artifact, false);
             expect(() => verifyWindowsRuntimePathPrivate(artifact, false)).not.toThrow();
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -285,7 +285,7 @@ describe('isolated Windows agent runtime', () => {
             execFileSync('icacls.exe', [artifact, '/grant', '*S-1-1-0:R'], { stdio: 'ignore' });
             expect(() => verifyWindowsRuntimePathPrivate(artifact, false)).toThrow();
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -300,7 +300,7 @@ describe('isolated Windows agent runtime', () => {
             expect(() => verifyWindowsAgentExecutableAcl(executable)).toThrow('writable by another principal');
             expect(() => validateAgentExecutableFile(executable)).toThrow('unsafe or unreadable Windows ACL');
         } finally {
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -317,8 +317,8 @@ describe('isolated Windows agent runtime', () => {
             ).status).toBe('missing');
             expect(existsSync(marker)).toBe(false);
         } finally {
-            rmSync(markerDirectory, { recursive: true, force: true });
-            rmSync(runtime.root, { recursive: true, force: true });
+            rmSync(markerDirectory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+            rmSync(runtime.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
@@ -333,7 +333,7 @@ describe('isolated Windows agent runtime', () => {
             await expect(runAgentCli(plan, 'literal & $(ignored) "quoted"')).resolves.toBe('literal & $(ignored) "quoted"');
             expect(existsSync(plan.runtimeDirectory)).toBe(false);
         } finally {
-            rmSync(fixture.root, { recursive: true, force: true });
+            rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 30_000);
 
@@ -377,7 +377,7 @@ describe('isolated Windows agent runtime', () => {
             });
             expect(result.stdout).toContain('codex-cli 0.156.1');
         } finally {
-            rmSync(fixture.root, { recursive: true, force: true });
+            rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 75_000);
 
@@ -390,7 +390,7 @@ describe('isolated Windows agent runtime', () => {
             await expect(runAgentCli(plan, 'fixture prompt')).rejects.toMatchObject({ category: 'timeout' });
             expect(existsSync(plan.runtimeDirectory)).toBe(false);
         } finally {
-            rmSync(fixture.root, { recursive: true, force: true });
+            rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 30_000);
 
@@ -432,7 +432,7 @@ describe('isolated Windows agent runtime', () => {
                 try { execFileSync('taskkill.exe', ['/PID', String(descendantPid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* Already gone. */ }
             }
             rmSync(pidFile, { force: true });
-            rmSync(fixture.root, { recursive: true, force: true });
+            rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     }, 30_000);
 });

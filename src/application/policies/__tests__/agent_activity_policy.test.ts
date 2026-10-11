@@ -22,6 +22,17 @@ function execution(overrides: Record<string, unknown> = {}): any {
 }
 
 describe('agent activity policy', () => {
+    it('tracks ready-for-review activity only for an available reviewer', () => {
+        const ready = execution({
+            eventName: 'pull_request',
+            pullRequest: { number: 12, action: 'ready_for_review', commentBody: '' },
+        });
+        expect(shouldTrackAgentActivity(ready, 'pull-request')).toBe(true);
+        ready.ai.getAgentConfiguration = jest.fn((task: string) => ({ model: task === 'planner' ? 'model' : '' }));
+        ready.ai.getPullRequestDescriptionMode = jest.fn(() => 'replace');
+        expect(shouldTrackAgentActivity(ready, 'pull-request')).toBe(false);
+    });
+
     it('tracks issue analysis only for issue open or description changes', () => {
         expect(shouldTrackAgentActivity(execution(), 'issue')).toBe(true);
         expect(shouldTrackAgentActivity(execution({ issue: { number: 7, opened: false, descriptionEdited: false } }), 'issue')).toBe(false);
