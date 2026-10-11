@@ -37214,6 +37214,9 @@ function buildCodexExecutionPolicy(input) {
         '--model', configuration.model,
         '--config', `model_provider=${tomlString(configuration.modelProvider || 'openai')}`,
         '--config', 'approval_policy="never"',
+        // Ignoring user configuration also drops Windows' sandbox selector.
+        // Select the isolated backend explicitly; never fall back to full access.
+        '--config', 'windows.sandbox="elevated"',
         '--config', 'web_search="disabled"',
         '--config', 'features.multi_agent=false',
         '--config', 'features.skill_mcp_dependency_install=false',
@@ -78451,7 +78454,7 @@ class ProgressDiffRepository {
     }
     async getDiff(owner, repository, baseSha, headSha, token) {
         if (![baseSha, headSha].every(sha => /^[a-f0-9]{40}$/u.test(sha)))
-            throw unavailable();
+            throw unavailable('workflow.stale');
         const { data } = await this.client.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: baseSha, head: headSha, per_page: 1, page: 1 });
         // GitHub supplies at most 300 comparison files. At that boundary, completeness is unknown.
         if (!Array.isArray(data.files) || data.files.length >= MAX_COMPARISON_FILES)
@@ -78464,21 +78467,23 @@ class ProgressDiffRepository {
                 || ![file.additions, file.deletions].every(value => Number.isSafeInteger(value) && value >= 0))
                 throw unavailable();
             paths.add(path);
-            const generated = path.startsWith('build/');
+            const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
             if (!generated && (file.additions > 0 || file.deletions > 0) && (typeof file.patch !== 'string' || !file.patch))
                 throw unavailable();
             return { path, status: file.status, additions: file.additions, deletions: file.deletions,
                 ...(generated ? { evidence: 'generated-metadata-only' } : { patch: file.patch ?? '' }) };
         });
         const evidence = JSON.stringify({ kind: 'pinned-branch-comparison', baseSha, headSha, changes });
-        if (Buffer.byteLength(evidence, 'utf8') > MAX_EVIDENCE_BYTES || (baseSha === headSha && changes.length > 0))
+        if (Buffer.byteLength(evidence, 'utf8') > MAX_EVIDENCE_BYTES)
             throw unavailable();
+        if (baseSha === headSha && changes.length > 0)
+            throw unavailable('workflow.stale');
         return Object.freeze({ baseSha, headSha, evidence });
     }
 }
 exports.ProgressDiffRepository = ProgressDiffRepository;
-function unavailable() {
-    return new application_error_1.ApplicationError('workflow.stale', 'A complete bounded branch comparison is unavailable. Progress was not assessed and existing state was retained.');
+function unavailable(code = 'provider.unavailable') {
+    return new application_error_1.ApplicationError(code, 'A complete bounded branch comparison is unavailable. Progress was not assessed and existing state was retained.');
 }
 
 

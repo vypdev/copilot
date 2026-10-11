@@ -1757,6 +1757,7 @@
         "src/application/policies/agent_configuration_validation_policy.ts",
         "src/application/policies/setup_configuration_plan.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
+        "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
         "src/application/policies/agent_execution/strict_output_schema_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/progress_response.ts",

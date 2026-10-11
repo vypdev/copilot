@@ -30,6 +30,16 @@ describe('pinned bounded progress diff', () => {
         expect(JSON.parse(result.evidence).changes).toEqual([{ path: 'build/github_action/index.js', status: 'modified', additions: 1, deletions: 1, evidence: 'generated-metadata-only' }]);
         expect(result.evidence).not.toContain('PRIVATE_GENERATED_PATCH');
     });
+    it('retains generated specification index facts without its oversized patch', async () => {
+        const f = fixture(); Object.assign(f.file, { filename: 'specs/CATALOG.md', patch: 'PRIVATE_GENERATED_INDEX'.repeat(30_000) });
+        const result = await f.read();
+        expect(JSON.parse(result.evidence).changes[0]).toEqual({ path: 'specs/CATALOG.md', status: 'modified', additions: 1, deletions: 1, evidence: 'generated-metadata-only' });
+        expect(result.evidence).not.toContain('PRIVATE_GENERATED_INDEX');
+    });
+    it('requires a complete source patch for the editable specification catalog', async () => {
+        const f = fixture(); Object.assign(f.file, { filename: 'specs/catalog.json', patch: undefined });
+        await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });
+    });
     it('accepts a proven empty same-object comparison', async () => {
         const f = fixture(); f.data.files = []; expect(JSON.parse((await f.read(base, base)).evidence).changes).toEqual([]);
     });
@@ -53,12 +63,12 @@ describe('pinned bounded progress diff', () => {
         if (scenario === 'empty path') f.file.filename = '';
         if (scenario === 'non-string path') f.file.filename = 42 as never;
         if (scenario === 'oversized filename') f.file.filename = 'x'.repeat(1025);
-        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: 'workflow.stale' });
+        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : 'provider.unavailable' });
     });
     it.each([undefined, -1, 0.5])('rejects unproven numeric file facts %s', async additions => {
-        const f = fixture(); Object.assign(f.file, { additions }); await expect(f.read()).rejects.toMatchObject({ code: 'workflow.stale' });
+        const f = fixture(); Object.assign(f.file, { additions }); await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });
     });
     it.each(['/absolute', '../outside', 'src\\outside', 'src/\0injected'])('rejects unsafe comparison path %s', async filename => {
-        const f = fixture(); f.file.filename = filename; await expect(f.read()).rejects.toMatchObject({ code: 'workflow.stale' });
+        const f = fixture(); f.file.filename = filename; await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });
     });
 });

@@ -1032,3 +1032,65 @@ and authentication isolation are unchanged. Five new invocation contracts check
 trusted import ordering, literal escaping, unsafe owner refusal, complete ancestor
 batches and timeout classification. Actual hosted/native Windows smoke proof is
 pending and must be recorded independently; diagnostic success is not acceptance.
+
+Native Windows run 38156569251 on source fe3e7ed72f454f5db54059636dddd26ec5fbef1a
+passed all five isolated runtime suites (95 passed, eight platform skips), then
+all 565 full suites (7,421 passed, 20 platform skips), every coverage budget and
+the documentation/contract validators. Its overall job was cancelled at the
+30-minute deadline during setup-node's post-job pnpm cache archive, after those
+checks had completed. This proves the descriptor repair on the native runner,
+but does not count as an end-to-end successful job or hosted Windows acceptance.
+
+Persistent self-hosted smoke runners now disable dependency-cache backup and
+automatic package-manager caching, while hosted pnpm caching is unchanged.
+The complete test path, worker memory bounds and 30-minute job deadline remain
+unchanged. Two workflow contracts prevent explicit or automatic cache backup
+from reappearing. A fresh completed native run remains required.
+
+### Hosted Windows shell-fixture correction (2026-10-11)
+
+Hosted run `38159744824`, head `c62f303a`, passed 92 isolated runtime cases but failed the three native shell hash fixtures at their existing 15-second subprocess boundary. All ACL probes passed. Native Windows run `38159821530` subsequently passed full coverage and cleanup after the cache-export correction; that independent success does not certify hosted startup.
+
+The shell fixtures now disable automatic module discovery and import the absolute system `Microsoft.PowerShell.Utility.psd1` manifest before their hash operation, using .NET path construction. They still exercise the actual private parent and Codex shell environments, both presence/absence of host application data, correct hash-module operation, checkout cleanliness, private-directory ACLs, cleanup and the unchanged 15-second boundary. They neither inherit host profiles nor require ambient module caches. This measures bounded startup with an explicitly selected system module; it does not promise that arbitrary first-time cmdlet discovery fits the same boundary. Fresh hosted acceptance remains pending.
+
+Cache-free native Windows job `114530212856` finished successfully, including all post steps, on master `45d8aeeb`. Ubuntu also completed. The macOS job lost runner communication during build and supplied no final log, so the run is not classified as cross-platform success; recovery and a fresh macOS execution are required.
+
+### Explicit Windows sandbox selection and fresh diagnostics (2026-10-11)
+
+Actual `/copilot fix` run `38162629567` and two read-only diagnosis commands on
+Windows could not execute shell tools. Explicit `login=false` did not repair the
+rejection. The official Codex 0.162.1 implementation returns a forbidden decision
+when Windows filesystem restrictions have no selected backend and approvals are
+disabled. Ignoring user configuration removes a user-supplied backend selection.
+This supports a configuration cause, but does not prove successful native agent
+access on these runners.
+
+The hermetic Codex policy MUST select `windows.sandbox="elevated"` explicitly,
+retain its capability's read-only/workspace-write scope, never load operator rules
+or configuration, and retain network denial, empty extra writable roots and
+disabled approvals. Runner administrators own provisioning; the Action adds no
+setup invocation or full-access recovery. Two distinct policy cases exercise
+read-only and fixer authority; live shell access and verified edit/push remain
+required acceptance evidence. Primary sources:
+[exact Codex exec policy](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/core/src/exec_policy.rs)
+and [Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox).
+
+Hosted run `38164031391` still failed three hash fixtures, now in approximately
+five seconds rather than at their timeout. Their failure assertions now expose
+only closed diagnostic tokens (timeout, command-not-found, or failed), never raw
+stderr. Two additional fixed, read-only startup probes compare the hash with an
+explicit system Utility manifest against Utility plus Management. The probe count
+is eight and every process remains capped at 20 seconds; fixture subprocesses
+remain capped at 15 seconds. No probe result is counted as a unit test or native
+agent acceptance. A successful diagnostic job can still contain failed probes.
+
+
+Hosted probe run `38165897450` on `c3394562` established the remaining hash
+fixture cause: Utility alone returned `command-not-found` in 445 ms; explicit
+Utility plus Management returned `ready` in 1083 ms. The same immutable system
+file and environment were used. The three fixtures now import both absolute
+system manifests while retaining disabled discovery and their 15-second bound.
+Fresh hosted smoke remains required; successful timing probes do not certify
+that smoke or the authenticated agent. The actual agent diagnosis after explicit
+backend selection reported `open sandbox setup mutex`; this is a separate runner
+provisioning failure and leaves actual Windows shell/edit acceptance open.

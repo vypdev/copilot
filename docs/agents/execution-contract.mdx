@@ -75,3 +75,11 @@ probe still uses its fixed minimal environment, complete file/ancestor batch,
 DACL policy and original timeout. No profile, credential, ambient module path
 or writable repository cache is inherited. Hosted and service-runner fixtures
 remain required to establish that a published repair works on each platform.
+
+Progress assessments receive a complete comparison pinned to the repository's
+base and source commits. Generated `build/` outputs and the exact generated
+`specs/CATALOG.md` index contribute file facts only; the editable catalog JSON
+still contributes its full source patch. These generated facts never certify a
+build or test. Comparisons exceeding the existing 256,000-byte evidence budget
+remain unavailable and preserve progress state. That condition does not imply
+that the branch changed during the invocation.

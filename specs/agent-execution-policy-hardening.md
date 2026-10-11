@@ -331,6 +331,13 @@ Managed argv includes `exec`, `--strict-config`, `--ignore-user-config`,
 explicit model/provider/effort, and terminal `-`. Managed configuration sets
 `approval_policy="never"`; the accepted CLI version does not expose an
 equivalent `exec` flag.
+Because ignoring user configuration also removes Windows backend selection,
+managed configuration MUST select `windows.sandbox="elevated"`. This backend
+still enforces the capability's sandbox scope and network denial; it does not
+give commands administrator authority. Runner administrators own prior setup,
+and Copilot MUST NOT recover by invoking setup, loading operator configuration,
+or selecting full access. Two independent read-only/fixer policy cases preserve
+these boundaries. Native effective-access acceptance remains open until observed.
 Structured roles also receive a managed `--output-schema` file and always undergo
 local validation. Before Codex can start, the provider policy validates that the
 schema uses the strict native subset: the root is an object, every object lists
@@ -560,7 +567,7 @@ runtime identity and fixed-plan checks before spawn.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **30 distinct cases**; parameterized provider/role rows
+This SDD owns at least **32 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -568,12 +575,12 @@ count separately only when authority/argv differs.
 | Plan/executable pure policy | 4 | exhaustive roles/providers, removed/unknown inputs |
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
-| Provider adapters | 8 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, fail-closed alternatives, and fixed secret-free child environment for read-only and fixer roles |
+| Provider adapters | 10 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, fail-closed alternatives, fixed secret-free child environment, and explicit isolated Windows backend for read-only and fixer roles |
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
-| **Total** | **30** | no double counting |
+| **Total** | **32** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -653,7 +660,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
       secrets, Git, MCP/plugins/subagents, and persistence boundaries.
 - [x] Provisioning, preflight, setup doctor, workflow inputs, docs, and manifest
       agree within their explicit runtime versus configuration responsibilities.
-- [x] At least 30 distinct automated cases and all repository coverage/architecture/security gates pass.
+- [x] At least 32 distinct automated cases and all repository coverage/architecture/security gates pass.
 - [x] Removed command inputs fail negative fixtures and no legacy code ships.
 - [x] No fail-open path, raw spawn, unknown flag, ambient environment, temporary
       waiver, or unresolved provider decision remains.

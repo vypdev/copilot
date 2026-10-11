@@ -751,6 +751,24 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
   });
 
+  it('rejects explicit dependency-cache backup on persistent smoke runners', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const node = workflow.jobs['setup-self-hosted-codex-smoke'].steps.find((step: { uses?: string }) => step.uses === 'actions/setup-node@v7');
+    node.with.cache = 'pnpm';
+    expect(() => assertRunner(file, workflow)).toThrow('disable dependency-cache backup');
+  });
+
+  it('rejects automatic cache detection on persistent runners while retaining hosted pnpm caching', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const node = workflow.jobs['setup-self-hosted-codex-smoke'].steps.find((step: { uses?: string }) => step.uses === 'actions/setup-node@v7');
+    delete node.with['package-manager-cache'];
+    expect(() => assertRunner(file, workflow)).toThrow('disable dependency-cache backup');
+    const hosted = workflow.jobs['setup-platform-smoke'].steps.find((step: { uses?: string }) => step.uses === 'actions/setup-node@v7');
+    expect(hosted.with.cache).toBe('pnpm');
+  });
+
   it('requires isolated fixtures on all three manually dispatched codex runner platforms', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

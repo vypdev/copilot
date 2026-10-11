@@ -391,6 +391,10 @@ function assertRunner(file, workflow) {
         if (pnpmSetup?.with?.dest !== ISOLATED_PNPM_DEST) {
           throw new Error(`${relativeFile} must isolate self-hosted pnpm installation by job.`);
         }
+        const nodeSetup = steps.find(step => typeof step?.uses === 'string' && step.uses.startsWith('actions/setup-node@'));
+        if (nodeSetup?.with?.cache !== undefined || nodeSetup?.with?.['package-manager-cache'] !== false) {
+          throw new Error(`${relativeFile} must disable dependency-cache backup on persistent self-hosted smoke runners.`);
+        }
         assertPlatformCoverageAndValidators(relativeFile, job);
         const serviceCoverage = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
         if (serviceCoverage?.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== '1') {
