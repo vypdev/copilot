@@ -50,7 +50,7 @@ describe('CommentLanguageTranslationWorkflow', () => {
     });
 
     it.each([
-        'word '.repeat(21).trim(),
+        'word '.repeat(410).trim(),
         'x'.repeat(2_000),
     ])('rejects translations that exceed the original command grammar', async adaptedText => {
         const query = jest.fn().mockResolvedValue({

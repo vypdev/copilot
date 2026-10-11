@@ -365,7 +365,8 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Implementation receipt and truthful outcome | 27 | Nine orchestration cases and eighteen authority/localization/rendering cases; no success inferred from agent prose or an incomplete commit result |
 | Semantic agent failure preservation | 3 | Timeout, cancellation and agent failure retain their exact code and correlation through the comment route |
 | Untracked-directory mutation boundary | 2 | Real Git reveals nested runtime/sensitive paths and rejects 101 files in one new directory before commit |
-| **Total** | **198** | no double counting |
+| Bounded prose requests | 10 | Eight established prose/rule commands accept more than twenty words; implement and remember still reject oversized character input |
+| **Total** | **208** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -536,3 +537,14 @@ correlation. Plain unknown exceptions still map to the safe workflow fallback.
 Three route cases cover timeout, cancellation and agent failure; the runtime SDD
 owns the separate CLI-to-semantic mapping cases. A timeout publishes no success
 receipt and does not reach commit/push. The existing bounded runtime stays fixed.
+
+### Live prose request parsing (2026-10-11)
+
+Dogfooding implementation requests in issues #462 and #463 were rejected by
+the shared twenty-argument cap despite having only 770 and 883 UTF-8 bytes.
+Natural-language arguments for the established adaptable-prose commands and
+remember MUST remain bounded by the existing 2,000-character command limit;
+they MUST NOT be rejected merely for containing more than twenty words.
+Structured commands retain the twenty-argument limit, including fix/dismiss
+finding identifiers. Parsing this prose does not grant mutation authority or
+change branch, sandbox, verification or publication rules.

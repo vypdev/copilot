@@ -80674,7 +80674,9 @@ function parseCopilotCommand(raw) {
     if (!argumentsList) {
         return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
     }
-    if (argumentsList.length > MAX_ARGUMENTS) {
+    if (argumentsList.length > MAX_ARGUMENTS
+        && !copilotCommandAcceptsAdaptableProse(name)
+        && name !== 'remember') {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
