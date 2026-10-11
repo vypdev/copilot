@@ -132,3 +132,19 @@ describe("commitAutofixAndResolveFindings", () => {
     expect(logInfo).toHaveBeenCalledWith(expect.stringContaining("remain open until a fresh review"));
   });
 });
+
+it.each([true, false])('emits typed completion only after a successful trusted push workflow (committed=%s)', async committed => {
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed });
+    const completed = jest.fn();
+    await commitAutofixAndResolveFindings({} as never, { targetFindingIds: [] } as never,
+        [{ success: true, payload: {} } as Result], {} as never, completed);
+    expect(completed).toHaveBeenCalledTimes(1);
+    expect(completed).toHaveBeenCalledWith(committed ? 'changes-pushed' : 'no-changes');
+});
+it('never emits completion after a failed trusted push workflow', async () => {
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: false, committed: false, error: 'failed' });
+    const completed = jest.fn();
+    const errors = await commitAutofixAndResolveFindings({} as never, { targetFindingIds: [] } as never,
+        [{ success: true, payload: {} } as Result], {} as never, completed);
+    expect(errors).toHaveLength(1); expect(completed).not.toHaveBeenCalled();
+});

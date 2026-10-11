@@ -118,6 +118,7 @@ describe("main run route composition root", () => {
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 14 }, () => expect.anything()),
       mockContext,
+      expect.objectContaining({ serverOrigin: 'https://github.com', readComments: expect.any(Function) }),
     );
   });
 
@@ -129,6 +130,7 @@ describe("main run route composition root", () => {
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 13 }, () => expect.anything()),
       mockContext,
+      expect.objectContaining({ serverOrigin: 'https://github.com', readComments: expect.any(Function) }),
     );
   });
 

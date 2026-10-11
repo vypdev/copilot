@@ -1,3 +1,7 @@
+import { invalidCommentCommandResult } from './comment_automation_command_workflow';
+import { parseCopilotCommand } from '../../domain/copilot_command';
+import { readCopilotHistory } from './read_copilot_history_workflow';
+import type { CopilotHistoryReadPort } from '../ports/copilot_history_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -46,9 +50,19 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly historyReadPort?: CopilotHistoryReadPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
+    const historyCommand = parseCopilotCommand(param.pullRequest.commentBody);
+    if (historyCommand.kind === 'invalid') return [invalidCommentCommandResult(this.taskId, historyCommand.reason)];
+    if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+      return [await readCopilotHistory({ owner: param.owner, repository: param.repo,
+        target: { kind: 'pr', number: param.pullRequest.number }, queryId: param.pullRequest.commentId,
+        botLogin: param.tokenUser ?? '', locale: param.locale.pullRequest,
+        generalConversation: param.eventName === 'issue_comment',
+      }, this.historyReadPort)];
+    }
     const context = projectCommentAutomationContext(
       param,
       projectPullRequestCommentLanguageRequest(param),

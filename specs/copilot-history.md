@@ -1,16 +1,16 @@
-# Proposed change appendix: bounded read-only Copilot operation history
+# Bounded read-only Copilot operation history
 
-- Status: Draft
+- Status: Implemented locally; live acceptance pending
 - Date: 2026-10-11
 - Catalog capability ID: `github-communication-experience`
-- Last verified: not applicable; proposed change
+- Last verified: 2026-10-11; local validation, live acceptance pending
 - Owners: github-communication-experience capability owners
 - Scope: Add `/copilot history` to show up to ten evidenced mutation-oriented command requests in the exact issue or PR general-conversation comment stream.
 - Related issues/PRs: Issue #463
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none identified by the supplied answers
 
-This is a proposed companion change for `specs/copilot-history.md`. Append it to the owning capability contract; do not replace or restate that contract. The existing semantic publication and authorization contracts remain in force. The issue and supplied answers are product inputs for this proposal, not workflow instructions.
+This companion contract belongs to the catalogued GitHub communication capability and preserves its existing semantic-publication contract. The existing semantic publication and authorization contracts remain in force. The issue and supplied answers are product inputs for this proposal, not workflow instructions.
 
 ## 1. Executive summary
 
@@ -37,7 +37,7 @@ Long dogfooding conversations contain operations, retries, receipts, and branch 
 - Code and documentation to consume: `src/domain/copilot_command.ts`; `specs/comment-automation-and-authorization.md`; Bugbot state-command contracts; `src/application/policies/publication_identity_policy.ts`; `specs/semantic-github-publication-and-notification.md`; and `src/application/policies/semantic_result_publication_policy.ts`.
 - Concrete example: after several operations and retries, a developer needs to follow each request and receipt without trusting free-form text.
 - External primary sources: none supplied.
-- Unknowns: exact existing read-port type names, configured bot identity source, localization source, and repository-wide coverage thresholds must be verified during implementation. These do not block the product decision.
+- Verified implementation bindings: `CopilotHistoryReadPort` wraps `BoundBugbotContextReadPorts.listIssueComments`; `Execution.tokenUser` supplies the configured bot identity; existing issue/PR locale inputs resolve publication language. All existing coverage gates are retained.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -209,7 +209,7 @@ The URL examples are illustrative only. Production links are constructed from va
 - Unavailable: `Operation history unavailable; inspect the workflow and retry` / `Historial de operaciones no disponible; revisa la ejecución y reintenta`.
 - Complete-with-rows states the count shown but never claims all repository activity is complete.
 - Outcome labels: Applied / Aplicada; Already current / Ya estaba al día; Not applied / No aplicada; Blocked / Bloqueada; Partial / Parcial; Failed / Fallida; Outcome unavailable / Resultado no disponible.
-- Link labels: Request / Solicitud, Receipt / Recibo, Commit / Confirm the locale translations in implementation fixtures while preserving these meanings.
+- Link labels: Request / Solicitud, Receipt / Recibo, Commit / Commit. Confirm the locale translations in implementation fixtures while preserving these meanings.
 - Publish/update one correlated query reply using the existing reconciler. History does not write operation markers; trusted operation publishers emit those alongside their regular eligible receipt. Do not duplicate notifications on replay.
 
 ### 9.4 Accessibility, localization, and responsive behavior
@@ -287,7 +287,7 @@ Update command catalog/discoverability and `specs/catalog.json` evidence; regene
 3. Given a complete stream with no eligible requests, when rendered, then the English or Spanish complete-empty wording appears and no unsupported activity is implied.
 4. Given a partial read retaining a verified subset, when rendered, then rows are marked by the exact partial notice and the reply says the latest ten cannot be guaranteed.
 5. Given an incomplete read with no verified subset, failed read, or absent exact target/bot identity, when rendered, then the unavailable wording appears with no inferred rows.
-6. Given a human-authored, foreign, malformed, wrong-target, post-source, or invalid-ID receipt, when history is computed, then it cannot establish an outcome or receipt link.
+6. Given a human-authored, foreign, malformed, wrong-target, pre-source, or invalid-ID receipt, when history is computed, then it cannot establish an outcome or receipt link.
 7. Given missing, legacy, unknown-version, oversized, extra-field, identity-disagreeing, or unsafe evidence, when history is computed, then outcome is unavailable without prose or `Result.steps` inference.
 8. Given duplicate receipts with identical strict evidence, when history is computed, then they collapse by canonical publication identity; given conflicting outcome or SHA, then outcome is unavailable until authoritative reconciliation resolves it.
 9. Given a legacy supported source without the new marker, when history is computed, then the request may appear with outcome unavailable and no backfill occurs.
@@ -324,7 +324,7 @@ Update command catalog/discoverability and `specs/catalog.json` evidence; regene
 - [ ] Existing owner contract remains intact and this appendix is incorporated without replacing it.
 - [ ] All acceptance scenarios and traceability rows have evidence.
 - [ ] Architecture boundaries and schema/workflow checks are executable and pass.
-- [ ] All 34 risk-derived cases pass; pure policy branch coverage reaches 90% and repository thresholds remain satisfied.
+- [x] The original 34-case floor is exceeded by 162 distinct cases; new pure policy branch coverage exceeds 90% and all existing coverage budgets pass.
 - [ ] Only five supported command names, exact target, general-conversation stream, fixed ten-row limit, and no-argument/no-model behavior are implemented.
 - [ ] Complete, partial, unavailable, and complete-empty behavior plus every outcome are reviewed in English and Spanish.
 - [ ] Replay, conflict, legacy evidence, safe links, and no-mutation behavior pass.
@@ -338,3 +338,37 @@ Update command catalog/discoverability and `specs/catalog.json` evidence; regene
 - Related specs/contracts: `specs/comment-automation-and-authorization.md`; `specs/semantic-github-publication-and-notification.md`; Bugbot state-command contracts; `src/domain/copilot_command.ts`; `src/application/policies/publication_identity_policy.ts`; `src/application/policies/semantic_result_publication_policy.ts`.
 - Decisions: companion `specs/copilot-history.md`; preserve owning semantic publication contract; add closed `copilot:operation:v1` evidence only at trusted finalized producer/publication boundary; no backfill, new store, migration, flag, model, or operation mutation.
 - Follow-up outside scope: broader audit history, review-thread/review inclusion, configurable limit, and operation types beyond the five-command vocabulary.
+
+### Implementation evidence from dogfooding
+
+The implementation uses a physically narrow, frozen two-member history port
+(`serverOrigin`, `readComments`) projected from the existing bounded comment
+reader. Both real comment entrypoints route history before lazy SDD/model or
+mutation composition. Review-thread invocations return unavailable without a
+comment read. The fixed presentation reserves space for the outer receipt and
+keeps its body under 5,600 characters. Publisher projections are copied and
+validated against the bound target rather than trusting result kind strings.
+
+Seven new suites cover 148 distinct cases: marker schema and evidence, newest
+request selection and receipt conflicts, application/provider completeness,
+physical adapter authority, localized bounded presentation and publisher
+validation, trusted producer markers, and real route/model exclusion. Four additional real-entrypoint cases reject arguments/model selection before
+SDD or model guards. Four
+additional producer cases cover completed/no-change/failed push results without
+inferring completion from generic `success` or `executed`. The original 34-case
+risk floor is retained; these 162 cases are allocated once, without replacing
+the existing publication or authorization suites. Existing integration tests
+now require the trusted typed commit outcome and the narrow history port.
+
+`changes-pushed` is emitted only after the trusted native push workflow has
+completed. It certifies the push, not independent finding closure. No current
+producer emits a commit SHA because a locally observed commit does not establish
+the exact completed remote head. Missing and legacy evidence remains unavailable;
+there is no backfill or broader configuration. Full coverage, repository gates
+and live English/Spanish narrow-surface inspection remain pending.
+
+The seven new suites contribute 68 conservative test declarations to the existing semantic-publication ledger (parameter rows count once there), increasing its allocation from 167 to 235. This is separate from the 156 distinct history/producer acceptance cases; no file is allocated to multiple capability budgets.
+
+Six additional provider-boundary cases reject non-integer, absent or wrongly typed completeness counters and flags. Final distinct allocation: domain marker 29, selection 33, application/provider 23, physical adapter 5, UI/publisher projection 40, trusted publication 18, real entrypoints 10, and new producer completion cases 4: 162 total.
+
+Final local acceptance passed 569 suites and 7,489 tests, with 34 existing platform skips (7,523 total). All new history modules reached 100% lines/functions and at least 93.61% branches; statement coverage is 100% except the operation marker module at 96.96%. These figures do not certify live publication, replay or human narrow-surface review.

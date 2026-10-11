@@ -167,7 +167,8 @@ describe('implementation conversation branch authority', () => {
 
   it.each([true, false])('confirms a verified implementation with committed=%s', async committed => {
     const h = fixture();
-    mockCommitUserRequest.mockResolvedValue([new Result({ id: 'DoUserRequestCommitAndPush', success: true, executed: committed })]);
+    mockCommitUserRequest.mockResolvedValue([new Result({ id: 'DoUserRequestCommitAndPush', success: true, executed: committed,
+      payload: { commitOutcome: committed ? 'changes-pushed' : 'no-changes' } })]);
     const results = await h.run();
     expect(results.at(-1)).toMatchObject({ id: 'CommentAutomation.ImplementationReply', success: true, executed: true,
       payload: { publication: { kind: 'implementation-result', outcome: committed ? 'changes-pushed' : 'no-changes', branch: h.branch } } });

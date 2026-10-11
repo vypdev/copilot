@@ -270,3 +270,33 @@ The shared reply publisher adds the same current hidden identity used by other
 correlated replies; the welcome text embeds no separate marker.
 
 See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.
+
+### Recent operation history
+
+`/copilot history` shows at most ten supported requests in this issue or PR's
+**general conversation**, newest request first. It accepts no arguments or model
+selection. It does not include review threads or reviews and does not call an
+agent. Each row links to the request and, when validated, its trusted receipt.
+Supported operations are `sync-branch`, `remember`, `dismiss`, `implement`, and
+`fix`; the query does not perform any of them.
+
+Outcomes require matching structured receipts from the configured bot. Earlier
+replies, missing receipts and conflicting evidence remain unavailable. Applied
+means the particular operation completed; a pushed fix still needs a fresh
+review. It does not mean the issue is complete or the PR is ready to merge.
+A Commit link requires independently verified evidence for the exact remote SHA;
+current producers omit it when that proof is absent.
+
+For example, a complete English reply can show `sync-branch | Already current`
+and links named `Request` and `Receipt`. The same evidence in Spanish uses
+`sync-branch | Ya estaba al día` with `Solicitud` and `Recibo`. A complete empty
+reply explicitly says no supported requests were found in the inspected stream.
+Partial coverage warns that the latest ten operations cannot be guaranteed.
+Unavailable coverage means the read or identity could not be verified, and does
+not prove an empty history or a failed operation. Retry `/copilot history` after
+checking the workflow's comment-read access. No new setting, permission or data
+migration is required; older conversations are not backfilled.
+
+A retried webhook for the same history request reuses its correlated response.
+Post a new `/copilot history` comment to take a new snapshot. The command preserves
+lifecycle labels and branches and never executes command text found in comments.

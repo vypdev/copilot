@@ -40523,6 +40523,166 @@ function neutralizeQuotedOriginal(value) {
 
 /***/ }),
 
+/***/ 14335:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HISTORY_UNAVAILABLE = void 0;
+exports.selectCopilotHistory = selectCopilotHistory;
+const copilot_command_1 = __nccwpck_require__(11771);
+const copilot_operation_1 = __nccwpck_require__(40221);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+exports.HISTORY_UNAVAILABLE = Object.freeze({ kind: 'history-command', state: 'unavailable', rows: Object.freeze([]) });
+const KEYS = Object.freeze({
+    'sync-branch': ['branch-sync-result', 'application-error'], remember: ['state-command-result', 'application-error'],
+    dismiss: ['state-command-result', 'application-error'], implement: ['implementation-result', 'application-error'],
+    fix: ['fix-result', 'application-error'],
+});
+function selectCopilotHistory(input) {
+    if (!/^(?:issue|pr):[1-9]\d*$/u.test(input.target) || !positive(Number(input.target.split(':')[1])) || !positive(input.queryId)
+        || !/^[A-Za-z0-9-]{1,100}(?:\[bot\])?$/u.test(input.botLogin) || input.comments.length > 1000)
+        return exports.HISTORY_UNAVAILABLE;
+    const seen = new Set();
+    if (input.comments.some(comment => !positive(comment.id) || seen.has(comment.id) || !seen.add(comment.id)))
+        return exports.HISTORY_UNAVAILABLE;
+    if (!input.complete && input.comments.length === 0)
+        return exports.HISTORY_UNAVAILABLE;
+    const rows = input.comments.flatMap(source => {
+        if (source.id >= input.queryId || source.automated || !source.author || (0, github_user_policy_1.githubUsersMatch)(source.author, input.botLogin))
+            return [];
+        const parsed = (0, copilot_command_1.parseCopilotCommand)(source.body);
+        if (parsed.kind !== 'command' || !(0, copilot_operation_1.isHistoryCommand)(parsed.command.name))
+            return [];
+        const command = parsed.command.name;
+        const receipts = input.comments.flatMap(comment => {
+            if (comment.id <= source.id || !(0, github_user_policy_1.githubUsersMatch)(comment.author, input.botLogin) || !comment.body)
+                return [];
+            const marker = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
+            if (!marker || marker.target !== input.target || marker.correlationId !== `comment:${source.id}`
+                || !KEYS[command].includes(marker.messageKey)
+                || !comment.body.startsWith((0, publication_identity_policy_1.buildPublicationReplyMarker)(marker))
+                || comment.body.split('<!-- copilot:reply').length !== 2)
+                return [];
+            const evidence = (0, copilot_operation_1.readOperationEvidence)(comment.body);
+            const compatible = marker.messageKey === 'application-error'
+                ? ['blocked', 'partial', 'failed', 'unavailable'].includes(evidence?.outcome ?? '')
+                : ['applied', 'already-current', 'not-applied'].includes(evidence?.outcome ?? '');
+            return [{ id: comment.id, evidence: compatible ? evidence : undefined, legacy: !comment.body.includes('<!-- copilot:operation:') }];
+        });
+        // A malformed or legacy receipt cannot establish the effect; disagreeing receipts cannot be selected.
+        const qualified = receipts.filter(receipt => receipt.evidence?.target === input.target
+            && receipt.evidence.correlationId === `comment:${source.id}` && receipt.evidence.command === command);
+        const evidence = qualified[0]?.evidence;
+        const agreement = evidence && qualified.length === receipts.length
+            && qualified.every(receipt => receipt.evidence?.outcome === evidence.outcome && receipt.evidence?.commitSha === evidence.commitSha);
+        return [Object.freeze({ sourceId: source.id, command, outcome: agreement ? evidence.outcome : 'unavailable',
+                ...(!agreement && receipts.length === 1 && receipts[0].legacy ? { receiptId: receipts[0].id } : {}),
+                ...(agreement ? { receiptId: Math.min(...qualified.map(receipt => receipt.id)),
+                    ...(evidence.commitSha ? { commitSha: evidence.commitSha } : {}) } : {}) })];
+    }).sort((a, b) => b.sourceId - a.sourceId).slice(0, 10);
+    return Object.freeze({ kind: 'history-command', state: input.complete ? 'complete' : 'partial', rows: Object.freeze(rows) });
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+
+
+/***/ }),
+
+/***/ 55507:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderCopilotHistory = renderCopilotHistory;
+/** Links come from a bound server/repository and validated IDs, never conversation URLs. */
+function renderCopilotHistory(view, catalog) {
+    const render = catalog.render;
+    const origin = safeOrigin(view.serverOrigin);
+    const identity = /^[A-Za-z0-9_.-]{1,100}$/u.test(view.owner) && /^[A-Za-z0-9_.-]{1,100}$/u.test(view.repository)
+        && !['.', '..'].includes(view.owner) && !['.', '..'].includes(view.repository);
+    const heading = `## ${render('interaction.history.heading')}`;
+    const unavailable = `${heading}\n\n${render('interaction.history.unavailable')}`;
+    if (!origin || !identity || view.state === 'unavailable')
+        return unavailable;
+    const root = `${origin}/${view.owner}/${view.repository}`;
+    const target = `${root}/${view.target.kind === 'pr' ? 'pull' : 'issues'}/${view.target.number}`;
+    const lines = [heading, '', render('interaction.history.scope'), '',
+        ...(view.state === 'partial' ? [render('interaction.history.partial'), ''] : []),
+        ...(view.rows.length ? [render('interaction.history.count', { count: view.rows.length }), '',
+            `| ${render('interaction.history.operation')} | ${render('interaction.history.outcome')} | ${render('interaction.history.evidence')} |`,
+            '|---|---|---|', ...view.rows.map(row => {
+                const links = [`[${render('interaction.history.request')}](${target}#issuecomment-${row.sourceId})`,
+                    ...(row.receiptId ? [`[${render('interaction.history.receipt')}](${target}#issuecomment-${row.receiptId})`] : []),
+                    ...(row.commitSha ? [`[${render('interaction.history.commit')}](${root}/commit/${row.commitSha})`] : [])];
+                return `| ${row.command} | ${render(row.outcome === 'unavailable' ? 'interaction.history.unavailableOutcome'
+                    : row.outcome === 'partial' ? 'interaction.history.partialOutcome' : `interaction.history.${row.outcome}`)} | ${links.join(' · ')} |`;
+            })] : [render('interaction.history.empty')])];
+    const body = lines.join('\n');
+    return body.length <= 5600 ? body : unavailable;
+}
+function safeOrigin(value) {
+    if (value.length > 200)
+        return undefined;
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && !url.username && !url.password
+            && url.pathname === '/' && !url.search && !url.hash ? url.origin : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
+/***/ 99186:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readHistoryProjection = readHistoryProjection;
+const git_object_id_1 = __nccwpck_require__(88623);
+const copilot_operation_1 = __nccwpck_require__(40221);
+/** Typed publisher boundary rejects malformed result data rather than trusting a kind string. */
+function readHistoryProjection(value, bound) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    const data = value;
+    const target = data.target;
+    if (data.kind !== 'history-command' || !['complete', 'partial', 'unavailable'].includes(String(data.state))
+        || typeof data.owner !== 'string' || typeof data.repository !== 'string' || typeof data.serverOrigin !== 'string'
+        || !target || Object.keys(target).some(key => !['kind', 'number'].includes(key)) || target.number !== bound.number || target.kind !== (bound.kind === 'pull-request' ? 'pr' : 'issue')
+        || !Array.isArray(data.rows) || data.rows.length > 10 || (data.state === 'unavailable' && data.rows.length !== 0)
+        || Object.keys(data).some(key => !['kind', 'state', 'rows', 'owner', 'repository', 'target', 'serverOrigin'].includes(key)))
+        return undefined;
+    const rows = [];
+    let previous = Number.MAX_SAFE_INTEGER;
+    for (const row of data.rows) {
+        if (!row || typeof row !== 'object' || !positive(row.sourceId) || row.sourceId >= previous || !(0, copilot_operation_1.isHistoryCommand)(row.command)
+            || !copilot_operation_1.OPERATION_OUTCOMES.includes(row.outcome)
+            || ('receiptId' in row && (!positive(row.receiptId) || row.receiptId <= row.sourceId))
+            || ('commitSha' in row && (typeof row.commitSha !== 'string' || (0, git_object_id_1.canonicalGitObjectId)(row.commitSha) !== row.commitSha
+                || row.outcome !== 'applied' || !row.receiptId))
+            || Object.keys(row).some(key => !['sourceId', 'command', 'outcome', 'receiptId', 'commitSha'].includes(key)))
+            return undefined;
+        rows.push(Object.freeze({ sourceId: row.sourceId, command: row.command, outcome: row.outcome,
+            ...(row.receiptId ? { receiptId: row.receiptId } : {}), ...(row.commitSha ? { commitSha: row.commitSha } : {}) }));
+        previous = row.sourceId;
+    }
+    return Object.freeze({ kind: 'history-command', state: data.state, rows: Object.freeze(rows),
+        owner: data.owner, repository: data.repository, serverOrigin: data.serverOrigin,
+        target: Object.freeze({ kind: target.kind, number: bound.number }) });
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+
+
+/***/ }),
+
 /***/ 90108:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -40552,6 +40712,7 @@ const READ_ONLY_COMMANDS = Object.freeze([
     ['/copilot recheck', 'interaction.help.command.recheck'],
     ['/copilot description', 'interaction.help.command.description'],
     ['/copilot status', 'interaction.help.command.status'],
+    ['/copilot history', 'interaction.help.command.history'],
 ]);
 const CHANGE_COMMANDS = Object.freeze([
     ['/copilot fix <finding-id>', 'interaction.help.command.fixOne'],
@@ -42432,6 +42593,28 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.help.command.recheck',
     'interaction.help.command.description',
     'interaction.help.command.status',
+    'interaction.help.command.history',
+    'interaction.history.fixPushed',
+    'interaction.history.fixNoChanges',
+    'interaction.history.heading',
+    'interaction.history.scope',
+    'interaction.history.empty',
+    'interaction.history.partial',
+    'interaction.history.unavailable',
+    'interaction.history.count',
+    'interaction.history.operation',
+    'interaction.history.outcome',
+    'interaction.history.evidence',
+    'interaction.history.request',
+    'interaction.history.receipt',
+    'interaction.history.commit',
+    'interaction.history.applied',
+    'interaction.history.already-current',
+    'interaction.history.not-applied',
+    'interaction.history.blocked',
+    'interaction.history.failed',
+    'interaction.history.partialOutcome',
+    'interaction.history.unavailableOutcome',
     'interaction.help.command.fixOne',
     'interaction.help.command.fixAll',
     'interaction.help.command.dismiss',
@@ -42530,6 +42713,28 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 're-run the review and reconcile findings.',
     'interaction.help.command.description': 'refresh the pull-request description.',
     'interaction.help.command.status': 'show the current automation status.',
+    'interaction.help.command.history': 'show up to ten supported operations and their verified receipts.',
+    'interaction.history.fixPushed': 'Fix changes were pushed. Findings require an independent review of the pushed revision.',
+    'interaction.history.fixNoChanges': 'The fix produced no changes to push.',
+    'interaction.history.heading': 'Operation history',
+    'interaction.history.scope': 'General conversation comments',
+    'interaction.history.empty': 'No supported requests in this conversation',
+    'interaction.history.partial': 'Partial comment coverage; the latest ten operations cannot be guaranteed. Retry /copilot history if needed.',
+    'interaction.history.unavailable': 'Operation history unavailable; inspect the workflow and retry /copilot history.',
+    'interaction.history.count': 'Showing {count} supported requests',
+    'interaction.history.operation': 'Operation',
+    'interaction.history.outcome': 'Outcome',
+    'interaction.history.evidence': 'Evidence',
+    'interaction.history.request': 'Request',
+    'interaction.history.receipt': 'Receipt',
+    'interaction.history.commit': 'Commit',
+    'interaction.history.applied': 'Applied',
+    'interaction.history.already-current': 'Already current',
+    'interaction.history.not-applied': 'Not applied',
+    'interaction.history.blocked': 'Blocked',
+    'interaction.history.failed': 'Failed',
+    'interaction.history.partialOutcome': 'Partial',
+    'interaction.history.unavailableOutcome': 'Outcome unavailable',
     'interaction.help.command.fixOne': 'fix one reported finding.',
     'interaction.help.command.fixAll': 'fix all unresolved findings.',
     'interaction.help.command.dismiss': 'dismiss a finding.',
@@ -42637,6 +42842,28 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 'repite la revisión y reconcilia los hallazgos.',
     'interaction.help.command.description': 'actualiza la descripción del pull request.',
     'interaction.help.command.status': 'muestra el estado actual de la automatización.',
+    'interaction.help.command.history': 'muestra hasta diez operaciones compatibles y sus recibos verificables.',
+    'interaction.history.fixPushed': 'Se publicaron los cambios de la corrección. Los hallazgos requieren una revisión independiente de esa revisión.',
+    'interaction.history.fixNoChanges': 'La corrección no produjo cambios que publicar.',
+    'interaction.history.heading': 'Historial de operaciones',
+    'interaction.history.scope': 'Comentarios de la conversación general',
+    'interaction.history.empty': 'No hay solicitudes compatibles en esta conversación',
+    'interaction.history.partial': 'Cobertura parcial de comentarios; no se pueden garantizar las diez operaciones más recientes. Reintenta /copilot history si lo necesitas.',
+    'interaction.history.unavailable': 'Historial de operaciones no disponible; revisa la ejecución y reintenta /copilot history.',
+    'interaction.history.count': 'Se muestran {count} solicitudes compatibles',
+    'interaction.history.operation': 'Operación',
+    'interaction.history.outcome': 'Resultado',
+    'interaction.history.evidence': 'Evidencia',
+    'interaction.history.request': 'Solicitud',
+    'interaction.history.receipt': 'Recibo',
+    'interaction.history.commit': 'Commit',
+    'interaction.history.applied': 'Aplicada',
+    'interaction.history.already-current': 'Ya estaba al día',
+    'interaction.history.not-applied': 'No aplicada',
+    'interaction.history.blocked': 'Bloqueada',
+    'interaction.history.failed': 'Fallida',
+    'interaction.history.partialOutcome': 'Parcial',
+    'interaction.history.unavailableOutcome': 'Resultado no disponible',
     'interaction.help.command.fixOne': 'corrige un hallazgo.',
     'interaction.help.command.fixAll': 'corrige todos los hallazgos sin resolver.',
     'interaction.help.command.dismiss': 'descarta un hallazgo.',
@@ -43491,6 +43718,9 @@ exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
+const copilot_operation_1 = __nccwpck_require__(40221);
+const copilot_history_presentation_policy_1 = __nccwpck_require__(55507);
+const copilot_history_projection_policy_1 = __nccwpck_require__(99186);
 const github_publication_1 = __nccwpck_require__(35793);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
@@ -43558,6 +43788,17 @@ function selectSemanticReplyIntents(context) {
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
             return [];
+        if (result.id === 'CommentAutomation.History' && result.executed) {
+            const history = (0, copilot_history_projection_policy_1.readHistoryProjection)(payload.publication, context.target);
+            if (history)
+                return [replyIntent(context, correlationId, 'copilot-history', history)];
+        }
+        const fixed = (0, result_1.getResultPayload)(payload.publication);
+        if (result.id === 'CommentAutomation.FixReply' && result.executed && fixed?.kind === 'fix-result'
+            && (fixed.outcome === 'changes-pushed' || fixed.outcome === 'no-changes')
+            && Object.keys(fixed).length === 2) {
+            return [replyIntent(context, correlationId, 'fix-result', Object.freeze({ kind: 'fix-result', outcome: fixed.outcome }))];
+        }
         const stateCommand = stateCommandReplyProjection(result.id, payload, context.correlationId);
         if (stateCommand)
             return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
@@ -43624,9 +43865,14 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
         digest: intent.digest,
     });
     const body = renderReplyBody(intent, catalog);
-    return `${marker}\n\n${body}`;
+    const operation = operationMarker(intent);
+    return `${marker}\n\n${body}${operation ? `\n\n${operation}` : ''}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'history-command')
+        return (0, copilot_history_presentation_policy_1.renderCopilotHistory)(intent.projection, catalog);
+    if (intent.projection.kind === 'fix-result')
+        return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed' ? 'interaction.history.fixPushed' : 'interaction.history.fixNoChanges'));
     if (intent.projection.kind === 'implementation-result') {
         return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
             ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges', { branch: inlineRef(intent.projection.branch) }));
@@ -43959,6 +44205,29 @@ function copyStatusSnapshot(snapshot) {
 }
 function safeDigest(value) {
     return /^[a-f0-9]{8,64}$/u.test(value) ? value : (0, publication_identity_policy_1.createSemanticDigest)(value);
+}
+function operationMarker(intent) {
+    if (!/^comment:[1-9]\d*$/u.test(intent.correlationId))
+        return undefined;
+    const projection = intent.projection;
+    const base = { target: (0, github_publication_1.publicationTargetToken)(intent.target), correlationId: intent.correlationId };
+    if (projection.kind === 'branch-sync-result') {
+        const outcome = projection.outcome === 'already-aligned' ? 'already-current'
+            : projection.outcome.startsWith('dry-run') ? 'not-applied' : 'applied';
+        // This producer proves completed push, but not an independent remote SHA read.
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: 'sync-branch', outcome });
+    }
+    if (projection.kind === 'implementation-result' || projection.kind === 'fix-result') {
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: projection.kind === 'fix-result' ? 'fix' : 'implement',
+            outcome: projection.outcome === 'changes-pushed' ? 'applied' : 'not-applied' });
+    }
+    if (projection.kind === 'state-command-result') {
+        const outcome = projection.outcome === 'not-applied' ? 'not-applied'
+            : projection.command === 'remember' ? projection.outcome === 'already-exists' ? 'already-current' : 'applied'
+                : projection.count === 0 ? 'already-current' : 'applied';
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: projection.command, outcome });
+    }
+    return undefined;
 }
 
 
@@ -52150,7 +52419,8 @@ async function runAutofixAction(param, options, intentPayload) {
         context: intentPayload.context,
         branchOverride: intentPayload.branchOverride,
     });
-    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort);
+    let completedOutcome;
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort, outcome => { completedOutcome = outcome; });
     if (resolutionErrors.length > 0) {
         autofixResults.push(new result_1.Result({
             id: `${options.taskId}.AutofixPostflight`,
@@ -52172,6 +52442,9 @@ async function runAutofixAction(param, options, intentPayload) {
         }
         autofixResults.push(...reviewResults);
     }
+    if (completedOutcome)
+        autofixResults.push(new result_1.Result({ id: 'CommentAutomation.FixReply', success: true, executed: true,
+            payload: { publication: Object.freeze({ kind: 'fix-result', outcome: completedOutcome }) } }));
     return autofixResults;
 }
 function isSupersededReviewResult(result) {
@@ -52209,8 +52482,11 @@ async function runDoUserRequestAction(param, options, intentPayload) {
     const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
     if (!committed || commitResults.some(result => !result.success || result.errors.length > 0))
         return results;
+    const outcome = committed.payload?.commitOutcome;
+    if (outcome !== 'changes-pushed' && outcome !== 'no-changes')
+        return results;
     const publication = Object.freeze({
-        kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+        kind: 'implementation-result', outcome, branch: branchOverride,
     });
     return [...results, new result_1.Result({ id: implementation_result_policy_1.IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
             payload: { publication } })];
@@ -52227,6 +52503,7 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const result_1 = __nccwpck_require__(73817);
 const read_copilot_status_workflow_1 = __nccwpck_require__(57206);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
@@ -52240,6 +52517,12 @@ const comment_mutation_target_workflow_1 = __nccwpck_require__(81324);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
+    if (command.name === 'history')
+        return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({
+                owner: param.bugbot.review.repository.owner, repository: param.bugbot.review.repository.name,
+                target: { kind: param.bugbot.review.target.isPullRequest ? 'pr' : 'issue', number: param.language.issueNumber },
+                queryId: param.language.commentId, botLogin: param.trustedBotLogin, locale: param.language.locale, generalConversation: false,
+            })];
     if (command.name === 'help')
         return runHelpCommand(param, options);
     if (command.name === 'status')
@@ -52305,7 +52588,8 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     }
     const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, targetBranch, results, options.bugbotGitMutationPort);
     const committed = commitResults.at(-1);
-    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
+    const commitOutcome = committed?.payload?.commitOutcome;
+    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && commitOutcome === 'changes-pushed'
             ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
 }
 function rememberFailure(error) {
@@ -52654,7 +52938,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
         const isPublicMetadataCommand = command.kind === 'command'
-            && (command.command.name === 'help' || command.command.name === 'status');
+            && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'history');
         if (!isPublicMetadataCommand && param.membersOnly
             && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
@@ -53284,6 +53568,9 @@ function positiveIssueNumberOrUndefined(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const copilot_command_1 = __nccwpck_require__(11771);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const result_1 = __nccwpck_require__(73817);
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
@@ -53291,7 +53578,7 @@ const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, historyReadPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -53307,9 +53594,20 @@ class IssueCommentUseCase {
         this.preBranchSddContinuation = preBranchSddContinuation;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.historyReadPort = historyReadPort;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
+        const historyCommand = (0, copilot_command_1.parseCopilotCommand)(param.issue.commentBody);
+        if (historyCommand.kind === 'invalid')
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
+        if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+            return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
+                    target: { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.locale.issue,
+                    generalConversation: param.eventName === 'issue_comment',
+                }, this.historyReadPort)];
+        }
         if (param.preBranchSdd && !param.issue.issueManagedBranches) {
             return [new result_1.Result({
                     id: this.taskId, success: false, executed: true,
@@ -53997,12 +54295,15 @@ function buildCatalogResponseSchema(source, ids, targetLocale = 'en-US') {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const copilot_command_1 = __nccwpck_require__(11771);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, historyReadPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -54017,9 +54318,20 @@ class PullRequestReviewCommentUseCase {
         this.syncBranchUseCase = syncBranchUseCase;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.historyReadPort = historyReadPort;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
+        const historyCommand = (0, copilot_command_1.parseCopilotCommand)(param.pullRequest.commentBody);
+        if (historyCommand.kind === 'invalid')
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
+        if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+            return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
+                    target: { kind: 'pr', number: param.pullRequest.number }, queryId: param.pullRequest.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.locale.pullRequest,
+                    generalConversation: param.eventName === 'issue_comment',
+                }, this.historyReadPort)];
+        }
         const context = (0, comment_automation_context_1.projectCommentAutomationContext)(param, (0, check_pull_request_comment_language_use_case_1.projectPullRequestCommentLanguageRequest)(param), param.pullRequest.commentBody ?? '');
         return (0, comment_automation_use_case_1.runCommentAutomation)(context, {
             taskId: this.taskId,
@@ -54516,6 +54828,47 @@ function deepFreezeCopy(value) {
         return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, deepFreezeCopy(nested)])));
     }
     return value;
+}
+
+
+/***/ }),
+
+/***/ 8140:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCopilotHistory = readCopilotHistory;
+const result_1 = __nccwpck_require__(73817);
+const copilot_history_policy_1 = __nccwpck_require__(14335);
+/** A failed read cannot prove empty history or an operation failure. */
+async function readCopilotHistory(request, ports) {
+    let history = copilot_history_policy_1.HISTORY_UNAVAILABLE;
+    if (ports && request.generalConversation && request.botLogin && Number.isSafeInteger(request.target.number)
+        && request.target.number > 0 && Number.isSafeInteger(request.queryId) && request.queryId > 0) {
+        try {
+            const read = await ports.readComments(request.target.number);
+            const coverage = read.coverage;
+            const counters = [coverage.pagesFetched, coverage.itemsFetched, coverage.itemsRetained, coverage.omittedItems, coverage.truncatedItems];
+            if (counters.some(value => !Number.isSafeInteger(value) || value < 0)
+                || typeof coverage.limitReached !== 'boolean'
+                || (coverage.providerLimitReached !== undefined && typeof coverage.providerLimitReached !== 'boolean'))
+                throw new Error('Invalid history coverage counters.');
+            if (coverage.source !== 'issue-comments' || coverage.itemsRetained !== read.value.length
+                || coverage.itemsFetched < coverage.itemsRetained || !['complete', 'partial'].includes(coverage.status))
+                throw new Error('Invalid history coverage.');
+            history = (0, copilot_history_policy_1.selectCopilotHistory)({ target: `${request.target.kind}:${request.target.number}`, queryId: request.queryId,
+                botLogin: request.botLogin, complete: coverage.status === 'complete' && coverage.omittedItems === 0
+                    && coverage.truncatedItems === 0 && !coverage.limitReached && !coverage.providerLimitReached,
+                comments: read.value.map(comment => Object.freeze({ id: comment.id, body: comment.body,
+                    author: comment.user?.login ?? '', automated: comment.isAutomatedAuthor })) });
+        }
+        catch { /* Provider errors disclose no inferred absence and no raw error. */ }
+    }
+    return new result_1.Result({ id: 'CommentAutomation.History', success: true, executed: true,
+        payload: { publication: Object.freeze({ ...history, owner: request.owner, repository: request.repository,
+                target: Object.freeze({ ...request.target }), serverOrigin: ports?.serverOrigin ?? 'https://github.com' }) } });
 }
 
 
@@ -58905,7 +59258,7 @@ exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort) {
+async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort, onCompleted) {
     const lastAutofix = autofixResults.at(-1);
     if (!lastAutofix?.success) {
         (0, logging_ports_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
@@ -58924,6 +59277,7 @@ async function commitAutofixAndResolveFindings(context, payload, autofixResults,
         (0, logging_ports_1.logInfo)(`Bugbot autofix commit failed: ${message}`);
         return [new Error(message)];
     }
+    onCompleted?.(commitResult.committed ? 'changes-pushed' : 'no-changes');
     if (commitResult.committed && payload.context) {
         (0, logging_ports_1.logInfo)(`Committed autofix for ${payload.targetFindingIds.length} ${payload.targetFindingIds.length === 1 ? 'finding' : 'findings'}. `
             + 'Findings remain open until a fresh review verifies the pushed revision.');
@@ -59029,6 +59383,7 @@ async function commitUserRequestIfSuccessful(context, branchOverride, results, g
             id: 'DoUserRequestCommitAndPush',
             success: true,
             executed: commitResult.committed,
+            payload: Object.freeze({ commitOutcome: commitResult.committed ? 'changes-pushed' : 'no-changes' }),
             steps: [commitResult.committed ? 'User request changes committed and pushed.' : 'No changes were produced by the user request.'],
         })];
 }
@@ -80571,6 +80926,7 @@ exports.COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'history',
     'description',
     'explain',
     'diagnose',
@@ -80629,6 +80985,9 @@ function parseCopilotCommand(raw) {
     }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+    }
+    if (name === 'history' && argumentsList.length) {
+        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
     }
     return {
         kind: 'command',
@@ -80808,6 +81167,70 @@ function waitingStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LAB
 function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
     return lifecycleLabelDefinitions(labels).find(definition => normalized.has(definition.name.trim().toLowerCase()))?.state;
+}
+
+
+/***/ }),
+
+/***/ 40221:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OPERATION_MARKER_PREFIX = exports.OPERATION_OUTCOMES = exports.HISTORY_COMMANDS = void 0;
+exports.isHistoryCommand = isHistoryCommand;
+exports.readOperationEvidence = readOperationEvidence;
+exports.validateOperationEvidence = validateOperationEvidence;
+exports.buildOperationEvidenceMarker = buildOperationEvidenceMarker;
+const git_object_id_1 = __nccwpck_require__(88623);
+exports.HISTORY_COMMANDS = ['sync-branch', 'remember', 'dismiss', 'implement', 'fix'];
+exports.OPERATION_OUTCOMES = ['applied', 'already-current', 'not-applied', 'blocked', 'partial', 'failed', 'unavailable'];
+exports.OPERATION_MARKER_PREFIX = '<!-- copilot:operation:v1 ';
+function isHistoryCommand(value) {
+    return exports.HISTORY_COMMANDS.includes(value);
+}
+function readOperationEvidence(body) {
+    if (body.split('<!-- copilot:operation:').length !== 2)
+        return undefined;
+    const match = body.match(/<!-- copilot:operation:v1 ([\s\S]{1,1200}?) -->/u);
+    if (!match)
+        return undefined;
+    try {
+        return validateOperationEvidence(JSON.parse(match[1]));
+    }
+    catch {
+        return undefined;
+    }
+}
+function validateOperationEvidence(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    const item = value;
+    if (Object.keys(item).some(key => !['version', 'target', 'correlationId', 'command', 'outcome', 'commitSha'].includes(key))
+        || item.version !== 1 || !validIdentity(item.target, /^(?:issue|pr):([1-9]\d*)$/u)
+        || !validIdentity(item.correlationId, /^comment:([1-9]\d*)$/u)
+        || !isHistoryCommand(item.command) || !exports.OPERATION_OUTCOMES.includes(item.outcome)
+        || ('commitSha' in item && (typeof item.commitSha !== 'string' || (0, git_object_id_1.canonicalGitObjectId)(item.commitSha) !== item.commitSha || item.outcome !== 'applied')))
+        return undefined;
+    return Object.freeze({ version: 1, target: item.target, correlationId: item.correlationId,
+        command: item.command, outcome: item.outcome,
+        ...('commitSha' in item ? { commitSha: item.commitSha } : {}) });
+}
+/** Only trusted finalized producers call this; a SHA requires independent post-push agreement. */
+function buildOperationEvidenceMarker(evidence, pushedRevision) {
+    const sha = pushedRevision && (0, git_object_id_1.canonicalGitObjectId)(pushedRevision.localSha);
+    const value = validateOperationEvidence({ version: 1, ...evidence,
+        ...(sha && pushedRevision?.remoteSha === sha && evidence.outcome === 'applied' ? { commitSha: sha } : {}) });
+    if (!value)
+        throw new Error('Invalid operation evidence.');
+    return `${exports.OPERATION_MARKER_PREFIX}${JSON.stringify(value)} -->`;
+}
+function validIdentity(value, pattern) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(pattern);
+    return Boolean(match && Number.isSafeInteger(Number(match[1])));
 }
 
 
@@ -84393,6 +84816,21 @@ function createUpgradeCliUseCase(cliUpgradePort = new pnpm_cli_upgrade_adapter_1
 
 /***/ }),
 
+/***/ 12321:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCopilotHistoryReadPort = createCopilotHistoryReadPort;
+/** Project only the existing bounded general-comment query, preserving its receiver. */
+function createCopilotHistoryReadPort(source, serverOrigin = 'https://github.com') {
+    return Object.freeze({ serverOrigin, readComments: (number) => source.listIssueComments(number) });
+}
+
+
+/***/ }),
+
 /***/ 98313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -85098,6 +85536,7 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         catalogResolver,
     });
 }
+const copilot_history_port_factory_1 = __nccwpck_require__(12321);
 function createIssueCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
@@ -85112,7 +85551,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -85128,7 +85567,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
