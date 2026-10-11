@@ -5,6 +5,11 @@ description: Use @vypbot from issues and pull requests for help, analysis, plann
 
 # Comment commands
 
+Branchless help requests stay on the read-only answer route even when natural
+language classification suggests a repository task. File changes require an
+authoritative branch from a supported surface, such as a PR review comment;
+a general conversation cannot infer one from the checkout's current branch.
+
 Copilot can act as a project assistant directly from an issue or pull-request comment. With the default workflow PAT, the bot user is `@vypbot`; if your installation uses another account, replace that mention with the configured PAT user.
 
 A comment must begin with `/copilot` or contain the exact bot mention. All
@@ -41,18 +46,73 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 | `/copilot recheck` | Re-run the review against the current branch. | No |
 | `/copilot status` | Show the current Copilot status. | No |
 | `/copilot description` | Refresh the PR description when that action is configured. | No |
-| `/copilot fix <finding-id>` | Fix one or more existing Bugbot findings. | Yes, if authorized |
-| `/copilot dismiss <finding-id>` | Dismiss one or more findings. | No file changes |
-| `/copilot implement <request>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
-| `/copilot sync-branch [options]` | Merge the issue/PR parent into its working branch; use the fixer only if eligible conflicts occur. | Yes, if authorized |
+| `/copilot fix <finding-id> [finding-id ...]` | Fix one or more existing Bugbot findings. | Yes, if authorized |
+| `/copilot dismiss <finding-id> [finding-id ...]` | Dismiss one or more findings. | No file changes |
+| `/copilot implement <request...>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
+| `/copilot remember <rule...>` | Save a learned Bugbot rule. | Yes, if authorized |
+| `/copilot sync-branch [--dry-run] [--no-agent] [--from <branch>]` | Merge the issue/PR parent into its working branch; use the fixer only if eligible conflicts occur. | Yes, if authorized |
 
-`/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
+`/copilot fix`, `/copilot dismiss`, `/copilot implement`, and `/copilot remember`
+require at least one argument. Give `fix` and `dismiss` one or more finding IDs;
+give `implement` a concrete request and `remember` the rule text. For
+`sync-branch`, `--from` must be followed by a branch name. Arguments are
+whitespace-separated, and commands are limited to 2,000 characters and 20
+arguments. Missing or malformed required arguments produce a validation reply;
+they never mean “all” or authorize a broad change.
+
+### Where command results persist
+
+Read-only commands publish a correlated GitHub reply and do not change repository
+files. Retrying the same source comment updates or reuses that reply. Results
+that change repository state are retained in the repository or GitHub resource
+they operate on:
+
+- `/copilot fix` and `/copilot implement` apply changes to the authoritative
+  working branch, run configured verification, then commit and push through the
+  trusted workflow. A verification failure prevents the commit.
+- `/copilot remember` appends the rule to `.copilot/BUGBOT.learned.md` and
+  commits it to the repository.
+- `/copilot dismiss` records dismissal against the existing Bugbot finding in
+  GitHub review state; it does not edit repository files.
+- `/copilot sync-branch` merges the parent into the working branch and pushes
+  the result unless `--dry-run` was supplied.
+
+The agent runtime does not retain a session between runs. Repository changes
+that are committed and pushed, plus finding/review state stored by GitHub, are
+the durable record. A prepared but uncommitted workspace is not durable.
+
+When a finding ID contains spaces, quote the complete ID with double quotes:
+
+```text
+/copilot dismiss "docs/file.mdx:28:message with spaces"
+/copilot fix "docs/file.mdx:28:message with spaces"
+```
+
+Fix IDs are literal and are not translated. `/copilot fix all` selects all
+unresolved findings; otherwise only the exact requested IDs are selected.
+You can combine plain and quoted IDs. Use JSON escapes for a literal double
+quote or backslash; malformed, empty or multiline quoted IDs are rejected.
+The command still accepts at most 20 IDs and 2,000 characters.
+
 
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
-resolved. If the stored workflow result owns malformed finding-state evidence,
-the command says that evidence is invalid and directs you to the workflow
-result; it never substitutes zero or a clean state.
+resolved. In a PR conversation, it reads one trusted complete Bugbot status
+card for the current commit and checks that the head is still unchanged. If
+that evidence is missing, malformed, incomplete or stale, run `/copilot recheck`
+and retry status. It never substitutes cached counts or zero. Setup reads that
+exact PR to resolve its linked issue and working branch. An unlinked PR remains
+separate from an issue with the same number. Status and description queries
+preserve existing lifecycle and waiting labels when they make no lifecycle
+decision.
+
+Read-only commands answer the current comment, using the issue or PR as
+background. Add the file, symbol, failure or requested work after the command to
+make the subject explicit. For example, `/copilot explain src/domain/copilot_command.ts`
+asks for that file's behavior. If the agent cannot inspect it, its answer should
+state the limitation. `diagnose` separates evidence from hypotheses, `clarify`
+asks for missing information, `estimate` includes uncertainty, and `test-plan`
+provides test cases and observable acceptance criteria.
 
 Every explicit answer uses a correlated reply marker. A webhook retry with the
 same source comment updates or reuses that response instead of creating another.
@@ -138,10 +198,11 @@ code spans, paths (including bare names such as `README.md`), recognizable Git
 refs and versions, issue or PR references, URLs, quoted literals, option flags,
 and commit IDs with opaque operands. Commands whose grammar has no translatable
 prose protect every argument, including an arbitrary value passed to `--from`.
-The provider must return every operand exactly once. Copilot restores them only
+The provider must return every operand exactly once. Sentence-ending periods
+beside code spans remain ordinary punctuation. Copilot restores operands only
 after validating that none was removed, duplicated, reordered, changed, or
 introduced, so a translation cannot turn `src/cache.ts` into another path or add
-`--force`. A failed validation performs no requested repository change.
+`--force`. A failed validation performs no requested repository change. Reconstructed commands also retain the fixed 2,000-character and 20-argument limits; an expansion beyond either limit returns an interpretation error before answering or writing. Rephrase the request more briefly to retry.
 
 An explicit command or mention that fails receives one correlated semantic
 error reply with impact, recovery action, retained state, stable error code,
@@ -152,14 +213,30 @@ that reply uses the complete English fallback so it cannot mix languages.
 
 ## Authorization and safety
 
+`remember` confirms when the rule was saved, verified and pushed to the exact
+working branch. Repeating an existing rule confirms that no change or additional
+commit was needed. `dismiss` confirms the number of matching findings dismissed;
+if no finding matched, its reply explicitly says nothing was dismissed. A
+permission or capability refusal says the command was not applied. A failed
+verification or mutation receives an error reply, never a success confirmation.
+These replies use the conversation language and reuse the same response on an
+event replay.
+
 - Read-only commands and answers can be requested by any participant who can comment.
 - File- and finding-state-modifying requests require the comment author to be the repository owner or have `push`, `maintain`, or `admin` permission; organization membership alone is not sufficient. `ai-members-only` remains a separate membership gate.
 - In personal repositories, the author must be the repository owner or a collaborator with `push`, `maintain`, or `admin` permission.
 - `/copilot dismiss` does not edit files, but it changes finding state and therefore uses the same authorization guard.
 - File-changing commands require an authoritative PR review-thread branch or an
   explicitly branch-scoped execution. Issue-only comments never scan open PRs
-  to guess a write target.
-- The workflow must grant `contents: write` for file-modifying actions. Verification failures prevent the commit.
+  to guess a write target. `/copilot remember` verifies the exact current PR
+  through GitHub or the issue's native branch link before checking it out; a
+  missing event ref is allowed only when that verification supplies the ref.
+  Closed PRs, forks and unavailable identity are rejected before storage.
+- The workflow must grant `contents: write` for file-modifying actions and
+  disable checkout credential persistence. When repository mutation uses the
+  configured `PAT` Secret, that token must have repository contents write
+  access. Actor authorization is checked separately, so a capable token does
+  not grant the commenter permission. Verification failures prevent the commit.
 - Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
 - Branch synchronization accepts `--dry-run`, `--no-agent`, and `--from <branch>` and applies additional Git-state, path, verification, and remote-race guards. See [Branch synchronization](/issues/branch-synchronization).
 

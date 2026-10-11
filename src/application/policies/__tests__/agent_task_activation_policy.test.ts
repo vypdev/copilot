@@ -14,6 +14,12 @@ const event = (eventName: string, body = '', extra: Record<string, unknown> = {}
 const noSingleAction = () => new SingleAction('', '', '', '', '');
 
 describe('activeAgentTasks', () => {
+    it('prepares only the reviewer when a draft becomes ready', () => {
+        const ready = event('pull_request', '', { action: 'ready_for_review' });
+        expect(activeAgentTasks(ready, noSingleAction())).toEqual(['reviewer']);
+        expect(activeAgentTasks(ready, noSingleAction(), '', false)).toEqual(['reviewer']);
+    });
+
     it('selects only roles reachable from lifecycle events', () => {
         expect(activeAgentTasks(event('issues', '', { action: 'opened' }), noSingleAction())).toEqual(['planner']);
         expect(activeAgentTasks(event('pull_request', '', { action: 'opened' }), noSingleAction())).toEqual(['planner', 'reviewer']);

@@ -5,7 +5,7 @@ import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
 import { getRecommendStepsPrompt, getThinkPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
-import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
+import { PROJECT_CONTEXT_INSTRUCTION, COPILOT_ISSUE_WORKFLOW_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { extractStructuredAnswer } from './agent_answer_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
@@ -71,10 +71,11 @@ export async function runThinkAnswerWorkflow(
     }
 
     const prompt = getThinkPrompt({
-        projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: `${PROJECT_CONTEXT_INSTRUCTION}\n\n${COPILOT_ISSUE_WORKFLOW_INSTRUCTION}`,
         contextBlock,
         question: request.question,
         targetLocale: param.targetLocale,
+        commandName: request.command?.name,
     });
     const answer = sanitizeAgentMarkdown(await queryThinkAnswer(
         param,

@@ -1,10 +1,14 @@
 import { lstat, mkdir, readFile, realpath, rename, unlink, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname, join, normalize, relative, resolve, sep } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { BugbotLearnedRuleCommandPort, BugbotReviewRule, BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
+import { ApplicationError } from '../../application/errors/application_error';
 
 const RULE_FILE = join('.copilot', 'BUGBOT.md');
 const LEARNED_RULE_FILE = join('.copilot', 'BUGBOT.learned.md');
+const executeFile = promisify(execFile);
 
 export class WorkspaceBugbotRulesRepository implements BugbotRuleFileQueryPort, BugbotLearnedRuleCommandPort {
     private readonly root: string;
@@ -13,9 +17,10 @@ export class WorkspaceBugbotRulesRepository implements BugbotRuleFileQueryPort, 
         this.root = resolve(root);
     }
 
-    async loadRules(changedFiles: readonly string[]): Promise<readonly BugbotReviewRule[]> {
+    async loadRules(changedFiles: readonly string[], revision?: string): Promise<readonly BugbotReviewRule[]> {
         const files = orderedRuleFiles(changedFiles);
         const canonicalRoot = await realpath(this.root);
+        if (revision !== undefined) return this.loadRevisionRules(files, revision, canonicalRoot);
         const rules = await Promise.all(files.map(async ({ path, scope }) => {
             const absolute = resolve(this.root, path);
             if (!isWithin(this.root, absolute)) return undefined;
@@ -36,6 +41,54 @@ export class WorkspaceBugbotRulesRepository implements BugbotRuleFileQueryPort, 
             }
         }));
         return rules.filter((rule): rule is BugbotReviewRule => rule !== undefined);
+    }
+
+    private async loadRevisionRules(
+        files: Array<{ path: string; scope: BugbotReviewRule['scope'] }>,
+        revision: string,
+        root: string,
+    ): Promise<readonly BugbotReviewRule[]> {
+        if (!/^[a-f0-9]{40}$/u.test(revision)) {
+            throw new ApplicationError('workflow.failed', 'Review rules require a full verified commit identity.');
+        }
+        const selected = files.filter(file => isWithin(root, resolve(root, file.path)))
+            .map(file => ({ ...file, path: file.path.split(sep).join('/') }));
+        try {
+            const blobs = new Map<string, string>();
+            for (const paths of ruleReadBatches(selected.map(file => file.path))) {
+                const tree = await this.readGit(root, ['ls-tree', '-z', revision, '--', ...paths]);
+                for (const entry of tree.split('\0')) {
+                    const match = /^(?:100644|100755) blob ([a-f0-9]{40})\t([\s\S]+)$/u.exec(entry);
+                    if (match) blobs.set(match[2], match[1]);
+                }
+            }
+            const rules: BugbotReviewRule[] = [];
+            for (const file of selected) {
+                const object = blobs.get(file.path);
+                if (object) rules.push({
+                    source: file.path,
+                    scope: file.scope,
+                    content: await this.readGit(root, ['cat-file', 'blob', object]),
+                });
+            }
+            return rules;
+        } catch {
+            throw new ApplicationError('workflow.failed', 'Review rules could not be read at the verified commit. Fetch that commit and check the fixed rule-source limits before retrying.');
+        }
+    }
+
+    private async readGit(root: string, arguments_: string[]): Promise<string> {
+        const { stdout } = await executeFile('git', [
+            '--no-optional-locks', '--no-replace-objects', '--literal-pathspecs', ...arguments_,
+        ], {
+            cwd: root,
+            encoding: 'utf8',
+            windowsHide: true,
+            timeout: 30_000,
+            maxBuffer: 2 * 1024 * 1024,
+            env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith('GIT_'))),
+        });
+        return stdout;
     }
 
     async rememberRule(rule: string): Promise<'created' | 'existing'> {
@@ -81,6 +134,24 @@ export class WorkspaceBugbotRulesRepository implements BugbotRuleFileQueryPort, 
         }
         return 'created';
     }
+}
+
+function ruleReadBatches(paths: readonly string[]): string[][] {
+    const batches: string[][] = [];
+    let current: string[] = [];
+    let characters = 0;
+    for (const path of paths) {
+        if (path.length > 12_000) throw new Error('Rule source path exceeds the fixed argument limit.');
+        if (current.length > 0 && (current.length === 64 || characters + path.length + 1 > 12_000)) {
+            batches.push(current);
+            current = [];
+            characters = 0;
+        }
+        current.push(path);
+        characters += path.length + 1;
+    }
+    if (current.length > 0) batches.push(current);
+    return batches;
 }
 
 function normalizeLearnedRule(rule: string): string {

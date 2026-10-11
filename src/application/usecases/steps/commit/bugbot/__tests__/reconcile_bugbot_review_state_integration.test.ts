@@ -46,6 +46,7 @@ function context(existingResolved = false): BugbotContext {
     canonicalPullRequest: {
       number: 358,
       state: 'open',
+      draft: false,
       baseRepository: { owner: 'org', name: 'repo' },
       headRepositoryOwner: 'org',
       headRef: 'feature/review',

@@ -2,7 +2,7 @@
 
 - Status: As-built baseline
 - Date: 2026-09-13
-- Last verified: 2026-09-17 on the local issue start and SDD gate implementation branch
+- Last verified: 2026-10-11 on `master`
 - Owners: Copilot maintainers
 - Scope: issue admission, metadata enrichment, managed branch creation, lifecycle state, and merge-driven closure
 - Related issues/PRs: release orchestration and branch synchronization SDDs
@@ -129,14 +129,17 @@ the route only after the preparation step returns.
 7. Commits and a linked PR advance review state; merge closes the issue.
 
 Project enrichment is immediate and deterministic: the existing-item query or
-add mutation returns the exact ProjectV2 item ID, and the status mutation uses
-that ID directly without a fixed sleep or a second board-list lookup.
+add mutation returns the exact ProjectV2 item ID. A direct read of that node verifies its Project and current Status. Linking initializes the configured created status only when the field is null; an existing status is retained on edits, replay, and reopening. No fixed sleep or second board-list lookup is used. Missing, foreign, or malformed status evidence fails before mutation. A failed initialization leaves the valid item linked and can retry while the field remains unset. Explicit lifecycle transitions still move the issue to the configured in-progress status after branch readiness.
 
 ### 6.2 Alternative paths
 
 - With `issue-managed-branches=false`, eligible regular work proceeds without an Action-managed branch; help is always branchless.
 - Existing correct branch becomes a no-op; a rename decision may create the new safe name.
-- Question/help issues receive answers instead of branch recommendations.
+- Admitted help issues receive answers instead of branch recommendations. A
+  successful executed answer to a help-issue comment restores `state:working`
+  and clears the waiting state after a failed request. Skipped/failed answers
+  cannot recover the phase, and answers on branch-bearing issues do not prove
+  their blocked work recovered. Explicit planning commands retain `state:planned`.
 - Release issues skip generic recommendations and delegate deployment later.
 - Closed issues may reopen on push when configured.
 
@@ -197,8 +200,7 @@ Architecture tests MUST keep policies provider-free, application ports semantic,
 and composition as the only concrete wiring owner.
 The project-link semantic port returns a required ProjectV2 item ID. An add
 response without that ID fails explicitly; the application never treats it as
-an already-linked skip. The project command adapter updates the returned item
-directly, while credentials and GraphQL details remain outside the use case.
+an already-linked skip. The bound semantic initializer returns initialized, retained, or failed; the application publishes truthful copy for each outcome. The command adapter checks and initializes the exact returned item directly, while credentials and GraphQL details remain outside the use case. GitHub offers a separate read and write rather than a conditional field mutation, so concurrent native automation can still race a first initialization; serialized Copilot replay never intentionally overwrites a populated field.
 
 ## 9. UI/UX and content contract
 
@@ -255,13 +257,13 @@ managed branches after exact validation; merged commits are not erased.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Strategy/name/lifecycle policy | 22 | precedence, origins, labels, names |
-| Issue sequencing/idempotency | 18 | permission, reuse, replay, cleanup |
-| Branch/project/provider adapters | 16 | linking, pagination, errors |
+| Strategy/name/lifecycle policy | 28 | precedence, origins, labels, names, successful/skipped/failed help answers, other issues/events and planning precedence |
+| Issue sequencing/idempotency | 22 | permission, reuse, replay, cleanup, authoritative help-kind projection |
+| Branch/project/provider adapters | 24 | linking, pagination, errors |
 | Workflow/template/config contract | 10 | events, inputs, issue types |
 | Issue UX/localization/sanitization | 12 | views, links, one welcome |
-| Integration/security/migration | 12 | issue→branch→PR, stale state, injection |
-| **Total** | **90** | no double counting |
+| Integration/security/migration | 13 | issue→branch→PR, stale state, injection, help-label recovery |
+| **Total** | **109** | no double counting |
 
 Global coverage remains mandatory; changed pure branch/lifecycle policy SHOULD
 reach 95% branch coverage. The P2-E issue/PR context path additionally enforces
@@ -295,13 +297,18 @@ dark/light, and non-English fallback.
 11. Issue project linking uses the mutation-returned item ID for the status
     update without a timer or board-list read; replay reuses the existing item.
 
+12. A successful executed answer on an admitted help issue replaces a stale
+    blocked label with working and clears waiting labels. An ordinary issue
+    answer, skipped/failed answer or unrelated event cannot trigger that recovery;
+    authoritative admission owns help identity, and explicit plans stay planned.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | strategy/origin | branch policies/preparation | strategy + preparation tests | branch management/release/hotfix |
 | issue sequence | issue workflow | issue use-case tests | issue overview |
-| lifecycle facts | lifecycle domain/use case | lifecycle tests | labels pages |
+| lifecycle facts | lifecycle domain/use case | lifecycle tests, six help-policy cases, two admission projections and one label-recovery integration | labels pages/issue overview |
 | provider linkage | branch repository/ports | repository tests | branch management |
 | route-owned state | branch preparation outcome and issue route | projection, preparation, and coordinator patch tests | branch management/architecture |
 | safe UX | presentation policies | result tests | examples |
@@ -317,7 +324,7 @@ dark/light, and non-English fallback.
 ## 19. Definition of Done
 
 - [ ] Origins, branch state, retries, cleanup, and closure remain deterministic.
-- [ ] Architecture checks and the 90-case budget pass.
+- [ ] Architecture checks and the 109-case budget pass.
 - [ ] All issue UI states and next actions are readable and localized/fallback-safe.
 - [ ] Workflow/template/config/docs/catalog contracts agree.
 - [ ] Security tests cover authorization, names, markers, and cleanup targeting.
@@ -331,3 +338,12 @@ dark/light, and non-English fallback.
 - Decision: semantic origins are fixed; surface naming remains bounded configuration.
 - Rejected: arbitrary branch graphs and inferred release origin.
 - Follow-up: event-driven branch propagation is outside this baseline.
+
+Live evidence on 2026-10-10: issue #456 reopening/title change preserved the original branch SHA and removed the obsolete ref, but the later edit reset Project #2 from In Progress to Todo. Ten additional cases cover unset initialization, existing Todo/In Progress, null/foreign/missing/malformed item evidence, failed initialization, and truthful retained-state issue/PR rendering. The direct Status read follows [GitHub ProjectV2Item fieldValueByName](https://docs.github.com/en/graphql/reference/projects#projectv2item).
+
+
+A status or description answer with no explicit lifecycle decision preserves
+existing waiting labels. Receiving a human comment alone does not satisfy a
+pending maintainer or issue-author action. Explicit working/help recovery and
+other lifecycle transitions retain their documented clearing rules. The two
+PR query regression cases are owned by the PR lifecycle SDD budget.

@@ -17,6 +17,7 @@ const sha = 'a'.repeat(40);
 const identity: BugbotPullRequestIdentity = {
   number: 50,
   state: 'open',
+  draft: false,
   baseRepository: { owner: 'acme', name: 'repo', id: 7 },
   headRepositoryOwner: 'acme',
   headRef: 'feature/42',
@@ -138,6 +139,16 @@ describe('loadBugbotContext', () => {
     expect(reader.getPullRequest).toHaveBeenCalledWith(50);
     expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
     expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+  });
+
+  it('loads PR rules using its provider-verified head rather than the comment workflow checkout', async () => {
+    const reader = ports({ loadRules: jest.fn().mockResolvedValue([
+      { source: '.copilot/BUGBOT.learned.md', scope: 'learned', content: 'Verified branch rule' },
+    ]) });
+    const context = await loadBugbotContext(request({ triggerKind: 'issue_comment', expectedHeadSha: undefined }), reader);
+    expect(reader.loadRules).toHaveBeenCalledWith(['src/example.ts'], sha);
+    expect(context.reviewRuleSources).toEqual(['learned:.copilot/BUGBOT.learned.md']);
+    expect(context.reviewRulesBlock).toContain('Verified branch rule');
   });
 
   it('selects one exact-head PR when no event candidate exists', async () => {

@@ -4,6 +4,7 @@ import type { GithubClientPort } from '../../../infrastructure/github/ports/gith
 import type { GithubGraphqlTransportClient } from '../../../infrastructure/github/ports/github_graphql_transport_port';
 import type { ProjectDetail } from '../../model/project_detail';
 import {
+    initializeProjectBoardItemStatus,
     setProjectBoardSingleSelectField,
     setProjectBoardSingleSelectFieldByItemId,
 } from './project_board_field_update';
@@ -83,6 +84,13 @@ export class ProjectBoardCommandRepository implements ProjectBoardCommandPort {
         columnName,
         token,
     );
+
+    initializeProjectItemStatus = (
+        project: ProjectDetail,
+        projectItemId: string,
+        columnName: string,
+        token: string,
+    ) => initializeProjectBoardItemStatus(this.graphqlClient, project, projectItemId, columnName, token);
 
     private setField(
         project: ProjectDetail,

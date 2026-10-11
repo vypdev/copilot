@@ -49,6 +49,24 @@ describe('CommentLanguageTranslationWorkflow', () => {
         expect(payload?.publication).toMatchObject({ sourceLocale: 'es-ES', targetLocale: 'en-US' });
     });
 
+    it.each([
+        'word '.repeat(21).trim(),
+        'x'.repeat(2_000),
+    ])('rejects translations that exceed the original command grammar', async adaptedText => {
+        const query = jest.fn().mockResolvedValue({
+            status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+            adaptedText, reasonCode: 'none',
+        });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
+            ...context, commentBody: '/copilot implement aclara el requisito',
+        });
+        expect(results[0].success).toBe(false);
+        expect(results[0].errors[0].code).toBe('locale.translation-failed');
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
+            status: 'failed', interpretedComment: '/copilot implement aclara el requisito',
+        });
+    });
+
     it('preserves a deterministic command while adapting only its arguments', async () => {
         const query = jest.fn().mockResolvedValue({
             status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
@@ -75,11 +93,11 @@ describe('CommentLanguageTranslationWorkflow', () => {
         });
         const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
             ...context,
-            commentBody: '/copilot fix corrige README.md en main para #123',
+            commentBody: '/copilot implement corrige README.md en main para #123',
         });
 
         expect(getCommentLanguageAdaptationPayload(results[0])?.interpretedComment)
-            .toBe('/copilot fix fix README.md on main for #123');
+            .toBe('/copilot implement fix README.md on main for #123');
         const prompt = query.mock.calls[0][0].prompt as string;
         expect(prompt).toContain('corrige COPILOT_OPERAND_0_TOKEN en COPILOT_OPERAND_1_TOKEN para COPILOT_OPERAND_2_TOKEN');
         expect(prompt).not.toContain('README.md');

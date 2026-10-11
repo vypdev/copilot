@@ -49,7 +49,7 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
         const safeCode = result.decision.code.replace(/[^a-z0-9-]/gu, '').slice(0, 60);
         core.info(`PR #${pullNumber}: ${result.decision.status} (${safeCode}); assessment ${result.publication}.`);
         if (result.publication === 'failed' || [
-            'invalid-policy', 'evidence-unavailable', 'target-mismatch',
+            'invalid-policy', 'policy-unavailable', 'evidence-unavailable', 'target-mismatch',
             'pre-submit-unavailable', 'publication-unknown',
         ].includes(result.decision.code)) failedPulls.push(pullNumber);
         if (result.evidence) {
@@ -61,6 +61,11 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
             }) + '\n');
         } else {
             core.summary.addRaw(`PR #${pullNumber}: ${result.decision.status} (${safeCode}). Assessment: ${result.publication}.\n`);
+            if (result.decision.code === 'policy-unavailable') {
+                core.summary.addRaw('No approval assessment was published because the installed policy could not be read from GitHub. Verify the runtime PAT can read Actions Variables, then rerun this observer. Existing PRs and reviews are unchanged.\n');
+            } else if (result.decision.code === 'invalid-policy') {
+                core.summary.addRaw('The installed policy was read but is invalid. Run copilot doctor, correct PR_APPROVAL_POLICY, then rerun this observer. Existing PRs and reviews are unchanged.\n');
+            }
         }
     }
     await core.summary.write();

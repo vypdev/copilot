@@ -6,7 +6,7 @@ import { renderUntrustedField } from '../../../../../domain/security/untrusted_c
 import { buildReviewDiffPlan } from '../../../../policies/bugbot_diff_partition_policy';
 const MAX_CONVERSATION_LENGTH = 24_000;
 const MAX_CONVERSATION_ITEMS = 50;
-const MAX_CONVERSATION_ITEM_LENGTH = 2_000;
+const MAX_CONVERSATION_ITEM_LENGTH = 4_000;
 
 export function buildReviewDiffBlock(
   context: BugbotPrContext | null,

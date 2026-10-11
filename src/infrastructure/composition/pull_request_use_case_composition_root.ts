@@ -1,3 +1,4 @@
+import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
 import {
   createIssueAssignmentClient,
   createIssueContentClient,
@@ -7,7 +8,7 @@ import {
   createIssueTitleClient,
 } from "./github_issue_client_factory";
 import { createGraphqlTransportClient } from "./github_project_client_factory";
-import { createPullRequestLifecycleClient } from "./github_pull_request_client_factory";
+import { createPullRequestChangesClient, createPullRequestLifecycleClient } from "./github_pull_request_client_factory";
 import { PullRequestUseCase } from "../../application/usecases/pull_request_use_case";
 import { UpdatePullRequestDescriptionUseCase } from "../../application/usecases/steps/pull_request/update_pull_request_description_use_case";
 import { UpdateTitleUseCase } from "../../application/usecases/steps/common/update_title_use_case";
@@ -115,7 +116,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
 
   return composePullRequestUseCase(
     new UpdatePullRequestDescriptionUseCase(
-      bindPullRequestDescription(pullRequestLifecycle, binding),
+      bindPullRequestDescription(pullRequestLifecycle, binding, new PullRequestChangesRepository(createPullRequestChangesClient())),
       bindIssueDescriptionQuery(issueContent, binding),
       bindOrganizationMembers(organizationMembers, binding),
       createFindingsQueryPort(),

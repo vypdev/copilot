@@ -119,6 +119,15 @@ If the card says “waiting”, let the named CI or Bugbot producer finish. If i
 
 Run `copilot doctor` for ordered `approval.policy`, `approval.workflow`, `approval.bot`, `approval.rules`, `approval.producers`, `approval.bugbot`, and `approval.overall` checks. `pass` means the prerequisite was verified; `warn` or `skipped` never means native approval is ready. Doctor is read-only. Credential health cannot prove future `Pull requests: write` authorization without submitting a review, so `approval.bot` remains a warning even when the Secret is healthy; verify that permission in the bot token settings. An observer file copied locally but not yet on the default branch will be reported as pending installation.
 
+Both `recommend` and `guarded` need the runtime `PAT` to read the effective
+`PR_APPROVAL_POLICY` through GitHub's Actions Variables API. For a fine-grained
+token, this requires repository **Variables: read**; an inherited organization
+policy also needs organization Variables read. If the Job Summary says
+`policy-unavailable`, verify that access and rerun the observer. A network failure
+can also prevent the read. This state leaves existing PRs and reviews unchanged
+and publishes no assessment. `invalid-policy` instead means the value was read
+but failed validation: run doctor and correct the variable before retrying.
+
 Use the **Copilot - Pull Request Approval** workflow's manual dispatch with a positive PR number to re-evaluate a missed wakeup. The dispatcher needs repository write permission; re-evaluation never bypasses eligibility. Set the policy mode to `off` to stop future reviews. Existing native reviews remain in GitHub history and need human assessment; disabling does not dismiss them.
 
 See [workflow setup](/pull-requests/workflow-setup), [authentication](/authentication), and [operations troubleshooting](/security-operations/operations/troubleshooting) for related prerequisites.

@@ -10,6 +10,8 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none in the SDD-only policy; live provider review remains pending
 
+Live dogfooding on 2026-10-10 (#454) exposed a runner checkout hook that required `node` from the service PATH and prevented the already validated SDD commit. SDD publication now uses an empty hooks directory for that single Git invocation; contributor hook configuration is retained. The Action's own SDD and catalog validation remains mandatory before staging and publication. Subsequent review found that a generated update had replaced the owning capability's previous contract with the new feature's scope. Automated updates now preserve the existing owner verbatim and append a proposed change. Publication retries reuse their validated owner without spending another clarification round. These protections bring the minimum budget to 72.
+
 ## 1. Executive summary
 
 A repository can enable a pre-branch SDD gate for feature issues and other
@@ -502,6 +504,20 @@ or status update failed. A retry reads the exact remote SHA before writing.
    separate regular-file checks. This closes the race found by [Bugbot on PR
    #403](https://github.com/vypdev/copilot/pull/403).
 
+A failed first publication persists the exact linked branch and original base in the bot-owned awaiting-answer record without claiming a published commit. Replay may reuse an empty retained branch only when its head belongs to the parent history; implementation commits before the first SDD block recovery. Advancing develop does not rebase, recreate, or force-push that branch. A pushed first SDD is recovered only through the existing author, subject, catalog, path, parent and remote ancestry verification. Action-owned hidden configuration is excluded from human issue freshness. Published records still require the exact verified first commit.
+
+An unchanged awaiting-publication record with no pending questions reuses its
+validated owner and answers, drafts again, and repeats validation and freshness
+checks. It does not reenter analysis or increment the clarification round.
+Automated `update` drafts are proposed appendices, not replacements: trusted
+composition retains the complete original Markdown, shifts only prose heading
+levels in the appendix, and preserves fenced examples. An appendix has a fixed
+18,000-character limit; the combined document retains the 70,000-character
+limit. Overflow fails before publication without truncation. Contributors review
+and integrate proposals explicitly; new distinct concerns may use a catalogued
+companion before branch creation. Existing requirements and test budgets cannot
+be silently erased by model output.
+
 ## 12. Observability and operational UX
 
 The issue status reports gate stage, SDD path/owner, answer owners, branch
@@ -531,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **60 distinct cases** are a floor derived from eligibility,
+The following **80 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -544,7 +560,12 @@ ownership/validation.
 | Workflow/setup/SDD schema | 8 | Forms, profile, template, catalog |
 | UX/localization/accessibility/sanitization | 6 | Five states, links, notification budget |
 | Integration/security/recovery | 8 | First commit, partial effects, abuse |
-| **Total** | **60** | No case counted twice |
+| Pending-branch recovery | 6 | Retained base, intervening commits, managed metadata, pending card, replay, post-push recovery |
+| Automation hook isolation | 1 | Validated SDD publication ignores failing checkout hooks; configuration preserved |
+| Owner preservation and publication replay | 5 | Original contract and fenced examples, appendix bound, combined bound, real Git publication of narrower output, retry after the third clarification round |
+| Canonical owner line endings | 1 | CRLF scratch checkout preserves the exact committed owner prefix and verified publication |
+| Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
+| **Total** | **80** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -682,3 +703,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
   compatibility placeholder in this version.
 - Rejected: drafting before blocking clarification, arbitrary document paths,
   branch creation before validated SDD content, and label-only readiness.
+
+When GitHub opens a PR for an issue-linked branch, it removes the direct branch connection and retains the native issue-to-PR connection. Readiness MUST preserve this evidence only for an open PR associated with the exact issue, from the same repository, whose exact head name and full commit SHA match the current remote ref. The bounded query reads at most 100 direct linked branches and 100 native associated PRs; no repository-wide search, branch-name inference, PR-body parsing or configurable expansion is permitted. A closed PR, fork, stale head or missing remote ref never proves readiness. Live evidence: issue #453 and PR #460 on 2026-10-10. Primary source: [GitHub branch-to-issue behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue).
+
+Automated SDD extension reads the existing owner from the selected immutable Git commit after checking the scratch file boundary. Checkout line-ending conversion cannot change the retained contract or introduce mixed line endings. A real Git fixture with core.autocrlf=true exercises validation, publication, and first-commit verification.

@@ -1,5 +1,6 @@
 import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
+import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 import {
     resolveStaticPublicationCatalog,
@@ -27,7 +28,7 @@ export interface CopilotStatusExecutionContext {
         readonly currentPullRequestLabels?: readonly string[];
         readonly lifecycle?: CopilotLifecycleLabels;
     };
-    readonly currentConfiguration: { readonly results?: readonly { readonly payload: unknown }[] };
+    readonly currentConfiguration: { readonly workingBranch?: string; readonly results?: readonly { readonly payload: unknown }[] };
     readonly ai: {
         readonly getPullRequestDescriptionMode: () => string;
     };
@@ -79,6 +80,11 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
     }).find(([, label]) => label && targetLabels.includes(label))?.[0];
     const findingStateProjection = projectBugbotResultFindingStates(execution.currentConfiguration?.results ?? []);
     const findingStates = findingStateProjection.status === 'valid' ? findingStateProjection.counts : undefined;
+    const branch = execution.isPush ? execution.commit?.branch
+        : execution.currentConfiguration?.workingBranch || execution.commit?.branch;
+    const candidateIssue = parsePositiveSafeInteger(execution.issueNumber)
+        ?? parsePositiveSafeInteger(execution.issue?.number);
+    const issueNumber = candidateIssue === execution.pullRequest?.number ? undefined : candidateIssue;
 
     return Object.freeze({
         owner: execution.owner,
@@ -92,9 +98,9 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
                 : execution.issue?.number > 0 || execution.isIssue
                     ? 'issue'
                     : 'repository',
-        ...(execution.issue?.number > 0 ? { issueNumber: execution.issue.number } : {}),
+        ...(issueNumber ? { issueNumber } : {}),
         ...(execution.pullRequest?.number > 0 ? { pullRequestNumber: execution.pullRequest.number } : {}),
-        ...(execution.commit?.branch ? { branch: execution.commit.branch } : {}),
+        ...(branch ? { branch } : {}),
         ...(lifecycle ? { lifecycle } : {}),
         ...(waitingFor ? { waitingFor } : {}),
         issueLabels: Object.freeze(issueLabels),
@@ -131,7 +137,9 @@ export function formatCopilotStatus(
     const lines = [
         `## ${catalog.render('interaction.status.heading')}`,
         label('interaction.status.repository', `${snapshot.owner}/${snapshot.repository}`),
-        label('interaction.status.target', `${snapshot.target}${snapshot.issueNumber ? ` #${snapshot.issueNumber}` : ''}${snapshot.pullRequestNumber ? ` / PR #${snapshot.pullRequestNumber}` : ''}`),
+        label('interaction.status.target', snapshot.target === 'pull-request'
+            ? `${snapshot.target}${snapshot.pullRequestNumber ? ` / PR #${snapshot.pullRequestNumber}` : ''}${snapshot.issueNumber ? ` / issue #${snapshot.issueNumber}` : ''}`
+            : `${snapshot.target}${snapshot.issueNumber ? ` #${snapshot.issueNumber}` : ''}`),
         label('interaction.status.event', `${snapshot.event}${snapshot.action ? ` (${snapshot.action})` : ''}`),
         label('interaction.status.branch', snapshot.branch ?? catalog.render('interaction.status.unknown')),
         label('interaction.status.lifecycle', snapshot.lifecycle ?? catalog.render('interaction.status.notSet')),

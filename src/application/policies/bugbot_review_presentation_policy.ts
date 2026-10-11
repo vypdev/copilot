@@ -9,6 +9,7 @@ import {
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import type { BugbotReviewNavigation } from '../ports/bugbot_review_navigation_ports';
 import { buildPublicationMarker } from './publication_identity_policy';
+import { buildBugbotStatusCountMarker } from './bugbot_status_count_marker_policy';
 import {
   resolveStaticBugbotCatalog,
   type BugbotMessageCatalog,
@@ -111,6 +112,7 @@ export function renderBugbotStatusCard(
     }),
     buildBugbotStatusMarker(projection),
     buildBugbotApprovalEvidenceMarker(projection),
+    buildBugbotStatusCountMarker(projection),
     `## ${heading}`,
     '',
     `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,

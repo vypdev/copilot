@@ -113,7 +113,8 @@ export function rebuildAdaptedComment(input: LanguageAdaptationInput, adaptedTex
     if (restored === undefined) return undefined;
     const safeText = sanitizeAgentMarkdown(restored, MAX_TRANSLATED_COMMENT_LENGTH).trim();
     if (input.kind === 'command' && input.commandName) {
-        return `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
+        const command = `/copilot ${input.commandName}${safeText ? ` ${safeText}` : ''}`;
+        return parseCopilotCommand(command).kind === 'command' ? command : undefined;
     }
     if (input.kind === 'mention' && input.trustedBotLogin) {
         return `@${input.trustedBotLogin}${safeText ? ` ${safeText}` : ''}`;
@@ -153,7 +154,12 @@ function exactPlaceholderIndex(value: string, placeholder: string): number | und
     const before = index > 0 ? value[index - 1] : '';
     const afterIndex = index + placeholder.length;
     const after = afterIndex < value.length ? value[afterIndex] : '';
-    return !OPERAND_ADJACENCY_PATTERN.test(before) && !OPERAND_ADJACENCY_PATTERN.test(after)
+    // A sentence-ending period beside an opaque code span is punctuation;
+    // extensions or other appended operands still fail this and the final scan.
+    const sentencePeriod = after === '.'
+        && (afterIndex + 1 === value.length || /\s/u.test(value[afterIndex + 1]));
+    return !OPERAND_ADJACENCY_PATTERN.test(before)
+        && (!OPERAND_ADJACENCY_PATTERN.test(after) || sentencePeriod)
         ? index
         : undefined;
 }

@@ -150,6 +150,7 @@ export async function runSetupExecution(
         };
         configuration = {
             ...configuration,
+            workingBranch: issueResolution.pullRequestHeadBranch || context.pullRequest.head || configuration.workingBranch,
             parentBranch: configuration.parentBranch ?? context.pullRequest.base,
         };
     }

@@ -79,6 +79,7 @@ export interface ResolvedSingleActionState {
 }
 
 export interface ExecutionIssueResolution {
+    readonly pullRequestHeadBranch?: string;
     readonly issueNumber?: number;
     readonly singleAction: ResolvedSingleActionState;
 }

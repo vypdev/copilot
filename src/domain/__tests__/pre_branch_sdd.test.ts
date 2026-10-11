@@ -5,6 +5,7 @@ import {
   readSddGateRecord,
   renderSddGateRecord,
   validateSddMarkdown,
+  composeSddUpdate,
   normalizeSddIssueTitle,
   type SddGateRecord,
 } from '../pre_branch_sdd';
@@ -14,6 +15,30 @@ const reason = 'This issue changes the payments contract and requires an owner u
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason, questions: [] };
 
 describe('pre-branch SDD policy', () => {
+  function validDocument(title: string, extra = ''): string {
+    return `# ${title}\n${'Existing scope and authorization remain required. '.repeat(45)}\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n20 distinct cases\n## 16. Acceptance\n${extra}`;
+  }
+
+  it('preserves the existing contract and appends an isolated proposed change without altering code examples', () => {
+    const existing = validDocument('Original owner', 'The original feature MUST remain authorized.');
+    const change = validDocument('Status extension', '```markdown\n## Example heading\n```\n');
+    const merged = composeSddUpdate(existing, change);
+    expect(merged.startsWith(`${existing}\n\n`)).toBe(true);
+    expect(merged).toContain('## Status extension');
+    expect(merged).toContain('### 16. Acceptance');
+    expect(merged).toContain('```markdown\n## Example heading\n```');
+  });
+
+  it('rejects an oversized change appendix without dropping any existing requirement', () => {
+    expect(() => composeSddUpdate(validDocument('Owner'), validDocument('Change', 'x'.repeat(18_000))))
+      .toThrow('appendix exceeds 18000');
+  });
+
+  it('rejects a combined owner beyond the fixed document limit instead of truncating it', () => {
+    expect(() => composeSddUpdate(validDocument('Owner', 'x'.repeat(60_000)), validDocument('Change', 'x'.repeat(10_000))))
+      .toThrow('length is outside');
+  });
+
   it.each(['specs/payments.md', 'specs/new-capability.md'])('allows one normalized SDD path %s', path => {
     expect(isSafeSddPath(path)).toBe(true);
   });

@@ -61,7 +61,7 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         }
 
         logDebugInfo(
-            `PR description will be generated from workspace diff: base "${branches.baseBranch}", head "${branches.headBranch}" (configured agent will run git diff).`,
+            `PR description will be generated from the bounded GitHub diff: base "${branches.baseBranch}", head "${branches.headBranch}".`,
         );
         const inferredIssueNumber = parsePositiveSafeInteger(context.issueNumber);
         const linkedIssueNumber = inferredIssueNumber !== context.pullRequest.number
@@ -83,6 +83,15 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             }
         }
 
+        const currentBody = details?.body ?? context.pullRequest.body;
+        const diff = await dependencies.pullRequestDescriptionCommandPort.getDiff(context.pullRequest.number);
+        const changes = diff.snapshot.changes;
+        const diffEvidence = JSON.stringify(changes);
+        if (diff.coverage.status !== 'complete' || changes.length === 0 || changes.length > 100
+            || diffEvidence.length > 120_000
+            || changes.some(change => (change.additions > 0 || change.deletions > 0) && !change.patch)) {
+            throw new ApplicationError('provider.contract-invalid', 'The PR diff is incomplete or exceeds the description evidence budget. Existing body retained.');
+        }
         const prompt = getUpdatePullRequestDescriptionPrompt({
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             baseBranch: branches.baseBranch,
@@ -93,6 +102,8 @@ export async function runUpdatePullRequestDescriptionWorkflow(
                 ? `Set \`closesLinkedIssue\` to true only when this PR fully resolves issue #${linkedIssueNumber}; otherwise set it to false. Do not put the closing reference in another field.`
                 : 'Set `closesLinkedIssue` to false because this pull request has no separate linked issue.',
             targetLocale: context.targetLocale,
+            diffEvidence,
+            currentBody: currentBody.slice(0, 12_000),
         });
         logDebugInfo(
             `UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`,
@@ -108,7 +119,6 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         });
         const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber);
 
-        const currentBody = details?.body ?? context.pullRequest.body;
         const pullRequestBody = context.mode === 'replace'
             ? generatedDescription
             : mergeManagedPullRequestDescription(currentBody, generatedDescription);

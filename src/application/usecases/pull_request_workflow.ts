@@ -77,6 +77,10 @@ export async function runPullRequestWorkflow(
       return results;
     }
 
+    if (context.action === 'ready_for_review') {
+      return agentAllowed ? await runPullRequestReview(context, ports) : [];
+    }
+
     if (context.action === 'edited') {
       return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
     }

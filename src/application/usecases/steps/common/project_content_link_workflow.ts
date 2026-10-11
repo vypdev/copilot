@@ -46,7 +46,7 @@ export function projectPullRequestContentLinkContext(source: ProjectContentLinkS
     );
 }
 
-/** Links issue-like content to each configured project and updates the returned item directly. */
+/** Links content and initializes only an unset status on the exact returned item. */
 export async function runProjectContentLinkWorkflow(
     param: ProjectContentLinkContext,
     taskId: string,
@@ -63,14 +63,16 @@ export async function runProjectContentLinkWorkflow(
         const results: Result[] = [];
         for (const project of param.projects) {
             const projectItemId = await port.linkContentId(project, contentId);
-            const moved = await port.moveContent(project, projectItemId, param.columnName);
-            if (moved) {
+            const status = await port.initializeStatus(project, projectItemId, param.columnName);
+            if (status === 'initialized' || status === 'retained') {
                 results.push(new Result({
                     id: taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`,
+                        status === 'initialized'
+                            ? `The ${param.contentType} is linked to [**${project.title}**](${project.url}) with status \`${param.columnName}\`.`
+                            : `The ${param.contentType} is linked to [**${project.title}**](${project.url}); its existing status was retained.`,
                     ],
                 }));
             } else {

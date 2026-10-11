@@ -59,12 +59,17 @@ During setup, Copilot creates the lifecycle labels once. The durable lifecycle p
 | --- | --- |
 | `state:planned` | A recommendation or implementation plan is available. |
 | `state:specifying` | A required SDD is being clarified or revised. |
-| `state:working` | Implementation may proceed. |
+| `state:working` | Implementation may proceed, or a branchless help conversation is active. |
 | `state:reviewing` | A pull request is being reviewed. |
 | `state:changes-requested` | The review has active findings. |
 | `state:ready` | The latest review has no active findings. |
 | `state:verified` | The pull request was merged successfully. |
 | `state:blocked` | A workflow failed or needs human input. |
+
+A successful answer to a help-issue comment restores `state:working` after a
+failed request and clears the waiting label. A successful answer on a
+branch-bearing issue does not prove its blocked work has recovered. Skipped or
+failed answers preserve the need to retry; explicit plans remain `state:planned`.
 
 ### Temporary activity and human waiting
 

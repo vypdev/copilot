@@ -40,6 +40,7 @@ import type {
 import type {
   BoundPullRequestDescriptionPort,
   PullRequestDescriptionCommandPort,
+  PullRequestDescriptionDiffPort,
 } from '../../application/ports/pull_request_description_ports';
 import type {
   BoundPullRequestIssueLinkPort,
@@ -338,6 +339,7 @@ export function bindPullRequestHeadSha(
 export function bindPullRequestDescription(
   port: PullRequestDescriptionCommandPort,
   binding: RepositoryCredentialBinding,
+  diff?: PullRequestDescriptionDiffPort,
 ): BoundPullRequestDescriptionPort {
   return Object.freeze({
     updateDescription: (pullRequestNumber, description) => port.updateDescription(
@@ -355,6 +357,10 @@ export function bindPullRequestDescription(
         pullRequestNumber,
         binding.token,
       );
+    },
+    getDiff: async (pullRequestNumber) => {
+      if (!diff) throw new Error('Pull-request diff query is not available.');
+      return diff.getBoundedBugbotReviewDiffSnapshot(binding.owner, binding.repository, pullRequestNumber, binding.token);
     },
   } satisfies BoundPullRequestDescriptionPort);
 }

@@ -5,7 +5,7 @@ import { runCommentAutomation as runCommentAutomationImpl } from "../comment_aut
 import type { CommentAutomationOptions } from '../comment_automation_contracts';
 import type { ActorAuthorizationPort } from '../../ports/actor_authorization_ports';
 import { projectCommentAutomationContext } from '../comment_automation_context';
-import { projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
+import { CommentLanguageTranslationWorkflow, projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
 
 type TestActorAuthorizationPort = Pick<ActorAuthorizationPort, 'isActorAllowedToModifyFiles'>
   & Partial<Pick<ActorAuthorizationPort, 'isActorAllowedToUseMemberOnlyAutomation'>>;
@@ -106,6 +106,7 @@ function runCommentAutomation(
       locale: 'en-US',
       issueNumber: source.issue.number ?? source.pullRequest.number,
       commentId: source.issue.commentId ?? source.pullRequest.commentId ?? -1,
+      trustedBotLogin: source.tokenUser,
       configuration: source.ai.getAgentConfiguration('findings'),
     }),
     userComment,
@@ -202,6 +203,34 @@ describe("runCommentAutomation", () => {
       })],
     });
     expect(JSON.stringify(results.at(-1))).not.toContain(resolutionError.message);
+  });
+
+  it.each([false, true])('routes literal fix identifiers without language adaptation (intent failure: %s)', async failure => {
+    const id = 'docs/área.mdx:28:awaiting-maintainer treated as failure';
+    const userComment = `/copilot fix ${JSON.stringify(id)}`;
+    const language = { invoke: jest.fn().mockResolvedValue([]) };
+    const intent = { invoke: jest.fn().mockResolvedValue([successfulResult('intent', {
+      isFixRequest: true, isDoRequest: false, targetFindingIds: [id], context: {},
+    })]) };
+    const autofix = { invoke: jest.fn().mockResolvedValue([successfulResult('autofix')]) };
+    if (failure) intent.invoke.mockRejectedValueOnce(new Error('private provider diagnostic'));
+    commitAutofixAndResolveFindings.mockResolvedValue([]);
+    const results = await runCommentAutomation({ owner: 'o', repo: 'r', actor: 'actor',
+      tokens: { token: 't' }, isPullRequest: true, eventName: 'pull_request_review_comment',
+      commit: { branch: '' }, pullRequest: { number: 460, head: 'docs/work', isPullRequestReviewComment: true, commentBody: userComment },
+    } as unknown as Execution, {
+      taskId: 'CommentAutomation', languageUseCase: language as never, intentUseCase: intent as never,
+      thinkUseCase: {} as never, autofixUseCase: autofix as never, doUserRequestUseCase: {} as never, userComment,
+    }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never);
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).toHaveBeenCalledWith(expect.objectContaining({ comment: expect.objectContaining({ body: userComment }) }));
+    if (failure) {
+      expect(autofix.invoke).not.toHaveBeenCalled();
+      expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.failed' })] });
+    } else {
+      expect(autofix.invoke).toHaveBeenCalledWith(expect.objectContaining({ targetFindingIds: [id] }));
+      expect(results.every(result => result.success)).toBe(true);
+    }
   });
 
   it("returns a sanitized failure result when intent detection rejects", async () => {
@@ -634,6 +663,58 @@ describe("runCommentAutomation", () => {
     expect(think.invoke).not.toHaveBeenCalled();
   });
 
+  it('stops an expanded translated command before intent, answer, or mutation', async () => {
+    const workflow = new CommentLanguageTranslationWorkflow({ query: jest.fn().mockResolvedValue({
+      status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+      adaptedText: 'word '.repeat(21).trim(), reasonCode: 'none',
+    }) });
+    const intent = { invoke: jest.fn() };
+    const think = { invoke: jest.fn() };
+    const mutation = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { actor: 'actor', tokenUser: 'vypbot', isPullRequest: true, tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { taskId: 'language', invoke: request => workflow.invoke({ ...request, taskId: 'language' }) },
+        intentUseCase: intent as never, thinkUseCase: think as never,
+        autofixUseCase: mutation as never, doUserRequestUseCase: mutation as never,
+        userComment: '/copilot implement aclara el requisito',
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+    );
+    expect(results[0].success).toBe(false);
+    expect(intent.invoke).not.toHaveBeenCalled();
+    expect(think.invoke).not.toHaveBeenCalled();
+    expect(mutation.invoke).not.toHaveBeenCalled();
+  });
+
+  it('retains the trusted mention through context projection and real language adaptation', async () => {
+    const workflow = new CommentLanguageTranslationWorkflow({ query: jest.fn().mockResolvedValue({
+      status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
+      adaptedText: 'add a test', reasonCode: 'none',
+    }) });
+    const intent = { invoke: jest.fn().mockResolvedValue([successfulResult('intent', {
+      isFixRequest: false, isDoRequest: true, targetFindingIds: [], requestText: 'add a test',
+    })]) };
+    const mutation = { invoke: jest.fn().mockResolvedValue([]) };
+    const results = await runCommentAutomation(
+      { actor: 'actor', tokenUser: 'vypbot', isPullRequest: true, tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { taskId: 'language', invoke: request => workflow.invoke({ ...request, taskId: 'language' }) },
+        intentUseCase: intent as never, thinkUseCase: { invoke: jest.fn() } as never,
+        autofixUseCase: {} as never, doUserRequestUseCase: mutation as never,
+        userComment: '@vypbot añade una prueba',
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+    );
+    expect(intent.invoke).toHaveBeenCalledWith(expect.objectContaining({
+      comment: expect.objectContaining({ body: '@vypbot add a test' }),
+    }));
+    expect(results).toEqual([expect.objectContaining({ id: 'language' }), expect.objectContaining({ id: 'intent' })]);
+    expect(mutation.invoke).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps an explicit implement request on the authorized mutation route', async () => {
     const doUserRequest = { invoke: jest.fn().mockResolvedValue([]) };
     const intent = {
@@ -772,7 +853,7 @@ describe("runCommentAutomation", () => {
   });
 
   it('delegates explicit dismiss commands only after authorization', async () => {
-    const dismiss = { invoke: jest.fn().mockResolvedValue([successfulResult('dismiss')]) };
+    const dismiss = { taskId: 'DismissBugbotFindings', invoke: jest.fn().mockResolvedValue([successfulResult('dismiss')]) };
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
     const results = await runCommentAutomation(
       { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
@@ -819,45 +900,245 @@ describe("runCommentAutomation", () => {
     expect(results[0]).toMatchObject({ success: true, executed: false });
   });
 
-  it('commits an explicitly remembered rule using only its exact guarded path', async () => {
-    const remember = { invoke: jest.fn().mockResolvedValue([successfulResult('remember')]) };
-    const statusOutputs = ['', '?? .copilot/BUGBOT.learned.md\n', '?? .copilot/BUGBOT.learned.md\n'];
-    const bugbotGitMutationPort = {
-      execute: jest.fn((_program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
-        if (args[0] === 'status') options?.stdout?.(Buffer.from(statusOutputs.shift() ?? ''));
-        return Promise.resolve();
+  it('passes a quoted multiword finding ID losslessly to deterministic dismissal', async () => {
+    const id = 'docs/issues/first-workflow.mdx:28:awaiting-maintainer treated as failure';
+    const dismiss = { taskId: 'DismissBugbotFindings', invoke: jest.fn().mockResolvedValue([successfulResult('dismiss')]) };
+    await runCommentAutomation({ owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution, {
+      taskId: 'CommentAutomation', languageUseCase: {} as never, intentUseCase: {} as never,
+      thinkUseCase: {} as never, autofixUseCase: {} as never, doUserRequestUseCase: {} as never,
+      dismissBugbotFindingsUseCase: dismiss,
+      userComment: `/copilot dismiss ${JSON.stringify(id)}`,
+    }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) });
+    expect(dismiss.invoke).toHaveBeenCalledWith(expect.objectContaining({ findingIds: [id] }));
+  });
+
+  it.each([0, 1, undefined])('publishes only a verified dismissal count (%s)', async count => {
+    const dismissed = new Result({ id: 'DismissBugbotFindingsUseCase', success: count !== undefined,
+      executed: true, payload: { dismissedCount: count } });
+    const results = await runCommentAutomation({
+      owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' },
+      commit: { branch: 'feature/work' }, issueNumber: 7, ai: configuredAi(),
+    } as unknown as Execution, {
+      taskId: 'CommentAutomation', languageUseCase: {} as never, intentUseCase: {} as never,
+      thinkUseCase: {} as never, autofixUseCase: {} as never, doUserRequestUseCase: {} as never,
+      dismissBugbotFindingsUseCase: { invoke: jest.fn().mockResolvedValue([dismissed]) } as never,
+      userComment: '/copilot dismiss "finding with spaces"',
+    }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never);
+    if (count === undefined) expect(results).toEqual([dismissed]);
+    else expect(results.at(-1)?.payload).toEqual({ publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count } });
+  });
+
+  function rememberFixture(settings: {
+    duplicate?: boolean;
+    changedPaths?: string;
+    checkoutFails?: boolean;
+    verificationFails?: boolean;
+    noPorts?: boolean;
+    readFails?: boolean;
+    identity?: Record<string, unknown>;
+    noLinkedBranch?: boolean;
+    linkedBranch?: { name: string; headSha: string };
+    storeResults?: Result[];
+  } = {}) {
+    let changed = false;
+    const remember = { invoke: jest.fn(async () => {
+      changed = !settings.duplicate;
+      return settings.storeResults ?? [new Result({ id: 'remember', success: true, executed: changed,
+        payload: { learnedRule: changed ? 'created' : 'existing' } })];
+    }) };
+    const git = {
+      execute: jest.fn(async (program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
+        if (args[0] === 'status') {
+          options?.stdout?.(Buffer.from(changed
+            ? settings.changedPaths ?? '?? .copilot/BUGBOT.learned.md\n'
+            : ''));
+        }
+        return program === 'pnpm' && settings.verificationFails ? 1 : 0;
       }),
+      fetch: jest.fn(async () => { if (settings.checkoutFails) throw new Error('fetch unavailable'); }),
       configureAuthor: jest.fn().mockResolvedValue(undefined),
       stagePaths: jest.fn().mockResolvedValue(undefined),
       stageAll: jest.fn().mockResolvedValue(undefined),
       commit: jest.fn().mockResolvedValue(undefined),
       push: jest.fn().mockResolvedValue(undefined),
     };
-    const results = await runCommentAutomation(
+    const pullRequests = { getPullRequest: jest.fn(async () => {
+      if (settings.readFails) throw new Error('provider read failed');
+      return {
+        number: 460, state: 'open', draft: true, baseRepository: { owner: 'o', name: 'r' },
+        headRepositoryOwner: 'o', headRepositoryName: 'r', headRef: 'docs/453-workflow', headSha: 'a'.repeat(40),
+        ...settings.identity,
+      };
+    }) };
+    const linkedBranches = { getLinkedBranch: jest.fn(async (_number: number, branch: string) =>
+      settings.noLinkedBranch ? undefined : settings.linkedBranch ?? { name: branch, headSha: 'a'.repeat(40) }) };
+    const run = (execution: Partial<Execution> = {}) => runCommentAutomation(
       {
         owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' },
         commit: { branch: 'feature/1-safe' }, issueNumber: 1,
-        ai: configuredAi({ fixVerifyCommands: [] }),
+        ai: configuredAi({ fixVerifyCommands: ['pnpm run typecheck'] }),
+        ...execution,
       } as unknown as Execution,
       {
         taskId: 'CommentAutomation',
-        languageUseCase: {} as never,
-        intentUseCase: {} as never,
-        thinkUseCase: {} as never,
-        autofixUseCase: {} as never,
+        languageUseCase: {} as never, intentUseCase: {} as never,
+        thinkUseCase: {} as never, autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         rememberBugbotRuleUseCase: remember as never,
+        rememberBranchPorts: settings.noPorts ? undefined : { pullRequests, linkedBranches } as never,
         userComment: '/copilot remember Prefer exact path validation',
-        bugbotGitMutationPort: bugbotGitMutationPort as never,
+        bugbotGitMutationPort: git as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
-      { getTokenUserDetails: jest.fn().mockResolvedValue({ name: 'Bot', email: 'bot@example.com' }) } as never,
     );
+    return { remember, git, run, pullRequests, linkedBranches };
+  }
 
-    expect(remember.invoke).toHaveBeenCalledTimes(1);
-    expect(bugbotGitMutationPort.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
-    expect(bugbotGitMutationPort.stageAll).not.toHaveBeenCalled();
-    expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: true });
+  it.each([
+    { label: 'issue branch', execution: {}, branch: 'feature/1-safe' },
+    { label: 'persisted issue branch verified by its native link', execution: { commit: { branch: '' }, currentConfiguration: { workingBranch: 'feature/1-safe' } } as unknown as Partial<Execution>, branch: 'feature/1-safe' },
+    { label: 'ordinary PR comment with no head fields', execution: { isPullRequest: true, commit: { branch: '' }, pullRequest: { number: 460, head: '' } } as unknown as Partial<Execution>, branch: 'docs/453-workflow' },
+    {
+      label: 'PR head with no commit-event branch',
+      execution: {
+        isPullRequest: true, commit: { branch: '' }, issueNumber: 453,
+        pullRequest: { number: 460, head: 'docs/453-workflow' },
+      } as unknown as Partial<Execution>,
+      branch: 'docs/453-workflow',
+    },
+  ])('checks out the $label before remembering and verifies only the guarded path', async ({ execution, branch }) => {
+    const { remember, git, run } = rememberFixture();
+    const results = await run(execution);
+    const checkoutIndex = git.execute.mock.calls.findIndex(([, args]) => args[0] === 'checkout');
+    expect(git.fetch).toHaveBeenCalledWith(branch);
+    expect(git.execute).toHaveBeenCalledWith('git', ['checkout', branch]);
+    expect(git.execute.mock.invocationCallOrder[checkoutIndex]).toBeLessThan(remember.invoke.mock.invocationCallOrder[0]);
+    expect(git.execute.mock.calls.filter(([, args]) => args[0] === 'checkout')).toHaveLength(1);
+    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true });
+    expect(git.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
+    expect(git.stageAll).not.toHaveBeenCalled();
+    expect(git.push).toHaveBeenCalledWith(branch);
+    expect(results).toContainEqual(expect.objectContaining({ id: 'DoUserRequestCommitAndPush', success: true }));
+    expect(results.at(-1)?.payload).toEqual({ publication: { kind: 'state-command-result', command: 'remember', outcome: 'saved', branch } });
+  });
+
+  const ordinaryPullRequestComment = {
+    isPullRequest: true, commit: { branch: '' }, pullRequest: { number: 460, head: '' },
+  } as unknown as Partial<Execution>;
+
+  it.each([
+    { label: 'wrong PR number', identity: { number: 461 }, code: 'workflow.stale' },
+    { label: 'closed PR', identity: { state: 'closed' }, code: 'workflow.stale' },
+    { label: 'foreign base repository', identity: { baseRepository: { owner: 'other', name: 'r' } }, code: 'workflow.stale' },
+    { label: 'foreign head owner', identity: { headRepositoryOwner: 'fork-owner' }, code: 'workflow.invalid-event' },
+    { label: 'same-owner foreign head repository', identity: { headRepositoryName: 'fork-repository' }, code: 'workflow.invalid-event' },
+    { label: 'unknown head repository name', identity: { headRepositoryName: undefined }, code: 'workflow.invalid-event' },
+  ])('rejects remember on $label before any workspace access', async ({ identity, code }) => {
+    const { remember, git, run } = rememberFixture({ identity });
+    const results = await run(ordinaryPullRequestComment);
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code })] });
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.execute).not.toHaveBeenCalled();
+  });
+
+  it('requires canonical read capability before remembering a PR rule', async () => {
+    const { remember, git, run } = rememberFixture({ noPorts: true });
+    const results = await run(ordinaryPullRequestComment);
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'configuration.unsupported' })] });
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not remember when a canonical provider read fails', async () => {
+    const { remember, git, run } = rememberFixture({ readFails: true });
+    const results = await run(ordinaryPullRequestComment);
+    expect(results[0].success).toBe(false);
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not query a missing pull-request conversation identity', async () => {
+    const { pullRequests, git, run } = rememberFixture();
+    const results = await run({ ...ordinaryPullRequestComment, pullRequest: { number: -1, head: '' } as never });
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.invalid-event' })] });
+    expect(pullRequests.getPullRequest).not.toHaveBeenCalled();
+    expect(git.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: 'missing native link', settings: { noLinkedBranch: true } },
+    { label: 'different branch link', settings: { linkedBranch: { name: 'other', headSha: 'a'.repeat(40) } } },
+    { label: 'malformed linked revision', settings: { linkedBranch: { name: 'feature/1-safe', headSha: 'invalid' } } },
+  ])('refuses remember on an issue with $label', async ({ settings }) => {
+    const { git, remember, run } = rememberFixture(settings);
+    const results = await run();
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.stale' })] });
+    expect(git.execute).not.toHaveBeenCalled();
+    expect(remember.invoke).not.toHaveBeenCalled();
+  });
+
+  it('requires native-link read capability before remembering an issue rule', async () => {
+    const { git, run } = rememberFixture({ noPorts: true });
+    expect((await run())[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'configuration.unsupported' })] });
+    expect(git.execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects branchless remember before inspecting or writing a workspace', async () => {
+    const { remember, git, run } = rememberFixture();
+    const results = await run({ commit: { branch: '' } as never });
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.execute).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.invalid-event' })] });
+  });
+
+  it('does not store a rule when target checkout fails', async () => {
+    const { remember, git, run } = rememberFixture({ checkoutFails: true });
+    const results = await run();
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'provider.unavailable' })] });
+  });
+
+  it('does not verify or commit an already remembered rule', async () => {
+    const { git, run } = rememberFixture({ duplicate: true });
+    const results = await run();
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(results.at(-1)?.payload).toEqual({ publication: { kind: 'state-command-result', command: 'remember', outcome: 'already-exists', branch: 'feature/1-safe' } });
+    expect(git.execute.mock.calls.some(([program]) => program === 'pnpm')).toBe(false);
+    expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: 'empty', storeResults: [] },
+    { label: 'unknown', storeResults: [new Result({ id: 'remember', success: true, executed: false })] },
+    { label: 'failed', storeResults: [new Result({ id: 'remember', success: false, executed: false, payload: { learnedRule: 'existing' } })] },
+  ])('does not infer an existing rule from a $label storage outcome', async ({ storeResults }) => {
+    const { git, run } = rememberFixture({ duplicate: true, storeResults });
+    const results = await run();
+    expect(results).toEqual(storeResults);
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
+  it('rejects unexpected paths written while remembering a rule', async () => {
+    const { git, run } = rememberFixture({ changedPaths: '?? .copilot/BUGBOT.learned.md\n M docs/unrelated.mdx\n' });
+    const results = await run();
+    expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'agent.policy-rejected' })] });
+    expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
+  it('does not publish a learned rule when verification fails', async () => {
+    const { git, run } = rememberFixture({ verificationFails: true });
+    const results = await run();
+    expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: false });
+    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true });
+    expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
   });
 
   it('refuses to remember a rule when the workspace is already dirty', async () => {
@@ -869,7 +1150,7 @@ describe("runCommentAutomation", () => {
       }),
     };
     const results = await runCommentAutomation(
-      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' }, commit: { branch: 'feature/1-safe' } } as Execution,
       {
         taskId: 'CommentAutomation',
         languageUseCase: {} as never,
@@ -878,6 +1159,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         rememberBugbotRuleUseCase: remember as never,
+        rememberBranchPorts: { linkedBranches: { getLinkedBranch: jest.fn().mockResolvedValue({ name: 'feature/1-safe', headSha: 'a'.repeat(40) }) } } as never,
         userComment: '/copilot remember Do not hide failures',
         bugbotGitMutationPort: bugbotGitMutationPort as never,
       },

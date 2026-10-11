@@ -80,4 +80,52 @@ describe('runCommentAutomationAction', () => {
     expect(mockCommitAutofix).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({ success: true, executed: false, payload: { dryRun: true } });
   });
+
+  it('retries a superseded post-push review once and retains only the fresh canonical result', async () => {
+    const superseded = new Result({ id: 'review', success: true, executed: true, payload: { superseded: true, analyzedHeadSha: 'old-head' } });
+    const verified = new Result({ id: 'review', success: true, executed: true, payload: { analyzedHeadSha: 'pushed-head' } });
+    const review = { invoke: jest.fn().mockResolvedValueOnce([superseded]).mockResolvedValueOnce([verified]) };
+    const autofix = { invoke: jest.fn().mockResolvedValue([new Result({ id: 'autofix', success: true, executed: true })]) };
+    const context = execution();
+
+    const results = await runCommentAutomationAction(context, options({ autofixUseCase: autofix, reviewPotentialProblemsUseCase: review }), 'autofix', { targetFindingIds: ['finding-1'] } as never);
+
+    expect(review.invoke).toHaveBeenCalledTimes(2);
+    expect(review.invoke.mock.calls[0][0]).toBe(review.invoke.mock.calls[1][0]);
+    expect(autofix.invoke).toHaveBeenCalledTimes(1);
+    expect(mockCommitAutofix).toHaveBeenCalledTimes(1);
+    expect(results).toContain(verified);
+    expect(results).not.toContain(superseded);
+  });
+
+  it('stops after a second superseded review without repeating any write or declaring a clean result', async () => {
+    const superseded = new Result({ id: 'review', success: true, executed: true, payload: { superseded: true } });
+    const review = { invoke: jest.fn().mockResolvedValue([superseded]) };
+    const autofix = { invoke: jest.fn().mockResolvedValue([new Result({ id: 'autofix', success: true, executed: true })]) };
+
+    const results = await runCommentAutomationAction(execution(), options({ autofixUseCase: autofix, reviewPotentialProblemsUseCase: review }), 'autofix', { targetFindingIds: ['finding-1'] } as never);
+
+    expect(review.invoke).toHaveBeenCalledTimes(2);
+    expect(mockCommitAutofix).toHaveBeenCalledTimes(1);
+    expect(autofix.invoke).toHaveBeenCalledTimes(1);
+    expect(results.filter(result => result === superseded)).toHaveLength(1);
+    expect(results.at(-1)?.payload).toEqual({ superseded: true });
+  });
+
+  it.each([
+    { success: false, executed: true, payload: { superseded: true } },
+    { success: true, executed: false, payload: { superseded: true } },
+    { success: true, executed: true, payload: { partial: true } },
+    { success: true, executed: true, payload: null },
+    { success: true, executed: true, payload: [] },
+  ])('does not retry failed, unexecuted or partial post-push evidence: %j', async data => {
+    const result = new Result({ id: 'review', ...data });
+    const review = { invoke: jest.fn().mockResolvedValue([result]) };
+    const autofix = { invoke: jest.fn().mockResolvedValue([new Result({ id: 'autofix', success: true, executed: true })]) };
+
+    const results = await runCommentAutomationAction(execution(), options({ autofixUseCase: autofix, reviewPotentialProblemsUseCase: review }), 'autofix', { targetFindingIds: ['finding-1'] } as never);
+
+    expect(review.invoke).toHaveBeenCalledTimes(1);
+    expect(results.at(-1)).toBe(result);
+  });
 });

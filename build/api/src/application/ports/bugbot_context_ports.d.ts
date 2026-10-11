@@ -16,7 +16,7 @@ export interface BoundBugbotContextReadPorts {
     getReviewDiffSnapshot(pullRequestNumber: number): Promise<BoundedBugbotRead<PullRequestReviewDiffSnapshot>>;
     getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
     getPullRequestReviewCommentBody(pullRequestNumber: number, commentId: number): Promise<string | null>;
-    loadRules(paths: readonly string[]): ReturnType<BugbotRuleFileQueryPort['loadRules']>;
+    loadRules(paths: readonly string[], revision?: string): ReturnType<BugbotRuleFileQueryPort['loadRules']>;
 }
 /** Repository-bound, credential-free context reads exposed to Bugbot use cases. */
 export type BugbotContextPorts = BoundBugbotContextReadPorts;

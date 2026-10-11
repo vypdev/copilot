@@ -6,15 +6,15 @@
     {
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
-      "requiredCases": 128,
-      "allocatedCases": 160,
+      "requiredCases": 131,
+      "allocatedCases": 163,
       "files": [
         { "path": "src/domain/__tests__/github_publication.test.ts", "qualifyingCases": 5 },
         { "path": "src/domain/__tests__/git_object_id.test.ts", "qualifyingCases": 2 },
         { "path": "src/domain/__tests__/implementation_plan.test.ts", "qualifyingCases": 2 },
         { "path": "src/application/policies/__tests__/publication_identity_policy.test.ts", "qualifyingCases": 14 },
         { "path": "src/application/policies/__tests__/publication_outcome_policy.test.ts", "qualifyingCases": 7 },
-        { "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts", "qualifyingCases": 30 },
+        { "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts", "qualifyingCases": 33 },
         { "path": "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts", "qualifyingCases": 16 },
         { "path": "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts", "qualifyingCases": 8 },
         { "path": "src/application/usecases/steps/common/__tests__/transition_notification_workflow.test.ts", "qualifyingCases": 10 },
@@ -31,15 +31,15 @@
     {
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
-      "requiredCases": 138,
-      "allocatedCases": 141,
+      "requiredCases": 146,
+      "allocatedCases": 148,
       "files": [
         { "path": "src/actions/__tests__/github_action_locale_inputs.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/action_summary_message_catalog.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/agent_output_locale_policy.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/application_error_message_catalog.test.ts", "qualifyingCases": 5 },
         { "path": "src/application/policies/__tests__/bugbot_message_catalog.test.ts", "qualifyingCases": 4 },
-        { "path": "src/application/policies/__tests__/comment_translation_policy.test.ts", "qualifyingCases": 15 },
+        { "path": "src/application/policies/__tests__/comment_translation_policy.test.ts", "qualifyingCases": 18 },
         { "path": "src/application/policies/__tests__/deployment_message_catalog.test.ts", "qualifyingCases": 5 },
         { "path": "src/application/policies/__tests__/inactivity_message_catalog.test.ts", "qualifyingCases": 5 },
         { "path": "src/application/policies/__tests__/publication_message_catalog.test.ts", "qualifyingCases": 6 },
@@ -51,11 +51,12 @@
         { "path": "src/application/usecases/localization/__tests__/resolve_message_catalog_use_case.test.ts", "qualifyingCases": 8 },
         { "path": "src/application/usecases/setup/__tests__/doctor_use_case.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts", "qualifyingCases": 1 },
-        { "path": "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts", "qualifyingCases": 13 },
+        { "path": "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts", "qualifyingCases": 14 },
         { "path": "src/architecture/__tests__/agent_output_locale_boundaries.test.ts", "qualifyingCases": 2 },
         { "path": "src/cli/__tests__/setup_prompt_rendering.test.ts", "qualifyingCases": 2 },
         { "path": "src/domain/__tests__/locale.test.ts", "qualifyingCases": 12 },
-        { "path": "src/domain/__tests__/message_catalog.test.ts", "qualifyingCases": 10 }
+        { "path": "src/domain/__tests__/message_catalog.test.ts", "qualifyingCases": 10 },
+        { "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts", "qualifyingCases": 3 }
       ]
     }
   ]

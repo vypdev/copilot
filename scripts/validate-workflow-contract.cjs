@@ -401,6 +401,9 @@ function assertRunner(file, workflow) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
+    } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {
+      if (!['linux', 'windows'].includes(jobId)) throw new Error(`${relativeFile} contains an unexpected diagnostic job.`);
+      expected = ['self-hosted', 'codex', jobId === 'linux' ? 'Linux' : 'Windows'];
     } else if (relativeFile === '.github/workflows/ci_check.yml'
       || relativeFile === '.github/workflows/repowise.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];
@@ -487,6 +490,12 @@ function assertAgentInstallationPrerequisites(file, workflow) {
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const steps = job.steps ?? [];
     for (const step of steps) {
+      const repositoryVerificationStep = ['.github/workflows/copilot_issue_comment.yml', '.github/workflows/copilot_pull_request_comment.yml'].includes(relativeFile)
+        && step.if === "env.COPILOT_PREPARE_VERIFICATION == 'true'"
+        && ((step.name === 'Prepare repository Node' && step.uses === 'actions/setup-node@v7' && step.with?.['node-version'] === '24.x')
+          || (step.name === 'Prepare repository pnpm' && step.uses === 'pnpm/action-setup@v5' && step.with?.version === '10.12.4')
+          || (step.name === 'Install repository verification dependencies' && step.run === 'pnpm install --frozen-lockfile --ignore-scripts'));
+      if (repositoryVerificationStep) continue;
       if (/^(?:actions\/setup-node|pnpm\/action-setup)@/u.test(String(step?.uses ?? ''))
         || /\b(?:npm|pnpm|npx)\s+(?:install|add|ci|i)\b/u.test(String(step?.run ?? ''))
         || Object.hasOwn(step?.env ?? {}, 'AGENT_PROVISIONING')) {
@@ -511,7 +520,9 @@ function assertNoJobLevelSecrets(file, workflow) {
 function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
-  const expectedPermissions = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml'].includes(path.basename(file))
+  const reviewEvidenceWorkflow = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
+    'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].includes(path.basename(file));
+  const expectedPermissions = reviewEvidenceWorkflow
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
@@ -522,6 +533,10 @@ function assertAgentWorkflowPermissions(file, workflow) {
       || permissionKeys.some((key, index) => key !== expectedKeys[index])
       || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
       throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
+    }
+    if (reviewEvidenceWorkflow && !(job.steps ?? []).some(step =>
+      isCopilotAction(step) && step?.env?.COPILOT_EVIDENCE_TOKEN === '${{ github.token }}')) {
+      throw new Error(`${relativeFile} job ${jobId} must scope COPILOT_EVIDENCE_TOKEN to the Action step for exact-head review Checks.`);
     }
   }
 }
@@ -622,7 +637,7 @@ function assertDirectEventTriggers(file, workflow) {
     const pullRequestTypes = triggers.pull_request.types;
     if (!Array.isArray(pullRequestTypes)
       || pullRequestTypes.includes('edited')
-      || ['opened', 'reopened', 'closed', 'synchronize'].some(type => !pullRequestTypes.includes(type))) {
+      || ['opened', 'reopened', 'closed', 'synchronize', 'ready_for_review'].some(type => !pullRequestTypes.includes(type))) {
       throw new Error(`${relativeFile} must handle code/lifecycle PR events without subscribing to metadata-only edited events.`);
     }
     if (triggers.merge_group || workflow.jobs?.['copilot-merge-group']) {

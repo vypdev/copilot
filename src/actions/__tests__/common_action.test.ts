@@ -253,6 +253,12 @@ function restoreEnvironmentVariable(name: string, value: string | undefined): vo
 describe('mainRun', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Verification deliberately strips live workflow identity. Each queue case
+    // supplies its own fixture rather than inheriting its parent Actions job.
+    delete process.env.GITHUB_RUN_ID;
+    delete process.env.GITHUB_WORKFLOW;
+    delete process.env.GITHUB_WORKFLOW_REF;
+    delete process.env.GITHUB_ACTIONS;
     mockWaitForPreviousWorkflowRunsInvoke.mockResolvedValue(undefined);
     mockSingleActionInvoke.mockResolvedValue([]);
     mockIssueCommentInvoke.mockResolvedValue([]);
