@@ -1,5 +1,5 @@
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
-import { SddDraftFormatFailure, type SddPlan } from '../../../domain/pre_branch_sdd';
+import { SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { FindingsAgentAdapter } from '../../../data/repository/ai/findings_agent_adapter';
 
@@ -7,6 +7,15 @@ const configuration = { provider: 'codex', model: 'model' } as never;
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason: 'A bounded contract change.', questions: [] } as const;
 
 describe('draftSddMarkdown', () => {
+  it('accepts a real findings response with only the canonical numeric table without regeneration', async () => {
+    const markdown = `${'Explicit product scope and architecture. '.repeat(55)}\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n| Area | Minimum distinct cases | Risks |\n|---|---:|---|\n| Policy | 4 | Authority |\n| Total | 4 | Distinct |\n## 16. Acceptance\n`;
+    const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown }));
+    const adapter = new FindingsAgentAdapter({ cli: { execute } });
+    await expect(draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' }, plan, 'Resolved requirements',
+      async candidate => validateSddMarkdown(candidate))).resolves.toBe(markdown);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0][0].prompt).toContain('Total must equal the sum');
+  });
   it('repairs the real findings adapter schema rejection before any draft reaches the writer', async () => {
     const execute = jest.fn().mockResolvedValueOnce(JSON.stringify({ markdown: 'untrusted secret '.repeat(5000) }))
       .mockResolvedValueOnce(JSON.stringify({ markdown: 'Accepted draft '.repeat(150) }));

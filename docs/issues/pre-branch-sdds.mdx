@@ -13,6 +13,13 @@ and integrate existing proposals as a normal contributor on the linked branch.
 Publication retries keep the validated owner and do not consume another
 clarification round. Review the generated specification before implementation.
 
+The numeric test budget may use the canonical template table in section 14.
+Each allocation must be a positive integer and the single `Total` must equal
+their sum; formatted numbers are supported. Placeholders, inconsistent totals
+and fenced examples do not prove a budget. Existing positive numeric prose
+remains supported. A malformed existing owner needs contributor review;
+regenerating a proposed appendix cannot repair that retained contract.
+
 `pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. It does not generate PRDs or ADRs in this flow.

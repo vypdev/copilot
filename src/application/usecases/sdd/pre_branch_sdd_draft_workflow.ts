@@ -24,13 +24,14 @@ export async function draftSddMarkdown(
     required: ['markdown'], additionalProperties: false,
   };
   let problem: 'size' | 'format' = 'size';
-  const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nThe test strategy must include an explicit sentence stating the justified integer number of distinct tests or cases, not only numbers in a table. Return only the required JSON.`;
+  let formatReason: 'required-heading' | 'test-budget' = 'required-heading';
+  const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
   for (let attempt = 0; attempt < 2; attempt++) {
     let value;
     try {
       value = await agent.query({
       configuration, agentId: 'pre-branch-sdd-draft',
-      prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : 'The previous response failed the required SDD headings or numeric test-budget contract.'} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
+      prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
       options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
       });
     } catch (error) {
@@ -52,9 +53,10 @@ export async function draftSddMarkdown(
     } catch (error) {
       if (!(error instanceof SddDraftFormatFailure)) throw error;
       problem = 'format';
+      formatReason = error.reason;
     }
   }
-  if (problem === 'format') throw new ApplicationError('validation.invalid-input', 'The SDD draft still violates its format contract after one bounded repair.', {
+  if (problem === 'format') throw new ApplicationError('validation.invalid-input', `The SDD draft still violates its ${formatReason} format contract after one bounded repair.`, {
     recovery: { id: 'sdd-draft-format-invalid', variables: {} },
   });
   throw new ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {

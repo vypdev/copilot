@@ -54608,13 +54608,14 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
         required: ['markdown'], additionalProperties: false,
     };
     let problem = 'size';
-    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nThe test strategy must include an explicit sentence stating the justified integer number of distinct tests or cases, not only numbers in a table. Return only the required JSON.`;
+    let formatReason = 'required-heading';
+    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
         let value;
         try {
             value = await agent.query({
                 configuration, agentId: 'pre-branch-sdd-draft',
-                prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : 'The previous response failed the required SDD headings or numeric test-budget contract.'} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
+                prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
                 options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
             });
         }
@@ -54643,10 +54644,11 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
             if (!(error instanceof pre_branch_sdd_1.SddDraftFormatFailure))
                 throw error;
             problem = 'format';
+            formatReason = error.reason;
         }
     }
     if (problem === 'format')
-        throw new application_error_1.ApplicationError('validation.invalid-input', 'The SDD draft still violates its format contract after one bounded repair.', {
+        throw new application_error_1.ApplicationError('validation.invalid-input', `The SDD draft still violates its ${formatReason} format contract after one bounded repair.`, {
             recovery: { id: 'sdd-draft-format-invalid', variables: {} },
         });
     throw new application_error_1.ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {
@@ -76299,7 +76301,7 @@ function parsePositiveSafeInteger(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SDD_REQUIRED_HEADINGS = exports.SddDraftFormatFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
+exports.SDD_REQUIRED_HEADINGS = exports.SddOwnerFormatFailure = exports.SddDraftFormatFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
 exports.retainSddAnswers = retainSddAnswers;
 exports.normalizeSddIssueTitle = normalizeSddIssueTitle;
 exports.isSafeSddPath = isSafeSddPath;
@@ -76499,6 +76501,14 @@ class SddDraftFormatFailure extends Error {
     }
 }
 exports.SddDraftFormatFailure = SddDraftFormatFailure;
+/** An immutable owner cannot be repaired by regenerating its proposed appendix. */
+class SddOwnerFormatFailure extends Error {
+    constructor(reason) {
+        super(`The existing owning SDD violates its ${reason} contract; review the owner before retrying.`);
+        this.reason = reason;
+    }
+}
+exports.SddOwnerFormatFailure = SddOwnerFormatFailure;
 exports.SDD_REQUIRED_HEADINGS = Object.freeze([
     '## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance',
 ]);
@@ -76509,13 +76519,88 @@ function validateSddMarkdown(markdown) {
         if (!markdown.includes(heading))
             throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
     }
-    if (!/\b\d+\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)) {
+    if (!/\b[1-9]\d*\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)
+        && !hasNumericSddBudgetTable(markdown)) {
         throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.');
     }
 }
+/** Accept the canonical template table only when its allocations prove its total. */
+function hasNumericSddBudgetTable(markdown) {
+    let fence;
+    let testing = false;
+    let table = false;
+    let separator = false;
+    let sum = 0;
+    let allocations = 0;
+    let total;
+    const finish = () => table && separator && allocations > 0 && total === sum;
+    for (const line of markdown.split(/\r?\n/)) {
+        const boundary = line.match(/^\s*(`{3,}|~{3,})/);
+        if (boundary) {
+            if (!fence)
+                fence = boundary[1];
+            else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length)
+                fence = undefined;
+            continue;
+        }
+        if (fence)
+            continue;
+        if (/^##\s/.test(line)) {
+            if (testing)
+                return finish();
+            testing = /^## 14\. Testing strategy\b/.test(line);
+            continue;
+        }
+        if (!testing)
+            continue;
+        if (!/^\s*\|/.test(line)) {
+            if (table)
+                return finish();
+            continue;
+        }
+        const cells = line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.replace(/[*_`]/g, '').trim());
+        if (!table) {
+            if (!/^(?:area|área)$/i.test(cells[0] ?? '')
+                || !/^(?:minimum(?: distinct)? (?:cases|tests)|(?:casos|pruebas) mínim[oa]s)$/i.test(cells[1] ?? ''))
+                continue;
+            table = true;
+            continue;
+        }
+        if (!separator) {
+            if (cells.length < 2 || !cells.every(cell => /^:?-{3,}:?$/.test(cell)))
+                return false;
+            separator = true;
+            continue;
+        }
+        if (!cells[0] || !/^[1-9]\d*$/.test(cells[1] ?? ''))
+            return false;
+        const count = Number(cells[1]);
+        if (!Number.isSafeInteger(count))
+            return false;
+        if (/^total$/i.test(cells[0])) {
+            if (total !== undefined)
+                return false;
+            total = count;
+        }
+        else {
+            if (total !== undefined || !Number.isSafeInteger(sum + count))
+                return false;
+            sum += count;
+            allocations++;
+        }
+    }
+    return finish();
+}
 /** Automated extensions retain the owning contract verbatim; contributors integrate revisions explicitly. */
 function composeSddUpdate(existing, change) {
-    validateSddMarkdown(existing);
+    try {
+        validateSddMarkdown(existing);
+    }
+    catch (error) {
+        if (error instanceof SddDraftFormatFailure)
+            throw new SddOwnerFormatFailure(error.reason);
+        throw error;
+    }
     validateSddMarkdown(change);
     if (change.length > exports.SDD_MAX_UPDATE_CHARACTERS)
         throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');

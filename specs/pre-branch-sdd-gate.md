@@ -547,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **117 distinct cases** are a floor derived from eligibility,
+The following **146 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -569,7 +569,8 @@ ownership/validation.
 | Answer history and state encoding | 14 | Four cumulative/current-authorization/base-reset routes, one legacy/new provenance roundtrip with visible round, six invalid-provenance cases, count/encoded-size bounds and comment-terminator isolation |
 | Draft format and final clarification recovery | 11 | Two typed content repair reasons, exhausted format, unexpected writer failure, both mixed size/format orders, final round completion, fourth question rejection, full writer/freshness revalidation, missing prepared value and localized closed recovery |
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
-| **Total** | **126** | No case counted twice |
+| Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
+| **Total** | **146** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -715,6 +716,30 @@ Automated SDD extension reads the existing owner from the selected immutable Git
 
 ### Live draft size recovery (2026-10-11)
 
+The canonical template's numeric budget table is valid without an additional
+prose sentence. A table in section 14 MUST have the `Area` and `Minimum cases`
+or `Minimum distinct cases` headers (tests are equivalent), a Markdown separator,
+at least one positive safe integer allocation and exactly one positive `Total`
+equal to the sum. Standard emphasis/code formatting is permitted in cells.
+The equivalent `Área` / `Casos mínimos` or `Pruebas mínimas` headers are supported.
+Placeholders, fractional/negative/zero counts, unsafe integer sums, duplicate or
+missing totals, unrelated sections/tables and fenced examples cannot prove a
+budget. This bounded scan uses the existing 70,000-character document limit,
+has linear time/space and introduces no configuration or public command.
+
+Flow: candidate -> positive numeric prose or validated section-14 table ->
+unchanged owner/catalog/workspace/freshness checks -> publication. An invalid
+immutable owner has a distinct failure identity: regenerating its appendix
+cannot repair the owner. Only candidate format failures consume the one repair.
+Repair prompts and exhausted-error diagnostics disclose the closed reason
+`required-heading` or `test-budget`, never the rejected Markdown or raw diagnostic.
+
+Acceptance: the existing catalogued comment automation SDD with its table-only
+budget validates; a matching allocation/total passes the real scratch-worktree
+writer without changing retained owner bytes; a mismatching total publishes
+nothing; two failed candidates retain the same answer history and do not create
+a third attempt. Documentation explains this table contract and the owner boundary.
+
 The answered doctor issue #461 failed because the update writer allowed 18,000
 characters while the agent schema allowed 70,000. Draft schemas MUST share the
 immutable domain limits: 1,800 minimum, 18,000 update maximum, 70,000
@@ -746,8 +771,8 @@ additional cases include the real adapter/parser/helper path.
 
 Both attempts receive the literal canonical heading prefixes from the same
 constant used by writer validation, preserving capitalization and Markdown
-syntax. The prompt requires an explicit sentence with the justified integer
-test budget; a table alone does not satisfy that contract. The first attempt
+syntax. The prompt accepts the canonical justified numeric test-budget table
+or a positive integer sentence describing distinct tests or cases. The first attempt
 also targets two thirds of the hard maximum. These instructions do not relax
 validation, change ownership or truncate a resolved requirement. This addresses
 the repeated required-format rejection in the final clarification of #464.

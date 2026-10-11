@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   isSafeSddPath,
   parseSddAnswer,
@@ -8,6 +10,7 @@ import {
   composeSddUpdate,
   normalizeSddIssueTitle,
   retainSddAnswers,
+  SddOwnerFormatFailure,
   type SddGateRecord,
 } from '../pre_branch_sdd';
 
@@ -159,6 +162,48 @@ describe('pre-branch SDD policy', () => {
     const text = `${'context '.repeat(300)}\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n## 16. Acceptance\n`;
     expect(() => validateSddMarkdown(text)).toThrow('numeric test budget');
     expect(() => validateSddMarkdown(`${text}\nAt least 24 distinct cases.`)).not.toThrow();
+  });
+});
+
+describe('canonical SDD numeric table budgets', () => {
+  const rows = '| Pure policy | 3 | Authority |\n| Adapter | 2 | Publication |\n| **Total** | **5** | No double counting |';
+  const header = '| Area | Minimum distinct cases | Behaviors/risks covered |\n|---|---:|---|\n';
+  const document = (table: string, before = '') => `# Budget\n${'Product scope and executable acceptance. '.repeat(55)}\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n${before}\n## 14. Testing strategy and numeric budget\n${table}\n## 16. Acceptance\n`;
+
+  it('accepts the canonical table with formatted allocations and a justified total', () => {
+    expect(() => validateSddMarkdown(document(header + rows.replace('| 3 |', '| `3` |')))).not.toThrow();
+  });
+  it('accepts an equivalent Spanish budget header with positive allocations', () => {
+    expect(() => validateSddMarkdown(document(header.replace('Area', 'Área').replace('Minimum distinct cases', 'Casos mínimos') + rows))).not.toThrow();
+  });
+  it('accepts the real catalogued comment automation owner without requiring invented numeric prose', () => {
+    expect(() => validateSddMarkdown(readFileSync(join(__dirname, '../../../specs/comment-automation-and-authorization.md'), 'utf8'))).not.toThrow();
+  });
+  it.each([
+    ['inconsistent total', header + rows.replace('**5**', '**6**')],
+    ['placeholder', header + rows.replace('| 3 |', '| <n> |')],
+    ['decimal allocation', header + rows.replace('| 3 |', '| 3.0 |')],
+    ['negative allocation', header + rows.replace('| 3 |', '| -3 |')],
+    ['zero allocation', header + rows.replace('| 3 |', '| 0 |')],
+    ['missing total', header + rows.split('\n').slice(0, 2).join('\n')],
+    ['duplicate total', header + rows + '\n| Total | 5 | Duplicate |'],
+    ['no allocation', header + '| Total | 5 | Unproven |'],
+    ['unrelated header', header.replace('Minimum distinct cases', 'Duration') + rows],
+    ['missing separator', header.split('\n')[0] + '\n' + rows],
+    ['fenced example', '```markdown\n' + header + rows + '\n```'],
+    ['later section', 'No budget.\n## 15. Risks\n' + header + rows],
+  ])('rejects a table with %s', (_reason, table) => {
+    expect(() => validateSddMarkdown(document(table))).toThrow('numeric test budget');
+  });
+  it('rejects unsafe integer totals rather than rounding their allocations', () => {
+    expect(() => validateSddMarkdown(document(header + '| Policy | 9007199254740992 | Scope |\n| Total | 9007199254740992 | Unproven |'))).toThrow('numeric test budget');
+  });
+  it('preserves positive prose compatibility and rejects a zero test budget', () => {
+    expect(() => validateSddMarkdown(document('At least 8 distinct cases.'))).not.toThrow();
+    expect(() => validateSddMarkdown(document('0 distinct cases.'))).toThrow('numeric test budget');
+  });
+  it('keeps immutable owner format failures distinct from a repairable candidate', () => {
+    expect(() => composeSddUpdate(document('No budget.'), document(header + rows))).toThrow(SddOwnerFormatFailure);
   });
 });
 
