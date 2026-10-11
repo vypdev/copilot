@@ -227,7 +227,7 @@ function toBugbotPullRequestIdentity(value: {
     head?: {
         ref?: string | null;
         sha?: string | null;
-        repo?: { owner?: { login?: string | null } | null } | null;
+        repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
     };
     base?: {
         repo?: {
@@ -242,6 +242,7 @@ function toBugbotPullRequestIdentity(value: {
     const baseOwner = value.base?.repo?.owner?.login?.trim();
     const baseName = value.base?.repo?.name?.trim();
     const headOwner = value.head?.repo?.owner?.login?.trim();
+    const headName = typeof value.head?.repo?.name === 'string' ? value.head.repo.name.trim() : undefined;
     const headRef = value.head?.ref?.trim();
     const headSha = value.head?.sha?.trim().toLowerCase();
     if (!Number.isSafeInteger(number) || Number(number) <= 0
@@ -262,6 +263,7 @@ function toBugbotPullRequestIdentity(value: {
             ...(Number.isSafeInteger(repositoryId) && Number(repositoryId) > 0 ? { id: Number(repositoryId) } : {}),
         },
         headRepositoryOwner: headOwner,
+        ...(headName ? { headRepositoryName: headName } : {}),
         headRef,
         headSha,
     };

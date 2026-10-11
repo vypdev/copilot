@@ -81,11 +81,30 @@ The agent runtime does not retain a session between runs. Repository changes
 that are committed and pushed, plus finding/review state stored by GitHub, are
 the durable record. A prepared but uncommitted workspace is not durable.
 
+When a finding ID contains spaces, quote the complete ID with double quotes:
+
+```text
+/copilot dismiss "docs/file.mdx:28:message with spaces"
+```
+
+You can combine plain and quoted IDs. Use JSON escapes for a literal double
+quote or backslash; malformed, empty or multiline quoted IDs are rejected.
+The command still accepts at most 20 IDs and 2,000 characters.
+
+
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
 resolved. If the stored workflow result owns malformed finding-state evidence,
 the command says that evidence is invalid and directs you to the workflow
 result; it never substitutes zero or a clean state. In a PR conversation, setup reads that exact PR head to resolve its linked issue and working branch. An unlinked PR remains separate from an issue with the same number.
+
+Read-only commands answer the current comment, using the issue or PR as
+background. Add the file, symbol, failure or requested work after the command to
+make the subject explicit. For example, `/copilot explain src/domain/copilot_command.ts`
+asks for that file's behavior. If the agent cannot inspect it, its answer should
+state the limitation. `diagnose` separates evidence from hypotheses, `clarify`
+asks for missing information, `estimate` includes uncertainty, and `test-plan`
+provides test cases and observable acceptance criteria.
 
 Every explicit answer uses a correlated reply marker. A webhook retry with the
 same source comment updates or reuses that response instead of creating another.
@@ -192,8 +211,15 @@ that reply uses the complete English fallback so it cannot mix languages.
 - `/copilot dismiss` does not edit files, but it changes finding state and therefore uses the same authorization guard.
 - File-changing commands require an authoritative PR review-thread branch or an
   explicitly branch-scoped execution. Issue-only comments never scan open PRs
-  to guess a write target.
-- Comment workflow templates declare `contents: read` and disable checkout credential persistence. Repository mutation is performed with the configured `PAT` Secret; that token must have repository contents write access. Actor authorization is checked separately, so a capable token does not grant the commenter permission. Verification failures prevent the commit.
+  to guess a write target. `/copilot remember` verifies the exact current PR
+  through GitHub or the issue's native branch link before checking it out; a
+  missing event ref is allowed only when that verification supplies the ref.
+  Closed PRs, forks and unavailable identity are rejected before storage.
+- The workflow must grant `contents: write` for file-modifying actions and
+  disable checkout credential persistence. When repository mutation uses the
+  configured `PAT` Secret, that token must have repository contents write
+  access. Actor authorization is checked separately, so a capable token does
+  not grant the commenter permission. Verification failures prevent the commit.
 - Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
 - Branch synchronization accepts `--dry-run`, `--no-agent`, and `--from <branch>` and applies additional Git-state, path, verification, and remote-race guards. See [Branch synchronization](/issues/branch-synchronization).
 

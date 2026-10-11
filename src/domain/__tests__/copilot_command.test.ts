@@ -30,6 +30,7 @@ describe('Copilot command policy', () => {
     });
 
     it('rejects unknown commands and missing required arguments', () => {
+        expect(parseCopilotCommand('/copilot')).toMatchObject({ kind: 'invalid' });
         expect(parseCopilotCommand('/copilot deploy')).toMatchObject({ kind: 'invalid' });
         expect(parseCopilotCommand('/copilot fix')).toMatchObject({ kind: 'invalid' });
         expect(parseCopilotCommand('/copilot implement')).toMatchObject({ kind: 'invalid' });
@@ -39,4 +40,49 @@ describe('Copilot command policy', () => {
     it('rejects oversized command input before tokenization', () => {
         expect(parseCopilotCommand(`/copilot plan ${'x'.repeat(2_000)}`)).toMatchObject({ kind: 'invalid' });
     });
+    it('preserves one quoted finding identifier containing spaces', () => {
+        const id = 'docs/issues/first-workflow.mdx:28:awaiting-maintainer treated as failure';
+        expect(parseCopilotCommand(`/copilot dismiss ${JSON.stringify(id)}`)).toMatchObject({
+            kind: 'command', command: { name: 'dismiss', arguments: [id] },
+        });
+    });
+
+    it('supports mixed plain and quoted finding IDs as separate exact operands', () => {
+        expect(parseCopilotCommand('/copilot dismiss plain-id "second spaced id"')).toMatchObject({
+            kind: 'command', command: { arguments: ['plain-id', 'second spaced id'] },
+        });
+    });
+
+    it('preserves escaped backslashes, Unicode and significant internal spaces', () => {
+        const id = 'src/área\\file.ts:8:two  words';
+        expect(parseCopilotCommand(`/copilot dismiss ${JSON.stringify(id)}`)).toMatchObject({
+            kind: 'command', command: { arguments: [id] },
+        });
+    });
+
+    it('accepts twenty quoted identifiers without counting their internal spaces', () => {
+        const ids = Array.from({ length: 20 }, (_, index) => `id ${index}`);
+        expect(parseCopilotCommand(`/copilot dismiss ${ids.map(id => JSON.stringify(id)).join(' ')}`)).toMatchObject({
+            kind: 'command', command: { arguments: ids },
+        });
+    });
+
+    it('rejects twenty-one quoted identifiers under the unchanged argument bound', () => {
+        const ids = Array.from({ length: 21 }, (_, index) => `id ${index}`);
+        expect(parseCopilotCommand(`/copilot dismiss ${ids.map(id => JSON.stringify(id)).join(' ')}`)).toMatchObject({ kind: 'invalid' });
+    });
+
+    it.each([
+        '"unterminated id',
+        '"first""second"',
+        'bad"embedded"quote',
+        '"bad\\q"',
+        '""',
+        '"   "',
+        '"line\\nnext"',
+        'plain-id "',
+    ])('rejects malformed or empty finding operand %s', (operand) => {
+        expect(parseCopilotCommand(`/copilot dismiss ${operand}`)).toMatchObject({ kind: 'invalid' });
+    });
+
 });

@@ -75,6 +75,7 @@ export async function runThinkAnswerWorkflow(
         contextBlock,
         question: request.question,
         targetLocale: param.targetLocale,
+        commandName: request.command?.name,
     });
     const answer = sanitizeAgentMarkdown(await queryThinkAnswer(
         param,

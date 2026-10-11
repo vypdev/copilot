@@ -42,7 +42,7 @@ export interface GithubPullRequestLifecycleClient {
         head?: {
           ref?: string | null;
           sha?: string | null;
-          repo?: { owner?: { login?: string | null } | null } | null;
+          repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
         };
         base?: {
           ref?: string | null;
@@ -65,7 +65,7 @@ export interface GithubPullRequestSummary {
   head?: {
     ref?: string | null;
     sha?: string | null;
-    repo?: { owner?: { login?: string | null } | null } | null;
+    repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
   };
   base?: {
     repo?: {

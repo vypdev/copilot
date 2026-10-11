@@ -419,6 +419,20 @@ describe('ThinkUseCase', () => {
     expect(prompt).toContain('how should I start?');
   });
 
+  it('keeps an explicit file explanation as the current task when the issue asks an unrelated workflow question', async () => {
+    mockGetDescription.mockResolvedValue('Explain the SDD issue workflow and branch lifecycle.');
+    mockAskAgent.mockResolvedValue({ answer: 'The parser recognizes explicit commands.' });
+    const results = await invoke(baseParam({ issue: { ...baseParam().issue,
+      commentBody: '/copilot explain src/domain/copilot_command.ts' } }));
+    const prompt = mockAskAgent.mock.calls[0][2];
+    expect(prompt).toContain('Explain the file, symbol or behavior named in the current command arguments.');
+    expect(prompt).toContain('Never substitute an older issue question');
+    expect(prompt).toContain('src/domain/copilot_command.ts');
+    expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA origin=prompt.contextBlock');
+    expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA origin=prompt.question');
+    expect(results[0]).toMatchObject({ success: true, payload: { publication: { kind: 'direct-answer' } } });
+  });
+
   it('for PR review comment uses issueNumber to fetch issue description', async () => {
     mockGetDescription.mockResolvedValue('Original issue description.');
     mockAskAgent.mockResolvedValue({ answer: 'Reply' });

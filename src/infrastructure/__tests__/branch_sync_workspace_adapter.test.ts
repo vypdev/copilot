@@ -98,6 +98,80 @@ describe("BranchSyncWorkspaceAdapter", () => {
     }
   });
 
+  it.each(['resolved without agent staging', 'remaining markers', 'outside worktree edit', 'verification changed resolution'])('validates a real conflicting merge: %s', async scenario => {
+      const directory = mkdtempSync(join(tmpdir(), 'copilot-sync-resolution-'));
+      const remote = join(directory, 'remote.git');
+      const workspace = join(directory, 'workspace');
+      const globalConfig = join(directory, 'empty-gitconfig');
+      writeFileSync(globalConfig, '');
+      const env = { ...process.env, GIT_CONFIG_GLOBAL: globalConfig, GIT_CONFIG_NOSYSTEM: '1' };
+      const gitAt = (cwd: string, args: readonly string[]) => execFileSync('git', [...args], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+      try {
+        gitAt(directory, ['init', '--bare', remote]);
+        gitAt(directory, ['init', '--initial-branch=develop', workspace]);
+        const commit = (message: string) => gitAt(workspace, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.com', 'commit', '-m', message]);
+        writeFileSync(join(workspace, 'conflict.txt'), 'base\n');
+        writeFileSync(join(workspace, 'protected.txt'), 'unchanged\n');
+        gitAt(workspace, ['add', '.']); commit('base');
+        gitAt(workspace, ['branch', 'feature/42']);
+        writeFileSync(join(workspace, 'conflict.txt'), 'parent\n');
+        gitAt(workspace, ['add', '.']); commit('parent');
+        gitAt(workspace, ['checkout', 'feature/42']);
+        writeFileSync(join(workspace, 'conflict.txt'), 'child\n');
+        gitAt(workspace, ['add', '.']); commit('child');
+        gitAt(workspace, ['remote', 'add', 'origin', remote]);
+        gitAt(workspace, ['push', 'origin', 'develop', 'feature/42']);
+        const { git } = createGit();
+        git.execute.mockImplementation(async (program, args, options) => {
+          const output = execFileSync(program, [...args], { cwd: workspace, env, stdio: ['ignore', 'pipe', 'pipe'] });
+          options?.stdout?.(output); return 0;
+        });
+        git.fetch.mockImplementation(async branch => { gitAt(workspace, ['fetch', 'origin', branch]); });
+        git.stagePaths.mockImplementation(async paths => { gitAt(workspace, ['add', '--', ...paths]); });
+        const adapter = new BranchSyncWorkspaceAdapter(git);
+        await expect(adapter.prepare('develop', 'feature/42', 'fixture')).resolves.toMatchObject({ kind: 'conflicted', conflictPaths: ['conflict.txt'] });
+        if (scenario !== 'remaining markers') writeFileSync(join(workspace, 'conflict.txt'), 'child and parent preserved\n');
+        if (scenario === 'outside worktree edit') writeFileSync(join(workspace, 'protected.txt'), 'unexpected\n');
+        const result = await adapter.validatePreparedMerge(['conflict.txt']);
+        if (scenario === 'remaining markers' || scenario === 'outside worktree edit') {
+          expect(result).toMatchObject({ valid: false });
+          expect(git.stagePaths).not.toHaveBeenCalled();
+        } else {
+          expect(result).toEqual({ valid: true });
+          expect(git.stagePaths).toHaveBeenCalledTimes(1);
+          expect(git.stagePaths).toHaveBeenCalledWith(['conflict.txt']);
+          expect(gitAt(workspace, ['diff', '--name-only', '--diff-filter=U']).toString()).toBe('');
+          if (scenario === 'verification changed resolution') {
+            writeFileSync(join(workspace, 'conflict.txt'), 'verification mutated the resolved file\n');
+            await expect(adapter.validatePreparedMerge(['conflict.txt'])).resolves.toEqual({ valid: false, reason: 'The prepared merge contains unstaged changes.' });
+            expect(git.stagePaths).toHaveBeenCalledTimes(1);
+            gitAt(workspace, ['checkout', '--', 'conflict.txt']);
+          }
+        }
+        expect(git.stageAll).not.toHaveBeenCalled();
+        await adapter.abort();
+      } finally { rmSync(directory, { recursive: true, force: true }); }
+    });
+
+  it.each(['staging fails', 'conflict remains after staging'])('fails closed when %s', async scenario => {
+    const { git } = createGit({
+      [STATUS]: ['', 'UU src/a.ts\n', 'UU src/a.ts\n'],
+      'rev-parse HEAD': ['child', 'child'], 'rev-parse FETCH_HEAD': ['parent'],
+      'merge-base --is-ancestor parent child': [new Error('not ancestor')],
+      [MERGE]: [new Error('conflict')], [UNRESOLVED]: ['src/a.ts\0', 'src/a.ts\0', 'src/a.ts\0'],
+      [INDEX]: ['100644 base 1\tsrc/a.ts\0', '100644 base 1\tsrc/a.ts\0'],
+      'rev-parse MERGE_HEAD': ['parent'], 'diff --name-only -z': ['src/a.ts\0'],
+    });
+    if (scenario === 'staging fails') git.stagePaths.mockRejectedValueOnce(new Error('stage failed'));
+    const adapter = new BranchSyncWorkspaceAdapter(git);
+    await adapter.prepare('develop', 'feature/42', 'fixture');
+    await expect(adapter.validatePreparedMerge(['src/a.ts'])).resolves.toEqual({ valid: false, reason:
+      scenario === 'staging fails' ? 'Trusted staging of the conflict resolution failed.' : 'Unresolved merge conflicts remain.' });
+    expect(git.stagePaths).toHaveBeenCalledWith(['src/a.ts']);
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
   it("returns an idempotent preparation when the parent is already an ancestor", async () => {
     const { git } = createGit({
       [STATUS]: [""],

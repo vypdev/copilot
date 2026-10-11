@@ -10,6 +10,7 @@ import type { UpdatePullRequestDescriptionUseCase } from './steps/pull_request/u
 import type { RememberBugbotRuleParam } from './steps/commit/bugbot/remember_bugbot_rule_use_case';
 import type { SyncBranchRequest } from './branch_sync/sync_branch_use_case';
 import type { BugbotGitMutationPort } from '../ports/bugbot_git_ports';
+import type { RememberBranchQueryPorts } from './comment_automation_contracts';
 import type {
   BugbotFixIntentContext,
   BugbotReviewOperationContext,
@@ -41,6 +42,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly rememberBugbotRuleUseCase?: ParamUseCase<RememberBugbotRuleParam, Result[]>,
     private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
     private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
+    private readonly rememberBranchPorts?: RememberBranchQueryPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -82,6 +84,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
             }) }
           : undefined,
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
+        rememberBranchPorts: this.rememberBranchPorts,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,
