@@ -1,3 +1,4 @@
+import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
 import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
@@ -238,7 +239,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     branchSync,
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
-    bugbot.scm.context,
+    createPullRequestStatusReadPorts(binding, bugbot.scm.context),
   );
 }
 
@@ -295,7 +296,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
     rememberBranchPorts(binding, bugbot.scm.context),
-    bugbot.scm.context,
+    createPullRequestStatusReadPorts(binding, bugbot.scm.context),
   );
 }
 

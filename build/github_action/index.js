@@ -36447,33 +36447,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ 98143:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveJsonInput = resolveJsonInput;
-exports.resolveActionInput = resolveActionInput;
-/**
- * Resolves one action input without coupling the caller to a specific lifecycle.
- * Explicit runtime parameters always override YAML/environment defaults.
- */
-function resolveJsonInput(inputVarsJson, key) {
-    if (!inputVarsJson) {
-        return undefined;
-    }
-    const inputVars = JSON.parse(inputVarsJson);
-    const value = inputVars[`INPUT_${key.toUpperCase()}`];
-    return value === undefined ? undefined : String(value);
-}
-function resolveActionInput(additionalParams, actionInputs, key) {
-    return (additionalParams[key] ?? actionInputs[key]);
-}
-
-
-/***/ }),
-
 /***/ 81248:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -37571,65 +37544,14 @@ function getCommitPrefixBuilder(getInput) {
 /***/ }),
 
 /***/ 8824:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getGithubActionInput = getGithubActionInput;
-const core = __importStar(__nccwpck_require__(75855));
-const action_input_source_1 = __nccwpck_require__(98143);
-const logger_1 = __nccwpck_require__(91151);
-const application_error_1 = __nccwpck_require__(75999);
-function getGithubActionInput(key, options) {
-    let value;
-    try {
-        const inputVarsJson = process.env.INPUT_VARS_JSON;
-        value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
-    }
-    catch (error) {
-        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
-    }
-    value = (value ?? core.getInput(key, options)).trim();
-    if (options?.required && value.length === 0)
-        throw new Error(`Input required and not supplied: ${key}`);
-    if (key.toLowerCase() === 'token' && value)
-        core.setSecret(value);
-    return value;
-}
+exports.getGithubActionInput = void 0;
+var github_action_input_1 = __nccwpck_require__(57581);
+Object.defineProperty(exports, "getGithubActionInput", ({ enumerable: true, get: function () { return github_action_input_1.getGithubActionInput; } }));
 
 
 /***/ }),
@@ -37979,18 +37901,14 @@ function parseStrictInteger(value) {
 /***/ }),
 
 /***/ 68841:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDelimitedValues = parseDelimitedValues;
-function parseDelimitedValues(value) {
-    return String(value ?? '')
-        .split(',')
-        .map(item => item.trim())
-        .filter(item => item.length > 0);
-}
+exports.parseDelimitedValues = void 0;
+var input_values_policy_1 = __nccwpck_require__(83592);
+Object.defineProperty(exports, "parseDelimitedValues", ({ enumerable: true, get: function () { return input_values_policy_1.parseDelimitedValues; } }));
 
 
 /***/ }),
@@ -45288,6 +45206,28 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.findings',
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
+    'interaction.status.prReadiness',
+    'interaction.status.prReadiness.unavailable',
+    'interaction.status.prReadiness.pending',
+    'interaction.status.prReadiness.blocked',
+    'interaction.status.prReadiness.satisfied',
+    'interaction.status.prReadiness.not-applicable',
+    'interaction.status.prReadiness.ci',
+    'interaction.status.prReadiness.coverage',
+    'interaction.status.prReadiness.bugbot',
+    'interaction.status.prReadiness.reviews',
+    'interaction.status.prReadiness.revision',
+    'interaction.status.prReadiness.openPr',
+    'interaction.status.prReadiness.next',
+    'interaction.status.prReadiness.action.retry',
+    'interaction.status.prReadiness.action.wait',
+    'interaction.status.prReadiness.action.resolve',
+    'interaction.status.prReadiness.action.human-review',
+    'interaction.status.prReadiness.action.observer',
+    'interaction.status.prReadiness.action.select-pr',
+    'interaction.status.prReadiness.oversize',
+    'interaction.status.prReadiness.countsUnavailable',
+    'interaction.status.prReadiness.humanReview',
     'cli.answer',
     'cli.outcome',
     'cli.status',
@@ -45398,6 +45338,28 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Bugbot findings',
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
+    'interaction.status.prReadiness': 'Exact-head PR readiness',
+    'interaction.status.prReadiness.unavailable': 'unavailable',
+    'interaction.status.prReadiness.pending': 'pending',
+    'interaction.status.prReadiness.blocked': 'blocked',
+    'interaction.status.prReadiness.satisfied': 'satisfied',
+    'interaction.status.prReadiness.not-applicable': 'not applicable',
+    'interaction.status.prReadiness.ci': 'CI',
+    'interaction.status.prReadiness.coverage': 'Coverage',
+    'interaction.status.prReadiness.bugbot': 'Bugbot',
+    'interaction.status.prReadiness.reviews': 'Native reviews',
+    'interaction.status.prReadiness.revision': 'Commit',
+    'interaction.status.prReadiness.openPr': 'View verified PR',
+    'interaction.status.prReadiness.next': 'Next action',
+    'interaction.status.prReadiness.action.retry': 'Inspect this run and retry status.',
+    'interaction.status.prReadiness.action.wait': 'Wait for the current revision, then retry status.',
+    'interaction.status.prReadiness.action.resolve': 'Resolve the verified prerequisites, then retry status.',
+    'interaction.status.prReadiness.action.human-review': 'Have a maintainer review this exact revision.',
+    'interaction.status.prReadiness.action.observer': 'Inspect the approval observer for this exact revision.',
+    'interaction.status.prReadiness.action.select-pr': 'Run /copilot status in the selected PR conversation.',
+    'interaction.status.prReadiness.countsUnavailable': 'Current finding counts could not be verified.',
+    'interaction.status.prReadiness.oversize': 'Status exceeds the reply budget; current readiness is unavailable.',
+    'interaction.status.prReadiness.humanReview': 'A human review is still required; status never submits a review.',
     'cli.answer': 'Answer',
     'cli.outcome': 'Outcome',
     'cli.status': 'Status',
@@ -45509,6 +45471,28 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Hallazgos de Bugbot',
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
+    'interaction.status.prReadiness': 'Preparación del PR para este commit',
+    'interaction.status.prReadiness.unavailable': 'no disponible',
+    'interaction.status.prReadiness.pending': 'pendiente',
+    'interaction.status.prReadiness.blocked': 'bloqueada',
+    'interaction.status.prReadiness.satisfied': 'cumplida',
+    'interaction.status.prReadiness.not-applicable': 'no aplicable',
+    'interaction.status.prReadiness.ci': 'CI',
+    'interaction.status.prReadiness.coverage': 'Cobertura',
+    'interaction.status.prReadiness.bugbot': 'Bugbot',
+    'interaction.status.prReadiness.reviews': 'Revisiones de GitHub',
+    'interaction.status.prReadiness.revision': 'Commit',
+    'interaction.status.prReadiness.openPr': 'Ver el PR verificado',
+    'interaction.status.prReadiness.next': 'Siguiente acción',
+    'interaction.status.prReadiness.action.retry': 'Consulta esta ejecución y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.wait': 'Espera a la revisión actual y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.resolve': 'Resuelve los requisitos verificados y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.human-review': 'Pide a un mantenedor que revise este commit concreto.',
+    'interaction.status.prReadiness.action.observer': 'Consulta el observador de aprobación para este commit concreto.',
+    'interaction.status.prReadiness.action.select-pr': 'Ejecuta /copilot status en la conversación del PR elegido.',
+    'interaction.status.prReadiness.countsUnavailable': 'No se han podido verificar los contadores actuales de hallazgos.',
+    'interaction.status.prReadiness.oversize': 'El estado supera el límite de la respuesta; su preparación actual no está disponible.',
+    'interaction.status.prReadiness.humanReview': 'Aún se requiere revisión humana; el estado nunca envía una revisión.',
     'cli.answer': 'Respuesta',
     'cli.outcome': 'Resultado',
     'cli.status': 'Estado',
@@ -46070,6 +46054,72 @@ function hasDuplicates(values, locale) {
 }
 function renderList(values) {
     return values.map(value => `- ${value}`).join('\n');
+}
+
+
+/***/ }),
+
+/***/ 79794:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.unavailablePullRequestReadiness = unavailablePullRequestReadiness;
+exports.projectPullRequestReadiness = projectPullRequestReadiness;
+const pull_request_approval_1 = __nccwpck_require__(8024);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const objectId = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+function unavailablePullRequestReadiness(code = 'evidence-unavailable', action = 'retry') {
+    return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
+        humanReviewRequired: true, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
+}
+function state(decision) {
+    return !decision || decision.status === 'already-approved' ? 'satisfied'
+        : decision.status === 'pending' ? 'pending'
+            : decision.code === 'reviews-unavailable' || decision.code === 'bugbot-incomplete' ? 'unavailable'
+                : decision.status === 'blocked' ? 'blocked'
+                    : decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
+}
+/** Uses the existing decision and the same canonical evidence gates, without an observer or a mutation. */
+function projectPullRequestReadiness(rawPolicy, evidence, final) {
+    let policy;
+    try {
+        policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
+    }
+    catch {
+        return Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' });
+    }
+    if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
+        || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
+        || !objectId(final.headSha) || !objectId(final.baseSha))
+        return unavailablePullRequestReadiness('identity-unavailable');
+    const sameTarget = evidence.repositoryId === final.repositoryId && evidence.pullNumber === final.pullNumber;
+    if (!sameTarget || evidence.headSha !== final.headSha || evidence.baseSha !== final.baseSha || rawPolicy !== final.rawPolicy) {
+        return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
+            humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+    }
+    if (policy.mode === 'off')
+        return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
+            baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none',
+            evidence: Object.freeze({ ci: 'not-applicable', coverage: 'not-applicable', bugbot: 'not-applicable', reviews: 'not-applicable' }) });
+    const ci = !policy.producerAttested ? 'blocked' : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha)
+        ? 'pending' : state((0, pull_request_approval_1.decideApprovalChecks)(policy, evidence));
+    const coverage = policy.coverage.mode === 'check' ? ci
+        : !policy.coverage.reporterAttested ? 'blocked' : !evidence.numericCoverage && !(0, pull_request_approval_1.isDocumentationOnlyDiff)(evidence.changedPaths)
+            ? 'unavailable' : state((0, pull_request_approval_1.decideApprovalCoverage)(policy, evidence));
+    const bugbot = evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun ? 'blocked' : state((0, pull_request_approval_1.decideApprovalBugbot)(policy, evidence));
+    const reviews = state((0, pull_request_approval_1.decideApprovalReviews)(policy, evidence));
+    const groups = Object.freeze({ ci, coverage, bugbot, reviews });
+    const decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, evidence);
+    let readiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
+        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' ? 'satisfied' : 'not-applicable';
+    if (Object.values(groups).includes('unavailable'))
+        readiness = 'unavailable';
+    const action = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
+        : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
+    return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
+        code: decision.code, humanReviewRequired: decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
 }
 
 
@@ -48307,12 +48357,49 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
         label('interaction.status.pullRequestLabels', snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : catalog.render('interaction.status.none')),
     ];
     if (snapshot.findingStateEvidence === 'invalid') {
-        lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
+        lines.push(label('interaction.status.findings', catalog.render(snapshot.pullRequestReadiness ? 'interaction.status.prReadiness.countsUnavailable' : 'interaction.status.findingsInvalid')));
     }
     else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
-    return lines.join('\n');
+    if (snapshot.pullRequestReadiness) {
+        const readiness = snapshot.pullRequestReadiness;
+        const states = ['unavailable', 'pending', 'blocked', 'satisfied', 'not-applicable'];
+        const renderState = (state) => catalog.render(`interaction.status.prReadiness.${states.includes(state) ? state : 'unavailable'}`);
+        const mode = ['off', 'recommend', 'guarded', 'unavailable'].includes(readiness.mode) ? readiness.mode : 'unavailable';
+        const head = /^[a-f0-9]{40}$/u.test(readiness.headSha) ? readiness.headSha.slice(0, 8) : catalog.render('interaction.status.notSet');
+        const code = /^[a-z0-9-]{1,60}$/u.test(readiness.code) ? readiness.code : 'evidence-unavailable';
+        lines.push(`- **${catalog.render('interaction.status.prReadiness')}:** ${renderState(readiness.readiness)} (${mode}; ${catalog.render('interaction.status.prReadiness.revision')} ${head}; ${code})`);
+        if (readiness.evidence)
+            for (const group of ['ci', 'coverage', 'bugbot', 'reviews']) {
+                lines.push(`- **${catalog.render(`interaction.status.prReadiness.${group}`)}:** ${renderState(readiness.evidence[group])}`);
+            }
+        const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
+        if (url)
+            lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
+        if (readiness.humanReviewRequired)
+            lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
+        const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
+        const action = readiness.action && actions.includes(readiness.action) ? readiness.action : 'retry';
+        if (action !== 'none')
+            lines.push(`${catalog.render('interaction.status.prReadiness.next')}: ${catalog.render(`interaction.status.prReadiness.action.${action}`)}`);
+    }
+    const rendered = lines.join('\n');
+    return snapshot.pullRequestReadiness && rendered.length > 6000
+        ? `${catalog.render('interaction.status.prReadiness.oversize')}\n${catalog.render('interaction.status.prReadiness.action.retry')}` : rendered;
+}
+function verifiedReadinessLink(snapshot, number) {
+    if (!Number.isSafeInteger(number) || !number || number <= 0 || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.owner)
+        || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.repository) || [snapshot.owner, snapshot.repository].some(value => value === '.' || value === '..'))
+        return undefined;
+    try {
+        const url = new URL(snapshot.serverOrigin ?? '');
+        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
+            ? `${url.origin}/${snapshot.owner}/${snapshot.repository}/pull/${number}` : undefined;
+    }
+    catch {
+        return undefined;
+    }
 }
 
 
@@ -54552,38 +54639,149 @@ const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
 const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
 const context_1 = __nccwpck_require__(14712);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
-const application_error_1 = __nccwpck_require__(75999);
-/** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const pull_request_readiness_policy_1 = __nccwpck_require__(79794);
+const positive = (value) => Number.isSafeInteger(value) && value > 0;
+const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+/** Independent reads retain verified facts. Unknown identity or freshness never becomes a clean snapshot. */
 async function readCopilotStatus(param, taskId, ports) {
-    if (!param.status.pullRequestNumber || !ports)
-        return (0, status_command_policy_1.buildCopilotStatusResult)(param.status, taskId);
+    const original = param.status;
+    if (original.target !== 'issue' && original.target !== 'pull-request')
+        return (0, status_command_policy_1.buildCopilotStatusResult)(original, taskId);
+    let snapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin };
+    const finish = (readiness) => (0, status_command_policy_1.buildCopilotStatusResult)({ ...snapshot, pullRequestReadiness: readiness }, taskId);
+    const fail = (code, action = 'retry') => finish((0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)(code, action));
+    if (!ports)
+        return fail('evidence-adapter-unavailable');
     const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
-    const selection = request.target.pullRequestSelection;
-    if (selection.kind !== 'event' || selection.number !== param.status.pullRequestNumber)
-        throw unavailableStatus();
-    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.getPullRequest(selection.number)], 'event');
-    if (canonical.kind !== 'canonical')
-        throw unavailableStatus();
-    const pull = canonical.pullRequest;
-    const comments = await ports.listIssueComments(pull.number);
-    if (comments.coverage.status !== 'complete')
-        throw unavailableStatus();
-    const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
-        && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
-    if (candidates.length !== 1)
-        throw unavailableStatus();
-    const counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', pull.number, pull.headSha);
-    if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha)
-        throw unavailableStatus();
-    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...param.status,
-        findingStateEvidence: undefined,
-        findingStates: { open: counts.open, reopened: counts.reopened,
-            verificationRequired: counts['verification-required'], unknown: counts.unknown,
-            resolved: counts.fixed + counts.obsolete + counts.dismissed },
-    }, taskId);
-}
-function unavailableStatus() {
-    return new application_error_1.ApplicationError('workflow.stale', 'Current Bugbot status evidence is unavailable, incomplete or stale. Run /copilot recheck and retry status.');
+    const repositoryId = request.target.repository.id;
+    if (!positive(repositoryId) || request.target.repository.owner.toLowerCase() !== original.owner.toLowerCase()
+        || request.target.repository.name.toLowerCase() !== original.repository.toLowerCase())
+        return fail('identity-unavailable');
+    let number;
+    let fromIssue = false;
+    if (original.target === 'issue') {
+        if (!positive(original.issueNumber) || !ports.readLinkedPullRequests)
+            return fail('linkage-unavailable');
+        let links;
+        try {
+            links = await ports.readLinkedPullRequests(original.issueNumber);
+        }
+        catch {
+            return fail('linkage-unavailable');
+        }
+        if (links.state !== 'available' || links.repositoryId !== repositoryId || links.issueNumber !== original.issueNumber
+            || !Array.isArray(links.numbers) || links.numbers.some(value => !positive(value))
+            || new Set(links.numbers).size !== links.numbers.length)
+            return fail('linkage-unavailable');
+        if (links.numbers.length === 0) {
+            snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: undefined };
+            return finish({ readiness: 'not-applicable', mode: 'unavailable', headSha: '', baseSha: '',
+                code: 'unlinked-issue', humanReviewRequired: false, action: 'none' });
+        }
+        if (links.numbers.length !== 1)
+            return fail('ambiguous-linkage', 'select-pr');
+        number = links.numbers[0];
+        fromIssue = true;
+    }
+    else {
+        const selection = request.target.pullRequestSelection;
+        if (!positive(original.pullRequestNumber) || selection.kind !== 'event' || selection.number !== original.pullRequestNumber)
+            return fail('identity-unavailable');
+        number = original.pullRequestNumber;
+    }
+    let pull;
+    try {
+        const target = fromIssue ? { ...request.target, headRef: '', expectedHeadSha: undefined,
+            pullRequestSelection: { kind: 'event', number } } : request.target;
+        const selected = (0, context_1.selectCanonicalBugbotPullRequest)(target, [await ports.getPullRequest(number)], 'event');
+        if (selected.kind !== 'canonical')
+            return fail('identity-unavailable');
+        pull = selected.pullRequest;
+    }
+    catch {
+        return fail('identity-unavailable');
+    }
+    const target = { owner: original.owner, repository: original.repository, repositoryId, pullNumber: number };
+    let rawPolicy;
+    let evidence;
+    let readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('evidence-adapter-unavailable');
+    if (ports.approval) {
+        try {
+            rawPolicy = await ports.approval.readPolicy(target);
+            try {
+                (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
+            }
+            catch {
+                readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
+            }
+            if (readiness.code !== 'invalid-policy') {
+                const read = await ports.approval.loadEvidence(target);
+                if (read.repositoryId !== repositoryId || read.pullNumber !== number || !sha(read.headSha) || !sha(read.baseSha)) {
+                    readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('target-mismatch');
+                }
+                else
+                    evidence = read;
+            }
+        }
+        catch {
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)();
+        }
+    }
+    // A missing, denied or incomplete Bugbot card cannot erase independent approval evidence.
+    let counts;
+    try {
+        const comments = await ports.listIssueComments(number);
+        if (comments.coverage.status === 'complete') {
+            const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
+                && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
+            if (candidates.length === 1)
+                counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', number, pull.headSha);
+        }
+    }
+    catch { /* Retain all independently verified facts. */ }
+    let revision;
+    if (evidence && ports.approval) {
+        try {
+            revision = await ports.approval.readRevision(target);
+            const finalPolicy = await ports.approval.readPolicy(target);
+            if (revision.repositoryId !== repositoryId || revision.pullNumber !== number)
+                return fail('target-mismatch');
+            readiness = (0, pull_request_readiness_policy_1.projectPullRequestReadiness)(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
+            if (pull.headSha !== evidence.headSha)
+                readiness = Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
+                    action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+        }
+        catch {
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+        }
+    }
+    let finalHead;
+    try {
+        finalHead = revision && sha(revision.headSha) ? revision.headSha : await ports.getPullRequestHeadSha(number);
+    }
+    catch { /* A denied freshness read cannot certify counts. */ }
+    if (finalHead === pull.headSha && counts)
+        snapshot = { ...snapshot, findingStateEvidence: undefined,
+            findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
+                resolved: counts.fixed + counts.obsolete + counts.dismissed } };
+    if (finalHead !== pull.headSha && readiness.readiness !== 'pending')
+        readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
+    if (fromIssue) {
+        try {
+            const final = await ports.readLinkedPullRequests(original.issueNumber);
+            if (final.state !== 'available' || final.repositoryId !== repositoryId || final.issueNumber !== original.issueNumber
+                || final.numbers.length !== 1 || final.numbers[0] !== number) {
+                snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: 'invalid' };
+                return fail('linkage-superseded');
+            }
+        }
+        catch {
+            snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: 'invalid' };
+            return fail('linkage-unavailable');
+        }
+    }
+    return finish(Object.freeze({ ...readiness, pullNumber: number }));
 }
 
 
@@ -73106,6 +73304,101 @@ exports.PullRequestReviewerRepository = PullRequestReviewerRepository;
 
 /***/ }),
 
+/***/ 1328:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PullRequestStatusQueryRepository = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+const integer = (value) => Number.isSafeInteger(value) && value > 0;
+const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+/** Bounded native linkage and fresh identity reads. No mutations or provider DTOs cross this boundary. */
+class PullRequestStatusQueryRepository {
+    constructor(owner, repository, token) {
+        this.owner = owner;
+        this.repository = repository;
+        this.octokit = github.getOctokit(token);
+    }
+    async readLinkedPullRequests(issueNumber) {
+        if (!integer(issueNumber))
+            return { state: 'unavailable' };
+        try {
+            const response = await this.octokit.graphql(`query ($owner: String!, $repository: String!, $issue: Int!) {
+                repository(owner: $owner, name: $repository) { databaseId nameWithOwner issue(number: $issue) { number
+                    closedByPullRequestsReferences(first: 100, includeClosedPrs: false) {
+                        totalCount pageInfo { hasNextPage } nodes { number state repository { databaseId } headRepository { databaseId } }
+                    } } } }`, { owner: this.owner, repository: this.repository, issue: issueNumber });
+            const repo = response.repository;
+            const issue = repo?.issue;
+            const links = issue?.closedByPullRequestsReferences;
+            if (!integer(repo?.databaseId) || repo?.nameWithOwner?.toLowerCase() !== `${this.owner}/${this.repository}`.toLowerCase()
+                || issue?.number !== issueNumber || !links || !Array.isArray(links.nodes) || links.nodes.length > 100
+                || links.pageInfo?.hasNextPage !== false || links.totalCount !== links.nodes.length)
+                return { state: 'unavailable' };
+            const numbers = [];
+            for (const pull of links.nodes) {
+                if (!pull || !integer(pull.number) || pull.state !== 'OPEN' || pull.repository?.databaseId !== repo.databaseId
+                    || pull.headRepository?.databaseId !== repo.databaseId || numbers.includes(pull.number))
+                    return { state: 'unavailable' };
+                numbers.push(pull.number);
+            }
+            return Object.freeze({ state: 'available', repositoryId: repo.databaseId, issueNumber, numbers: Object.freeze(numbers) });
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readRevision(target) {
+        if (target.owner.toLowerCase() !== this.owner.toLowerCase() || target.repository.toLowerCase() !== this.repository.toLowerCase()
+            || !integer(target.repositoryId) || !integer(target.pullNumber))
+            throw new Error('Status target unavailable.');
+        const { data: pull } = await this.octokit.rest.pulls.get({ owner: this.owner, repo: this.repository, pull_number: target.pullNumber });
+        if (pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
+            || !sha(pull.head.sha) || !sha(pull.base.sha))
+            throw new Error('Status revision unavailable.');
+        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha: pull.base.sha });
+    }
+}
+exports.PullRequestStatusQueryRepository = PullRequestStatusQueryRepository;
+
+
+/***/ }),
+
 /***/ 96578:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -73963,6 +74256,33 @@ exports.WORKFLOW_ACTIVE_STATUSES = [
 
 /***/ }),
 
+/***/ 25911:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveJsonInput = resolveJsonInput;
+exports.resolveActionInput = resolveActionInput;
+/**
+ * Resolves one action input without coupling the caller to a specific lifecycle.
+ * Explicit runtime parameters always override YAML/environment defaults.
+ */
+function resolveJsonInput(inputVarsJson, key) {
+    if (!inputVarsJson) {
+        return undefined;
+    }
+    const inputVars = JSON.parse(inputVarsJson);
+    const value = inputVars[`INPUT_${key.toUpperCase()}`];
+    return value === undefined ? undefined : String(value);
+}
+function resolveActionInput(additionalParams, actionInputs, key) {
+    return (additionalParams[key] ?? actionInputs[key]);
+}
+
+
+/***/ }),
+
 /***/ 89040:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74655,6 +74975,9 @@ function parseCopilotCommand(raw) {
         : tokens;
     if (!argumentsList) {
         return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
+    }
+    if (name === 'status' && argumentsList.length > 0) {
+        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
     }
     if (argumentsList.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
@@ -75473,6 +75796,23 @@ function isRecord(value) {
 }
 function hasOnlyKeys(value, allowed) {
     return Object.keys(value).every(key => allowed.includes(key));
+}
+
+
+/***/ }),
+
+/***/ 83592:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseDelimitedValues = parseDelimitedValues;
+function parseDelimitedValues(value) {
+    return String(value ?? '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => item.length > 0);
 }
 
 
@@ -76660,6 +77000,10 @@ function isRecord(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.decidePullRequestApproval = decidePullRequestApproval;
 exports.isDocumentationOnlyDiff = isDocumentationOnlyDiff;
+exports.decideApprovalChecks = decideApprovalChecks;
+exports.decideApprovalBugbot = decideApprovalBugbot;
+exports.decideApprovalCoverage = decideApprovalCoverage;
+exports.decideApprovalReviews = decideApprovalReviews;
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 /** Pure, intentionally conservative decision. Every unknown provider fact blocks mutation. */
 function decidePullRequestApproval(policy, evidence) {
@@ -76701,6 +77045,37 @@ function decidePullRequestApproval(policy, evidence) {
     if (evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun) {
         return stop('blocked', 'bugbot-configuration', 'Bugbot must run with info severity and dry-run disabled.');
     }
+    const ciDecision = decideApprovalChecks(policy, evidence);
+    if (ciDecision)
+        return ciDecision;
+    const bugbotDecision = decideApprovalBugbot(policy, evidence);
+    if (bugbotDecision)
+        return bugbotDecision;
+    const coverageDecision = decideApprovalCoverage(policy, evidence);
+    if (coverageDecision)
+        return coverageDecision;
+    const reviewDecision = decideApprovalReviews(policy, evidence);
+    if (reviewDecision)
+        return reviewDecision;
+    if (policy.mode === 'recommend')
+        return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
+    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
+}
+function isDocumentationOnlyDiff(paths) {
+    return paths.length > 0 && paths.every(path => /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
+        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
+}
+function matchesGlob(path, glob) {
+    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
+        .replace(/\*\*/gu, '\u0000')
+        .replace(/\*/gu, '[^/]*')
+        .replace(/\?/gu, '[^/]')
+        .split('\u0000').join('.*');
+    return new RegExp(`^${escaped}$`, 'u').test(path);
+}
+/** Canonical checks gate shared by approval and read-only status. */
+function decideApprovalChecks(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     const selected = [...policy.testChecks];
     const required = new Set([...evidence.requiredChecks, ...selected.map(check => check.name)]);
     for (const name of required) {
@@ -76725,6 +77100,11 @@ function decidePullRequestApproval(policy, evidence) {
         if (latest.conclusion !== 'success')
             return stop('blocked', 'check-failed', `Check ${name} did not succeed.`);
     }
+    return undefined;
+}
+/** Canonical bugbot gate shared by approval and read-only status. */
+function decideApprovalBugbot(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     const bugbot = evidence.bugbot;
     if (!bugbot || bugbot.headSha !== evidence.headSha)
         return stop('pending', 'bugbot-missing', 'Waiting for a complete Bugbot review of this head.');
@@ -76735,6 +77115,11 @@ function decidePullRequestApproval(policy, evidence) {
         || (!policy.allowHumanDismissed && bugbot.dismissed > 0)) {
         return stop('blocked', 'bugbot-findings', 'Bugbot has unresolved, unknown, or policy-blocked dismissed findings.');
     }
+    return undefined;
+}
+/** Canonical coverage gate shared by approval and read-only status. */
+function decideApprovalCoverage(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     // A complete, explicitly classified documentation-only diff has no
     // measurable executable lines. It still needs every declared CI and
     // Bugbot gate above; a zero-line code diff is never exempt.
@@ -76750,6 +77135,11 @@ function decidePullRequestApproval(policy, evidence) {
             return stop('blocked', 'coverage-low', 'Diff coverage is below the configured threshold.');
         }
     }
+    return undefined;
+}
+/** Canonical reviews gate shared by approval and read-only status. */
+function decideApprovalReviews(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     if (!evidence.reviewHistoryComplete)
         return stop('blocked', 'reviews-unavailable', 'Native review history is incomplete.');
     const botReviewsForHead = evidence.reviews.filter(review => review.userId === evidence.botUserId && review.commitId === evidence.headSha);
@@ -76769,21 +77159,7 @@ function decidePullRequestApproval(policy, evidence) {
     if (policy.skipWhenHumanApproved && [...latestByUser.values()].some(review => review.userId !== evidence.botUserId && review.state === 'APPROVED' && review.commitId === evidence.headSha)) {
         return stop('recommend', 'human-approved', 'A human has already approved this revision.');
     }
-    if (policy.mode === 'recommend')
-        return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
-    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
-}
-function isDocumentationOnlyDiff(paths) {
-    return paths.length > 0 && paths.every(path => /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
-        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
-}
-function matchesGlob(path, glob) {
-    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
-        .replace(/\*\*/gu, '\u0000')
-        .replace(/\*/gu, '[^/]*')
-        .replace(/\?/gu, '[^/]')
-        .split('\u0000').join('.*');
-    return new RegExp(`^${escaped}$`, 'u').test(path);
+    return undefined;
 }
 
 
@@ -79599,6 +79975,7 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+const pull_request_status_composition_root_1 = __nccwpck_require__(49891);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const commit_use_case_1 = __nccwpck_require__(28001);
@@ -79716,7 +80093,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -79732,7 +80109,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -79841,6 +80218,40 @@ const pull_request_reviewer_repository_1 = __nccwpck_require__(13779);
 const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 function createPullRequestReviewerCompositionRoot() {
     return new pull_request_reviewer_repository_1.PullRequestReviewerRepository((0, github_pull_request_client_factory_1.createPullRequestReviewerClient)());
+}
+
+
+/***/ }),
+
+/***/ 49891:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPullRequestStatusReadPorts = createPullRequestStatusReadPorts;
+const pull_request_status_query_repository_1 = __nccwpck_require__(1328);
+const pull_request_approval_repository_1 = __nccwpck_require__(23001);
+const github_action_input_1 = __nccwpck_require__(57581);
+const input_values_policy_1 = __nccwpck_require__(83592);
+/** Physically narrow facade: constructing a query cannot expose the observer's write operations. */
+function createPullRequestStatusReadPorts(binding, context) {
+    const query = new pull_request_status_query_repository_1.PullRequestStatusQueryRepository(binding.owner, binding.repository, binding.token);
+    const approval = new pull_request_approval_repository_1.PullRequestApprovalRepository(binding.token, {
+        mainBranch: (0, github_action_input_1.getGithubActionInput)('main-branch') || 'master', developmentBranch: (0, github_action_input_1.getGithubActionInput)('development-branch') || 'develop',
+        branchPrefixes: { feature: (0, github_action_input_1.getGithubActionInput)('feature-tree') || 'feature', bugfix: (0, github_action_input_1.getGithubActionInput)('bugfix-tree') || 'bugfix',
+            documentation: (0, github_action_input_1.getGithubActionInput)('docs-tree') || 'docs', chore: (0, github_action_input_1.getGithubActionInput)('chore-tree') || 'chore' },
+        bugbotSeverity: (0, github_action_input_1.getGithubActionInput)('bugbot-severity') || 'low', bugbotDryRun: (0, github_action_input_1.getGithubActionInput)('bugbot-dry-run') === 'true',
+        bugbotIgnorePatterns: (0, input_values_policy_1.parseDelimitedValues)((0, github_action_input_1.getGithubActionInput)('ai-ignore-files')),
+        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+    });
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        getPullRequest: (number) => context.getPullRequest(number), listIssueComments: (number) => context.listIssueComments(number),
+        getPullRequestHeadSha: (number) => context.getPullRequestHeadSha(number),
+        readLinkedPullRequests: (number) => query.readLinkedPullRequests(number),
+        approval: Object.freeze({ readPolicy: (target) => approval.readPolicy(target), loadEvidence: (target) => approval.loadEvidence(target),
+            readRevision: (target) => query.readRevision(target) }),
+    });
 }
 
 
@@ -81047,6 +81458,70 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = void 0;
 // GitHub Projects currently permits up to 50,000 items per project.
 exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
+
+
+/***/ }),
+
+/***/ 57581:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getGithubActionInput = getGithubActionInput;
+const core = __importStar(__nccwpck_require__(75855));
+const action_input_source_1 = __nccwpck_require__(25911);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
+function getGithubActionInput(key, options) {
+    let value;
+    try {
+        const inputVarsJson = process.env.INPUT_VARS_JSON;
+        value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
+    }
+    catch (error) {
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
+    }
+    value = (value ?? core.getInput(key, options)).trim();
+    if (options?.required && value.length === 0)
+        throw new Error(`Input required and not supplied: ${key}`);
+    if (key.toLowerCase() === 'token' && value)
+        core.setSecret(value);
+    return value;
+}
 
 
 /***/ }),

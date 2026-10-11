@@ -370,3 +370,7 @@ Docs lead with the normal journey and a text-equivalent flow before internals. T
 - Related repository contracts: [Bugbot reconciliation](./bugbot-review-state-reconciliation.md), [PR lifecycle](./pull-request-lifecycle-and-enrichment.md), [setup and doctor](./setup-configuration-credentials-and-doctor.md).
 - Decision: one new native approval observer, separate from analysis and review-state workflows; `workflow_run` completion is a wakeup and never authority. Rejected: `state:ready` alone, a green generic workflow, `check_run` of Actions checks, a privileged PR-head checkout, and treating the setup PAT as a second reviewer.
 - Follow-up outside scope: auto-merge, arbitrary third-party webhook subscriptions, and revocation of existing native approvals.
+
+### Read-only status implementation on managed issue #462
+
+`/copilot status` now has dedicated frozen read-only composition and native issue-linkage ports. It projects the same canonical CI, numeric coverage, Bugbot and native review gates as approval, without invoking the observer or exposing mutation ports. Exact repository/PR/head/base/policy fences and a final issue-linkage fence prevent stale readiness; unavailable counts do not hide independent verified facts. The companion `specs/guarded-pull-request-approval-status.md` owns the 103-case budget, bounded localized presentation, implementation evidence and pending live acceptance. Native approval behavior and guarded activation are unchanged.

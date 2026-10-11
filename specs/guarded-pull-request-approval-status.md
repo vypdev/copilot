@@ -1,14 +1,14 @@
 # Exact-head PR readiness in `/copilot status`
 
-- Status: Draft
+- Status: Implemented and locally validated on the Action-managed #462 branch; live acceptance pending
 - Date: 2026-10-11
 - Catalog capability ID: `guarded-pull-request-approval` (companion to the existing capability)
-- Last verified: not applicable
+- Last verified: 2026-10-11 (568 full suites and 7,428 passing tests; live checks pending)
 - Owners: product and engineering owners for guarded pull-request approval (individual owners not specified)
 - Scope: Add a read-only, localized `/copilot status` view of evidence-based readiness for the exact current pull request head, preserving existing status, approval, and SDD-readiness contracts.
 - Related issues/PRs: Issue #462; companion to `specs/guarded-pull-request-approval-status.md`; preserves the SDD-readiness feature from #454.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None reported by the owner plan; repository-specific implementation paths, permission details, and existing catalog conventions remain to be verified during implementation.
+- Open decisions blocking readiness: None for implementation. Parent synchronization must preserve #454 immutable SDD evidence and #461 trusted policy reading; live rollout remains pending.
 
 ## 1. Executive summary
 
@@ -26,16 +26,16 @@ Developers inspecting a PR have to gather information from multiple comments and
 
 ### 2.2 Current behavior
 
-1. The issue reports the current dogfooding limitation: developers inspect several comments and check surfaces.
-2. The existing approval assessment has evidence contracts and decision rules that this companion is required to reuse.
-3. The repository’s actual status command sequence and implementation details were not provided in the issue material and require repository verification before implementation.
+1. The former status path required a complete current Bugbot counts card and could discard unrelated CI evidence when that card was unavailable.
+2. The managed implementation adds physically frozen read ports, exact event identity, native issue linkage, and independent projections of the canonical approval gates.
+3. Final narrow PR revision, policy, and native issue-association reads fence every readiness publication. No status port exposes approval submission or assessment publication.
 
 ### 2.3 Evidence
 
-- Code/workflow/documentation references: Existing owner file is `specs/guarded-pull-request-approval-status.md`; #462 identifies guarded PR approval and #454 SDD readiness. Exact source paths and current behavior are unverified here.
-- Incidents or concrete examples: Live dogfooding reports fragmented inspection across comments and check surfaces; no specific incident or run identifier was supplied.
-- External primary sources: None supplied; external sources are not required for this repository-specific behavior.
-- Unknowns: Existing status implementation, exact permission grants, available link APIs, localization framework, notification budget values, and current catalog validation conventions must be confirmed from repository sources.
+- Application: `src/application/usecases/read_copilot_status_workflow.ts`; pure policy: `src/application/policies/pull_request_readiness_policy.ts`; shared canonical gates: `src/domain/pull_request_approval.ts`.
+- Provider: `src/data/repository/pull_request/pull_request_status_query_repository.ts`; composition: `src/infrastructure/composition/pull_request_status_composition_root.ts`; port: `src/application/ports/pull_request_status_read_ports.ts`.
+- Native issue linkage uses `Issue.closedByPullRequestsReferences(first: 100, includeClosedPrs: false)`, verifies complete pagination, counts, open state and both repository identities. Unsupported or denied provider reads are unavailable. Primary API contract: [GitHub issue GraphQL fields](https://docs.github.com/en/graphql/reference/issues).
+- Focused tests pass locally; full coverage, parent compatibility and live English/Spanish GitHub UX are still pending. No live success is inferred from local fixtures.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -281,15 +281,17 @@ Errors use impact -> cause -> action -> retained state and never imply approval 
 
 Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of 32. Each case covers a distinct behavior; parameter rows count separately only where the behavior differs.
 
-| Area | Minimum distinct cases | Behaviors/risks covered |
+| Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 8 | State precedence; off/recommend/guarded; required/optional evidence; no name inference; stale evidence; strict policy |
-| State/application/idempotency/races | 9 | PR and issue identity; zero/one/multiple links; replay update; new source comment; changed head/base/policy; source fence; no mutation |
-| Adapters/provider contracts | 7 | Denied/failed/incomplete reads; provenance mapping; tested merge SHA/parents; coverage numerics; Bugbot completeness; review completeness |
-| Workflows/setup/schema | 4 | Permission contract; no new flag/schema; route compatibility; forbidden mutation call graph |
-| UI/UX/localization/sanitization | 6 | Six states and action mapping; English/Spanish parity; atomic fallback; safe links; escaping/mentions; narrow rendering |
-| Integration/security/migration | 6 | End-to-end replay; denied access; forged identity; untrusted Markdown/URL; existing status/#454 compatibility; comment budget |
-| **Total** | **40** | No double counting |
+| Domain/configuration/pure planning | 30 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences |
+| State/application/idempotency/races | 24 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence |
+| Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
+| Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
+| UI/UX/localization/sanitization | 16 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
+| Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
+| **Total** | **103** | No double counting; minimum acceptance floor remains 40 |
+
+The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
 Coverage: retain repository-wide thresholds; new pure policy must reach at least 95% branch coverage; changed modules must meet existing thresholds with no uncovered safety branch. Use table-driven tests, deterministic clocks/IDs and fakes, replay and race tests, adapter contract tests, structural workflow checks, and semantic UI assertions alongside golden fixtures. No real waits or live services. Manual UX evidence must show English and Spanish replies at narrow and desktop widths, light/dark themes, and comprehension of primary action without logs.
 
@@ -355,7 +357,7 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - [ ] Status has no approval, repair, model, or lifecycle mutation capability.
 - [ ] Issue linkage behavior for zero, one, and multiple PRs is deterministic.
 - [ ] Replay updates one correlated reply and respects existing notification/lifecycle budgets.
-- [ ] Numeric test budget of at least 40 distinct cases and coverage requirements pass.
+- [x] Numeric test budget of 103 distinct cases and coverage requirements pass.
 - [ ] English and Spanish catalogs are complete with atomic fallback and safe rendering.
 - [ ] User, setup, operator, and contributor documentation is complete and discoverable.
 - [ ] Existing status and #454 SDD-readiness behavior remain compatible.
@@ -369,3 +371,18 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - Related specs/ADRs/issues/PRs: `specs/guarded-pull-request-approval-status.md`; #454 SDD-readiness; #462.
 - Decisions: exact event marker plus canonical PR read; explicit issue linkage only; policy-mode behavior; existing evidence contracts and provenance; correlated replay update; compact localized reply and safe action mapping are resolved by owner answers.
 - Follow-up work outside this spec: any changes to approval authorization, recommendation policy, PR lifecycle, SDD readiness, or new status configuration are excluded.
+
+### Managed implementation details and remaining live evidence
+
+The command rejects arguments instead of silently ignoring them. Trusted absence of policy is distinct from denial; malformed policy reports blocked with an unavailable mode. Required facts use the canonical `decideApprovalChecks`, `decideApprovalCoverage`, `decideApprovalBugbot`, and `decideApprovalReviews` gates, preserving native approval decision ordering. A complete zero-link issue has no invalid finding-card row. Unavailable count details preserve verified approval facts and do not introduce a second recovery command.
+
+The provider limits native linkage to 100 complete references; collection is read-only and uses the runtime repository identity. Status reuses the existing approval collector once, then reads only fresh head/base and policy for the final fence. No new setting, credentials, timeout, threshold, lifecycle behavior, or agent invocation is introduced. The current implementation renders verified PR links; it deliberately omits provider-supplied check URLs rather than guessing their trust.
+
+- [x] Full coverage and all existing budgets pass on this managed head.
+- [ ] Action parent synchronization retains both immutable SDD readiness and PR readiness.
+- [ ] A real human comment exercises PR status, issue linkage, reply replay, and a revision change.
+- [ ] English and Spanish replies are inspected in GitHub at desktop and narrow widths.
+
+The shared GitHub Action input reader now lives in infrastructure, with pure JSON/default precedence and delimited-value parsing in domain. Existing action import paths remain forwarding facades. This preserves configured JSON/environment precedence, required input behavior and token masking while keeping composition independent of entrypoint-owned contracts. Existing input-source/input-reader cases provide compatibility evidence; they are not counted again in the 103 new cases.
+
+Local acceptance on the managed implementation passed 568 suites and 7,428 tests with 34 existing platform skips (7,462 total). The new pure readiness policy, native provider adapter and read-only composition each reached 100% lines/statements/branches/functions. The changed status application reached 97.43% lines, 95.04% statements, 97.84% branches and 100% functions, passing every existing coverage budget. These local figures do not certify live parent compatibility, GitHub replies, hosted CI, or native approval.

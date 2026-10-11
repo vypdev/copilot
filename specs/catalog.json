@@ -2042,7 +2042,8 @@
         "src/actions/github_action.ts",
         "src/actions/pull_request_approval_action.ts",
         "src/cli/commands/setup.ts",
-        "src/cli/commands/doctor.ts"
+        "src/cli/commands/doctor.ts",
+        "src/infrastructure/composition/pull_request_status_composition_root.ts"
       ],
       "code": [
         "src/domain/setup.ts",
@@ -2075,7 +2076,15 @@
         "web/src/i18n/permissions/en.ts",
         "web/src/i18n/permissions/es.ts",
         "web/src/i18n/permissions/fr.ts",
-        "web/src/i18n/permissions/pt.ts"
+        "web/src/i18n/permissions/pt.ts",
+        "src/application/ports/pull_request_status_read_ports.ts",
+        "src/application/policies/publication_message_catalog.ts",
+        "src/domain/copilot_command.ts",
+        "src/data/repository/pull_request/pull_request_status_query_repository.ts",
+        "src/infrastructure/composition/pull_request_status_composition_root.ts",
+        "src/domain/action_input_source.ts",
+        "src/domain/input_values_policy.ts",
+        "src/infrastructure/github_action_input.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -2097,7 +2106,13 @@
         "src/infrastructure/__tests__/setup_approval_readiness_adapter.test.ts",
         "src/utils/__tests__/setup_files.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
-        "src/application/policies/__tests__/setup_token_permission_policy.test.ts"
+        "src/application/policies/__tests__/setup_token_permission_policy.test.ts",
+        "src/application/usecases/__tests__/pull_request_readiness_workflow.test.ts",
+        "src/application/policies/__tests__/pull_request_readiness_presentation.test.ts",
+        "src/application/usecases/__tests__/pull_request_readiness_security_integration.test.ts",
+        "src/data/repository/pull_request/__tests__/pull_request_status_query_repository.test.ts",
+        "src/infrastructure/composition/__tests__/pull_request_status_composition_root.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts"
       ],
       "documentation": [
         "docs/authentication.mdx",

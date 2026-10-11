@@ -64,7 +64,7 @@ describe('read canonical Copilot status', () => {
         const mismatched = { ...context, bugbot: { ...context.bugbot, review: { ...context.bugbot.review,
             target: { ...context.bugbot.review.target, isPullRequest: reason !== 'non-PR',
                 pullRequestNumber: reason === 'different-PR' ? 12 : 11 } } } };
-        await expect(readCopilotStatus(mismatched, 'IssueCommentUseCase', ports)).rejects.toMatchObject({ code: 'workflow.stale' });
+        expect((await readCopilotStatus(mismatched, 'IssueCommentUseCase', ports)).payload).toMatchObject({ status: { pullRequestReadiness: { readiness: 'unavailable', code: 'identity-unavailable' } } });
         expect(ports.getPullRequest).not.toHaveBeenCalled();
     });
     it('reports readiness evidence unavailable when its read adapter is absent', async () => {
@@ -87,7 +87,7 @@ describe('read canonical Copilot status', () => {
             if (reason === 'moved-head') ports.getPullRequestHeadSha.mockResolvedValue('b'.repeat(40));
             if (reason === 'wrong-repository') ports.getPullRequest.mockResolvedValue({ number: 11, state: 'open', draft: false,
                 baseRepository: { owner: 'other', name: 'r', id: 2 }, headRepositoryOwner: 'o', headRef: 'docs/7', headSha: head });
-            await expect(readCopilotStatus(context, 'IssueCommentUseCase', ports)).rejects.toMatchObject({ code: 'workflow.stale' });
+            expect((await readCopilotStatus(context, 'IssueCommentUseCase', ports)).payload).toMatchObject({ status: { findingStates: undefined, findingStateEvidence: 'invalid', pullRequestReadiness: { readiness: 'unavailable' } } });
         },
     );
 });

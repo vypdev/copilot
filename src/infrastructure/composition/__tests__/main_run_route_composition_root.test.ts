@@ -20,6 +20,8 @@ import {
 const mockIssue = {};
 const mockPullRequest = {};
 const mockContext = { kind: 'context' };
+const mockStatusReadPorts = { kind: 'status-read-ports' };
+jest.mock('../pull_request_status_composition_root', () => ({ createPullRequestStatusReadPorts: jest.fn(() => mockStatusReadPorts) }));
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
@@ -117,7 +119,7 @@ describe("main run route composition root", () => {
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 14 }, () => expect.anything()),
-      mockContext,
+      mockStatusReadPorts,
     );
   });
 
@@ -128,7 +130,7 @@ describe("main run route composition root", () => {
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 13 }, () => expect.anything()),
-      mockContext,
+      mockStatusReadPorts,
     );
   });
 

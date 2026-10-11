@@ -108,25 +108,39 @@ quote or backslash; malformed, empty or multiline quoted IDs are rejected.
 The command still accepts at most 20 IDs and 2,000 characters.
 
 
-`/copilot status` reports lifecycle, waiting state, branch, labels, and the
-canonical Bugbot counts: open, reopened, verification-required, unknown, and
-resolved. In a PR conversation, it reads one trusted complete Bugbot status
-card for the current commit and checks that the head is still unchanged. If
-that evidence is missing, malformed, incomplete or stale, run `/copilot recheck`
-and retry status. It never substitutes cached counts or zero. Setup reads that
-exact PR to resolve its linked issue and working branch. An unlinked PR remains
-separate from an issue with the same number. Status and description queries
-preserve existing lifecycle and waiting labels when they make no lifecycle
-decision.
+`/copilot status` takes no arguments. It reports lifecycle, waiting state, branch,
+labels, and independently verified Bugbot counts. Cached counts never replace
+missing or stale evidence. Read-only status and description queries preserve
+existing lifecycle and waiting labels.
 
-When exact-head PR approval evidence is available, status also shows its
-readiness projection and configured policy mode. This is a snapshot: status
-never submits an approval, review, or merge. Missing or denied policy/evidence
-reads are reported as unavailable; they are never treated as policy `off`.
-Recommendation mode still requires a human decision. Issue-to-PR selection is
-not yet connected to this command, so run status in the PR conversation for a
-PR readiness snapshot. Bugbot counts and lifecycle status remain independent
-when readiness evidence cannot be read.
+In a PR conversation, status reads that exact PR and evaluates its current head
+and base using the approval policy's existing evidence rules. It shows CI,
+numeric coverage, Bugbot, and native review states independently. Missing a
+Bugbot counts card does not discard verified CI or approval evidence. In an
+issue conversation it uses native GitHub links to open PRs: zero links means not
+applicable, one selects that PR, and multiple links ask you to run status in the
+selected PR. It never guesses from an issue number or branch name.
+
+The reply identifies the verified commit and configured policy mode, links to
+the verified PR, and offers one next action. Known running checks are pending;
+proven failures are blocked; denied or incomplete evidence is unavailable.
+Policy read failures never mean `off`. A change to the head, base, policy, or
+issue linkage during collection invalidates earlier readiness. Retry status
+for the new revision. Recommendation mode still requires human review; guarded
+mode points to the existing approval observer. Status itself never submits an
+approval, invokes an agent, repairs files, or merges a PR.
+
+For example, `/copilot status` in an eligible PR can show:
+
+```text
+PR readiness: satisfied · Mode: recommend · Commit: a1b2c3d4
+CI: satisfied
+Coverage: satisfied
+Bugbot: satisfied
+Native reviews: satisfied
+A human review is still required.
+Next action: Have a maintainer review this exact revision.
+```
 
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to
