@@ -33,13 +33,14 @@ describe('GitHub communication test-budget validator', () => {
     expect(validateCommunicationTestBudget(process.cwd(), ledger)).toEqual([]);
     expect(ledger.budgets.map(budget => ({
       id: budget.id,
-      allocated: budget.allocatedCases,
       required: budget.requiredCases,
     }))).toEqual([
-      { id: 'semantic-github-publication', allocated: 235, required: 135 },
-      { id: 'repository-locale-localization', allocated: 149, required: 146 },
+      { id: 'semantic-github-publication', required: 135 },
+      { id: 'repository-locale-localization', required: 146 },
     ]);
     for (const budget of ledger.budgets) {
+      expect(budget.allocatedCases).toBe(budget.files.reduce((total, entry) => total + entry.qualifyingCases, 0));
+      expect(budget.allocatedCases).toBeGreaterThanOrEqual(budget.requiredCases);
       for (const entry of budget.files) {
         expect(countQualifyingDeclarations(process.cwd(), ledger.baseline, entry.path))
           .toBeGreaterThanOrEqual(entry.qualifyingCases);
@@ -58,10 +59,11 @@ describe('GitHub communication test-budget validator', () => {
 
   it('rejects an allocation total that no longer matches its evidence rows', () => {
     const ledger = mutableLedger();
+    const total = ledger.budgets[0].files.reduce((sum: number, entry: { qualifyingCases: number }) => sum + entry.qualifyingCases, 0);
     ledger.budgets[0].allocatedCases -= 1;
 
     expect(validateCommunicationTestBudget(process.cwd(), ledger)).toContain(
-      'semantic-github-publication allocatedCases is 234 but its file allocation totals 235.',
+      `semantic-github-publication allocatedCases is ${total - 1} but its file allocation totals ${total}.`,
     );
   });
 
