@@ -39402,6 +39402,9 @@ function replaceAgentActivityLabel(currentLabels, activityLabel, active) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
 const agent_1 = __nccwpck_require__(89040);
+const copilot_command_1 = __nccwpck_require__(11771);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'dismiss', 'remember']);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))
@@ -39412,10 +39415,11 @@ function shouldTrackAgentActivity(execution, route) {
                 && isAgentReady(execution, 'planner');
         case 'issue-comment':
         case 'pull-request-review-comment':
-            return hasComment(execution)
+            return hasAgentCapableComment(execution)
                 && (isAgentReady(execution, 'planner')
                     || isAgentReady(execution, 'findings')
-                    || isAgentReady(execution, 'fixer'));
+                    || isAgentReady(execution, 'fixer')
+                    || isAgentReady(execution, 'reviewer'));
         case 'pull-request':
             if (execution.pullRequest.action === 'ready_for_review')
                 return isAgentReady(execution, 'reviewer');
@@ -39443,8 +39447,22 @@ function isAgentBackedSingleAction(execution) {
 function isAgentReady(execution, task) {
     return (0, agent_1.isAgentConfigurationReady)(execution.ai.getAgentConfiguration(task));
 }
-function hasComment(execution) {
-    return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
+function hasAgentCapableComment(execution) {
+    const body = execution.issue.commentBody || execution.pullRequest.commentBody || '';
+    if (!body.trim())
+        return false;
+    const parsed = (0, copilot_command_1.parseCopilotCommand)(body);
+    if (parsed.kind === 'invalid')
+        return false;
+    if (parsed.kind === 'command') {
+        if (DETERMINISTIC_COMMENT_COMMANDS.has(parsed.command.name))
+            return false;
+        if (parsed.command.name === 'sync-branch') {
+            const sync = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(parsed.command.arguments);
+            return sync.valid && !sync.options.dryRun && sync.options.useAgent;
+        }
+    }
+    return true;
 }
 function hasTarget(execution) {
     if (['pull_request', 'pull_request_review', 'pull_request_review_comment', 'check_suite', 'workflow_run'].includes(execution.eventName)) {

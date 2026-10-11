@@ -1608,7 +1608,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1691,7 +1691,8 @@
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/detection.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/pull-requests/examples.mdx"
+        "docs/pull-requests/examples.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {

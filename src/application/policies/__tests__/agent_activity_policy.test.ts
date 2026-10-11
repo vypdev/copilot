@@ -22,6 +22,42 @@ function execution(overrides: Record<string, unknown> = {}): any {
 }
 
 describe('agent activity policy', () => {
+    const deterministicComments = ['issue-comment', 'pull-request-review-comment'].flatMap(route =>
+        ['/copilot help', '/copilot status', '/copilot dismiss finding-id', '/copilot remember one bounded rule', '/copilot unknown-command']
+            .map(body => ({ route: route as 'issue-comment' | 'pull-request-review-comment', body })));
+    it.each(deterministicComments)('does not claim model work for $route: $body', ({ route, body }) => {
+        const context = execution({
+            eventName: route === 'issue-comment' ? 'issue_comment' : 'pull_request_review_comment',
+            issue: { number: 7, commentBody: route === 'issue-comment' ? body : '' },
+            pullRequest: { number: 12, action: 'created', commentBody: route === 'pull-request-review-comment' ? body : '' },
+        });
+        expect(shouldTrackAgentActivity(context, route)).toBe(false);
+        expect(context.ai.getAgentConfiguration).not.toHaveBeenCalled();
+    });
+
+    it('does not label a missing required command argument as model work', () => {
+        expect(shouldTrackAgentActivity(execution({ issue: { number: 7, commentBody: '/copilot implement' } }), 'issue-comment')).toBe(false);
+    });
+
+    it.each(['--dry-run', '--no-agent', '--unsupported'])('does not label deterministic sync %s as model work', option => {
+        expect(shouldTrackAgentActivity(execution({ issue: { number: 7, commentBody: `/copilot sync-branch ${option}` } }), 'issue-comment')).toBe(false);
+    });
+
+    it('retains activity tracking when sync may invoke the conflict fixer', () => {
+        expect(shouldTrackAgentActivity(execution({ issue: { number: 7, commentBody: '/copilot sync-branch' } }), 'issue-comment')).toBe(true);
+    });
+
+    it('retains activity tracking for fresh findings analysis', () => {
+        expect(shouldTrackAgentActivity(execution({ issue: { number: 7, commentBody: '/copilot findings' } }), 'issue-comment')).toBe(true);
+    });
+
+    it('tracks comment review when only the reviewer is configured', () => {
+        expect(shouldTrackAgentActivity(execution({
+            issue: { number: 7, commentBody: '/copilot recheck' },
+            ai: { getAgentConfiguration: jest.fn((task: string) => ({ model: task === 'reviewer' ? 'model' : '' })) },
+        }), 'issue-comment')).toBe(true);
+    });
+
     it('tracks ready-for-review activity only for an available reviewer', () => {
         const ready = execution({
             eventName: 'pull_request',
@@ -58,6 +94,28 @@ describe('agent activity policy', () => {
             issue: { number: -1, commentBody: '' },
             pullRequest: { number: 12, action: 'created', commentBody: 'Please fix this' },
         }), 'pull-request-review-comment')).toBe(true);
+        expect(shouldTrackAgentActivity(execution({
+            issue: { number: 7, commentBody: '' }, pullRequest: { number: 0, commentBody: '' },
+        }), 'issue-comment')).toBe(false);
+    });
+
+    it.each([
+        { mode: 'replace', planner: true, expected: true },
+        { mode: 'disabled', planner: true, expected: false },
+        { mode: 'append', planner: false, expected: false },
+    ])('tracks description-only PR work according to $mode and planner=$planner', ({ mode, planner, expected }) => {
+        expect(shouldTrackAgentActivity(execution({
+            eventName: 'pull_request',
+            pullRequest: { number: 12, action: 'opened', commentBody: '' },
+            ai: {
+                getAgentConfiguration: jest.fn((task: string) => ({ model: planner && task === 'planner' ? 'model' : '' })),
+                getPullRequestDescriptionMode: jest.fn(() => mode),
+            },
+        }), 'pull-request')).toBe(expected);
+    });
+
+    it('does not label an unrecognized runtime route as model work', () => {
+        expect(shouldTrackAgentActivity(execution(), 'unrecognized' as Parameters<typeof shouldTrackAgentActivity>[1])).toBe(false);
     });
 
     it('does not track metadata-only pull request edits as agent activity', () => {
@@ -108,6 +166,13 @@ describe('agent activity policy', () => {
                 getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
             },
         }), 'issue')).toBe(false);
+        expect(shouldTrackAgentActivity(execution({
+            issue: { number: 7, commentBody: '/copilot recheck' },
+            ai: {
+                getAgentConfiguration: jest.fn(() => ({ model: '' })),
+                getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
+            },
+        }), 'issue-comment')).toBe(false);
     });
 
     it('does not track a route with no issue or pull request target', () => {

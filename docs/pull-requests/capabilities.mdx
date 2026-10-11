@@ -109,6 +109,13 @@ A PR conversation targets the PR even when its event is `issue_comment`;
 read-only status and description requests preserve lifecycle and waiting labels
 unless they produce an explicit lifecycle decision.
 
+`help`, `status`, `dismiss`, `remember`, invalid commands and deterministic
+`sync-branch --dry-run` / `--no-agent` paths do not invoke a model and do not
+add or remove the agent activity label. `findings` performs fresh analysis and
+can show agent activity. A reviewer-only configuration also tracks review work.
+If a runner stops abruptly, inspect its Actions job before treating a retained
+activity label as proof that an agent is still running.
+
 Each run writes a bounded Job Summary. The supplied PR, review-state, ordinary
 comment and native review-comment workflows grant
 `checks: write` to a short-lived `GITHUB_TOKEN` and passes it only as
