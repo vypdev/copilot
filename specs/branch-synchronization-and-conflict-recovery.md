@@ -405,3 +405,21 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 - Decision: observe cheaply on all branches; invoke fixer only for eligible conflicts.
 - Rejected: full commit workflow everywhere, force push, agent-owned git.
 - Follow-up: indexed dependency storage/performance study is outside this baseline.
+
+### Dogfooding correction: Windows verification heap (2026-10-11)
+
+Sync run 38149808386 merged develop e2b6b3e6 into the managed #454 workspace
+without conflicts, then failed before commit/push because the full Jest process
+exhausted its approximately 1.8 GB Node heap. The configured `pnpm run test
+--runInBand` bypassed the repository's existing Windows service-worker recycling.
+The remote feature head remained fb8f3d9b. This is a verification failure, not
+proof that synchronization was published or that the merge itself failed.
+
+The repository variable `BUGBOT_AUTOFIX_VERIFY_COMMANDS` now retains five checks:
+typecheck, `pnpm run test:coverage`, lint, documentation, and specifications.
+Coverage uses the existing maximum of two workers and the installed Windows
+service flag's 512 MB idle-worker recycling. The existing coverage budgets and
+setup acceptance validator also run. No tests, skips, thresholds, or runtime
+permissions were weakened. Comment 6110538037 starts the Action-owned retry;
+its final native verification and remote publication remain acceptance evidence
+to collect, not an assumed successful result.

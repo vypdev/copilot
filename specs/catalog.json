@@ -1779,7 +1779,8 @@
         "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-workflow-contract.cjs",
         "src/application/policies/agent_execution_failure_policy.ts",
-        "src/infrastructure/untrusted_command_environment.ts"
+        "src/infrastructure/untrusted_command_environment.ts",
+        "scripts/diagnose-windows-powershell-startup.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",

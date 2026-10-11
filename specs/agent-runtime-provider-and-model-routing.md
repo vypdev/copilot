@@ -945,3 +945,44 @@ errors and credential masking.
 - Decision: semantic role ports and explicit complete tuples; no fallback.
 - Rejected: eager provisioning, shell-string assembly, provider DTOs in use cases.
 - Follow-up: automatic model selection is outside this baseline.
+
+### Hosted Windows startup investigation (2026-10-11)
+
+PR #465 hosted Windows smoke run 38146124779 failed 29 isolated runtime
+fixtures. The native descriptor PowerShell process repeatedly reached its
+15-second timeout; a nested verification-environment probe also reached its
+60-second timeout. Earlier self-hosted Windows run 38142246677 passed those
+fixtures. This difference does not identify a root cause or prove the
+authenticated fixer works on either runner.
+
+The existing platform smoke workflow now offers a bounded, read-only
+`windows_startup_probe` dispatch. One hosted Windows job compares nine
+20-second probes in order: isolated ACL environment, runner baseline, the
+same isolated environment after the baseline, then isolated environments
+with system metadata, runner temp variables, and runner profile variables.
+Three further probes use fresh disposable profile directories with cache-off,
+absolute cache, and native cache selection respectively. Those directories are
+removed after the comparison and are never passed to an agent. It records only the fixed
+environment label, closed status and elapsed milliseconds. It never records
+stdout, stderr, errors, environment values, credentials or paths. It does not
+change process permissions, ACL policy, sandboxing or verification requirements.
+
+This investigation tool makes no feature-readiness claim and does not replace
+the mandatory smoke fixtures. Its six live probes are operational evidence,
+not additional unit cases or a completed acceptance gate. The default workflow
+behavior and coverage export stay unchanged; probe-only dispatch does not start
+self-hosted smoke jobs or export coverage.
+
+Initial diagnostic run 38150007571 on master 4575bbc3 proved that a minimal
+PowerShell command times out in the isolated ACL environment both before and
+after a successful 947 ms runner-baseline invocation. Subsequent probes separate
+non-secret system metadata, temp variables, and profile variables; this does not
+change the admitted agent environment or execution permissions. The success of
+the diagnostic workflow itself is not a successful isolated startup result.
+
+Expanded run 38150471451 showed a different hosted VM with isolated startup
+18,757 ms initially and around 12,000 ms thereafter, versus 233 ms baseline.
+Adding each tested system/temp/profile group independently did not remove the
+delay. This demonstrates timing variability as well as the isolated overhead;
+it does not establish a single missing variable or justify disabling ACL checks.
+Disposable-profile cache comparisons remain investigation evidence only.
