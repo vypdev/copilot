@@ -547,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **106 distinct cases** are a floor derived from eligibility,
+The following **117 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -567,7 +567,8 @@ ownership/validation.
 | Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
 | Bounded draft generation and recovery | 12 | Three action-specific schema boundaries, one safe regeneration, one exhausted size repair, three malformed outputs, one provider failure, two validation/freshness integration routes and one closed localized recovery presentation |
 | Answer history and state encoding | 14 | Four cumulative/current-authorization/base-reset routes, one legacy/new provenance roundtrip with visible round, six invalid-provenance cases, count/encoded-size bounds and comment-terminator isolation |
-| **Total** | **106** | No case counted twice |
+| Draft format and final clarification recovery | 11 | Two typed content repair reasons, exhausted format, unexpected writer failure, both mixed size/format orders, final round completion, fourth question rejection, full writer/freshness revalidation, missing prepared value and localized closed recovery |
+| **Total** | **117** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -755,3 +756,20 @@ distinct decisions with their question/round; the old Q1 alone leaves round two
 waiting; an unauthorized current answer cannot progress; state roundtrips
 malicious comment terminators without exposing them as markup. These fourteen
 new cases belong only to this gate budget.
+
+### Canonical draft format and the final clarification round (2026-10-11)
+
+A generated draft missing required canonical headings or a numeric test budget
+MUST be rejected by the existing writer validation. A typed domain content
+failure permits one concise regeneration, sharing the same two-attempt ceiling
+with size repair. Feedback contains only closed failure categories and the
+original requirements; it never echoes rejected Markdown or diagnostics. Every
+regenerated candidate passes full owner, catalog, workspace and freshness
+validation. Provider, malformed-output, authority and unrelated writer failures
+do not trigger a content regeneration. A second invalid format publishes nothing
+and gives the closed localized template/acceptance recovery.
+
+The three-round bound counts question sets. After all questions of round three
+are answered, a question-free analysis can prepare the draft in round three.
+A proposed fourth question set still blocks before drafting or publication;
+pending publication retries continue to preserve their existing round.

@@ -41,6 +41,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'sdd-draft-size-exceeded',
+    'sdd-draft-format-invalid',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
@@ -56,6 +57,7 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
 }
 
 export type ApplicationErrorRecovery = {
@@ -295,6 +297,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-format-invalid': Object.freeze([]),
 });
 
 function normalizeApplicationErrorRecovery(

@@ -20,6 +20,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'sdd-draft-format-invalid', variables: {} },
+        english: 'Existing answers and published SDDs were preserved; no draft was published.',
+        spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+    },
+    {
         recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published.',
         spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',

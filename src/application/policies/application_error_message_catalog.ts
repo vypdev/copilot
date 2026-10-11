@@ -196,6 +196,11 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'sdd-draft-format-invalid': Object.freeze({
+    impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
+    action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+  }),
   'sdd-draft-size-exceeded': Object.freeze({
     impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
     action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
@@ -249,6 +254,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'sdd-draft-format-invalid': Object.freeze({
+    impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
+    action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
   'sdd-draft-size-exceeded': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
     action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',

@@ -5161,6 +5161,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'sdd-draft-size-exceeded',
+    'sdd-draft-format-invalid',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -5350,6 +5351,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-format-invalid': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)

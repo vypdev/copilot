@@ -1,4 +1,4 @@
-import { readSddGateRecord } from '../../../../../domain/pre_branch_sdd';
+import { readSddGateRecord, SddDraftFormatFailure } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
 
@@ -72,6 +72,57 @@ describe('PreBranchSddGateUseCase', () => {
     await h.useCase.begin(context());
     return h;
   }
+
+  async function thirdClarificationRound() {
+    const h = await twoClarificationRounds();
+    h.comments.push({ id: 102, body: 'SDD Q1: Show newest operations first', user: { login: 'alice' } });
+    h.query.mockResolvedValueOnce({ ...plan, questions: [{ ...question, text: 'How should stale state be reported?', owner: 'issue-author' }], newCapability: null });
+    await h.useCase.begin(context());
+    h.comments.push({ id: 103, body: 'SDD Q1: Report stale before pending revision', user: { login: 'alice' } });
+    return h;
+  }
+
+  it('allows publication preparation after the third question round is fully answered', async () => {
+    const h = await thirdClarificationRound();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Accepted draft' });
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('drafted');
+    if (outcome.status === 'drafted') {
+      expect(outcome.record.round).toBe(3);
+      expect(outcome.record.answers).toHaveLength(3);
+      expect(outcome.record.answers!.map(answer => answer.round)).toEqual([1, 2, 3]);
+    }
+    expect(h.validateDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('still blocks a fourth set of questions before drafting or publication', async () => {
+    const h = await thirdClarificationRound();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(readSddGateRecord(h.comments[0].body, 42)!.round).toBe(3);
+  });
+
+  it('revalidates a repaired format with the same owner before the final freshness fence', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
+      .mockResolvedValueOnce({ markdown: '# Invalid draft' }).mockResolvedValueOnce({ markdown: '# Accepted draft' });
+    h.validateDraft.mockRejectedValueOnce(new SddDraftFormatFailure('required-heading', 'Missing heading'));
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('drafted');
+    expect(h.validateDraft.mock.calls.map(call => call.slice(1, 3))).toEqual([[plan, '# Invalid draft'], [plan, '# Accepted draft']]);
+    expect(h.loadSnapshot).toHaveBeenCalledTimes(2);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('refuses a writer that returns no validated draft', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Candidate draft' });
+    h.validateDraft.mockResolvedValue(undefined);
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
 
   it('retains earlier decisions with their round and question when Q IDs are reused', async () => {
     const h = await twoClarificationRounds();

@@ -218,13 +218,18 @@ export function parseSddAnswer(body: string, questionId: string): string | undef
   return text.length >= 3 && text.length <= 3000 ? text : undefined;
 }
 
+/** Only these content failures may trigger a bounded draft regeneration. */
+export class SddDraftFormatFailure extends Error {
+  constructor(readonly reason: 'required-heading' | 'test-budget', message: string) { super(message); }
+}
+
 export function validateSddMarkdown(markdown: string): void {
   if (markdown.length < SDD_MIN_DRAFT_CHARACTERS || markdown.length > SDD_MAX_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
   for (const heading of ['## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance']) {
-    if (!markdown.includes(heading)) throw new Error(`The SDD draft is missing ${heading}.`);
+    if (!markdown.includes(heading)) throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
   }
   if (!/\b\d+\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)) {
-    throw new Error('The SDD must include a numeric test budget.');
+    throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.');
   }
 }
 
