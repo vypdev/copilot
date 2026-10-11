@@ -87,11 +87,22 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
             if (candidates.length === 1) counts = readBugbotStatusCounts(candidates[0].body ?? '', number, pull.headSha);
         }
     } catch { /* Retain all independently verified facts. */ }
-    let observedRevisionHead: string | undefined;
+    let finalPolicy: string | undefined;
+    let policyVerified = false;
     if (evidence && ports.approval) {
         try {
+            finalPolicy = await ports.approval.readPolicy(target);
+            policyVerified = true;
+        } catch { readiness = unavailablePullRequestReadiness('final-evidence-unavailable'); }
+    }
+    let finalHead: string | undefined;
+    try { finalHead = await ports.getPullRequestHeadSha(number); }
+    catch { /* A denied freshness read cannot certify counts or other gates. */ }
+    let observedRevisionHead: string | undefined;
+    if (evidence && ports.approval && policyVerified) {
+        try {
+            // Read both revision identities after policy and the independent head lookup.
             const revision = await ports.approval.readRevision(target);
-            const finalPolicy = await ports.approval.readPolicy(target);
             if (revision.repositoryId !== repositoryId || revision.pullNumber !== number) return fail('target-mismatch');
             observedRevisionHead = revision.headSha;
             readiness = projectPullRequestReadiness(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
@@ -99,13 +110,10 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
                 action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         } catch { readiness = unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }
-    let finalHead: string | undefined;
-    try { finalHead = await ports.getPullRequestHeadSha(number); }
-    catch { /* A denied freshness read cannot certify counts. */ }
     if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts) snapshot = { ...snapshot, findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
             resolved: counts.fixed + counts.obsolete + counts.dismissed } };
-    if (finalHead !== pull.headSha && readiness.readiness !== 'pending') readiness = unavailablePullRequestReadiness('final-identity-unavailable');
+    if (finalHead !== pull.headSha) readiness = unavailablePullRequestReadiness('final-identity-unavailable');
     if (fromIssue) {
         try {
             const final = await ports.readLinkedPullRequests!(original.issueNumber!);

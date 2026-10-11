@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 30 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences |
-| State/application/idempotency/races | 24 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence |
+| Domain/configuration/pure planning | 32 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| State/application/idempotency/races | 35 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 16 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **103** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **116** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -393,3 +393,9 @@ Local acceptance on the managed implementation passed 568 suites and 7,428 tests
 Bugbot finding `4242855091` exposed reuse of a previously read revision at the final head fence. The application now always performs the narrow independent current-head read after comments, revision and policy collection. A denied final read cannot certify readiness or counts. If the revision read and independent head read contradict one another, old finding counts remain unavailable. Two additional regression cases reproduce movement during the final policy read and denial of the independent head read, increasing this feature from 103 to 105 distinct cases. This correction does not change approval authority, provider limits or policy semantics.
 
 The correction first passed all 568 suites and 7,430 tests, with 34 existing platform skips (7,464 total). The Action subsequently synchronized the parent into commit `134ec5ac648a95b31bafc7c6fa49bc380c35d48d`; native Ubuntu verification passed 571 suites and 7,514 tests, with 35 existing platform skips (7,549 total). Reapplying only the owned correction to that exact Action head passed 571 suites and 7,516 tests, with 35 skips (7,551 total). The changed status workflow reached 97.46% lines, 95.09% statements, 97.8% branches and 100% functions. Typecheck, lint, specification/catalog, documentation, graph update and compilation passed. Fresh live review, shared SDD-status integration and command acceptance remain required before promotion.
+
+### Fresh live review after the first correction
+
+On published head `597f3dd94f735986e606c7c36503c155ba5205bb`, the Action resolved the original finding and identified three further defects (`4243019384`, `4243019388`, `4243019390`). The application now reads the complete final head/base revision after the policy and independent head reads; base advancement during either earlier read cannot certify old gates. Every denied or contradictory independent head read invalidates all gates, including when CI was already pending. Off mode keeps separately verified CI, coverage, Bugbot and native review states while its overall approval assessment remains disabled, with no observer action or approval authority.
+
+Eleven additional contracts reproduce those cases and deny canonical/final-revision/final-linkage reads, increasing this extension to 116 distinct cases. Full local verification passed 571 suites and 7,527 tests with 35 existing platform skips (7,562 total). The pure readiness policy has 100% coverage; the changed application has 100% lines/functions, 99.06% statements and 98.93% branches. Existing coverage budgets, typecheck, lint, documentation, specifications/catalog, graph update and compilation passed. These figures do not certify fresh live review or post-promotion command acceptance.

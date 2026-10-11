@@ -46,9 +46,6 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
         return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
             humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
     }
-    if (policy.mode === 'off') return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
-        baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none',
-        evidence: Object.freeze({ ci: 'not-applicable', coverage: 'not-applicable', bugbot: 'not-applicable', reviews: 'not-applicable' }) });
     const ci: PullRequestReadiness = !policy.producerAttested ? 'blocked' : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha)
         ? 'pending' : state(decideApprovalChecks(policy, evidence));
     const coverage: PullRequestReadiness = policy.coverage.mode === 'check' ? ci
@@ -57,6 +54,8 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
     const bugbot = evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun ? 'blocked' : state(decideApprovalBugbot(policy, evidence));
     const reviews = state(decideApprovalReviews(policy, evidence));
     const groups = Object.freeze({ ci, coverage, bugbot, reviews });
+    if (policy.mode === 'off') return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
+        baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none', evidence: groups });
     const decision = decidePullRequestApproval(policy, evidence);
     let readiness: PullRequestReadiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
         : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' ? 'satisfied' : 'not-applicable';

@@ -26,6 +26,54 @@ describe('readiness workflow identity and independent evidence', () => {
         expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
             pullRequestReadiness: { readiness: 'unavailable', code: 'final-identity-unavailable' } });
     });
+    it.each(['policy', 'head lookup'])('detects a base advancement during the final %s read', async during => {
+        const f = readinessFixture();
+        const moveBase = () => f.ports.approval.readRevision.mockResolvedValue({ repositoryId: 1, pullNumber: 11,
+            headSha: READINESS_HEAD, baseSha: 'd'.repeat(40) });
+        if (during === 'policy') f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy()).mockImplementationOnce(async () => {
+            moveBase(); return readinessPolicy();
+        });
+        else f.ports.getPullRequestHeadSha.mockImplementationOnce(async () => { moveBase(); return READINESS_HEAD; });
+        expect(await status(f)).toMatchObject({ findingStates: { open: 0 }, pullRequestReadiness: { readiness: 'pending',
+            code: 'superseded', evidence: { ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' } } });
+    });
+    it.each(['changed head', 'denied head'])('discards every old gate when CI was already pending and the final read has %s', async reason => {
+        const f = readinessFixture(); const e = readinessEvidence();
+        f.ports.approval.loadEvidence.mockResolvedValue({ ...e, checks: [{ ...e.checks[0], status: 'in_progress', conclusion: null }] });
+        if (reason === 'changed head') f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
+        else f.ports.getPullRequestHeadSha.mockRejectedValue({ status: 403 });
+        expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
+            pullRequestReadiness: { readiness: 'unavailable', code: 'final-identity-unavailable',
+                evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } } });
+    });
+    it('retains verified native groups in off mode without offering observer or approval actions', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'not-applicable', mode: 'off', action: 'none',
+            evidence: { ci: 'satisfied', coverage: 'satisfied', bugbot: 'satisfied', reviews: 'satisfied' } });
+    });
+    it('withholds all readiness when the canonical PR lookup is denied', async () => {
+        const f = readinessFixture(); f.ports.getPullRequest.mockRejectedValue({ status: 403 });
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'unavailable', code: 'identity-unavailable' });
+        expect(f.ports.approval.loadEvidence).not.toHaveBeenCalled();
+    });
+    it('withholds approval facts when the final complete revision lookup is denied', async () => {
+        const f = readinessFixture(); f.ports.approval.readRevision.mockRejectedValue({ status: 403 });
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'unavailable', code: 'final-evidence-unavailable',
+            evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } });
+    });
+    it('discards already collected facts when final native linkage is denied', async () => {
+        const f = readinessIssueFixture();
+        f.ports.readLinkedPullRequests.mockResolvedValueOnce({ state: 'available', repositoryId: 1, issueNumber: 7, numbers: [11] })
+            .mockRejectedValueOnce({ status: 403 });
+        expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
+            pullRequestReadiness: { readiness: 'unavailable', code: 'linkage-unavailable' } });
+    });
+    it('never treats evidence collected for a later head as the originally selected snapshot', async () => {
+        const f = readinessFixture(); f.ports.approval.loadEvidence.mockResolvedValue(readinessEvidence({ headSha: 'd'.repeat(40) }));
+        f.ports.approval.readRevision.mockResolvedValue({ repositoryId: 1, pullNumber: 11, headSha: 'd'.repeat(40), baseSha: READINESS_BASE });
+        expect(await status(f)).toMatchObject({ findingStates: undefined, pullRequestReadiness: { readiness: 'pending', code: 'superseded',
+            evidence: { ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' } } });
+    });
     it('uses only the event PR when the same-number issue exists', async () => {
         const f=readinessFixture(); await status(f); expect(f.ports.readLinkedPullRequests).not.toHaveBeenCalled(); expect(f.ports.getPullRequest).toHaveBeenCalledWith(11);
     });

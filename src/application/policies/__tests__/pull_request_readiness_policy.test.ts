@@ -15,6 +15,18 @@ describe('projectPullRequestReadiness', () => {
         expect(projectPullRequestReadiness(policy('off'), evidence, { ...final, rawPolicy: policy('off') }))
             .toMatchObject({ readiness: 'not-applicable', mode: 'off' });
     });
+    it('retains independently satisfied gates with approval disabled', () => {
+        const e = readinessEvidence(); const rawPolicy = readinessPolicy('off');
+        expect(projectPullRequestReadiness(rawPolicy, e, { ...e, rawPolicy })).toMatchObject({ readiness: 'not-applicable',
+            code: 'disabled', action: 'none', evidence: { ci: 'satisfied', coverage: 'satisfied', bugbot: 'satisfied', reviews: 'satisfied' } });
+    });
+    it('retains failed CI and native changes-requested facts with approval disabled', () => {
+        const e = readinessEvidence(); const rawPolicy = readinessPolicy('off');
+        const changed = { ...e, checks: [{ ...e.checks[0], conclusion: 'failure' }],
+            reviews: [{ id: 10, userId: 30, state: 'CHANGES_REQUESTED', commitId: READINESS_HEAD, submittedAt: '2026-10-11T10:00:00Z' }] };
+        expect(projectPullRequestReadiness(rawPolicy, changed, { ...e, rawPolicy })).toMatchObject({ readiness: 'not-applicable',
+            code: 'disabled', action: 'none', evidence: { ci: 'blocked', coverage: 'blocked', bugbot: 'satisfied', reviews: 'blocked' } });
+    });
     it('does not call out-of-scope incomplete evidence satisfied in recommend mode', () => {
         expect(projectPullRequestReadiness(policy('recommend'), evidence, { ...final, rawPolicy: policy('recommend') }))
             .toMatchObject({ readiness: 'unavailable', mode: 'recommend' });

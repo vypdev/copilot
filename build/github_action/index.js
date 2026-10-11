@@ -46112,10 +46112,6 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
         return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
             humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
     }
-    if (policy.mode === 'off')
-        return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
-            baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none',
-            evidence: Object.freeze({ ci: 'not-applicable', coverage: 'not-applicable', bugbot: 'not-applicable', reviews: 'not-applicable' }) });
     const ci = !policy.producerAttested ? 'blocked' : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha)
         ? 'pending' : state((0, pull_request_approval_1.decideApprovalChecks)(policy, evidence));
     const coverage = policy.coverage.mode === 'check' ? ci
@@ -46124,6 +46120,9 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
     const bugbot = evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun ? 'blocked' : state((0, pull_request_approval_1.decideApprovalBugbot)(policy, evidence));
     const reviews = state((0, pull_request_approval_1.decideApprovalReviews)(policy, evidence));
     const groups = Object.freeze({ ci, coverage, bugbot, reviews });
+    if (policy.mode === 'off')
+        return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
+            baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none', evidence: groups });
     const decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, evidence);
     let readiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
         : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' ? 'satisfied' : 'not-applicable';
@@ -54786,11 +54785,27 @@ async function readCopilotStatus(param, taskId, ports) {
         }
     }
     catch { /* Retain all independently verified facts. */ }
-    let observedRevisionHead;
+    let finalPolicy;
+    let policyVerified = false;
     if (evidence && ports.approval) {
         try {
+            finalPolicy = await ports.approval.readPolicy(target);
+            policyVerified = true;
+        }
+        catch {
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+        }
+    }
+    let finalHead;
+    try {
+        finalHead = await ports.getPullRequestHeadSha(number);
+    }
+    catch { /* A denied freshness read cannot certify counts or other gates. */ }
+    let observedRevisionHead;
+    if (evidence && ports.approval && policyVerified) {
+        try {
+            // Read both revision identities after policy and the independent head lookup.
             const revision = await ports.approval.readRevision(target);
-            const finalPolicy = await ports.approval.readPolicy(target);
             if (revision.repositoryId !== repositoryId || revision.pullNumber !== number)
                 return fail('target-mismatch');
             observedRevisionHead = revision.headSha;
@@ -54803,16 +54818,11 @@ async function readCopilotStatus(param, taskId, ports) {
             readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
         }
     }
-    let finalHead;
-    try {
-        finalHead = await ports.getPullRequestHeadSha(number);
-    }
-    catch { /* A denied freshness read cannot certify counts. */ }
     if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts)
         snapshot = { ...snapshot, findingStateEvidence: undefined,
             findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
                 resolved: counts.fixed + counts.obsolete + counts.dismissed } };
-    if (finalHead !== pull.headSha && readiness.readiness !== 'pending')
+    if (finalHead !== pull.headSha)
         readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
     if (fromIssue) {
         try {
