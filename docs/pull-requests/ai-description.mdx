@@ -9,21 +9,18 @@ description: How the configured agent writes a concise pull request description 
 ## How it works
 
 1. The action determines the PR's **base** and **head** branch (target and source branch).
-2. The configured agent CLI runs in the repository workspace. It:
-   - Reads the repository's **pull request template** as content guidance and constraints.
-   - Computes the merge-base **diff** between base and head (`git diff base...head`) to understand what changed.
-   - Uses the **issue description** (when the PR branch is linked to an issue) as context; otherwise it infers intent from the PR metadata and diff.
+2. The action reads the PR diff from GitHub through a repository-bound read port. It supplies the complete changed-file metadata and patches, the current body, and any linked issue to the configured planner as untrusted evidence. Generation does not require the agent to run Git commands. Optional workspace reads can still provide repository-specific guidance.
 3. The agent returns bounded semantic fields for one short outcome paragraph, two to six changes, optional verified validation evidence, and optional review notes. The action validates and sanitizes those fields, then renders the fixed Markdown hierarchy; the model does not control arbitrary sections or closing-reference syntax.
 4. The request carries the effective PR locale (`pull-requests-locale`, otherwise `repository-locale`, otherwise `en-US`). The response must echo that exact canonical tag in `outputLocale`; a mismatch stops before the body changes.
 5. The action writes the validated result to the PR body according to the configured ownership mode.
 
-No pre-computed file list or patches are sent from the action; the agent has access to the workspace and computes the diff itself, similar to the [check progress](/single-actions) flow.
+Description evidence has fixed limits of 100 changed files and 120,000 serialized characters. Missing text patches, partial provider coverage, an empty diff, or exceeded limits stop the update before the agent runs and retain the existing body. These limits do not add configuration inputs.
 
 ## PR template as guidance
 
 The AI reads your repository's **pull request template** for team-specific guidance:
 
-- **`.github/pull_request_template.md`** — This file is read by the configured `planner` agent runtime. Its instructions and relevant headings influence the result, but empty placeholders and generic sections are omitted.
+- **`.github/pull_request_template.md`** — When workspace reads are available, this file is read by the configured `planner` agent runtime. Its instructions and relevant headings influence the result, but empty placeholders and generic sections are omitted.
 
 The generated body is normally under 4,000 characters and can never exceed
 12,000. It excludes emoji, separators, empty headings, generic checklists,

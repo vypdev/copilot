@@ -10,6 +10,8 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
             issueDescription: 'Add login screen.',
             relatedIssueInstruction: 'Set `closesLinkedIssue` for issue #42 only when fully resolved.',
             targetLocale: 'es-ES',
+            diffEvidence: 'Changed login behavior.',
+            currentBody: 'Verified login manually.',
         });
         expect(prompt).toContain('**Use repo.**');
         expect(prompt).toContain('`main`');
@@ -17,7 +19,9 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
         expect(prompt).toContain('`closesLinkedIssue` for issue #42');
         expect(prompt).toContain('Add login screen.');
         expect(prompt).toContain('pull_request_template.md');
-        expect(prompt).toContain('git diff main...feature/123');
+        expect(prompt).toContain('Changed login behavior.');
+        expect(prompt).toContain('Verified login manually.');
+        expect(prompt).toContain('Do not run shell commands to obtain the diff');
         expect(prompt).toContain('`whatChangedHeading`');
         expect(prompt).toContain('never infer that result from the presence of test files or commands');
         expect(prompt).toContain('set both fields to `null`');

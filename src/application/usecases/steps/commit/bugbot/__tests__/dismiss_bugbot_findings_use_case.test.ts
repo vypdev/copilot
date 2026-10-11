@@ -60,7 +60,7 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(mockMarkFindingsResolved).toHaveBeenCalledWith(expect.objectContaining({
             resolvedFindingIds: new Set(['finding-1']),
         }));
-        expect(results[0]).toMatchObject({ success: true, executed: true });
+        expect(results[0]).toMatchObject({ success: true, executed: true, payload: { dismissedCount: 1 } });
     });
 
     it('uses the issue locale for the durable dismissal note', async () => {
@@ -118,6 +118,7 @@ describe('DismissBugbotFindingsUseCase', () => {
             .toMatchObject({ resolutionSource: 'base', locale: 'es-ES' });
         expect(results[0].steps[0]).toContain('Dismissed 2 Bugbot findings');
         expect(results[0].errors).toHaveLength(1);
+        expect(results[0].payload).toEqual({ dismissedCount: undefined });
         expect(results[0].errors[0].message).toBe('A Bugbot finding could not be dismissed.');
     });
 
@@ -151,6 +152,7 @@ describe('DismissBugbotFindingsUseCase', () => {
 
         expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
         expect(results[0].steps[0]).toContain('nothing was dismissed');
+        expect(results[0].payload).toEqual({ dismissedCount: 0 });
     });
 
     it('uses the head fallback and PR override while ignoring an invalid finding id', async () => {

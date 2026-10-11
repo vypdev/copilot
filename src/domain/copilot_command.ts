@@ -29,7 +29,6 @@ const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE: ReadonlySet<CopilotCommandName> = n
     'test-plan',
     'explain',
     'diagnose',
-    'fix',
     'implement',
 ]);
 
@@ -71,14 +70,36 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (!name || !COPILOT_COMMAND_NAMES.includes(name as CopilotCommandName)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
-    if (tokens.length > MAX_ARGUMENTS) {
+    const argumentsList = name === 'dismiss' || name === 'fix'
+        ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
+        : tokens;
+    if (!argumentsList) {
+        return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
+    }
+    if (argumentsList.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
-    if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && tokens.length === 0) {
+    if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
     }
     return {
         kind: 'command',
-        command: { name: name as CopilotCommandName, arguments: tokens, raw: input },
+        command: { name: name as CopilotCommandName, arguments: argumentsList, raw: input },
     };
+}
+
+/** JSON quoting preserves lossless finding identities without evaluating user input. */
+function parseFindingIdentifiers(input: string): string[] | undefined {
+    const identifiers: string[] = [];
+    let cursor = 0;
+    for (const match of input.matchAll(/(?:"(?:[^"\\]|\\.)*"|[^\s"]+)(?=\s|$)/gu)) {
+        if (input.slice(cursor, match.index).trim()) return undefined;
+        try {
+            const identifier: string = match[0].startsWith('"') ? JSON.parse(match[0]) : match[0];
+            if (!identifier.trim() || /[\r\n]/u.test(identifier)) return undefined;
+            identifiers.push(identifier);
+        } catch { return undefined; }
+        cursor = match.index + match[0].length;
+    }
+    return input.slice(cursor).trim() ? undefined : identifiers;
 }

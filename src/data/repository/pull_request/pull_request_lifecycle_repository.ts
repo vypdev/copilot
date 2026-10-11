@@ -223,10 +223,11 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
 function toBugbotPullRequestIdentity(value: {
     number?: number;
     state?: string;
+    draft?: boolean;
     head?: {
         ref?: string | null;
         sha?: string | null;
-        repo?: { owner?: { login?: string | null } | null } | null;
+        repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
     };
     base?: {
         repo?: {
@@ -241,10 +242,12 @@ function toBugbotPullRequestIdentity(value: {
     const baseOwner = value.base?.repo?.owner?.login?.trim();
     const baseName = value.base?.repo?.name?.trim();
     const headOwner = value.head?.repo?.owner?.login?.trim();
+    const headName = typeof value.head?.repo?.name === 'string' ? value.head.repo.name.trim() : undefined;
     const headRef = value.head?.ref?.trim();
     const headSha = value.head?.sha?.trim().toLowerCase();
     if (!Number.isSafeInteger(number) || Number(number) <= 0
         || (state !== 'open' && state !== 'closed')
+        || typeof value.draft !== 'boolean'
         || !baseOwner || !baseName || !headOwner || !headRef
         || !headSha || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(headSha)) {
         throw new Error('Pull-request identity response is incomplete or invalid.');
@@ -253,12 +256,14 @@ function toBugbotPullRequestIdentity(value: {
     return {
         number: Number(number),
         state,
+        draft: value.draft,
         baseRepository: {
             owner: baseOwner,
             name: baseName,
             ...(Number.isSafeInteger(repositoryId) && Number(repositoryId) > 0 ? { id: Number(repositoryId) } : {}),
         },
         headRepositoryOwner: headOwner,
+        ...(headName ? { headRepositoryName: headName } : {}),
         headRef,
         headSha,
     };

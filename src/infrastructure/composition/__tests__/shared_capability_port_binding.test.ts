@@ -91,7 +91,7 @@ describe('shared capability repository bindings', () => {
   it('rehydrates project references only inside the bound project adapter', async () => {
     const getId = jest.fn().mockResolvedValue('ISSUE_10');
     const linkContentId = jest.fn().mockResolvedValue('PVTI_1');
-    const moveProjectItemToColumn = jest.fn().mockResolvedValue(true);
+    const initializeProjectItemStatus = jest.fn().mockResolvedValue('initialized');
     const project = {
       id: 'PVT_1',
       title: 'Delivery',
@@ -102,18 +102,18 @@ describe('shared capability repository bindings', () => {
     };
     const port = bindProjectContent(
       { getId } as never,
-      { moveProjectItemToColumn } as never,
+      { initializeProjectItemStatus } as never,
       { linkContentId } as never,
       binding,
     );
 
     await port.resolveIssueContentId(10);
     await port.linkContentId(project, 'ISSUE_10');
-    await port.moveContent(project, 'PVTI_1', 'In progress');
+    await port.initializeStatus(project, 'PVTI_1', 'In progress');
 
     expect(getId).toHaveBeenCalledWith('acme', 'demo', 10, 'secret');
     expect(linkContentId).toHaveBeenCalledWith(expect.objectContaining(project), 'ISSUE_10', 'secret');
-    expect(moveProjectItemToColumn).toHaveBeenCalledWith(
+    expect(initializeProjectItemStatus).toHaveBeenCalledWith(
       expect.objectContaining(project), 'PVTI_1', 'In progress', 'secret',
     );
   });

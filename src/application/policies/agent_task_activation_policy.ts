@@ -39,6 +39,7 @@ export function activeAgentTasks(
         case 'issues':
             return activeIssueTasks(event, preBranchSddEnabled);
         case 'pull_request':
+            if (eventAction(event) === 'ready_for_review') return ['reviewer'];
             if (!['opened', 'reopened', 'synchronize'].includes(eventAction(event))) return [];
             return pullRequestDescriptionEnabled ? ['planner', 'reviewer'] : ['reviewer'];
         case 'pull_request_review':

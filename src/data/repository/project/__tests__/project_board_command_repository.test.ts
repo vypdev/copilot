@@ -68,6 +68,7 @@ interface HarnessOptions {
   fieldConnection?: "present" | "missing";
   itemConnection?: "present" | "missing";
   mutationItemId?: string;
+  statusItem?: unknown;
 }
 
 function createHarness(options: HarnessOptions = {}) {
@@ -89,6 +90,11 @@ function createHarness(options: HarnessOptions = {}) {
 
   const graphql = jest.fn(
     async (document: string, variables?: Record<string, unknown>) => {
+      if (document.includes("fieldValueByName")) {
+        return { node: Object.prototype.hasOwnProperty.call(options, "statusItem") ? options.statusItem : {
+          project: { id: "PVT_project" }, fieldValueByName: null,
+        } };
+      }
       if (document.includes("mutation(")) {
         return options.mutationItemId === undefined
           ? {
@@ -154,6 +160,39 @@ describe("ProjectBoardCommandRepository", () => {
     type: "organization",
     owner: "owner",
     number: 1,
+  });
+
+  it('initializes an unset status by exact item ID without scanning project items', async () => {
+    const harness = createHarness();
+    await expect(harness.repository.initializeProjectItemStatus(project, 'PVTI_created', 'Todo', 'token')).resolves.toBe('initialized');
+    expect(harness.contentQuery.getProjectItemId).not.toHaveBeenCalled();
+    expect(harness.graphql.mock.calls.some(([document]) => String(document).includes('items(first'))).toBe(false);
+    expect(harness.graphql.mock.calls.find(([document]) => String(document).includes('mutation('))?.[1]).toMatchObject({
+      itemId: 'PVTI_created', optionId: 'option_todo',
+    });
+  });
+
+  it.each(['option_in_progress', 'option_todo'])('preserves an existing status on replay: %s', async optionId => {
+    const harness = createHarness({ statusItem: { project: { id: project.id }, fieldValueByName: { optionId } } });
+    await expect(harness.repository.initializeProjectItemStatus(project, 'PVTI_existing', 'Todo', 'token')).resolves.toBe('retained');
+    expect(harness.graphql).toHaveBeenCalledTimes(1);
+    expect(harness.graphql.mock.calls.some(([document]) => String(document).includes('mutation('))).toBe(false);
+  });
+
+  it.each([
+    null,
+    { project: { id: 'PVT_foreign' }, fieldValueByName: null },
+    { project: { id: 'PVT_project' } },
+    { project: { id: 'PVT_project' }, fieldValueByName: { optionId: '' } },
+  ])('rejects missing, foreign, or malformed status evidence before a write', async statusItem => {
+    const harness = createHarness({ statusItem });
+    await expect(harness.repository.initializeProjectItemStatus(project, 'PVTI_existing', 'Todo', 'token')).rejects.toThrow();
+    expect(harness.graphql.mock.calls.some(([document]) => String(document).includes('mutation('))).toBe(false);
+  });
+
+  it('reports a failed initialization so an unset field can be retried', async () => {
+    const harness = createHarness({ mutationItemId: '' });
+    await expect(harness.repository.initializeProjectItemStatus(project, 'PVTI_created', 'Todo', 'token')).resolves.toBe('failed');
   });
 
   it("updates a newly linked item by mutation ID without querying the project item list", async () => {

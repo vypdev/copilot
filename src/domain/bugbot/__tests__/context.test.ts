@@ -19,6 +19,7 @@ const target: BugbotReviewTarget = {
 const candidate = (overrides: Partial<BugbotPullRequestIdentity> = {}): BugbotPullRequestIdentity => ({
   number: 12,
   state: "open",
+  draft: false,
   baseRepository: { owner: "acme", name: "repo", id: 7 },
   headRepositoryOwner: "acme",
   headRef: "feature/42",

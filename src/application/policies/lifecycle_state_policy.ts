@@ -43,6 +43,7 @@ export interface LifecycleStateDecisionInput {
     readonly isPullRequest: boolean;
     readonly issueOpened: boolean;
     readonly issueDescriptionEdited: boolean;
+    readonly issueBranchlessHelp?: boolean;
     readonly pullRequestMerged: boolean;
     readonly pullRequestClosed: boolean;
     readonly externalEvidence?: LifecycleExternalEvidence;
@@ -73,7 +74,7 @@ export function resolveLifecycleState(
         if (input.externalEvidence?.review === 'approved') return 'ready';
         if (input.externalEvidence?.checks === 'success') return 'reviewing';
         if (input.externalEvidence?.review !== undefined) return 'reviewing';
-        if (['opened', 'reopened', 'synchronize'].includes(input.action)) return 'reviewing';
+        if (['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(input.action)) return 'reviewing';
         return undefined;
     }
 
@@ -83,6 +84,8 @@ export function resolveLifecycleState(
     if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
+    if (input.issueBranchlessHelp && input.eventName === 'issue_comment'
+        && hasSuccessfulResult(input.results, 'ThinkUseCase')) return 'working';
     return undefined;
 }
 

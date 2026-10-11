@@ -37,11 +37,12 @@ export interface GithubPullRequestLifecycleClient {
       get?(parameters: Record<string, unknown>): Promise<{ data: {
         number?: number;
         state?: string;
+        draft?: boolean;
         body?: string | null;
         head?: {
           ref?: string | null;
           sha?: string | null;
-          repo?: { owner?: { login?: string | null } | null } | null;
+          repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
         };
         base?: {
           ref?: string | null;
@@ -59,11 +60,12 @@ export interface GithubPullRequestLifecycleClient {
 export interface GithubPullRequestSummary {
   number: number;
   state?: string;
+  draft?: boolean;
   body?: string | null;
   head?: {
     ref?: string | null;
     sha?: string | null;
-    repo?: { owner?: { login?: string | null } | null } | null;
+    repo?: { name?: string | null; owner?: { login?: string | null } | null } | null;
   };
   base?: {
     repo?: {

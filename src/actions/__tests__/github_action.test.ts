@@ -308,6 +308,29 @@ describe('runGitHubAction', () => {
     expect(mockCreateLanguageQueryPort).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['/copilot recheck', 'reviewer'],
+    ['/copilot test-plan', 'tester'],
+    ['/copilot description', 'planner'],
+  ])('prepares the %s PR conversation runtime independently of issue admission', async (command, role) => {
+    github.context.eventName = 'issue_comment';
+    github.context.payload = {
+      action: 'created',
+      issue: { number: 42, pull_request: {} },
+      comment: { id: 101, body: command },
+    };
+    mockMainRun.mockImplementationOnce(async (...args: unknown[]) => {
+      const execution = args[0] as { issueWorkflowRuntimeMode: string };
+      execution.issueWorkflowRuntimeMode = 'continuation-only';
+      await (args[6] as (source: unknown) => Promise<void>)(execution);
+      return [];
+    });
+
+    await runGitHubAction();
+
+    expect(agentProvisioningSpy).toHaveBeenCalledWith(expect.anything(), [role]);
+  });
+
   it('passes a disabled profile to live-state admission without event-payload preflight', async () => {
     github.context.eventName = 'issues';
     github.context.payload = {

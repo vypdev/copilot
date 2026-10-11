@@ -3,6 +3,7 @@ import type { CopilotEvidence } from '../ports/copilot_evidence_ports';
 import { projectBugbotResultTelemetry, type BugbotTelemetryProjection } from './bugbot_telemetry_projection_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
+import { canonicalGitObjectId } from '../../domain/git_object_id';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import {
     resolveStaticActionSummaryCatalog,
@@ -21,11 +22,17 @@ export interface CopilotEvidenceContext {
 
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
 export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEvidence | undefined {
-    const headSha = context.headSha?.trim();
-    if (!headSha) return undefined;
-    const isReviewEvent = context.eventName.startsWith('pull_request');
     const telemetryProjection = projectBugbotResultTelemetry(context.results);
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
+    const isCommentReview = ['issue_comment', 'pull_request_review_comment'].includes(context.eventName)
+        && bugbotTelemetry !== undefined;
+    // Conversation payloads omit the PR head; thread payloads can precede an
+    // autofix commit. Only canonical owned review telemetry supplies that SHA.
+    const headSha = isCommentReview
+        ? canonicalGitObjectId(bugbotTelemetry.headSha)
+        : context.headSha?.trim();
+    if (!headSha) return undefined;
+    const isReviewEvent = context.eventName.startsWith('pull_request') || isCommentReview;
     if (!isEligibleEvidenceSource(isReviewEvent, bugbotTelemetry, headSha)) return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
     const findingStateProjection = projectBugbotResultFindingStates(context.results);

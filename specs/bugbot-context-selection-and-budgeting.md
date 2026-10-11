@@ -2,9 +2,9 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-21
+- Last updated: 2026-10-11
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-21 on `develop`
+- Last verified: 2026-10-11 on `master`
 - Owners: Copilot and Bugbot maintainers
 - Scope: resolve exactly one canonical pull request, bound every provider read
   and prompt section, and make incomplete context visible and safe
@@ -73,6 +73,12 @@ silently decides which PR receives diff, publication, and reconciliation logic.
 ### 2.4 Retrospective classification
 
 Not applicable. This prospective SDD refines the catalogued as-built Bugbot SDD.
+
+Dogfooding PR #460 exposed a draft-state omission on 2026-10-11: the explicit
+comment review in run `38091732743` executed while the live PR was a draft and
+`bugbot-review-drafts=false`. Comment events omit that flag. The verified
+provider identity now carries a required boolean draft state; admission uses
+that current fact before detailed context or agent execution.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -197,6 +203,12 @@ sole initial contract; there is no first-matching-PR fallback.
    repository/head/SHA checks; two results yields `ambiguous` and no pagination.
 4. A PR-required target with `none`, `ambiguous`, or `stale` aborts safely. An
    issue-only target with `none` continues without PR detail.
+5. The canonical identity includes the provider's boolean `draft`. Missing or
+   malformed state fails identity verification. When draft reviews are disabled,
+   a canonical draft yields a successful `skipped: draft` result after selection
+   and before comments, threads, diff, rules, model calls, or finding mutation.
+   Comment events and delayed event snapshots cannot bypass or override that
+   live state. Enabling the existing setting admits the draft normally.
 
 No retry changes the selection criteria. A transient selection read uses the
 standard bounded provider retry and otherwise becomes unavailable.
@@ -227,7 +239,7 @@ before any item/character budget.
 | Context section | Item cap | Section cap | Per-item cap | Selection order |
 |---|---:|---:|---:|---|
 | unresolved previous findings | 100 | 48,000 chars including wrappers/note | existing finding body cap | newest unresolved first, render chronological |
-| human conversation | 50 | 24,000 chars including omission note | 2,000 chars | newest first for packing, render chronological |
+| human conversation | 50 | 24,000 chars including omission note | 4,000 chars | newest first for packing, render chronological |
 | diff | 1,000 files pre-plan; max 64 partitions | 64,000 chars per partition | 12,000 UTF-16 code units per fragment | provider file order; ignored files removed first; lossless line/hard splitting without separating surrogate pairs |
 | review rules | deduplicated | 100,000 chars | 30,000 chars | organization then repository specificity |
 
@@ -255,6 +267,7 @@ partition, fragment, assigned-file, concurrency, and character totals.
 | issue comments fail when issue exists | unavailable | no | none |
 | PR comments or threads fail | unavailable | no | none |
 | diff/identity read fails or PR changes SHA | stale/unavailable | no | none |
+| canonical draft and draft reviews disabled | skipped | no | existing findings retained; no detail reads |
 | rule loading fails validation/read | unavailable | no | none |
 | issue-only target has no PR | complete/partial issue coverage | yes if workflow supports it | issue-only, no PR publication/resolution |
 
@@ -397,7 +410,9 @@ provider page limits and partition execution failures.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD retains its **18 distinct context-selection cases**. The partitioned
+This SDD owns **25 distinct context-selection cases**, including six draft-state
+regressions (four use-case cases and two adapter cases, with parameter rows
+counted once). The partitioned
 analysis extension adds the separate 67-case budget in
 `bugbot-exhaustive-partitioned-analysis.md`; neither budget double-counts cases.
 
@@ -405,11 +420,31 @@ analysis extension adds the separate 67-case budget in
 |---|---:|---|
 | Selection/pure packing | 4 | event, none, unique, ambiguity/stale; newest packing |
 | State/freshness/eligibility | 3 | partial clean prohibition, omitted resolution, SHA change |
-| Application loader | 3 | PR, issue-only, unavailable abort |
-| Provider adapters | 4 | exact encoding, two-result cap, page caps, rate/error mapping |
+| Application loader | 8 | PR, issue-only, unavailable abort; omitted comment draft, enabled setting, stale event, exact-head draft |
+| Provider adapters | 6 | exact encoding, two-result cap, page caps, rate/error mapping; draft mapping and malformed-state rejection |
 | UX/sanitization | 2 | partial and ambiguous/unavailable content |
 | Integration/security | 2 | 10,000 unrelated candidates and max concurrency/call ledger |
-| **Total** | **18** | no double counting |
+| **Total** | **25** | no double counting |
+
+One additional application-loader case verifies that an ordinary comment passes
+the provider-verified PR head to the credential-free rule query port and exposes
+that learned source in review context. The twelve Git-object adapter cases are
+owned by the Bugbot analysis/autofix SDD and are not counted here.
+
+For a canonical pull-request review, repository, path-specific, and learned rules
+are read from the same provider-verified head SHA as the diff. This includes
+reviews requested from ordinary PR comments whose workflow checkout is the
+default branch. Rule reads use local Git objects without changing the checkout,
+index, refs, or files; they do not fall back to rules from another revision.
+The checkout must contain that commit. The supplied workflows fetch complete
+history; for custom or local runners, fetch the verified commit before retrying.
+Git rule reads have fixed limits of 64 paths and 12,000 argument characters per
+batch, 2 MiB output and 30 seconds per command. Missing objects, invalid identities,
+oversized sources, and command failures stop the review before publication.
+Only regular file blobs are read, so committed file or directory symlinks are
+never followed. Issue-only contexts without a canonical PR retain workspace rule
+reads. These source limits are not configurable and do not change the prompt
+limits of 30,000 characters per rule and 100,000 combined characters.
 
 Selection, packing, coverage, and resolution-eligibility policies require 100%
 enumerated branch coverage. Changed loader/adapters require 95% lines/statements
@@ -450,6 +485,10 @@ and catalog evidence in the implementation slice.
     every reviewable file assigned and zero prompt-budget omission/truncation.
 13. Any failed, stale, duplicated, or non-owner partition response produces no
     finding/resolution mutation; a complete plan aggregates once.
+14. A comment review on a live draft with draft reviews disabled performs one
+    canonical selection and no detail read, model call, or finding mutation.
+    The same PR is admitted when enabled or marked ready; a delayed event's old
+    draft value cannot prevent review of the current ready PR.
 
 ## 17. Requirements traceability
 
@@ -480,7 +519,7 @@ and catalog evidence in the implementation slice.
 - [x] Required read failures abort before model/publication/resolution.
 - [x] Partial coverage cannot declare clean or resolve omitted findings.
 - [x] The same identity is used end to end and freshness is rechecked.
-- [x] At least 18 distinct cases and changed-module/repository thresholds pass.
+- [x] At least 25 distinct cases and changed-module/repository thresholds pass.
 - [x] Active behavior, docs, UX, telemetry, SDD, catalog, and ports agree.
 - [x] No open decision, unbounded pagination/fan-out, legacy context/marker,
       compatibility method, dual field, or translator remains.

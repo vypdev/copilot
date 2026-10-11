@@ -3,7 +3,7 @@
 - Status: Draft — local implementation in progress; controlled live evidence pending
 - Date: 2026-09-17
 - Catalog capability ID: `guarded-pull-request-approval`
-- Last verified: not applicable; setup/doctor baseline inspected 2026-09-17
+- Last verified: not applicable; setup/runtime permission parity inspected 2026-10-11 after live recommendation policy-read failure
 - Owners: Copilot product and engineering maintainers
 - Scope: install, validate, diagnose, document, and safely roll back the guarded approval policy defined in [the runtime SDD](./guarded-pull-request-approval.md).
 - Related issues/PRs: none linked; this is the configuration/operations companion to the runtime SDD.
@@ -124,6 +124,15 @@ equivalents. Private-repository discovery may require conditional setup PAT
 keeps the manual path without falsely identifying an App.
 
 The setup plan MUST display, in order: configured mode; PR scope and fixed exclusions; selected test/coverage producer names and source IDs; Bugbot review floor and path exclusions; effective branch-rule/stale-dismissal readiness for each selected target; workflow files and event names; runtime PAT identity/permission status; Secret/Variable names only; and a one-line outcome (`can approve after installation`, `installed but recommendation only`, or `setup blocked`). `--dry-run` performs no writes and needs no token for local-only preview, marking remote facts `unverified` rather than passing them. `--non-interactive --yes` approves only the complete plan and cannot choose an ambiguous producer or credential.
+
+Both `recommend` and `guarded` MUST include runtime Actions, Contents,
+Administration, Checks and repository Variables read, plus Pull requests write
+for the assessment card. Organization Variables read is required only when the
+effective approval policy is organization-scoped, including a selected override
+or preserved inherited Variable. An approval-only installation MUST NOT request
+Actions, Contents or Issues write. `off` contributes no approval permissions.
+These grants enable the observer's reads and card; only the runtime policy can
+authorize a native approval, and `recommend` never does so.
 
 ### 6.2 Doctor sequence
 
@@ -324,7 +333,7 @@ The [runtime SDD](./guarded-pull-request-approval.md#9-uiux-and-content-contract
 
 ## 11. Security, permissions, and privacy
 
-The setup PAT reads repository metadata, exact workflow files, effective branch rules, and resource scopes; its existing write privileges are used only after plan confirmation. Where classic protection inspection requires Administration read, setup/doctor request only that permission and clearly mark an unreadable rule as unverifiable. The workflow PAT is stored as `PAT`, identified through metadata or a credential-health run, and needs Pull requests write for native approval plus necessary read access. No new Administration write, Secret readback, second token, or external network endpoint is required. The observer's `GITHUB_TOKEN` is read-only except any narrowly isolated Check publication permission; approval is through the bound PAT adapter.
+The setup PAT reads repository metadata, exact workflow files, effective branch rules, and resource scopes; its existing write privileges are used only after plan confirmation. Where classic protection inspection requires Administration read, setup/doctor request only that permission and clearly mark an unreadable rule as unverifiable. The workflow PAT is stored as `PAT`, identified through metadata or a credential-health run, and needs Pull requests write for the assessment card in either active mode and for native approval only in guarded mode, plus the necessary read access listed in section 6.1. No new Administration write, Secret readback, second token, or external network endpoint is required. The observer's `GITHUB_TOKEN` is read-only except any narrowly isolated Check publication permission; approval is through the bound PAT adapter.
 
 Do not echo raw PAT, auth headers, arbitrary provider responses, PR titles/bodies, artifact content, or signed download URLs. Setup-generated YAML contains only validated workflow names and an immutable reviewed Action revision or package digest. Numeric coverage data is parsed in the trusted observer as bounded, non-executable data. An untrusted PR that changes workflow/setup/policy files is excluded from native approval, and those PR files never supply the running observer. See [GitHub secure-use guidance](https://docs.github.com/en/actions/reference/security/secure-use) for the privileged `workflow_run` boundary.
 
@@ -338,17 +347,17 @@ Setup records a policy digest, selected resource names, producer identities, eff
 
 ## 14. Testing strategy and numeric budget
 
-The minimum **82 distinct setup/doctor cases** is derived from config safety, generated workflow privileges, secret identity, partial multi-resource installation, and diagnosis drift. It does not double-count the runtime SDD's 112 cases; the combined implementation floor is **194**.
+The minimum **87 distinct setup/doctor cases** is derived from config safety, generated workflow privileges, secret identity, partial multi-resource installation, and diagnosis drift. Five additional recommendation-mode cases cover approval-only grants, repository evidence reads, selected organization capabilities, a per-variable scope override, and a preserved inherited policy. It does not double-count the runtime SDD's 116 cases; the combined implementation floor is **203**.
 
 | Area | Minimum cases | Required risk cases |
 |---|---:|---|
-| Domain/defaults/codec/validation | 20 | every field/bound, absent/unknown version, invalid combinations, precedence, explicit vs default severity |
+| Domain/defaults/codec/validation | 25 | every field/bound, absent/unknown version, invalid combinations, precedence, explicit vs default severity; recommend-mode permissions and scope parity |
 | Questionnaire/plan/install/replay | 14 | interactive/non-interactive, ambiguous producer, cancel, backup, partial Variable/file, disable retirement |
 | Doctor/adapters | 16 | all seven checks, blockedBy, PAT/rule permission denial, identity, source mismatch, no mutation |
 | Workflow/render/schema/architecture | 14 | exact static workflow names, safe escaping, default-branch trigger, no PR checkout/agent/cache, package parity |
 | CLI UX/localization/sanitization | 8 | five states, narrow width, en/es/dynamic fallback, hostile diagnostics, secret masking |
 | Integration/security/migration | 10 | fresh vs upgrade, same bot author, producer order, numeric reporter missing, rollback, live-shaped fixtures |
-| **Total** | **82** | no double counting |
+| **Total** | **87** | no double counting |
 
 Keep global 90% lines/statements, 88% functions, and 82% branches. New config codec, validation, workflow renderer, and doctor result policies MUST achieve 100% statements/branches/functions/lines; changed setup/doctor application modules MUST meet 95% lines/statements and 90% branches/functions. Use temporary workspaces, fake terminal/GitHub/health ports, deterministic IDs/clocks, no real waits or live services. YAML and manifest tests parse structure and compare exact expected outputs. Golden plan/report fixtures require semantic assertions, not snapshots alone. Manual evidence covers interactive confirmation/cancel, 80-column terminal, masked Secret prompt, real branch-rule permissions, fresh default-branch installation, and controlled `workflow_run` producer-order inversions.
 
@@ -382,6 +391,7 @@ Documentation must explain that `CI Check` and source App ID in examples are rep
 14. Given English, Spanish, or invalid dynamic locale, doctor emits one complete catalog with stable IDs and no mixed-language fallback or color-only signal.
 15. Given selected CI and Bugbot producer completions in either order, the observer is awakened after each, queries all current evidence, and can approve only after the final required fact; `check_run` is not relied upon.
 16. Given the approval Check is configured as required, setup and doctor report the dependency cycle and runtime posts no approval.
+17. Given recommend mode with other runtime routes disabled, setup requests the observer's evidence reads and assessment-card PR write, without Actions/Contents/Issues write. Repository policy remains repository-scoped; selected overrides and preserved inherited policy add only organization Variables read. Off mode does not request approval grants. Recommendation mode never submits a native approval.
 
 ## 17. Requirements traceability
 
@@ -411,7 +421,7 @@ Documentation must explain that `CI Check` and source App ID in examples are rep
 - [ ] Every `S1`–`S10` and normative requirement has observable acceptance and traceability.
 - [ ] New setup defaults to recommendation-only for fresh installations; guarded requires explicit attestation, existing missing-policy installations remain off, and invalid config fails closed.
 - [ ] Setup's workflow/Variable/Secret plan, confirmation, backup, retry, disable, and partial states are proven; doctor has no repository mutation port.
-- [ ] At least 82 distinct setup/doctor cases and stated coverage thresholds pass, in addition to the runtime SDD's 112 cases.
+- [ ] At least 87 distinct setup/doctor cases and stated coverage thresholds pass, in addition to the runtime SDD's 116 cases.
 - [ ] Workflow event, default-branch trust, no PR-head execution, PAT separation, strict producer identity, and effective stale-rule checks pass automated and controlled live evidence.
 - [ ] Pending, action-required, blocked, partial, and complete setup/doctor UX is localized, accessible, narrow-width readable, sanitized, and secret-free.
 - [ ] User/setup/operator/security/contributor documentation, navigation, examples, and migration/rollback instructions are implemented and validated.

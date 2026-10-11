@@ -1,3 +1,4 @@
+import { readSddGateRecord } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
 
@@ -31,6 +32,7 @@ function harness() {
   const comments: { id: number; body: string; user: { login: string } }[] = [];
   const query = jest.fn();
   const loadSnapshot = jest.fn().mockResolvedValue(snapshot);
+  const isAncestor = jest.fn().mockResolvedValue(true);
   const readSdd = jest.fn().mockResolvedValue('# Existing SDD');
   const validateDraft = jest.fn().mockResolvedValue(prepared);
   const publish = jest.fn().mockResolvedValue(commitSha);
@@ -49,7 +51,7 @@ function harness() {
   const getLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42-change', headSha: baseSha });
   const useCase = new PreBranchSddGateUseCase(
     { query },
-    { loadSnapshot, readSdd, validateDraft, publish, recoverPublished, verifyPublication },
+    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication },
     { listIssueComments: jest.fn(async () => comments), addComment, updateComment },
     { getLabels: jest.fn(async () => labels), setLabels },
     { isActorAllowedToModifyFiles, isActorAllowedToUseMemberOnlyAutomation },
@@ -57,10 +59,91 @@ function harness() {
     { getTitle } as never,
     { getLinkedBranch },
   );
-  return { useCase, comments, query, loadSnapshot, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
+  return { useCase, comments, query, loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('retries a pending publication without consuming another clarification round or changing the owner', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    const first = await h.useCase.begin(context());
+    if (first.status !== 'drafted') throw new Error('Expected draft');
+    h.publish.mockRejectedValueOnce(new Error('Hook failure'));
+    await h.useCase.publish(context(), { ...first, record: { ...first.record, round: 3 } }, 'feature/42-change');
+    h.query.mockClear();
+    h.query.mockResolvedValueOnce({ markdown: '# Retried appendix' });
+
+    const retry = await h.useCase.begin(context());
+
+    expect(retry.status).toBe('drafted');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.query.mock.calls[0][0].agentId).toBe('pre-branch-sdd-draft');
+    if (retry.status === 'drafted') expect(retry.record).toMatchObject({ round: 3, plan, branchName: 'feature/42-change' });
+  });
+
+  it('retains the original empty linked branch base when develop advances during recovery', async () => {
+    const h = harness();
+    const parentSha = 'c'.repeat(40);
+    h.loadSnapshot.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ ...snapshot, baseSha: parentSha });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    const outcome = await h.useCase.begin({ ...context(), workingBranch: 'feature/42-change' });
+    expect(outcome.status).toBe('drafted');
+    expect(h.loadSnapshot).toHaveBeenCalledWith('feature/42-change');
+    expect(h.isAncestor).toHaveBeenCalledWith(baseSha, parentSha);
+    if (outcome.status === 'drafted') expect(outcome.record.branchName).toBe('feature/42-change');
+  });
+
+  it('blocks a retained branch with implementation commits before the SDD', async () => {
+    const h = harness();
+    h.isAncestor.mockResolvedValue(false);
+    expect((await h.useCase.begin({ ...context(), workingBranch: 'feature/42-change' })).status).toBe('blocked');
+    expect(h.query).not.toHaveBeenCalled();
+  });
+
+  it('ignores Action-owned configuration changes when checking issue freshness', async () => {
+    const h = harness();
+    h.getDescription.mockResolvedValue(context().issueBody + '\n\n<!-- copilot-configuration-start\n{"workingBranch":"feature/42-change"}\ncopilot-configuration-end -->');
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+  });
+
+  it('persists a bot-owned pending branch record after a publication failure', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    h.publish.mockRejectedValue(new Error('push unavailable'));
+    expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('blocked');
+    expect(readSddGateRecord(h.comments[0].body, 42)).toMatchObject({ phase: 'awaiting-answer', branchName: 'feature/42-change', baseSha });
+    expect(h.comments[0].body).toContain('Implementation remains blocked');
+  });
+
+  it('recovers a verified first SDD commit after its card publication was interrupted', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    h.publish.mockRejectedValueOnce(new Error('transport failed after push'));
+    await h.useCase.publish(context(), draft, 'feature/42-change');
+    h.query.mockClear();
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: commitSha });
+    h.recoverPublished.mockResolvedValue(commitSha);
+    const recovered = await h.useCase.begin(context());
+    expect(recovered.status).toBe('published');
+    expect(h.query).not.toHaveBeenCalled();
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses a pending branch question card without dropping ownership on replay', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    const retainedContext = { ...context(), workingBranch: 'feature/42-change' };
+    await h.useCase.begin(retainedContext);
+    expect((await h.useCase.begin(retainedContext)).status).toBe('waiting');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(readSddGateRecord(h.comments[0].body, 42)?.branchName).toBe('feature/42-change');
+  });
+
   it('adds the SDD label and asks blocking questions before any draft or branch', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
@@ -263,7 +346,7 @@ describe('PreBranchSddGateUseCase', () => {
     h.verifyPublication.mockResolvedValue(false);
 
     expect((await h.useCase.publish(context(), first, 'feature/42-change')).status).toBe('blocked');
-    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.comments[0].body).toContain('First SDD publication is pending.');
   });
 
   it('blocks when branch linkage disappears after the SDD commit is pushed', async () => {
@@ -276,7 +359,7 @@ describe('PreBranchSddGateUseCase', () => {
     h.getLinkedBranch.mockResolvedValueOnce(undefined);
     expect((await h.useCase.publish(context(), first, 'feature/42-change')).status).toBe('blocked');
     expect(h.publish).toHaveBeenCalledTimes(1);
-    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.comments[0].body).toContain('First SDD publication is pending.');
   });
 
   it('blocks publication after a human title edit but ignores the generated emoji prefix', async () => {

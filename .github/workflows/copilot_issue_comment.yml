@@ -11,13 +11,37 @@ jobs:
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
+      checks: write
       contents: read
+    env:
+      # Recycle Jest workers on Windows service runners during full verification.
+      COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
+      COPILOT_PREPARE_VERIFICATION: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((startsWith(github.event.comment.body, '/copilot sync-branch') && !contains(github.event.comment.body, '--dry-run')) || startsWith(github.event.comment.body, '/copilot implement ') || startsWith(github.event.comment.body, '/copilot fix') || startsWith(github.event.comment.body, '/copilot remember ')) }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Prepare repository pnpm
+        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.12.4
+          standalone: false
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+
+      - name: Prepare repository Node
+        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
+      - name: Install repository verification dependencies
+        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
+        shell: bash
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - uses: ./
         with:
@@ -85,3 +109,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

@@ -116,7 +116,8 @@ describe("main run route composition root", () => {
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 13 }, () => expect.anything()),
+      ...Array.from({ length: 14 }, () => expect.anything()),
+      mockContext,
     );
   });
 
@@ -126,7 +127,8 @@ describe("main run route composition root", () => {
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 12 }, () => expect.anything()),
+      ...Array.from({ length: 13 }, () => expect.anything()),
+      mockContext,
     );
   });
 

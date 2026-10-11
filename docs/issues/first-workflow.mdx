@@ -5,11 +5,65 @@ description: Create, automate, verify, and close one issue-driven workflow.
 
 # First issue workflow
 
+Use a documentation change for your first run: it exercises issue admission,
+branch creation and PR review without changing application behavior.
+
 <Steps>
-  <Step title="Create the issue">Use a supported issue type and required label.</Step>
-  <Step title="Verify branch policy">Confirm the configured tree and branch naming rules.</Step>
-  <Step title="Run the issue workflow">Trigger it from a trusted repository event.</Step>
-  <Step title="Verify side effects">Check branch, project, labels, comments, and notifications.</Step>
+  <Step title="Create a Documentation Update issue">
+    Open **Issues → New issue → Documentation Update** and complete the required
+    fields. The installed form supplies the routing labels (`documentation` and
+    `docs` by default). Copilot checks the enabled workflow profile and adds the
+    native issue type, assignee, project item and welcome or plan response.
+    Admission alone does not start implementation or create a branch.
+  </Step>
+  <Step title="Start the work">
+    An authorized maintainer adds `in-progress`. Wait for the Action run to
+    finish and inspect **Development** on the issue for its exact linked branch.
+    Copilot applies `branched` after it verifies the remote branch. Continue on
+    that linked ref; its name and parent are chosen by the Action.
+  </Step>
+  <Step title="Check readiness and recover failures">
+    Comment `/copilot status` to inspect the current lifecycle and branch, or
+    `/copilot help` for the command reference. If a run failed, inspect its
+    **Job Summary**, correct the reported cause, and retry the workflow. For a
+    missing branch or `state:blocked`, check the workflow result and branch
+    guidance. An awaiting-maintainer state may only require maintainer action;
+    follow the status card or next-action guidance when no run failed. A branch
+    created before a later failure may already be retained: verify the
+    existing link before contributing.
+  </Step>
+  <Step title="Contribute on the linked branch">
+    Fetch and check out the exact remote ref shown in Development. Make the
+    documentation change, run the relevant validation, commit, and push to the
+    same ref. The Action manages remote naming, parent selection, synchronization
+    and cleanup; use its branch commands when those operations are needed.
+  </Step>
+  <Step title="Open and verify a linked pull request">
+    Open a PR from the managed branch to its recorded parent and link the issue,
+    for example with `Closes #123`. Include what changed and the checks you ran.
+    Verify the generated description, native labels and project status, the
+    **Copilot / Review** check, and the Actions **Job Summary**. Use
+    `/copilot description` to refresh the PR description and `/copilot recheck`
+    after addressing review findings.
+  </Step>
+  <Step title="Complete the workflow">
+    Resolve findings and required checks, then let an authorized maintainer merge
+    the PR. Verify the linked issue and project status after completion. Release
+    and hotfix publication have their own explicit deployment workflow.
+  </Step>
 </Steps>
 
-See [Issue workflow setup](/issues/workflow-setup) for inputs and [Issues](/issues) for the complete capability map.
+## When an SDD is required
+
+With `pre-branch-sdd: true` and `issue-managed-branches: true`, features and
+issues marked `contract-change` must pass the pre-branch SDD gate. After
+`in-progress`, answer the blocking questions using the exact format on the
+status card, such as `SDD Q1: Show the verified state and pending questions.`
+Copilot then validates and commits the SDD to the linked branch before applying
+`branched`. Help issues remain branchless.
+
+See [Issue workflow setup](/issues/workflow-setup) for inputs,
+[Branch management](/issues/branch-management) for branch ownership and recovery,
+[Comment commands](/issues/comment-commands) for the command reference,
+[Pre-branch SDDs](/issues/pre-branch-sdds) for specification readiness, and
+[Pull-request capabilities](/pull-requests/capabilities) for review and checks.

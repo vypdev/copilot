@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-21
+- Last updated: 2026-10-11
 - Owners: Copilot maintainers
 - Scope: parsing and routing issue/PR comments to read-only or mutation-capable use cases
 - Related issues/PRs: Bugbot and branch synchronization SDDs
@@ -42,7 +42,13 @@ modify the wrong branch.
 1. Commands are recognized only at the beginning, case-insensitively, with a
    2,000-character and 20-argument maximum.
 2. Unknown commands and missing required arguments return validation errors.
-3. `help` and `status` are public metadata. Read-only plan/explain/diagnose/test
+3. Explicit read-only tasks use fixed command-specific instructions: explain
+   inspects the supplied file/symbol/behavior or states an access limitation;
+   diagnose separates evidence from hypotheses; clarify identifies missing
+   information; estimate states effort/uncertainty; test-plan defines observable
+   tests. The current comment owns the task; the issue description is background
+   and MUST NOT replace it. Operands and issue content remain untrusted data.
+   `help` and `status` are public metadata. Read-only plan/explain/diagnose/test
    and review commands invoke their assigned agent role.
 4. `fix`, `implement`, `remember`, `dismiss`, `description`, and `sync-branch`
    apply command-specific authorization and availability checks.
@@ -54,9 +60,12 @@ modify the wrong branch.
    authenticated commit, and push before publication.
 8. Unaddressed comments are successful no-ops before project/provider reads, so
    documentation, coverage, and other machine-authored reports cannot activate agents.
-9. Comment-triggered file mutation requires a PR review-comment event with its
+9. `fix` and `implement` require a PR review-comment event with its
    authoritative branch, or an explicitly branch-scoped execution. An
    `issue_comment` never scans open PRs or selects a first matching branch.
+   The deterministic `remember` route verifies the exact current same-repository
+   PR or native issue branch link before checkout, under the companion Bugbot
+   SDD's canonical-write-target contract.
 10. Issue and PR comment routes project one frozen, credential-free
     `CommentAutomationContext`; shared workflows receive only capability facts
     and repository-bound semantic ports.
@@ -125,6 +134,12 @@ a mention.
    `User`. Unknown, missing, or unsupported owner types cannot inherit either a
    username-match or organization-membership shortcut and MUST prove repository
    collaborator permission.
+
+Explicit `fix` arguments are literal finding IDs or `all`. JSON double-quoted
+IDs containing spaces are parsed losslessly and bypass language adaptation;
+only existing unresolved IDs can reach autofix. The Bugbot SDD owns 15 new parser
+and selection cases; the localization SDD owns two no-adaptation routing
+cases. Neither allocation is double-counted in this capability's baseline budget.
 
 ## 5. Current versus proposed product journey
 
@@ -232,16 +247,37 @@ provider client, `Ai` instance, or configuration getter. Command-specific review
 overrides create a new frozen context and cannot mutate the run-wide AI model.
 There is no legacy aggregate overload or compatibility route.
 
-The read-only status path projects stored Bugbot result evidence through the
-same strict seven-state application policy used by Action completion,
-lifecycle, Job Summary, and Check evidence. The status renderer receives only a
-canonical aggregate or an explicit `invalid` state; it cannot parse an older
-reduced `{open,reopened,resolved}` shape or infer absent counts.
+For a PR, the read-only status path reads the exact canonical PR, its complete
+bounded comment inventory (newest 200), and its head again after reading the
+card. It accepts exactly one trusted bot-owned canonical status card with a
+closed-shape seven-state count marker correlated by PR, head and digest. Only
+complete review coverage and outcome can supply counts. Missing, duplicate,
+foreign, malformed, oversized or stale evidence returns `workflow.stale` and
+asks for `/copilot recheck`; it never substitutes cached counts or zero. The
+three logical reads do not use an agent, workspace, diff, rules or mutation
+port. Issue-only/API contexts without bound PR read ports retain the existing
+snapshot route without claiming fresh verified PR counts. The marker is
+read-only evidence and cannot authorize approval or mutation.
+
+```mermaid
+flowchart LR
+  C[Status command] --> P[Exact canonical PR]
+  P --> B[One trusted complete card]
+  B --> H[Read head again]
+  H --> V[Current seven-state counts]
+  B --> E[Unavailable: recheck and retry]
+  H --> E
+```
+
+Read-only status and description requests preserve durable lifecycle and
+waiting labels unless the run produces an explicit lifecycle decision.
 
 Target classification is independent from GitHub's event name: the
 `issue_comment` transport continues to select the comment coordinator, while the
 payload's PR marker selects PR setup and read-only PR capabilities. This avoids
 both dual issue/PR setup and the previous false issue classification.
+
+PR conversation setup queries the exact PR head through its bounded setup port to resolve a separate linked issue. The PR number is never used as its own linked issue. Status uses the restored linked working branch when the comment event omits a ref; an actual push ref remains authoritative. Selected PR command agents are prepared independently from issue-only admission. Live evidence: PR #459 on 2026-10-10.
 
 ## 9. UI/UX and content contract
 
@@ -271,7 +307,7 @@ untrusted mentions, Markdown, markers, and URLs are sanitized.
 | agent/verification | no commit | workspace aborted | yes | repair config/tests | abort changes |
 | push race | no stale push | remote heads | yes | rerun latest | abort local operation |
 | publication | work may be pushed | commit/result | yes | inspect run/commit | do not undo commit |
-| malformed stored finding evidence | status cannot report safe counts | original workflow result | yes | inspect producer, then `/copilot recheck` | no guessed state |
+| missing or invalid current PR card | status cannot report safe counts | canonical PR/card/head reads | yes | `/copilot recheck`, then retry status | no cached or guessed counts |
 
 ## 11. Security, permissions, and privacy
 
@@ -318,7 +354,14 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
 | UX/localization/sanitization | 19 | help/errors/links/mentions/Markdown, target locale, complete finding-state status, invalid-evidence recovery, internally consistent mutation-authority copy across all Bugbot pages |
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
-| **Total** | **107** | no double counting |
+| PR conversation context/runtime | 9 | Four live-head resolution cases including unavailable authority, two status branch cases, three specialist preparation cases |
+| PR status identity | 2 | Linked issue differs from PR; unlinked PR never invents an issue |
+| Conversation branch authority | 3 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn |
+| Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
+| Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
+| **Total** | **154** | no double counting |
+
+The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -345,7 +388,7 @@ English/non-English requests.
 7. A verification or remote-head failure aborts without push and reports recovery.
 8. A duplicated delivery does not silently duplicate the mutation.
 9. Untrusted comment text cannot inject shell, marker, mention, or secret output.
-10. An issue-only or general PR-conversation mutation request performs no
+10. An issue-only or general PR-conversation `fix`/`implement` request performs no
     workspace operation and never scans open PRs for a branch.
 11. An unaddressed human or machine comment exits before project lookup, AI
     configuration, runtime provisioning, translation, or publication.
@@ -353,9 +396,10 @@ English/non-English requests.
     coordinator but projects the exact PR number, PR locale, reviewer role, and
     canonical PR diff; issue-only setup is not invoked.
 13. `/copilot status` renders open, reopened, verification-required, unknown,
-    and resolved counts from the canonical result projection; malformed owned
-    or required-but-absent review evidence produces an `invalid` recovery
-    message and never a clean count.
+    and resolved counts from one trusted complete current-head card. Missing,
+    malformed, partial, duplicate, foreign or superseded evidence returns
+    `workflow.stale` with `/copilot recheck` recovery and never a clean count.
+    A changed head during the bounded read is rejected before publication.
 14. An organization member without repository write permission cannot run a
     file- or finding-state mutation, while an organization repository
     collaborator with `push`, `maintain`, or `admin` can.
@@ -375,11 +419,18 @@ English/non-English requests.
     rule for organization and personal repositories; membership alone never
     grants mutation authority in examples or comparison tables.
 
+19. Given an explicit explanation of `src/domain/copilot_command.ts` on an
+    issue about SDDs, the agent receives the file explanation as its fixed task
+    and the issue as untrusted background. A live response explains that file or
+    truthfully states that it could not inspect it; it never answers the older
+    issue question instead. No configuration can remove this focus/trust boundary.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | bounded grammar | command domain | command tests | comment commands |
+| current command focus | fixed Think task + answer workflow | eight task-key cases and unrelated issue-context integration | comment commands |
 | safe routing/admission | request/route/workflow policies | entrypoint and use-case tests | comment commands |
 | authorization | authorization port/adapter | organization, user, unknown-owner, and collaborator repository tests | permissions |
 | consistent authorization guidance | documentation contract | required authority sentences across all Bugbot pages and retired contradictory-copy checks | autofix/permissions/examples/do request |
@@ -399,7 +450,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 107-case budget, coverage, and architecture checks pass.
+- [x] The 154-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.
@@ -412,3 +463,7 @@ English/non-English requests.
 - Decision: deterministic commands precede agent intent; authorization is fixed.
 - Rejected: model-only command parsing and silent unauthorized mutation.
 - Follow-up: localized deterministic command errors are outside this baseline.
+
+Live status recovery for #459 uses the setup-resolved issue #453 rather than the PR number carried in an issue-comment payload. The target line names PR and linked issue separately; absent linkage does not fabricate an issue.
+
+Branchless help conversations remain on the read-only answer route regardless of classified mutation intent. A file-changing use case requires an authoritative branch before agent or Git execution. No changed paths after an admitted agent maps to agent.failed, preserving the distinction from a pre-spawn policy rejection.

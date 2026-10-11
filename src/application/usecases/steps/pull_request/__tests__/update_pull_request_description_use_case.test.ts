@@ -15,6 +15,7 @@ const mockGetAllMembers = jest.fn();
 const mockAskAgent = jest.fn();
 const mockUpdateDescription = jest.fn();
 const mockGetDetails = jest.fn();
+const mockGetDiff = jest.fn();
 
 async function localizedDescription(value: Parameters<typeof mockAskAgent>[0]): Promise<AgentQueryResult> {
   const response = await mockAskAgent(value);
@@ -71,7 +72,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useCase = new UpdatePullRequestDescriptionUseCase(
-      { updateDescription: mockUpdateDescription, getDetails: mockGetDetails },
+      { updateDescription: mockUpdateDescription, getDetails: mockGetDetails, getDiff: mockGetDiff },
       { getDescription: mockGetIssueDescription },
       { getAllMembers: mockGetAllMembers },
       { query: localizedDescription },
@@ -81,6 +82,7 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     mockAskAgent.mockResolvedValue('PR does X.');
     mockGetDetails.mockResolvedValue({ body: 'Remote human context', headBranch: 'feature/42-x', baseBranch: 'develop' });
     mockUpdateDescription.mockResolvedValue(undefined);
+    mockGetDiff.mockResolvedValue({ snapshot: { changes: [{ filename: 'src/login.ts', additions: 1, deletions: 0, patch: '+login()', status: 'modified' }] }, coverage: { status: 'complete' } });
   });
 
   it.each(['replace', 'append'] as const)('runs %s automatically', async (mode) => {
@@ -88,6 +90,34 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0]).toMatchObject({ success: true, executed: true });
     expect(mockUpdateDescription).toHaveBeenCalledWith(10, expect.stringContaining('PR does X'));
     expect(mockGetAllMembers).not.toHaveBeenCalled();
+  });
+
+  it.each(['partial', 'unavailable'])('retains the body when GitHub diff evidence is %s', async (status) => {
+    mockGetDiff.mockResolvedValue({ snapshot: { changes: [] }, coverage: { status } });
+    const results = await useCase.invoke(request());
+    expect(results[0].success).toBe(false);
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ filename: 'src/a.ts', additions: 1, deletions: 0, patch: '' }],
+    [{ filename: 'src/a.ts', additions: 1, deletions: 0, patch: 'a'.repeat(120_001) }],
+    Array.from({ length: 101 }, () => ({ filename: 'image.png', additions: 0, deletions: 0, patch: '' })),
+  ])('rejects incomplete or oversized diff patches before any agent call', async (...args) => {
+    // Jest expands each table row: retain the complete changes collection.
+    const changes = Array.isArray(args[0]) ? args[0] : args;
+    mockGetDiff.mockResolvedValue({ snapshot: { changes }, coverage: { status: 'complete' } });
+    const results = await useCase.invoke(request());
+    expect(results[0].success).toBe(false);
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('provides the diff and existing verification evidence without requiring agent shell access', async () => {
+    await useCase.invoke(request());
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('+login()');
+    expect(mockAskAgent.mock.calls[0][0].prompt).toContain('Human context');
   });
 
   it('skips preserve mode automatically', async () => {

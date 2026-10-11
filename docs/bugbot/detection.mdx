@@ -9,11 +9,20 @@ This page describes **when** Bugbot runs, **where** findings are published, and 
 
 ## When Bugbot runs
 
+Draft pull requests are skipped while `bugbot-review-drafts` is `false` (the
+default), including an explicit `/copilot recheck` from a comment. Bugbot checks
+GitHub's current draft state before loading review details or calling the agent.
+Marking the PR ready for review starts a fresh full review through the supplied
+workflow. You can also enable the setting to review drafts. A skipped
+review retains existing findings and does not declare the PR clean.
+
 Bugbot detection runs in two ways:
 
 ### 1. On pull-request review events
 
-The pull-request workflow runs a full review on `opened` and `reopened`. On
+The pull-request workflow runs a full review on `opened`, `reopened`, and
+`ready_for_review`. The draft-to-ready event runs review without repeating
+assignments, project linking, or generated descriptions. On
 `synchronize`, it reviews only the exact `before..after` commit range for new
 problems instead of reprocessing the unchanged part of a large PR. Existing
 open findings are still checked against current code, so incremental analysis

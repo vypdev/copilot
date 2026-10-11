@@ -39,7 +39,7 @@ export const permissionCopyFr: Readonly<Record<PermissionText, string>> = {
   'Manage selected issue lifecycles, comments, and progress.': 'Gérer le cycle de vie, les commentaires et la progression des tickets choisis.',
   'Manage selected pull request workflows, reviews, or autofix.': 'Gérer les workflows de pull request, les revues ou les corrections automatiques.',
   'Verify current-head required checks and producer identities.': 'Vérifier les contrôles requis et leurs producteurs pour le commit courant.',
-  'Load the guarded approval policy.': 'Lire la politique d’approbation encadrée.',
+  'Load the PR approval assessment policy.': 'Lire la politique d’évaluation de l’approbation des PR.',
   'Select or authorize organization members for enabled workflows.': 'Sélectionner ou autoriser des membres de l’organisation pour les workflows activés.',
   'Assign configured organization issue types.': 'Attribuer les types de ticket configurés dans l’organisation.',
   'Update selected organization Projects.': 'Mettre à jour les projets de l’organisation choisis.',

@@ -1,4 +1,5 @@
 import type { SetupExecutionContext } from '../setup_execution_contracts';
+import { resolveExecutionIssueNumber } from '../resolve_execution_issue_number';
 import {
   resolveEventIssueNumber,
   resolveSingleActionIssueNumber,
@@ -9,6 +10,34 @@ const issueRepository = {
   isIssue: jest.fn(),
   getHeadBranch: jest.fn(),
 };
+
+describe('live PR conversation issue resolution', () => {
+  it.each(['issue_comment', 'pull_request_review_comment'])('loads the linked issue from the real head for %s', async eventName => {
+    issueRepository.getHeadBranch.mockResolvedValueOnce('docs/44-work');
+    const result = await resolveExecutionIssueNumber(context({
+      eventName, isPullRequest: true, pullRequest: { number: 91, head: '', base: '' },
+    }), issueRepository);
+    expect(result.issueNumber).toBe(44);
+    expect(issueRepository.getHeadBranch).toHaveBeenLastCalledWith(91);
+  });
+
+  it('keeps an unlinked PR separate from an issue with the same number', async () => {
+    issueRepository.getHeadBranch.mockResolvedValueOnce('codex/pr-ux');
+    const result = await resolveExecutionIssueNumber(context({
+      eventName: 'issue_comment', isPullRequest: true, pullRequest: { number: 91, head: '', base: '' },
+    }), issueRepository);
+    expect(result.issueNumber).toBeUndefined();
+  });
+
+  it('does not infer branch authority when the live PR head is unavailable', async () => {
+    issueRepository.getHeadBranch.mockResolvedValueOnce(undefined);
+    const result = await resolveExecutionIssueNumber(context({
+      eventName: 'issue_comment', isPullRequest: true, pullRequest: { number: 91, head: '', base: '' },
+    }), issueRepository);
+    expect(result.issueNumber).toBeUndefined();
+    expect(result).not.toHaveProperty('pullRequestHeadBranch');
+  });
+});
 
 function context(overrides: Partial<SetupExecutionContext> = {}): SetupExecutionContext {
   return {

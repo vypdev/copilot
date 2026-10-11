@@ -56,6 +56,20 @@ describe('ObservePullRequestApprovalUseCase', () => {
     expect(result.decision.code).toBe('invalid-policy');
     expect(gateway.submitApproval).not.toHaveBeenCalled();
   });
+  it.each([
+    ['denied Variable access', { status: 403, message: 'private provider diagnostic' }],
+    ['unavailable GitHub transport', new Error('private transport diagnostic')],
+  ])('distinguishes %s from malformed policy without any PR mutation', async (_label, error) => {
+    const gateway = port({ readPolicy: jest.fn().mockRejectedValue(error) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ decision: { status: 'blocked', code: 'policy-unavailable' }, publication: 'not-applicable' });
+    expect(result.decision.detail).toContain('runtime PAT');
+    expect(result.decision.detail).toContain('Actions Variables');
+    expect(JSON.stringify(result)).not.toContain('private');
+    expect(gateway.loadEvidence).not.toHaveBeenCalled();
+    expect(gateway.submitApproval).not.toHaveBeenCalled();
+    expect(gateway.publishAssessment).not.toHaveBeenCalled();
+  });
   it('posts once only after readback confirms the exact native review', async () => {
     const loadEvidence = jest.fn().mockResolvedValueOnce(evidence())
       .mockResolvedValueOnce(evidence())

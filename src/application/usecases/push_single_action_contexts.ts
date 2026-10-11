@@ -141,6 +141,7 @@ export type IssueCommentActionContext =
     };
 
 export interface PushSingleActionContextSource {
+  readonly isPullRequest?: boolean;
   readonly owner: string;
   readonly repo: string;
   readonly issueNumber: number;
@@ -381,7 +382,8 @@ export function projectIssueCommentActionContext(source: PushSingleActionContext
 }
 
 export function projectAgentActivityContext(source: PushSingleActionContextSource): AgentActivityContext {
-  const pullRequest = source.eventName === 'pull_request' || source.eventName === 'pull_request_review_comment';
+  const pullRequest = source.isPullRequest === true
+    || source.eventName === 'pull_request' || source.eventName === 'pull_request_review_comment';
   const number = pullRequest
     ? source.pullRequest.number
     : source.issue.number > 0 ? source.issue.number : source.issueNumber;

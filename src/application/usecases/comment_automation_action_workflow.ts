@@ -87,11 +87,23 @@ async function runAutofixAction(
   }
   if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
     logInfo('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
-    autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(
+    let reviewResults = await options.reviewPotentialProblemsUseCase.invoke(
       param.bugbot.review,
-    ));
+    );
+    if (reviewResults.some(isSupersededReviewResult)) {
+      logInfo('Post-autofix review was superseded; reloading the current PR for one bounded read-only retry.');
+      reviewResults = await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
+    }
+    autofixResults.push(...reviewResults);
   }
   return autofixResults;
+}
+
+function isSupersededReviewResult(result: Result): boolean {
+  const payload = result.payload;
+  return result.success && result.executed
+    && payload !== null && typeof payload === 'object' && !Array.isArray(payload)
+    && (payload as Record<string, unknown>).superseded === true;
 }
 
 async function runDoUserRequestAction(

@@ -48,6 +48,8 @@ With `issues-locale: es-ES`, the same semantic transition is rendered in Spanish
 La sincronización de la rama necesita atención: `feature/42` está por detrás de `develop`. [Abrir el estado actual](https://github.com/example/project/issues/42#issuecomment-8).
 ```
 
+Long branch names use a shorter localized notification with the same status link. Open that card to see both complete refs and the command to run. Notifications stay within the fixed copy budget without displaying internal truncation markers.
+
 The visible wording never participates in notification identity. Changing a translation therefore does not recreate or rewrite an already issued notification. The workflow Job Summary records whether the notification was created or reused and reports bounded duplicate-cleanup evidence without copying the message body.
 
 <Info>
@@ -115,6 +117,11 @@ When Git reports conflicts, the configured fixer agent may resolve them under a 
 - no agent-controlled checkout, reset, merge, commit, or push;
 - no unresolved markers, unexpected paths, changes to non-conflicted index entries, or changes to `HEAD`/`MERGE_HEAD`; and
 - all configured verification commands must pass in the credential-free untrusted-command environment.
+
+The agent resolves files without staging them. Copilot checks the original
+conflict paths, merge identity, protected index entries and remaining markers,
+then stages only those resolved conflicts through trusted Git code. It rejects
+later changes introduced by verification rather than staging them again.
 
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 

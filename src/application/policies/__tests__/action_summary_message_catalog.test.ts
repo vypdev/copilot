@@ -1,4 +1,6 @@
 import type { CatalogMessage } from '../../../domain/message_catalog';
+import { Result } from '../../../data/model/result';
+import { buildActionSummary } from '../action_summary_policy';
 import { catalogPlaceholders, validateCatalogDefinition } from '../../../domain/message_catalog';
 import { ResolveMessageCatalogUseCase } from '../../usecases/localization/resolve_message_catalog_use_case';
 import {
@@ -57,6 +59,19 @@ describe('action summary message catalog', () => {
     expect(first.message('summary.target.issue', { number: 12 })).toBe('FR Issue #12');
     expect(replay.message('summary.heading')).toBe('FR Copilot execution');
     expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['es-ES', 'Inactividad de issues', 'Examinadas: 1 · Cerradas: 0 · Omitidas: 1', 'no disponible'],
+    ['fr-FR', 'Issue inactivity', 'Scanned: 1 · Closed: 0 · Skipped: 1', 'unavailable'],
+  ])('renders scan evidence and missing evidence atomically for %s', (locale, heading, counts, unavailable) => {
+    const base = { owner: 'owner', repository: 'repo', eventName: 'workflow_dispatch',
+      issueNumber: -1, pullRequestNumber: -1, locale: { repository: locale, issue: locale, pullRequest: locale } };
+    const result = (payload?: unknown) => new Result({ id: 'CloseInactiveIssuesUseCase',
+      success: true, executed: false, payload });
+    expect(buildActionSummary({ ...base, results: [result({ scanned: 1, closed: 0, skipped: 1 })] }))
+      .toContain(`| ${heading} | ${counts} |`);
+    expect(buildActionSummary({ ...base, results: [result()] })).toContain(`| ${heading} | ${unavailable} |`);
   });
 
   it('falls back atomically to English when a dynamic descriptor is missing', async () => {

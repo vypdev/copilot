@@ -1160,9 +1160,9 @@ counted across rows.
 | Application ordering, idempotency, replay, cancellation, and races | 38 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen, metadata-during-review ordering, 42-review multi-batch completion, 101-review cap, failed-batch stop and replay |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 15 | shared concurrency key, conditional metadata non-preemption in active/setup copies, malformed-sibling telemetry cardinality, negative unconditional-cancel fixture, bot guard, permissions, trigger contract, strict finding/resolution schema, presentation-pending error code and validated count recovery, composition wiring, API declarations, package exports |
-| UI/UX, localization, accessibility, links, and sanitization | 22 | pending, active, clean, failed, partial, skipped, superseded, metadata-only Check/generic-comment omission, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
+| UI/UX, localization, accessibility, links, and sanitization | 23 | pending, active, clean, failed, partial, skipped, superseded, metadata-only Check/generic-comment omission, missing/invalid summary and status output, every non-clean count, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
 | Integration, security, greenfield cutover, and live-shaped replay | 14 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust, missing-state completion fail-closed, latest-by-name PR #363 replay |
-| **Total** | **139** | No double counting |
+| **Total** | **140** | No double counting |
 
 Coverage requirements:
 
@@ -1589,3 +1589,15 @@ evidence.
 - Broader cross-SCM visual conventions may be standardized after the GitHub
   contract has controlled live evidence; the domain and ports are deliberately
   provider-neutral now.
+
+Live PRs #459/#460 showed a 2,119-character Codecov report posted by a provider-classified User account, legitimately retained as discussion. The fixed per-item limit is 4,000 characters; the total 24,000-character and 50-item bounds remain enforced. Provider author classification remains authoritative: account names never bypass completeness. Reports above the item bound and aggregate omissions still produce partial coverage. A representative positive case and the existing clipping case cover both boundaries.
+
+
+The canonical PR status card also publishes a bounded schema-1
+`copilot-bugbot-state-counts` marker with PR, verified head, digest, outcome,
+coverage and all seven counts. It preserves the existing canonical status and
+approval marker grammars. The status command accepts this read-only marker only
+from one trusted bot-owned complete current-head card; it grants no approval
+or mutation authority. Marker/reader tests (24 cases) belong exclusively to
+the comment automation SDD budget. User documentation explains recheck recovery
+when evidence is absent or stale.

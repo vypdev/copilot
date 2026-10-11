@@ -33,7 +33,9 @@ function execution(overrides: Record<string, unknown> = {}): any {
 describe('SynchronizeAgentActivityUseCase', () => {
     it('adds and removes the activity label while preserving other labels', async () => {
         const setLabels = jest.fn().mockResolvedValue(undefined);
-        const getLabels = jest.fn().mockResolvedValue([
+        const getLabels = jest.fn().mockResolvedValueOnce([
+            'feature', 'state:working', 'state:awaiting-maintainer',
+        ]).mockResolvedValue([
             'feature',
             'state:working',
             'state:awaiting-maintainer',
@@ -82,7 +84,7 @@ describe('SynchronizeAgentActivityUseCase', () => {
                 currentPullRequestLabels: ['state:reviewing'],
             },
         });
-        const useCase = new SynchronizeAgentActivityUseCase({ setLabels, getLabels: jest.fn() });
+        const useCase = new SynchronizeAgentActivityUseCase({ setLabels, getLabels: jest.fn().mockResolvedValue(['state:reviewing']) });
 
         await useCase.start(projectAgentActivityContext(param));
 
@@ -90,5 +92,22 @@ describe('SynchronizeAgentActivityUseCase', () => {
             11,
             ['state:reviewing', 'state:ai-processing'],
         );
+    });
+
+    it('preserves a completed review and business labels published during runtime preparation', async () => {
+        const setLabels = jest.fn().mockResolvedValue(undefined);
+        const latest = ['documentation', 'state:ready', 'state:awaiting-maintainer', 'size: M'];
+        const getLabels = jest.fn().mockResolvedValue(latest);
+        const param = execution({
+            eventName: 'issue_comment',
+            isPullRequest: true,
+            pullRequest: { number: 11 },
+            labels: { ...execution().labels, currentPullRequestLabels: ['state:planned'] },
+        });
+        const context = projectAgentActivityContext(param);
+        const outcome = await new SynchronizeAgentActivityUseCase({ getLabels, setLabels }).start(context);
+        expect(getLabels).toHaveBeenCalledWith(11);
+        expect(setLabels).toHaveBeenCalledWith(11, [...latest, 'state:ai-processing']);
+        expect(outcome.labels).toEqual([...latest, 'state:ai-processing']);
     });
 });

@@ -4,6 +4,7 @@ import { selectPullRequestOwnerForPushReview } from '../bugbot_event_ownership_p
 const pullRequest: BugbotPullRequestIdentity = {
   number: 42,
   state: 'open',
+  draft: false,
   baseRepository: { owner: 'owner', name: 'repo' },
   headRepositoryOwner: 'owner',
   headRef: 'feature/42',

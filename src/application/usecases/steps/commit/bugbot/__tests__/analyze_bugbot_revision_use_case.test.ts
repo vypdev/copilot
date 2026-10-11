@@ -52,6 +52,7 @@ function context(partitions: readonly BugbotReviewDiffPartition[]): BugbotContex
     canonicalPullRequest: {
       number: 7,
       state: 'open',
+      draft: false,
       baseRepository: { owner: 'org', name: 'repo' },
       headRepositoryOwner: 'org',
       headRef: 'feature',

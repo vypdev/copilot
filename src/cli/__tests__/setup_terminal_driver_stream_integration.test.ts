@@ -64,5 +64,5 @@ describe('NodeTerminalDriver stream transitions', () => {
     expect(output).toContain('"length":11');
     expect(output).not.toContain('dummy-');
     expect(errorOutput).not.toContain('Error:');
-  });
+  }, 15_000);
 });

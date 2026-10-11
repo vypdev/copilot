@@ -63,6 +63,10 @@ describe('comment translation policy', () => {
         expect(command).toEqual({ kind: 'command', prose: 'por que', commandName: 'explain' });
         expect(rebuildAdaptedComment(plain, ' translated ')).toBe('translated');
         expect(rebuildAdaptedComment(mention, '')).toBe('@vypbot');
+        expect(rebuildAdaptedComment(prepareLanguageAdaptationInput('/copilot status', 'vypbot'), ''))
+            .toBe('/copilot status');
+        expect(rebuildAdaptedComment(prepareLanguageAdaptationInput('/copilot implement add tests', 'vypbot'),
+            Array(21).fill('word').join(' '))).toBeUndefined();
         expect(rebuildAdaptedComment(mention, 'translated')).toBe('@vypbot translated');
         expect(rebuildAdaptedComment({ kind: 'mention', prose: 'plain' }, 'translated')).toBe('translated');
         expect(rebuildAdaptedComment(command, '')).toBe('/copilot explain');
@@ -160,6 +164,24 @@ describe('comment translation policy', () => {
         const input = prepareLanguageAdaptationInput('@vypbot explica esto', 'vypbot');
 
         expect(restoreLanguageAdaptationOutput(input, 'explain COPILOT_OPERAND_0_TOKEN')).toBeUndefined();
+    });
+
+    it.each(['.', '. More context', '.\nMore context'])('restores an inline command followed by sentence punctuation: %s', suffix => {
+        const input = prepareLanguageAdaptationInput('@vypbot explica la diferencia en `/copilot status`.', 'vypbot');
+        const translated = `explain the difference in COPILOT_OPERAND_0_TOKEN${suffix}`;
+        expect(restoreLanguageAdaptationOutput(input, translated)).toBe(`explain the difference in \`/copilot status\`${suffix}`);
+        expect(rebuildAdaptedComment(input, translated)).toBe(`@vypbot explain the difference in \`/copilot status\`${suffix}`);
+    });
+
+    it.each(['.tsx', '.}', '. --force', './other'])('still rejects extensions, non-sentence adjacency and generated operands: %s', suffix => {
+        const input = prepareLanguageAdaptationInput('@vypbot explica `/copilot status`.', 'vypbot');
+        expect(restoreLanguageAdaptationOutput(input, `explain COPILOT_OPERAND_0_TOKEN${suffix}`)).toBeUndefined();
+    });
+
+    it('preserves ordered code operands across sentence boundaries', () => {
+        const input = prepareLanguageAdaptationInput('@vypbot explica `/copilot status`. Luego `HEAD~2`.', 'vypbot');
+        expect(restoreLanguageAdaptationOutput(input, 'explain COPILOT_OPERAND_0_TOKEN. Then COPILOT_OPERAND_1_TOKEN.'))
+            .toBe('explain `/copilot status`. Then `HEAD~2`.');
     });
 
     it('rejects reordered operands and malformed trusted adaptation input', () => {

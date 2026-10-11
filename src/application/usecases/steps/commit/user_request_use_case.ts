@@ -52,6 +52,10 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         }
 
         const targetBranch = param.branchOverride ?? context.headBranch;
+        if (!targetBranch?.trim()) {
+            return [failure(new ApplicationError('workflow.invalid-event',
+                'User-request implementation requires an authoritative branch; a general conversation cannot infer one.'))];
+        }
         let mutation;
         try {
             mutation = await prepareWorkspaceMutation(this.gitCommitPort, {

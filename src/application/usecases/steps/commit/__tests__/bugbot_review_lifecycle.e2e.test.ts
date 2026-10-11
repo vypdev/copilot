@@ -110,6 +110,7 @@ function contextPorts(provider: InMemoryReviewProvider) {
     getPullRequest: async (number: number) => ({
       number,
       state: 'open' as const,
+      draft: false,
       baseRepository: { owner: 'org', name: 'repo' },
       headRepositoryOwner: 'org',
       headRef: 'feature/review',

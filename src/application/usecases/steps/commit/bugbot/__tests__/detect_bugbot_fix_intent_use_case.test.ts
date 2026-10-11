@@ -247,6 +247,18 @@ describe("DetectBugbotFixIntentUseCase", () => {
         expect((results[0].payload as { targetFindingIds: string[] }).targetFindingIds).toEqual(['finding-0']);
     });
 
+    it.each(['', ' unknown-id'])('selects exactly the quoted multiword finding without model intent (%s)', async extra => {
+        const id = 'docs/issues/first-workflow.mdx:28:awaiting-maintainer treated as failure';
+        const context = mockContextWithUnresolved(2);
+        context.unresolvedFindingsWithBody[0].id = id;
+        mockLoadBugbotContext.mockResolvedValue(context);
+        const results = await invoke(useCase, baseExecution({
+            issue: { ...baseExecution().issue, commentBody: `/copilot fix ${JSON.stringify(id)}${extra}` },
+        } as Partial<Execution>));
+        expect(mockAskAgent).not.toHaveBeenCalled();
+        expect(results[0].payload).toMatchObject({ isFixRequest: true, targetFindingIds: [id] });
+    });
+
     it('skips an explicit fix command when there are no unresolved findings', async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
 

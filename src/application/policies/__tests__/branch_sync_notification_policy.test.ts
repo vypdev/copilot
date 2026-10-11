@@ -135,6 +135,37 @@ describe("branch sync notification policy", () => {
     );
     expect(buildBranchSyncTransitionNotification(dependency, verbose, url).length).toBeLessThanOrEqual(400);
     expect(buildBranchSyncDuplicatePointer(verbose, url).length).toBeLessThanOrEqual(400);
+    expect(buildBranchSyncTransitionNotification(dependency, verbose, url)).not.toContain('[untrusted content truncated]');
+    expect(buildBranchSyncDuplicatePointer(verbose, url)).not.toContain('[untrusted content truncated]');
+  });
+
+  it('uses complete localized compact copy for long Action-created branch names', () => {
+    const liveDependency = {
+      ...dependency,
+      workingBranch: 'docs/453-dogfooding-document-the-first-issue-to-pr-workflow',
+      parentBranch: 'develop',
+    };
+    const url = buildBranchSyncStatusCommentUrl('vypdev', 'copilot', 453, 6102286940);
+    expect(buildBranchSyncTransitionNotification(liveDependency, english, url))
+      .toBe(`Branch synchronization needs attention. [Open the current status](${url}).`);
+    expect(buildBranchSyncTransitionNotification(liveDependency, spanish, url))
+      .toBe(`La sincronización de la rama necesita atención. [Abrir el estado actual](${url}).`);
+  });
+
+  it('keeps maximum refs and provider-controlled copy bounded without internal truncation markers', () => {
+    const maximumDependency = { ...dependency, workingBranch: 'w'.repeat(255), parentBranch: 'p'.repeat(255) };
+    const verbose = { ...english, message: jest.fn(() => '@team '.repeat(1_000)) } as typeof english;
+    const url = buildBranchSyncStatusCommentUrl('o'.repeat(39), 'r'.repeat(100), Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+    for (const rendered of [
+      buildBranchSyncTransitionNotification(maximumDependency, english, url),
+      buildBranchSyncTransitionNotification(maximumDependency, verbose, url),
+      buildBranchSyncDuplicatePointer(verbose, url),
+    ]) {
+      expect(rendered.length).toBeLessThanOrEqual(400);
+      expect(rendered).not.toContain('[untrusted content truncated]');
+      expect(rendered).not.toContain('@team');
+      expect(rendered.match(/\[[^\]]*\]\([^)]*\)/gu)).toHaveLength(1);
+    }
   });
 
   it('neutralizes unsafe localized notification controls and validates status identifiers', () => {
@@ -245,6 +276,7 @@ describe('branch sync message catalog', () => {
       'branchSync.aligned.status': '{workingBranch} contient maintenant l’historique actuel de {parentBranch}.',
       'branchSync.aligned.resolved': 'La recommandation précédente est résolue.',
       'branchSync.transition.required': 'La synchronisation nécessite une action : {workingBranch} est derrière {parentBranch}.',
+      'branchSync.transition.requiredCompact': 'La synchronisation nécessite une action.',
       'branchSync.transition.openStatus': 'Ouvrir le statut actuel',
       'branchSync.transition.duplicate': 'Une notification en double a été supprimée.',
       'branchSync.transition.viewOriginal': 'Voir la notification originale',

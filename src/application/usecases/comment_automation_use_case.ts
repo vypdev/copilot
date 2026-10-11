@@ -45,6 +45,9 @@ export async function runCommentAutomation(
     if (command.kind === 'command' && !commandHasAdaptableProse) {
       const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
       if (explicitResults) return explicitResults;
+      if (command.command.name === 'fix') {
+        return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, []);
+      }
     }
     if (isNaturalLanguageBranchSyncRequest(param.userComment, param.trustedBotLogin)) {
       return runBranchSyncCommand(param, options, [], actorAuthorizationPort);
@@ -54,6 +57,9 @@ export async function runCommentAutomation(
     if (adaptation?.status === 'failed') return languageResults;
     if (adaptation) param = withCommentLanguageAdaptation(param, adaptation);
     const adaptedCommand = parseCopilotCommand(param.userComment);
+    if (adaptedCommand.kind === 'invalid') {
+      return [...languageResults, invalidCommentCommandResult(options.taskId, adaptedCommand.reason)];
+    }
     if (adaptedCommand.kind === 'command') {
       const explicitResults = await runExplicitCommentCommand(param, options, adaptedCommand.command, actorAuthorizationPort);
       if (explicitResults) return [...languageResults, ...explicitResults];

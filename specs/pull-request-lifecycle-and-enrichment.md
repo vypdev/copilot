@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-15
-- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
+- Last verified: 2026-10-11 on `master`; PR #460 exposed a missing draft-to-ready review trigger during dogfooding
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
 - Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), [PR #393](https://github.com/vypdev/copilot/pull/393), and [PR #394](https://github.com/vypdev/copilot/pull/394)
@@ -25,6 +25,7 @@ is explicit full ownership with `replace`.
 ```text
 opened/reopened -> resolve optional distinct issue -> enrich PR -> concise description -> review
 synchronize -> concise description policy -> review
+ready_for_review -> full read-only review, without repeating enrichment
 edited metadata -> no Copilot PR workflow
 merged -> close distinct linked issue only
 ```
@@ -51,7 +52,9 @@ descriptions can also overwrite human content unless ownership is explicit.
    description from the merge-base diff and optional distinct issue context.
 4. `replace` owns the body; `append` upserts a marker-bounded Copilot section;
    `preserve` updates only on authorized `/copilot description`; `disabled` never updates.
-5. Open/reopen/synchronize run read-only review when configured/authorized.
+5. Open/reopen/synchronize and draft-to-ready events run read-only review when
+   configured/authorized. Draft-to-ready activates only the reviewer and does
+   not regenerate descriptions, assignments, links, or project status.
 6. Metadata-only edited events do not start the supplied workflow. Merged PRs
    close only a distinct linked issue.
 7. Runs expose event/action identity and review-state events use a distinct job
@@ -248,6 +251,8 @@ P2-E makes this boundary executable: issue/PR leaves import no `Execution`
 aggregate, application requests contain facts rather than credentials, and
 composition exposes operation-only bound ports. Automatic and explicit PR
 description generation share one discriminated request instead of dual methods.
+The description read port supplies the GitHub merge-base diff and current body as untrusted evidence before the agent query. Complete evidence is limited to 100 changed files and 120,000 serialized characters. Missing nonempty text patches, empty diffs, partial provider coverage, or exceeded budgets retain the existing body without an agent call or write. Credentials remain confined to the read adapter. Optional agent workspace reads do not gate generation. These bounds are fixed rather than configuration inputs.
+
 The agent returns bounded semantic fields, not arbitrary body Markdown. A pure
 application presentation policy validates cardinality, sentence count,
 duplicates, optional notes, trusted linkage, unsafe Markdown controls, and the
@@ -388,13 +393,22 @@ not altered.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Event/description/label policy | 26 | action matrix, optional/self linkage, modes, markers, bounds |
-| Orchestration/idempotency | 20 | order, unlinked route, replay, partial, merge closure |
+| Event/description/label policy | 43 | action matrix, optional/self linkage, modes, markers, bounds |
+| Orchestration/idempotency | 26 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
-| Workflow/config contracts | 14 | event exclusion, identity, forks, permissions, inputs |
-| PR UX/localization/sanitization | 15 | concise body/status/links/template/output, evidence-backed optional notes |
+| Workflow/config contracts | 17 | event exclusion, identity, forks, permissions, inputs |
+| PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
-| **Total** | **101** | no double counting |
+| Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
+| **Total** | **135** | no double counting |
+
+Seven draft-to-ready regression cases cover authorized and unauthorized review,
+semantic failure, reviewer-only activation, activity availability, reviewing
+lifecycle, and a missing-event rejection for both workflow copies. Existing
+canonical draft checks, fork guards, bot-event admission, and stale-head guards
+remain authoritative. The live acceptance is: convert PR #460 to draft, mark it
+ready without pushing, and observe `pull_request:ready_for_review` plus a review
+for its current head. No new input, permission, or publication authority is added.
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
 coverage. The P2-E context/orchestration path enforces 95% lines/statements and
@@ -449,6 +463,8 @@ body mutation that produces no follow-up PR workflow.
     null for removed state/configuration contracts, even when the diff uses
     `legacy`, `deprecated`, migration, strict-reader, or fail-closed wording.
 
+18. A complete GitHub diff permits description generation even when agent shell commands fail; partial/missing/oversized evidence performs zero body writes and retains the existing body.
+
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
@@ -475,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 101-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 135-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
@@ -491,3 +507,37 @@ body mutation that produces no follow-up PR workflow.
 - Decision: body ownership is explicit and marker-bounded outside replace mode.
 - Rejected: hidden fallback modes and unsafe fork execution.
 - Follow-up: changing the recommended description default needs product evidence.
+
+Hyphenated words retain their boundaries during automatic issue and PR title formatting. For example, `issue-to-pr` becomes the readable `issue to pr`; both map to the same managed branch slug. Formatting and replay MUST preserve that slug. Two title-policy cases cover the issue and PR renderers, including idempotent formatting and branch-name equivalence. Live evidence: issue #453 and PR #460 on 2026-10-10.
+
+
+Live PR #460 evidence on 2026-10-11 exposed a long-running description request
+restoring issue-derived `state:planned` over a fresh PR review. Agent activity
+uses semantic PR identity for ordinary PR conversation comments and reads the
+current target labels immediately before both start and cleanup writes. Status
+and description results without a lifecycle decision preserve existing waiting
+labels. Five additional cases cover these two queries, semantic activity
+identity/current labels, and the two supplied comment workflow contracts.
+
+Both installed and setup comment workflows grant only `contents: read` and
+`checks: write`, passing `${{ github.token }}` as `COPILOT_EVIDENCE_TOKEN` only
+on the Action step. Ordinary conversation and native thread reviews therefore
+publish the same current-head `Copilot / Review` Check as PR events. No new
+configuration input or agent credential is introduced. Acceptance: after a
+clean recheck, run description and status; `state:ready` and
+`state:awaiting-maintainer` remain, and the Check SHA equals the canonical head.
+Activity updates preserve business labels read from GitHub, including labels
+changed while runtime preparation was pending. Documentation covers these
+query semantics and all four review-producing workflow token contracts.
+
+
+The ordinary PR-comment payload has no head SHA, and a native thread payload
+may still name the commit before autofix. Check publication takes the real
+SHA-1/SHA-256 object ID from exactly one valid owned Bugbot telemetry result
+for these two comment transports. That result classifies the Check as
+`Copilot / Review`. Missing, malformed, duplicate, null-SHA and dry-run
+telemetry cannot publish it; status/description metadata cannot overwrite it.
+PR events retain their event-head correlation. Twelve pure-policy cases and
+two completion/token-binding cases cover this contract, owned by this SDD.
+Live discovery: recheck 38104992977 verified PR #460/head 7be27aa but produced
+no Check because completion only read the webhook head.

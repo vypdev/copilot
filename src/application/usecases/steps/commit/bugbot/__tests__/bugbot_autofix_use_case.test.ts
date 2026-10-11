@@ -65,6 +65,7 @@ function contextWithFindings(ids: string[]) {
         canonicalPullRequest: {
             number: 50,
             state: 'open',
+            draft: false,
             baseRepository: { owner: 'o', name: 'r' },
             headRepositoryOwner: 'o',
             headRef: 'feature/42-foo',
@@ -403,5 +404,6 @@ describe("BugbotAutofixUseCase", () => {
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
         expect(results[0].errors?.[0].message).toContain("no safe workspace paths");
+        expect(results[0].errors?.[0].code).toBe('agent.failed');
     });
 });

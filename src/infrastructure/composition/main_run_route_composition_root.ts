@@ -1,3 +1,6 @@
+import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
+import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
+import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
 import { CommitUseCase } from "../../application/usecases/commit_use_case";
 import { IssueCommentUseCase } from "../../application/usecases/issue_comment_use_case";
 import type { ProjectBoardCommandPort } from "../../application/ports/project_board_command_ports";
@@ -38,7 +41,7 @@ import { createCheckProgressCompositionRoot } from "./check_progress_composition
 import {
   createBranchComparisonClient,
 } from "./github_branch_client_factory";
-import { createPullRequestLifecycleClient } from "./github_pull_request_client_factory";
+import { createPullRequestChangesClient, createPullRequestLifecycleClient } from "./github_pull_request_client_factory";
 import { createReleaseClient } from "./github_release_client_factory";
 import { createInitialSetupCompositionRoot } from "./initial_setup_composition_root";
 import { createIssueContentCompositionRoot } from "./issue_content_composition_root";
@@ -190,7 +193,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
   const authenticatedUser = createAuthenticatedUserCompositionRoot();
   const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
-    bindPullRequestDescription(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+    bindPullRequestDescription(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding, new PullRequestChangesRepository(createPullRequestChangesClient())),
     bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
     bindOrganizationMembers(createOrganizationMembersCompositionRoot(), binding),
     createFindingsQueryPort(),
@@ -234,6 +237,8 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
     createIssueUseCaseCompositionRoot(binding),
+    rememberBranchPorts(binding, bugbot.scm.context),
+    bugbot.scm.context,
   );
 }
 
@@ -246,7 +251,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
   const authenticatedUser = createAuthenticatedUserCompositionRoot();
   const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
-    bindPullRequestDescription(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+    bindPullRequestDescription(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding, new PullRequestChangesRepository(createPullRequestChangesClient())),
     bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
     bindOrganizationMembers(createOrganizationMembersCompositionRoot(), binding),
     createFindingsQueryPort(),
@@ -289,6 +294,8 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
+    rememberBranchPorts(binding, bugbot.scm.context),
+    bugbot.scm.context,
   );
 }
 
@@ -358,5 +365,17 @@ function bugbotBinding(execution: {
     owner: execution.owner,
     repository: execution.repo,
     token: execution.tokens.token,
+  };
+}
+
+function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBranchQueryPorts['pullRequests']): RememberBranchQueryPorts {
+  const repository = new LinkedBranchReadinessRepository(createGraphqlTransportClient());
+  return {
+    pullRequests,
+    linkedBranches: {
+      getLinkedBranch: (issueNumber, branchName) => repository.getLinkedBranch(
+        binding.owner, binding.repository, issueNumber, branchName, binding.token,
+      ),
+    },
   };
 }

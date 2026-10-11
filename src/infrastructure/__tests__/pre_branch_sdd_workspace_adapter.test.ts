@@ -37,7 +37,7 @@ function fixture() {
   fs.mkdirSync(path.join(repo, 'docs'));
   fs.writeFileSync(path.join(repo, 'specs/README.md'), '# Specification standard\n');
   fs.writeFileSync(path.join(repo, 'specs/_template.md'), '# Template\n');
-  fs.writeFileSync(path.join(repo, 'specs/payments.md'), '# Existing payment contract\n');
+  fs.writeFileSync(path.join(repo, 'specs/payments.md'), draft().replace('# Payment behavior', '# Existing payment contract'));
   fs.writeFileSync(path.join(repo, 'specs/CATALOG.md'), '# Catalog\n');
   fs.writeFileSync(path.join(repo, 'src/index.ts'), 'export const value = 1;\n');
   fs.writeFileSync(path.join(repo, 'src/index.test.ts'), 'export const test = true;\n');
@@ -88,6 +88,8 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
     const prepared = await workspace.validateDraft(snapshot, plan, draft());
+    expect(prepared.markdown.startsWith(git(repo, 'show', `${snapshot.baseSha}:${plan.path}`))).toBe(true);
+    expect(prepared.markdown).toContain('## Payment behavior');
     expect(prepared.changedPaths).toEqual(['specs/payments.md']);
     expect(git(repo, 'branch', '--list', 'feature/42-change')).toBe('');
     git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
@@ -98,6 +100,52 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(await workspace.recoverPublished('feature/42-change', { ...prepared, markdown: `${prepared.markdown}\nregenerated draft` })).toBe(commitSha);
     expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', commitSha)).toBe(plan.path);
     expect(git(repo, 'rev-parse', `${commitSha}^`)).toBe(snapshot.baseSha);
+  });
+
+  it('preserves canonical owner bytes when the scratch checkout converts line endings', async () => {
+    git(repo, 'config', 'core.autocrlf', 'true');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const owner = git(repo, 'show', `${snapshot.baseSha}:${plan.path}`);
+    const prepared = await workspace.validateDraft(snapshot, plan, draft());
+    expect(prepared.markdown.startsWith(owner)).toBe(true);
+    expect(prepared.markdown).not.toContain('\r');
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const sha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, plan.path)).toBe(true);
+  });
+
+  it('publishes the validated SDD without running or changing inherited contributor hooks', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const prepared = await workspace.validateDraft(snapshot, plan, draft());
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const hooks = git(repo, 'config', 'core.hooksPath');
+    const hook = path.join(hooks, 'pre-commit');
+    fs.writeFileSync(hook, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+
+    const commitSha = await workspace.publish('feature/42-change', prepared);
+
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, commitSha, plan.path)).toBe(true);
+    expect(git(repo, 'config', 'core.hooksPath')).toBe(hooks);
+    expect(fs.readFileSync(hook, 'utf8')).toBe('#!/bin/sh\nexit 1\n');
+  });
+
+  it('retains the complete previous owner when an agent drafts only a narrower feature contract', async () => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const previous = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    const narrower = draft().replace('# Payment behavior', '# Read-only status').replace('20 distinct cases', '4 distinct cases');
+    const prepared = await workspace.validateDraft(snapshot, plan, narrower);
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+
+    const commitSha = await workspace.publish('feature/42-change', prepared);
+    const published = git(repo, 'show', `${commitSha}:${plan.path}`);
+
+    expect(published.startsWith(previous.trimEnd())).toBe(true);
+    expect(published).toContain('20 distinct cases');
+    expect(published).toContain('4 distinct cases');
+    expect(published).toContain('## Read-only status');
   });
 
   it('retains an existing branch with unrelated commits and blocks an SDD first-commit rewrite', async () => {

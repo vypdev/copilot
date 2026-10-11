@@ -547,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **72 distinct cases** are a floor derived from eligibility,
+The following **80 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -563,7 +563,9 @@ ownership/validation.
 | Pending-branch recovery | 6 | Retained base, intervening commits, managed metadata, pending card, replay, post-push recovery |
 | Automation hook isolation | 1 | Validated SDD publication ignores failing checkout hooks; configuration preserved |
 | Owner preservation and publication replay | 5 | Original contract and fenced examples, appendix bound, combined bound, real Git publication of narrower output, retry after the third clarification round |
-| **Total** | **72** | No case counted twice |
+| Canonical owner line endings | 1 | CRLF scratch checkout preserves the exact committed owner prefix and verified publication |
+| Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
+| **Total** | **80** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -743,7 +745,7 @@ Eligibility is derived from existing issue classification and pre-branch gate po
 
 ### 14. Testing strategy and numeric budget
 
-The extension has a minimum budget of **30 distinct cases**, comprising the reviewed companion proposal's 28 cases and two additional revision cases below. This budget is separate from the existing owning gate's 72-case minimum, which remains intact.
+The extension has a minimum budget of **30 distinct cases**, comprising the reviewed companion proposal's 28 cases and two additional revision cases below. This budget is separate from the existing owning gate's 80-case minimum, which remains intact.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -781,3 +783,6 @@ Update the command documentation with the appended readiness section and its sta
 10. Given any readiness state, when status runs, then repository, target identity, event, branch, lifecycle, waiting-for, PR description policy, issue labels, PR labels, and finding-state counts remain in their existing order and unchanged; only the compact readiness section is appended.
 11. Given English or Spanish locale resolution, when any readiness state renders, then every message is available in the complete catalog, including “Specification revision pending” / “Revisión de la especificación pendiente” and “First verified SDD commit” / “Primer commit del SDD verificado”; unsupported custom locale uses complete English fallback.
 12. Given repeated status requests or any evidence state, when the command completes, then it performs no writes, creates no duplicate timeline cards, and does not alter lifecycle, labels, branches, commits, or SDD content.
+When GitHub opens a PR for an issue-linked branch, it removes the direct branch connection and retains the native issue-to-PR connection. Readiness MUST preserve this evidence only for an open PR associated with the exact issue, from the same repository, whose exact head name and full commit SHA match the current remote ref. The bounded query reads at most 100 direct linked branches and 100 native associated PRs; no repository-wide search, branch-name inference, PR-body parsing or configurable expansion is permitted. A closed PR, fork, stale head or missing remote ref never proves readiness. Live evidence: issue #453 and PR #460 on 2026-10-10. Primary source: [GitHub branch-to-issue behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue).
+
+Automated SDD extension reads the existing owner from the selected immutable Git commit after checking the scratch file boundary. Checkout line-ending conversion cannot change the retained contract or introduce mixed line endings. A real Git fixture with core.autocrlf=true exercises validation, publication, and first-commit verification.

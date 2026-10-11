@@ -8,11 +8,11 @@ const DEFAULT_ROOT = path.resolve(__dirname, '..');
 const LEDGER_PATH = 'src/architecture/github_communication_test_budget.json';
 const EXPECTED_BUDGETS = Object.freeze({
   'semantic-github-publication': Object.freeze({
-    requiredCases: 128,
+    requiredCases: 135,
     spec: 'specs/semantic-github-publication-and-notification.md',
   }),
   'repository-locale-localization': Object.freeze({
-    requiredCases: 138,
+    requiredCases: 146,
     spec: 'specs/repository-locale-and-localization.md',
   }),
 });

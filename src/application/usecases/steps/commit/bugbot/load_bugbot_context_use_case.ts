@@ -136,6 +136,7 @@ export async function loadBugbotContext(
     prContext?.prFiles
       .map((file) => file.filename)
       .filter((file) => !fileMatchesIgnorePatterns(file, request.ignorePatterns)) ?? [],
+    canonicalPullRequest?.headSha,
   );
   const ruleSet = buildBugbotReviewRuleSet(request.organizationRules, repositoryRules);
   const coverage = summarizeBugbotCoverage([

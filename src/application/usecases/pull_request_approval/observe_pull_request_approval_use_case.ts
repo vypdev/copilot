@@ -20,6 +20,13 @@ export class ObservePullRequestApprovalUseCase {
         let rawPolicy: string | undefined;
         try {
             rawPolicy = await this.port.readPolicy(target);
+        } catch {
+            return {
+                decision: { status: 'blocked', code: 'policy-unavailable', detail: 'The installed PR approval policy could not be read from GitHub. Verify the runtime PAT can read Actions Variables, then rerun the observer. Existing PRs and reviews are unchanged.' },
+                publication: 'not-applicable',
+            };
+        }
+        try {
             policy = parsePullRequestApprovalPolicy(rawPolicy);
         } catch {
             return {

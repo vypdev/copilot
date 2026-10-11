@@ -458,13 +458,13 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     For the default installation, set these permissions for the repository:
 
     - **Actions**: Read-only for the previous-run queue check when any runtime route is enabled; read and write for release/hotfix dispatch
-    - **Administration**: Read-only when release/hotfix orchestration or guarded PR approval is enabled, so runtime can inspect classic branch protection alongside effective rulesets.
-    - **Checks**: Read-only when guarded PR approval is enabled, to verify current-head check runs and their producer App IDs. For ordinary pull-request automation, Checks is not required on the PAT: the supplied workflow grants job-local `checks: write` to its short-lived `GITHUB_TOKEN` for its own Check Run.
+    - **Administration**: Read-only when release/hotfix orchestration or PR approval assessment (`recommend` or `guarded`) is enabled, so runtime can inspect classic branch protection alongside effective rulesets.
+    - **Checks**: Read-only when PR approval assessment (`recommend` or `guarded`) is enabled, to verify current-head check runs and their producer App IDs. For ordinary pull-request automation, Checks is not required on the PAT: the supplied workflow grants job-local `checks: write` to its short-lived `GITHUB_TOKEN` for its own Check Run.
     - **Contents**: Read for enabled runtime routes; read and write for managed issue branches, file-editing comment routes, or release/hotfix operations
     - **Issues**: Read and write for issue automation, issue comments, commit-driven issue progress, inactive issue closure, or release/hotfix lifecycle
     - **Metadata**: Read-only
-    - **Pull requests**: Read and write for PR automation/comments, commit-driven Bugbot review, issue-comment autofix, guarded approval, or release/hotfix promotion
-    - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
+    - **Pull requests**: Read and write for PR automation/comments, commit-driven Bugbot review, issue-comment autofix, PR approval assessment cards (`recommend` or `guarded`), or release/hotfix promotion; native approval remains limited to `guarded` mode
+    - **Variables**: Read-only when PR approval assessment is enabled in `recommend` or `guarded` mode, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
 
     Workflow installation and Secret/Variable administration belong to the separate setup PAT. The runtime matrix does not request Administration write, Secrets, Variables write, Webhooks, or Workflows. Some disposable audit operations need extra prerequisites: opening a draft PR needs a temporary changed branch (Contents write), the setup PAT needs Workflows write to prepare an Actions override, deleting a temporary Issue needs repository administration/organization enablement, and creating or deleting an organization Project may require a stronger organization role than updating an existing item. A runtime grant alone cannot satisfy these prerequisites. Inspect the failed phase; setup blocks rather than treating an incomplete transaction as verified or silently adding broad permissions.
 

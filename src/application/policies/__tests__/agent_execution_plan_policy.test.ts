@@ -64,6 +64,19 @@ describe('provider execution plan policy', () => {
         })).toThrow('must require every property');
     });
 
+    it.each(['findings', 'fixer'] as const)('gives Codex %s only the system environment needed for sandbox startup', capability => {
+        const policy = build('codex', capability);
+        expect(policy.argv).toContain('shell_environment_policy.inherit="core"');
+        expect(policy.argv).toContain('shell_environment_policy.ignore_default_excludes=false');
+        const inclusion = policy.argv.find(value => value.startsWith('shell_environment_policy.include_only='));
+        expect(JSON.parse(inclusion!.split('=')[1])).toEqual([
+            'PATH', 'SystemRoot', 'WINDIR', 'PATHEXT', 'TMPDIR', 'TEMP', 'TMP', 'LANG', 'LC_ALL',
+        ]);
+        expect(inclusion).not.toMatch(/TOKEN|KEY|SECRET|HOME|USERPROFILE|GIT_|SSH_|PROXY|\*/);
+        expect(policy.argv).toContain('sandbox_workspace_write.network_access=false');
+        expect(policy.argv).toContain('approval_policy="never"');
+    });
+
     it('builds OpenCode default-deny permissions with fixer-only edit authority', () => {
         const readonly = build('opencode', 'reviewer');
         const fixer = build('opencode', 'fixer');

@@ -80,6 +80,7 @@ describe("PullRequestLifecycleRepository", () => {
         )).resolves.toEqual({
             number: 12,
             state: 'open',
+            draft: false,
             baseRepository: { owner: 'owner', name: 'repo', id: 7 },
             headRepositoryOwner: 'fork-owner',
             headRef: 'feature/12',
@@ -97,6 +98,36 @@ describe("PullRequestLifecycleRepository", () => {
             code: 'provider.unavailable',
             message: 'Unable to verify pull request #12.',
         });
+    });
+
+    it('retains the provider draft state on the canonical identity', async () => {
+        mockGet.mockResolvedValue({ data: { ...pullRequestIdentity(12), draft: true } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+        await expect(repository.getBugbotPullRequestIdentity('owner', 'repo', 12, 'token'))
+            .resolves.toEqual(expect.objectContaining({ draft: true }));
+    });
+
+    it('retains the exact head repository name for authorized write-target verification', async () => {
+        const identity = pullRequestIdentity(12);
+        mockGet.mockResolvedValue({ data: { ...identity, head: { ...identity.head, repo: { ...identity.head.repo, name: '  fork-repo  ' } } } });
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .getBugbotPullRequestIdentity('owner', 'repo', 12, 'token'))
+            .resolves.toEqual(expect.objectContaining({ headRepositoryName: 'fork-repo' }));
+    });
+
+    it('does not infer an absent head repository name from the base repository', async () => {
+        const identity = pullRequestIdentity(12);
+        mockGet.mockResolvedValue({ data: { ...identity, head: { ...identity.head, repo: { ...identity.head.repo, name: '  ' } } } });
+        const result = await new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .getBugbotPullRequestIdentity('owner', 'repo', 12, 'token');
+        expect(result).not.toHaveProperty('headRepositoryName');
+    });
+
+    it.each([undefined, null, 'true'])('rejects an absent or malformed provider draft state: %s', async draft => {
+        mockGet.mockResolvedValue({ data: { ...pullRequestIdentity(12), draft } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+        await expect(repository.getBugbotPullRequestIdentity('owner', 'repo', 12, 'token'))
+            .rejects.toMatchObject({ code: 'provider.unavailable' });
     });
 
     it('maps Bugbot identity and exact-head failures to sanitized provider errors', async () => {
@@ -189,6 +220,7 @@ function pullRequestIdentity(number: number) {
     return {
         number,
         state: 'open',
+        draft: false,
         head: {
             ref: 'feature/12',
             sha: 'a'.repeat(40),

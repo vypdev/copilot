@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-09-21
+- Last updated: 2026-10-11
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-09-21 on `develop`
+- Last verified: 2026-10-11 on `master`
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -56,6 +56,9 @@ comments can also disagree after partial mutations.
    the separate reconciliation contract.
 8. Authorized autofix resolves a target branch, applies guarded edits, verifies,
    commits/pushes, and reruns independent review while findings remain open until proved.
+   If that post-push review is superseded, orchestration reloads the same canonical
+   PR once and retains only the final review result. It never repeats the edit,
+   verification, commit or push, and every review retains its head guards.
 
 ### 2.3 Evidence and contract classification
 
@@ -127,7 +130,39 @@ not verified; it is not clean.
 | Fix | model edits/pushes | guarded edit + trusted verify/git | least authority |
 | Resolution | fixer claims success | independent provider re-read/review | no false clean |
 
-No behavior change is proposed.
+Learned rules use the same authoritative branch boundary as implementation:
+`/copilot remember <rule>` checks out the current PR head or issue branch before
+reading/writing rules, then verifies and commits only `.copilot/BUGBOT.learned.md`
+to that exact ref. A branchless request fails before touching the workspace; a
+duplicate rule succeeds without verification, commit or push. Ordinary PR
+comments need not contain a head ref: one exact-number provider read validates
+an open current PR, matching base and head repositories, optional event hints,
+and full head SHA before checkout. Fork or unknown head repository identity,
+provider failure and closed/stale PRs fail before storage. Issue conversations
+verify their persisted branch against the bounded native linked-branch port
+(first 100 linked branches or closing PRs); no broad open-PR scan guesses a ref.
+
+The command MUST publish one correlated, localized confirmation after successful
+verification and push. A verified duplicate MUST explicitly say that no change
+or additional commit was needed. Empty, unknown or failed storage outcomes MUST
+NOT be interpreted as duplicates; failed verification MUST NOT announce a saved
+rule. These are typed application facts, never inferred from diagnostic steps.
+
+`/copilot fix` and `/copilot dismiss` accept plain IDs and JSON double-quoted IDs containing
+spaces. Quoted operands retain internal spaces, Unicode and escaped backslashes.
+Malformed, empty or multiline operands fail before finding mutation. The fixed
+2,000-character and 20-argument limits remain; other command grammars are unchanged. Explicit `fix` operands are exact IDs or
+the reserved `all` operand, so they bypass language adaptation and deterministic
+selection cannot widen to another finding or a generic implementation request.
+
+A successful dismissal MUST publish its verified count; zero matching findings
+MUST receive an explicit no-op reply. Authorization or unavailable capability
+MUST say the command was not applied. A failed mutation MUST NOT receive a
+success confirmation. Reply identity, locale and replay use the shared semantic
+publication boundary; no new configuration or marker schema is introduced.
+
+Post-autofix recovery adds one bounded read-only retry for superseded evidence;
+the existing mutation, authorization and freshness contracts remain in force.
 
 ## 6. Functional behavior and state model
 
@@ -142,7 +177,10 @@ No behavior change is proposed.
 
 ### 6.2 Alternative paths
 
-- Draft PRs skip unless `bugbot-review-drafts` is enabled.
+- Draft PRs skip unless `bugbot-review-drafts` is enabled. The canonical
+  provider identity supplies the current draft state even for comment events
+  and delayed PR events; skipped reviews perform no detailed context/model read
+  or finding mutation. The companion context SDD owns six draft-state regressions.
 - Dry run returns proposed state after freshness checks but mutates nothing.
 - Overflow remains summarized and counts in aggregate state.
 - Unaddressable lines become explicit file-level findings, never guessed anchors.
@@ -154,6 +192,11 @@ No behavior change is proposed.
   validation failure may be retried twice for that same partition only; a
   missing/invalid partition after this fixed bound aborts the whole aggregate
   before mutation. A plan over 64 partitions does not start.
+- A superseded independent post-autofix review permits exactly one fresh
+  read-only review attempt (at most two complete review attempts). Failed,
+  unexecuted, partial or malformed evidence does not activate that retry.
+  A second superseded outcome remains non-clean and requires `/copilot recheck`;
+  it does not start an unbounded loop or repeat any file mutation.
 
 ### 6.3 Finding state model
 
@@ -189,6 +232,9 @@ lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 ch
 24,000 characters, 1,000 diff files, 12,000-character fragments, 64,000
 characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
+The one-retry post-autofix bound is fixed and adds no user setting. Only the
+final attempt enters the returned canonical review evidence; the discarded
+superseded attempt remains observable in content-free telemetry and run logs.
 
 ## 8. Clean Architecture design
 
@@ -247,6 +293,7 @@ discussion, paths, Markdown, mentions, markers, and URLs are sanitized.
 | canonical PR ambiguous/stale | no analysis or mutation | target and bounded candidate fact | new event | close obsolete PR/retry current head | none |
 | autofix verification fail | no commit | findings remain open | yes | repair code/tests | abort workspace |
 | push race | no stale push | remote heads/open findings | yes | rerun | abort workspace |
+| post-autofix review superseded | pushed fix retained; old status is not treated as current | pushed commit and open findings | one fresh read-only attempt | `/copilot recheck` if still superseded | discard stale review result; no repeated write |
 
 ## 11. Security, permissions, and privacy
 
@@ -289,13 +336,38 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Finding/config/identity policy | 36 | schema, fingerprint, rank, limits |
+| Finding/config/identity policy | 62 | schema, fingerprint, rank, limits; 26 exact quoted-identifier, boundary and malformed-input cases across fix and dismissal |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
-| Use cases/autofix | 28 | context, publish, verify, commit, re-review |
-| Provider/workflow contracts | 22 | diffs, reviews, threads, checks, ranges |
+| Use cases/autofix | 61 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case, six receipt-outcome cases and two exact single-finding selection cases |
+| Provider/workflow contracts | 36 | diffs, reviews, threads, checks, ranges; exact and absent head repository names |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
 | Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **156** | no double counting |
+| **Total** | **229** | no double counting |
+
+Twelve committed-rule adapter cases cover precedence, stale-workspace isolation,
+absent-file isolation, missing objects, three malformed revisions, inherited Git
+selectors, symlinks, oversized blobs, oversized paths, and count/character batch
+bounds. The separate context SDD owns one canonical-head forwarding case, with
+no double counting. PR #460 supplied the live evidence: a native remember saved
+a branch rule, while ordinary comment reviews reported `rulesLoaded=0` until
+revision-pinned reads were introduced. Acceptance: after remember, a comment
+review must report the learned source for the current verified head without
+changing the checkout or falling back to another revision.
+
+For a canonical pull-request review, repository, path-specific, and learned rules
+are read from the same provider-verified head SHA as the diff. This includes
+reviews requested from ordinary PR comments whose workflow checkout is the
+default branch. Rule reads use local Git objects without changing the checkout,
+index, refs, or files; they do not fall back to rules from another revision.
+The checkout must contain that commit. The supplied workflows fetch complete
+history; for custom or local runners, fetch the verified commit before retrying.
+Git rule reads have fixed limits of 64 paths and 12,000 argument characters per
+batch, 2 MiB output and 30 seconds per command. Missing objects, invalid identities,
+oversized sources, and command failures stop the review before publication.
+Only regular file blobs are read, so committed file or directory symlinks are
+never followed. Issue-only contexts without a canonical PR retain workspace rule
+reads. These source limits are not configurable and do not change the prompt
+limits of 30,000 characters per rule and 100,000 combined characters.
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
 coverage and security/identity policy 100% for enumerated branches. Fakes replace
@@ -329,6 +401,20 @@ screen reader, and controlled live model samples.
 12. Fixed cap reach is partial and omitted findings are not resolution-eligible.
 13. All canonical diff partitions attest one SHA and aggregate before a single
     publication; one failed partition produces no finding-state mutation.
+14. A superseded post-autofix review reloads the canonical PR once without
+    repeating the fixer or commit path. Only its final evidence reaches the
+    aggregate; failed/partial evidence and a second superseded result remain
+    truthful and never produce an assumed clean state.
+
+15. An authorized remember command selects the PR head even when the comment
+    event has no commit branch, or selects the linked issue branch. Checkout
+    precedes rule storage; failed checkout, unrelated changed paths or failed
+    verification prevents publication. Repeating the same rule creates no commit.
+    Missing event head fields are recovered only through the exact canonical PR
+    or verified native issue link; missing/foreign/stale identity prevents writes.
+16. Dismissing `"docs/file.mdx:28:message with spaces"` targets that one exact
+    ID. Mixed operands remain separate; malformed quotes, empty/multiline IDs
+    and the 21st argument produce an invalid-command result without mutation.
 
 ## 17. Requirements traceability
 
@@ -339,6 +425,8 @@ screen reader, and controlled live model samples.
 | stable identity | finding identity domain | identity tests | publication |
 | safe publication | publish/reconciliation use cases | publication/reconciliation tests | publication |
 | guarded autofix | autofix/workspace/git use cases | autofix/security tests | autofix |
+| versioned learned rule | explicit command/workspace/git use cases | 22 command-level branch, canonical identity, replay and failure cases | configuration/how it works |
+| lossless finding operands | command domain + explicit routing | 26 parser cases + exact-ID dismissal and fix selection assertions; locale companion covers adaptation bypass | comment commands |
 | current truth | reconciliation spec/policies | projection tests | detection/quality |
 
 ## 18. Maintenance sequence
@@ -351,7 +439,7 @@ screen reader, and controlled live model samples.
 
 ## 19. Definition of Done
 
-- [ ] The 156-case budget, coverage, quality eval, and architecture gates pass.
+- [ ] The 217-case budget, coverage, quality eval, and architecture gates pass.
 - [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.

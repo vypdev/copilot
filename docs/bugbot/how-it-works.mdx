@@ -165,7 +165,22 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
 
 6. **Review:** If the bot is mentioned and intent detection classifies the request as a review, the action runs the read-only Bugbot detection flow. It never edits files or commits.
 
-7. **Remember:** `/copilot remember <rule>` is an explicit authorized mutation. It appends a normalized, deduplicated rule to `.copilot/BUGBOT.learned.md`, then commits and pushes through the same guarded workflow. It never changes model memory outside the repository.
+For a canonical pull-request review, repository, path-specific, and learned rules
+are read from the same provider-verified head SHA as the diff. This includes
+reviews requested from ordinary PR comments whose workflow checkout is the
+default branch. Rule reads use local Git objects without changing the checkout,
+index, refs, or files; they do not fall back to rules from another revision.
+The checkout must contain that commit. The supplied workflows fetch complete
+history; for custom or local runners, fetch the verified commit before retrying.
+Git rule reads have fixed limits of 64 paths and 12,000 argument characters per
+batch, 2 MiB output and 30 seconds per command. Missing objects, invalid identities,
+oversized sources, and command failures stop the review before publication.
+Only regular file blobs are read, so committed file or directory symlinks are
+never followed. Issue-only contexts without a canonical PR retain workspace rule
+reads. These source limits are not configurable and do not change the prompt
+limits of 30,000 characters per rule and 100,000 combined characters.
+
+7. **Remember:** `/copilot remember <rule>` is an explicit authorized mutation. It checks out the PR head or linked issue branch before reading or writing rules; a branchless request is rejected. It appends a normalized, deduplicated rule to `.copilot/BUGBOT.learned.md`, then commits and pushes through the same guarded workflow. Repeating a rule creates no additional commit. Ordinary PR comments use the verified current same-repository PR head even when the event omits it; issue comments require a verified native branch link. Missing identity, closed PRs and forks are rejected before storage. It never changes model memory outside the repository.
 
 8. **Think (when no file-modifying action ran):** If the comment was not a fix/do/review request or the user was not allowed, the action runs **Think** (analysis role) and posts an **answer** as a comment (e.g. explanation or suggestion), without editing files.
 

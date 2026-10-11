@@ -26,12 +26,17 @@ export async function resolveCommentAutomationDecision(
   const parsedCommand = parseCopilotCommand(param.userComment);
   const explicitMutationCommand = parsedCommand.kind === 'command'
     && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
-  const route = resolveCommentAutomationRoute(
+  let route = resolveCommentAutomationRoute(
     intentPayload,
     await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor),
     containsBotMention(param.userComment, param.trustedBotLogin),
     explicitMutationCommand,
   );
+  if (param.status.target === 'issue' && !param.status.branch
+    && (route === 'do-user-request' || route === 'autofix')) {
+    logInfo('The issue has no authoritative working branch; retaining the read-only answer route.');
+    route = 'think';
+  }
 
   logIntent(intentPayload);
   return { intentResults, intentPayload, route };

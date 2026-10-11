@@ -756,6 +756,26 @@ The same fingerprint never creates that notification twice.
 Completion updates the existing dashboard. It does not create a celebratory
 comment.
 
+#### Explicit state-command confirmations
+
+`remember` and `dismiss` MUST emit at most one correlated localized reply from
+validated application facts. The explicit-command producer owns a typed receipt;
+model results, arbitrary producer IDs, diagnostic steps and background events
+MUST NOT manufacture this reply. Successful saved rules require completed
+verification and push; verified duplicates and zero-match dismissals have an
+explicit no-op response. Malformed refs/counts and failed results are rejected.
+The existing reply identity/digest/reconciliation handles replay. No new input,
+configuration, migration or marker schema is required.
+
+Representative English result: “The rule already exists in
+`.copilot/BUGBOT.learned.md` on `docs/work`. No change or additional commit was
+needed.” Spanish zero-match result: “No se encontraron hallazgos coincidentes.
+No se descartó ninguno.” Permission/capability refusals say the command was not
+applied; failed verification/mutation uses the existing semantic error boundary.
+User documentation is `docs/issues/comment-commands.mdx`. Pure receipt tests own
+presentation/trust/replay coverage; the Bugbot SDD separately owns six routing
+outcome cases, with no cross-budget double counting.
+
 #### Bugbot and direct reply
 
 ```markdown
@@ -906,6 +926,17 @@ generic output is left intact.
 - **Job Summary:** route, target, semantic outcomes, publication decisions and
   reasons, card identity/comment ID, source version, prior/new digest,
   create/update/skip/cleanup result, truncation, and semantic application errors.
+- **Inactivity scan:** the Job Summary MUST project only validated, nonnegative
+  safe-integer `scanned`, `closed`, and `skipped` counts from exactly one
+  `CloseInactiveIssuesUseCase` result. It MUST show completed closes even if the
+  terminal explanation failed, and retain zero counts in a successful no-op.
+  Missing, malformed, inconsistent or repeated scan evidence is `unavailable`,
+  never invented zero. Other result payloads cannot produce the scan row. This
+  row follows repository locale, including atomic fallback, and adds no
+  conversation mutation or configuration input.
+  A pure capability projection owns internal result identity and validation;
+  the generic summary consumes its absent/valid/invalid data without knowing
+  use-case IDs or step prose. This new projection requires 100% coverage.
 - **Logs:** full masked operational sequence, retry/rate-limit data, and debug
   detail. Logs remain machine-searchable English as specified by localization.
 - **Metrics:** count by intent, topic, target, create/update/skip reason,
@@ -1026,7 +1057,8 @@ Scheduled inactivity closure now emits exactly one terminal policy explanation
 after a successful native close. Its fixed structure contains only outcome,
 threshold reason, and reopen guidance; internal scan steps and provider details
 remain in the Job Summary and errors. The issue-locale catalog supplies complete
-plural messages for the run summary, while stable ownership markers and payload
+plural messages for scan steps, while the shared summary projects localized
+validated counts. Stable ownership markers and payload
 keys remain machine-readable. Revalidation, close, and comment-publication
 failures are classified separately so a partial publication failure cannot
 rewrite the already-completed domain outcome. Because a later scan cannot replay
@@ -1126,13 +1158,17 @@ Job-Summary-only; debug-in-comment and generic step dumps remain disabled.
 
 ## 14. Testing strategy and numeric budget
 
-The implementation requires at least **128 distinct new or materially rewritten
+The implementation requires at least **135 distinct new or materially rewritten
 test cases**. This budget covers semantic publication only; locale resolution,
 translation correctness, and multilingual matrices are counted in the companion
 SDD and MUST NOT be double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 160 qualifying
+`src/architecture/github_communication_test_budget.json` records 167 qualifying
 semantic cases from the implementation diff against the specification baseline.
+The 2026-10-11 inactivity-summary correction adds four conservative semantic
+Jest declarations (23 runtime rows) for no-op/close/partial outcomes, malformed
+counts, unrelated payloads and repeated results. Its two locale/fallback rows
+are allocated only to the companion localization ledger.
 Its files are disjoint from the localization allocation and are enforced by
 `pnpm run validate:specifications`.
 
@@ -1142,9 +1178,9 @@ Its files are disjoint from the localization allocation and are enforced by
 | State/application/idempotency/races | 30 | create/update/unchanged, stale source, out-of-order revision, duplicate create healing, partial publication, per-feature coordination |
 | Adapters/provider contracts | 18 | ownership filtering, pagination, create/update/delete, review threads, rate-limit/error mapping, trusted URLs |
 | Workflows/setup/schema | 16 | issue/PR/push/single-action routes, completion omission, setup defaults, doctor warnings, marker/workflow contracts |
-| UI/UX/accessibility/sanitization | 26 | all primary states and topics, narrow Markdown, headings, links, truncation, hostile text, no retired chrome |
+| UI/UX/accessibility/sanitization | 33 | all primary states and topics, narrow Markdown, headings, links, truncation, hostile text, no retired chrome; three state-command receipt families (33 semantic rows) cover localized outcomes/replay, malformed or forged evidence and inert ref rendering |
 | Integration/security/cutover | 12 | end-to-end lifecycles, permissions, forged/removed markers, strict rejection, rollback, live fixture matrix |
-| **Total** | **128** | No double counting |
+| **Total** | **135** | No double counting |
 
 Required quality gates:
 
@@ -1236,7 +1272,7 @@ per-push commit comments are generated after rollout.
     exactly that bounded create/update/append occurs without a generic wrapper;
     existing authorization and sanitization contracts remain in force.
 18. Given the implementation change, then catalog, action/setup schemas,
-    generated bundles, documentation, architecture checks, 128-case budget, and
+    generated bundles, documentation, architecture checks, 135-case budget, and
     repository validations agree.
 19. Given one push creates both `push` and `pull_request:synchronize` runs, then
     neither workflow cancels the other, Commit retains progress without running
@@ -1250,6 +1286,13 @@ per-push commit comments are generated after rollout.
     transition comment before either create returns, then both provider creates
     succeed, both calls select the lowest ID after re-listing, and the durable
     conversation retains exactly one active bot-owned publication.
+
+22. Given a scheduled or manually dispatched inactivity run, then the Job
+    Summary reports `Scanned: 1 · Closed: 0 · Skipped: 1` for one recently
+    updated waiting issue, creates no conversation comment and leaves it open.
+    A close whose terminal comment failed retains `Closed: 1` with the existing
+    failure/recovery presentation. Absent, malformed, inconsistent or repeated
+    scan evidence shows `unavailable` without guessed counts or raw step prose.
 
 ## 17. Requirements traceability
 
@@ -1268,9 +1311,9 @@ per-push commit comments are generated after rollout.
 | §9.5 size limits | bounded renderer | boundary/truncation/security tests | operator details |
 | §10 partial/recovery | error presentation and publication-only retry | failure/partial/irreversible cases | error/troubleshooting pages |
 | §11 trust/ownership | marker parser, sanitizer, authorization | forged marker/mention/secret tests | security operations |
-| §12 evidence/metrics | Job Summary and telemetry ports | summary/metric assertions | quality observability |
+| §12 evidence/metrics | Job Summary and telemetry ports; strict inactivity-count projection | summary/metric assertions; no-op/close/partial/malformed/repeated scan and locale fallback tests | quality observability; issue auto-close guide |
 | §13 cutover | exact current markers and greenfield input removal | strict-marker, rollback, and schema-absence tests | architecture and configuration guides |
-| §14 quality budget | coverage scripts and disjoint communication test ledger | 160 allocated semantic cases plus CI coverage evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 167 allocated semantic cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1314,7 +1357,7 @@ per-push commit comments are generated after rollout.
       actionable UI.
 - [x] Architecture boundaries and direct-mutation inventory are automatically
       enforced.
-- [x] The 128-case numeric budget and changed-module coverage gates pass without
+- [x] The 135-case numeric budget and changed-module coverage gates pass without
       double counting localization tests.
 - [x] Action schema, runtime configuration, setup, CLI, docs, dependencies, and
       generated bundles contain no decorative-image configuration surface.
