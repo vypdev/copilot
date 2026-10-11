@@ -38259,8 +38259,11 @@ const github_action_input_1 = __nccwpck_require__(8824);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const github_action_locale_inputs_1 = __nccwpck_require__(58893);
 const pull_request_approval_presentation_policy_1 = __nccwpck_require__(79017);
+const logging_ports_1 = __nccwpck_require__(6152);
+const logger_adapter_1 = __nccwpck_require__(72762);
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 async function runPullRequestApprovalAction(token) {
+    (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {
@@ -64250,7 +64253,10 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         const diffEvidence = JSON.stringify(changes);
         if (diff.coverage.status !== 'complete'
             || changes.some(change => (change.additions > 0 || change.deletions > 0) && !change.patch)) {
-            throw new application_error_1.ApplicationError('workflow.stale', 'Complete PR diff evidence is unavailable. Existing body retained.');
+            const retained = 'Complete PR diff evidence is unavailable. Existing body retained. Retry when the required patches are available.';
+            if (request.trigger === 'automatic')
+                return skipped(taskId, retained);
+            throw new application_error_1.ApplicationError('workflow.stale', retained);
         }
         if (changes.length === 0)
             return skipped(taskId, 'The PR has no changed files to describe. Existing body retained.');
@@ -72402,6 +72408,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
+const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const approval_coverage_artifact_1 = __nccwpck_require__(96710);
@@ -72423,8 +72430,10 @@ class PullRequestApprovalRepository {
             return response.data.value;
         }
         catch (error) {
-            if (statusOf(error) !== 404)
+            if (statusOf(error) !== 404) {
+                reportPolicyReadFailure('repository-variable', error);
                 throw error;
+            }
         }
         // A repository Variable takes precedence over an accessible organization Variable.
         try {
@@ -72436,6 +72445,7 @@ class PullRequestApprovalRepository {
         catch (error) {
             if (statusOf(error) === 404)
                 return undefined;
+            reportPolicyReadFailure('organization-variable', error);
             throw error;
         }
     }
@@ -72444,6 +72454,7 @@ class PullRequestApprovalRepository {
             owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
         });
         const headSha = pull.head.sha;
+        const baseSha = await this.readCurrentBaseSha(target, pull.base.ref);
         const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(await this.readPolicy(target));
         let testedMergeSha;
         if (pull.mergeable === true && /^[a-f0-9]{40}$/iu.test(pull.merge_commit_sha ?? '')) {
@@ -72451,7 +72462,7 @@ class PullRequestApprovalRepository {
                 const merge = await this.octokit.rest.git.getCommit({
                     owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha,
                 });
-                if (merge.data.parents[0]?.sha === pull.base.sha && merge.data.parents[1]?.sha === headSha
+                if (merge.data.parents[0]?.sha === baseSha && merge.data.parents[1]?.sha === headSha
                     && merge.data.parents.length === 2)
                     testedMergeSha = pull.merge_commit_sha;
             }
@@ -72518,13 +72529,13 @@ class PullRequestApprovalRepository {
             submittedAt: review.submitted_at ?? '',
         }));
         const numericCoverage = policy.coverage.mode === 'numeric'
-            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, pull.base.sha, testedMergeSha, workflowRuns)
+            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns)
             : undefined;
         return {
             repositoryId: pull.base.repo?.id ?? 0,
             pullNumber: pull.number,
             headSha,
-            baseSha: pull.base.sha,
+            baseSha,
             ...(testedMergeSha ? { testedMergeSha } : {}),
             mergeCommitVerified: testedMergeSha !== undefined,
             baseRef: pull.base.ref,
@@ -72610,7 +72621,8 @@ class PullRequestApprovalRepository {
         const current = await this.octokit.rest.pulls.get({
             owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
         });
-        if (current.data.head.sha !== headSha || current.data.base.sha !== evidence.baseSha) {
+        if (current.data.head.sha !== headSha || current.data.base.ref !== evidence.baseRef
+            || await this.readCurrentBaseSha(target, evidence.baseRef) !== evidence.baseSha) {
             throw new Error('PR head or base changed before assessment publication.');
         }
         const user = await this.octokit.rest.users.getAuthenticated();
@@ -72659,10 +72671,27 @@ class PullRequestApprovalRepository {
             }
         }
     }
+    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
+    async readCurrentBaseSha(target, baseRef) {
+        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
+            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
+            throw new Error('The PR base ref is invalid.');
+        const { data } = await this.octokit.rest.git.getRef({
+            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
+        });
+        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
+            || !/^[a-f0-9]{40}$/u.test(data.object.sha))
+            throw new Error('The PR base ref cannot be verified.');
+        return data.object.sha;
+    }
     async effectiveRules(owner, repo, branch) {
         try {
             const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
-            const rules = Array.isArray(rulesResponse.data) ? rulesResponse.data : [];
+            if (!Array.isArray(rulesResponse.data) || rulesResponse.data.some((rule) => !record(rule)
+                || typeof record(rule)?.type !== 'string' || record(rule)?.type === '')) {
+                throw new Error('GitHub returned an invalid effective rules inventory.');
+            }
+            const rules = rulesResponse.data;
             let classic;
             try {
                 const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
@@ -72730,6 +72759,13 @@ function parseBugbotCard(body, headSha, pullNumber) {
         open: counts[0], reopened: counts[1], dismissed: counts[2],
         verificationRequired: counts[3], unknown: counts[4],
     };
+}
+/** Fixed metadata only: never interpolate error text, response bodies or credentials. */
+function reportPolicyReadFailure(scope, error) {
+    const status = statusOf(error);
+    const code = [400, 401, 403, 409, 422, 429, 500, 502, 503, 504].includes(status)
+        ? `http-${status}` : 'http-unavailable';
+    (0, logging_ports_1.logInfo)(`Approval policy read failed (${scope}, ${code}).`);
 }
 function statusOf(error) {
     return record(error)?.status;
@@ -79152,6 +79188,7 @@ exports.SDD_CATALOG_INDEX_PATH = exports.SDD_CATALOG_PATH = void 0;
 exports.refreshBranchSyncSddCatalog = refreshBranchSyncSddCatalog;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const logging_ports_1 = __nccwpck_require__(6152);
 exports.SDD_CATALOG_PATH = 'specs/catalog.json';
 exports.SDD_CATALOG_INDEX_PATH = 'specs/CATALOG.md';
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -79160,49 +79197,65 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const validator = __nccwpck_require__(29617);
 /** Refreshes one already-authorized generated file; it neither stages nor executes repository code. */
 function refreshBranchSyncSddCatalog(repositoryRoot) {
+    let phase = 'workspace-boundary';
     try {
         const root = (0, node_fs_1.realpathSync)(repositoryRoot);
         const specs = (0, node_path_1.join)(root, 'specs');
         if (!(0, node_fs_1.lstatSync)(specs).isDirectory() || (0, node_fs_1.lstatSync)(specs).isSymbolicLink())
-            return false;
+            return rejectCatalog(phase);
+        phase = 'catalog-file-boundary';
         const metadataPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_PATH);
         const indexPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_INDEX_PATH);
         for (const path of [metadataPath, indexPath]) {
             const stat = (0, node_fs_1.lstatSync)(path);
             if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_BYTES)
-                return false;
+                return rejectCatalog(phase);
         }
-        const catalog = JSON.parse((0, node_fs_1.readFileSync)(metadataPath, 'utf8'));
+        phase = 'metadata-json';
+        const metadata = (0, node_fs_1.readFileSync)(metadataPath, 'utf8');
+        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(metadata))
+            phase = 'metadata-conflict-markers';
+        const catalog = JSON.parse(metadata);
         // Reject links before the shared validator follows any evidence paths.
         const capabilities = catalog?.capabilities;
+        phase = 'metadata-shape';
         if (!Array.isArray(capabilities))
-            return false;
+            return rejectCatalog(phase);
         for (const capability of capabilities) {
             for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                phase = 'evidence-shape';
                 if (!Array.isArray(capability?.[field]))
-                    return false;
+                    return rejectCatalog(phase);
                 for (const entry of capability[field]) {
+                    phase = 'evidence-shape';
                     if (typeof entry !== 'string')
-                        return false;
+                        return rejectCatalog(phase);
+                    phase = 'evidence-path-boundary';
                     const file = (0, node_path_1.join)(root, entry);
                     const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
                     if ((0, node_path_1.isAbsolute)(entry) || !(0, node_fs_1.lstatSync)(file).isFile() || target === '..' || target.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(target))
-                        return false;
+                        return rejectCatalog(phase);
                 }
             }
         }
+        phase = 'catalog-contract';
         if (validator.validateCatalog(root, catalog).length)
-            return false;
+            return rejectCatalog(phase);
+        phase = 'index-output';
         const expected = validator.renderCatalog(catalog);
         if (Buffer.byteLength(expected, 'utf8') > MAX_BYTES)
-            return false;
+            return rejectCatalog(phase);
         if (validator.normalizeCheckoutLineEndings((0, node_fs_1.readFileSync)(indexPath, 'utf8')) !== expected)
             (0, node_fs_1.writeFileSync)(indexPath, expected, 'utf8');
         return true;
     }
     catch {
-        return false;
+        return rejectCatalog(phase);
     }
+}
+function rejectCatalog(phase) {
+    (0, logging_ports_1.logInfo)(`Branch synchronization SDD catalog rejected (${phase}).`);
+    return false;
 }
 
 

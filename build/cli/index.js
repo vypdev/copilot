@@ -65870,7 +65870,10 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         const diffEvidence = JSON.stringify(changes);
         if (diff.coverage.status !== 'complete'
             || changes.some(change => (change.additions > 0 || change.deletions > 0) && !change.patch)) {
-            throw new application_error_1.ApplicationError('workflow.stale', 'Complete PR diff evidence is unavailable. Existing body retained.');
+            const retained = 'Complete PR diff evidence is unavailable. Existing body retained. Retry when the required patches are available.';
+            if (request.trigger === 'automatic')
+                return skipped(taskId, retained);
+            throw new application_error_1.ApplicationError('workflow.stale', retained);
         }
         if (changes.length === 0)
             return skipped(taskId, 'The PR has no changed files to describe. Existing body retained.');
@@ -84576,6 +84579,7 @@ exports.SDD_CATALOG_INDEX_PATH = exports.SDD_CATALOG_PATH = void 0;
 exports.refreshBranchSyncSddCatalog = refreshBranchSyncSddCatalog;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const logging_ports_1 = __nccwpck_require__(6152);
 exports.SDD_CATALOG_PATH = 'specs/catalog.json';
 exports.SDD_CATALOG_INDEX_PATH = 'specs/CATALOG.md';
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -84584,49 +84588,65 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const validator = __nccwpck_require__(29617);
 /** Refreshes one already-authorized generated file; it neither stages nor executes repository code. */
 function refreshBranchSyncSddCatalog(repositoryRoot) {
+    let phase = 'workspace-boundary';
     try {
         const root = (0, node_fs_1.realpathSync)(repositoryRoot);
         const specs = (0, node_path_1.join)(root, 'specs');
         if (!(0, node_fs_1.lstatSync)(specs).isDirectory() || (0, node_fs_1.lstatSync)(specs).isSymbolicLink())
-            return false;
+            return rejectCatalog(phase);
+        phase = 'catalog-file-boundary';
         const metadataPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_PATH);
         const indexPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_INDEX_PATH);
         for (const path of [metadataPath, indexPath]) {
             const stat = (0, node_fs_1.lstatSync)(path);
             if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_BYTES)
-                return false;
+                return rejectCatalog(phase);
         }
-        const catalog = JSON.parse((0, node_fs_1.readFileSync)(metadataPath, 'utf8'));
+        phase = 'metadata-json';
+        const metadata = (0, node_fs_1.readFileSync)(metadataPath, 'utf8');
+        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(metadata))
+            phase = 'metadata-conflict-markers';
+        const catalog = JSON.parse(metadata);
         // Reject links before the shared validator follows any evidence paths.
         const capabilities = catalog?.capabilities;
+        phase = 'metadata-shape';
         if (!Array.isArray(capabilities))
-            return false;
+            return rejectCatalog(phase);
         for (const capability of capabilities) {
             for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                phase = 'evidence-shape';
                 if (!Array.isArray(capability?.[field]))
-                    return false;
+                    return rejectCatalog(phase);
                 for (const entry of capability[field]) {
+                    phase = 'evidence-shape';
                     if (typeof entry !== 'string')
-                        return false;
+                        return rejectCatalog(phase);
+                    phase = 'evidence-path-boundary';
                     const file = (0, node_path_1.join)(root, entry);
                     const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
                     if ((0, node_path_1.isAbsolute)(entry) || !(0, node_fs_1.lstatSync)(file).isFile() || target === '..' || target.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(target))
-                        return false;
+                        return rejectCatalog(phase);
                 }
             }
         }
+        phase = 'catalog-contract';
         if (validator.validateCatalog(root, catalog).length)
-            return false;
+            return rejectCatalog(phase);
+        phase = 'index-output';
         const expected = validator.renderCatalog(catalog);
         if (Buffer.byteLength(expected, 'utf8') > MAX_BYTES)
-            return false;
+            return rejectCatalog(phase);
         if (validator.normalizeCheckoutLineEndings((0, node_fs_1.readFileSync)(indexPath, 'utf8')) !== expected)
             (0, node_fs_1.writeFileSync)(indexPath, expected, 'utf8');
         return true;
     }
     catch {
-        return false;
+        return rejectCatalog(phase);
     }
+}
+function rejectCatalog(phase) {
+    (0, logging_ports_1.logInfo)(`Branch synchronization SDD catalog rejected (${phase}).`);
+    return false;
 }
 
 

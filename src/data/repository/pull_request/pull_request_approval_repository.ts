@@ -1,3 +1,4 @@
+import { logInfo } from '../../../application/ports/logging_ports';
 import * as github from '@actions/github';
 import type {
     ApprovalBugbotFact,
@@ -52,7 +53,10 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             });
             return response.data.value;
         } catch (error) {
-            if (statusOf(error) !== 404) throw error;
+            if (statusOf(error) !== 404) {
+                reportPolicyReadFailure('repository-variable', error);
+                throw error;
+            }
         }
         // A repository Variable takes precedence over an accessible organization Variable.
         try {
@@ -62,6 +66,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             return response.data.value;
         } catch (error) {
             if (statusOf(error) === 404) return undefined;
+            reportPolicyReadFailure('organization-variable', error);
             throw error;
         }
     }
@@ -71,6 +76,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
         });
         const headSha = pull.head.sha;
+        const baseSha = await this.readCurrentBaseSha(target, pull.base.ref);
         const policy = parsePullRequestApprovalPolicy(await this.readPolicy(target));
         let testedMergeSha: string | undefined;
         if (pull.mergeable === true && /^[a-f0-9]{40}$/iu.test(pull.merge_commit_sha ?? '')) {
@@ -78,7 +84,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
                 const merge = await this.octokit.rest.git.getCommit({
                     owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha!,
                 });
-                if (merge.data.parents[0]?.sha === pull.base.sha && merge.data.parents[1]?.sha === headSha
+                if (merge.data.parents[0]?.sha === baseSha && merge.data.parents[1]?.sha === headSha
                     && merge.data.parents.length === 2) testedMergeSha = pull.merge_commit_sha!;
             } catch { /* Missing or unreadable merge parentage is non-authorizing. */ }
         }
@@ -142,13 +148,13 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             submittedAt: review.submitted_at ?? '',
         }));
         const numericCoverage = policy.coverage.mode === 'numeric'
-            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, pull.base.sha, testedMergeSha, workflowRuns)
+            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns)
             : undefined;
         return {
             repositoryId: pull.base.repo?.id ?? 0,
             pullNumber: pull.number,
             headSha,
-            baseSha: pull.base.sha,
+            baseSha,
             ...(testedMergeSha ? { testedMergeSha } : {}),
             mergeCommitVerified: testedMergeSha !== undefined,
             baseRef: pull.base.ref,
@@ -238,7 +244,8 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         const current = await this.octokit.rest.pulls.get({
             owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
         });
-        if (current.data.head.sha !== headSha || current.data.base.sha !== evidence.baseSha) {
+        if (current.data.head.sha !== headSha || current.data.base.ref !== evidence.baseRef
+            || await this.readCurrentBaseSha(target, evidence.baseRef) !== evidence.baseSha) {
             throw new Error('PR head or base changed before assessment publication.');
         }
         const user = await this.octokit.rest.users.getAuthenticated();
@@ -283,12 +290,28 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         }
     }
 
+    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
+    private async readCurrentBaseSha(target: ApprovalObservationTarget, baseRef: string): Promise<string> {
+        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1_024
+            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef)) throw new Error('The PR base ref is invalid.');
+        const { data } = await this.octokit.rest.git.getRef({
+            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
+        });
+        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
+            || !/^[a-f0-9]{40}$/u.test(data.object.sha)) throw new Error('The PR base ref cannot be verified.');
+        return data.object.sha;
+    }
+
     private async effectiveRules(owner: string, repo: string, branch: string): Promise<{
         readable: boolean; dismissesStaleReviews: boolean; requiredChecks: string[];
     }> {
         try {
             const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
-            const rules = Array.isArray(rulesResponse.data) ? rulesResponse.data as Array<Record<string, unknown>> : [];
+            if (!Array.isArray(rulesResponse.data) || rulesResponse.data.some((rule: unknown) => !record(rule)
+                || typeof record(rule)?.type !== 'string' || record(rule)?.type === '')) {
+                throw new Error('GitHub returned an invalid effective rules inventory.');
+            }
+            const rules = rulesResponse.data as Array<Record<string, unknown>>;
             let classic: Record<string, unknown> | undefined;
             try {
                 const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
@@ -346,6 +369,14 @@ function parseBugbotCard(body: string, headSha: string, pullNumber: number): App
         open: counts[0], reopened: counts[1], dismissed: counts[2],
         verificationRequired: counts[3], unknown: counts[4],
     };
+}
+
+/** Fixed metadata only: never interpolate error text, response bodies or credentials. */
+function reportPolicyReadFailure(scope: 'repository-variable' | 'organization-variable', error: unknown): void {
+    const status = statusOf(error);
+    const code = [400, 401, 403, 409, 422, 429, 500, 502, 503, 504].includes(status as number)
+        ? `http-${status}` : 'http-unavailable';
+    logInfo(`Approval policy read failed (${scope}, ${code}).`);
 }
 
 function statusOf(error: unknown): number | undefined {
