@@ -11,6 +11,7 @@ jobs:
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
+      checks: write
       contents: read
     env:
       # Recycle Jest workers on Windows service runners during full verification.
@@ -106,3 +107,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

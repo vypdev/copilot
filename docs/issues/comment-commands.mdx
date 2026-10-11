@@ -97,9 +97,14 @@ The command still accepts at most 20 IDs and 2,000 characters.
 
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
-resolved. If the stored workflow result owns malformed finding-state evidence,
-the command says that evidence is invalid and directs you to the workflow
-result; it never substitutes zero or a clean state. In a PR conversation, setup reads that exact PR head to resolve its linked issue and working branch. An unlinked PR remains separate from an issue with the same number.
+resolved. In a PR conversation, it reads one trusted complete Bugbot status
+card for the current commit and checks that the head is still unchanged. If
+that evidence is missing, malformed, incomplete or stale, run `/copilot recheck`
+and retry status. It never substitutes cached counts or zero. Setup reads that
+exact PR to resolve its linked issue and working branch. An unlinked PR remains
+separate from an issue with the same number. Status and description queries
+preserve existing lifecycle and waiting labels when they make no lifecycle
+decision.
 
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to

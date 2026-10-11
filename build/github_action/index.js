@@ -42436,6 +42436,7 @@ exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
 const review_state_1 = __nccwpck_require__(79200);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
+const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 exports.BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 exports.BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
@@ -42518,6 +42519,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
         }),
         buildBugbotStatusMarker(projection),
         buildBugbotApprovalEvidenceMarker(projection),
+        (0, bugbot_status_count_marker_policy_1.buildBugbotStatusCountMarker)(projection),
         `## ${heading}`,
         '',
         `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,
@@ -42606,6 +42608,44 @@ function escapeRegExp(value) {
 }
 function presentationCatalog(value) {
     return typeof value === 'string' ? (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)(value) : value;
+}
+
+
+/***/ }),
+
+/***/ 8654:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_STATUS_COUNTS_PREFIX = void 0;
+exports.buildBugbotStatusCountMarker = buildBugbotStatusCountMarker;
+exports.readBugbotStatusCounts = readBugbotStatusCounts;
+const review_state_1 = __nccwpck_require__(79200);
+exports.BUGBOT_STATUS_COUNTS_PREFIX = 'copilot-bugbot-state-counts';
+/** Read-only status evidence; this marker never authorizes approval or mutation. */
+function buildBugbotStatusCountMarker(projection) {
+    const c = projection.counts;
+    return `<!-- ${exports.BUGBOT_STATUS_COUNTS_PREFIX} schema="1" pr="${projection.pullRequestNumber}" head="${projection.verifiedHeadSha}" digest="${projection.digest}" outcome="${projection.outcome}" coverage="${projection.coverage.status}" open="${c.open}" reopened="${c.reopened}" fixed="${c.fixed}" obsolete="${c.obsolete}" dismissed="${c.dismissed}" verification="${c['verification-required']}" unknown="${c.unknown}" -->`;
+}
+/** Requires one complete, closed-shape marker correlated with its canonical card. */
+function readBugbotStatusCounts(body, number, head) {
+    if ((body.match(/<!--\s*copilot-bugbot-state-counts\b/gu) ?? []).length !== 1)
+        return undefined;
+    const markers = body.match(/<!--\s*copilot-bugbot-state-counts\b[\s\S]{0,1000}?-->/gu) ?? [];
+    if (markers.length !== 1)
+        return undefined;
+    const match = /^<!-- copilot-bugbot-state-counts schema="1" pr="([1-9]\d{0,15})" head="([a-f0-9]{40}|[a-f0-9]{64})" digest="([a-f0-9]{8})" outcome="complete" coverage="complete" open="(\d{1,16})" reopened="(\d{1,16})" fixed="(\d{1,16})" obsolete="(\d{1,16})" dismissed="(\d{1,16})" verification="(\d{1,16})" unknown="(\d{1,16})" -->$/u.exec(markers[0]);
+    if (!match || Number(match[1]) !== number || match[2] !== head)
+        return undefined;
+    if (!body.includes(`<!-- copilot-bugbot-status schema="1" pr="${number}" verified_head="${head}" digest="${match[3]}" -->`))
+        return undefined;
+    const values = match.slice(4).map(Number);
+    if (values.some(value => !Number.isSafeInteger(value))
+        || !Number.isSafeInteger(values.reduce((sum, value) => sum + value, 0)))
+        return undefined;
+    return Object.freeze(Object.fromEntries(review_state_1.BUGBOT_FINDING_STATES.map((state, index) => [state, values[index]])));
 }
 
 
@@ -44614,22 +44654,10 @@ function resolveLifecycleWaitingState(input) {
     if (input.lifecycleState === 'changes-requested') {
         return { kind: 'set', state: 'awaiting-issue-author' };
     }
-    if (input.lifecycleState !== undefined || isHumanInteraction(input.eventName)) {
+    if (input.lifecycleState !== undefined) {
         return { kind: 'clear' };
     }
     return { kind: 'preserve' };
-}
-function isHumanInteraction(eventName) {
-    return [
-        'issues',
-        'issue_comment',
-        'pull_request',
-        'pull_request_review',
-        'pull_request_review_comment',
-        'check_suite',
-        'workflow_run',
-        'push',
-    ].includes(eventName);
 }
 
 
@@ -51324,12 +51352,10 @@ class SynchronizeAgentActivityUseCase {
             return Object.freeze({});
         }
         try {
-            // Route steps may have changed labels through their own ports. Read
-            // the latest server inventory before cleanup so removing the
-            // transient marker cannot overwrite those changes.
-            const currentLabels = active
-                ? target.labels
-                : await this.issueLabelsPort.getLabels(target.number);
+            // Runtime preparation and route work can outlive the initial
+            // snapshot. Read both boundaries so the transient marker cannot
+            // restore an older lifecycle, waiting state or business label.
+            const currentLabels = await this.issueLabelsPort.getLabels(target.number);
             const configuredLabel = context.activityLabel;
             const nextLabels = (0, agent_activity_label_policy_1.replaceAgentActivityLabel)(currentLabels, configuredLabel, active);
             if (sameLabels(currentLabels, nextLabels))
@@ -51850,7 +51876,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
 const result_1 = __nccwpck_require__(73817);
-const status_command_policy_1 = __nccwpck_require__(3449);
+const read_copilot_status_workflow_1 = __nccwpck_require__(57206);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const review_command_1 = __nccwpck_require__(1811);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
@@ -51867,7 +51893,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     if (command.name === 'help')
         return runHelpCommand(param, options);
     if (command.name === 'status')
-        return [(0, status_command_policy_1.buildCopilotStatusResult)(param.status, options.taskId)];
+        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember')
@@ -52935,7 +52961,7 @@ const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -52950,6 +52976,7 @@ class IssueCommentUseCase {
         this.syncBranchUseCase = syncBranchUseCase;
         this.preBranchSddContinuation = preBranchSddContinuation;
         this.rememberBranchPorts = rememberBranchPorts;
+        this.statusReadPorts = statusReadPorts;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -52986,6 +53013,7 @@ class IssueCommentUseCase {
                 : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
+            statusReadPorts: this.statusReadPorts,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -53764,7 +53792,7 @@ const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -53778,6 +53806,7 @@ class PullRequestReviewCommentUseCase {
         this.rememberBugbotRuleUseCase = rememberBugbotRuleUseCase;
         this.syncBranchUseCase = syncBranchUseCase;
         this.rememberBranchPorts = rememberBranchPorts;
+        this.statusReadPorts = statusReadPorts;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -53802,6 +53831,7 @@ class PullRequestReviewCommentUseCase {
                 : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
+            statusReadPorts: this.statusReadPorts,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -54224,7 +54254,8 @@ function projectIssueCommentActionContext(source) {
         : Object.freeze({ kind: 'ready', issueNumber: source.singleAction.issue, request: Object.freeze({ ...request }) });
 }
 function projectAgentActivityContext(source) {
-    const pullRequest = source.eventName === 'pull_request' || source.eventName === 'pull_request_review_comment';
+    const pullRequest = source.isPullRequest === true
+        || source.eventName === 'pull_request' || source.eventName === 'pull_request_review_comment';
     const number = pullRequest
         ? source.pullRequest.number
         : source.issue.number > 0 ? source.issue.number : source.issueNumber;
@@ -54275,6 +54306,56 @@ function deepFreezeCopy(value) {
         return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, deepFreezeCopy(nested)])));
     }
     return value;
+}
+
+
+/***/ }),
+
+/***/ 57206:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCopilotStatus = readCopilotStatus;
+const status_command_policy_1 = __nccwpck_require__(3449);
+const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
+const context_1 = __nccwpck_require__(14712);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+const application_error_1 = __nccwpck_require__(75999);
+/** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
+async function readCopilotStatus(param, taskId, ports) {
+    if (!param.status.pullRequestNumber || !ports)
+        return (0, status_command_policy_1.buildCopilotStatusResult)(param.status, taskId);
+    const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
+    const selection = request.target.pullRequestSelection;
+    if (selection.kind !== 'event' || selection.number !== param.status.pullRequestNumber)
+        throw unavailableStatus();
+    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.getPullRequest(selection.number)], 'event');
+    if (canonical.kind !== 'canonical')
+        throw unavailableStatus();
+    const pull = canonical.pullRequest;
+    const comments = await ports.listIssueComments(pull.number);
+    if (comments.coverage.status !== 'complete')
+        throw unavailableStatus();
+    const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
+        && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
+    if (candidates.length !== 1)
+        throw unavailableStatus();
+    const counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', pull.number, pull.headSha);
+    if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha)
+        throw unavailableStatus();
+    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...param.status,
+        findingStateEvidence: undefined,
+        findingStates: { open: counts.open, reopened: counts.reopened,
+            verificationRequired: counts['verification-required'], unknown: counts.unknown,
+            resolved: counts.fixed + counts.obsolete + counts.dismissed },
+    }, taskId);
+}
+function unavailableStatus() {
+    return new application_error_1.ApplicationError('workflow.stale', 'Current Bugbot status evidence is unavailable, incomplete or stale. Run /copilot recheck and retry status.');
 }
 
 
@@ -79088,7 +79169,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -79104,7 +79185,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());

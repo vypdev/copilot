@@ -366,7 +366,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-24",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -401,7 +401,8 @@
         "src/application/usecases/steps/commit/bugbot/schema.ts",
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts",
-        "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
+        "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
+        "src/application/policies/bugbot_status_count_marker_policy.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -435,7 +436,8 @@
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/how-it-works.mdx",
         "docs/bugbot/programmatic-api.mdx",
-        "docs/pull-requests/workflow-setup.mdx"
+        "docs/pull-requests/workflow-setup.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {
@@ -1309,7 +1311,9 @@
       ],
       "workflows": [
         ".github/workflows/copilot_issue_comment.yml",
-        ".github/workflows/copilot_pull_request_comment.yml"
+        ".github/workflows/copilot_pull_request_comment.yml",
+        "setup/workflows/copilot_issue_comment.yml",
+        "setup/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/actions/github_action.ts",
@@ -1343,7 +1347,10 @@
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/data/repository/actor_modification_policy.ts",
         "src/data/repository/organization/actor_authorization_repository.ts",
-        "src/prompts/think.ts"
+        "src/prompts/think.ts",
+        "src/application/policies/bugbot_status_count_marker_policy.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
@@ -1369,7 +1376,10 @@
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
         "src/data/repository/__tests__/actor_modification_policy.test.ts",
         "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts",
-        "src/prompts/__tests__/think.test.ts"
+        "src/prompts/__tests__/think.test.ts",
+        "src/application/policies/__tests__/bugbot_status_count_marker_policy.test.ts",
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts"
       ],
       "documentation": [
         "docs/issues/comment-commands.mdx",
@@ -1572,7 +1582,11 @@
         ".github/workflows/copilot_pull_request.yml",
         ".github/workflows/copilot_pull_request_merge_queue.yml",
         "setup/workflows/copilot_pull_request.yml",
-        "setup/workflows/copilot_pull_request_merge_queue.yml"
+        "setup/workflows/copilot_pull_request_merge_queue.yml",
+        ".github/workflows/copilot_issue_comment.yml",
+        ".github/workflows/copilot_pull_request_comment.yml",
+        "setup/workflows/copilot_issue_comment.yml",
+        "setup/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/application/usecases/pull_request_use_case.ts",
@@ -1601,7 +1615,10 @@
         "src/application/usecases/steps/pull_request/update_pull_request_description_workflow.ts",
         "src/application/policies/agent_task_activation_policy.ts",
         "src/application/policies/agent_activity_policy.ts",
-        "src/application/policies/lifecycle_state_policy.ts"
+        "src/application/policies/lifecycle_state_policy.ts",
+        "src/application/usecases/push_single_action_contexts.ts",
+        "src/application/usecases/actions/synchronize_agent_activity_use_case.ts",
+        "src/application/policies/lifecycle_waiting_state_policy.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -1623,7 +1640,9 @@
         "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts",
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
         "src/application/policies/__tests__/agent_activity_policy.test.ts",
-        "src/application/policies/__tests__/lifecycle_state_policy.test.ts"
+        "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
+        "src/application/usecases/actions/__tests__/synchronize_agent_activity_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",

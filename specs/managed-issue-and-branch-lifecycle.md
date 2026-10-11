@@ -340,3 +340,10 @@ dark/light, and non-English fallback.
 - Follow-up: event-driven branch propagation is outside this baseline.
 
 Live evidence on 2026-10-10: issue #456 reopening/title change preserved the original branch SHA and removed the obsolete ref, but the later edit reset Project #2 from In Progress to Todo. Ten additional cases cover unset initialization, existing Todo/In Progress, null/foreign/missing/malformed item evidence, failed initialization, and truthful retained-state issue/PR rendering. The direct Status read follows [GitHub ProjectV2Item fieldValueByName](https://docs.github.com/en/graphql/reference/projects#projectv2item).
+
+
+A status or description answer with no explicit lifecycle decision preserves
+existing waiting labels. Receiving a human comment alone does not satisfy a
+pending maintainer or issue-author action. Explicit working/help recovery and
+other lifecycle transitions retain their documented clearing rules. The two
+PR query regression cases are owned by the PR lifecycle SDD budget.

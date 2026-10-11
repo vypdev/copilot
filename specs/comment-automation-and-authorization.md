@@ -247,11 +247,30 @@ provider client, `Ai` instance, or configuration getter. Command-specific review
 overrides create a new frozen context and cannot mutate the run-wide AI model.
 There is no legacy aggregate overload or compatibility route.
 
-The read-only status path projects stored Bugbot result evidence through the
-same strict seven-state application policy used by Action completion,
-lifecycle, Job Summary, and Check evidence. The status renderer receives only a
-canonical aggregate or an explicit `invalid` state; it cannot parse an older
-reduced `{open,reopened,resolved}` shape or infer absent counts.
+For a PR, the read-only status path reads the exact canonical PR, its complete
+bounded comment inventory (newest 200), and its head again after reading the
+card. It accepts exactly one trusted bot-owned canonical status card with a
+closed-shape seven-state count marker correlated by PR, head and digest. Only
+complete review coverage and outcome can supply counts. Missing, duplicate,
+foreign, malformed, oversized or stale evidence returns `workflow.stale` and
+asks for `/copilot recheck`; it never substitutes cached counts or zero. The
+three logical reads do not use an agent, workspace, diff, rules or mutation
+port. Issue-only/API contexts without bound PR read ports retain the existing
+snapshot route without claiming fresh verified PR counts. The marker is
+read-only evidence and cannot authorize approval or mutation.
+
+```mermaid
+flowchart LR
+  C[Status command] --> P[Exact canonical PR]
+  P --> B[One trusted complete card]
+  B --> H[Read head again]
+  H --> V[Current seven-state counts]
+  B --> E[Unavailable: recheck and retry]
+  H --> E
+```
+
+Read-only status and description requests preserve durable lifecycle and
+waiting labels unless the run produces an explicit lifecycle decision.
 
 Target classification is independent from GitHub's event name: the
 `issue_comment` transport continues to select the comment coordinator, while the
@@ -288,7 +307,7 @@ untrusted mentions, Markdown, markers, and URLs are sanitized.
 | agent/verification | no commit | workspace aborted | yes | repair config/tests | abort changes |
 | push race | no stale push | remote heads | yes | rerun latest | abort local operation |
 | publication | work may be pushed | commit/result | yes | inspect run/commit | do not undo commit |
-| malformed stored finding evidence | status cannot report safe counts | original workflow result | yes | inspect producer, then `/copilot recheck` | no guessed state |
+| missing or invalid current PR card | status cannot report safe counts | canonical PR/card/head reads | yes | `/copilot recheck`, then retry status | no cached or guessed counts |
 
 ## 11. Security, permissions, and privacy
 
@@ -339,7 +358,8 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | PR status identity | 2 | Linked issue differs from PR; unlinked PR never invents an issue |
 | Conversation branch authority | 3 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn |
 | Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
-| **Total** | **130** | no double counting |
+| Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
+| **Total** | **154** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -376,9 +396,10 @@ English/non-English requests.
     coordinator but projects the exact PR number, PR locale, reviewer role, and
     canonical PR diff; issue-only setup is not invoked.
 13. `/copilot status` renders open, reopened, verification-required, unknown,
-    and resolved counts from the canonical result projection; malformed owned
-    or required-but-absent review evidence produces an `invalid` recovery
-    message and never a clean count.
+    and resolved counts from one trusted complete current-head card. Missing,
+    malformed, partial, duplicate, foreign or superseded evidence returns
+    `workflow.stale` with `/copilot recheck` recovery and never a clean count.
+    A changed head during the bounded read is rejected before publication.
 14. An organization member without repository write permission cannot run a
     file- or finding-state mutation, while an organization repository
     collaborator with `push`, `maintain`, or `admin` can.
@@ -429,7 +450,7 @@ English/non-English requests.
 ## 19. Definition of Done
 
 - [ ] Commands, mentions, authorization, fallback, replay, and races are covered.
-- [x] The 130-case budget, coverage, and architecture checks pass.
+- [x] The 154-case budget, coverage, and architecture checks pass.
 - [ ] No model output or comment can expand authorization or git authority.
 - [ ] All five UI states and help content are reviewed and accessible.
 - [ ] Workflows, documentation, and catalog agree.

@@ -3,7 +3,7 @@ import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_p
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import type { CommentAutomationContext } from './comment_automation_context';
 import type { ParsedCopilotCommand } from '../../domain/copilot_command';
-import { buildCopilotStatusResult } from '../policies/status_command_policy';
+import { readCopilotStatus } from './read_copilot_status_workflow';
 import { buildCopilotHelpMessage } from '../policies/copilot_interaction_policy';
 import { parseBugbotReviewCommandOptions } from '../../domain/bugbot/review_command';
 import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user_request_workflow';
@@ -27,7 +27,7 @@ export async function runExplicitCommentCommand(
     actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
-    if (command.name === 'status') return [buildCopilotStatusResult(param.status, options.taskId)];
+    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);

@@ -1214,4 +1214,22 @@ describe('workflow contract validator', () => {
       }
     }
   });
+
+  it.each(['copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'])(
+    'requires exact-head Check permissions and a step-scoped evidence token for %s', (name) => {
+      for (const directory of ['.github/workflows', 'setup/workflows']) {
+        const file = path.join(process.cwd(), directory, name);
+        const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+        const job = Object.values(workflow.jobs)[0];
+        job.permissions = { contents: 'read' };
+        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
+        job.permissions = { checks: 'write', contents: 'read' };
+        const action = job.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
+        delete action.env.COPILOT_EVIDENCE_TOKEN;
+        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+        job.steps.push({ run: 'true', env: { COPILOT_EVIDENCE_TOKEN: '${{ github.token }}' } });
+        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+      }
+    },
+  );
 });

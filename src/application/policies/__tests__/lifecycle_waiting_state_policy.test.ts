@@ -17,8 +17,8 @@ describe('lifecycle waiting state policy', () => {
         expect(resolveLifecycleWaitingState({ eventName: 'issues', lifecycleState: 'working' })).toEqual({ kind: 'clear' });
     });
 
-    it('clears waiting state after a human interaction without a new stable state', () => {
-        expect(resolveLifecycleWaitingState({ eventName: 'issue_comment', lifecycleState: undefined })).toEqual({ kind: 'clear' });
+    it('preserves waiting state for a query without a new stable state', () => {
+        expect(resolveLifecycleWaitingState({ eventName: 'issue_comment', lifecycleState: undefined })).toEqual({ kind: 'preserve' });
     });
 
     it('preserves waiting state for an unrelated lifecycle event', () => {

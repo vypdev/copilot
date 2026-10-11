@@ -1485,6 +1485,7 @@ exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
 const review_state_1 = __nccwpck_require__(9200);
 const github_comment_publication_policy_1 = __nccwpck_require__(2712);
 const publication_identity_policy_1 = __nccwpck_require__(5403);
+const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
 exports.BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 exports.BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
@@ -1567,6 +1568,7 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
         }),
         buildBugbotStatusMarker(projection),
         buildBugbotApprovalEvidenceMarker(projection),
+        (0, bugbot_status_count_marker_policy_1.buildBugbotStatusCountMarker)(projection),
         `## ${heading}`,
         '',
         `> **${catalog.message('bugbot.status.currentStatus')}:** ${status}`,
@@ -1655,6 +1657,43 @@ function escapeRegExp(value) {
 }
 function presentationCatalog(value) {
     return typeof value === 'string' ? (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)(value) : value;
+}
+
+
+/***/ }),
+
+/***/ 8654:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_STATUS_COUNTS_PREFIX = void 0;
+exports.buildBugbotStatusCountMarker = buildBugbotStatusCountMarker;
+exports.readBugbotStatusCounts = readBugbotStatusCounts;
+const review_state_1 = __nccwpck_require__(9200);
+exports.BUGBOT_STATUS_COUNTS_PREFIX = 'copilot-bugbot-state-counts';
+/** Read-only status evidence; this marker never authorizes approval or mutation. */
+function buildBugbotStatusCountMarker(projection) {
+    const c = projection.counts;
+    return `<!-- ${exports.BUGBOT_STATUS_COUNTS_PREFIX} schema="1" pr="${projection.pullRequestNumber}" head="${projection.verifiedHeadSha}" digest="${projection.digest}" outcome="${projection.outcome}" coverage="${projection.coverage.status}" open="${c.open}" reopened="${c.reopened}" fixed="${c.fixed}" obsolete="${c.obsolete}" dismissed="${c.dismissed}" verification="${c['verification-required']}" unknown="${c.unknown}" -->`;
+}
+/** Requires one complete, closed-shape marker correlated with its canonical card. */
+function readBugbotStatusCounts(body, number, head) {
+    if ((body.match(/<!--\s*copilot-bugbot-state-counts\b/gu) ?? []).length !== 1)
+        return undefined;
+    const markers = body.match(/<!--\s*copilot-bugbot-state-counts\b[\s\S]{0,1000}?-->/gu) ?? [];
+    if (markers.length !== 1)
+        return undefined;
+    const match = /^<!-- copilot-bugbot-state-counts schema="1" pr="([1-9]\d{0,15})" head="([a-f0-9]{40}|[a-f0-9]{64})" digest="([a-f0-9]{8})" outcome="complete" coverage="complete" open="(\d{1,16})" reopened="(\d{1,16})" fixed="(\d{1,16})" obsolete="(\d{1,16})" dismissed="(\d{1,16})" verification="(\d{1,16})" unknown="(\d{1,16})" -->$/u.exec(markers[0]);
+    if (!match || Number(match[1]) !== number || match[2] !== head)
+        return undefined;
+    if (!body.includes(`<!-- copilot-bugbot-status schema="1" pr="${number}" verified_head="${head}" digest="${match[3]}" -->`))
+        return undefined;
+    const values = match.slice(4).map(Number);
+    if (values.some(value => !Number.isSafeInteger(value))
+        || !Number.isSafeInteger(values.reduce((sum, value) => sum + value, 0)))
+        return undefined;
+    return Object.freeze(Object.fromEntries(review_state_1.BUGBOT_FINDING_STATES.map((state, index) => [state, values[index]])));
 }
 
 

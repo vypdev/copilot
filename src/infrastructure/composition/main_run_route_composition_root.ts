@@ -238,6 +238,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     branchSync,
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
+    bugbot.scm.context,
   );
 }
 
@@ -294,6 +295,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
     rememberBranchPorts(binding, bugbot.scm.context),
+    bugbot.scm.context,
   );
 }
 

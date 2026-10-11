@@ -509,6 +509,27 @@
         }
       ],
       "successMessage": "setup configuration management coverage: PASS (each new runtime module 100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Canonical PR status",
+      "missingEntryLabel": "canonical PR status",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/bugbot_status_count_marker_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/read_copilot_status_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "canonical PR status coverage: PASS (marker policy 100%; read workflow 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

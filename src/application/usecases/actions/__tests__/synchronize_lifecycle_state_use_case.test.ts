@@ -33,6 +33,20 @@ function ports(labels?: readonly string[]) {
 describe('SynchronizeLifecycleStateUseCase', () => {
     afterEach(() => resetApplicationLogger());
 
+    it.each(['IssueCommentUseCase.Status', 'UpdatePullRequestDescriptionUseCase'])(
+        'preserves a reviewed PR and its pending maintainer action after %s', async (id) => {
+            const latest = ['documentation', 'state:ready', 'state:awaiting-maintainer'];
+            const dependencies = ports(latest);
+            const outcome = await new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head).invoke({
+                context: context({ eventName: 'issue_comment', action: 'created',
+                    target: { kind: 'pull-request', number: 11, labels: [], merged: false, closed: false } }),
+                results: [{ id, success: true, executed: true, steps: [], errors: [] } as never],
+            });
+            expect(outcome.results).toEqual([]);
+            expect(dependencies.labels.setLabels).not.toHaveBeenCalled();
+        },
+    );
+
     it('recovers a blocked branchless help issue after a successful answer and preserves other labels', async () => {
         const dependencies = ports(['help', 'in-progress', 'state:blocked', 'state:awaiting-maintainer']);
         const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
@@ -186,7 +200,7 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         );
     });
 
-    it('clears waiting state for a pull-request conversation comment', async () => {
+    it('preserves waiting state for a conversation without a new lifecycle decision', async () => {
         const dependencies = ports(['state:changes-requested', 'state:awaiting-issue-author']);
         const useCase = new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head);
         const outcome = await useCase.invoke({
@@ -197,8 +211,8 @@ describe('SynchronizeLifecycleStateUseCase', () => {
             }),
             results: [],
         });
-        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(11, ['state:changes-requested']);
-        expect(outcome.labelPatch?.target.kind).toBe('pull-request');
+        expect(dependencies.labels.setLabels).not.toHaveBeenCalled();
+        expect(outcome.labelPatch).toBeUndefined();
     });
 
     it('uses current-head evidence through the bound head capability', async () => {
