@@ -1032,3 +1032,17 @@ and authentication isolation are unchanged. Five new invocation contracts check
 trusted import ordering, literal escaping, unsafe owner refusal, complete ancestor
 batches and timeout classification. Actual hosted/native Windows smoke proof is
 pending and must be recorded independently; diagnostic success is not acceptance.
+
+Native Windows run 38156569251 on source fe3e7ed72f454f5db54059636dddd26ec5fbef1a
+passed all five isolated runtime suites (95 passed, eight platform skips), then
+all 565 full suites (7,421 passed, 20 platform skips), every coverage budget and
+the documentation/contract validators. Its overall job was cancelled at the
+30-minute deadline during setup-node's post-job pnpm cache archive, after those
+checks had completed. This proves the descriptor repair on the native runner,
+but does not count as an end-to-end successful job or hosted Windows acceptance.
+
+Persistent self-hosted smoke runners now disable dependency-cache backup and
+automatic package-manager caching, while hosted pnpm caching is unchanged.
+The complete test path, worker memory bounds and 30-minute job deadline remain
+unchanged. Two workflow contracts prevent explicit or automatic cache backup
+from reappearing. A fresh completed native run remains required.

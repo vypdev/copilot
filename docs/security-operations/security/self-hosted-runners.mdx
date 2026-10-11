@@ -16,6 +16,12 @@ A self-hosted runner that can access agent credentials MUST be dedicated or isol
 
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
 
+The self-hosted platform smoke uses the local pnpm store without exporting a
+dependency-cache archive to GitHub. Its Node setup explicitly disables automatic
+package-manager caching. This keeps a successful full validation from timing out
+in the post-job archive step; hosted fixture caching is retained. See the
+[setup-node cache inputs](https://github.com/actions/setup-node#usage).
+
 This repository runs `CI Check` and `RepoWise code health` on self-hosted
 Ubuntu `codex` runners for its own PRs and pushes. Fork PRs and all merge
 groups keep the same quality checks on disposable GitHub-hosted Ubuntu
