@@ -1485,7 +1485,8 @@
         "src/application/policies/publication_message_catalog.ts",
         "src/application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_workflow.ts",
         "src/application/usecases/comment_automation_use_case.ts",
-        "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts"
+        "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts",
+        "src/application/usecases/steps/commit/git_branch_checkout.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1522,7 +1523,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/dismiss_bugbot_findings_use_case.test.ts",
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/detect_bugbot_fix_intent_use_case.test.ts",
-        "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts"
+        "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts",
+        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
