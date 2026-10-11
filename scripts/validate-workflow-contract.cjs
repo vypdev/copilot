@@ -419,9 +419,6 @@ function assertRunner(file, workflow) {
     if (relativeFile.startsWith('setup/workflows/')
       || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
       expected = ['ubuntu-latest'];
-    } else if (relativeFile === '.github/workflows/copilot_issue_comment.yml') {
-      // Temporary installed routing for round-two conflict recovery; restore with the workflow.
-      expected = ['self-hosted', 'codex', 'Linux'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
     } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {

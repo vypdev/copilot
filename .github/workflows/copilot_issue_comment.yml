@@ -8,8 +8,7 @@ jobs:
   copilot-issues:
     if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Issue Comment
-    # Round 2 recovery: use Linux agents while Windows sandbox setup is investigated.
-    runs-on: [self-hosted, codex, Linux]
+    runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
       checks: write
@@ -126,9 +125,3 @@ jobs:
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
           COPILOT_EVIDENCE_TOKEN: ${{ github.token }}
-
-
-      - name: Diagnose retained workspace after rejected branch synchronization
-        if: failure() && vars.DEBUG == 'true' && startsWith(github.event.comment.body, '/copilot sync-branch')
-        shell: bash
-        run: git -c core.quotePath=true status --porcelain=v1 --untracked-files=normal | sed -n '1,40p'
