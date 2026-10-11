@@ -10,11 +10,11 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: None stated in the supplied issue and answers.
 
-This companion specifies the full status extension for [issue #454](https://github.com/vypdev/copilot/issues/454). The implemented gate contract remains in [`pre-branch-sdd-gate.md`](./pre-branch-sdd-gate.md). The current branch adds the fail-closed requirement label/state projection and a 30-case rendering/localization budget, but does not yet read gate records or prove publication. This SDD remains proposed until those requirements are implemented.
+This companion specifies the full status extension for [issue #454](https://github.com/vypdev/copilot/issues/454). The implemented gate contract remains in [`pre-branch-sdd-gate.md`](./pre-branch-sdd-gate.md). The branch now includes typed read-only orchestration, immutable catalog ownership and publication verification, current question/answer provenance, final issue/card/branch fences, and complete English/Spanish presentation. Local acceptance is executable; live Action acceptance and promotion remain pending until the published implementation is exercised.
 
 ## 1. Executive summary
 
-Extend the read-only `/copilot status` response for an issue to show its pre-branch SDD readiness using the latest valid Action-owned `copilot:sdd-gate:v1` evidence. The compact section reports whether an SDD is required, the owning SDD path, pending clarification IDs, and a verified SDD commit when publication has been proven. Missing evidence is unknown when a specification is required; malformed, foreign, stale, or inconsistent evidence is invalid or unverified. Neither a branch nor a `published` phase alone proves readiness.
+Extend the read-only `/copilot status` response for an issue to show its pre-branch SDD readiness using the latest Action-owned `copilot:sdd-gate:v1` evidence. The compact section reports whether an SDD is required, the owning SDD path, pending clarification IDs, and a verified SDD commit when publication has been proven. Missing evidence is unknown when a specification is required; malformed, foreign, stale, or inconsistent evidence is invalid or unverified. Neither a branch nor a `published` phase alone proves readiness.
 
 The command preserves existing status fields, ordering, lifecycle, labels, and finding counts; performs no writes; creates no timeline card; and uses complete existing English and Spanish message catalogs. Help issues remain branchless and show that a specification is not required.
 
@@ -35,14 +35,14 @@ A maintainer checking an issue while its SDD is being clarified cannot see pendi
 1. The existing `/copilot status` snapshot reports branch, lifecycle, labels, and Bugbot finding counts, according to the issue description.
 2. It does not directly expose the SDD readiness facts specified here.
 3. The pre-branch gate already has durable `copilot:sdd-gate:v1` evidence and an existing owning SDD contract at `specs/pre-branch-sdd-gate.md`.
-4. The current status command's implementation details and exact message catalog paths are not established by the supplied issue; implementation must locate and preserve those existing contracts.
+4. Status orchestration is `src/application/usecases/read_copilot_status_workflow.ts`; the closed projection and renderer are `src/application/policies/sdd_status_policy.ts`; catalogs are `src/application/policies/publication_message_catalog.ts`.
 
 ### 2.3 Evidence
 
-- Code/workflow/documentation references: Existing owning contract `specs/pre-branch-sdd-gate.md`; issue #454 identifies the status command, durable gate evidence, and complete message catalogs as the relevant scope. Exact source paths are not supplied.
+- Code/workflow/documentation references: Existing owning contract `specs/pre-branch-sdd-gate.md`; issue #454 identifies the status command, durable gate evidence, and complete message catalogs as the relevant scope. Read-only authority is bound by `src/application/ports/sdd_evidence_read_ports.ts` and `src/infrastructure/composition/sdd_evidence_composition_root.ts`; `src/application/usecases/sdd/sdd_evidence_query_use_case.ts` verifies the record against GitHub and immutable Git objects.
 - Incidents or concrete examples: Dogfooding feedback says users inspect another status comment to discover SDD blockers.
 - External primary sources: Not applicable; this is an internal command and evidence contract.
-- Unknowns: Exact status renderer, ports, catalog file names, and current gate record schema definitions beyond the fields stated in Q2 are implementation discovery items.
+- Open verification: Live Action rendering after publication, replay behavior, and exact linked-branch behavior on each supported runner. Missing configuration remains unavailable rather than defaulting to not-required.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -57,7 +57,7 @@ Not applicable. This is a prospective extension; no implemented baseline is reco
 | Contributor | Confirm verified SDD evidence before implementation | `/copilot status` | Owning path and verified commit |
 | Copilot Action | Report authoritative readiness facts | Existing status use case | Existing status response |
 
-A **gate record** is the latest valid Action-bot-owned `copilot:sdd-gate:v1` record for the current issue. **Pending question IDs** are current `plan.questions` IDs without a valid authorized answer in that record. **Verified SDD commit** is the verified latest revision SHA when present, otherwise the first commit SHA, only after existing publication verification proves the commit is on the exact linked remote branch, derives from the recorded base, and changes the owning SDD. **Unknown** means required evidence is absent. **Invalid or unverified** means evidence cannot safely establish readiness.
+A **gate record** is the latest Action-bot-owned `copilot:sdd-gate:v1` record for the current issue. **Pending question IDs** are current `plan.questions` IDs without a valid authorized answer in that record. **Verified SDD commit** is the verified latest revision SHA when present, otherwise the first commit SHA, only after existing publication verification proves the commit is on the exact linked remote branch, derives from the recorded base, and changes the owning SDD. **Unknown** means required evidence is absent. **Invalid or unverified** means evidence cannot safely establish readiness.
 
 ## 4. Goals, non-goals, and fixed invariants
 
@@ -77,7 +77,7 @@ A **gate record** is the latest valid Action-bot-owned `copilot:sdd-gate:v1` rec
 ### 4.3 Fixed product/safety invariants
 
 1. Status MUST NOT mutate issues, labels, branches, commits, or SDD files.
-2. Only the latest valid Action-owned gate record for this issue may supply durable readiness evidence; arbitrary human comments are not evidence.
+2. Only the latest Action-owned gate record for this issue may supply durable readiness evidence; arbitrary human comments are not evidence.
 3. A branched issue or `published` phase alone MUST NOT be reported ready.
 4. Required but absent evidence is unknown; malformed, foreign, stale, or inconsistent evidence is invalid/unverified.
 5. Help issues MUST remain branchless and show specification not required/not applicable.
@@ -308,17 +308,20 @@ No schema or configuration migration is introduced. Existing gate records remain
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **28 distinct cases**, derived from evidence validation, read-only behavior, publication proof, and bilingual completeness.
+Minimum: **141 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 7 | Required/exempt, help, pending-answer derivation, unknown/invalid mapping |
-| State/application/idempotency/races | 5 | Latest record, superseded rounds, inconsistent records, repeated reads, snapshot preservation |
-| Adapters/provider contracts | 4 | Ownership/schema mapping, retrieval failures, publication proof errors |
-| Workflows/setup/schema | 3 | Existing command grammar, record version/current issue identity, no new configuration |
-| UI/UX/localization/sanitization | 5 | All readiness states, English/Spanish completeness, path/ID escaping |
-| Integration/security/migration | 4 | Read-only ports, no card, revision SHA precedence, exact branch/base/SDD proof |
-| **Total** | **28** | No case counted twice |
+| Existing basic status presentation | 30 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
+| Issue identity | 8 | Canonical visible body/title normalization, profile, kind, issue number and original base digest |
+| Owned card selection | 16 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
+| Authority/application/fences | 51 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities and three status integration outcomes |
+| Closed projection/UX | 29 | Canonical requirement/configuration, eight evidence outcomes, withheld historical SHA, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
+| Native linked ref adapter | 4 | Stale/deleted refs, foreign/missing repository identity; none may fall back to another PR |
+| Immutable workspace reads | 2 | Read the original catalog without checkout/current-file mutation; reject non-SHA identifiers |
+| Read-only composition | 1 | Repository-bound live publication query and current maintainer authorization without mutation capability |
+| **Total** | **141** | No case counted twice |
+
 
 Maintain repository-wide thresholds. New pure readiness policy should meet at least 95% branch coverage; changed status modules should meet existing module thresholds, with a target of 90% branches and 95% lines/statements. Use deterministic records, clocks, provider fakes, and publication proofs; no sleeps or live services. Parse catalog structures and gate records rather than grep prose. UI fixtures require semantic assertions beyond snapshots. Manual acceptance confirms the section is readable on mobile and desktop and preserves the existing status ordering.
 
@@ -351,7 +354,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 
 | Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
 |---|---|---|---|
-| Read latest valid Action-owned evidence | Evidence port and validator | Ownership/schema/identity cases | Status command docs |
+| Read latest Action-owned evidence | Evidence port and validator | Ownership/schema/identity cases | Status command docs |
 | Derive pending IDs from current round | Pure readiness policy | Superseded and answer matrix | Status command docs |
 | Prove publication before SHA | Verification port and SHA selector | Exact branch/base/path/revision cases | Gate SDD |
 | Fail closed on missing/invalid evidence | Application result mapping | Missing, malformed, foreign, stale cases | Operator guidance |
@@ -365,7 +368,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 2. Define typed readiness result and semantic read/verification ports; add pure policy tests for ownership, identity, pending IDs, and state mapping.
 3. Integrate read-only orchestration into status while retaining the original snapshot on retrieval errors.
 4. Add catalog messages and compact rendering for all states; ensure no timeline-card path is invoked.
-5. Add adapter, integration, localization, security, and compatibility tests within the 28-case floor.
+5. Add adapter, integration, localization, security, and compatibility tests within the 141-case implementation budget.
 6. Update command/operator documentation and contract examples.
 7. Run specification, architecture, catalog, and repository validation required by the existing project workflow.
 
@@ -374,16 +377,38 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 - [x] Required SDD evidence is shown as unavailable/unverified until authoritative evidence can be verified; status never infers readiness from a marker or branch.
 - [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
 - [x] English and Spanish catalogs cover the readiness section.
-- [ ] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [x] The 30-case status rendering budget is covered by deterministic offline tests.
+- [x] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
+- [x] All 141 distinct extension cases, full coverage budgets and generated bundles pass before publication.
 - [x] User documentation explains the evidence limit and fail-closed behavior.
-- [ ] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
-- [ ] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
+- [x] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
+- [x] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
+
+- [ ] Live runtime acceptance after promotion verifies published, awaiting, stale and unavailable outcomes on GitHub.
 
 ## 20. References and decisions
 
 - Owning SDD: `specs/pre-branch-sdd-gate.md`, capability `issue-start-and-sdd-readiness`.
 - Issue: #454, dogfooding status readiness request.
-- Decisions from explicit answers: use existing feature/contract-change classification; latest valid Action-owned `copilot:sdd-gate:v1` record only; derive question IDs only from current validated questions and authorized answers; verified revision SHA takes precedence over immutable first commit SHA; help is exempt and branchless; use approved English/Spanish catalog wording; preserve existing status fields and make retrieval failure non-destructive.
+- Decisions from explicit answers: use existing feature/contract-change classification; latest Action-owned `copilot:sdd-gate:v1` record only; derive question IDs only from current validated questions and authorized answers; verified revision SHA takes precedence over immutable first commit SHA; help is exempt and branchless; use approved English/Spanish catalog wording; preserve existing status fields and make retrieval failure non-destructive.
 - Rejected: inferring readiness from branch existence or `published` phase alone; parsing arbitrary human comments; combining superseded clarification rounds; adding writes, cards, configuration, or locale support.
 - Follow-up: exact code and catalog paths are to be resolved during implementation discovery; no product decision remains open.
+
+### As-built evidence and authority limits
+
+The highest owned SDD-card ID is selected before schema validation. A newer
+corrupted card cannot revive an older ready record. Stored answers count only
+with exact current round and question-text provenance plus current role
+authorization; ordinary live answers must follow the card/retained-answer
+cutoff. Every ready SHA has first-publication parent/SDD proof, immutable
+catalog ownership and live same-repository branch ancestry. Revisions retain
+the first publication and prove their own recorded base and owning path.
+Final issue title/body, labels, owned card and remote-head reads can downgrade
+the result to unverified. Status does not expose question text, raw failure
+reasons, model capabilities or mutation ports. Immutable catalog reads may
+fetch Git objects locally but never checkout, commit, push or rewrite source.
+The four native-ref regressions and two workspace-read cases above belong to
+this extension; the gate's existing numeric budget does not count them again.
+
+### Offline implementation validation — 2026-10-11
+
+The 141 distinct extension cases are implemented. Full validation on the Action-managed head `43d710770972df3443b519ca0bd61c6ad6256c93` plus this contribution passed 567 Jest suites with 7,485 tests passed and 35 configured skips. Repository coverage budgets and the setup acceptance ledger passed; the ledger retains its 42 explicitly open cases. New identity and card policies and the read-only composition have 100% coverage; projection branch coverage is 96% and query branch coverage is 97.36%. Typecheck, lint, documentation, specification validation and generated bundles passed. Live acceptance remains pending promotion and is not inferred from these offline checks.

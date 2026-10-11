@@ -903,3 +903,15 @@ The three-round bound counts question sets. After all questions of round three
 are answered, a question-free analysis can prepare the draft in round three.
 A proposed fourth question set still blocks before drafting or publication;
 pending publication retries continue to preserve their existing round.
+
+### Read-only readiness queries
+
+The status reader specified in [pre-branch SDD status readiness](./pre-branch-sdd-status-readiness.md) uses the same admitted-kind/start policy
+and issue digest, but receives physically read-only ports. It selects the
+highest owned card before validation and never falls back after corruption.
+Readiness requires immutable catalog ownership, verified first/revision
+publication and a same-repository native link matching the live ref SHA. A
+positive stale or foreign native link cannot be replaced by PR fallback.
+Repeated title/body/card/label/head reads fence the result before publication.
+The companion owns the additional query, presentation and native-ref test
+budget; existing gate tests remain counted here only once.

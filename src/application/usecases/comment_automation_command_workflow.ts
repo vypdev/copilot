@@ -26,7 +26,7 @@ export async function runExplicitCommentCommand(
     actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
-    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts)];
+    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);

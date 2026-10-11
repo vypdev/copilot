@@ -80,3 +80,18 @@ question automatically. A changed issue or development base starts clarification
 again. Keep answers concise; the retained history has fixed size limits and is
 never silently truncated. Copilot may ask up to three sets of questions;
 answering the third set can complete preparation without starting another round.
+
+## Inspect readiness with status
+
+Run `/copilot status` in the issue to see whether the SDD is required, which
+question IDs still need authorized answers, and whether publication is pending
+or verified. A ready result links the owning specification at its verified
+first or current revision commit. The SDD-card link returns you to the existing
+clarification flow.
+
+Status reads current GitHub facts and immutable publication evidence. It
+preserves the issue, labels, branch and SDD. Missing or partial access reports
+unavailable; a corrupted card, changed issue or racing branch cannot produce a
+ready result. A newer invalid owned card never restores an older ready state.
+Answers from older rounds without matching question provenance remain pending.
+Help issues remain branchless and do not require an SDD.

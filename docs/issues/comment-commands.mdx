@@ -121,8 +121,11 @@ decision.
 
 For issue types covered by `pre-branch-sdd`, status also appends an SDD
 readiness section. It reports when an SDD is not required and marks required
-SDD evidence unavailable until the status reader can verify authoritative gate
-evidence. A `published` marker or existing branch alone never means the SDD is
+SDD evidence unavailable until the reader verifies the current owned card,
+immutable catalog and remote publication. It shows pending question IDs and
+the owning specification, then links the verified current publication once
+ready. Old answer rounds and stale issue or branch evidence cannot establish
+readiness. A `published` marker or existing branch alone never means the SDD is
 ready. Missing or unverified evidence blocks a readiness claim; status remains
 read-only and preserves its existing fields.
 
