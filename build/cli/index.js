@@ -82871,14 +82871,14 @@ function parseCopilotCommand(raw) {
     if (!name || !exports.COPILOT_COMMAND_NAMES.includes(name)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${exports.COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
+    if (name === 'status' && tokens.length > 0) {
+        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
+    }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
     if (!argumentsList) {
         return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
-    }
-    if (name === 'status' && argumentsList.length > 0) {
-        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
     }
     if (argumentsList.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
