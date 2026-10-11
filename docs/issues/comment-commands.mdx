@@ -119,6 +119,15 @@ separate from an issue with the same number. Status and description queries
 preserve existing lifecycle and waiting labels when they make no lifecycle
 decision.
 
+When exact-head PR approval evidence is available, status also shows its
+readiness projection and configured policy mode. This is a snapshot: status
+never submits an approval, review, or merge. Missing or denied policy/evidence
+reads are reported as unavailable; they are never treated as policy `off`.
+Recommendation mode still requires a human decision. Issue-to-PR selection is
+not yet connected to this command, so run status in the PR conversation for a
+PR readiness snapshot. Bugbot counts and lifecycle status remain independent
+when readiness evidence cannot be read.
+
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to
 make the subject explicit. For example, `/copilot explain src/domain/copilot_command.ts`

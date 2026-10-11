@@ -5,7 +5,7 @@ export type PullRequestReadiness = 'unavailable' | 'pending' | 'blocked' | 'sati
 
 export interface PullRequestReadinessSnapshot {
     readonly readiness: PullRequestReadiness;
-    readonly mode: 'off' | 'recommend' | 'guarded';
+    readonly mode: 'off' | 'recommend' | 'guarded' | 'unavailable';
     readonly headSha: string;
     readonly baseSha: string;
     readonly code: string;

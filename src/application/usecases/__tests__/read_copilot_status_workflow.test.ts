@@ -67,10 +67,11 @@ describe('read canonical Copilot status', () => {
         await expect(readCopilotStatus(mismatched, 'IssueCommentUseCase', ports)).rejects.toMatchObject({ code: 'workflow.stale' });
         expect(ports.getPullRequest).not.toHaveBeenCalled();
     });
-    it('supports a projected snapshot when the optional canonical read capability is absent', async () => {
+    it('reports readiness evidence unavailable when its read adapter is absent', async () => {
         const { context } = fixture();
         const result = await readCopilotStatus(context, 'IssueCommentUseCase');
-        expect(result.payload).toMatchObject({ status: { pullRequestNumber: 11 } });
+        expect(result.payload).toMatchObject({ status: { pullRequestNumber: 11,
+            pullRequestReadiness: { readiness: 'unavailable', mode: 'unavailable', code: 'evidence-adapter-unavailable' } } });
         expect(result.steps.join('')).not.toContain('open=0');
     });
     it.each(['missing', 'foreign', 'duplicate', 'malformed', 'older-card', 'partial', 'moved-head', 'wrong-repository'])(

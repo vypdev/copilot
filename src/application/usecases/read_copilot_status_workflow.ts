@@ -9,19 +9,21 @@ import { projectBugbotContextRequest } from './steps/commit/bugbot/bugbot_contex
 import { ApplicationError } from '../errors/application_error';
 import type { ApprovalObservationTarget } from '../ports/pull_request_approval_ports';
 import { projectPullRequestReadiness } from '../policies/pull_request_readiness_policy';
-import type { ApprovalEvidence } from '../../domain/pull_request_approval';
 
 export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
     'getPullRequest' | 'listIssueComments' | 'getPullRequestHeadSha'> & {
-        readonly approval?: {
-            readPolicy(target: ApprovalObservationTarget): Promise<string | undefined>;
-            loadEvidence(target: ApprovalObservationTarget): Promise<ApprovalEvidence>;
-        };
+        /** A deliberately narrow projection. Status cannot publish assessments or reviews. */
+        readonly approval?: Pick<import('../ports/pull_request_approval_ports').PullRequestApprovalPort,
+            'readPolicy' | 'loadEvidence'>;
     };
 
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
 export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts) {
-    if (!param.status.pullRequestNumber || !ports) return buildCopilotStatusResult(param.status, taskId);
+    if (!param.status.pullRequestNumber) return buildCopilotStatusResult(param.status, taskId);
+    if (!ports) return buildCopilotStatusResult({ ...param.status,
+        pullRequestReadiness: { readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '',
+            code: 'evidence-adapter-unavailable', humanReviewRequired: true },
+    }, taskId);
     const request = projectBugbotContextRequest(param.bugbot.review);
     const selection = request.target.pullRequestSelection;
     if (selection.kind !== 'event' || selection.number !== param.status.pullRequestNumber) throw unavailableStatus();
@@ -46,9 +48,14 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
             snapshot = { ...snapshot, pullRequestReadiness: readiness };
         } catch {
             snapshot = { ...snapshot, pullRequestReadiness: { readiness: 'unavailable' as const,
-                mode: 'off' as const, headSha: pull.headSha, baseSha: '',
+                mode: 'unavailable' as const, headSha: pull.headSha, baseSha: '',
                 code: 'evidence-unavailable', humanReviewRequired: true } };
         }
+    } else {
+        // A missing binding is an explicit failure of evidence collection, never an implicit opt-out.
+        snapshot = { ...snapshot, pullRequestReadiness: { readiness: 'unavailable',
+            mode: 'unavailable', headSha: pull.headSha, baseSha: '',
+            code: 'evidence-adapter-unavailable', humanReviewRequired: true } };
     }
     const comments = await ports.listIssueComments(pull.number);
     if (comments.coverage.status !== 'complete') throw unavailableStatus();

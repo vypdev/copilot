@@ -2053,6 +2053,8 @@
         "src/application/policies/bot_pull_request_analysis_policy.ts",
         "src/application/policies/bugbot_review_presentation_policy.ts",
         "src/application/policies/pull_request_approval_presentation_policy.ts",
+        "src/application/policies/pull_request_readiness_policy.ts",
+        "src/application/policies/status_command_policy.ts",
         "src/application/policies/approval_doctor_message_catalog.ts",
         "src/application/policies/setup_approval_doctor_policy.ts",
         "src/application/policies/setup_configuration_defaults.ts",
@@ -2060,6 +2062,7 @@
         "src/application/policies/setup_configuration_validation.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/application/usecases/pull_request_approval/observe_pull_request_approval_use_case.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/usecases/setup/setup_wizard_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
@@ -2078,6 +2081,8 @@
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/bot_pull_request_analysis_policy.test.ts",
         "src/application/policies/__tests__/pull_request_approval_presentation_policy.test.ts",
+        "src/application/policies/__tests__/pull_request_readiness_policy.test.ts",
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
         "src/application/policies/__tests__/setup_approval_doctor_policy.test.ts",
         "src/application/usecases/pull_request_approval/__tests__/observe_pull_request_approval_use_case.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
@@ -2101,6 +2106,7 @@
         "docs/pull-requests/capabilities.mdx",
         "docs/pull-requests/guarded-approval.mdx",
         "docs/pull-requests/workflow-setup.mdx",
+        "docs/issues/comment-commands.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/development/architecture.mdx"
       ]
