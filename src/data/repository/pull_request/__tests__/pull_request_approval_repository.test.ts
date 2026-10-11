@@ -12,7 +12,7 @@ const target = { owner: 'owner', repository: 'repo', repositoryId: 17, pullNumbe
 const head = 'a'.repeat(40);
 const base = 'b'.repeat(40);
 const testedMerge = 'c'.repeat(40);
-const publicationEvidence = { headSha: head, baseSha: base, checks: [] } as unknown as ApprovalEvidence;
+const publicationEvidence = { headSha: head, baseSha: base, baseRef: 'develop', checks: [] } as unknown as ApprovalEvidence;
 const settings = {
   mainBranch: 'main', developmentBranch: 'develop',
   branchPrefixes: { feature: 'feature', bugfix: 'bugfix', documentation: 'docs', chore: 'chore' },
@@ -26,9 +26,10 @@ function patOctokit() {
   const client = {
     rest: {
       actions: { getRepoVariable, getOrgVariable },
-      pulls: { get: jest.fn().mockResolvedValue({ data: { head: { sha: head }, base: { sha: base } } }),
+      pulls: { get: jest.fn().mockResolvedValue({ data: { head: { sha: head }, base: { sha: base, ref: 'develop' } } }),
         createReview: jest.fn().mockResolvedValue({ data: { id: 33, commit_id: head, user: { id: 20 }, state: 'APPROVED' } }) },
       users: { getAuthenticated: jest.fn().mockResolvedValue({ data: { id: 20 } }) },
+      git: { getRef: jest.fn().mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: base } } }) },
       issues: {
         listComments,
         createComment: jest.fn().mockResolvedValue({}),
@@ -80,7 +81,7 @@ function evidenceOctokit(mergeParents = [base, head], attempt = 1, runConclusion
       checks: { listForRef },
       actions: { ...pat.rest.actions, listWorkflowRunsForRepo, listJobsForWorkflowRunAttempt,
         listWorkflowRunArtifacts: jest.fn(), downloadArtifact: jest.fn() },
-      git: { getCommit: jest.fn().mockResolvedValue({ data: { parents: mergeParents.map(sha => ({ sha })) } }) },
+      git: { ...pat.rest.git, getCommit: jest.fn().mockResolvedValue({ data: { parents: mergeParents.map(sha => ({ sha })) } }) },
       repos: { getBranchProtection: jest.fn().mockRejectedValue({ status: 404 }) },
     },
     request: jest.fn().mockResolvedValue({ data: [{ type: 'pull_request', parameters: { dismiss_stale_reviews: true } }] }),
@@ -226,7 +227,8 @@ describe('PullRequestApprovalRepository', () => {
     await expect(repository.publishAssessment(target, publicationEvidence, { status: 'pending', code: 'superseded', detail: 'Changed.' }))
       .rejects.toThrow('head or base changed');
     expect(pat.rest.issues.createComment).not.toHaveBeenCalled();
-    pat.rest.pulls.get.mockResolvedValue({ data: { head: { sha: head }, base: { sha: 'd'.repeat(40) } } });
+    pat.rest.pulls.get.mockResolvedValue({ data: { head: { sha: head }, base: { sha: base, ref: 'develop' } } });
+    pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: 'd'.repeat(40) } } });
     await expect(repository.publishAssessment(target, publicationEvidence, { status: 'pending', code: 'superseded', detail: 'Changed.' }))
       .rejects.toThrow('head or base changed');
     expect(pat.rest.issues.createComment).not.toHaveBeenCalled();
@@ -461,5 +463,78 @@ describe('PullRequestApprovalRepository', () => {
     f.pat.rest.repos.getBranchProtection.mockResolvedValue({ data: { required_pull_request_reviews: { dismiss_stale_reviews: true } } });
     expect(await f.repository.loadEvidence(target)).toMatchObject({ rulesReadable: false, dismissesStaleReviews: false });
     expect(f.pat.rest.repos.getBranchProtection).not.toHaveBeenCalled();
+  });
+});
+
+describe('live native base ref instead of cached PR base metadata', () => {
+  it('uses the current base ref and rejects merge proof from the previous base', async () => {
+    const f = evidenceFixture();
+    const advanced = 'd'.repeat(40);
+    f.pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: advanced } } });
+    const evidence = await f.repository.loadEvidence(target);
+    expect(evidence).toMatchObject({ baseSha: advanced, baseRef: 'develop' });
+    expect(evidence.testedMergeSha).toBeUndefined();
+    expect(f.pat.rest.git.getRef).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', ref: 'heads/develop' });
+  });
+  it('rejects numeric coverage for the cached previous base even when a current-head producer succeeded', async () => {
+    const f = numericFixture();
+    const advanced = 'd'.repeat(40);
+    f.pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: advanced } } });
+    f.pages.set(f.pat.rest.actions.listWorkflowRunsForRepo, [{ workflow_runs: [{
+      id: 50, name: 'CI Check', head_sha: head, run_attempt: 1, status: 'completed', conclusion: 'success',
+    }] }]);
+    const evidence = await f.repository.loadEvidence(target);
+    expect(f.pat.rest.actions.downloadArtifact).toHaveBeenCalled();
+    expect(evidence.baseSha).toBe(advanced);
+    expect(evidence.numericCoverage).toBeUndefined();
+  });
+  it('publishes for the verified live base when only the PR metadata cache differs', async () => {
+    const pat = patOctokit();
+    pat.rest.pulls.get.mockResolvedValue({ data: { head: { sha: head }, base: { ref: 'develop', sha: 'd'.repeat(40) } } });
+    (github.getOctokit as jest.Mock).mockReturnValue(pat);
+    await new PullRequestApprovalRepository('pat', settings).publishAssessment(target, publicationEvidence,
+      { status: 'pending', code: 'check-missing', detail: 'Waiting.' });
+    expect(pat.rest.issues.createComment).toHaveBeenCalledTimes(1);
+  });
+  it('withholds assessment writes when the live base advances behind unchanged PR metadata', async () => {
+    const pat = patOctokit();
+    pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: 'd'.repeat(40) } } });
+    (github.getOctokit as jest.Mock).mockReturnValue(pat);
+    await expect(new PullRequestApprovalRepository('pat', settings).publishAssessment(target, publicationEvidence,
+      { status: 'pending', code: 'check-missing', detail: 'Waiting.' })).rejects.toThrow('head or base changed');
+    expect(pat.rest.issues.createComment).not.toHaveBeenCalled();
+    expect(pat.rest.issues.updateComment).not.toHaveBeenCalled();
+  });
+  it('rejects a base-branch retarget even when its cached SHA equals the verified original base', async () => {
+    const pat = patOctokit();
+    pat.rest.pulls.get.mockResolvedValue({ data: { head: { sha: head }, base: { ref: 'release/1', sha: base } } });
+    (github.getOctokit as jest.Mock).mockReturnValue(pat);
+    await expect(new PullRequestApprovalRepository('pat', settings).publishAssessment(target, publicationEvidence,
+      { status: 'pending', code: 'check-missing', detail: 'Waiting.' })).rejects.toThrow('head or base changed');
+    expect(pat.rest.issues.createComment).not.toHaveBeenCalled();
+  });
+  it('fails closed on denied native ref access rather than falling back to cached base evidence', async () => {
+    const f = evidenceFixture(); f.pat.rest.git.getRef.mockRejectedValue({ status: 403 });
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ status: 403 });
+    expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
+  });
+  it.each(['foreign ref', 'non-commit object', 'invalid SHA', 'non-string SHA', 'missing object', 'empty response'])('rejects native base evidence with %s', async scenario => {
+    const f = evidenceFixture();
+    f.pat.rest.git.getRef.mockResolvedValue({ data: {
+      ref: scenario === 'foreign ref' ? 'refs/heads/other' : 'refs/heads/develop',
+      object: { type: scenario === 'non-commit object' ? 'tree' : 'commit', sha: scenario === 'invalid SHA' ? 'unverified' : base },
+    } });
+    if (scenario === 'missing object') f.pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop' } } as never);
+    if (scenario === 'non-string SHA') f.pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: [base] } } } as never);
+    if (scenario === 'empty response') f.pat.rest.git.getRef.mockResolvedValue({ data: null } as never);
+    await expect(f.repository.loadEvidence(target)).rejects.toThrow('base ref');
+    expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
+  });
+  it.each([undefined, '', 17, 'a'.repeat(1_025), 'develop\n', 'develop\u0000'])('rejects unsafe PR base metadata before any native ref request (%p)', async ref => {
+    const f = evidenceFixture();
+    const pull = await f.pat.rest.pulls.get();
+    f.pat.rest.pulls.get.mockResolvedValue({ data: { ...pull.data, base: { ...pull.data.base, ref } } } as never);
+    await expect(f.repository.loadEvidence(target)).rejects.toThrow('base ref');
+    expect(f.pat.rest.git.getRef).not.toHaveBeenCalled();
   });
 });

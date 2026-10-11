@@ -112,6 +112,12 @@ No setting can make the bot approve its own PR, a fork, a draft, a deployment/re
 A malformed ruleset response is unavailable evidence. It cannot be treated as
 an empty ruleset or overridden by otherwise valid classic branch protection.
 
+When the target branch advances, Copilot checks its current remote commit before
+evaluating merge evidence and publishing the assessment. GitHub's cached PR base
+can lag that push. Coverage from the previous base cannot authorize the new
+revision; unavailable base-ref access also withholds the assessment. Rerun the
+observer after fresh CI completes for the current base and PR head.
+
 ## What you will see
 
 The PR gets one editable “Copilot approval” assessment card. It says whether the bot is waiting, a human must review, a prerequisite blocks approval, a submission is uncertain, or a native review was confirmed. `Copilot / Approval` is a supplemental Check, not a prerequisite for itself. The native GitHub `APPROVE` review is the actual approval record and is tied to the head commit.
