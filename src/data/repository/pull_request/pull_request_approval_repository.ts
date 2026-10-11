@@ -1,3 +1,4 @@
+import { logInfo } from '../../../application/ports/logging_ports';
 import * as github from '@actions/github';
 import type {
     ApprovalBugbotFact,
@@ -52,7 +53,10 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             });
             return response.data.value;
         } catch (error) {
-            if (statusOf(error) !== 404) throw error;
+            if (statusOf(error) !== 404) {
+                reportPolicyReadFailure('repository-variable', error);
+                throw error;
+            }
         }
         // A repository Variable takes precedence over an accessible organization Variable.
         try {
@@ -62,6 +66,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             return response.data.value;
         } catch (error) {
             if (statusOf(error) === 404) return undefined;
+            reportPolicyReadFailure('organization-variable', error);
             throw error;
         }
     }
@@ -346,6 +351,14 @@ function parseBugbotCard(body: string, headSha: string, pullNumber: number): App
         open: counts[0], reopened: counts[1], dismissed: counts[2],
         verificationRequired: counts[3], unknown: counts[4],
     };
+}
+
+/** Fixed metadata only: never interpolate error text, response bodies or credentials. */
+function reportPolicyReadFailure(scope: 'repository-variable' | 'organization-variable', error: unknown): void {
+    const status = statusOf(error);
+    const code = [400, 401, 403, 409, 422, 429, 500, 502, 503, 504].includes(status as number)
+        ? `http-${status}` : 'http-unavailable';
+    logInfo(`Approval policy read failed (${scope}, ${code}).`);
 }
 
 function statusOf(error: unknown): number | undefined {

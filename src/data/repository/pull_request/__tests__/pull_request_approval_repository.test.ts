@@ -1,8 +1,10 @@
+import { logInfo } from '../../../../application/ports/logging_ports';
 import * as github from '@actions/github';
 import { PullRequestApprovalRepository } from '../pull_request_approval_repository';
 import type { ApprovalEvidence } from '../../../../domain/pull_request_approval';
 
 jest.mock('@actions/github', () => ({ getOctokit: jest.fn() }));
+jest.mock('../../../../application/ports/logging_ports', () => ({ logInfo: jest.fn() }));
 
 const target = { owner: 'owner', repository: 'repo', repositoryId: 17, pullNumber: 42 };
 const head = 'a'.repeat(40);
@@ -123,6 +125,27 @@ describe('PullRequestApprovalRepository', () => {
     pat.rest.actions.getRepoVariable.mockRejectedValue({ status: 403 });
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
     await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toEqual({ status: 403 });
+    expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (repository-variable, http-403).');
+  });
+
+  it('identifies organization-scope denial without emitting raw provider diagnostics', async () => {
+    const pat = patOctokit();
+    pat.rest.actions.getRepoVariable.mockRejectedValue({ status: 404 });
+    const failure = { status: 403, message: 'PRIVATE-CREDENTIAL', response: { data: 'PRIVATE-POLICY' } };
+    pat.rest.actions.getOrgVariable.mockRejectedValue(failure);
+    (github.getOctokit as jest.Mock).mockReturnValue(pat);
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toBe(failure);
+    expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (organization-variable, http-403).');
+    expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-');
+  });
+  it.each(['PRIVATE-CREDENTIAL', 499])('contains unrecognized provider status %s in a closed unavailable code', async status => {
+    const pat = patOctokit(); const failure = { status, message: 'PRIVATE-CREDENTIAL' };
+    pat.rest.actions.getRepoVariable.mockRejectedValue(failure);
+    (github.getOctokit as jest.Mock).mockReturnValue(pat);
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toBe(failure);
+    expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (repository-variable, http-unavailable).');
+    expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-');
+    expect(pat.rest.actions.getOrgVariable).not.toHaveBeenCalled();
   });
 
   it('creates one assessment and a separately identified supplemental Check', async () => {

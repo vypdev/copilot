@@ -138,3 +138,15 @@ still determines whether a native approval may be submitted.
 Use the **Copilot - Pull Request Approval** workflow's manual dispatch with a positive PR number to re-evaluate a missed wakeup. The dispatcher needs repository write permission; re-evaluation never bypasses eligibility. Set the policy mode to `off` to stop future reviews. Existing native reviews remain in GitHub history and need human assessment; disabling does not dismiss them.
 
 See [workflow setup](/pull-requests/workflow-setup), [authentication](/authentication), and [operations troubleshooting](/security-operations/operations/troubleshooting) for related prerequisites.
+
+
+When the observer reports `policy-unavailable`, inspect its fixed log entry
+`Approval policy read failed (repository-variable, http-403)` or the
+`organization-variable` equivalent. It identifies the failed scope without
+printing the Variable, credential or provider response. A recognized HTTP code
+is reported literally; `http-unavailable` means no supported status was obtained
+and must not be interpreted as permission denial or policy absence. Verify the
+runtime PAT's access to that scope and rerun the observer after recovery.
+Successfully read malformed policy still has the separate `invalid-policy`
+recovery path. This diagnostic does not change credentials, precedence, fallback
+or approval authority.

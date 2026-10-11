@@ -286,17 +286,17 @@ The observer Job Summary records wakeup, PR, head/base, configured/effective mod
 
 ## 14. Testing strategy and numeric budget
 
-The minimum **116 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Parameter rows count separately only for distinct behavior.
+The minimum **119 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Parameter rows count separately only for distinct behavior.
 
 | Area | Minimum cases | Required risk cases |
 |---|---:|---|
 | Domain/eligibility and config | 30 | every reason precedence; author/bot/last-pusher; scope; exclusions; completeness; coverage modes; human reviews |
 | Application/state/idempotency/races | 26 | duplicate/out-of-order wakeups, head/base/rule movement at each guard, cancellation before/after POST, read-first replay; denied/unavailable policy reads without writes |
-| GitHub/coverage adapters | 16 | pagination, exact App/source/attempt, malformed artifact, 403/422/timeout/rate limit, review readback |
+| GitHub/coverage adapters | 19 | pagination, exact App/source/attempt, malformed artifact, 403/422/timeout/rate limit, review readback |
 | Workflow/schema/architecture | 16 | `workflow_run` producers, trusted default-branch code, no PR checkout/cache/agent, loop guard, permissions, no check collision; actionable safe summaries for unreadable/malformed policy |
 | UI/localization/accessibility/sanitization | 12 | five primary states, one action, en/es/fallback, hostile links/mentions/markers, narrow output |
 | Integration/security/migration | 16 | human/bot PRs, full Bugbot projection, numeric producer, stale rules, fresh vs absent config, rollback, live-shaped replay |
-| **Total** | **116** | no double counting |
+| **Total** | **119** | no double counting |
 
 Global Jest gates remain 90% lines/statements, 88% functions, and 82% branches ([configuration](../jest.config.js)). New pure decision/schema/renderer modules MUST reach 100% statements/branches/functions/lines; changed application/adapters MUST meet at least 95% lines/statements and 90% branches/functions. Tests use deterministic clocks, fake GitHub ports, recorded but sanitized webhook/review fixtures, no sleeps or live mutations. Contract tests parse YAML and JSON rather than grep prose; golden Markdown is paired with semantic assertions. Controlled live evidence MUST cover human-owned approval, bot-owned recommendation, a post-approval push under stale-dismissal rules, and check-order inversion; manual review covers desktop/mobile, light/dark, and screen-reader reading order.
 
@@ -356,7 +356,7 @@ Docs lead with the normal journey and a text-equivalent flow before internals. T
 
 - [ ] Every `MUST` and `A1`–`A9` requirement has an observable acceptance case and traceability.
 - [ ] Architecture, schema, workflow safety, dependency, cycle, and package contract checks pass.
-- [ ] At least 116 distinct runtime tests and stated coverage thresholds pass with deterministic race/security fixtures.
+- [ ] At least 119 distinct runtime tests and stated coverage thresholds pass with deterministic race/security fixtures.
 - [ ] Native reviews are exact-head, one-per-head, and never bot-self, stale, fork, deployment, or trust-path approvals.
 - [ ] Pending, human-action, blocked, partial, and complete UX, localization, sanitization, accessibility, responsive behavior, and noise budgets pass.
 - [ ] Setup/doctor companion gates and user/setup/operator/contributor documentation are complete.
@@ -370,3 +370,8 @@ Docs lead with the normal journey and a text-equivalent flow before internals. T
 - Related repository contracts: [Bugbot reconciliation](./bugbot-review-state-reconciliation.md), [PR lifecycle](./pull-request-lifecycle-and-enrichment.md), [setup and doctor](./setup-configuration-credentials-and-doctor.md).
 - Decision: one new native approval observer, separate from analysis and review-state workflows; `workflow_run` completion is a wakeup and never authority. Rejected: `state:ready` alone, a green generic workflow, `check_run` of Actions checks, a privileged PR-head checkout, and treating the setup PAT as a second reviewer.
 - Follow-up outside scope: auto-merge, arbitrary third-party webhook subscriptions, and revocation of existing native approvals.
+
+
+### Live policy-read diagnostic correction
+
+Recommendation observer runs `38165545004` and `38165297893` failed before assessment with `policy-unavailable`. The adapter now reports only the closed scope (`repository-variable` or `organization-variable`) and one recognized HTTP code or `http-unavailable`; it never logs error messages, values, URLs, tokens or response bodies. Three additional provider cases verify organization-scope denial and containment of unrecognized string/numeric statuses, raising the minimum runtime budget from 116 to 119. The existing repository-denial case also asserts the closed diagnostic. Precedence and fail-closed behavior remain intact: only a real repository 404 reaches organization fallback; denied reads never become off and never use operator credentials. The exact live runtime failure remains unproven until a fresh instrumented run.

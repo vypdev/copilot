@@ -71882,6 +71882,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
+const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const approval_coverage_artifact_1 = __nccwpck_require__(96710);
@@ -71903,8 +71904,10 @@ class PullRequestApprovalRepository {
             return response.data.value;
         }
         catch (error) {
-            if (statusOf(error) !== 404)
+            if (statusOf(error) !== 404) {
+                reportPolicyReadFailure('repository-variable', error);
                 throw error;
+            }
         }
         // A repository Variable takes precedence over an accessible organization Variable.
         try {
@@ -71916,6 +71919,7 @@ class PullRequestApprovalRepository {
         catch (error) {
             if (statusOf(error) === 404)
                 return undefined;
+            reportPolicyReadFailure('organization-variable', error);
             throw error;
         }
     }
@@ -72210,6 +72214,13 @@ function parseBugbotCard(body, headSha, pullNumber) {
         open: counts[0], reopened: counts[1], dismissed: counts[2],
         verificationRequired: counts[3], unknown: counts[4],
     };
+}
+/** Fixed metadata only: never interpolate error text, response bodies or credentials. */
+function reportPolicyReadFailure(scope, error) {
+    const status = statusOf(error);
+    const code = [400, 401, 403, 409, 422, 429, 500, 502, 503, 504].includes(status)
+        ? `http-${status}` : 'http-unavailable';
+    (0, logging_ports_1.logInfo)(`Approval policy read failed (${scope}, ${code}).`);
 }
 function statusOf(error) {
     return record(error)?.status;
