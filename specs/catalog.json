@@ -1174,7 +1174,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md"
@@ -1209,7 +1209,12 @@
         "src/infrastructure/pre_branch_sdd_workspace_adapter.ts",
         "src/infrastructure/specification_catalog_validator.cjs",
         "src/actions/input_boolean_policy.ts",
-        "src/domain/issue_workflow_profile.ts"
+        "src/domain/issue_workflow_profile.ts",
+        "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.ts",
+        "src/data/model/application_error.ts",
+        "src/application/policies/application_error_message_catalog.ts",
+        "src/domain/agent_response_length_failure.ts",
+        "src/data/repository/agent_json_schema_validator.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1226,7 +1231,10 @@
         "src/infrastructure/__tests__/pre_branch_sdd_workspace_adapter.test.ts",
         "src/architecture/__tests__/github_publication_boundaries.test.ts",
         "src/actions/__tests__/input_boolean_policy.test.ts",
-        "src/domain/__tests__/issue_workflow_profile.test.ts"
+        "src/domain/__tests__/issue_workflow_profile.test.ts",
+        "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1275,7 +1283,8 @@
         "src/domain/copilot_lifecycle.ts",
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/usecases/actions/lifecycle_synchronization_context.ts",
-        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts"
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
+        "src/application/policies/implementation_result_policy.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1351,7 +1360,12 @@
         "src/prompts/think.ts",
         "src/application/policies/bugbot_status_count_marker_policy.ts",
         "src/application/usecases/read_copilot_status_workflow.ts",
-        "src/infrastructure/composition/main_run_route_composition_root.ts"
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/application/usecases/comment_mutation_target_workflow.ts",
+        "src/application/policies/implementation_result_policy.ts",
+        "src/application/policies/agent_execution_failure_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/workspace_changes.ts",
+        "src/application/usecases/steps/commit/workspace_mutation_guard.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
@@ -1380,7 +1394,10 @@
         "src/prompts/__tests__/think.test.ts",
         "src/application/policies/__tests__/bugbot_status_count_marker_policy.test.ts",
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
-        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
+        "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts",
+        "src/application/usecases/steps/commit/__tests__/user_request_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts"
       ],
       "documentation": [
         "docs/issues/comment-commands.mdx",
@@ -1549,7 +1566,11 @@
         "src/infrastructure/composition/main_run_route_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
         "src/infrastructure/branch_sync_workspace_adapter.ts",
-        "src/prompts/branch_sync_conflicts.ts"
+        "src/prompts/branch_sync_conflicts.ts",
+        "src/data/model/application_error.ts",
+        "src/application/policies/application_error_message_catalog.ts",
+        "src/infrastructure/git_commit_adapter.ts",
+        "src/infrastructure/branch_sync_sdd_catalog.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1560,7 +1581,12 @@
         "src/data/repository/branch_sync/__tests__/branch_dependency_policy.test.ts",
         "src/data/repository/branch_sync/__tests__/branch_dependency_repository.test.ts",
         "src/infrastructure/__tests__/branch_sync_workspace_adapter.test.ts",
-        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts"
+        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
+        "src/application/usecases/branch_sync/__tests__/branch_sync_execution_policy.test.ts",
+        "src/application/errors/__tests__/application_error.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/infrastructure/__tests__/git_commit_adapter.test.ts",
+        "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -1667,7 +1693,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1719,7 +1745,9 @@
         "scripts/verify-agent-clis.cjs",
         "scripts/verify-windows-job-npm.cjs",
         "scripts/smoke-test-npm-package.cjs",
-        "scripts/validate-workflow-contract.cjs"
+        "scripts/validate-workflow-contract.cjs",
+        "src/application/policies/agent_execution_failure_policy.ts",
+        "src/infrastructure/untrusted_command_environment.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1744,7 +1772,9 @@
         "src/infrastructure/agents/__tests__/agent_official_installer.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_version.test.ts",
         "src/tooling/__tests__/verify_agent_clis.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

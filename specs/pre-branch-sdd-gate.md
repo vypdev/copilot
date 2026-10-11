@@ -547,7 +547,14 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **80 distinct cases** are a floor derived from eligibility,
+Draft prompts carry the selected validated catalog entry at the immutable base,
+including existing specification, code, test and documentation locations, and a
+bounded canonical HTTPS issue URL without credentials, query or fragment. Missing
+authority is explicit; placeholder repository links and self-owned new companions
+are not supported evidence. Authorized retained answers resolve their decisions
+across rounds. These inputs remain data and grant no model or workspace authority.
+
+The following **149 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -555,7 +562,7 @@ ownership/validation.
 |---|---:|---|
 | Pure selection/configuration/catalog planning | 10 | Boolean mode, feature/label eligibility, owner |
 | State, answers, idempotency, cancellation, races | 12 | Q IDs, replay, edits, parallel runs |
-| Application use cases | 8 | Analyze through publish and revise |
+| Application use cases | 11 | Analyze through publish and revise; immutable owner evidence and canonical/foreign/credential-bearing issue URL cases |
 | Provider/agent/Git adapters | 8 | Comment, scratch workspace, exact ref, errors |
 | Workflow/setup/SDD schema | 8 | Forms, profile, template, catalog |
 | UX/localization/accessibility/sanitization | 6 | Five states, links, notification budget |
@@ -565,7 +572,12 @@ ownership/validation.
 | Owner preservation and publication replay | 5 | Original contract and fenced examples, appendix bound, combined bound, real Git publication of narrower output, retry after the third clarification round |
 | Canonical owner line endings | 1 | CRLF scratch checkout preserves the exact committed owner prefix and verified publication |
 | Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
-| **Total** | **80** | No case counted twice |
+| Bounded draft generation and recovery | 12 | Three action-specific schema boundaries, one safe regeneration, one exhausted size repair, three malformed outputs, one provider failure, two validation/freshness integration routes and one closed localized recovery presentation |
+| Answer history and state encoding | 14 | Four cumulative/current-authorization/base-reset routes, one legacy/new provenance roundtrip with visible round, six invalid-provenance cases, count/encoded-size bounds and comment-terminator isolation |
+| Draft format and final clarification recovery | 11 | Two typed content repair reasons, exhausted format, unexpected writer failure, both mixed size/format orders, final round completion, fourth question rejection, full writer/freshness revalidation, missing prepared value and localized closed recovery |
+| Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
+| Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
+| **Total** | **149** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -707,3 +719,108 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 When GitHub opens a PR for an issue-linked branch, it removes the direct branch connection and retains the native issue-to-PR connection. Readiness MUST preserve this evidence only for an open PR associated with the exact issue, from the same repository, whose exact head name and full commit SHA match the current remote ref. The bounded query reads at most 100 direct linked branches and 100 native associated PRs; no repository-wide search, branch-name inference, PR-body parsing or configurable expansion is permitted. A closed PR, fork, stale head or missing remote ref never proves readiness. Live evidence: issue #453 and PR #460 on 2026-10-10. Primary source: [GitHub branch-to-issue behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue).
 
 Automated SDD extension reads the existing owner from the selected immutable Git commit after checking the scratch file boundary. Checkout line-ending conversion cannot change the retained contract or introduce mixed line endings. A real Git fixture with core.autocrlf=true exercises validation, publication, and first-commit verification.
+
+
+### Live draft size recovery (2026-10-11)
+
+The canonical template's numeric budget table is valid without an additional
+prose sentence. A table in section 14 MUST have the `Area` and `Minimum cases`
+or `Minimum distinct cases` headers (tests are equivalent), a Markdown separator,
+at least one positive safe integer allocation and exactly one positive `Total`
+equal to the sum. Standard emphasis/code formatting is permitted in cells.
+The equivalent `Área` / `Casos mínimos` or `Pruebas mínimas` headers are supported.
+Placeholders, fractional/negative/zero counts, unsafe integer sums, duplicate or
+missing totals, unrelated sections/tables and fenced examples cannot prove a
+budget. This bounded scan uses the existing 70,000-character document limit,
+has linear time/space and introduces no configuration or public command.
+
+Flow: candidate -> positive numeric prose or validated section-14 table ->
+unchanged owner/catalog/workspace/freshness checks -> publication. An invalid
+immutable owner has a distinct failure identity: regenerating its appendix
+cannot repair the owner. Only candidate format failures consume the one repair.
+Repair prompts and exhausted-error diagnostics disclose the closed reason
+`required-heading` or `test-budget`, never the rejected Markdown or raw diagnostic.
+
+Acceptance: the existing catalogued comment automation SDD with its table-only
+budget validates; a matching allocation/total passes the real scratch-worktree
+writer without changing retained owner bytes; a mismatching total publishes
+nothing; two failed candidates retain the same answer history and do not create
+a third attempt. Documentation explains this table contract and the owner boundary.
+
+The answered doctor issue #461 failed because the update writer allowed 18,000
+characters while the agent schema allowed 70,000. Draft schemas MUST share the
+immutable domain limits: 1,800 minimum, 18,000 update maximum, 70,000
+companion/new maximum. An oversized structured response may be regenerated once
+for the same owner and answered plan, without echoing its untrusted contents.
+It must retain requirements, architecture, numeric tests, documentation and
+acceptance; no truncation, automatic owner change or skipped clarification.
+
+The regenerated document passes every existing workspace, catalog, owner,
+combined-size and freshness validation before any branch/publication. Provider
+failures and malformed output are not size retries. A second oversized response
+blocks with a closed localized recovery explaining proportional/companion
+preparation and retained answers/SDDs. No new configuration flag.
+
+Flow: analysis and required answers -> bounded draft -> optional single size
+regeneration -> unchanged validation/freshness -> publication, or blocked.
+Acceptance: the provider schema for an update has maxLength 18000; two oversized
+responses publish no draft; a base change after regeneration remains blocked.
+
+The live #463 retry rejected an oversized response in local schema validation
+before the draft helper received a value. The schema validator MUST expose a
+typed maximum-length rejection with the local field path and maximum, never
+provider content. Only `$.markdown` with this request's exact action-specific
+maximum may enter the existing single regeneration. String-matched diagnostics,
+foreign fields/bounds, minimum-length violations, malformed JSON and provider
+failures never authorize a retry. Native schema rejection, accepted oversized
+output and writer format failure share the same two-attempt ceiling. Nine
+additional cases include the real adapter/parser/helper path.
+
+Both attempts receive the literal canonical heading prefixes from the same
+constant used by writer validation, preserving capitalization and Markdown
+syntax. The prompt accepts the canonical justified numeric test-budget table
+or a positive integer sentence describing distinct tests or cases. The first attempt
+also targets two thirds of the hard maximum. These instructions do not relax
+validation, change ownership or truncate a resolved requirement. This addresses
+the repeated required-format rejection in the final clarification of #464.
+
+
+### Clarification history and safe durable state (2026-10-11)
+
+A later clarification round may reuse Q1–Q8. Previously, collecting the new
+answers replaced the prior resolved decisions. The gate MUST retain the ordered
+answer history for the same issue digest and base, with optional legacy-compatible
+round and exact question text provenance. Historical answers are context only:
+each current question independently needs a fresh authorized answer after the
+prior-answer cutoff. Reused IDs cannot satisfy a new question or overwrite an
+earlier decision. Legacy records retain their known text/source without invented
+question provenance. Changed issue/base restarts clarification without implicitly
+adopting historical decisions.
+
+The fixed history bounds are 24 answers and 64,000 encoded characters; exceeded
+bounds stop before draft/publication without truncating decisions. State encoding
+escapes angle brackets so an answer cannot terminate its hidden HTML record.
+The visible question card names the clarification round in English/Spanish.
+
+Acceptance: after Q1 in rounds one and two, analysis and drafting receive both
+distinct decisions with their question/round; the old Q1 alone leaves round two
+waiting; an unauthorized current answer cannot progress; state roundtrips
+malicious comment terminators without exposing them as markup. These fourteen
+new cases belong only to this gate budget.
+
+### Canonical draft format and the final clarification round (2026-10-11)
+
+A generated draft missing required canonical headings or a numeric test budget
+MUST be rejected by the existing writer validation. A typed domain content
+failure permits one concise regeneration, sharing the same two-attempt ceiling
+with size repair. Feedback contains only closed failure categories and the
+original requirements; it never echoes rejected Markdown or diagnostics. Every
+regenerated candidate passes full owner, catalog, workspace and freshness
+validation. Provider, malformed-output, authority and unrelated writer failures
+do not trigger a content regeneration. A second invalid format publishes nothing
+and gives the closed localized template/acceptance recovery.
+
+The three-round bound counts question sets. After all questions of round three
+are answered, a question-free analysis can prepare the draft in round three.
+A proposed fourth question set still blocks before drafting or publication;
+pending publication retries continue to preserve their existing round.

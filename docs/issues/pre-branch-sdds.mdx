@@ -13,9 +13,16 @@ and integrate existing proposals as a normal contributor on the linked branch.
 Publication retries keep the validated owner and do not consume another
 clarification round. Review the generated specification before implementation.
 
+The numeric test budget may use the canonical template table in section 14.
+Each allocation must be a positive integer and the single `Total` must equal
+their sum; formatted numbers are supported. Placeholders, inconsistent totals
+and fenced examples do not prove a budget. Existing positive numeric prose
+remains supported. A malformed existing owner needs contributor review;
+regenerating a proposed appendix cannot repair that retained contract.
+
 `pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
 
-The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. It does not generate PRDs or ADRs in this flow.
+The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. Drafting receives the selected owner's verified source, test and documentation paths at the immutable base, the canonical issue link and retained authorized answers. A new companion identifies the existing owner; its own new path is proposed evidence. It does not generate PRDs or ADRs in this flow.
 
 ## Issue flow
 
@@ -53,3 +60,23 @@ See [Branch management](/issues/branch-management) for the standard flow and [Sp
 Opening a PR replaces GitHub's direct issue-to-branch connection with its issue-to-PR connection. Copilot retains branch readiness by verifying that the associated open PR belongs to this repository and its exact head name and commit still match the live remote branch. Closed PRs, forks and missing or stale heads cannot establish readiness.
 
 Automatic updates retain the owning SDD from its original Git commit, including when Windows converts checkout line endings.
+
+### Draft validation recovery
+
+Copilot limits proposed update appendices to 18,000 characters and complete new
+or companion specifications to 70,000. If a generated draft exceeds its limit,
+it tries one concise regeneration for the same owner and answers. Missing
+required sections or a numeric test budget can use that same single attempt.
+All validation and freshness checks still apply. If the second draft still fails,
+no draft is published; existing answers and SDDs are retained. Retry with a proportional
+change or an approved companion specification.
+
+### Additional clarification rounds
+
+The question card shows its current round. Reply to each new round in a new
+comment, even when a question reuses an ID such as Q1. Copilot retains earlier
+decisions with their question and round, but those answers do not satisfy a new
+question automatically. A changed issue or development base starts clarification
+again. Keep answers concise; the retained history has fixed size limits and is
+never silently truncated. Copilot may ask up to three sets of questions;
+answering the third set can complete preparation without starting another round.

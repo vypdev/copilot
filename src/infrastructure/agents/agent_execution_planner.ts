@@ -116,6 +116,13 @@ export class AgentExecutionPlanner {
             stage = 'artifacts';
             runtimeDirectory = mkdtempSync(join(tmpdir(), 'copilot-agent-runtime-'));
             makeWindowsRuntimePathPrivate(runtimeDirectory, true);
+            if (request.configuration.provider === 'codex') {
+                for (const kind of ['roaming', 'local']) {
+                    const directory = join(runtimeDirectory, 'shell', kind);
+                    mkdirSync(directory, { recursive: true, mode: 0o700 });
+                    makeWindowsRuntimePathPrivate(directory, true);
+                }
+            }
             const gitConfigPath = join(runtimeDirectory, 'gitconfig');
             stage = 'policy';
             const providerPolicy = buildProviderExecutionPolicy({

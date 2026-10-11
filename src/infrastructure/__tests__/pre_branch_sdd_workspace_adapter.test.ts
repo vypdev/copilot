@@ -68,6 +68,21 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
 
+  it('validates a table-only owner update with the real scratch-worktree and catalog boundary', async () => {
+    const owner = draft().replace('At least 20 distinct cases cover success, replay, authorization, and failure.',
+      '| Area | Minimum cases | Risks |\n|---|---:|---|\n| Policy | 12 | Authority |\n| Adapter | 8 | Publication |\n| Total | 20 | Distinct |');
+    fs.writeFileSync(path.join(repo, plan.path), owner);
+    git(repo, 'add', plan.path);
+    git(repo, 'commit', '-m', 'canonical table owner');
+    git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const prepared = await workspace.validateDraft(snapshot, plan, owner.replace('# Payment behavior', '# Proposed extension'));
+    expect(prepared.markdown.startsWith(owner.trimEnd())).toBe(true);
+    expect(prepared.markdown).toContain('### 14. Testing strategy');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
   it('reads only safe SDD paths from the selected base commit', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');

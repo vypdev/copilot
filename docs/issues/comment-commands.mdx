@@ -69,13 +69,26 @@ they operate on:
 
 - `/copilot fix` and `/copilot implement` apply changes to the authoritative
   working branch, run configured verification, then commit and push through the
-  trusted workflow. A verification failure prevents the commit.
+  trusted workflow. A verification failure prevents the commit. Every new file
+  inside an untracked directory is checked against sensitive-path rules and
+  the 100-file automatic mutation limit.
+
+  `/copilot implement` then confirms whether changes were pushed or no commit
+  was needed. Review the diff and acceptance criteria before considering the
+  feature complete. A successful implementation clears an earlier blocked
+  lifecycle state on the issue and returns it to working.
+
 - `/copilot remember` appends the rule to `.copilot/BUGBOT.learned.md` and
   commits it to the repository.
 - `/copilot dismiss` records dismissal against the existing Bugbot finding in
   GitHub review state; it does not edit repository files.
 - `/copilot sync-branch` merges the parent into the working branch and pushes
   the result unless `--dry-run` was supplied.
+
+An implementation request in an issue uses its verified linked branch, even
+when the comment event has no commit branch. In a PR conversation it uses the
+exact current PR head in this repository. Missing or conflicting branch
+evidence stops implementation before the agent runs.
 
 The agent runtime does not retain a session between runs. Repository changes
 that are committed and pushed, plus finding/review state stored by GitHub, are

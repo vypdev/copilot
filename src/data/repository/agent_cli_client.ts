@@ -6,9 +6,9 @@ import type {
     AgentExecutionFailureCategory,
     AgentExecutionObservation,
     AgentExecutionObserverPort,
-    AgentExecutionSemanticCode,
 } from '../../application/ports/agent_execution_observation_ports';
 import { AgentCliError } from './agent_cli_contracts';
+import { agentExecutionFailureCode } from '../../application/policies/agent_execution_failure_policy';
 
 export type { AgentCliRequest, AgentCliError } from './agent_cli_contracts';
 
@@ -81,19 +81,11 @@ function failureObservation(
             ? { preflightStage: error.preflightStage } : {}),
         ...(phase === 'preflight' && error instanceof AgentCliError && error.preflightDiagnostic
             ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
-        semanticCode: semanticCodeForFailure(category),
+        semanticCode: agentExecutionFailureCode(category),
         retryable: error instanceof AgentCliError && error.retryable,
         exitCode: error instanceof AgentCliError ? error.exitCode : undefined,
         exitDiagnostic: error instanceof AgentCliError ? error.exitDiagnostic : undefined,
     };
-}
-
-function semanticCodeForFailure(category: AgentExecutionFailureCategory): AgentExecutionSemanticCode {
-    if (category === 'configuration') return 'agent.policy-rejected';
-    if (category === 'timeout') return 'timeout';
-    if (category === 'cancelled') return 'workflow.cancelled';
-    if (category === 'output') return 'provider.contract-invalid';
-    return 'agent.failed';
 }
 
 function observeSafely(observer: AgentExecutionObserverPort, observation: AgentExecutionObservation): void {
