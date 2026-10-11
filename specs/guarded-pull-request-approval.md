@@ -3,7 +3,7 @@
 - Status: Draft — local implementation in progress; controlled live evidence pending
 - Date: 2026-09-17
 - Catalog capability ID: `guarded-pull-request-approval`
-- Last verified: not applicable; current-state evidence inspected 2026-09-17
+- Last verified: not applicable; current-state evidence inspected 2026-10-11; live recommendation blocked before assessment by policy-read diagnostics
 - Owners: Copilot product and engineering maintainers
 - Scope: decide whether the workflow PAT's bot may submit one native GitHub approval for a verified pull-request revision, and explain every other outcome.
 - Related issues/PRs: none linked; the setup/doctor contract is in [the companion SDD](./guarded-pull-request-approval-setup-and-doctor.md).
@@ -139,6 +139,14 @@ For `guarded`, the fixed prerequisites are:
 
 The canonical, versioned configuration and setup surface are specified in [the companion SDD](./guarded-pull-request-approval-setup-and-doctor.md). The runtime consumes one `PR_APPROVAL_POLICY` JSON value, forwarded through one `pr-approval-policy` Action input. Missing value means `off` for safe upgrades; a fresh `copilot setup` proposes `recommend` by default and offers `guarded` explicitly. Repository Variable overrides an accessible organization Variable; PR content and event inputs never override either. Invalid versions or unknown keys fail closed.
 
+The observer MUST distinguish an unreadable effective Variable (`policy-unavailable`)
+from a successfully read but malformed policy (`invalid-policy`). Either outcome
+stops before PR evidence, card/Check publication, or native review writes. The
+Job Summary MUST provide one safe recovery action and retain existing PR/review
+state; raw provider diagnostics and credentials are never included. Policy-read
+failure asks the operator to verify runtime PAT Actions Variables read access and
+retry; malformed policy asks them to run doctor and correct `PR_APPROVAL_POLICY`.
+
 | Field | Type/default in new setup | Bounds and behavior | Snapshot/reread |
 |---|---|---|---|
 | `mode` | enum `recommend` | `off`, `recommend`, `guarded` | read every observer run; fingerprint before mutation |
@@ -251,6 +259,8 @@ Cards are <= 1,800 rendered characters with at most four secondary reasons and o
 |---|---|---|---|---|---|
 | CI/Bugbot pending | no approval yet | current PR and pending card | producer completion | none unless stuck | no review |
 | missing/ambiguous current-head evidence | recommendation only | raw GitHub checks/reviews | bounded reread; next event | fix named producer/recheck | no review |
+| policy Variable unreadable | no assessment or approval | existing PR/reviews | manual recheck after recovery | verify runtime PAT Actions Variables read access, then rerun | no card/Check/review |
+| policy read but malformed | no assessment or approval | existing PR/reviews | manual recheck after correction | run doctor and correct PR_APPROVAL_POLICY | no card/Check/review |
 | branch rules unreadable or stale dismissal off | recommendation only | existing PR/reviews | next event | setup owner fixes rules/permissions | no bypass |
 | head/base moves before submit | old run stops | new head | new event | none | old card cannot claim current |
 | review POST returns ambiguous timeout | possible native approval | result `publication-unknown` | read-first retry | recheck if not converged | never blindly repost |
@@ -262,7 +272,7 @@ Cards are <= 1,800 rendered characters with at most four secondary reasons and o
 
 ## 11. Security, permissions, and privacy
 
-`A8` The workflow PAT needs only the already documented Pull requests write plus read permissions needed for PR/check/rule queries; an independently privileged setup PAT never enters Actions. Use the job-local `GITHUB_TOKEN` for read-only Checks metadata where appropriate, but never let `GITHUB_TOKEN` substitute the bot identity for native approval. GitHub documents that most [`GITHUB_TOKEN`-created events do not start new workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), another reason not to conflate credentials.
+`A8` The workflow PAT needs only the already documented Pull requests write plus read permissions needed for PR/check/rule queries and Actions Variables read for both recommendation and guarded assessment; an independently privileged setup PAT never enters Actions. The [repository-variable API](https://docs.github.com/en/rest/actions/variables#get-a-repository-variable) requires the fine-grained repository Variables read permission. Use the job-local `GITHUB_TOKEN` for read-only Checks metadata where appropriate, but never let `GITHUB_TOKEN` substitute the bot identity for native approval. GitHub documents that most [`GITHUB_TOKEN`-created events do not start new workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), another reason not to conflate credentials.
 
 The privileged observer uses an immutable, reviewed Action revision or installed package digest from the trusted default branch and no PR checkout, downloaded executable artifact, shared untrusted cache, or shell interpolation from the event. Numeric artifacts are parsed as bounded data with workflow/repository/run/head provenance; only supported same-repository PRs are assessed. Exact bound owner/repository and positive PR number determine every API target. Secrets, token values, raw provider errors, full PR text, and raw model output never enter card, Check, Job Summary, telemetry, or logs. Policy digest and provider IDs are safe technical details. A PR changing protected workflow, approval policy code, setup/workflow templates, or CODEOWNERS cannot approve itself.
 
@@ -276,17 +286,17 @@ The observer Job Summary records wakeup, PR, head/base, configured/effective mod
 
 ## 14. Testing strategy and numeric budget
 
-The minimum **112 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Parameter rows count separately only for distinct behavior.
+The minimum **116 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Parameter rows count separately only for distinct behavior.
 
 | Area | Minimum cases | Required risk cases |
 |---|---:|---|
 | Domain/eligibility and config | 30 | every reason precedence; author/bot/last-pusher; scope; exclusions; completeness; coverage modes; human reviews |
-| Application/state/idempotency/races | 24 | duplicate/out-of-order wakeups, head/base/rule movement at each guard, cancellation before/after POST, read-first replay |
+| Application/state/idempotency/races | 26 | duplicate/out-of-order wakeups, head/base/rule movement at each guard, cancellation before/after POST, read-first replay; denied/unavailable policy reads without writes |
 | GitHub/coverage adapters | 16 | pagination, exact App/source/attempt, malformed artifact, 403/422/timeout/rate limit, review readback |
-| Workflow/schema/architecture | 14 | `workflow_run` producers, trusted default-branch code, no PR checkout/cache/agent, loop guard, permissions, no check collision |
+| Workflow/schema/architecture | 16 | `workflow_run` producers, trusted default-branch code, no PR checkout/cache/agent, loop guard, permissions, no check collision; actionable safe summaries for unreadable/malformed policy |
 | UI/localization/accessibility/sanitization | 12 | five primary states, one action, en/es/fallback, hostile links/mentions/markers, narrow output |
 | Integration/security/migration | 16 | human/bot PRs, full Bugbot projection, numeric producer, stale rules, fresh vs absent config, rollback, live-shaped replay |
-| **Total** | **112** | no double counting |
+| **Total** | **116** | no double counting |
 
 Global Jest gates remain 90% lines/statements, 88% functions, and 82% branches ([configuration](../jest.config.js)). New pure decision/schema/renderer modules MUST reach 100% statements/branches/functions/lines; changed application/adapters MUST meet at least 95% lines/statements and 90% branches/functions. Tests use deterministic clocks, fake GitHub ports, recorded but sanitized webhook/review fixtures, no sleeps or live mutations. Contract tests parse YAML and JSON rather than grep prose; golden Markdown is paired with semantic assertions. Controlled live evidence MUST cover human-owned approval, bot-owned recommendation, a post-approval push under stale-dismissal rules, and check-order inversion; manual review covers desktop/mobile, light/dark, and screen-reader reading order.
 
@@ -317,6 +327,7 @@ Docs lead with the normal journey and a text-equivalent flow before internals. T
 12. Given `mode=off`, no observer review/card/Check is created; existing native reviews are retained.
 13. Given `Copilot / Approval` appears among effective required checks, the observer reports a policy cycle and posts no native approval; doctor identifies the offending rule.
 14. Given a `workflow_run` without a PR number, an exact-head same-repository lookup may select one open PR; zero or multiple matches produce no approval. An unauthorized manual dispatch cannot bypass eligibility.
+15. Given denied Variables access or a failed policy-read transport, the run fails with `policy-unavailable`, asks the operator to verify runtime PAT Actions Variables read access and retry, and neither reads PR evidence nor writes a card, Check, or review. Successfully read malformed JSON instead reports `invalid-policy` with doctor/correction recovery. Neither summary includes raw provider diagnostics.
 
 ## 17. Requirements traceability
 

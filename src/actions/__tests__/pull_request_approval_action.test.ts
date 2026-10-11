@@ -87,6 +87,19 @@ describe('trusted PR approval Action route', () => {
     await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('PR(s) 42');
     expect(core.summary.write).toHaveBeenCalledTimes(1);
   });
+  it.each(['policy-unavailable', 'invalid-policy'])('fails with actionable safe recovery for %s before evidence exists', async code => {
+    mockExecute.mockResolvedValue({
+      decision: { status: 'blocked', code, detail: 'private provider diagnostic' },
+      publication: 'not-applicable',
+    });
+    await expect(runPullRequestApprovalAction('pat')).rejects.toThrow('PR(s) 42');
+    const summary = (core.summary.addRaw as jest.Mock).mock.calls.map(call => call[0]).join('');
+    expect(summary).toContain(code);
+    expect(summary).toContain(code === 'policy-unavailable' ? 'runtime PAT can read Actions Variables' : 'correct PR_APPROVAL_POLICY');
+    expect(summary).toContain('Existing PRs and reviews are unchanged');
+    expect(summary).not.toContain('private');
+    expect(core.summary.write).toHaveBeenCalledTimes(1);
+  });
 
   it('uses one unambiguous workflow_run PR association as a wakeup', async () => {
     context().eventName = 'workflow_run';

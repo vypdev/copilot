@@ -38303,7 +38303,7 @@ async function runPullRequestApprovalAction(token) {
         const safeCode = result.decision.code.replace(/[^a-z0-9-]/gu, '').slice(0, 60);
         core.info(`PR #${pullNumber}: ${result.decision.status} (${safeCode}); assessment ${result.publication}.`);
         if (result.publication === 'failed' || [
-            'invalid-policy', 'evidence-unavailable', 'target-mismatch',
+            'invalid-policy', 'policy-unavailable', 'evidence-unavailable', 'target-mismatch',
             'pre-submit-unavailable', 'publication-unknown',
         ].includes(result.decision.code))
             failedPulls.push(pullNumber);
@@ -38317,6 +38317,12 @@ async function runPullRequestApprovalAction(token) {
         }
         else {
             core.summary.addRaw(`PR #${pullNumber}: ${result.decision.status} (${safeCode}). Assessment: ${result.publication}.\n`);
+            if (result.decision.code === 'policy-unavailable') {
+                core.summary.addRaw('No approval assessment was published because the installed policy could not be read from GitHub. Verify the runtime PAT can read Actions Variables, then rerun this observer. Existing PRs and reviews are unchanged.\n');
+            }
+            else if (result.decision.code === 'invalid-policy') {
+                core.summary.addRaw('The installed policy was read but is invalid. Run copilot doctor, correct PR_APPROVAL_POLICY, then rerun this observer. Existing PRs and reviews are unchanged.\n');
+            }
         }
     }
     await core.summary.write();
@@ -53686,6 +53692,14 @@ class ObservePullRequestApprovalUseCase {
         let rawPolicy;
         try {
             rawPolicy = await this.port.readPolicy(target);
+        }
+        catch {
+            return {
+                decision: { status: 'blocked', code: 'policy-unavailable', detail: 'The installed PR approval policy could not be read from GitHub. Verify the runtime PAT can read Actions Variables, then rerun the observer. Existing PRs and reviews are unchanged.' },
+                publication: 'not-applicable',
+            };
+        }
+        try {
             policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
         }
         catch {

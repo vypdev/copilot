@@ -464,7 +464,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - **Issues**: Read and write for issue automation, issue comments, commit-driven issue progress, inactive issue closure, or release/hotfix lifecycle
     - **Metadata**: Read-only
     - **Pull requests**: Read and write for PR automation/comments, commit-driven Bugbot review, issue-comment autofix, guarded approval, or release/hotfix promotion
-    - **Variables**: Read-only when guarded PR approval is enabled, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
+    - **Variables**: Read-only when PR approval assessment is enabled in `recommend` or `guarded` mode, to load `PR_APPROVAL_POLICY`. If setup creates, selects, or preserves an organization-level Variable, grant the corresponding organization Variables read permission as well.
 
     Workflow installation and Secret/Variable administration belong to the separate setup PAT. The runtime matrix does not request Administration write, Secrets, Variables write, Webhooks, or Workflows. Some disposable audit operations need extra prerequisites: opening a draft PR needs a temporary changed branch (Contents write), the setup PAT needs Workflows write to prepare an Actions override, deleting a temporary Issue needs repository administration/organization enablement, and creating or deleting an organization Project may require a stronger organization role than updating an existing item. A runtime grant alone cannot satisfy these prerequisites. Inspect the failed phase; setup blocks rather than treating an incomplete transaction as verified or silently adding broad permissions.
 
