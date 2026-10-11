@@ -48653,21 +48653,6 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
 
 /***/ }),
 
-/***/ 64921:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DOCTOR_REPOSITORY_PATHS = void 0;
-exports.DOCTOR_REPOSITORY_PATHS = [
-    '.github/workflows/copilot_issue.yml', '.github/workflows/copilot_issue_comment.yml',
-    '.github/workflows/copilot_pull_request.yml', 'specs/catalog.json', 'specs/_template.md', 'specs/README.md',
-];
-
-
-/***/ }),
-
 /***/ 31811:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -48678,6 +48663,21 @@ exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = void 0;
 /** Fixed local output rejection cause; never derived by interpolating provider bytes. */
 exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
     'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
+];
+
+
+/***/ }),
+
+/***/ 64921:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DOCTOR_REPOSITORY_PATHS = void 0;
+exports.DOCTOR_REPOSITORY_PATHS = [
+    '.github/workflows/copilot_issue.yml', '.github/workflows/copilot_issue_comment.yml',
+    '.github/workflows/copilot_pull_request.yml', 'specs/catalog.json', 'specs/_template.md', 'specs/README.md',
 ];
 
 
