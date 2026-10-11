@@ -66,7 +66,10 @@ describe('comment translation policy', () => {
         expect(rebuildAdaptedComment(prepareLanguageAdaptationInput('/copilot status', 'vypbot'), ''))
             .toBe('/copilot status');
         expect(rebuildAdaptedComment(prepareLanguageAdaptationInput('/copilot implement add tests', 'vypbot'),
-            Array(21).fill('word').join(' '))).toBeUndefined();
+            Array(410).fill('word').join(' '))).toBeUndefined();
+        const longerProse = Array(40).fill('word').join(' ');
+        expect(rebuildAdaptedComment(prepareLanguageAdaptationInput('/copilot implement add tests', 'vypbot'), longerProse))
+            .toBe(`/copilot implement ${longerProse}`);
         expect(rebuildAdaptedComment(mention, 'translated')).toBe('@vypbot translated');
         expect(rebuildAdaptedComment({ kind: 'mention', prose: 'plain' }, 'translated')).toBe('translated');
         expect(rebuildAdaptedComment(command, '')).toBe('/copilot explain');

@@ -560,7 +560,7 @@ runtime identity and fixed-plan checks before spawn.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **22 distinct cases**; parameterized provider/role rows
+This SDD owns at least **30 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -572,7 +572,8 @@ count separately only when authority/argv differs.
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
-| **Total** | **22** | no double counting |
+| Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
+| **Total** | **30** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -652,7 +653,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
       secrets, Git, MCP/plugins/subagents, and persistence boundaries.
 - [x] Provisioning, preflight, setup doctor, workflow inputs, docs, and manifest
       agree within their explicit runtime versus configuration responsibilities.
-- [x] At least 18 distinct automated cases and all repository coverage/architecture/security gates pass.
+- [x] At least 30 distinct automated cases and all repository coverage/architecture/security gates pass.
 - [x] Removed command inputs fail negative fixtures and no legacy code ships.
 - [x] No fail-open path, raw spawn, unknown flag, ambient environment, temporary
       waiver, or unresolved provider decision remains.
@@ -676,3 +677,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
   publishes, and calls GitHub.
 
 Repository verification on Windows retains only the fixed non-secret OS metadata needed by system tools and official installer fixtures (`SystemRoot`, `WINDIR`, `OS`, `ComSpec`, `PATHEXT`). The verification environment still removes credentials and live workflow identity. Queue tests provide explicit fixture identity, and unsafe local Action metadata is exercised with an unprivileged directory junction rather than requiring file-symlink privilege.
+
+### Dogfooding output rejection diagnostics — 2026-10-11
+
+Issue #463 run `38144699470` on `ubuntu-runner-3` rejected agent output as `provider.contract-invalid` before verification or an implementation push. Its historical `run/output` log does not prove whether the output was empty or exceeded the existing limit. New terminal observations add only one admitted local code: `output-limit`, `empty-output`, `malformed-json-event`, `invalid-json-event`, `missing-text-events`, or `unclassified`. The process adapter assigns the code where it rejects bytes; the logger revalidates it and replaces unknown values with `unclassified`. No output, prompt, path or stderr is published; process limits and schema acceptance remain unchanged. A live retry after publication is required to identify any repeated rejection.

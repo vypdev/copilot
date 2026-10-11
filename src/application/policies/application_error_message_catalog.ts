@@ -206,6 +206,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
   }),
+  'branch-sync-resolution-invalid': Object.freeze({
+    impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
+    action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
+    retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+  }),
   'branch-sync-agent-disabled': Object.freeze({
     impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
     action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
@@ -263,6 +268,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
     action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'branch-sync-resolution-invalid': Object.freeze({
+    impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',
+    action: 'Revisa este código de validación en los logs del workflow y corrige la resolución antes de reintentar {command}.',
+    retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
   }),
   'branch-sync-agent-disabled': Object.freeze({
     impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',

@@ -56,3 +56,22 @@ argv, environment values, paths, raw stderr, and user identity are excluded by
 the observer contract.
 
 The reviewed runtime baseline is Codex `codex-cli 0.156.1`, OpenCode `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`. An available runtime may report any non-empty version and is never silently replaced; an incompatible command surface fails terminally with no provider fallback. See [Agent input reference](/agents/input-reference) and [Agent failure policy](/agents/failure-policy).
+
+When a run rejects process output, its log includes a fixed local cause: `output-limit`, `empty-output`, `malformed-json-event`, `invalid-json-event`, `missing-text-events`, or `unclassified`. These codes distinguish the existing rejection paths without exposing the response or prompt. Inspect the code before retrying or changing a provider integration; a historical log that only says `run/output` cannot establish the cause.
+
+## Windows startup evidence
+
+Maintainers of this repository can dispatch the `Setup Platform Smoke` workflow
+with `windows_startup_probe=true` to compare bounded PowerShell startup in the
+isolated ACL environment and the runner baseline. The report contains only
+closed statuses and elapsed milliseconds. This read-only investigation does not
+replace the required runtime fixtures or certify a successful agent execution.
+
+
+The ACL descriptor probe imports the trusted absolute Windows system Utility
+manifest before JSON serialization, with automatic module loading disabled.
+This avoids discovery scans when the module analysis cache is disabled. The
+probe still uses its fixed minimal environment, complete file/ancestor batch,
+DACL policy and original timeout. No profile, credential, ambient module path
+or writable repository cache is inherited. Hosted and service-runner fixtures
+remain required to establish that a published repair works on each platform.

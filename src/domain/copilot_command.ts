@@ -77,7 +77,9 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (!argumentsList) {
         return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
     }
-    if (argumentsList.length > MAX_ARGUMENTS) {
+    if (argumentsList.length > MAX_ARGUMENTS
+        && !copilotCommandAcceptsAdaptableProse(name as CopilotCommandName)
+        && name !== 'remember') {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
     if (name === 'doctor' && argumentsList.length > 0) {

@@ -230,7 +230,9 @@ descriptor collection starts Windows PowerShell before the private agent plan
 exists. Those trusted metadata probes MUST use a fixed minimal environment:
 the captured canonical system root and its system modules, with
 `PSModuleAnalysisCachePath=NUL` (Microsoft's documented cache-off setting).
-They inherit no authentication, host profile, repository module path or ambient
+Descriptor commands explicitly import the trusted absolute system Utility
+manifest with automatic module loading disabled before serializing the unchanged
+ACL batch. They inherit no authentication, host profile, repository module path or ambient
 cache override. This setting applies only to the metadata probe; it neither
 disables the private cache for agent execution nor changes its authentication.
 No process-global environment mutation, cache deletion, workspace ignore or
@@ -945,3 +947,88 @@ errors and credential masking.
 - Decision: semantic role ports and explicit complete tuples; no fallback.
 - Rejected: eager provisioning, shell-string assembly, provider DTOs in use cases.
 - Follow-up: automatic model selection is outside this baseline.
+
+### Hosted Windows startup investigation (2026-10-11)
+
+PR #465 hosted Windows smoke run 38146124779 failed 29 isolated runtime
+fixtures. The native descriptor PowerShell process repeatedly reached its
+15-second timeout; a nested verification-environment probe also reached its
+60-second timeout. Earlier self-hosted Windows run 38142246677 passed those
+fixtures. This difference does not identify a root cause or prove the
+authenticated fixer works on either runner.
+
+The existing platform smoke workflow now offers a bounded, read-only
+`windows_startup_probe` dispatch. One hosted Windows job compares six fixed
+20-second probes: baseline and isolated Write-Output; isolated .NET console
+output; isolated explicit system Utility manifest or DLL followed by Write-Output;
+and isolated explicit Utility DLL followed by the ACL helper's JSON cmdlet.
+These use fixed commands and trusted absolute Windows system paths only.
+It records only the fixed
+environment label, closed status and elapsed milliseconds. It never records
+stdout, stderr, errors, environment values, credentials or paths. It does not
+change process permissions, ACL policy, sandboxing or verification requirements.
+
+This investigation tool makes no feature-readiness claim and does not replace
+the mandatory smoke fixtures. Its six live probes are operational evidence,
+not additional unit cases or a completed acceptance gate. The default workflow
+behavior and coverage export stay unchanged; probe-only dispatch does not start
+self-hosted smoke jobs or export coverage.
+
+Initial diagnostic run 38150007571 on master 4575bbc3 proved that a minimal
+PowerShell command times out in the isolated ACL environment both before and
+after a successful 947 ms runner-baseline invocation. Subsequent probes separate
+non-secret system metadata, temp variables, and profile variables; this does not
+change the admitted agent environment or execution permissions. The success of
+the diagnostic workflow itself is not a successful isolated startup result.
+
+Expanded run 38150471451 showed a different hosted VM with isolated startup
+18,757 ms initially and around 12,000 ms thereafter, versus 233 ms baseline.
+Adding each tested system/temp/profile group independently did not remove the
+delay. This demonstrates timing variability as well as the isolated overhead;
+it does not establish a single missing variable or justify disabling ACL checks.
+Disposable-profile cache comparisons remain investigation evidence only.
+
+Cache comparison run 38151029504 found that all eight isolated variants reached
+the 20-second timeout while the runner baseline completed in 651 ms. Native,
+absolute and disabled cache selections with disposable profiles did not isolate
+the cause. The next six-probe comparison tests combined non-secret Windows
+metadata and module-path selection. It never copies token/proxy/auth variables,
+prints metadata values, or changes the agent environment.
+
+Combined comparison run 38152468447 timed out all five isolated variants at
+20 seconds; the runner baseline completed in 622 ms. Combined metadata,
+disposable profiles and the runner module path did not remove the difference.
+The next six probes separate PATH from module/cache settings in both directions.
+This remains diagnosis only: no production process environment or trust check
+is relaxed, and process output/environment values are never reported.
+
+PATH comparison run 38153237008 preserved a ready baseline when PATH alone was
+replaced by the isolated system PATH (311 ms). Replacing the module-path/cache
+pair in the baseline instead caused a 20-second timeout. All three isolated
+PATH variants also timed out. This narrows the next comparison to the two
+module settings independently; it does not yet identify which causes the delay.
+
+Control comparison run 38154093700 found that adding cache-off alone to the
+ready runner baseline caused a 20-second timeout. The isolated system module
+path alone retained a 527 ms baseline. Every minimal environment still timed
+out, including without cache overrides. The next comparison distinguishes
+process startup from command discovery using .NET console output and explicit
+trusted system Utility imports. This is a hypothesis test, not a proven repair;
+ACL checks, the agent environment and process timeouts remain unchanged.
+
+
+Utility-discovery run 38154939851 kept the isolated environment unchanged: the
+ordinary Write-Output probe timed out at 20 seconds, direct .NET console output
+completed in 210 ms, and an explicit trusted system Utility manifest followed
+by Write-Output completed in 242 ms. This reproduces a command-discovery delay,
+not slow native PowerShell startup. Explicit DLL imports produced an unexpected
+result and are not used in the repair.
+
+The descriptor helper now explicitly imports that system Utility manifest,
+disables automatic module-loading fallback, and then runs the existing complete
+file/ancestor descriptor collection and JSON serialization. The fixed minimal
+environment, cache-off value, 15-second timeout, 1 MiB output bound, DACL rules
+and authentication isolation are unchanged. Five new invocation contracts check
+trusted import ordering, literal escaping, unsafe owner refusal, complete ancestor
+batches and timeout classification. Actual hosted/native Windows smoke proof is
+pending and must be recorded independently; diagnostic success is not acceptance.

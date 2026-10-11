@@ -7,6 +7,12 @@ description: How to ask the bot to fix one or more Bugbot findings from an issue
 
 **Bugbot autofix** lets you ask the bot to **fix** one or more previously reported findings. The configured agent determines which findings you mean and applies the fixes. The action checks out the target branch before agent execution, runs your verify commands, and commits and pushes only safe workspace paths. Findings stay open until a fresh review verifies the pushed revision.
 
+On runners that reuse a checkout, the action fetches the target branch and
+fast-forwards its local copy to that exact fetched commit before starting the
+fixer. If the local branch contains unpublished or divergent commits, or a Git
+preparation command fails, the fix stops and retains that work. Inspect the
+reported failure before retrying; no reset or force push is performed.
+
 When `bugbot-dry-run` is enabled globally, autofix exits successfully before invoking the fixer, verification, commit, or push.
 
 This page explains how to trigger autofix, who can do it, and what the action does under the hood.

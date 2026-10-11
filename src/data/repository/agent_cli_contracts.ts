@@ -1,6 +1,6 @@
 import type { AgentCapability, AgentConfiguration } from '../model/agent';
 import type {
-    AgentExecutionExitDiagnostic, AgentExecutionPreflightDiagnostic, AgentExecutionPreflightStage,
+    AgentExecutionExitDiagnostic, AgentExecutionPreflightDiagnostic, AgentExecutionPreflightStage, AgentExecutionOutputDiagnostic,
 } from '../../application/ports/agent_execution_observation_ports';
 
 export interface AgentCliRequest {
@@ -18,6 +18,7 @@ export interface AgentCliRequest {
 }
 
 export class AgentCliError extends Error {
+    outputDiagnostic?: AgentExecutionOutputDiagnostic;
     preflightStage?: AgentExecutionPreflightStage;
     preflightDiagnostic?: AgentExecutionPreflightDiagnostic;
     constructor(

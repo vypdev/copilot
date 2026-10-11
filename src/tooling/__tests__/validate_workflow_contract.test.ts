@@ -764,7 +764,7 @@ describe('workflow contract validator', () => {
       ['pull_request', 'refs/heads/master', false],
     ] as const) {
       expect(runInNewContext(dispatchGuard.slice(4, -3), {
-        github: { event_name: eventName, ref },
+        github: { event_name: eventName, ref }, inputs: { windows_startup_probe: false },
       })).toBe(expected);
     }
     workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
@@ -779,7 +779,7 @@ describe('workflow contract validator', () => {
     workflow.jobs['setup-self-hosted-codex-smoke'].if = "github.event_name == 'workflow_dispatch'";
     expect(() => assertRunner(file, workflow)).toThrow('manual dispatch from protected master');
     workflow.jobs['setup-self-hosted-codex-smoke'].if =
-      "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}";
+      "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}";
     workflow.jobs['setup-self-hosted-codex-smoke'].steps = workflow.jobs['setup-self-hosted-codex-smoke'].steps
       .filter((step: { name?: string }) => step.name !== 'Full platform coverage and acceptance budgets');
     expect(() => assertRunner(file, workflow)).toThrow('full platform coverage and acceptance budgets');

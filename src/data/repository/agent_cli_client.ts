@@ -85,6 +85,8 @@ function failureObservation(
         retryable: error instanceof AgentCliError && error.retryable,
         exitCode: error instanceof AgentCliError ? error.exitCode : undefined,
         exitDiagnostic: error instanceof AgentCliError ? error.exitDiagnostic : undefined,
+        ...(phase === 'run' && category === 'output' && error instanceof AgentCliError
+            ? { outputDiagnostic: error.outputDiagnostic ?? 'unclassified' } : {}),
     };
 }
 

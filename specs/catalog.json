@@ -128,7 +128,9 @@
         "src/application/usecases/comment_automation_command_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
         "src/application/policies/inactivity_result_counts_projection_policy.ts",
-        "src/domain/copilot_command.ts"
+        "src/domain/copilot_command.ts",
+        "src/application/ports/progress_diff_query_ports.ts",
+        "src/data/repository/progress_diff_repository.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -203,7 +205,8 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
         "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
-        "src/application/usecases/__tests__/comment_automation_use_case.test.ts"
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
+        "src/data/repository/__tests__/progress_diff_repository.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -239,7 +242,8 @@
         "docs/security-operations/security/prompt-injection.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/development/architecture.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "docs/issues/branch-management.mdx"
       ]
     },
     {
@@ -1508,7 +1512,8 @@
         "src/application/policies/publication_message_catalog.ts",
         "src/application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_workflow.ts",
         "src/application/usecases/comment_automation_use_case.ts",
-        "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts"
+        "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts",
+        "src/application/usecases/steps/commit/git_branch_checkout.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1545,7 +1550,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/dismiss_bugbot_findings_use_case.test.ts",
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/detect_bugbot_fix_intent_use_case.test.ts",
-        "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts"
+        "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts",
+        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -1597,7 +1603,8 @@
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/infrastructure/git_commit_adapter.ts",
-        "src/infrastructure/branch_sync_sdd_catalog.ts"
+        "src/infrastructure/branch_sync_sdd_catalog.ts",
+        "src/domain/branch_sync_validation.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1774,7 +1781,8 @@
         "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-workflow-contract.cjs",
         "src/application/policies/agent_execution_failure_policy.ts",
-        "src/infrastructure/untrusted_command_environment.ts"
+        "src/infrastructure/untrusted_command_environment.ts",
+        "scripts/diagnose-windows-powershell-startup.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1801,7 +1809,8 @@
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
-        "src/infrastructure/__tests__/untrusted_command_environment.test.ts"
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
