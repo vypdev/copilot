@@ -196,6 +196,31 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'sdd-draft-format-invalid': Object.freeze({
+    impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
+    action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+  }),
+  'sdd-draft-size-exceeded': Object.freeze({
+    impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
+    action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+  }),
+  'branch-sync-resolution-invalid': Object.freeze({
+    impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
+    action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
+    retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+  }),
+  'branch-sync-agent-disabled': Object.freeze({
+    impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
+    action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
+    retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+  }),
+  'branch-sync-fixer-unavailable': Object.freeze({
+    impact: 'Branch synchronization stopped because the merge has conflicts and no fixer agent is configured.',
+    action: 'Configure a supported fixer and retry {command}; use --dry-run to inspect the merge without publishing it.',
+    retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+  }),
   'pull-request-link-restored': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
     action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
@@ -234,6 +259,31 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'sdd-draft-format-invalid': Object.freeze({
+    impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
+    action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'sdd-draft-size-exceeded': Object.freeze({
+    impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
+    action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'branch-sync-resolution-invalid': Object.freeze({
+    impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',
+    action: 'Revisa este código de validación en los logs del workflow y corrige la resolución antes de reintentar {command}.',
+    retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+  }),
+  'branch-sync-agent-disabled': Object.freeze({
+    impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
+    action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
+    retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+  }),
+  'branch-sync-fixer-unavailable': Object.freeze({
+    impact: 'La sincronización se detuvo porque el merge tiene conflictos y no hay un fixer configurado.',
+    action: 'Configura un fixer compatible y reintenta {command}; usa --dry-run para inspeccionar el merge sin publicarlo.',
+    retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+  }),
   'pull-request-link-restored': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
     action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',

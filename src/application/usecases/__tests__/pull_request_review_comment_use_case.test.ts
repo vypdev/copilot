@@ -101,6 +101,8 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
     owner: "o",
     repo: "r",
     issueNumber: 296,
+    isPullRequest: true,
+    eventName: "pull_request_review_comment",
     tokens: { token: "t" },
     issue: {
       isIssueComment: false,
@@ -113,6 +115,7 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
       isPullRequestReviewComment: true,
       commentBody: "@bot fix it",
       number: 42,
+      head: "feature/296-bugbot-autofix",
     },
     commit: { branch: "feature/296-bugbot-autofix" },
     singleAction: { enabledSingleAction: false } as Execution["singleAction"],
@@ -169,6 +172,11 @@ describe("PullRequestReviewCommentUseCase", () => {
         commit: jest.fn(),
         push: jest.fn(),
       },
+      undefined, undefined, undefined, undefined, undefined,
+      { linkedBranches: { getLinkedBranch: jest.fn(async (_issue: number, branch: string) => ({ name: branch, headSha: 'a'.repeat(40) })) },
+        pullRequests: { getPullRequest: jest.fn().mockResolvedValue({ number: 42, state: 'open', draft: false,
+          baseRepository: { owner: 'o', name: 'r' }, headRepositoryOwner: 'o', headRepositoryName: 'r',
+          headRef: 'feature/296-bugbot-autofix', headSha: 'a'.repeat(40) }) } },
     );
     mockLogInfo.mockClear();
     mockIsActorAllowedToModifyFiles.mockReset().mockResolvedValue(true);
@@ -491,7 +499,7 @@ describe("PullRequestReviewCommentUseCase", () => {
           isFixRequest: false,
           isDoRequest: true,
           targetFindingIds: [],
-          branchOverride: "feature/296-from-pr",
+          branchOverride: "feature/296-bugbot-autofix",
         },
       }),
     ]);
@@ -510,7 +518,7 @@ describe("PullRequestReviewCommentUseCase", () => {
     expect(mockRunUserRequestCommitAndPush).toHaveBeenCalledTimes(1);
     expect(mockRunUserRequestCommitAndPush).toHaveBeenCalledWith(
       expect.objectContaining({ issueNumber: 296 }),
-      expect.objectContaining({ branchOverride: "feature/296-from-pr" }),
+      expect.objectContaining({ branchOverride: "feature/296-bugbot-autofix" }),
       expect.anything(),
     );
     expect(mockThinkInvoke).not.toHaveBeenCalled();

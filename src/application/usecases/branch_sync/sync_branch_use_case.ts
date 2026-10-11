@@ -1,4 +1,5 @@
 import { Result } from "../../../data/model/result";
+import { admittedBranchSyncValidationCode } from '../../../domain/branch_sync_validation';
 import type { BranchSyncCommandOptions } from "../../../domain/branch_sync_command";
 import { getBranchSyncConflictsPrompt } from "../../../prompts/branch_sync_conflicts";
 import type { FixerQueryPort } from "../../ports/agent_fixer_ports";
@@ -17,11 +18,13 @@ import { runVerifyCommands } from "../steps/commit/bugbot/verify_command_runner"
 import type { ParamUseCase } from "../base/param_usecase";
 import {
   BRANCH_SYNC_TASK_ID,
-  branchSyncConflictEligibilityError,
+  branchSyncConflictEligibilityFailure,
+  type BranchSyncConflictFailure,
   completedBranchSyncResult,
   failedBranchSyncResult,
   unavailableBranchSyncResult,
 } from "./branch_sync_execution_policy";
+import type { ApplicationErrorRecovery } from '../../errors/application_error';
 
 export interface SyncBranchRequest {
   readonly context: BranchSyncContext;
@@ -75,10 +78,10 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     }
 
     const conflictResolution = await this.resolveConflicts(context, preparation, parentBranch, target, options.useAgent);
-    if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure)];
+    if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
 
     const verification = await this.verifyPreparedMerge(context, preparation);
-    if (verification.failure) return [await this.abortFailure(verification.failure)];
+    if (verification.failure) return [await this.abortFailure(verification.failure, verification.recovery)];
 
     const author = await this.authenticatedUser.getUserDetails();
     const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(
@@ -88,7 +91,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       preparation.childSha,
     );
     if (!remoteValidation.valid) {
-      return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.")];
+      return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.", validationRecovery(remoteValidation.code))];
     }
 
     const commitSha = await this.workspace.commitAndPush(
@@ -106,9 +109,9 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     parentBranch: string,
     target: BranchSyncTarget,
     useAgent: boolean,
-  ): Promise<{ readonly agentUsed: boolean; readonly failure?: string }> {
+  ): Promise<{ readonly agentUsed: boolean; readonly failure?: BranchSyncConflictFailure }> {
     if (preparation.kind !== "conflicted") return { agentUsed: false };
-    const failure = branchSyncConflictEligibilityError(preparation, useAgent, context.agentConfiguration);
+    const failure = branchSyncConflictEligibilityFailure(preparation, useAgent, context.agentConfiguration);
     if (failure) return { agentUsed: false, failure };
 
     logInfo(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
@@ -123,18 +126,21 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       }),
     });
     if (!response?.text?.trim()) {
-      return { agentUsed: false, failure: "The conflict-resolution agent returned no usable response." };
+      return { agentUsed: false, failure: { reason: "The conflict-resolution agent returned no usable response." } };
     }
     const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
     return validation.valid
       ? { agentUsed: true }
-      : { agentUsed: false, failure: validation.reason ?? "The agent resolution did not pass workspace safety validation." };
+      : { agentUsed: false, failure: {
+        reason: validation.reason ?? "The agent resolution did not pass workspace safety validation.",
+        recovery: validationRecovery(validation.code),
+      } };
   }
 
   private async verifyPreparedMerge(
     context: BranchSyncContext,
     preparation: BranchMergePreparation,
-  ): Promise<{ readonly commandCount: number; readonly failure?: string }> {
+  ): Promise<{ readonly commandCount: number; readonly failure?: string; readonly recovery?: ApplicationErrorRecovery }> {
     const commands = limitVerifyCommands([...context.verifyCommands]);
     if (commands.length === MAX_VERIFY_COMMANDS) logInfo(`Branch sync verification is capped at ${MAX_VERIFY_COMMANDS} commands.`);
     const verification = await runVerifyCommands(
@@ -151,7 +157,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     const validation = await this.workspace.validatePreparedMerge(conflictPaths);
     return validation.valid
       ? { commandCount: commands.length }
-      : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly." };
+      : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly.", recovery: validationRecovery(validation.code) };
   }
 
   private completed(
@@ -172,9 +178,12 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     });
   }
 
-  private async abortFailure(reason: string): Promise<Result> {
+  private async abortFailure(reason: string, recovery?: ApplicationErrorRecovery): Promise<Result> {
     await this.safeAbort();
-    return failedBranchSyncResult(reason);
+    if (recovery?.id === 'branch-sync-resolution-invalid') {
+      logInfo(`Branch synchronization validation rejected: ${recovery.variables.validationCode}.`);
+    }
+    return failedBranchSyncResult(reason, undefined, recovery);
   }
 
   private async safeAbort(): Promise<void> {
@@ -184,4 +193,8 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       logError("Unable to abort the in-progress branch merge cleanly.");
     }
   }
+}
+
+function validationRecovery(code: unknown): ApplicationErrorRecovery {
+  return { id: 'branch-sync-resolution-invalid', variables: { validationCode: admittedBranchSyncValidationCode(code), command: '/copilot sync-branch' } };
 }

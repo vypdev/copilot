@@ -1,3 +1,5 @@
+import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
+
 export type ApplicationErrorKind =
     | 'configuration'
     | 'authorization'
@@ -38,6 +40,11 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
     'bugbot-review-blocks-pending',
+    'branch-sync-agent-disabled',
+    'branch-sync-fixer-unavailable',
+    'branch-sync-resolution-invalid',
+    'sdd-draft-size-exceeded',
+    'sdd-draft-format-invalid',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
@@ -50,6 +57,11 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'managed-branch-enrichment-failed': Readonly<{ branchName: string }>;
     readonly 'inactivity-explanation-failed': Readonly<{ issueNumber: number }>;
     readonly 'bugbot-review-blocks-pending': Readonly<{ pendingCount: number }>;
+    readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
+    readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
 }
 
 export type ApplicationErrorRecovery = {
@@ -286,6 +298,11 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
+    'branch-sync-agent-disabled': Object.freeze(['command']),
+    'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-format-invalid': Object.freeze([]),
 });
 
 function normalizeApplicationErrorRecovery(
@@ -318,6 +335,14 @@ function normalizeApplicationErrorRecovery(
             || !Number.isSafeInteger(variables.pendingCount)
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
+    }
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
+        && variables.command !== '/copilot sync-branch') {
+        throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-resolution-invalid'
+        && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
+        throw new TypeError('Application error recovery synchronization validation code is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

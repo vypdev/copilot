@@ -5137,7 +5137,7 @@ Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true,
 /***/ }),
 
 /***/ 7790:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 
 var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
@@ -5150,6 +5150,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const branch_sync_validation_1 = __nccwpck_require__(981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'pull-request-link-restored',
     'pull-request-link-base-retained',
@@ -5158,6 +5159,11 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
     'bugbot-review-blocks-pending',
+    'branch-sync-agent-disabled',
+    'branch-sync-fixer-unavailable',
+    'branch-sync-resolution-invalid',
+    'sdd-draft-size-exceeded',
+    'sdd-draft-format-invalid',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -5344,6 +5350,11 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
+    'branch-sync-agent-disabled': Object.freeze(['command']),
+    'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-draft-format-invalid': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -5374,6 +5385,14 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !Number.isSafeInteger(variables.pendingCount)
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
+    }
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
+        && variables.command !== '/copilot sync-branch') {
+        throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-resolution-invalid'
+        && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
+        throw new TypeError('Application error recovery synchronization validation code is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -5430,6 +5449,28 @@ exports.AGENT_EXECUTABLE_BASENAMES = {
 };
 function isAgentConfigurationReady(configuration) {
     return Boolean(configuration?.model.trim());
+}
+
+
+/***/ }),
+
+/***/ 981:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BRANCH_SYNC_VALIDATION_CODES = void 0;
+exports.admittedBranchSyncValidationCode = admittedBranchSyncValidationCode;
+/** Closed diagnostic vocabulary; workspace paths and provider output stay private. */
+exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
+    'merge-state-mismatch', 'head-changed', 'merge-parent-changed',
+    'unresolved-conflicts', 'unexpected-paths', 'unstaged-changes',
+    'protected-index-changed', 'sdd-catalog-invalid', 'staging-failed',
+    'whitespace-or-conflict-markers', 'parent-head-changed', 'working-head-changed',
+    'unclassified',
+]);
+function admittedBranchSyncValidationCode(value) {
+    return exports.BRANCH_SYNC_VALIDATION_CODES.find(code => code === value) ?? 'unclassified';
 }
 
 

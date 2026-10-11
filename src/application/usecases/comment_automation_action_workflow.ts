@@ -1,4 +1,5 @@
 import { Result } from "../../data/model/result";
+import { IMPLEMENTATION_REPLY_RESULT_ID, type ImplementationResultProjection } from '../policies/implementation_result_policy';
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
 import type { CommentAutomationContext } from './comment_automation_context';
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
@@ -6,6 +7,8 @@ import { commitAutofixAndResolveFindings } from "./steps/commit/bugbot/commit_au
 import { commitUserRequestIfSuccessful } from "./steps/commit/bugbot/commit_user_request_workflow";
 import { logInfo } from "../ports/logging_ports";
 import { ApplicationError, toApplicationError } from "../errors/application_error";
+
+import { resolveCommentMutationBranch } from './comment_mutation_target_workflow';
 
 export type CommentAutomationAction = "autofix" | "do-user-request" | "review" | "think";
 
@@ -112,16 +115,38 @@ async function runDoUserRequestAction(
   intentPayload: BugbotFixIntentPayload | undefined,
 ): Promise<Result[]> {
   if (!intentPayload) return [];
+  let branchOverride: string;
+  try {
+    branchOverride = await resolveCommentMutationBranch(param, options);
+    if (!branchOverride || (intentPayload.branchOverride && intentPayload.branchOverride !== branchOverride)) {
+      throw new ApplicationError('workflow.stale', 'Implementation requires the exact current conversation branch.');
+    }
+  } catch (error) {
+    return [new Result({
+      id: `${options.taskId}.Implementation`, success: false, executed: false,
+      errors: [toApplicationError(error, 'provider.unavailable', 'The implementation branch could not be verified.')],
+    })];
+  }
   logInfo("Running do user request.");
   const doResults = await options.doUserRequestUseCase.invoke({
     userComment: intentPayload.requestText?.trim() || param.userComment,
-    branchOverride: intentPayload.branchOverride,
+    branchOverride,
   });
+  if (!doResults.some(result => result.executed) || doResults.some(result => !result.success || result.errors.length > 0)) {
+    return doResults;
+  }
   const commitResults = await commitUserRequestIfSuccessful(
     param.bugbot.commit,
-    intentPayload.branchOverride,
+    branchOverride,
     doResults,
     options.bugbotGitMutationPort,
   );
-  return [...doResults, ...commitResults];
+  const results = [...doResults, ...commitResults];
+  const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
+  if (!committed || commitResults.some(result => !result.success || result.errors.length > 0)) return results;
+  const publication: ImplementationResultProjection = Object.freeze({
+    kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+  });
+  return [...results, new Result({ id: IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
+    payload: { publication } })];
 }

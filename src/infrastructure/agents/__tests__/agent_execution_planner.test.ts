@@ -201,6 +201,68 @@ describe('AgentExecutionPlanner', () => {
         expect(planningSystem.readVersion).toHaveBeenCalledTimes(1);
     });
 
+    it('materializes private shell data directories inside the cleaned runtime, never inside the workspace', () => {
+        const plan = new AgentExecutionPlanner(system('codex')).prepare({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'fixture', timeoutMs: 1_000, environment: { PATH: '' },
+        });
+        try {
+            for (const kind of ['roaming', 'local']) {
+                const directory = join(plan.runtimeDirectory, 'shell', kind);
+                expect(statSync(directory).isDirectory()).toBe(true);
+                expect(directory.startsWith(plan.workspace)).toBe(false);
+                if (process.platform === 'win32') expect(() => verifyWindowsRuntimePathPrivate(directory, true)).not.toThrow();
+                else expect(statSync(directory).mode & 0o077).toBe(0);
+            }
+        } finally {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+        }
+        expect(existsSync(plan.runtimeDirectory)).toBe(false);
+    });
+
+    it.each([true, false])('overrides ambient PowerShell cache authority with private runtime data (host app data=%s)', present => {
+        const plan = new AgentExecutionPlanner(system('codex')).prepare({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'language', prompt: 'fixture', timeoutMs: 1_000,
+            environment: { PATH: '', CODEX_HOME: '/operator-codex-session', PSModuleAnalysisCachePath: '/untrusted/checkout-cache',
+                ...(present ? { APPDATA: '/host/roaming', LOCALAPPDATA: '/host/local' } : {}) },
+        });
+        try {
+            const cache = join(plan.runtimeDirectory, 'shell', 'local', 'powershell-module-analysis.cache').replace(/\\/gu, '/');
+            expect(plan.environment.PSModuleAnalysisCachePath?.replace(/\\/gu, '/')).toBe(cache);
+            expect(plan.environment.CODEX_HOME).toBe('/operator-codex-session');
+            expect(existsSync(join(plan.runtimeDirectory, 'shell', 'local'))).toBe(true);
+        } finally {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
+    it('preserves parent Codex authentication while admitting only private application data to child shells', () => {
+        const environment = {
+            PATH: '', CODEX_HOME: '/operator-codex-session', HOME: '/host-profile',
+            USERPROFILE: '/host-profile', APPDATA: '/host-roaming', LOCALAPPDATA: '/host-local',
+            OPENAI_API_KEY: 'provider-fixture', GITHUB_TOKEN: 'github-fixture',
+        };
+        const plan = new AgentExecutionPlanner(system('codex')).prepare({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'language',
+            prompt: 'fixture', timeoutMs: 1_000, environment,
+        });
+        try {
+            expect(plan.environment.CODEX_HOME).toBe(environment.CODEX_HOME);
+            expect(plan.environment.APPDATA).toBe(environment.APPDATA);
+            const inclusion = plan.argv.find(value => value.startsWith('shell_environment_policy.include_only='))!;
+            expect(inclusion).not.toMatch(/TOKEN|KEY|SECRET|HOME|USERPROFILE/);
+            for (const [key, kind] of [['APPDATA', 'roaming'], ['LOCALAPPDATA', 'local']]) {
+                const setting = plan.argv.find(value => value.startsWith(`shell_environment_policy.set.${key}=`))!;
+                expect(JSON.parse(setting.slice(setting.indexOf('=') + 1)).replace(/\\/gu, '/'))
+                    .toBe(join(plan.runtimeDirectory, 'shell', kind).replace(/\\/gu, '/'));
+                expect(setting).not.toContain(environment[key as 'APPDATA' | 'LOCALAPPDATA']);
+            }
+            expect(plan.environment).not.toHaveProperty('GITHUB_TOKEN');
+        } finally {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     it.each([
         ['timeoutMs', 900_001], ['maxPromptBytes', 524_289], ['maxOutputBytes', 4_194_305],
         ['timeoutMs', 0], ['maxPromptBytes', 0], ['maxOutputBytes', 0],

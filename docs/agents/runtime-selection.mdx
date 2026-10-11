@@ -20,4 +20,34 @@ Windows agent execution remains an open gate. An earlier hosted fixture rejected
 
 If agent preflight fails, the Action log identifies a fixed stage such as `resolution`, `invocation-trust`, or `version`. Private official installation failures report a closed stage, bounded exit code and, when recognizable, a fixed reason; they never print installer stderr, executable paths, prompts, arguments, or credentials. The standalone read-only CLI verifier checks trust once before its help, version, and optional login probes and retries only a transient Windows ACL query timeout once.
 
+Codex child shells use private per-run application-data directories outside the checkout. The parent Codex login context is preserved; host profile paths and credentials remain excluded from child shells. Unexpected untracked files still block implementation rather than being ignored or committed.
+
+Windows executable ACL checks run before the agent starts. Their PowerShell
+metadata probe uses only system modules and disables its own module cache, so
+missing service-account application-data variables cannot create
+`Microsoft/Windows/PowerShell/ModuleAnalysisCache` in the checkout. Official
+Windows installers also disable their PowerShell module cache before starting;
+this occurs before the provider's private shell policy exists. Executable
+and ancestor ACL validation remains mandatory.
+
+Repository verification commands also receive a temporary Windows profile and
+module cache. Required Windows machine facts and the configured Jest worker
+recycling flag are preserved; operator profile paths and authentication-store
+references remain excluded.
+
+On Windows, that verification home must also pass the existing private-directory
+and ancestor permission checks before it is used. Verification commands receive
+`TMP`, `TEMP`, `TMPDIR` and `RUNNER_TEMP` pointing to a private subdirectory of
+their temporary home. This keeps nested fixtures and installers in the same
+protected scope. The Action can fall back to a safe profile-local parent; it
+blocks execution when no safe parent is available and never changes host
+directory permissions.
+
+The parent process and child shells also use an explicit PowerShell module-cache
+filename inside that private runtime directory. Ambient cache locations cannot
+redirect it into the checkout. Agent failures retain their specific timeout,
+cancellation, policy or execution code in the conversation reply. The agent's
+15-minute deadline stays bounded; inspect the current state before retrying a
+timed-out implementation.
+
 There is no runtime registry or provider fallback. The exhaustive dispatcher recognizes exactly these three values and rejects every other value before spawn.

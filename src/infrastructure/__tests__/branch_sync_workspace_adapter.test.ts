@@ -28,7 +28,7 @@ function createGit(replies: Record<string, Reply[]> = {}) {
   return { git, execute };
 }
 
-const STATUS = "status --porcelain";
+const STATUS = "status --porcelain --untracked-files=all";
 const UNRESOLVED = "diff --name-only --diff-filter=U -z";
 const INDEX = "ls-files -s -z";
 const MERGE = "-c user.name=Copilot -c user.email=copilot@users.noreply.github.com merge --no-ff --no-commit parent";
@@ -143,7 +143,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
           expect(gitAt(workspace, ['diff', '--name-only', '--diff-filter=U']).toString()).toBe('');
           if (scenario === 'verification changed resolution') {
             writeFileSync(join(workspace, 'conflict.txt'), 'verification mutated the resolved file\n');
-            await expect(adapter.validatePreparedMerge(['conflict.txt'])).resolves.toEqual({ valid: false, reason: 'The prepared merge contains unstaged changes.' });
+            await expect(adapter.validatePreparedMerge(['conflict.txt'])).resolves.toEqual({ valid: false, code: 'unstaged-changes', reason: 'The prepared merge contains unstaged changes.' });
             expect(git.stagePaths).toHaveBeenCalledTimes(1);
             gitAt(workspace, ['checkout', '--', 'conflict.txt']);
           }
@@ -165,7 +165,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
     if (scenario === 'staging fails') git.stagePaths.mockRejectedValueOnce(new Error('stage failed'));
     const adapter = new BranchSyncWorkspaceAdapter(git);
     await adapter.prepare('develop', 'feature/42', 'fixture');
-    await expect(adapter.validatePreparedMerge(['src/a.ts'])).resolves.toEqual({ valid: false, reason:
+    await expect(adapter.validatePreparedMerge(['src/a.ts'])).resolves.toEqual({ valid: false, code: scenario === 'staging fails' ? 'staging-failed' : 'unresolved-conflicts', reason:
       scenario === 'staging fails' ? 'Trusted staging of the conflict resolution failed.' : 'Unresolved merge conflicts remain.' });
     expect(git.stagePaths).toHaveBeenCalledWith(['src/a.ts']);
     expect(git.commit).not.toHaveBeenCalled();
@@ -263,19 +263,19 @@ describe("BranchSyncWorkspaceAdapter", () => {
     });
     const adapter = new BranchSyncWorkspaceAdapter(changed.git);
     await adapter.prepare("develop", "feature/42", "token");
-    await expect(adapter.validatePreparedMerge([])).resolves.toEqual({ valid: false, reason: "The agent changed HEAD." });
+    await expect(adapter.validatePreparedMerge([])).resolves.toEqual({ valid: false, code: "head-changed", reason: "The agent changed HEAD." });
   });
 
   it("rejects validation without the expected prepared conflict set", async () => {
     const context = createGit();
     const unprepared = new BranchSyncWorkspaceAdapter(context.git);
     await expect(unprepared.validatePreparedMerge([])).resolves.toEqual({
-      valid: false, reason: "Merge state does not match the expected conflict set.",
+      valid: false, code: "merge-state-mismatch", reason: "Merge state does not match the expected conflict set.",
     });
 
     const prepared = await prepareCleanAdapter();
     await expect(prepared.adapter.validatePreparedMerge(["src/a.ts"])).resolves.toEqual({
-      valid: false, reason: "Merge state does not match the expected conflict set.",
+      valid: false, code: "merge-state-mismatch", reason: "Merge state does not match the expected conflict set.",
     });
   });
 
@@ -300,7 +300,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
     ],
   ])("rejects unsafe post-merge %s", async (_case, replies, reason) => {
     const context = await prepareCleanAdapter(replies);
-    await expect(context.adapter.validatePreparedMerge([])).resolves.toEqual({ valid: false, reason });
+    await expect(context.adapter.validatePreparedMerge([])).resolves.toEqual({ valid: false, code: ({ 'merge parent': 'merge-parent-changed', 'unresolved conflicts': 'unresolved-conflicts', 'workspace paths': 'unexpected-paths', 'unstaged changes': 'unstaged-changes', 'protected index entries': 'protected-index-changed', 'whitespace validation': 'whitespace-or-conflict-markers' } as Record<string, string>)[_case], reason });
   });
 
   it("aborts a failed merge without conflicts and detects remote races", async () => {
@@ -327,7 +327,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
     const racedAdapter = new BranchSyncWorkspaceAdapter(raced.git);
     await racedAdapter.prepare("develop", "feature/42", "token");
     await expect(racedAdapter.assertRemoteHeadsUnchanged("develop", "parent", "feature/42", "child", "token"))
-      .resolves.toEqual({ valid: false, reason: "Parent branch develop changed during synchronization." });
+      .resolves.toEqual({ valid: false, code: "parent-head-changed", reason: "Parent branch develop changed during synchronization." });
     await racedAdapter.abort();
     expect(raced.execute).toHaveBeenCalledWith("git", ["merge", "--abort"]);
   });
@@ -338,7 +338,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
     });
 
     await expect(context.adapter.assertRemoteHeadsUnchanged("develop", "parent", "feature/42", "child", "token"))
-      .resolves.toEqual({ valid: false, reason: "Working branch feature/42 changed during synchronization." });
+      .resolves.toEqual({ valid: false, code: "working-head-changed", reason: "Working branch feature/42 changed during synchronization." });
   });
 
   it("rejects a commit without a prepared merge and treats an idle abort as a no-op", async () => {

@@ -1,7 +1,38 @@
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { prepareUntrustedCommandEnvironment } from '../untrusted_command_environment';
 
 describe('prepareUntrustedCommandEnvironment', () => {
+    it('keeps nested temporary work inside the isolated profile and removes it with that profile', () => {
+        const runtime = prepareUntrustedCommandEnvironment({ TMP: 'host-temp', TEMP: 'host-temp', TMPDIR: 'host-temp', RUNNER_TEMP: 'host-runner' });
+        const home = runtime.environment.HOME;
+        for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP']) expect(runtime.environment[key]).toBe(join(home, 'temp'));
+        expect(existsSync(runtime.environment.TEMP)).toBe(true);
+        runtime.cleanup();
+        expect(existsSync(home)).toBe(false);
+    });
+    it.each([true, false])('creates private Windows profile and cache paths with host application data present=%s', present => {
+        const runtime = prepareUntrustedCommandEnvironment({
+            SystemRoot: 'C:\\Windows', WINDIR: 'C:\\Windows', SystemDrive: 'C:',
+            COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1',
+            ...(present ? { APPDATA: 'host-roaming', LOCALAPPDATA: 'host-local', USERPROFILE: 'host-user' } : {}),
+            PSModuleAnalysisCachePath: 'host-cache', PAT: 'secret',
+        }, 'win32');
+        try {
+            const environment = runtime.environment;
+            expect(environment.SystemDrive).toBe('C:');
+            expect(environment.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE).toBe('1');
+            expect(environment.USERPROFILE).toBe(environment.HOME);
+            expect(existsSync(environment.APPDATA)).toBe(true);
+            expect(existsSync(environment.LOCALAPPDATA)).toBe(true);
+            expect(environment.PSModuleAnalysisCachePath).toContain(environment.LOCALAPPDATA);
+            expect(JSON.stringify(environment)).not.toMatch(/host-|secret/);
+        } finally {
+            const root = runtime.environment.HOME;
+            runtime.cleanup();
+            expect(existsSync(root)).toBe(false);
+        }
+    });
     it('keeps only runtime metadata and removes every credential/auth-store reference', () => {
         const runtime = prepareUntrustedCommandEnvironment({
             PATH: '/usr/bin',

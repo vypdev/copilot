@@ -1,6 +1,7 @@
 import { FindingsAgentAdapter } from '../findings_agent_adapter';
 import { FixerAgentAdapter } from '../fixer_agent_adapter';
 import type { AgentConfiguration } from '../../../model/agent';
+import { AgentCliError } from '../../agent_cli_contracts';
 
 const mockExecute = jest.fn();
 
@@ -18,6 +19,20 @@ describe('agent capability adapters', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    it.each([
+        ['configuration', 'agent.policy-rejected'], ['timeout', 'timeout'], ['cancelled', 'workflow.cancelled'],
+        ['output', 'provider.contract-invalid'], ['process', 'agent.failed'],
+    ] as const)('preserves the closed %s failure as %s without provider diagnostics', async (category, code) => {
+        mockExecute.mockRejectedValue(new AgentCliError('private executable/token diagnostic', category, category !== 'process'));
+        try {
+            await new FixerAgentAdapter(infrastructure).fix({ configuration, prompt: 'Implement accepted change' });
+            throw new Error('Expected CLI rejection');
+        } catch (error) {
+            expect(error).toMatchObject({ name: 'ApplicationError', code, retryable: category === 'timeout' });
+            expect(JSON.stringify(error)).not.toContain('private executable/token diagnostic');
+        }
     });
 
     it('returns undefined and reports a missing findings configuration', async () => {

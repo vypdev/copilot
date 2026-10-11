@@ -31,6 +31,16 @@ function ports(labels?: readonly string[]) {
 }
 
 describe('SynchronizeLifecycleStateUseCase', () => {
+    it('clears an earlier implementation failure after a verified push while retaining unrelated labels', async () => {
+        const dependencies = ports(['feature', 'in-progress', 'state:blocked', 'state:awaiting-maintainer']);
+        await new SynchronizeLifecycleStateUseCase(dependencies.labels, dependencies.head).invoke({
+            context: context({ eventName: 'issue_comment', action: 'created',
+                target: { kind: 'issue', number: 7, labels: [], opened: false, descriptionEdited: false } }),
+            results: [{ id: 'CommentAutomation.ImplementationReply', success: true, executed: true, steps: [], errors: [],
+                payload: { publication: { kind: 'implementation-result', outcome: 'changes-pushed', branch: 'feature/7-managed' } } } as never],
+        });
+        expect(dependencies.labels.setLabels).toHaveBeenCalledWith(7, ['feature', 'in-progress', 'state:working']);
+    });
     afterEach(() => resetApplicationLogger());
 
     it.each(['IssueCommentUseCase.Status', 'UpdatePullRequestDescriptionUseCase'])(

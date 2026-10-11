@@ -2,6 +2,10 @@ import { runCommentAutomationAction } from '../comment_automation_action_workflo
 import { Result } from '../../../data/model/result';
 
 const mockCommitAutofix = jest.fn();
+const mockCommitUserRequest = jest.fn();
+jest.mock('../steps/commit/bugbot/commit_user_request_workflow', () => ({
+  commitUserRequestIfSuccessful: (...args: unknown[]) => mockCommitUserRequest(...args),
+}));
 jest.mock('../steps/commit/bugbot/commit_autofix_and_resolve_workflow', () => ({
   commitAutofixAndResolveFindings: (...args: unknown[]) => mockCommitAutofix(...args),
 }));
@@ -26,7 +30,10 @@ function execution(publicationMode: 'publish' | 'dry-run' = 'publish') {
 }
 
 describe('runCommentAutomationAction', () => {
-  beforeEach(() => mockCommitAutofix.mockReset().mockResolvedValue([]));
+  beforeEach(() => {
+    mockCommitAutofix.mockReset().mockResolvedValue([]);
+    mockCommitUserRequest.mockReset().mockResolvedValue([]);
+  });
   it('fails clearly when the read-only review route is not composed', async () => {
     const results = await runCommentAutomationAction(
       {} as never,
@@ -128,4 +135,109 @@ describe('runCommentAutomationAction', () => {
     expect(review.invoke).toHaveBeenCalledTimes(1);
     expect(results.at(-1)).toBe(result);
   });
+});
+
+
+describe('implementation conversation branch authority', () => {
+  beforeEach(() => mockCommitUserRequest.mockReset().mockResolvedValue([]));
+  function fixture(pr = false) {
+    const branch = 'feature/42-managed';
+    const target = {
+      userComment: '/copilot implement Add the accepted feature',
+      status: { target: pr ? 'pull-request' : 'issue', branch },
+      bugbot: { commit: {}, fixIntent: {
+        repository: { owner: 'o', name: 'r' },
+        target: { isPullRequest: pr, issueNumber: 42, pullRequestNumber: 77, headBranch: branch },
+        trigger: { kind: 'issue_comment', headOwner: 'o' }, ignorePatterns: [], organizationRules: [],
+      } },
+    };
+    const invoke = jest.fn().mockResolvedValue([new Result({ id: 'implementation', success: true, executed: true })]);
+    const linked = jest.fn().mockResolvedValue({ name: branch, headSha: 'a'.repeat(40) });
+    const candidate = { number: 77, state: 'open', draft: false, baseRepository: { owner: 'o', name: 'r' },
+      headRepositoryOwner: 'o', headRepositoryName: 'r', headRef: branch, headSha: 'a'.repeat(40) };
+    const getPullRequest = jest.fn().mockResolvedValue(candidate);
+    const opts = { taskId: 'CommentAutomation', doUserRequestUseCase: { invoke },
+      rememberBranchPorts: { linkedBranches: { getLinkedBranch: linked }, pullRequests: { getPullRequest } },
+      bugbotGitMutationPort: {},
+    };
+    const intent = { isDoRequest: true, requestText: 'Add the accepted feature', targetFindingIds: [] };
+    const run = () => runCommentAutomationAction(target as never, opts as never, 'do-user-request', intent as never);
+    return { branch, target, invoke, linked, candidate, getPullRequest, opts, intent, run };
+  }
+
+  it.each([true, false])('confirms a verified implementation with committed=%s', async committed => {
+    const h = fixture();
+    mockCommitUserRequest.mockResolvedValue([new Result({ id: 'DoUserRequestCommitAndPush', success: true, executed: committed })]);
+    const results = await h.run();
+    expect(results.at(-1)).toMatchObject({ id: 'CommentAutomation.ImplementationReply', success: true, executed: true,
+      payload: { publication: { kind: 'implementation-result', outcome: committed ? 'changes-pushed' : 'no-changes', branch: h.branch } } });
+    expect(results.at(-1)?.payload).not.toHaveProperty('commitSha');
+  });
+
+  it.each(['empty', 'failed', 'wrong-producer'])('does not confirm an %s commit result', async mode => {
+    const h = fixture();
+    mockCommitUserRequest.mockResolvedValue(mode === 'empty' ? [] : [new Result({
+      id: mode === 'wrong-producer' ? 'UnknownCommit' : 'DoUserRequestCommitAndPush', success: mode !== 'failed', executed: true,
+    })]);
+    expect((await h.run()).some(r => r.id === 'CommentAutomation.ImplementationReply')).toBe(false);
+  });
+
+  it.each(['preceding-failure', 'errors', 'empty', 'skipped'])('does not commit or confirm %s agent results', async mode => {
+    const h = fixture();
+    const successful = new Result({ id: 'implementation', success: true, executed: mode !== 'skipped' });
+    h.invoke.mockResolvedValue(mode === 'empty' ? [] : mode === 'preceding-failure'
+      ? [new Result({ id: 'failed-preparation', success: false, executed: true }), successful]
+      : mode === 'errors' ? [new Result({ id: 'implementation', success: true, executed: true,
+        errors: [{ code: 'workflow.failed' } as never] })] : [successful]);
+    expect((await h.run()).some(r => r.id === 'CommentAutomation.ImplementationReply')).toBe(false);
+    expect(mockCommitUserRequest).not.toHaveBeenCalled();
+  });
+
+  it('passes the exact verified linked issue branch to both implementation and commit', async () => {
+    const h = fixture();
+    await h.run();
+    expect(h.linked).toHaveBeenCalledWith(42, h.branch);
+    expect(h.invoke).toHaveBeenCalledWith({ userComment: 'Add the accepted feature', branchOverride: h.branch });
+    expect(mockCommitUserRequest.mock.calls[0][1]).toBe(h.branch);
+    expect(h.getPullRequest).not.toHaveBeenCalled();
+  });
+
+  it('resolves a PR conversation through its exact current canonical identity', async () => {
+    const h = fixture(true);
+    await h.run();
+    expect(h.getPullRequest).toHaveBeenCalledWith(77);
+    expect(h.invoke).toHaveBeenCalledWith(expect.objectContaining({ branchOverride: h.branch }));
+    expect(mockCommitUserRequest.mock.calls[0][1]).toBe(h.branch);
+    expect(h.linked).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing', 'wrong-ref', 'invalid-sha', 'denied', 'no-port'])('blocks %s branch evidence before the agent or commit', async mode => {
+    const h = fixture();
+    if (mode === 'missing') h.linked.mockResolvedValue(undefined);
+    if (mode === 'wrong-ref') h.linked.mockResolvedValue({ name: 'feature/foreign', headSha: 'a'.repeat(40) });
+    if (mode === 'invalid-sha') h.linked.mockResolvedValue({ name: h.branch, headSha: 'malformed' });
+    if (mode === 'denied') h.linked.mockRejectedValue(new Error('Denied'));
+    if (mode === 'no-port') Object.assign(h.opts, { rememberBranchPorts: undefined });
+    expect((await h.run())[0]).toMatchObject({ success: false, executed: false });
+    expect(h.invoke).not.toHaveBeenCalled();
+    expect(mockCommitUserRequest).not.toHaveBeenCalled();
+  });
+
+  it('rejects an intent branch that disagrees with the verified conversation target', async () => {
+    const h = fixture();
+    Object.assign(h.intent, { branchOverride: 'master' });
+    expect((await h.run())[0].errors?.[0].code).toBe('workflow.stale');
+    expect(h.invoke).not.toHaveBeenCalled();
+    expect(mockCommitUserRequest).not.toHaveBeenCalled();
+  });
+
+  it.each([{ headRepositoryOwner: 'fork-owner' }, { headRepositoryName: 'fork-repo' }, { number: 78 }])(
+    'rejects foreign PR authority before implementation: %j', async override => {
+      const h = fixture(true);
+      h.getPullRequest.mockResolvedValue({ ...h.candidate, ...override });
+      expect((await h.run())[0]).toMatchObject({ success: false, executed: false });
+      expect(h.invoke).not.toHaveBeenCalled();
+      expect(mockCommitUserRequest).not.toHaveBeenCalled();
+    },
+  );
 });

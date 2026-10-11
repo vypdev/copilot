@@ -169,6 +169,11 @@ describe("IssueCommentUseCase", () => {
         commit: jest.fn(),
         push: jest.fn(),
       },
+      undefined, undefined, undefined, undefined, undefined, undefined,
+      { linkedBranches: { getLinkedBranch: jest.fn(async (_issue: number, branch: string) => ({ name: branch, headSha: 'a'.repeat(40) })) },
+        pullRequests: { getPullRequest: jest.fn().mockResolvedValue({ number: 42, state: 'open', draft: false,
+          baseRepository: { owner: 'o', name: 'r' }, headRepositoryOwner: 'o', headRepositoryName: 'r',
+          headRef: 'feature/296-bugbot-autofix', headSha: 'a'.repeat(40) }) } },
     );
     mockIsActorAllowedToModifyFiles.mockReset().mockResolvedValue(true);
     mockIsActorAllowedToUseMemberOnlyAutomation.mockReset().mockResolvedValue(true);
@@ -532,7 +537,7 @@ describe("IssueCommentUseCase", () => {
           isFixRequest: false,
           isDoRequest: true,
           targetFindingIds: [],
-          branchOverride: "feature/296-from-issue",
+          branchOverride: "feature/296-bugbot-autofix",
         },
       }),
     ]);
@@ -551,7 +556,7 @@ describe("IssueCommentUseCase", () => {
     expect(mockRunUserRequestCommitAndPush).toHaveBeenCalledTimes(1);
     expect(mockRunUserRequestCommitAndPush).toHaveBeenCalledWith(
       expect.objectContaining({ issueNumber: 296 }),
-      expect.objectContaining({ branchOverride: "feature/296-from-issue" }),
+      expect.objectContaining({ branchOverride: "feature/296-bugbot-autofix" }),
       expect.anything(),
     );
     expect(mockThinkInvoke).not.toHaveBeenCalled();
