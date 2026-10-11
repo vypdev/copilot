@@ -8,6 +8,7 @@ import { runAgentCli } from '../../../data/repository/agent_cli_execution';
 import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
 import { installerEnvironment } from '../agent_official_installer';
+import { buildWindowsAclProbeEnvironment } from '../windows_executable_trust.cjs';
 import { createPrivateAgentInstallRoot, prepareWindowsInstallRoot,
     securePrivateInstalledAgent, selectPrivateInstallRoot } from '../agent_private_install_root';
 import {
@@ -99,6 +100,53 @@ function prepare(workspace: string, environment: NodeJS.ProcessEnv, timeoutMs = 
 }
 
 describe('isolated Windows agent runtime', () => {
+    it('bounds ACL PowerShell probes to system modules and disables their checkout-relative cache', () => {
+        expect(buildWindowsAclProbeEnvironment('C:\\Windows')).toEqual({
+            SystemRoot: 'C:\\Windows', WINDIR: 'C:\\Windows', PATH: 'C:\\Windows\\System32',
+            PSModulePath: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\Modules', PSModuleAnalysisCachePath: 'NUL',
+        });
+    });
+    it('does not inherit credentials, host profiles or a poisoned cache in trusted descriptor probes', () => {
+        const previous = process.env.PSModuleAnalysisCachePath;
+        process.env.PSModuleAnalysisCachePath = 'poisoned-workspace-cache';
+        try {
+            const environment = buildWindowsAclProbeEnvironment('C:\\Windows');
+            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'CODEX_HOME', 'GITHUB_TOKEN', 'OPENAI_API_KEY']) {
+                expect(environment).not.toHaveProperty(key);
+            }
+            expect(environment.PSModuleAnalysisCachePath).toBe('NUL');
+            expect(process.env.PSModuleAnalysisCachePath).toBe('poisoned-workspace-cache');
+        } finally {
+            if (previous === undefined) delete process.env.PSModuleAnalysisCachePath;
+            else process.env.PSModuleAnalysisCachePath = previous;
+        }
+    });
+    windowsIt.each([true, false])('runs the exact ACL probe with host application data present=%s without creating checkout cache files', hostDataPresent => {
+        const fixture = fakeRuntime('process.stdout.write("fixture")');
+        try {
+            const environment: NodeJS.ProcessEnv = { ...fixture.environment,
+                PSModulePath: join(fixture.workspace, 'untrusted-modules'),
+                PSModuleAnalysisCachePath: join(fixture.workspace, 'poisoned-cache'),
+            };
+            for (const key of ['APPDATA', 'LOCALAPPDATA']) {
+                if (hostDataPresent) {
+                    environment[key] = join(fixture.root, key);
+                    mkdirSync(environment[key]!);
+                } else delete environment[key];
+            }
+            const script = `require(${JSON.stringify(require.resolve('../windows_executable_trust.cjs'))}).verifyWindowsAgentExecutableAcl(process.argv[1]);process.stdout.write('verified');`;
+            const result = spawnSync(fixture.node, ['-e', script, fixture.node], {
+                cwd: fixture.workspace, env: environment, encoding: 'utf8', timeout: 30_000, windowsHide: true,
+            });
+            expect(result.error).toBeUndefined();
+            expect(result.status).toBe(0);
+            expect(result.stdout).toBe('verified');
+            expect(execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: fixture.workspace, encoding: 'utf8' }).trim()).toBe('');
+            expect(existsSync(join(fixture.workspace, 'Microsoft'))).toBe(false);
+            expect(existsSync(join(fixture.workspace, 'poisoned-cache'))).toBe(false);
+        } finally { rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
+    });
+
     it('falls back from an unsafe installation parent and fails closed when none is safe', () => {
         const attempts: string[] = [];
         const prepare = (parent: string): string => {

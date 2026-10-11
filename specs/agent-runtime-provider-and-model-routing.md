@@ -224,6 +224,26 @@ These paths do not add sandbox writable roots, network access, shell profiles,
 login shells, or approval authority. Do not ignore, delete or commit unexpected
 checkout files as a substitute for isolating runtime state.
 
+The repeated Windows implementation run `38133560682` identified the exact
+unexpected file as `Microsoft/Windows/PowerShell/ModuleAnalysisCache`. ACL
+descriptor collection starts Windows PowerShell before the private agent plan
+exists. Those trusted metadata probes MUST use a fixed minimal environment:
+the captured canonical system root and its system modules, with
+`PSModuleAnalysisCachePath=NUL` (Microsoft's documented cache-off setting).
+They inherit no authentication, host profile, repository module path or ambient
+cache override. This setting applies only to the metadata probe; it neither
+disables the private cache for agent execution nor changes its authentication.
+No process-global environment mutation, cache deletion, workspace ignore or
+ACL-validation bypass is permitted.
+
+Flow: trusted system root -> cache-free system-module ACL probe -> unchanged
+executable/ancestor descriptor validation -> private agent plan -> execution.
+Native fixtures MUST call the exact descriptor verifier in a child Node process
+with present and absent host application data and deliberately poisoned module/
+cache paths. Both must validate the executable and leave Git completely clean.
+A subsequent real Windows implementation remains the live acceptance gate.
+Source: [Windows PowerShell module cache](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1).
+
 A native Windows fixture MUST start Windows PowerShell with the actual generated
 shell policy, load its file-hash module, and prove a clean Git workspace and
 private runtime cleanup with both present and absent host application-data
@@ -796,6 +816,11 @@ category mappings and four private module-cache policy/planner/native scenarios.
 This is separate from the 130-case baseline, 18-case Windows extension and
 6-case private application-data extension. Required native cases run on Windows;
 fixture success never substitutes for a live agent execution.
+
+The trusted ACL-probe cache extension adds **4 distinct cases**: exact system-only
+environment, absence of credential/profile inheritance without ambient mutation,
+and two native exact-probe clean-workspace cases with host application data
+present/absent. They are additional to the 130 + 18 + 6 + 9 case budgets.
 
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live

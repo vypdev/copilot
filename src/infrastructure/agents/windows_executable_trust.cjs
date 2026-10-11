@@ -2,7 +2,7 @@ const { execFileSync } = require('node:child_process');
 const { Buffer } = require('node:buffer');
 const { realpathSync } = require('node:fs');
 const { hostname } = require('node:os');
-const { dirname, join } = require('node:path');
+const { dirname, join, win32 } = require('node:path');
 const { trustedWindowsSystemRoot } = require('./windows_system_root.cjs');
 
 const SID_PATTERN = /S-\d+(?:-\d+)+/u;
@@ -59,6 +59,7 @@ function installedExecutableDescriptors(paths) {
   try {
     output = execFileSync(systemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe')),
       ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+        env: buildWindowsAclProbeEnvironment(),
         encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15_000, maxBuffer: 1_048_576, windowsHide: true,
       }).replace(/^\uFEFF/u, '').trim();
   } catch (error) {
@@ -66,6 +67,19 @@ function installedExecutableDescriptors(paths) {
     throw error;
   }
   return parseWindowsExecutableDescriptors(output, paths.length);
+}
+
+/** Trusted metadata probes do not need authentication, profiles or a module cache. */
+function buildWindowsAclProbeEnvironment(root = trustedWindowsSystemRoot()) {
+  return {
+    SystemRoot: root,
+    WINDIR: root,
+    PATH: win32.join(root, 'System32'),
+    PSModulePath: win32.join(root, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
+    // Microsoft's documented cache-off value prevents a missing LOCALAPPDATA
+    // from resolving ModuleAnalysisCache relative to the repository checkout.
+    PSModuleAnalysisCachePath: 'NUL',
+  };
 }
 
 function grantsMutation(rights, directory = false, directParent = false) {
@@ -149,6 +163,7 @@ function verifyWindowsAgentExecutableAcl(path) {
 }
 
 module.exports = {
+  buildWindowsAclProbeEnvironment,
   assertWindowsExecutableDacl,
   assertWindowsExecutableParentDacl,
   currentWindowsUserIdentity,

@@ -22,6 +22,12 @@ If agent preflight fails, the Action log identifies a fixed stage such as `resol
 
 Codex child shells use private per-run application-data directories outside the checkout. The parent Codex login context is preserved; host profile paths and credentials remain excluded from child shells. Unexpected untracked files still block implementation rather than being ignored or committed.
 
+Windows executable ACL checks run before the agent starts. Their PowerShell
+metadata probe uses only system modules and disables its own module cache, so
+missing service-account application-data variables cannot create
+`Microsoft/Windows/PowerShell/ModuleAnalysisCache` in the checkout. Executable
+and ancestor ACL validation remains mandatory.
+
 The parent process and child shells also use an explicit PowerShell module-cache
 filename inside that private runtime directory. Ambient cache locations cannot
 redirect it into the checkout. Agent failures retain their specific timeout,
