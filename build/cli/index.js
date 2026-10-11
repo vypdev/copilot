@@ -83452,6 +83452,218 @@ function definedEnvironment(environment) {
 
 /***/ }),
 
+/***/ 44640:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PrivateInstalledAgentValidationError = void 0;
+exports.selectPrivateInstallRoot = selectPrivateInstallRoot;
+exports.prepareWindowsInstallRoot = prepareWindowsInstallRoot;
+exports.createPrivateAgentInstallRoot = createPrivateAgentInstallRoot;
+exports.createPrivateVerificationRuntimeRoot = createPrivateVerificationRuntimeRoot;
+exports.securePrivateInstalledAgent = securePrivateInstalledAgent;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const windows_runtime_acl_1 = __nccwpck_require__(55362);
+const INSTALL_PREFIX = 'copilot-agent-install-';
+class PrivateInstalledAgentValidationError extends Error {
+    constructor(reason, message, cause) {
+        super(message);
+        this.reason = reason;
+        this.name = 'PrivateInstalledAgentValidationError';
+        if (cause !== undefined)
+            Object.defineProperty(this, 'cause', { value: cause, enumerable: false });
+    }
+}
+exports.PrivateInstalledAgentValidationError = PrivateInstalledAgentValidationError;
+class TransientWindowsAclTimeout extends Error {
+    constructor() {
+        super('Windows private installation ACL check timed out.');
+    }
+}
+/** Keep a failed candidate from preventing a safer profile-local fallback. */
+function selectPrivateInstallRoot(parents, prepare) {
+    const tried = new Set();
+    for (const parent of parents) {
+        const key = parent.toLowerCase();
+        if (tried.has(key))
+            continue;
+        tried.add(key);
+        try {
+            return prepare(parent);
+        }
+        catch {
+            // The candidate is cleaned by prepare before another parent is tried.
+        }
+    }
+    throw new Error('No protected agent installation directory is available.');
+}
+function prepareWindowsInstallRoot(parent, verify = windows_runtime_acl_1.verifyWindowsAgentExecutableAcl) {
+    return prepareWindowsPrivateRoot(parent, verify, INSTALL_PREFIX);
+}
+function prepareWindowsPrivateRoot(parent, verify, prefix) {
+    try {
+        return prepareWindowsInstallRootOnce(parent, verify, prefix);
+    }
+    catch (error) {
+        // Cold Windows services can time out a read-only ACL query once.
+        // Every other failure remains final for this candidate.
+        if (!(error instanceof TransientWindowsAclTimeout))
+            throw error;
+        return prepareWindowsInstallRootOnce(parent, verify, prefix);
+    }
+}
+function prepareWindowsInstallRootOnce(parent, verify, prefix) {
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(parent, prefix));
+    const probe = (0, node_path_1.join)(root, '.acl-probe');
+    let checkingAcl = false;
+    try {
+        (0, node_fs_1.chmodSync)(root, 0o700);
+        checkingAcl = true;
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(root, true);
+        checkingAcl = false;
+        (0, node_fs_1.writeFileSync)(probe, '', { flag: 'wx' });
+        checkingAcl = true;
+        (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(probe, false);
+        verify(probe);
+        checkingAcl = false;
+        (0, node_fs_1.rmSync)(probe);
+        return root;
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        if (checkingAcl && error && typeof error === 'object' && 'code' in error && error.code === 'ETIMEDOUT') {
+            throw new TransientWindowsAclTimeout();
+        }
+        throw error;
+    }
+}
+function createPrivateAgentInstallRoot() {
+    return createPrivateRuntimeRoot(INSTALL_PREFIX);
+}
+/** Verification uses the same owner and ancestor guarantees before replacing the child's profile. */
+function createPrivateVerificationRuntimeRoot() {
+    return createPrivateRuntimeRoot('copilot-verify-runtime-');
+}
+function createPrivateRuntimeRoot(prefix) {
+    if (process.platform === 'win32') {
+        return selectPrivateInstallRoot([
+            process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(),
+            (0, node_path_1.join)((0, node_os_1.homedir)(), 'AppData', 'Local', 'Temp'),
+        ], parent => prepareWindowsPrivateRoot(parent, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl, prefix));
+    }
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), prefix));
+    (0, node_fs_1.chmodSync)(root, 0o700);
+    return root;
+}
+/** This may change ACLs only for a newly installed file contained in our root. */
+function securePrivateInstalledAgent(root, path) {
+    const canonicalRoot = (0, node_fs_1.realpathSync)(root);
+    const relation = (0, node_path_1.relative)(root, path);
+    if (!isWithinPrivateRoot(relation))
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+    const canonicalPath = resolvePrivateInstalledFile(root, canonicalRoot, relation);
+    if (process.platform === 'win32' && (0, node_fs_1.lstatSync)(path).isSymbolicLink()) {
+        throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
+    }
+    if (process.platform === 'win32') {
+        const directories = [];
+        let parent = (0, node_path_1.dirname)(canonicalPath);
+        while (parent !== canonicalRoot) {
+            const parentRelation = (0, node_path_1.relative)(canonicalRoot, parent);
+            if (!parentRelation || parentRelation.startsWith('..') || (0, node_path_1.isAbsolute)(parentRelation)) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+            }
+            directories.unshift(parent);
+            parent = (0, node_path_1.dirname)(parent);
+        }
+        try {
+            for (const directory of directories)
+                (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(directory, true);
+            (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(canonicalPath, false);
+        }
+        catch (error) {
+            throw new PrivateInstalledAgentValidationError('acl-hardening', 'Could not protect the installed agent ACL.', error);
+        }
+        try {
+            (0, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl)(canonicalPath);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            const reason = message.startsWith('Unsafe Windows executable ancestor ')
+                ? 'acl-ancestor' : /^(?:Unsafe executable ACL owner|Agent executable is writable)/u.test(message)
+                ? 'acl-file' : 'acl-inspection';
+            throw new PrivateInstalledAgentValidationError(reason, 'Could not verify the installed agent ACL.', error);
+        }
+    }
+    try {
+        (0, node_fs_1.accessSync)(canonicalPath, node_fs_1.constants.X_OK);
+    }
+    catch (error) {
+        throw new PrivateInstalledAgentValidationError('access-denied', 'Installed agent is not executable.', error);
+    }
+    return canonicalPath;
+}
+function isWithinPrivateRoot(relation) {
+    return Boolean(relation) && relation !== '..' && !relation.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(relation);
+}
+/** Follow installer launch links only while each hop stays under our private root. */
+function resolvePrivateInstalledFile(root, canonicalRoot, relation) {
+    let current = canonicalRoot;
+    let pending = relation.split(node_path_1.sep).filter(Boolean);
+    let links = 0;
+    while (pending.length > 0) {
+        const next = (0, node_path_1.resolve)(current, pending.shift());
+        if (!isWithinPrivateRoot((0, node_path_1.relative)(canonicalRoot, next))) {
+            throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+        }
+        const entry = (0, node_fs_1.lstatSync)(next);
+        if (entry.isSymbolicLink()) {
+            // The official Windows Codex installer publishes bin and current as
+            // directory junctions. Never admit a linked executable itself.
+            if (process.platform === 'win32' && pending.length === 0) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output is a Windows symlink.');
+            }
+            if (++links > 32)
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output has too many links.');
+            const target = (0, node_path_1.resolve)((0, node_path_1.dirname)(next), normalizedLinkTarget((0, node_fs_1.readlinkSync)(next)));
+            const canonicalRelation = (0, node_path_1.relative)(canonicalRoot, target);
+            const targetRelation = isWithinPrivateRoot(canonicalRelation)
+                ? canonicalRelation : (0, node_path_1.relative)(root, target);
+            if (!isWithinPrivateRoot(targetRelation)) {
+                throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output escaped its private directory.');
+            }
+            pending = [...targetRelation.split(node_path_1.sep).filter(Boolean), ...pending];
+            current = canonicalRoot;
+        }
+        else if (pending.length > 0 && !entry.isDirectory()) {
+            throw new PrivateInstalledAgentValidationError('unsafe-link', 'Official agent installer output has a non-directory ancestor.');
+        }
+        else {
+            current = next;
+            if (pending.length === 0 && !entry.isFile()) {
+                throw new PrivateInstalledAgentValidationError('invalid-file', 'Official agent installer did not create a file.');
+            }
+        }
+    }
+    return current;
+}
+function normalizedLinkTarget(target) {
+    if (process.platform !== 'win32')
+        return target;
+    // Node may return the NT namespaced form of a junction target. Compare its
+    // ordinary drive path with the private root before following any next hop.
+    const namespaced = target.startsWith('\\\\?\\') || target.startsWith('\\??\\');
+    const ordinary = namespaced ? target.slice(4) : target;
+    return /^[A-Za-z]:\\/u.test(ordinary) ? ordinary : target;
+}
+
+
+/***/ }),
+
 /***/ 57104:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -90443,8 +90655,8 @@ exports.TimerWorkflowPollingDelayAdapter = TimerWorkflowPollingDelayAdapter;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareUntrustedCommandEnvironment = prepareUntrustedCommandEnvironment;
 const node_fs_1 = __nccwpck_require__(87561);
-const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
 const ALLOWED_VARIABLES = [
     'PATH',
     'LANG',
@@ -90478,13 +90690,19 @@ const ALLOWED_VARIABLES = [
  * credentials or paths to local agent authentication stores.
  */
 function prepareUntrustedCommandEnvironment(source = process.env, platform = process.platform) {
-    const runtimeHome = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-verify-runtime-'));
+    const runtimeHome = (0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)();
     const environment = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
         if (value !== undefined)
             environment[variable] = value;
     }
+    // Nested fixtures/installers must not fall back into host temp directories
+    // whose ancestors may be replaceable by another Windows principal.
+    const runtimeTemp = (0, node_path_1.join)(runtimeHome, 'temp');
+    (0, node_fs_1.mkdirSync)(runtimeTemp, { mode: 0o700 });
+    for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP'])
+        environment[key] = runtimeTemp;
     if (platform === 'win32') {
         environment.USERPROFILE = runtimeHome;
         environment.APPDATA = (0, node_path_1.join)(runtimeHome, 'roaming');

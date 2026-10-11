@@ -1,6 +1,6 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { createPrivateVerificationRuntimeRoot } from './agents/agent_private_install_root';
 
 export interface PreparedUntrustedCommandEnvironment {
     environment: Record<string, string>;
@@ -44,12 +44,17 @@ export function prepareUntrustedCommandEnvironment(
     source: NodeJS.ProcessEnv = process.env,
     platform: NodeJS.Platform = process.platform,
 ): PreparedUntrustedCommandEnvironment {
-    const runtimeHome = mkdtempSync(join(tmpdir(), 'copilot-verify-runtime-'));
+    const runtimeHome = createPrivateVerificationRuntimeRoot();
     const environment: Record<string, string> = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
         if (value !== undefined) environment[variable] = value;
     }
+    // Nested fixtures/installers must not fall back into host temp directories
+    // whose ancestors may be replaceable by another Windows principal.
+    const runtimeTemp = join(runtimeHome, 'temp');
+    mkdirSync(runtimeTemp, { mode: 0o700 });
+    for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP']) environment[key] = runtimeTemp;
     if (platform === 'win32') {
         environment.USERPROFILE = runtimeHome;
         environment.APPDATA = join(runtimeHome, 'roaming');

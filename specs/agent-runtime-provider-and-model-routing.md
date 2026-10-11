@@ -838,6 +838,25 @@ fact required by the validator and the declared Jest worker-recycling flag;
 profile and module-cache paths always belong to the fresh temporary home.
 Credentials and operator authentication-store references remain excluded.
 
+The protected verification-temp extension adds **2 distinct cases**: a portable
+isolation/cleanup case for all four temporary-directory variables, and a native
+Windows preflight of a private dummy agent inside the actual isolated profile.
+These are additional to every preceding budget. Windows verification homes MUST
+pass the existing owner/ancestor ACL checks before use, with the existing safe
+profile-local fallback. `TMP`, `TEMP`, `TMPDIR` and `RUNNER_TEMP` MUST identify one
+private temporary subdirectory inside that home rather than inherited host
+directories. The child profile MUST NOT inherit operator authentication paths.
+Nested fixtures and installers use those protected ancestors; unsafe candidates
+still fail closed and no host directory ACL may be modified.
+
+Live [run 38137358379](https://github.com/vypdev/copilot/actions/runs/38137358379)
+reproduced three private-installation preflight failures inside verification on
+`windows-intel-runner-1`, although the native smoke on another runner passed.
+It was canceled after more than twenty minutes without new test output. The
+installed repository verification command now requests Jest `--runInBand` for
+the repeat; serialization is an operational experiment, not proof that either
+the full verification or live agent operation succeeded.
+
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
 provider in unit/integration tests. Each provider requires controlled smoke tests

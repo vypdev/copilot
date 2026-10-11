@@ -1,7 +1,16 @@
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { prepareUntrustedCommandEnvironment } from '../untrusted_command_environment';
 
 describe('prepareUntrustedCommandEnvironment', () => {
+    it('keeps nested temporary work inside the isolated profile and removes it with that profile', () => {
+        const runtime = prepareUntrustedCommandEnvironment({ TMP: 'host-temp', TEMP: 'host-temp', TMPDIR: 'host-temp', RUNNER_TEMP: 'host-runner' });
+        const home = runtime.environment.HOME;
+        for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP']) expect(runtime.environment[key]).toBe(join(home, 'temp'));
+        expect(existsSync(runtime.environment.TEMP)).toBe(true);
+        runtime.cleanup();
+        expect(existsSync(home)).toBe(false);
+    });
     it.each([true, false])('creates private Windows profile and cache paths with host application data present=%s', present => {
         const runtime = prepareUntrustedCommandEnvironment({
             SystemRoot: 'C:\\Windows', WINDIR: 'C:\\Windows', SystemDrive: 'C:',

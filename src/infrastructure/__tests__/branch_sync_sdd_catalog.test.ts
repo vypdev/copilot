@@ -7,7 +7,6 @@ import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 import { refreshBranchSyncSddCatalog, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from '../branch_sync_sdd_catalog';
 import { BranchSyncWorkspaceAdapter } from '../branch_sync_workspace_adapter';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { renderCatalog } = require('../specification_catalog_validator.cjs') as { renderCatalog(catalog: unknown): string };
 
 function fixture(root: string) {
