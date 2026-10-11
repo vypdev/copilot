@@ -653,7 +653,8 @@
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
-        "specs/setup-pat-permission-guidance-and-verification.md"
+        "specs/setup-pat-permission-guidance-and-verification.md",
+        "specs/github-runtime-doctor-command.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
