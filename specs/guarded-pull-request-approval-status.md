@@ -284,12 +284,12 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/configuration/pure planning | 32 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
-| State/application/idempotency/races | 35 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
+| State/application/idempotency/races | 41 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 16 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **116** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **122** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -399,3 +399,10 @@ The correction first passed all 568 suites and 7,430 tests, with 34 existing pla
 On published head `597f3dd94f735986e606c7c36503c155ba5205bb`, the Action resolved the original finding and identified three further defects (`4243019384`, `4243019388`, `4243019390`). The application now reads the complete final head/base revision after the policy and independent head reads; base advancement during either earlier read cannot certify old gates. Every denied or contradictory independent head read invalidates all gates, including when CI was already pending. Off mode keeps separately verified CI, coverage, Bugbot and native review states while its overall approval assessment remains disabled, with no observer action or approval authority.
 
 Eleven additional contracts reproduce those cases and deny canonical/final-revision/final-linkage reads, increasing this extension to 116 distinct cases. Full local verification passed 571 suites and 7,527 tests with 35 existing platform skips (7,562 total). The pure readiness policy has 100% coverage; the changed application has 100% lines/functions, 99.06% statements and 98.93% branches. Existing coverage budgets, typecheck, lint, documentation, specifications/catalog, graph update and compilation passed. These figures do not certify fresh live review or post-promotion command acceptance.
+
+
+### Disabled policy with unavailable optional facts
+
+Fresh native review on head `b067c36c2b5cb9c87f37ee59ce0e8c98068ddff9` resolved the three preceding findings and exposed `4243066051`: an optional evidence read could erase an independently verified disabled approval policy. Status now preserves `off` / not applicable while attempting to read native facts. Failed, foreign, or superseded facts remain unavailable and cannot carry a commit or satisfied gates into the reply. The final policy is still read independently: denied policy access or policy movement invalidates the disabled snapshot. No approval or observer action is introduced.
+
+Six additional application contracts cover denied optional reads, denied or changed final policy, changed native head, foreign evidence and a denied complete final revision. The extension now has 122 distinct cases. Full local verification passed 571 suites and 7,533 tests with 35 configured skips (7,568 total). The pure policy has 100% coverage; the changed application has 100% lines/functions, 99.1% statements and 99.08% branches, with unchanged repository coverage budgets. Fresh review and live command acceptance remain required after publication and promotion.

@@ -25,6 +25,11 @@ export function unavailablePullRequestReadiness(code = 'evidence-unavailable', a
     return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
         humanReviewRequired: true, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
 }
+/** A verified disabled policy is independent of whether optional native facts were readable. */
+export function disabledPullRequestReadiness(): PullRequestReadinessSnapshot {
+    return Object.freeze({ ...unavailablePullRequestReadiness(), readiness: 'not-applicable', mode: 'off', code: 'disabled',
+        humanReviewRequired: false, action: 'none' });
+}
 function state(decision: ApprovalDecision | undefined): PullRequestReadiness {
     return !decision || decision.status === 'already-approved' ? 'satisfied'
         : decision.status === 'pending' ? 'pending'

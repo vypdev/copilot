@@ -44628,6 +44628,7 @@ function renderList(values) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.unavailablePullRequestReadiness = unavailablePullRequestReadiness;
+exports.disabledPullRequestReadiness = disabledPullRequestReadiness;
 exports.projectPullRequestReadiness = projectPullRequestReadiness;
 const pull_request_approval_1 = __nccwpck_require__(8024);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
@@ -44635,6 +44636,11 @@ const objectId = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(
 function unavailablePullRequestReadiness(code = 'evidence-unavailable', action = 'retry') {
     return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
         humanReviewRequired: true, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
+}
+/** A verified disabled policy is independent of whether optional native facts were readable. */
+function disabledPullRequestReadiness() {
+    return Object.freeze({ ...unavailablePullRequestReadiness(), readiness: 'not-applicable', mode: 'off', code: 'disabled',
+        humanReviewRequired: false, action: 'none' });
 }
 function state(decision) {
     return !decision || decision.status === 'already-approved' ? 'satisfied'
@@ -56215,7 +56221,8 @@ async function readCopilotStatus(param, taskId, ports) {
         try {
             rawPolicy = await ports.approval.readPolicy(target);
             try {
-                (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
+                if ((0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy).mode === 'off')
+                    readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
             }
             catch {
                 readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
@@ -56223,14 +56230,16 @@ async function readCopilotStatus(param, taskId, ports) {
             if (readiness.code !== 'invalid-policy') {
                 const read = await ports.approval.loadEvidence(target);
                 if (read.repositoryId !== repositoryId || read.pullNumber !== number || !sha(read.headSha) || !sha(read.baseSha)) {
-                    readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('target-mismatch');
+                    if (readiness.mode !== 'off')
+                        readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('target-mismatch');
                 }
                 else
                     evidence = read;
             }
         }
         catch {
-            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)();
+            if (readiness.mode !== 'off')
+                readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)();
         }
     }
     // A missing, denied or incomplete Bugbot card cannot erase independent approval evidence.
@@ -56247,10 +56256,12 @@ async function readCopilotStatus(param, taskId, ports) {
     catch { /* Retain all independently verified facts. */ }
     let finalPolicy;
     let policyVerified = false;
-    if (evidence && ports.approval) {
+    if (ports.approval && (evidence || readiness.mode === 'off')) {
         try {
             finalPolicy = await ports.approval.readPolicy(target);
             policyVerified = true;
+            if (!evidence && rawPolicy !== finalPolicy)
+                readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('policy-superseded');
         }
         catch {
             readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
@@ -56275,7 +56286,7 @@ async function readCopilotStatus(param, taskId, ports) {
                     action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         }
         catch {
-            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+            readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
         }
     }
     if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts)
@@ -56283,7 +56294,7 @@ async function readCopilotStatus(param, taskId, ports) {
             findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
                 resolved: counts.fixed + counts.obsolete + counts.dismissed } };
     if (finalHead !== pull.headSha)
-        readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
+        readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
     if (fromIssue) {
         try {
             const final = await ports.readLinkedPullRequests(original.issueNumber);

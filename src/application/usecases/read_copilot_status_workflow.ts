@@ -11,7 +11,7 @@ import { isBugbotStatusComment } from '../policies/bugbot_review_presentation_po
 import { selectCanonicalBugbotPullRequest } from '../../domain/bugbot/context';
 import { projectBugbotContextRequest } from './steps/commit/bugbot/bugbot_context_request';
 import { parsePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
-import { projectPullRequestReadiness, unavailablePullRequestReadiness,
+import { projectPullRequestReadiness, unavailablePullRequestReadiness, disabledPullRequestReadiness,
     type PullRequestReadinessSnapshot } from '../policies/pull_request_readiness_policy';
 
 export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
@@ -67,15 +67,15 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     if (ports.approval) {
         try {
             rawPolicy = await ports.approval.readPolicy(target);
-            try { parsePullRequestApprovalPolicy(rawPolicy); }
+            try { if (parsePullRequestApprovalPolicy(rawPolicy).mode === 'off') readiness = disabledPullRequestReadiness(); }
             catch { readiness = Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' }); }
             if (readiness.code !== 'invalid-policy') {
                 const read = await ports.approval.loadEvidence(target);
                 if (read.repositoryId !== repositoryId || read.pullNumber !== number || !sha(read.headSha) || !sha(read.baseSha)) {
-                    readiness = unavailablePullRequestReadiness('target-mismatch');
+                    if (readiness.mode !== 'off') readiness = unavailablePullRequestReadiness('target-mismatch');
                 } else evidence = read;
             }
-        } catch { readiness = unavailablePullRequestReadiness(); }
+        } catch { if (readiness.mode !== 'off') readiness = unavailablePullRequestReadiness(); }
     }
     // A missing, denied or incomplete Bugbot card cannot erase independent approval evidence.
     let counts;
@@ -89,10 +89,11 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     } catch { /* Retain all independently verified facts. */ }
     let finalPolicy: string | undefined;
     let policyVerified = false;
-    if (evidence && ports.approval) {
+    if (ports.approval && (evidence || readiness.mode === 'off')) {
         try {
             finalPolicy = await ports.approval.readPolicy(target);
             policyVerified = true;
+            if (!evidence && rawPolicy !== finalPolicy) readiness = unavailablePullRequestReadiness('policy-superseded');
         } catch { readiness = unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }
     let finalHead: string | undefined;
@@ -108,12 +109,12 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
             readiness = projectPullRequestReadiness(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
             if (pull.headSha !== evidence.headSha) readiness = Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
                 action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
-        } catch { readiness = unavailablePullRequestReadiness('final-evidence-unavailable'); }
+        } catch { readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }
     if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts) snapshot = { ...snapshot, findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
             resolved: counts.fixed + counts.obsolete + counts.dismissed } };
-    if (finalHead !== pull.headSha) readiness = unavailablePullRequestReadiness('final-identity-unavailable');
+    if (finalHead !== pull.headSha) readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('final-identity-unavailable');
     if (fromIssue) {
         try {
             const final = await ports.readLinkedPullRequests!(original.issueNumber!);

@@ -124,7 +124,7 @@ selected PR. It never guesses from an issue number or branch name.
 The reply identifies the verified commit and configured policy mode, links to
 the verified PR, and offers one next action. Known running checks are pending;
 proven failures are blocked; denied or incomplete evidence is unavailable.
-Policy read failures never mean `off`. A change to the head, base, policy, or
+A verified `off` policy remains disabled when optional native facts are unavailable. Unknown or superseded facts have no verified commit or satisfied gates. Final policy access and identity must still be verified. Policy read failures never mean `off`. A change to the head, base, policy, or
 issue linkage during collection invalidates earlier readiness. Retry status
 for the new revision. Recommendation mode still requires human review; guarded
 mode points to the existing approval observer. Status itself never submits an

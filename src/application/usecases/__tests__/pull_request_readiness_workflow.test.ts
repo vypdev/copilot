@@ -51,6 +51,41 @@ describe('readiness workflow identity and independent evidence', () => {
         expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'not-applicable', mode: 'off', action: 'none',
             evidence: { ci: 'satisfied', coverage: 'satisfied', bugbot: 'satisfied', reviews: 'satisfied' } });
     });
+    it('keeps a freshly verified off policy disabled when optional evidence is denied', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        f.ports.approval.loadEvidence.mockRejectedValue({ status: 403 });
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'not-applicable', mode: 'off', code: 'disabled',
+            action: 'none', evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } });
+        expect(f.ports.approval.readPolicy).toHaveBeenCalledTimes(2);
+    });
+    it('cannot keep off mode after its final policy read is denied', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy('off')).mockRejectedValueOnce({ status: 403 });
+        f.ports.approval.loadEvidence.mockRejectedValue({ status: 403 });
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'unavailable', mode: 'unavailable', code: 'final-evidence-unavailable' });
+    });
+    it('discards the disabled assessment if policy changes after denied optional evidence', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy('off')).mockResolvedValueOnce(readinessPolicy('recommend'));
+        f.ports.approval.loadEvidence.mockRejectedValue({ status: 403 });
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'unavailable', mode: 'unavailable', code: 'policy-superseded' });
+    });
+    it('keeps off disabled after head movement while discarding all stale native groups', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
+        expect(await status(f)).toMatchObject({ findingStates: undefined, pullRequestReadiness: { readiness: 'not-applicable', mode: 'off',
+            code: 'disabled', headSha: '', baseSha: '', evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } } });
+    });
+    it('keeps off disabled without trusting native evidence from another target', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        f.ports.approval.loadEvidence.mockResolvedValue(readinessEvidence({ repositoryId: 99 }));
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'not-applicable', mode: 'off', code: 'disabled',
+            evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } });
+    });
+    it('retains disabled policy but withholds native gates after a denied final complete revision', async () => {
+        const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        f.ports.approval.readRevision.mockRejectedValue({ status: 403 });
+        expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'not-applicable', mode: 'off', code: 'disabled', headSha: '',
+            evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } });
+    });
     it('withholds all readiness when the canonical PR lookup is denied', async () => {
         const f = readinessFixture(); f.ports.getPullRequest.mockRejectedValue({ status: 403 });
         expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'unavailable', code: 'identity-unavailable' });
