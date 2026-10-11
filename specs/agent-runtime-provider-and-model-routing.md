@@ -956,13 +956,11 @@ fixtures. This difference does not identify a root cause or prove the
 authenticated fixer works on either runner.
 
 The existing platform smoke workflow now offers a bounded, read-only
-`windows_startup_probe` dispatch. One hosted Windows job compares nine
-20-second probes in order: isolated ACL environment, runner baseline, the
-same isolated environment after the baseline, then isolated environments
-with system metadata, runner temp variables, and runner profile variables.
-Three further probes use fresh disposable profile directories with cache-off,
-absolute cache, and native cache selection respectively. Those directories are
-removed after the comparison and are never passed to an agent. It records only the fixed
+`windows_startup_probe` dispatch. One hosted Windows job compares six fixed 20-second probes in order: isolated
+ACL environment, runner baseline, combined allowlisted Windows metadata, that
+metadata with disposable profile directories, the runner module path alone,
+and metadata with that module path. Disposable directories are removed after
+the comparison and are never passed to an agent. It records only the fixed
 environment label, closed status and elapsed milliseconds. It never records
 stdout, stderr, errors, environment values, credentials or paths. It does not
 change process permissions, ACL policy, sandboxing or verification requirements.
@@ -986,3 +984,10 @@ Adding each tested system/temp/profile group independently did not remove the
 delay. This demonstrates timing variability as well as the isolated overhead;
 it does not establish a single missing variable or justify disabling ACL checks.
 Disposable-profile cache comparisons remain investigation evidence only.
+
+Cache comparison run 38151029504 found that all eight isolated variants reached
+the 20-second timeout while the runner baseline completed in 651 ms. Native,
+absolute and disabled cache selections with disposable profiles did not isolate
+the cause. The next six-probe comparison tests combined non-secret Windows
+metadata and module-path selection. It never copies token/proxy/auth variables,
+prints metadata values, or changes the agent environment.

@@ -14,21 +14,16 @@ const probeRoot = mkdtempSync(join(tmpdir(), 'copilot-startup-evidence-'));
 const profile = Object.fromEntries(['USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TEMP', 'TMP'].map(key => {
   const path = join(probeRoot, key); mkdirSync(path); return [key, path];
 }));
+const metadataKeys = ["SystemDrive", "OS", "ComSpec", "PATHEXT", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "HOMEDRIVE", "HOMEPATH", "ALLUSERSPROFILE", "CommonProgramFiles", "CommonProgramFiles(x86)", "ProgramFiles", "ProgramFiles(x86)", "ProgramData", "PUBLIC", "USERDOMAIN", "USERNAME", "COMPUTERNAME", "LOGONSERVER", "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "SESSIONNAME", "TEMP", "TMP"];
+const metadata = Object.fromEntries(metadataKeys.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
 try {
 for (const [environment, env] of [
   ['isolated-acl', buildWindowsAclProbeEnvironment()],
   ['runner-baseline', process.env],
-  ['isolated-acl-after-baseline', buildWindowsAclProbeEnvironment()],
-  ['isolated-acl-system-metadata', { ...buildWindowsAclProbeEnvironment(),
-    SystemDrive: process.env.SystemDrive, OS: 'Windows_NT', PATHEXT: '.EXE;.CMD', ComSpec: systemTool('cmd.exe') }],
-  ['isolated-acl-runner-temp', { ...buildWindowsAclProbeEnvironment(), TEMP: process.env.TEMP, TMP: process.env.TMP }],
-  ['isolated-acl-runner-profile', { ...buildWindowsAclProbeEnvironment(), USERPROFILE: process.env.USERPROFILE,
-    APPDATA: process.env.APPDATA, LOCALAPPDATA: process.env.LOCALAPPDATA }],
-  ['isolated-private-profile-cache-off', { ...buildWindowsAclProbeEnvironment(), ...profile }],
-  ['isolated-private-profile-absolute-cache', { ...buildWindowsAclProbeEnvironment(), ...profile,
-    PSModuleAnalysisCachePath: join(profile.LOCALAPPDATA, 'module-analysis.cache') }],
-  ['isolated-private-profile-native-cache', { ...buildWindowsAclProbeEnvironment(), ...profile,
-    PSModuleAnalysisCachePath: undefined }],
+  ['isolated-combined-windows-metadata', { ...buildWindowsAclProbeEnvironment(), ...metadata }],
+  ['isolated-combined-private-profile', { ...buildWindowsAclProbeEnvironment(), ...metadata, ...profile }],
+  ['isolated-runner-module-path', { ...buildWindowsAclProbeEnvironment(), PSModulePath: process.env.PSModulePath }],
+  ['isolated-combined-metadata-runner-module-path', { ...buildWindowsAclProbeEnvironment(), ...metadata, PSModulePath: process.env.PSModulePath }],
 ]) {
   const start = performance.now();
   const result = spawnSync(executable, args, { env, encoding: 'utf8', timeout: 20_000, maxBuffer: 4096, windowsHide: true });
