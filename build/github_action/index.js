@@ -85081,7 +85081,12 @@ function parseWindowsExecutableDescriptors(output, expectedCount) {
 function installedExecutableDescriptors(paths) {
   // icacls /save omits the owner; read full descriptors in one bounded process.
   const literals = paths.map(path => `'${path.replace(/'/gu, "''")}'`).join(',');
-  const command = "$ErrorActionPreference='Stop'; $paths=@(" + literals + "); "
+  const utility = systemTool(join('WindowsPowerShell', 'v1.0', 'Modules',
+    'Microsoft.PowerShell.Utility', 'Microsoft.PowerShell.Utility.psd1')).replace(/'/gu, "''");
+  // Command discovery without an analysis cache can scan all installed modules.
+  // Import only the trusted system manifest; prevent any automatic fallback.
+  const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; "
+    + `Import-Module -Name '${utility}' -ErrorAction Stop; $paths=@(` + literals + "); "
     + '$sections=[System.Security.AccessControl.AccessControlSections]::All; $descriptors=@(); '
     + '$descriptors += [System.IO.File]::GetAccessControl($paths[0]).GetSecurityDescriptorSddlForm($sections); '
     + 'for($i=1;$i -lt $paths.Length;$i++){ '

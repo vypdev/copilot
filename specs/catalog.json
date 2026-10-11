@@ -1807,7 +1807,8 @@
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
-        "src/infrastructure/__tests__/untrusted_command_environment.test.ts"
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

@@ -66,3 +66,12 @@ with `windows_startup_probe=true` to compare bounded PowerShell startup in the
 isolated ACL environment and the runner baseline. The report contains only
 closed statuses and elapsed milliseconds. This read-only investigation does not
 replace the required runtime fixtures or certify a successful agent execution.
+
+
+The ACL descriptor probe imports the trusted absolute Windows system Utility
+manifest before JSON serialization, with automatic module loading disabled.
+This avoids discovery scans when the module analysis cache is disabled. The
+probe still uses its fixed minimal environment, complete file/ancestor batch,
+DACL policy and original timeout. No profile, credential, ambient module path
+or writable repository cache is inherited. Hosted and service-runner fixtures
+remain required to establish that a published repair works on each platform.
