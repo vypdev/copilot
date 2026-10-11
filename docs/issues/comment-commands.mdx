@@ -299,3 +299,9 @@ The shared reply publisher adds the same current hidden identity used by other
 correlated replies; the welcome text embeds no separate marker.
 
 See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.
+
+The runtime doctor distinguishes proven missing files from inaccessible evidence.
+A contents API 404 needs an independent complete tree at the same verified
+commit before it can be reported as missing. Denied or incomplete tree reads
+remain unavailable. The proof adds at most two shared read requests and never
+changes repository files or permissions.

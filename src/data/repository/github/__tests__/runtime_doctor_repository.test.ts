@@ -1,7 +1,8 @@
 import { RuntimeDoctorRepository } from '../runtime_doctor_repository';
 import { DOCTOR_REPOSITORY_PATHS } from '../../../../application/ports/github_runtime_doctor_ports';
-const HEAD = 'a'.repeat(40);
-const mockClient = { rest: { repos: { get: jest.fn(), getContent: jest.fn() }, git: { getRef: jest.fn() },
+const HEAD = 'a'.repeat(40), TREE = 'c'.repeat(40);
+const trackedTree = (paths: readonly string[] = DOCTOR_REPOSITORY_PATHS) => ({ data: { sha: TREE, truncated: false, tree: paths.map(path => ({ path, type: 'blob', sha: 'd'.repeat(40) })) } });
+const mockClient = { rest: { repos: { get: jest.fn(), getContent: jest.fn() }, git: { getRef: jest.fn(), getCommit: jest.fn(), getTree: jest.fn() },
     issues: { get: jest.fn() }, actions: { getRepoVariable: jest.fn(), getOrgVariable: jest.fn() } }, graphql: jest.fn() };
 jest.mock('@actions/github', () => ({ getOctokit: () => mockClient }));
 const ref = () => ({ data: { object: { type: 'commit', sha: HEAD } } });
@@ -11,6 +12,7 @@ const links = (nodes: unknown[] = [{ ref: branch() }]) => ({ repository: { datab
 beforeEach(() => {
     jest.resetAllMocks(); mockClient.rest.repos.get.mockResolvedValue({ data: { id: 42, default_branch: 'master' } });
     mockClient.rest.git.getRef.mockResolvedValue(ref());
+    mockClient.rest.git.getCommit.mockResolvedValue({data:{sha:HEAD,tree:{sha:TREE}}}); mockClient.rest.git.getTree.mockResolvedValue(trackedTree());
     mockClient.rest.repos.getContent.mockImplementation(async ({ path }: { path: string }) => ({ data: { type: 'file', path,
         encoding: 'base64', content: Buffer.from('# Safe source').toString('base64') } }));
     mockClient.graphql.mockResolvedValue(links());
@@ -45,8 +47,49 @@ describe('bounded SDK doctor reads', () => {
     });
     it('retains proven missing files as missing rather than permission failures', async () => {
         mockClient.rest.repos.getContent.mockRejectedValue({ status: 404 });
+        mockClient.rest.git.getTree.mockResolvedValue(trackedTree([]));
         const result = await new RuntimeDoctorRepository('o', 'r', 't').readRepository(42);
         expect(result).toMatchObject({ state: 'available', files: { 'specs/catalog.json': { state: 'missing' } } });
+    });
+    it('does not treat a concealed content 404 as absence when the immutable tree contains the file', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404});
+        expect(await new RuntimeDoctorRepository('o','r','t').readRepository(42)).toEqual({state:'unavailable'});
+    });
+    it('keeps a denied absence proof unavailable', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404}); mockClient.rest.git.getCommit.mockRejectedValue({status:403,message:'SECRET'});
+        expect(await new RuntimeDoctorRepository('o','r','t').readRepository(42)).toEqual({state:'unavailable'});
+    });
+    it('rejects a foreign commit identity during absence proof', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404}); mockClient.rest.git.getCommit.mockResolvedValue({data:{sha:'b'.repeat(40),tree:{sha:TREE}}});
+        expect((await new RuntimeDoctorRepository('o','r','t').readRepository(42)).state).toBe('unavailable'); expect(mockClient.rest.git.getTree).not.toHaveBeenCalled();
+    });
+    it('rejects a foreign tree identity during absence proof', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404}); const tree=trackedTree([]); tree.data.sha='b'.repeat(40); mockClient.rest.git.getTree.mockResolvedValue(tree);
+        expect((await new RuntimeDoctorRepository('o','r','t').readRepository(42)).state).toBe('unavailable');
+    });
+    it('requires a complete tree to prove absence', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404}); const tree=trackedTree([]); tree.data.truncated=true;mockClient.rest.git.getTree.mockResolvedValue(tree);
+        expect((await new RuntimeDoctorRepository('o','r','t').readRepository(42)).state).toBe('unavailable');
+    });
+    it('shares one immutable absence proof across all fixed file reads', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404});mockClient.rest.git.getTree.mockResolvedValue(trackedTree([]));
+        const result=await new RuntimeDoctorRepository('o','r','t').readRepository(42);
+        expect(result.state).toBe('available'); expect(mockClient.rest.git.getCommit).toHaveBeenCalledTimes(1);expect(mockClient.rest.git.getTree).toHaveBeenCalledTimes(1);
+        expect(mockClient.rest.git.getCommit).toHaveBeenCalledWith({owner:'o',repo:'r',commit_sha:HEAD});
+        expect(mockClient.rest.git.getTree).toHaveBeenCalledWith({owner:'o',repo:'r',tree_sha:TREE,recursive:'1'});
+    });
+    it.each(['duplicate path','unsafe path','invalid SHA','invalid type'])('rejects %s in absence proof', async scenario => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404}); const tree=trackedTree();
+        if(scenario==='duplicate path')tree.data.tree.push({...tree.data.tree[0]});
+        if(scenario==='unsafe path')tree.data.tree[0].path='../private';
+        if(scenario==='invalid SHA')tree.data.tree[0].sha='not-an-object';
+        if(scenario==='invalid type')tree.data.tree[0].type='unknown';
+        mockClient.rest.git.getTree.mockResolvedValue(tree);
+        expect((await new RuntimeDoctorRepository('o','r','t').readRepository(42)).state).toBe('unavailable');
+    });
+    it('bounds complete absence-proof metadata to ten thousand entries', async () => {
+        mockClient.rest.repos.getContent.mockRejectedValue({status:404}); mockClient.rest.git.getTree.mockResolvedValue(trackedTree(Array.from({length:10_001},(_,n)=>'src/'+n)));
+        expect((await new RuntimeDoctorRepository('o','r','t').readRepository(42)).state).toBe('unavailable');
     });
     it('keeps a denied content sample unavailable rather than missing', async () => {
         mockClient.rest.repos.getContent.mockRejectedValue({ status: 403, message: 'SECRET' });

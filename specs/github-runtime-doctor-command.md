@@ -1,9 +1,9 @@
 # GitHub Runtime Doctor Command
 
-- Status: Draft
+- Status: Implemented and locally validated on the Action-managed #461 branch; live command acceptance pending
 - Date: 2026-10-11
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: not applicable (prospective specification)
+- Last verified: 2026-10-11 (572 full suites, 7,544 passing tests; live acceptance pending)
 - Owners: setup-and-doctor capability owner; implementation owners to be confirmed in review
 - Scope: Add deterministic `/copilot doctor` replies to issue and pull request conversations using bounded read-only evidence about runtime prerequisites.
 - Related issues/PRs: Issue #461
@@ -351,14 +351,14 @@ foreign or moved refs. Exact PR identity uses the existing canonical read policy
 and a final head fence. Group states and actions are closed; raw source text,
 provider errors and credentials never enter the report.
 
-The fixed 52-case floor is retained. Current evidence covers **124 distinct
+The fixed 52-case floor is retained. Current evidence covers **135 distinct
 feature cases** without double counting existing observer tests: 25 domain and
 configuration cases (the original ten domain cases plus fifteen new prerequisite
-cases); 23 application cases; 35 provider cases (28 metadata adapters plus seven
+cases); 23 application cases; 46 provider cases (39 metadata adapters plus seven
 new policy-reader cases); ten workflow structural cases; 17 presentation cases;
 and 14 integration cases (eight command/security, three composition, two
 semantic correlation cases, and one real issue-route configuration regression). The nine-suite focused run passed 138 tests; the additional real issue-route suite passed 18 tests,
-including compatibility tests outside this 124-case feature budget. The full managed-branch suite passed 569 suites and 7,454 tests (35 existing
+including compatibility tests outside this 135-case feature budget. The full managed-branch suite passed 569 suites and 7,454 tests (35 existing
 platform skips), with every repository coverage budget and setup ledger check
 passing. Doctor bypasses only the incompatible-configuration mutation guard and SDD-continuation getter so it can report their blocked state; mutation commands retain those gates. Generated bundles, live issue/PR commands and narrow-screen browser
 acceptance must be recorded separately before final readiness.
@@ -382,3 +382,11 @@ acceptance must be recorded separately before final readiness.
 - Related specs/ADRs/issues/PRs: setup-and-doctor owning specification; comment-automation; semantic GitHub communication; issue-start-and-sdd-readiness; exact paths and current contract details to be verified in repository.
 - Decisions: preserve existing owning contract and use a focused companion; no new configuration or permission; independent partial reads; blocked/unavailable distinction; exact PR identity; one correlated localized reply.
 - Follow-up work outside this spec: any repair workflow, credential write testing, local setup provisioning, or broader credential-health certification.
+
+### Live dogfooding correction: ambiguous content absence
+
+Bugbot review `38162038624` on PR #466 found that a contents API 404 was falsely reported as proven missing. Human `/copilot fix` comment `6112079942` correctly fetched the current managed head but the Windows agent produced no safe changes; run `38162629567` failed without a commit. That failure is retained as an unfulfilled agent-write test, not certified repair.
+
+The managed correction now proves absence independently: a lazily shared read resolves the exact default commit to its tree, then reads a complete recursive tree at that immutable tree SHA. It rejects changed identities, truncation, duplicate/unsafe/malformed entries, and metadata beyond 10,000 entries. Only verified absence may become `missing`; a file present in the tree with contents 404, denied proof, or incomplete proof is unavailable. The six fixed content paths and 200,000-byte decoded-file budget stay unchanged; at most two additional immutable reads are shared across all 404s. Eleven distinct provider cases cover the live finding and proof boundaries. Fresh full validation and a live review of this correction remain pending.
+
+The managed absence correction passed 572 full suites and 7,544 tests, with 35 existing platform skips (7,579 total). All existing budgets passed; the changed provider reached 100% lines/statements/functions and 95.53% branches. This evidence validates the manual correction, not a successful Windows agent write. The second read-only diagnosis with explicit `login=false` also reported rejection before process startup, so login handling is not established as the cause and no runtime permission was relaxed.

@@ -70314,7 +70314,9 @@ class RuntimeDoctorRepository {
             const revision = ref.data.object.sha;
             if (!SHA.test(revision) || ref.data.object.type !== 'commit')
                 return { state: 'unavailable' };
-            const values = await Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision)]));
+            let trackedPaths;
+            const proveAbsent = (path) => (trackedPaths ?? (trackedPaths = this.readTrackedPaths(revision))).then(paths => !paths.has(path));
+            const values = await Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision, proveAbsent)]));
             const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             if (final.data.object.type !== 'commit' || final.data.object.sha !== revision)
                 return { state: 'unavailable' };
@@ -70325,7 +70327,7 @@ class RuntimeDoctorRepository {
             return { state: 'unavailable' };
         }
     }
-    async readFile(path, revision) {
+    async readFile(path, revision, proveAbsent) {
         try {
             const response = await this.client.rest.repos.getContent({ owner: this.owner, repo: this.repository, path, ref: revision });
             const data = response.data;
@@ -70341,10 +70343,30 @@ class RuntimeDoctorRepository {
             return Object.freeze({ state: 'present', text });
         }
         catch (error) {
-            if (status(error) === 404)
+            if (status(error) === 404 && await proveAbsent(path))
                 return Object.freeze({ state: 'missing' });
             throw error;
         }
+    }
+    /** A content 404 alone is ambiguous. Only a complete immutable tree proves absence. */
+    async readTrackedPaths(revision) {
+        const commit = await this.client.rest.git.getCommit({ owner: this.owner, repo: this.repository, commit_sha: revision });
+        if (commit.data.sha !== revision || !SHA.test(commit.data.tree.sha))
+            throw new Error('Unverified repository tree identity.');
+        const response = await this.client.rest.git.getTree({ owner: this.owner, repo: this.repository, tree_sha: commit.data.tree.sha, recursive: '1' });
+        const tree = response.data;
+        if (tree.sha !== commit.data.tree.sha || tree.truncated !== false || !Array.isArray(tree.tree) || tree.tree.length > 10000)
+            throw new Error('Incomplete bounded repository tree.');
+        const paths = new Set();
+        for (const entry of tree.tree) {
+            const path = entry.path;
+            if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || path.includes('\\')
+                || Array.from(path).some(character => character.charCodeAt(0) < 32) || path.split('/').includes('..') || paths.has(path)
+                || !['blob', 'tree', 'commit'].includes(entry.type ?? '') || !SHA.test(entry.sha ?? ''))
+                throw new Error('Malformed repository tree evidence.');
+            paths.add(path);
+        }
+        return paths;
     }
     async readIssue(issueNumber) {
         const response = await this.client.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber });

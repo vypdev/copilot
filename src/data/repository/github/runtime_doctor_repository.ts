@@ -19,14 +19,16 @@ export class RuntimeDoctorRepository {
             const ref = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             const revision = ref.data.object.sha;
             if (!SHA.test(revision) || ref.data.object.type !== 'commit') return { state: 'unavailable' };
-            const values = await Promise.all(DOCTOR_REPOSITORY_PATHS.map(async path => [path, await this.readFile(path, revision)] as const));
+            let trackedPaths: Promise<ReadonlySet<string>> | undefined;
+            const proveAbsent = (path: string) => (trackedPaths ??= this.readTrackedPaths(revision)).then(paths => !paths.has(path));
+            const values = await Promise.all(DOCTOR_REPOSITORY_PATHS.map(async path => [path, await this.readFile(path, revision, proveAbsent)] as const));
             const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             if (final.data.object.type !== 'commit' || final.data.object.sha !== revision) return { state: 'unavailable' };
             return Object.freeze({ state: 'available', repositoryId, revision,
                 files: Object.freeze(Object.fromEntries(values)) as Extract<DoctorRepositoryRead, { state: 'available' }>['files'] });
         } catch { return { state: 'unavailable' }; }
     }
-    private async readFile(path: string, revision: string): Promise<DoctorFile> {
+    private async readFile(path: string, revision: string, proveAbsent: (path: string) => Promise<boolean>): Promise<DoctorFile> {
         try {
             const response = await this.client.rest.repos.getContent({ owner: this.owner, repo: this.repository, path, ref: revision });
             const data = response.data;
@@ -39,9 +41,28 @@ export class RuntimeDoctorRepository {
                 || bytes.length > 200_000 || !Buffer.from(text, 'utf8').equals(bytes)) throw new Error('Malformed bounded file content.');
             return Object.freeze({ state: 'present', text });
         } catch (error) {
-            if (status(error) === 404) return Object.freeze({ state: 'missing' });
+            if (status(error) === 404 && await proveAbsent(path)) return Object.freeze({ state: 'missing' });
             throw error;
         }
+    }
+    /** A content 404 alone is ambiguous. Only a complete immutable tree proves absence. */
+    private async readTrackedPaths(revision: string): Promise<ReadonlySet<string>> {
+        const commit = await this.client.rest.git.getCommit({ owner: this.owner, repo: this.repository, commit_sha: revision });
+        if (commit.data.sha !== revision || !SHA.test(commit.data.tree.sha)) throw new Error('Unverified repository tree identity.');
+        const response = await this.client.rest.git.getTree({ owner: this.owner, repo: this.repository, tree_sha: commit.data.tree.sha, recursive: '1' });
+        const tree = response.data;
+        if (tree.sha !== commit.data.tree.sha || tree.truncated !== false || !Array.isArray(tree.tree) || tree.tree.length > 10_000)
+            throw new Error('Incomplete bounded repository tree.');
+        const paths = new Set<string>();
+        for (const entry of tree.tree) {
+            const path = entry.path;
+            if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || path.includes('\\')
+                || Array.from(path).some(character => character.charCodeAt(0) < 32) || path.split('/').includes('..') || paths.has(path)
+                || !['blob', 'tree', 'commit'].includes(entry.type ?? '') || !SHA.test(entry.sha ?? ''))
+                throw new Error('Malformed repository tree evidence.');
+            paths.add(path);
+        }
+        return paths;
     }
     async readIssue(issueNumber: number): Promise<DoctorIssue> {
         const response = await this.client.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber });
