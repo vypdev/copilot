@@ -1026,7 +1026,11 @@ bare filenames, recognizable refs/versions, issue or PR references, URLs,
 quoted literals, option flags, and commit IDs are replaced with opaque
 placeholders before language adaptation. Commands whose grammar contains no
 adaptable prose protect every argument, including arbitrary branch, tag, or
-finding identifiers. A response must return every placeholder exactly once and
+finding identifiers. Explicit `fix` operands are exact finding IDs or `all`,
+not adaptable prose. They bypass comment language adaptation entirely; the
+original quoted ID reaches deterministic selection unchanged. Two integration
+cases prove no language call, exact downstream selection and semantic rejection
+of a failed provider read before autofix. A response must return every placeholder exactly once and
 in source order and introduce no new operand before the original values are
 restored. Invalid output fails before the requested mutation. Explicit
 request failures now reconcile one semantic error reply for the source-comment
@@ -1075,11 +1079,11 @@ and irreversible facts.
 
 ## 14. Testing strategy and numeric budget
 
-The implementation requires at least **144 distinct new or materially rewritten
+The implementation requires at least **146 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 147 qualifying
+`src/architecture/github_communication_test_budget.json` records 148 qualifying
 localization cases from the implementation diff against the specification
 baseline. No listed test file appears in the semantic allocation, and the
 contract is enforced by `pnpm run validate:specifications`.
@@ -1091,8 +1095,8 @@ contract is enforced by `pnpm run validate:specifications`.
 | Translation/application state | 30 | admission order, command arguments, mention path, matches/translated/ambiguous/failed, one call, output-locale recovery, duplicate request; sentence punctuation, hostile suffixes and ordered operands |
 | Adapters/provider contracts | 16 | static/dynamic adapters, schema errors, timeouts, cache key, error mapping, no comment update capability |
 | Workflows/setup/generated schemas | 18 | action defaults, strict setup validation, doctor, issue/PR/run/CLI surface propagation, agent task inventory, release snapshot |
-| UI/UX/security/integration | 26 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths, post-live-admission membership lookup and non-executable no-lookup behavior |
-| **Total** | **144** | No double counting |
+| UI/UX/security/integration | 28 | five primary states, en/es/fr/ar/zh fixtures, bidi/CJK, quotes, mentions/commands/current markers, fallback, end-to-end paths, post-live-admission membership lookup and non-executable no-lookup behavior; exact fix-ID adaptation bypass and failed-intent error containment |
+| **Total** | **146** | No double counting |
 
 Required quality gates:
 
@@ -1203,7 +1207,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 21. Given repository-aware CLI `--json`, then human terminal prose may localize
     but JSON keys, codes, and enums remain stable English machine contracts.
 22. Given implementation completion, then related SDDs, catalog, action/setup
-    defaults, generated bundles, 144-case budget, coverage, documentation, and
+    defaults, generated bundles, 146-case budget, coverage, documentation, and
     all repository validations agree without stale en/es conditionals.
 23. Given an unchanged issue whose valid current plan was produced in a
     different locale, when planning runs in the current effective issue locale,
@@ -1239,7 +1243,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 | §11 privacy/security | sanitizer, minimizer, telemetry projection | injection/bidi/secret/body-absence tests | security operations |
 | §12 observability/cost | summary/log/metric projections and run cache | fields, one-call, no-body assertions | quality observability |
 | §13 greenfield cutover | strict readers and required locale state | removed-name/invalid-marker/state/rollback tests | configuration guide |
-| §14 quality budget | coverage scripts and disjoint communication test ledger | 147 allocated localization cases plus CI coverage evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 148 allocated localization cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1294,7 +1298,7 @@ hyphenated tags and never imply that fallback is a successful translation.
       and bidi tests/manual evidence pass.
 - [x] Architecture, source-string, agent-task, catalog-manifest, and no-comment-
       update constraints are executable and blocking.
-- [x] The 144-case numeric budget and changed-module coverage gates pass without
+- [x] The 146-case numeric budget and changed-module coverage gates pass without
       double counting semantic publication tests.
 - [x] Action/setup/doctor/CLI/workflow schemas, persisted variables, generated
       bundles, examples, and defaults agree.

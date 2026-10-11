@@ -1450,7 +1450,9 @@
         "src/infrastructure/github/ports/github_pull_request_provider_ports.ts",
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
         "src/application/policies/semantic_result_publication_policy.ts",
-        "src/application/policies/publication_message_catalog.ts"
+        "src/application/policies/publication_message_catalog.ts",
+        "src/application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_workflow.ts",
+        "src/application/usecases/comment_automation_use_case.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1485,7 +1487,8 @@
         "src/domain/__tests__/copilot_command.test.ts",
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/dismiss_bugbot_findings_use_case.test.ts",
-        "src/application/policies/__tests__/semantic_result_publication_policy.test.ts"
+        "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/detect_bugbot_fix_intent_use_case.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

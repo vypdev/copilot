@@ -31,8 +31,8 @@
     {
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
-      "requiredCases": 144,
-      "allocatedCases": 147,
+      "requiredCases": 146,
+      "allocatedCases": 148,
       "files": [
         { "path": "src/actions/__tests__/github_action_locale_inputs.test.ts", "qualifyingCases": 4 },
         { "path": "src/application/policies/__tests__/action_summary_message_catalog.test.ts", "qualifyingCases": 4 },
@@ -56,7 +56,7 @@
         { "path": "src/cli/__tests__/setup_prompt_rendering.test.ts", "qualifyingCases": 2 },
         { "path": "src/domain/__tests__/locale.test.ts", "qualifyingCases": 12 },
         { "path": "src/domain/__tests__/message_catalog.test.ts", "qualifyingCases": 10 },
-        { "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts", "qualifyingCases": 2 }
+        { "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts", "qualifyingCases": 3 }
       ]
     }
   ]

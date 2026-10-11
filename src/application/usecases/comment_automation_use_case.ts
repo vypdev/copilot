@@ -45,6 +45,9 @@ export async function runCommentAutomation(
     if (command.kind === 'command' && !commandHasAdaptableProse) {
       const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
       if (explicitResults) return explicitResults;
+      if (command.command.name === 'fix') {
+        return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, []);
+      }
     }
     if (isNaturalLanguageBranchSyncRequest(param.userComment, param.trustedBotLogin)) {
       return runBranchSyncCommand(param, options, [], actorAuthorizationPort);

@@ -205,6 +205,34 @@ describe("runCommentAutomation", () => {
     expect(JSON.stringify(results.at(-1))).not.toContain(resolutionError.message);
   });
 
+  it.each([false, true])('routes literal fix identifiers without language adaptation (intent failure: %s)', async failure => {
+    const id = 'docs/área.mdx:28:awaiting-maintainer treated as failure';
+    const userComment = `/copilot fix ${JSON.stringify(id)}`;
+    const language = { invoke: jest.fn().mockResolvedValue([]) };
+    const intent = { invoke: jest.fn().mockResolvedValue([successfulResult('intent', {
+      isFixRequest: true, isDoRequest: false, targetFindingIds: [id], context: {},
+    })]) };
+    const autofix = { invoke: jest.fn().mockResolvedValue([successfulResult('autofix')]) };
+    if (failure) intent.invoke.mockRejectedValueOnce(new Error('private provider diagnostic'));
+    commitAutofixAndResolveFindings.mockResolvedValue([]);
+    const results = await runCommentAutomation({ owner: 'o', repo: 'r', actor: 'actor',
+      tokens: { token: 't' }, isPullRequest: true, eventName: 'pull_request_review_comment',
+      commit: { branch: '' }, pullRequest: { number: 460, head: 'docs/work', isPullRequestReviewComment: true, commentBody: userComment },
+    } as unknown as Execution, {
+      taskId: 'CommentAutomation', languageUseCase: language as never, intentUseCase: intent as never,
+      thinkUseCase: {} as never, autofixUseCase: autofix as never, doUserRequestUseCase: {} as never, userComment,
+    }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never);
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).toHaveBeenCalledWith(expect.objectContaining({ comment: expect.objectContaining({ body: userComment }) }));
+    if (failure) {
+      expect(autofix.invoke).not.toHaveBeenCalled();
+      expect(results.at(-1)).toMatchObject({ success: false, errors: [expect.objectContaining({ code: 'workflow.failed' })] });
+    } else {
+      expect(autofix.invoke).toHaveBeenCalledWith(expect.objectContaining({ targetFindingIds: [id] }));
+      expect(results.every(result => result.success)).toBe(true);
+    }
+  });
+
   it("returns a sanitized failure result when intent detection rejects", async () => {
     const languageResult = successfulResult("language");
     const authorization = {

@@ -2,7 +2,7 @@ import { copilotCommandAcceptsAdaptableProse, parseCopilotCommand } from '../cop
 
 describe('Copilot command policy', () => {
     it('classifies only commands with natural-language arguments as adaptable prose', () => {
-        expect(copilotCommandAcceptsAdaptableProse('fix')).toBe(true);
+        expect(copilotCommandAcceptsAdaptableProse('fix')).toBe(false);
         expect(copilotCommandAcceptsAdaptableProse('sync-branch')).toBe(false);
         expect(copilotCommandAcceptsAdaptableProse('help')).toBe(false);
     });
@@ -40,36 +40,36 @@ describe('Copilot command policy', () => {
     it('rejects oversized command input before tokenization', () => {
         expect(parseCopilotCommand(`/copilot plan ${'x'.repeat(2_000)}`)).toMatchObject({ kind: 'invalid' });
     });
-    it('preserves one quoted finding identifier containing spaces', () => {
+    it.each(['dismiss', 'fix'])('preserves one quoted finding identifier containing spaces for %s', command => {
         const id = 'docs/issues/first-workflow.mdx:28:awaiting-maintainer treated as failure';
-        expect(parseCopilotCommand(`/copilot dismiss ${JSON.stringify(id)}`)).toMatchObject({
-            kind: 'command', command: { name: 'dismiss', arguments: [id] },
+        expect(parseCopilotCommand(`/copilot ${command} ${JSON.stringify(id)}`)).toMatchObject({
+            kind: 'command', command: { name: command, arguments: [id] },
         });
     });
 
-    it('supports mixed plain and quoted finding IDs as separate exact operands', () => {
-        expect(parseCopilotCommand('/copilot dismiss plain-id "second spaced id"')).toMatchObject({
+    it.each(['dismiss', 'fix'])('supports mixed plain and quoted finding IDs as separate exact operands for %s', command => {
+        expect(parseCopilotCommand(`/copilot ${command} plain-id "second spaced id"`)).toMatchObject({
             kind: 'command', command: { arguments: ['plain-id', 'second spaced id'] },
         });
     });
 
-    it('preserves escaped backslashes, Unicode and significant internal spaces', () => {
+    it.each(['dismiss', 'fix'])('preserves escaped backslashes, Unicode and significant internal spaces for %s', command => {
         const id = 'src/área\\file.ts:8:two  words';
-        expect(parseCopilotCommand(`/copilot dismiss ${JSON.stringify(id)}`)).toMatchObject({
+        expect(parseCopilotCommand(`/copilot ${command} ${JSON.stringify(id)}`)).toMatchObject({
             kind: 'command', command: { arguments: [id] },
         });
     });
 
-    it('accepts twenty quoted identifiers without counting their internal spaces', () => {
+    it.each(['dismiss', 'fix'])('accepts twenty quoted identifiers without counting their internal spaces for %s', command => {
         const ids = Array.from({ length: 20 }, (_, index) => `id ${index}`);
-        expect(parseCopilotCommand(`/copilot dismiss ${ids.map(id => JSON.stringify(id)).join(' ')}`)).toMatchObject({
+        expect(parseCopilotCommand(`/copilot ${command} ${ids.map(id => JSON.stringify(id)).join(' ')}`)).toMatchObject({
             kind: 'command', command: { arguments: ids },
         });
     });
 
-    it('rejects twenty-one quoted identifiers under the unchanged argument bound', () => {
+    it.each(['dismiss', 'fix'])('rejects twenty-one quoted identifiers under the unchanged argument bound for %s', command => {
         const ids = Array.from({ length: 21 }, (_, index) => `id ${index}`);
-        expect(parseCopilotCommand(`/copilot dismiss ${ids.map(id => JSON.stringify(id)).join(' ')}`)).toMatchObject({ kind: 'invalid' });
+        expect(parseCopilotCommand(`/copilot ${command} ${ids.map(id => JSON.stringify(id)).join(' ')}`)).toMatchObject({ kind: 'invalid' });
     });
 
     it.each([
@@ -81,8 +81,8 @@ describe('Copilot command policy', () => {
         '"   "',
         '"line\\nnext"',
         'plain-id "',
-    ])('rejects malformed or empty finding operand %s', (operand) => {
-        expect(parseCopilotCommand(`/copilot dismiss ${operand}`)).toMatchObject({ kind: 'invalid' });
+    ].flatMap(operand => ['dismiss', 'fix'].map(command => ({ command, operand }))))('rejects malformed or empty $command finding operand $operand', ({ command, operand }) => {
+        expect(parseCopilotCommand(`/copilot ${command} ${operand}`)).toMatchObject({ kind: 'invalid' });
     });
 
 });

@@ -135,6 +135,12 @@ a mention.
    username-match or organization-membership shortcut and MUST prove repository
    collaborator permission.
 
+Explicit `fix` arguments are literal finding IDs or `all`. JSON double-quoted
+IDs containing spaces are parsed losslessly and bypass language adaptation;
+only existing unresolved IDs can reach autofix. The Bugbot SDD owns 15 new parser
+and selection cases; the localization SDD owns two no-adaptation routing
+cases. Neither allocation is double-counted in this capability's baseline budget.
+
 ## 5. Current versus proposed product journey
 
 | Stage | Unsafe/unclear alternative | As-built contract | Effect |

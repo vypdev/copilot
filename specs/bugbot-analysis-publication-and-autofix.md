@@ -148,10 +148,12 @@ or additional commit was needed. Empty, unknown or failed storage outcomes MUST
 NOT be interpreted as duplicates; failed verification MUST NOT announce a saved
 rule. These are typed application facts, never inferred from diagnostic steps.
 
-`/copilot dismiss` accepts plain IDs and JSON double-quoted IDs containing
+`/copilot fix` and `/copilot dismiss` accept plain IDs and JSON double-quoted IDs containing
 spaces. Quoted operands retain internal spaces, Unicode and escaped backslashes.
 Malformed, empty or multiline operands fail before finding mutation. The fixed
-2,000-character and 20-argument limits remain; other command grammars are unchanged.
+2,000-character and 20-argument limits remain; other command grammars are unchanged. Explicit `fix` operands are exact IDs or
+the reserved `all` operand, so they bypass language adaptation and deterministic
+selection cannot widen to another finding or a generic implementation request.
 
 A successful dismissal MUST publish its verified count; zero matching findings
 MUST receive an explicit no-op reply. Authorization or unavailable capability
@@ -334,13 +336,13 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Finding/config/identity policy | 49 | schema, fingerprint, rank, limits; 13 exact quoted-identifier, boundary and malformed-input cases |
+| Finding/config/identity policy | 62 | schema, fingerprint, rank, limits; 26 exact quoted-identifier, boundary and malformed-input cases across fix and dismissal |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
-| Use cases/autofix | 59 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case and six receipt-outcome cases |
+| Use cases/autofix | 61 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case, six receipt-outcome cases and two exact single-finding selection cases |
 | Provider/workflow contracts | 24 | diffs, reviews, threads, checks, ranges; exact and absent head repository names |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
 | Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **202** | no double counting |
+| **Total** | **217** | no double counting |
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
 coverage and security/identity policy 100% for enumerated branches. Fakes replace
@@ -399,7 +401,7 @@ screen reader, and controlled live model samples.
 | safe publication | publish/reconciliation use cases | publication/reconciliation tests | publication |
 | guarded autofix | autofix/workspace/git use cases | autofix/security tests | autofix |
 | versioned learned rule | explicit command/workspace/git use cases | 22 command-level branch, canonical identity, replay and failure cases | configuration/how it works |
-| lossless dismissal operands | command domain + explicit routing | 13 parser cases + exact-ID use-case assertion | comment commands |
+| lossless finding operands | command domain + explicit routing | 26 parser cases + exact-ID dismissal and fix selection assertions; locale companion covers adaptation bypass | comment commands |
 | current truth | reconciliation spec/policies | projection tests | detection/quality |
 
 ## 18. Maintenance sequence
@@ -412,7 +414,7 @@ screen reader, and controlled live model samples.
 
 ## 19. Definition of Done
 
-- [ ] The 202-case budget, coverage, quality eval, and architecture gates pass.
+- [ ] The 217-case budget, coverage, quality eval, and architecture gates pass.
 - [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.
