@@ -648,7 +648,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-09",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -2035,7 +2035,12 @@
         "src/data/repository/pull_request/pull_request_approval_repository.ts",
         "src/data/repository/pull_request/approval_coverage_artifact.ts",
         "src/infrastructure/setup_approval_readiness_adapter.ts",
-        "src/utils/setup_files.ts"
+        "src/utils/setup_files.ts",
+        "src/application/policies/setup_token_permission_policy.ts",
+        "web/src/i18n/permissions/en.ts",
+        "web/src/i18n/permissions/es.ts",
+        "web/src/i18n/permissions/fr.ts",
+        "web/src/i18n/permissions/pt.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -2054,7 +2059,8 @@
         "src/data/repository/pull_request/__tests__/pull_request_review_comment_command_repository.test.ts",
         "src/infrastructure/__tests__/setup_approval_readiness_adapter.test.ts",
         "src/utils/__tests__/setup_files.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/application/policies/__tests__/setup_token_permission_policy.test.ts"
       ],
       "documentation": [
         "docs/authentication.mdx",

@@ -128,6 +128,13 @@ can also prevent the read. This state leaves existing PRs and reviews unchanged
 and publishes no assessment. `invalid-policy` instead means the value was read
 but failed validation: run doctor and correct the variable before retrying.
 
+Setup includes the same evidence reads for both active modes: Actions, Contents,
+Administration, Checks and Variables read, and Pull requests write to publish the
+assessment card. An installation with only approval assessment does not need
+Actions, Contents or Issues write. Existing tokens created before this permission
+fix need their grants checked when recommendation mode is enabled. The mode
+still determines whether a native approval may be submitted.
+
 Use the **Copilot - Pull Request Approval** workflow's manual dispatch with a positive PR number to re-evaluate a missed wakeup. The dispatcher needs repository write permission; re-evaluation never bypasses eligibility. Set the policy mode to `off` to stop future reviews. Existing native reviews remain in GitHub history and need human assessment; disabling does not dismiss them.
 
 See [workflow setup](/pull-requests/workflow-setup), [authentication](/authentication), and [operations troubleshooting](/security-operations/operations/troubleshooting) for related prerequisites.

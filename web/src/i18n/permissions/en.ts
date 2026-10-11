@@ -38,7 +38,7 @@ export const permissionTexts = [
   'Manage selected issue lifecycles, comments, and progress.',
   'Manage selected pull request workflows, reviews, or autofix.',
   'Verify current-head required checks and producer identities.',
-  'Load the guarded approval policy.',
+  'Load the PR approval assessment policy.',
   'Select or authorize organization members for enabled workflows.',
   'Assign configured organization issue types.',
   'Update selected organization Projects.',
