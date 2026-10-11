@@ -286,19 +286,23 @@ The observer Job Summary records wakeup, PR, head/base, configured/effective mod
 
 ## 14. Testing strategy and numeric budget
 
-The minimum **119 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Parameter rows count separately only for distinct behavior.
+The minimum **168 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Dogfooding adds 49 SDK contracts for native artifact/provenance, rule inventories, current attempts, Bugbot ownership and assessment/review publication. Parameter rows count separately only for distinct behavior.
 
 | Area | Minimum cases | Required risk cases |
 |---|---:|---|
 | Domain/eligibility and config | 30 | every reason precedence; author/bot/last-pusher; scope; exclusions; completeness; coverage modes; human reviews |
 | Application/state/idempotency/races | 26 | duplicate/out-of-order wakeups, head/base/rule movement at each guard, cancellation before/after POST, read-first replay; denied/unavailable policy reads without writes |
-| GitHub/coverage adapters | 19 | pagination, exact App/source/attempt, malformed artifact, 403/422/timeout/rate limit, review readback |
+| GitHub/coverage adapters | 68 | pagination, exact App/source/attempt, malformed artifact, 403/422/timeout/rate limit, review readback, artifact SDK encodings and identity substitutions, ruleset schema, owned assessment replay and current Bugbot cards |
 | Workflow/schema/architecture | 16 | `workflow_run` producers, trusted default-branch code, no PR checkout/cache/agent, loop guard, permissions, no check collision; actionable safe summaries for unreadable/malformed policy |
 | UI/localization/accessibility/sanitization | 12 | five primary states, one action, en/es/fallback, hostile links/mentions/markers, narrow output |
 | Integration/security/migration | 16 | human/bot PRs, full Bugbot projection, numeric producer, stale rules, fresh vs absent config, rollback, live-shaped replay |
-| **Total** | **119** | no double counting |
+| **Total** | **168** | no double counting |
 
 Global Jest gates remain 90% lines/statements, 88% functions, and 82% branches ([configuration](../jest.config.js)). New pure decision/schema/renderer modules MUST reach 100% statements/branches/functions/lines; changed application/adapters MUST meet at least 95% lines/statements and 90% branches/functions. Tests use deterministic clocks, fake GitHub ports, recorded but sanitized webhook/review fixtures, no sleeps or live mutations. Contract tests parse YAML and JSON rather than grep prose; golden Markdown is paired with semantic assertions. Controlled live evidence MUST cover human-owned approval, bot-owned recommendation, a post-approval push under stale-dismissal rules, and check-order inversion; manual review covers desktop/mobile, light/dark, and screen-reader reading order.
+
+The effective rules inventory must be a complete native array of typed rule records. A non-array response, non-object row or absent/empty rule type cannot be substituted with an empty ruleset; it makes rules unreadable and non-authorizing even if classic stale-review protection is enabled.
+
+Controlled SDK fixtures reproduced a malformed rules response being reported as readable with stale dismissal enabled. The correction rejects those inventories. The repository adapter's 49 new cases increase its coverage to 100% lines, 99.45% statements, 91.37% branches and 97.5% functions, satisfying the unchanged adapter thresholds above. Full local verification passed 565 suites and 7,465 tests with 35 existing platform skips (7,500 total), together with all existing coverage budgets. The five ZIP-parser cases are retained through a shared archive fixture and are not counted again. This local evidence does not certify native guarded approvals or resolve the runtime policy-access and Windows provisioning gates.
 
 ## 15. Documentation and discoverability
 

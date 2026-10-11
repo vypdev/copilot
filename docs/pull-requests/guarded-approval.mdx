@@ -109,6 +109,9 @@ Numeric mode consumes a single `copilot-diff-coverage-v1` workflow artifact cont
 
 No setting can make the bot approve its own PR, a fork, a draft, a deployment/release/hotfix PR, a changed file hidden from Bugbot by `AI_IGNORE_FILES`, or a change to protected workflow/policy files. Effective branch rules must be readable and dismiss stale approvals; `Copilot / Approval` must not be its own required check. The workflow PAT used at runtime is separate from the local setup PAT. The observer never checks out or runs PR-head code.
 
+A malformed ruleset response is unavailable evidence. It cannot be treated as
+an empty ruleset or overridden by otherwise valid classic branch protection.
+
 ## What you will see
 
 The PR gets one editable “Copilot approval” assessment card. It says whether the bot is waiting, a human must review, a prerequisite blocks approval, a submission is uncertain, or a native review was confirmed. `Copilot / Approval` is a supplemental Check, not a prerequisite for itself. The native GitHub `APPROVE` review is the actual approval record and is tied to the head commit.

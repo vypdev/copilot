@@ -72146,7 +72146,11 @@ class PullRequestApprovalRepository {
     async effectiveRules(owner, repo, branch) {
         try {
             const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
-            const rules = Array.isArray(rulesResponse.data) ? rulesResponse.data : [];
+            if (!Array.isArray(rulesResponse.data) || rulesResponse.data.some((rule) => !record(rule)
+                || typeof record(rule)?.type !== 'string' || record(rule)?.type === '')) {
+                throw new Error('GitHub returned an invalid effective rules inventory.');
+            }
+            const rules = rulesResponse.data;
             let classic;
             try {
                 const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
