@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 177,
+      "allocatedCases": 179,
       "files": [
         { "path": "src/domain/__tests__/github_publication.test.ts", "qualifyingCases": 5 },
         { "path": "src/domain/__tests__/git_object_id.test.ts", "qualifyingCases": 2 },
@@ -27,7 +27,7 @@
         { "path": "src/application/usecases/__tests__/issue_use_case.test.ts", "qualifyingCases": 8 },
         { "path": "src/architecture/__tests__/github_publication_boundaries.test.ts", "qualifyingCases": 11 },
         { "path": "src/application/policies/__tests__/action_summary_policy.test.ts", "qualifyingCases": 4 },
-        { "path": "src/data/repository/__tests__/progress_diff_repository.test.ts", "qualifyingCases": 8 }
+        { "path": "src/data/repository/__tests__/progress_diff_repository.test.ts", "qualifyingCases": 10 }
       ]
     },
     {
