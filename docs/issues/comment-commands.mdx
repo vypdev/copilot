@@ -69,7 +69,9 @@ they operate on:
 
 - `/copilot fix` and `/copilot implement` apply changes to the authoritative
   working branch, run configured verification, then commit and push through the
-  trusted workflow. A verification failure prevents the commit.
+  trusted workflow. A verification failure prevents the commit. Every new file
+  inside an untracked directory is checked against sensitive-path rules and
+  the 100-file automatic mutation limit.
 
   `/copilot implement` then confirms whether changes were pushed or no commit
   was needed. Review the diff and acceptance criteria before considering the

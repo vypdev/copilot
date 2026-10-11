@@ -58,6 +58,9 @@ modify the wrong branch.
 6. Unauthorized file-modifying intent routes to read-only Think or a visible no-op.
 7. Successful workspace mutations pass preflight, path checks, verification,
    authenticated commit, and push before publication.
+   Workspace status enumerates every untracked file inside a new directory.
+   A directory cannot hide sensitive files or bypass the 100-file mutation limit.
+   Diagnostics report repository-relative paths without reading file contents.
 8. Unaddressed comments are successful no-ops before project/provider reads, so
    documentation, coverage, and other machine-authored reports cannot activate agents.
 9. `fix` and `implement` require a PR review-comment event with its
@@ -361,7 +364,8 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
 | Implementation receipt and truthful outcome | 27 | Nine orchestration cases and eighteen authority/localization/rendering cases; no success inferred from agent prose or an incomplete commit result |
 | Semantic agent failure preservation | 3 | Timeout, cancellation and agent failure retain their exact code and correlation through the comment route |
-| **Total** | **196** | no double counting |
+| Untracked-directory mutation boundary | 2 | Real Git reveals nested runtime/sensitive paths and rejects 101 files in one new directory before commit |
+| **Total** | **198** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 

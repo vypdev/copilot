@@ -59064,7 +59064,7 @@ function selectWorkspacePathsToCommit(before, after) {
 /** Reads the current working tree paths without executing a shell. */
 async function listWorkspacePaths(gitCommitPort) {
     let output = "";
-    await gitCommitPort.execute("git", ["status", "--porcelain"], {
+    await gitCommitPort.execute("git", ["status", "--porcelain", "--untracked-files=all"], {
         stdout: (data) => {
             output += data.toString();
         },

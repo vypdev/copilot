@@ -28,7 +28,7 @@ function createGit(replies: Record<string, Reply[]> = {}) {
   return { git, execute };
 }
 
-const STATUS = "status --porcelain";
+const STATUS = "status --porcelain --untracked-files=all";
 const UNRESOLVED = "diff --name-only --diff-filter=U -z";
 const INDEX = "ls-files -s -z";
 const MERGE = "-c user.name=Copilot -c user.email=copilot@users.noreply.github.com merge --no-ff --no-commit parent";
