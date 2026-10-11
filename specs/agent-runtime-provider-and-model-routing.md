@@ -230,7 +230,9 @@ descriptor collection starts Windows PowerShell before the private agent plan
 exists. Those trusted metadata probes MUST use a fixed minimal environment:
 the captured canonical system root and its system modules, with
 `PSModuleAnalysisCachePath=NUL` (Microsoft's documented cache-off setting).
-They inherit no authentication, host profile, repository module path or ambient
+Descriptor commands explicitly import the trusted absolute system Utility
+manifest with automatic module loading disabled before serializing the unchanged
+ACL batch. They inherit no authentication, host profile, repository module path or ambient
 cache override. This setting applies only to the metadata probe; it neither
 disables the private cache for agent execution nor changes its authentication.
 No process-global environment mutation, cache deletion, workspace ignore or
@@ -1013,3 +1015,20 @@ out, including without cache overrides. The next comparison distinguishes
 process startup from command discovery using .NET console output and explicit
 trusted system Utility imports. This is a hypothesis test, not a proven repair;
 ACL checks, the agent environment and process timeouts remain unchanged.
+
+
+Utility-discovery run 38154939851 kept the isolated environment unchanged: the
+ordinary Write-Output probe timed out at 20 seconds, direct .NET console output
+completed in 210 ms, and an explicit trusted system Utility manifest followed
+by Write-Output completed in 242 ms. This reproduces a command-discovery delay,
+not slow native PowerShell startup. Explicit DLL imports produced an unexpected
+result and are not used in the repair.
+
+The descriptor helper now explicitly imports that system Utility manifest,
+disables automatic module-loading fallback, and then runs the existing complete
+file/ancestor descriptor collection and JSON serialization. The fixed minimal
+environment, cache-off value, 15-second timeout, 1 MiB output bound, DACL rules
+and authentication isolation are unchanged. Five new invocation contracts check
+trusted import ordering, literal escaping, unsafe owner refusal, complete ancestor
+batches and timeout classification. Actual hosted/native Windows smoke proof is
+pending and must be recorded independently; diagnostic success is not acceptance.
