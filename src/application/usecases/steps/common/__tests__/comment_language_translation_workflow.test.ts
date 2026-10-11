@@ -93,11 +93,11 @@ describe('CommentLanguageTranslationWorkflow', () => {
         });
         const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({
             ...context,
-            commentBody: '/copilot fix corrige README.md en main para #123',
+            commentBody: '/copilot implement corrige README.md en main para #123',
         });
 
         expect(getCommentLanguageAdaptationPayload(results[0])?.interpretedComment)
-            .toBe('/copilot fix fix README.md on main for #123');
+            .toBe('/copilot implement fix README.md on main for #123');
         const prompt = query.mock.calls[0][0].prompt as string;
         expect(prompt).toContain('corrige COPILOT_OPERAND_0_TOKEN en COPILOT_OPERAND_1_TOKEN para COPILOT_OPERAND_2_TOKEN');
         expect(prompt).not.toContain('README.md');

@@ -29,7 +29,6 @@ const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE: ReadonlySet<CopilotCommandName> = n
     'test-plan',
     'explain',
     'diagnose',
-    'fix',
     'implement',
 ]);
 
@@ -71,7 +70,7 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (!name || !COPILOT_COMMAND_NAMES.includes(name as CopilotCommandName)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
-    const argumentsList = name === 'dismiss'
+    const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
     if (!argumentsList) {

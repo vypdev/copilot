@@ -37,7 +37,7 @@ describe('GitHub communication test-budget validator', () => {
       required: budget.requiredCases,
     }))).toEqual([
       { id: 'semantic-github-publication', allocated: 163, required: 131 },
-      { id: 'repository-locale-localization', allocated: 147, required: 144 },
+      { id: 'repository-locale-localization', allocated: 148, required: 146 },
     ]);
     for (const budget of ledger.budgets) {
       for (const entry of budget.files) {

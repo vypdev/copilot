@@ -52320,6 +52320,9 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, command.command, actorAuthorizationPort);
             if (explicitResults)
                 return explicitResults;
+            if (command.command.name === 'fix') {
+                return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, []);
+            }
         }
         if ((0, branch_sync_command_1.isNaturalLanguageBranchSyncRequest)(param.userComment, param.trustedBotLogin)) {
             return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, [], actorAuthorizationPort);
@@ -74185,7 +74188,6 @@ const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE = new Set([
     'test-plan',
     'explain',
     'diagnose',
-    'fix',
     'implement',
 ]);
 /** Commands whose arguments may contain human prose that benefits from locale adaptation. */
@@ -74214,7 +74216,7 @@ function parseCopilotCommand(raw) {
     if (!name || !exports.COPILOT_COMMAND_NAMES.includes(name)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${exports.COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
-    const argumentsList = name === 'dismiss'
+    const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
     if (!argumentsList) {

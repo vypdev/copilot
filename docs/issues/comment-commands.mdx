@@ -57,8 +57,11 @@ When a finding ID contains spaces, quote the complete ID with double quotes:
 
 ```text
 /copilot dismiss "docs/file.mdx:28:message with spaces"
+/copilot fix "docs/file.mdx:28:message with spaces"
 ```
 
+Fix IDs are literal and are not translated. `/copilot fix all` selects all
+unresolved findings; otherwise only the exact requested IDs are selected.
 You can combine plain and quoted IDs. Use JSON escapes for a literal double
 quote or backslash; malformed, empty or multiline quoted IDs are rejected.
 The command still accepts at most 20 IDs and 2,000 characters.
