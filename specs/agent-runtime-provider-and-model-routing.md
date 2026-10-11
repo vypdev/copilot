@@ -945,3 +945,26 @@ errors and credential masking.
 - Decision: semantic role ports and explicit complete tuples; no fallback.
 - Rejected: eager provisioning, shell-string assembly, provider DTOs in use cases.
 - Follow-up: automatic model selection is outside this baseline.
+
+### Hosted Windows startup investigation (2026-10-11)
+
+PR #465 hosted Windows smoke run 38146124779 failed 29 isolated runtime
+fixtures. The native descriptor PowerShell process repeatedly reached its
+15-second timeout; a nested verification-environment probe also reached its
+60-second timeout. Earlier self-hosted Windows run 38142246677 passed those
+fixtures. This difference does not identify a root cause or prove the
+authenticated fixer works on either runner.
+
+The existing platform smoke workflow now offers a bounded, read-only
+`windows_startup_probe` dispatch. One hosted Windows job compares three
+20-second probes in order: isolated ACL environment, runner baseline, and the
+same isolated environment after the baseline. It records only the fixed
+environment label, closed status and elapsed milliseconds. It never records
+stdout, stderr, errors, environment values, credentials or paths. It does not
+change process permissions, ACL policy, sandboxing or verification requirements.
+
+This investigation tool makes no feature-readiness claim and does not replace
+the mandatory smoke fixtures. Its three live probes are operational evidence,
+not additional unit cases or a completed acceptance gate. The default workflow
+behavior and coverage export stay unchanged; probe-only dispatch does not start
+self-hosted smoke jobs or export coverage.

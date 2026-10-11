@@ -292,12 +292,16 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
-    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage'])) {
+    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
       throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs and Windows coverage upload.`);
     }
     const uploadInput = workflow.on?.workflow_dispatch?.inputs?.upload_windows_coverage;
     if (uploadInput?.type !== 'boolean' || uploadInput.default !== false) {
       throw new Error(`${relativeFile} must default Windows Codecov export to disabled on manual fixture runs.`);
+    }
+    const probeInput = workflow.on?.workflow_dispatch?.inputs?.windows_startup_probe;
+    if (probeInput?.type !== 'boolean' || probeInput.default !== false) {
+      throw new Error(`${relativeFile} must default Windows startup probes to disabled.`);
     }
   }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
@@ -305,6 +309,18 @@ function assertRunner(file, workflow) {
       throw new Error(`${relativeFile} job ${jobId} cannot use runner context in job-level env.`);
     }
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+      if (jobId === 'windows-startup-probe') {
+        const steps = job.steps ?? [];
+        if (job['runs-on'] !== 'windows-latest' || job['timeout-minutes'] !== 5
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}"
+          || job.needs || steps.length !== 3
+          || steps[0]?.uses !== 'actions/checkout@v5' || steps[0]?.with?.['persist-credentials'] !== false
+          || steps[1]?.uses !== 'actions/setup-node@v7' || steps[1]?.with?.['node-version'] !== '24.x'
+          || steps[2]?.run !== 'node scripts/diagnose-windows-powershell-startup.cjs') {
+          throw new Error(`${relativeFile} must retain its bounded manual hosted Windows startup diagnostic without credentials or export.`);
+        }
+        continue;
+      }
       if (jobId === 'upload-windows-coverage') {
         const steps = job.steps ?? [];
         const checkout = steps[0];
@@ -361,7 +377,7 @@ function assertRunner(file, workflow) {
           || job.strategy?.['fail-fast'] !== false) {
           throw new Error(`${relativeFile} must target self-hosted Windows, macOS and Ubuntu codex runners.`);
         }
-        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}") {
+        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}") {
           throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch from protected master.`);
         }
         const steps = job.steps ?? [];
