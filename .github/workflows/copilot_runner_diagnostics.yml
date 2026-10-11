@@ -11,6 +11,27 @@ jobs:
     runs-on: [self-hosted, codex, Linux]
     timeout-minutes: 5
     steps:
+      - name: Report bounded Linux resource counters
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const read = path => { try { return fs.readFileSync(path, 'utf8').slice(0, 16384); } catch { return ''; } };
+          const count = (text, key) => {
+            const match = text.match(new RegExp(`^${key}[ \\t]+([0-9]+)$`, 'm'));
+            return match && Number.isSafeInteger(Number(match[1])) ? Number(match[1]) : 'unavailable';
+          };
+          const limit = read('/sys/fs/cgroup/memory.max').trim();
+          console.log(JSON.stringify({
+            totalMemoryMiB: Math.floor(os.totalmem() / 1048576),
+            freeMemoryMiB: Math.floor(os.freemem() / 1048576),
+            logicalCpus: os.cpus().length,
+            kernelOomKillsSinceBoot: count(read('/proc/vmstat'), 'oom_kill'),
+            cgroupOomKills: count(read('/sys/fs/cgroup/memory.events'), 'oom_kill'),
+            cgroupMemoryLimitBytes: limit === 'max' ? 'unbounded' : /^[0-9]{1,15}$/.test(limit) ? Number(limit) : 'unavailable'
+          }));
+          NODE
       - name: Check tool and sandbox prerequisites
         shell: bash
         run: |
