@@ -130,6 +130,16 @@ for approval. **Stop setup** ends the run. Copilot never deletes a Secret during
 this flow; a Secret you delete in GitHub is not restored if you stop.
 
 Both links use GitHub's [documented fine-grained PAT form](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+When PR assessment is selected in `recommend` or `guarded` mode, the bot link
+prefills repository **Variables: Read** (`actions_variables=read`). If the
+effective `PR_APPROVAL_POLICY` is stored at organization scope, it also prefills
+organization **Variables: Read** (`organization_actions_variables=read`).
+An existing repository policy takes precedence over an inherited organization
+policy. With assessment `off`, the bot does not request these grants. Setup
+uses its separate operator PAT for provisioning Variables; the bot's read
+grant does not give it Variables write access. If you enable assessment after
+creating the bot PAT, update these permissions in GitHub and complete any
+organization approval before rerunning the observer.
 They do not sign you in, complete 2FA, generate or revoke a token, or choose
 an individual repository. Check the active browser account, change **All
 repositories** to **Only select repositories**, select only the

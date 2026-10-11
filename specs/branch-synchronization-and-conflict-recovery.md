@@ -315,6 +315,17 @@ without a push. Dogfooding run 38140515377 motivated this contract because the
 resolution was rejected before verification, but the published failure hid which
 workspace control rejected it.
 
+When the trusted catalog refresh rejects a resolution, the operator log MUST
+identify its closed validation phase: workspace/file boundary, metadata JSON
+or remaining conflict markers, metadata/evidence shape, evidence path boundary,
+catalog contract, or index output. It MUST NOT include repository paths,
+metadata values, validator messages, exception text, or raw provider output.
+This diagnosis does not relax validation, rewrite metadata, or permit a push.
+Native dogfooding runs `38173557022` and `38176196334` returned
+`sdd-catalog-invalid` without identifying the failing catalog phase; the abort
+then restored the worktree, so inspecting retained Git status could not recover
+that information. The phase is captured by trusted validation before abort.
+
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
@@ -322,10 +333,10 @@ workspace control rejected it.
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 49 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fourteen closed/forged diagnostic cases with localized replies and no push |
-| Adapters/workflow contracts | 30 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks |
+| Adapters/workflow contracts | 35 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
 | Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **165** | no double counting |
+| **Total** | **170** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -390,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The 118-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 170-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
