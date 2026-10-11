@@ -42499,10 +42499,12 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.sddUnverified',
     'interaction.status.sddAwaitingAnswers',
     'interaction.status.sddPublicationPending',
+    'interaction.status.sddRevisionPending',
     'interaction.status.sddReady',
     'interaction.status.sddOwner',
     'interaction.status.sddQuestions',
     'interaction.status.sddCommit',
+    'interaction.status.sddFirstCommit',
     'interaction.status.sddNextInspect',
     'interaction.status.sddNextAnswers',
     'interaction.status.sddNextPublication',
@@ -42628,10 +42630,12 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.sddUnverified': 'Publication evidence is invalid, absent or stale; readiness is unverified.',
     'interaction.status.sddAwaitingAnswers': 'Answers required',
     'interaction.status.sddPublicationPending': 'Publication pending',
+    'interaction.status.sddRevisionPending': 'Revision pending; current readiness is unverified.',
     'interaction.status.sddReady': 'Published and verified',
     'interaction.status.sddOwner': 'Specification',
     'interaction.status.sddQuestions': 'Pending questions',
     'interaction.status.sddCommit': 'Verified publication',
+    'interaction.status.sddFirstCommit': 'First verified publication (history)',
     'interaction.status.sddNextInspect': 'Inspect the SDD card and retry after correcting its evidence.',
     'interaction.status.sddNextAnswers': 'Answer these questions in the issue using their question identifiers.',
     'interaction.status.sddNextPublication': 'Resume SDD preparation to publish the approved specification.',
@@ -42758,10 +42762,12 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.sddUnverified': 'La publicación es inválida, está ausente o desactualizada; preparación sin verificar.',
     'interaction.status.sddAwaitingAnswers': 'Respuestas necesarias',
     'interaction.status.sddPublicationPending': 'Publicación pendiente',
+    'interaction.status.sddRevisionPending': 'Revisión pendiente; preparación actual sin verificar.',
     'interaction.status.sddReady': 'Publicado y verificado',
     'interaction.status.sddOwner': 'Especificación',
     'interaction.status.sddQuestions': 'Preguntas pendientes',
     'interaction.status.sddCommit': 'Publicación verificada',
+    'interaction.status.sddFirstCommit': 'Primera publicación verificada (histórica)',
     'interaction.status.sddNextInspect': 'Revisa la tarjeta del SDD y reintenta tras corregir su evidencia.',
     'interaction.status.sddNextAnswers': 'Responde estas preguntas en la issue usando sus identificadores.',
     'interaction.status.sddNextPublication': 'Retoma la preparación del SDD para publicar la especificación aprobada.',
@@ -43631,14 +43637,19 @@ function initialSddStatus(context, labels) {
     }
 }
 function projectSddStatus(evidence, initial) {
+    const firstCommitSha = evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.firstSha ?? '')
+        ? evidence.verified.firstSha : undefined;
+    const revisionPending = (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending') && Boolean(firstCommitSha);
     const state = evidence.state === 'not-required' ? 'not-required'
         : evidence.state === 'absent' || evidence.state === 'unavailable' ? 'unavailable'
             : evidence.state === 'stale' || evidence.state === 'invalid' ? 'unverified'
-                : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified') : evidence.state;
+                : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
+                    : revisionPending ? 'revision-pending' : evidence.state;
     return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
         ...(evidence.path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path: evidence.path } : {}),
-        ...(state === 'awaiting-answers' && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
+        ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
         ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
+        ...((state === 'revision-pending' || state === 'ready') && firstCommitSha ? { firstCommitSha } : {}),
         ...(evidence.cardId ? { cardId: evidence.cardId } : {}),
     });
 }
@@ -43646,16 +43657,19 @@ function projectSddStatus(evidence, initial) {
 function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
     const path = readiness.path && (0, pre_branch_sdd_1.isSafeSddPath)(readiness.path) ? readiness.path : undefined;
     const commitSha = readiness.commitSha && /^[a-f0-9]{40}$/u.test(readiness.commitSha) ? readiness.commitSha : undefined;
+    const firstCommitSha = readiness.firstCommitSha && /^[a-f0-9]{40}$/u.test(readiness.firstCommitSha) ? readiness.firstCommitSha : undefined;
     const pending = readiness.pendingQuestionIds?.filter(id => /^Q[1-8]$/u.test(id));
-    const state = readiness.state === 'ready' && (!path || !commitSha) ? 'unverified' : readiness.state;
+    const state = (readiness.state === 'ready' && (!path || !commitSha))
+        || (readiness.state === 'revision-pending' && (!path || !firstCommitSha)) ? 'unverified' : readiness.state;
     const message = {
         'not-required': 'interaction.status.sddNotRequired', unavailable: 'interaction.status.sddUnavailable',
         unverified: 'interaction.status.sddUnverified', 'awaiting-answers': 'interaction.status.sddAwaitingAnswers',
-        'publication-pending': 'interaction.status.sddPublicationPending', ready: 'interaction.status.sddReady',
+        'publication-pending': 'interaction.status.sddPublicationPending', 'revision-pending': 'interaction.status.sddRevisionPending', ready: 'interaction.status.sddReady',
     };
     const next = {
         'not-required': undefined, unavailable: 'interaction.status.sddNextInspect', unverified: 'interaction.status.sddNextInspect',
-        'awaiting-answers': 'interaction.status.sddNextAnswers', 'publication-pending': 'interaction.status.sddNextPublication', ready: 'interaction.status.sddNextReady',
+        'awaiting-answers': 'interaction.status.sddNextAnswers', 'publication-pending': 'interaction.status.sddNextPublication',
+        'revision-pending': pending?.length ? 'interaction.status.sddNextAnswers' : 'interaction.status.sddNextPublication', ready: 'interaction.status.sddNextReady',
     };
     const label = (id, value) => `- **${catalog.render(id)}:** ${value}`;
     const lines = ['', `## ${catalog.render('interaction.status.sddHeading')}`,
@@ -43666,11 +43680,15 @@ function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
     const base = safeIssueUrl(issueUrl, issueNumber, identity);
     if (path && !['unavailable', 'unverified'].includes(state))
         lines.push(label('interaction.status.sddOwner', `\`${path}\``));
-    if (state === 'awaiting-answers' && pending?.length)
+    if ((state === 'awaiting-answers' || state === 'revision-pending') && pending?.length)
         lines.push(label('interaction.status.sddQuestions', [...new Set(pending)].slice(0, 8).join(', ')));
     if (state === 'ready' && commitSha && path) {
         const evidence = base ? `[\`${commitSha}\`](${base.repository}/blob/${commitSha}/${path})` : `\`${commitSha}\``;
         lines.push(label('interaction.status.sddCommit', evidence));
+    }
+    if ((state === 'revision-pending' || (state === 'ready' && firstCommitSha !== commitSha)) && firstCommitSha && path) {
+        const evidence = base ? `[\`${firstCommitSha}\`](${base.repository}/blob/${firstCommitSha}/${path})` : `\`${firstCommitSha}\``;
+        lines.push(label('interaction.status.sddFirstCommit', evidence));
     }
     if (next[state])
         lines.push('', catalog.render(next[state]));

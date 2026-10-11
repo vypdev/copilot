@@ -718,7 +718,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 
 ## Proposed status readiness extension
 
-The proposed read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its 30-case rendering/localization regression budget is separate from the gate's acceptance budget above. The current partial projection fails closed for required evidence, but does not yet project gate records or publication proofs.
+The read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its original 30 rendering/localization regression cases are included in the companion's distinct extension budget, separate from the gate's acceptance budget above. The managed implementation reads the latest owned gate record, verifies immutable catalog ownership and remote publication, and fences current issue/card/branch evidence. Live command acceptance and promotion remain pending; local implementation evidence alone does not certify them.
 
 ### 1. Executive summary
 

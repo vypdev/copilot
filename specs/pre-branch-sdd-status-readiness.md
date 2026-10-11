@@ -308,19 +308,19 @@ No schema or configuration migration is introduced. Existing gate records remain
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **149 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
+Minimum: **170 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Existing basic status presentation | 30 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
 | Issue identity | 8 | Canonical visible body/title normalization, profile, kind, issue number and original base digest |
 | Owned card selection | 16 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
-| Authority/application/fences | 51 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities and three status integration outcomes |
-| Closed projection/UX | 37 | Canonical requirement/configuration, eight evidence outcomes, withheld historical SHA, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
+| Authority/application/fences | 53 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes |
+| Closed projection/UX | 56 | Canonical requirement/configuration, eight evidence outcomes, explicitly historical first publication during a pending revision and alongside a different verified revision, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
 | Native linked ref adapter | 4 | Stale/deleted refs, foreign/missing repository identity; none may fall back to another PR |
 | Immutable workspace reads | 2 | Read the original catalog without checkout/current-file mutation; reject non-SHA identifiers |
 | Read-only composition | 1 | Repository-bound live publication query and current maintainer authorization without mutation capability |
-| **Total** | **149** | No case counted twice |
+| **Total** | **170** | No case counted twice |
 
 
 Maintain repository-wide thresholds. New pure readiness policy should meet at least 95% branch coverage; changed status modules should meet existing module thresholds, with a target of 90% branches and 95% lines/statements. Use deterministic records, clocks, provider fakes, and publication proofs; no sleeps or live services. Parse catalog structures and gate records rather than grep prose. UI fixtures require semantic assertions beyond snapshots. Manual acceptance confirms the section is readable on mobile and desktop and preserves the existing status ordering.
@@ -368,7 +368,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 2. Define typed readiness result and semantic read/verification ports; add pure policy tests for ownership, identity, pending IDs, and state mapping.
 3. Integrate read-only orchestration into status while retaining the original snapshot on retrieval errors.
 4. Add catalog messages and compact rendering for all states; ensure no timeline-card path is invoked.
-5. Add adapter, integration, localization, security, and compatibility tests within the 149-case implementation budget.
+5. Add adapter, integration, localization, security, and compatibility tests within the 170-case implementation budget.
 6. Update command/operator documentation and contract examples.
 7. Run specification, architecture, catalog, and repository validation required by the existing project workflow.
 
@@ -378,7 +378,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 - [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
 - [x] English and Spanish catalogs cover the readiness section.
 - [x] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [x] All 149 distinct extension cases, full coverage budgets and generated bundles pass before publication.
+- [x] All 170 distinct extension cases, full coverage budgets and generated bundles pass before publication.
 - [x] User documentation explains the evidence limit and fail-closed behavior.
 - [x] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
 - [x] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
@@ -438,3 +438,9 @@ Live recheck and native status acceptance remain pending.
 ### Native dogfooding evidence after parent synchronization
 
 Action run `38166458576` on `windows-intel-runner-1` completed 570 suites and 7,576 tests with 20 platform skips, then published synchronized head `3edeb4da098712385c9176c918d3dd0814883296` and its correlated receipt for comment `6112587961`. Its native PowerShell hash-module and clean-checkout fixtures passed in 1.086, 1.982 and 1.828 seconds respectively, with unchanged isolation and budgets. The synchronized bundles validate locally. This establishes native verification and an actual pushed branch, not Windows agent writing or live status acceptance after promotion. User documentation explicitly separates SDD readiness from implementation completion, CI/review and merge authorization.
+
+### Publication history and pending-revision correction from dogfooding
+
+The original progress comparison exposed the missing revision-pending view. Subsequent real Bugbot findings `4242981181` and `4242981184` identified loss of the first publication alongside a verified revision and an obsolete implementation claim in the owning gate SDD. The projection now retains a independently verified immutable first SHA: pending revisions label it as historical and withhold current readiness; verified revisions show current and first publications separately only when they differ. Current pending question identifiers remain visible. Absent, stale, invalid or denied evidence never promotes historical publication to current readiness. The owning gate SDD and user documentation describe the actual implementation while keeping post-promotion acceptance explicitly open.
+
+Twenty-one distinct new contracts cover both pending phases, incomplete publication metadata, unknown requirement, bilingual history, invalid navigation, malformed projected evidence, deduplication of identical publication links and real status integration. The extension budget increases from 149 to 170 without recounting shared gate tests. Full local verification passed 570 suites and 7,583 tests with 35 existing platform skips (7,618 total). The changed projection has 100% lines/statements/branches/functions; all existing budgets, typecheck, lint, specifications/catalog, documentation, graph update and compilation passed. Fresh independent review and live command/replay checks still require the published implementation and promotion.

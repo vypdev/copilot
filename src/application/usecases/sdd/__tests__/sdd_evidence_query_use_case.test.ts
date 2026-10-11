@@ -58,6 +58,17 @@ describe('read-only SDD authority and publication query', () => {
         const f = fixture(); expect(await f.query.read({ ...f.context, issueNumber })).toEqual({ state: 'unavailable' });
         expect(f.comments).not.toHaveBeenCalled();
     });
+    it.each([true, false])('integrates a verified first publication and pending revision with questions=%s', async hasQuestions => {
+        const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', round: 2,
+            plan: { ...f.record.plan, questions: hasQuestions ? [{ id: 'Q1', text: 'What should the revision change?', owner: 'issue-author' }] : [] } });
+        const statusContext = { sdd: f.context, status: { owner: 'acme', repository: 'demo', event: 'issue_comment', action: 'created', target: 'issue', issueNumber: 42,
+            issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'append', sddReadiness: { state: 'unavailable', required: true } } } as unknown as CommentAutomationContext;
+        const result = await readCopilotStatus(statusContext, 'IssueCommentUseCase', undefined, { read: f.query.read.bind(f.query) });
+        expect(result.payload).toMatchObject({ status: { sddReadiness: { state: 'revision-pending', firstCommitSha: first,
+            pendingQuestionIds: hasQuestions ? ['Q1'] : [], path: 'specs/feature.md' } } });
+        expect((result.payload as { status: { sddReadiness: { commitSha?: string } } }).status.sddReadiness.commitSha).toBeUndefined();
+        expect(f.ports.workspace.verifyPublication).toHaveBeenCalledTimes(2);
+    });
     it.each(['issueManagedBranches', 'admittedKind'] as const)('does not guess missing configuration %s', async field => {
         const f = fixture(); expect(await f.query.read({ ...f.context, [field]: undefined })).toEqual({ state: 'unavailable' });
         expect(f.comments).not.toHaveBeenCalled();
