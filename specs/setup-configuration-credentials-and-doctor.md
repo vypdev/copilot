@@ -676,3 +676,21 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.
+
+
+## GitHub conversation runtime doctor extension — issue #461
+
+The companion `github-runtime-doctor-command.md` owns the deterministic
+`/copilot doctor` conversation audit. It uses the Action runtime credential,
+not the local setup operator PAT. Its physically frozen query port exposes only
+repository, issue, native linked branch, canonical PR and trusted effective
+approval policy reads. It never exposes local setup provisioning, credential
+health dispatch, approval submission, model or Git/file mutation capabilities.
+
+All public strings join the existing publication catalog (35 reviewed English
+and Spanish message IDs). Independent unavailable checks preserve successful
+facts. A valid active approval policy reports declared prerequisites as a warning,
+without inferring producer health or write grants. Existing off semantics require
+trusted verified absence. The feature adds 124 distinct contract and risk cases
+across the numeric companion budget; live promotion and browser proof remain
+pending until their actual results are recorded.

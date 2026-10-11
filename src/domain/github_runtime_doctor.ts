@@ -80,7 +80,7 @@ export function aggregateGithubRuntimeDoctorReport(input: {
     const byGroup = new Map<GithubRuntimeDoctorGroup, GithubRuntimeDoctorCheck>();
     for (const check of input.checks) {
         if (byGroup.has(check.group)) throw new Error(`Duplicate GitHub runtime doctor group: ${check.group}.`);
-        byGroup.set(check.group, Object.freeze({ ...check }));
+        byGroup.set(check.group, Object.freeze({ ...check, ...(check.evidence ? { evidence: Object.freeze({ ...check.evidence }) } : {}) }));
     }
     const checks: readonly GithubRuntimeDoctorCheck[] = GITHUB_RUNTIME_DOCTOR_GROUPS.map(group => byGroup.get(group)
         ?? Object.freeze({ group, state: 'unavailable' as const }));

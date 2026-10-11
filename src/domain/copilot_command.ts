@@ -80,6 +80,9 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (argumentsList.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
+    if (name === 'doctor' && argumentsList.length > 0) {
+        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
+    }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
     }

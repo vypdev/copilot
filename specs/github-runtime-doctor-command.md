@@ -333,13 +333,35 @@ Document that local setup operator PAT and Action runtime PAT are distinct and t
 
 ## 19. Definition of Done
 
-Implementation status: **incomplete**. The current code covers the domain contract,
-trusted strict policy parsing, aggregate ordering/priority, command recognition,
-and bilingual help discoverability. The route fails closed with an unavailable
-response; it does not claim that any runtime prerequisite passed. This partial
-state does not satisfy the numeric 52-case budget or the capability acceptance
-scenarios below. Do not mark this specification implemented or its catalog
-capability complete until every unchecked item is verified.
+Implementation status: **implemented in the managed feature branch; live
+promotion and browser acceptance pending**. The runtime composition binds only
+metadata queries using the installed runtime credential. The command performs
+all seven groups, retains independent successful checks, validates the effective
+profile/start settings using the owning policies, and inspects the dependency
+reference already resolved by runtime setup. It does not certify an entire remote
+dependency graph from that setting.
+
+The canonical policy reader is shared with the approval observer and retains
+repository-over-organization precedence. Its read-only method never consults an
+injected variable after failure. Files use six fixed paths, 200,000 decoded UTF-8
+bytes per file, one exact 40-hex default-branch revision, and a final revision
+fence. Workflow YAML uses the JSON schema and is never executed. Native branch
+queries retain their 100-node complete-page boundary and refuse ambiguous,
+foreign or moved refs. Exact PR identity uses the existing canonical read policy
+and a final head fence. Group states and actions are closed; raw source text,
+provider errors and credentials never enter the report.
+
+The fixed 52-case floor is retained. Current evidence covers **124 distinct
+feature cases** without double counting existing observer tests: 25 domain and
+configuration cases (the original ten domain cases plus fifteen new prerequisite
+cases); 23 application cases; 35 provider cases (28 metadata adapters plus seven
+new policy-reader cases); ten workflow structural cases; 17 presentation cases;
+and 14 integration cases (eight command/security, three composition, two
+semantic correlation cases, and one real issue-route configuration regression). The nine-suite focused run passed 138 tests; the additional real issue-route suite passed 18 tests,
+including compatibility tests outside this 124-case feature budget. The full managed-branch suite passed 569 suites and 7,454 tests (35 existing
+platform skips), with every repository coverage budget and setup ledger check
+passing. Doctor bypasses only the incompatible-configuration mutation guard and SDD-continuation getter so it can report their blocked state; mutation commands retain those gates. Generated bundles, live issue/PR commands and narrow-screen browser
+acceptance must be recorded separately before final readiness.
 
 - [ ] Every normative requirement has acceptance and traceability.
 - [ ] Architecture boundaries are implemented and automatically enforced; doctor has no mutation or model capability.

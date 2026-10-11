@@ -1,3 +1,4 @@
+import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -22,6 +23,7 @@ import { projectIssueCommentLanguageRequest } from './steps/issue_comment/check_
 import { projectCommentAutomationContext } from './comment_automation_context';
 import { projectPullRequestDescriptionContext } from './pull_request_workflow_context';
 import { isSddAnswerComment } from '../../domain/pre_branch_sdd';
+import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
   taskId = "IssueCommentUseCase";
@@ -45,16 +47,19 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
-    if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+    const command = parseCopilotCommand(param.issue.commentBody);
+    const isDoctor = command.kind === 'command' && command.command.name === 'doctor';
+    if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
       return [new Result({
         id: this.taskId, success: false, executed: true,
         steps: ['pre-branch-sdd requires issue-managed-branches; correct the Action configuration.'],
       })];
     }
-    if (this.preBranchSddContinuation
+    if (!isDoctor && this.preBranchSddContinuation
       && param.issueStartDecision.sddRequired
       && isSddAnswerComment(param.issue.commentBody)
       && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
@@ -88,6 +93,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        doctorReadPorts: this.doctorReadPorts,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

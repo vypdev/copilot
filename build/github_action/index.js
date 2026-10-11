@@ -43227,6 +43227,7 @@ const READ_ONLY_COMMANDS = Object.freeze([
     ['/copilot recheck', 'interaction.help.command.recheck'],
     ['/copilot description', 'interaction.help.command.description'],
     ['/copilot status', 'interaction.help.command.status'],
+    ['/copilot doctor', 'interaction.help.command.doctor'],
 ]);
 const CHANGE_COMMANDS = Object.freeze([
     ['/copilot fix <finding-id>', 'interaction.help.command.fixOne'],
@@ -44328,6 +44329,185 @@ function resolveGithubExecutionAdmission(input) {
 
 /***/ }),
 
+/***/ 99566:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validDoctorConfiguration = validDoctorConfiguration;
+exports.doctorRepositoryPrerequisites = doctorRepositoryPrerequisites;
+exports.doctorWorkflowContracts = doctorWorkflowContracts;
+const js_yaml_1 = __nccwpck_require__(783);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+function validDoctorConfiguration(value) {
+    if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
+        || !/^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u.test(value.dependencyBranch))
+        return false;
+    try {
+        if ('error' in (0, issue_workflow_profile_1.parseIssueWorkflowProfile)(JSON.stringify(value.profile)))
+            return false;
+        (0, issue_start_policy_1.decideIssueStart)({ labels: [], issueManagedBranches: value.issueManagedBranches, preBranchSdd: value.preBranchSdd });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function doctorRepositoryPrerequisites(read) {
+    if (read.state !== 'available')
+        return 'unavailable';
+    const paths = ['specs/catalog.json', 'specs/_template.md', 'specs/README.md'];
+    if (paths.some(path => read.files[path]?.state !== 'present'))
+        return 'blocked';
+    const catalogFile = read.files['specs/catalog.json'];
+    if (catalogFile.state !== 'present')
+        return 'blocked';
+    try {
+        const catalog = object(JSON.parse(catalogFile.text));
+        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities))
+            return 'blocked';
+        const ids = new Set();
+        for (const raw of catalog.capabilities) {
+            const capability = object(raw);
+            if (typeof capability.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(capability.id)
+                || ids.has(capability.id) || !Array.isArray(capability.specs) || capability.specs.length === 0
+                || capability.specs.some(path => typeof path !== 'string' || !/^specs\/[a-z0-9_-]+\.md$/u.test(path)))
+                return 'blocked';
+            ids.add(capability.id);
+        }
+        return paths.slice(1).every(path => {
+            const file = read.files[path];
+            return file.state === 'present' && /^#\s+\S/mu.test(file.text);
+        }) ? 'pass' : 'blocked';
+    }
+    catch {
+        return 'blocked';
+    }
+}
+/** Structural evidence only. YAML is parsed with the JSON schema and never executed. */
+function doctorWorkflowContracts(read) {
+    if (read.state !== 'available')
+        return 'unavailable';
+    const expected = [
+        ['.github/workflows/copilot_issue.yml', 'issues'],
+        ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
+        ['.github/workflows/copilot_pull_request.yml', 'pull_request'],
+    ];
+    try {
+        return expected.every(([path, event]) => {
+            const file = read.files[path];
+            if (file?.state !== 'present')
+                return false;
+            const document = object((0, js_yaml_1.load)(file.text, { schema: js_yaml_1.JSON_SCHEMA }));
+            const events = document.on;
+            const admitted = typeof events === 'string' ? events === event : Array.isArray(events)
+                ? events.includes(event) : Object.prototype.hasOwnProperty.call(object(events), event);
+            return admitted && Object.values(object(document.jobs)).some(job => {
+                const steps = object(job).steps;
+                return Array.isArray(steps) && steps.some(raw => {
+                    const step = object(raw);
+                    return step.uses === './' || typeof step.uses === 'string'
+                        && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses);
+                });
+            });
+        }) ? 'pass' : 'blocked';
+    }
+    catch {
+        return 'blocked';
+    }
+}
+function object(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
+/***/ 2808:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isGithubRuntimeDoctorProjection = isGithubRuntimeDoctorProjection;
+exports.formatGithubRuntimeDoctor = formatGithubRuntimeDoctor;
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
+const ACTIONS = ['configuration', 'workflow', 'retry', 'issue', 'specifications', 'branch', 'policy', 'declared'];
+const STATES = ['pass', 'warning', 'blocked', 'unavailable', 'not-applicable'];
+function isGithubRuntimeDoctorProjection(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const projection = value;
+    const report = projection.report;
+    if (['serverOrigin', 'revision', 'owner', 'repository'].some(key => {
+        const field = projection[key];
+        return field !== undefined && (typeof field !== 'string' || field.length > 300);
+    }))
+        return false;
+    if (report === undefined)
+        return true;
+    if (!report || typeof report !== 'object' || !report.target || !Number.isSafeInteger(report.target.repositoryId)
+        || report.target.repositoryId < 1 || (report.target.kind !== 'issue' && report.target.kind !== 'pull-request')
+        || !Number.isSafeInteger(report.target.kind === 'issue' ? report.target.issueNumber : report.target.pullNumber)
+        || (report.target.kind === 'issue' ? report.target.issueNumber : report.target.pullNumber) < 1)
+        return false;
+    return STATES.includes(report.severity) && Array.isArray(report.checks) && report.checks.length === 7
+        && report.checks.every((check, index) => check && check.group === github_runtime_doctor_1.GITHUB_RUNTIME_DOCTOR_GROUPS[index] && STATES.includes(check.state))
+        && (report.primaryAction === undefined || ACTIONS.includes(report.primaryAction));
+}
+function formatGithubRuntimeDoctor(projection, locale = 'en-US', catalog = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(locale).catalog) {
+    if (!isGithubRuntimeDoctorProjection(projection))
+        projection = {};
+    const message = (suffix) => catalog.render(`interaction.doctor.${suffix}`);
+    const severity = projection.report?.severity ?? 'unavailable';
+    const action = projection.report?.primaryAction;
+    const lines = [`## 🩺 ${message('heading')}: ${message(`state.${severity}`)}`, '',
+        message(`summary.${severity}`), '',
+        `**${message('action')}:** ${action && ACTIONS.includes(action) ? message(`action.${action}`)
+            : severity === 'pass' || severity === 'not-applicable' ? message('action.none') : message('action.retry')}`,
+        '', message('readonly'), '', `### ${message('checks')}`, ''];
+    const source = repositorySource(projection);
+    const origin = source?.split('/').slice(0, 5).join('/');
+    for (const group of github_runtime_doctor_1.GITHUB_RUNTIME_DOCTOR_GROUPS) {
+        const state = projection.report?.checks.find(check => check.group === group)?.state ?? 'unavailable';
+        const evidence = projection.report?.checks.find(check => check.group === group)?.evidence?.source;
+        const target = projection.report?.target;
+        const link = origin && target && group === 'pull-request-identity' && target.kind === 'pull-request'
+            ? `${origin}/pull/${target.pullNumber}` : origin && target && target.kind === 'issue'
+            && (group === 'issue-readiness' || group === 'linked-branch-readiness') ? `${origin}/issues/${target.issueNumber}` : undefined;
+        const policySource = group === 'approval-policy' && (evidence === 'repository' || evidence === 'organization' || evidence === 'default-off')
+            ? message(`source.${evidence}`) : undefined;
+        const mode = group === 'approval-prerequisites' && (evidence === 'off' || evidence === 'recommend' || evidence === 'guarded')
+            ? `${message('mode')}: ${evidence}` : undefined;
+        lines.push(`- **${message(`group.${group}`)}:** ${message(`state.${state}`)}${policySource ? ` · ${policySource}` : ''}${mode ? ` · ${mode}` : ''}${link ? ` · [${message('source')}](${link})` : ''}`);
+    }
+    if (source)
+        lines.push('', `[${message('source')}](${source})`);
+    return lines.join('\n');
+}
+function repositorySource(value) {
+    if (!value.serverOrigin || !value.revision || !/^[a-f0-9]{40}$/u.test(value.revision)
+        || !value.owner || !value.repository || !/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/u.test(value.owner)
+        || !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/u.test(value.repository))
+        return undefined;
+    try {
+        const url = new URL(value.serverOrigin);
+        if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash
+            || url.pathname !== '/' || url.origin !== value.serverOrigin.replace(/\/$/u, ''))
+            return undefined;
+        return `${url.origin}/${value.owner}/${value.repository}/tree/${value.revision}`;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
 /***/ 30203:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -45244,6 +45424,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.help.command.recheck',
     'interaction.help.command.description',
     'interaction.help.command.status',
+    'interaction.help.command.doctor',
     'interaction.help.command.fixOne',
     'interaction.help.command.fixAll',
     'interaction.help.command.dismiss',
@@ -45271,6 +45452,41 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.branchSync.merged',
     'interaction.branchSync.agentResolution',
     'interaction.branchSync.verification',
+    'interaction.doctor.source.repository',
+    'interaction.doctor.source.organization',
+    'interaction.doctor.source.default-off',
+    'interaction.doctor.mode',
+    'interaction.doctor.heading',
+    'interaction.doctor.action',
+    'interaction.doctor.checks',
+    'interaction.doctor.readonly',
+    'interaction.doctor.source',
+    'interaction.doctor.group.effective-configuration',
+    'interaction.doctor.group.issue-readiness',
+    'interaction.doctor.group.linked-branch-readiness',
+    'interaction.doctor.group.workflow-contracts',
+    'interaction.doctor.group.approval-policy',
+    'interaction.doctor.group.approval-prerequisites',
+    'interaction.doctor.group.pull-request-identity',
+    'interaction.doctor.action.configuration',
+    'interaction.doctor.action.workflow',
+    'interaction.doctor.action.retry',
+    'interaction.doctor.action.issue',
+    'interaction.doctor.action.specifications',
+    'interaction.doctor.action.branch',
+    'interaction.doctor.action.policy',
+    'interaction.doctor.action.declared',
+    'interaction.doctor.action.none',
+    'interaction.doctor.state.pass',
+    'interaction.doctor.summary.pass',
+    'interaction.doctor.state.blocked',
+    'interaction.doctor.summary.blocked',
+    'interaction.doctor.state.unavailable',
+    'interaction.doctor.summary.unavailable',
+    'interaction.doctor.state.warning',
+    'interaction.doctor.summary.warning',
+    'interaction.doctor.state.not-applicable',
+    'interaction.doctor.summary.not-applicable',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -45342,6 +45558,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 're-run the review and reconcile findings.',
     'interaction.help.command.description': 'refresh the pull-request description.',
     'interaction.help.command.status': 'show the current automation status.',
+    'interaction.help.command.doctor': 'check available runtime prerequisites without making repository changes.',
     'interaction.help.command.fixOne': 'fix one reported finding.',
     'interaction.help.command.fixAll': 'fix all unresolved findings.',
     'interaction.help.command.dismiss': 'dismiss a finding.',
@@ -45381,6 +45598,41 @@ const ENGLISH_MESSAGES = Object.freeze({
         one: '{count} verification check passed.',
         other: '{count} verification checks passed.',
     }),
+    'interaction.doctor.source.repository': "Repository variable",
+    'interaction.doctor.source.organization': "Organization variable",
+    'interaction.doctor.source.default-off': "Verified absence; default off",
+    'interaction.doctor.mode': "Mode",
+    'interaction.doctor.heading': "Runtime doctor",
+    'interaction.doctor.action': "Next action",
+    'interaction.doctor.checks': "Checks",
+    'interaction.doctor.readonly': "This command reads evidence only. Declared approval settings do not prove producer health or write access.",
+    'interaction.doctor.source': "Inspected repository revision",
+    'interaction.doctor.group.effective-configuration': "Effective configuration",
+    'interaction.doctor.group.issue-readiness': "Issue and SDD prerequisites",
+    'interaction.doctor.group.linked-branch-readiness': "Native linked branch",
+    'interaction.doctor.group.workflow-contracts': "Installed workflow structure",
+    'interaction.doctor.group.approval-policy': "Trusted approval policy read",
+    'interaction.doctor.group.approval-prerequisites': "Declared approval prerequisites",
+    'interaction.doctor.group.pull-request-identity': "Exact current PR identity",
+    'interaction.doctor.action.configuration': "Inspect the effective workflow configuration and correct the invalid setting.",
+    'interaction.doctor.action.workflow': "Inspect the linked workflow revision and correct its required structure.",
+    'interaction.doctor.action.retry': "Inspect this workflow run and retry /copilot doctor.",
+    'interaction.doctor.action.issue': "Inspect the issue form and its routing labels.",
+    'interaction.doctor.action.specifications': "Inspect the catalog, template and specification standard at the linked revision.",
+    'interaction.doctor.action.branch': "Inspect the issue’s native linked branch and retry after branch readiness.",
+    'interaction.doctor.action.policy': "Inspect the trusted Actions Variables approval policy source.",
+    'interaction.doctor.action.declared': "Verify the declared producer prerequisites using the approval setup documentation.",
+    'interaction.doctor.action.none': "No action required for the inspected prerequisites.",
+    'interaction.doctor.state.pass': "Pass",
+    'interaction.doctor.summary.pass': "The inspected applicable prerequisites passed.",
+    'interaction.doctor.state.blocked': "Blocked",
+    'interaction.doctor.summary.blocked': "An authoritative read established an invalid required prerequisite.",
+    'interaction.doctor.state.unavailable': "Unavailable",
+    'interaction.doctor.summary.unavailable': "Some prerequisites could not be verified; completed checks remain visible.",
+    'interaction.doctor.state.warning': "Warning",
+    'interaction.doctor.summary.warning': "A prerequisite needs attention or independent verification.",
+    'interaction.doctor.state.not-applicable': "Not applicable",
+    'interaction.doctor.summary.not-applicable': "The inspected prerequisites do not apply to this target.",
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -45449,6 +45701,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 'repite la revisión y reconcilia los hallazgos.',
     'interaction.help.command.description': 'actualiza la descripción del pull request.',
     'interaction.help.command.status': 'muestra el estado actual de la automatización.',
+    'interaction.help.command.doctor': 'comprueba los requisitos disponibles del runtime sin modificar el repositorio.',
     'interaction.help.command.fixOne': 'corrige un hallazgo.',
     'interaction.help.command.fixAll': 'corrige todos los hallazgos sin resolver.',
     'interaction.help.command.dismiss': 'descarta un hallazgo.',
@@ -45492,6 +45745,41 @@ const SPANISH_MESSAGES = Object.freeze({
         many: 'Se superaron {count} comprobaciones de verificación.',
         other: 'Se superaron {count} comprobaciones de verificación.',
     }),
+    'interaction.doctor.source.repository': "Variable del repositorio",
+    'interaction.doctor.source.organization': "Variable de la organización",
+    'interaction.doctor.source.default-off': "Ausencia verificada; off por defecto",
+    'interaction.doctor.mode': "Modo",
+    'interaction.doctor.heading': "Diagnóstico del runtime",
+    'interaction.doctor.action': "Siguiente acción",
+    'interaction.doctor.checks': "Comprobaciones",
+    'interaction.doctor.readonly': "Este comando solo lee evidencias. La configuración de aprobación declarada no acredita la salud de los productores ni el acceso de escritura.",
+    'interaction.doctor.source': "Revisión inspeccionada del repositorio",
+    'interaction.doctor.group.effective-configuration': "Configuración efectiva",
+    'interaction.doctor.group.issue-readiness': "Requisitos de la issue y el SDD",
+    'interaction.doctor.group.linked-branch-readiness': "Rama enlazada nativa",
+    'interaction.doctor.group.workflow-contracts': "Estructura de los workflows instalados",
+    'interaction.doctor.group.approval-policy': "Lectura confiable de la política de aprobación",
+    'interaction.doctor.group.approval-prerequisites': "Requisitos de aprobación declarados",
+    'interaction.doctor.group.pull-request-identity': "Identidad actual exacta del PR",
+    'interaction.doctor.action.configuration': "Revisa la configuración efectiva del workflow y corrige el ajuste inválido.",
+    'interaction.doctor.action.workflow': "Revisa la revisión enlazada de los workflows y corrige la estructura requerida.",
+    'interaction.doctor.action.retry': "Revisa esta ejecución del workflow y vuelve a ejecutar /copilot doctor.",
+    'interaction.doctor.action.issue': "Revisa el formulario de la issue y sus etiquetas de clasificación.",
+    'interaction.doctor.action.specifications': "Revisa el catálogo, la plantilla y el estándar de especificaciones en la revisión enlazada.",
+    'interaction.doctor.action.branch': "Revisa la rama enlazada nativa de la issue y reintenta cuando esté preparada.",
+    'interaction.doctor.action.policy': "Revisa la fuente confiable de la política de aprobación en Actions Variables.",
+    'interaction.doctor.action.declared': "Verifica los requisitos de los productores declarados siguiendo la documentación de aprobación.",
+    'interaction.doctor.action.none': "No se requiere ninguna acción para los requisitos inspeccionados.",
+    'interaction.doctor.state.pass': "Correcto",
+    'interaction.doctor.summary.pass': "Los requisitos aplicables inspeccionados son correctos.",
+    'interaction.doctor.state.blocked': "Bloqueado",
+    'interaction.doctor.summary.blocked': "Una lectura autoritativa confirmó un requisito obligatorio inválido.",
+    'interaction.doctor.state.unavailable': "No disponible",
+    'interaction.doctor.summary.unavailable': "Algunos requisitos no se pudieron verificar; las comprobaciones completadas siguen visibles.",
+    'interaction.doctor.state.warning': "Advertencia",
+    'interaction.doctor.summary.warning': "Un requisito necesita atención o verificación independiente.",
+    'interaction.doctor.state.not-applicable': "No aplicable",
+    'interaction.doctor.summary.not-applicable': "Los requisitos inspeccionados no se aplican a este destino.",
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -46420,6 +46708,7 @@ exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
+const github_runtime_doctor_presentation_policy_1 = __nccwpck_require__(2808);
 const github_publication_1 = __nccwpck_require__(35793);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
@@ -46517,6 +46806,11 @@ function selectSemanticReplyIntents(context) {
         if (kind === 'access-policy') {
             return [replyIntent(context, correlationId, 'access-policy', Object.freeze({ kind }))];
         }
+        if (result.id.endsWith('.Doctor') && (0, github_runtime_doctor_presentation_policy_1.isGithubRuntimeDoctorProjection)(payload.doctor)) {
+            return [replyIntent(context, correlationId, 'copilot-doctor', Object.freeze({
+                    kind: 'doctor-command', snapshot: payload.doctor,
+                }))];
+        }
         const snapshot = (0, result_1.getResultPayload)(payload.status);
         if (result.id.endsWith('.Status') && isStatusSnapshot(snapshot)) {
             const projection = Object.freeze({
@@ -46597,6 +46891,8 @@ function renderReplyBody(intent, catalog) {
     if (intent.projection.kind === 'branch-sync-result') {
         return renderBranchSyncResult(intent.projection, catalog);
     }
+    if (intent.projection.kind === 'doctor-command')
+        return (0, github_runtime_doctor_presentation_policy_1.formatGithubRuntimeDoctor)(intent.projection.snapshot, intent.locale, catalog);
     return (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
 }
 function renderBranchSyncResult(projection, catalog) {
@@ -48343,6 +48639,21 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
     const jitter = (boundedRandom * 2 - 1) * policy.jitterRatio;
     return Math.min(policy.maximumDelayMilliseconds, Math.max(0, Math.round(baseDelayMilliseconds * (1 + jitter))));
 }
+
+
+/***/ }),
+
+/***/ 64921:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DOCTOR_REPOSITORY_PATHS = void 0;
+exports.DOCTOR_REPOSITORY_PATHS = [
+    '.github/workflows/copilot_issue.yml', '.github/workflows/copilot_issue_comment.yml',
+    '.github/workflows/copilot_pull_request.yml', 'specs/catalog.json', 'specs/_template.md', 'specs/README.md',
+];
 
 
 /***/ }),
@@ -52082,6 +52393,7 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
+const read_copilot_doctor_workflow_1 = __nccwpck_require__(12416);
 const result_1 = __nccwpck_require__(73817);
 const read_copilot_status_workflow_1 = __nccwpck_require__(57206);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
@@ -52097,6 +52409,8 @@ const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
     if (command.name === 'help')
         return runHelpCommand(param, options);
+    if (command.name === 'doctor')
+        return [await (0, read_copilot_doctor_workflow_1.readCopilotDoctor)(param, options.taskId, options.doctorReadPorts)];
     if (command.name === 'status')
         return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts)];
     if (command.name === 'dismiss')
@@ -52323,6 +52637,22 @@ const copilot_command_1 = __nccwpck_require__(11771);
 function projectCommentAutomationContext(source, language, userComment) {
     const review = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(source);
     return Object.freeze({
+        ...(source.issueWorkflowProfile && typeof source.preBranchSdd === 'boolean'
+            && typeof source.issue.issueManagedBranches === 'boolean' ? { doctorConfiguration: Object.freeze({
+                profile: Object.freeze({ schemaVersion: source.issueWorkflowProfile.schemaVersion,
+                    enabled: Object.freeze([...source.issueWorkflowProfile.enabled]) }),
+                labels: Object.freeze({
+                    feature: Object.freeze([source.labels?.feature, source.labels?.enhancement].filter((value) => typeof value === 'string' && value.length > 0)),
+                    bugfix: Object.freeze([source.labels?.bugfix, source.labels?.bug].filter((value) => typeof value === 'string' && value.length > 0)),
+                    documentation: Object.freeze([source.labels?.documentation, source.labels?.docs].filter((value) => typeof value === 'string' && value.length > 0)),
+                    chore: Object.freeze([source.labels?.chore, source.labels?.maintenance].filter((value) => typeof value === 'string' && value.length > 0)),
+                    help: Object.freeze([source.labels?.help, source.labels?.question].filter((value) => typeof value === 'string' && value.length > 0)),
+                    release: Object.freeze([source.labels?.release].filter((value) => typeof value === 'string' && value.length > 0)),
+                    hotfix: Object.freeze([source.labels?.hotfix].filter((value) => typeof value === 'string' && value.length > 0)),
+                }),
+                preBranchSdd: source.preBranchSdd, issueManagedBranches: source.issue.issueManagedBranches,
+                dependencyBranch: source.currentConfiguration.parentBranch ?? source.branches.development ?? '',
+            }) } : {}),
         actor: source.actor,
         trustedBotLogin: source.tokenUser?.trim() ?? '',
         userComment,
@@ -52509,7 +52839,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
         const isPublicMetadataCommand = command.kind === 'command'
-            && (command.command.name === 'help' || command.command.name === 'status');
+            && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'doctor');
         if (!isPublicMetadataCommand && param.membersOnly
             && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
@@ -53180,8 +53510,9 @@ const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const copilot_command_1 = __nccwpck_require__(11771);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, doctorReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -53197,16 +53528,19 @@ class IssueCommentUseCase {
         this.preBranchSddContinuation = preBranchSddContinuation;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.doctorReadPorts = doctorReadPorts;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
-        if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+        const command = (0, copilot_command_1.parseCopilotCommand)(param.issue.commentBody);
+        const isDoctor = command.kind === 'command' && command.command.name === 'doctor';
+        if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
             return [new result_1.Result({
                     id: this.taskId, success: false, executed: true,
                     steps: ['pre-branch-sdd requires issue-managed-branches; correct the Action configuration.'],
                 })];
         }
-        if (this.preBranchSddContinuation
+        if (!isDoctor && this.preBranchSddContinuation
             && param.issueStartDecision.sddRequired
             && (0, pre_branch_sdd_1.isSddAnswerComment)(param.issue.commentBody)
             && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
@@ -53234,6 +53568,7 @@ class IssueCommentUseCase {
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
+            doctorReadPorts: this.doctorReadPorts,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -54020,7 +54355,7 @@ const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, doctorReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -54035,6 +54370,7 @@ class PullRequestReviewCommentUseCase {
         this.syncBranchUseCase = syncBranchUseCase;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.doctorReadPorts = doctorReadPorts;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -54060,6 +54396,7 @@ class PullRequestReviewCommentUseCase {
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
+            doctorReadPorts: this.doctorReadPorts,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -54534,6 +54871,120 @@ function deepFreezeCopy(value) {
         return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, deepFreezeCopy(nested)])));
     }
     return value;
+}
+
+
+/***/ }),
+
+/***/ 12416:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCopilotDoctor = readCopilotDoctor;
+const result_1 = __nccwpck_require__(73817);
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const context_1 = __nccwpck_require__(14712);
+const github_runtime_doctor_policy_1 = __nccwpck_require__(99566);
+const github_runtime_doctor_presentation_policy_1 = __nccwpck_require__(2808);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+async function readCopilotDoctor(param, taskId, ports) {
+    const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.bugbot.review.repository.id);
+    const isPull = param.status.target === 'pull-request';
+    const number = (0, positive_integer_policy_1.parsePositiveSafeInteger)(isPull ? param.status.pullRequestNumber : param.status.issueNumber);
+    if (!repositoryId || !number)
+        return doctorResult(taskId, undefined);
+    const target = isPull ? { kind: 'pull-request', repositoryId, pullNumber: number }
+        : { kind: 'issue', repositoryId, issueNumber: number };
+    const checks = [];
+    const put = (group, state, action) => checks.push(Object.freeze({ group, state, evidence: { source: group }, ...(action && state !== 'pass' && state !== 'not-applicable' ? { action: state === 'unavailable' ? 'retry' : action } : {}) }));
+    const configuration = param.doctorConfiguration;
+    const valid = (0, github_runtime_doctor_policy_1.validDoctorConfiguration)(configuration);
+    put('effective-configuration', configuration === undefined ? 'unavailable' : valid ? 'pass' : 'blocked', !valid ? 'configuration' : undefined);
+    const repositoryRead = ports ? await ports.readRepository(repositoryId).catch(() => ({ state: 'unavailable' }))
+        : { state: 'unavailable' };
+    const verifiedRead = repositoryRead.state === 'available'
+        && (repositoryRead.repositoryId !== repositoryId || !/^[a-f0-9]{40}$/u.test(repositoryRead.revision))
+        ? { state: 'unavailable' } : repositoryRead;
+    put('workflow-contracts', (0, github_runtime_doctor_policy_1.doctorWorkflowContracts)(verifiedRead), 'workflow');
+    if (isPull) {
+        // Optional issue context is not guessed from a PR number or event prose.
+        put('issue-readiness', 'not-applicable');
+        put('linked-branch-readiness', 'not-applicable');
+    }
+    else if (!valid || !ports) {
+        put('issue-readiness', 'unavailable', 'retry');
+        put('linked-branch-readiness', 'unavailable', 'retry');
+    }
+    else {
+        try {
+            const issue = await ports.readIssue(number);
+            if (issue.number !== number)
+                throw new Error('Wrong issue identity.');
+            const admission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(issue.labels, configuration.profile, configuration.labels, issue.body);
+            if (admission.status !== 'eligible') {
+                put('issue-readiness', admission.status === 'unmanaged' ? 'unavailable' : 'blocked', 'issue');
+                put('linked-branch-readiness', 'not-applicable');
+            }
+            else {
+                const decision = (0, issue_start_policy_1.decideIssueStart)({ kind: admission.kind, labels: issue.labels,
+                    issueManagedBranches: configuration.issueManagedBranches, preBranchSdd: configuration.preBranchSdd });
+                put('issue-readiness', decision.sddRequired ? (0, github_runtime_doctor_policy_1.doctorRepositoryPrerequisites)(verifiedRead) : 'not-applicable', 'specifications');
+                if (!decision.branchRequired)
+                    put('linked-branch-readiness', 'not-applicable');
+                else {
+                    const branch = await ports.readLinkedBranch(number).catch(() => ({ state: 'unavailable' }));
+                    const state = branch.state === 'available' && branch.repositoryId === repositoryId && /^[a-f0-9]{40}$/u.test(branch.headSha)
+                        ? 'pass' : branch.state === 'absent' ? 'warning' : 'unavailable';
+                    put('linked-branch-readiness', state, 'branch');
+                }
+            }
+        }
+        catch {
+            put('issue-readiness', 'unavailable', 'retry');
+            put('linked-branch-readiness', 'unavailable', 'retry');
+        }
+    }
+    const policyRead = ports ? await ports.readApprovalPolicy().catch(() => ({ status: 'unavailable' }))
+        : { status: 'unavailable' };
+    const policy = (0, github_runtime_doctor_1.parseTrustedDoctorApprovalPolicy)(policyRead);
+    put('approval-policy', policy.status === 'valid' ? 'pass' : policy.status === 'invalid' ? 'blocked' : 'unavailable', 'policy');
+    if (policy.status === 'valid' || policyRead.status === 'available')
+        checks[checks.length - 1] = Object.freeze({ ...checks[checks.length - 1],
+            evidence: { source: policyRead.status === 'available' ? policyRead.source : policy.status === 'valid' ? policy.source : 'unavailable' } });
+    put('approval-prerequisites', policy.status !== 'valid' ? 'unavailable' : policy.policy.mode === 'off' ? 'not-applicable' : 'warning', 'declared');
+    if (policy.status === 'valid')
+        checks[checks.length - 1] = Object.freeze({ ...checks[checks.length - 1], evidence: { source: policy.policy.mode } });
+    if (!isPull)
+        put('pull-request-identity', 'not-applicable');
+    else {
+        let state = 'unavailable';
+        try {
+            if (ports) {
+                const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
+                const selection = request.target.pullRequestSelection;
+                if (selection.kind === 'event' && selection.number === number) {
+                    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.pullRequests.getPullRequest(number)], 'event');
+                    if (canonical.kind === 'canonical' && /^[a-f0-9]{40}$/u.test(canonical.pullRequest.headSha)
+                        && await ports.pullRequests.getPullRequestHeadSha(number) === canonical.pullRequest.headSha)
+                        state = 'pass';
+                }
+            }
+        }
+        catch { /* Independent facts remain available. */ }
+        put('pull-request-identity', state, 'retry');
+    }
+    const report = (0, github_runtime_doctor_1.aggregateGithubRuntimeDoctorReport)({ target, checks });
+    return doctorResult(taskId, report, ports?.serverOrigin, verifiedRead.state === 'available' ? verifiedRead.revision : undefined, param.status.owner, param.status.repository);
+}
+function doctorResult(taskId, report, serverOrigin, revision, owner, repository) {
+    const projection = Object.freeze({ report, serverOrigin, revision, owner, repository });
+    return new result_1.Result({ id: `${taskId}.Doctor`, success: true, executed: true, stepFormat: 'markdown',
+        steps: [(0, github_runtime_doctor_presentation_policy_1.formatGithubRuntimeDoctor)(projection)], payload: { doctor: projection } });
 }
 
 
@@ -69723,6 +70174,156 @@ function requireObject(data, operation) {
 
 /***/ }),
 
+/***/ 25282:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RuntimeDoctorRepository = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+const github_runtime_doctor_ports_1 = __nccwpck_require__(64921);
+const pull_request_approval_repository_1 = __nccwpck_require__(23001);
+const SHA = /^[a-f0-9]{40}$/u;
+const SAFE_REF = /^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u;
+/** SDK DTOs and diagnostics terminate here; no mutation, provisioning, or filesystem API. */
+class RuntimeDoctorRepository {
+    constructor(owner, repository, token) {
+        this.owner = owner;
+        this.repository = repository;
+        this.client = github.getOctokit(token);
+    }
+    async readRepository(repositoryId) {
+        try {
+            const repo = await this.client.rest.repos.get({ owner: this.owner, repo: this.repository });
+            if (repo.data.id !== repositoryId || !SAFE_REF.test(repo.data.default_branch))
+                return { state: 'unavailable' };
+            const ref = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
+            const revision = ref.data.object.sha;
+            if (!SHA.test(revision) || ref.data.object.type !== 'commit')
+                return { state: 'unavailable' };
+            const values = await Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision)]));
+            const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
+            if (final.data.object.type !== 'commit' || final.data.object.sha !== revision)
+                return { state: 'unavailable' };
+            return Object.freeze({ state: 'available', repositoryId, revision,
+                files: Object.freeze(Object.fromEntries(values)) });
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readFile(path, revision) {
+        try {
+            const response = await this.client.rest.repos.getContent({ owner: this.owner, repo: this.repository, path, ref: revision });
+            const data = response.data;
+            if (Array.isArray(data) || data.type !== 'file' || data.path !== path || !('content' in data)
+                || data.encoding !== 'base64' || typeof data.content !== 'string' || data.content.length > 300000
+                || !/^[A-Za-z0-9+/=\r\n]*$/u.test(data.content))
+                throw new Error('Malformed bounded file response.');
+            const bytes = Buffer.from(data.content, 'base64');
+            const text = bytes.toString('utf8');
+            if (bytes.toString('base64') !== data.content.replace(/[\r\n]/gu, '')
+                || bytes.length > 200000 || !Buffer.from(text, 'utf8').equals(bytes))
+                throw new Error('Malformed bounded file content.');
+            return Object.freeze({ state: 'present', text });
+        }
+        catch (error) {
+            if (status(error) === 404)
+                return Object.freeze({ state: 'missing' });
+            throw error;
+        }
+    }
+    async readIssue(issueNumber) {
+        const response = await this.client.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber });
+        const issue = response.data;
+        if (issue.number !== issueNumber || issue.pull_request || typeof issue.body !== 'string' || issue.body.length > 70000
+            || typeof issue.title !== 'string' || issue.title.length > 256 || !Array.isArray(issue.labels) || issue.labels.length > 100)
+            throw new Error('Malformed bounded issue response.');
+        const labels = issue.labels.map((label) => typeof label === 'string' ? label : label.name);
+        if (labels.some((label) => typeof label !== 'string' || label.length > 120))
+            throw new Error('Malformed issue labels.');
+        return Object.freeze({ number: issue.number, title: issue.title, body: issue.body, labels: Object.freeze(labels) });
+    }
+    async readLinkedBranch(issueNumber) {
+        try {
+            const result = await this.client.graphql(`query RuntimeDoctorLinkedBranch($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){
+                  databaseId nameWithOwner issue(number:$number){number linkedBranches(first:100){
+                    pageInfo{hasNextPage} nodes{ref{name target{oid} repository{databaseId nameWithOwner}}}}}}}`, { owner: this.owner, repo: this.repository, number: issueNumber });
+            const repo = result.repository;
+            const links = repo?.issue?.linkedBranches;
+            const expected = `${this.owner}/${this.repository}`.toLowerCase();
+            if (!repo || !Number.isSafeInteger(repo.databaseId) || (repo.databaseId ?? 0) <= 0 || repo.nameWithOwner?.toLowerCase() !== expected
+                || repo.issue?.number !== issueNumber || links?.pageInfo?.hasNextPage !== false || !Array.isArray(links.nodes))
+                return { state: 'unavailable' };
+            const refs = links.nodes.flatMap((node) => node?.ref ? [node.ref] : []);
+            if (refs.length === 0)
+                return { state: 'absent' };
+            if (refs.length !== 1)
+                return { state: 'unavailable' };
+            const branch = refs[0];
+            if (!branch.name || !SAFE_REF.test(branch.name) || !branch.target?.oid || !SHA.test(branch.target.oid)
+                || branch.repository?.databaseId !== repo.databaseId || branch.repository?.nameWithOwner?.toLowerCase() !== expected)
+                return { state: 'unavailable' };
+            const live = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${branch.name}` });
+            return live.data.object.type === 'commit' && live.data.object.sha === branch.target.oid
+                ? Object.freeze({ state: 'available', repositoryId: repo.databaseId, name: branch.name, headSha: branch.target.oid }) : { state: 'unavailable' };
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readApprovalPolicy() {
+        try {
+            const value = await (0, pull_request_approval_repository_1.readEffectiveApprovalPolicy)(this.client, { owner: this.owner, repository: this.repository });
+            return value ? Object.freeze({ status: 'available', ...value }) : Object.freeze({ status: 'absent' });
+        }
+        catch {
+            return Object.freeze({ status: 'unavailable' });
+        }
+    }
+}
+exports.RuntimeDoctorRepository = RuntimeDoctorRepository;
+function status(error) {
+    return error && typeof error === 'object' && 'status' in error && typeof error.status === 'number' ? error.status : undefined;
+}
+
+
+/***/ }),
+
 /***/ 52644:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -71747,6 +72348,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
+exports.readEffectiveApprovalPolicy = readEffectiveApprovalPolicy;
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const approval_coverage_artifact_1 = __nccwpck_require__(96710);
@@ -71760,29 +72362,21 @@ class PullRequestApprovalRepository {
         this.octokit = github.getOctokit(token);
         this.checkOctokit = settings.githubToken ? github.getOctokit(settings.githubToken) : undefined;
     }
+    /** Read-only source evidence; failure never consults an injected policy value. */
+    async readPolicyEvidence(target) {
+        try {
+            const read = await this.readEffectivePolicy(target);
+            return Object.freeze(read ? { status: 'available', ...read } : { status: 'absent' });
+        }
+        catch {
+            return Object.freeze({ status: 'unavailable' });
+        }
+    }
     async readPolicy(target) {
-        try {
-            const response = await this.octokit.rest.actions.getRepoVariable({
-                owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY',
-            });
-            return response.data.value;
-        }
-        catch (error) {
-            if (statusOf(error) !== 404)
-                throw error;
-        }
-        // A repository Variable takes precedence over an accessible organization Variable.
-        try {
-            const response = await this.octokit.rest.actions.getOrgVariable({
-                org: target.owner, name: 'PR_APPROVAL_POLICY',
-            });
-            return response.data.value;
-        }
-        catch (error) {
-            if (statusOf(error) === 404)
-                return undefined;
-            throw error;
-        }
+        return (await this.readEffectivePolicy(target))?.value;
+    }
+    async readEffectivePolicy(target) {
+        return readEffectiveApprovalPolicy(this.octokit, target);
     }
     async loadEvidence(target) {
         const { data: pull } = await this.octokit.rest.pulls.get({
@@ -72083,6 +72677,31 @@ function record(value) {
     return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 }
 function array(value) { return Array.isArray(value) ? value : []; }
+/** Canonical repository-over-organization read shared with the physically read-only doctor binding. */
+async function readEffectiveApprovalPolicy(octokit, target) {
+    const admit = (source, value) => {
+        if (typeof value !== 'string' || value.length > 65536)
+            throw new Error('Approval policy response is malformed or unbounded.');
+        return { source, value };
+    };
+    try {
+        const response = await octokit.rest.actions.getRepoVariable({ owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY' });
+        return admit('repository', response.data.value);
+    }
+    catch (error) {
+        if (statusOf(error) !== 404)
+            throw error;
+    }
+    try {
+        const response = await octokit.rest.actions.getOrgVariable({ org: target.owner, name: 'PR_APPROVAL_POLICY' });
+        return admit('organization', response.data.value);
+    }
+    catch (error) {
+        if (statusOf(error) === 404)
+            return undefined;
+        throw error;
+    }
+}
 
 
 /***/ }),
@@ -74603,6 +75222,7 @@ exports.COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'doctor',
     'description',
     'explain',
     'diagnose',
@@ -74658,6 +75278,9 @@ function parseCopilotCommand(raw) {
     }
     if (argumentsList.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
+    }
+    if (name === 'doctor' && argumentsList.length > 0) {
+        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
     }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
@@ -75386,6 +76009,71 @@ function publicationTargetToken(target) {
         throw new Error('Publication target number must be a positive safe integer.');
     }
     return `${target.kind === 'pull-request' ? 'pr' : 'issue'}:${target.number}`;
+}
+
+
+/***/ }),
+
+/***/ 20413:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GITHUB_RUNTIME_DOCTOR_GROUPS = void 0;
+exports.parseTrustedDoctorApprovalPolicy = parseTrustedDoctorApprovalPolicy;
+exports.aggregateGithubRuntimeDoctorReport = aggregateGithubRuntimeDoctorReport;
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+// Domain contracts and trusted policy parsing for the issue/PR runtime doctor.
+/** The fixed, ordered evidence groups in the GitHub runtime doctor contract. */
+exports.GITHUB_RUNTIME_DOCTOR_GROUPS = [
+    'effective-configuration',
+    'issue-readiness',
+    'linked-branch-readiness',
+    'workflow-contracts',
+    'approval-policy',
+    'approval-prerequisites',
+    'pull-request-identity',
+];
+/**
+ * Parses only a successful trusted effective read. Verified absence preserves the
+ * established off default; read failure is unavailable and never consults an injected value.
+ */
+function parseTrustedDoctorApprovalPolicy(read) {
+    if (read.status === 'unavailable')
+        return { status: 'unavailable' };
+    if (read.status === 'absent') {
+        return { status: 'valid', source: 'default-off', policy: pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY };
+    }
+    try {
+        return { status: 'valid', source: read.source, policy: (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(read.value) };
+    }
+    catch {
+        // Do not leak parser/provider text into a report or user-facing surface.
+        return { status: 'invalid' };
+    }
+}
+/** Aggregate explicit independent evidence. Missing groups are unavailable, never assumed healthy. */
+function aggregateGithubRuntimeDoctorReport(input) {
+    const byGroup = new Map();
+    for (const check of input.checks) {
+        if (byGroup.has(check.group))
+            throw new Error(`Duplicate GitHub runtime doctor group: ${check.group}.`);
+        byGroup.set(check.group, Object.freeze({ ...check, ...(check.evidence ? { evidence: Object.freeze({ ...check.evidence }) } : {}) }));
+    }
+    const checks = exports.GITHUB_RUNTIME_DOCTOR_GROUPS.map(group => byGroup.get(group)
+        ?? Object.freeze({ group, state: 'unavailable' }));
+    const priority = ['blocked', 'unavailable', 'warning', 'pass'];
+    const applicable = checks.filter(check => check.state !== 'not-applicable');
+    const severity = applicable.length === 0 ? 'not-applicable'
+        : priority.find(state => applicable.some(check => check.state === state)) ?? 'unavailable';
+    const primaryAction = applicable.find(check => check.state === severity && check.action)?.action;
+    return Object.freeze({
+        target: Object.freeze({ ...input.target }),
+        checks: Object.freeze(checks),
+        severity,
+        ...(primaryAction ? { primaryAction } : {}),
+    });
 }
 
 
@@ -79202,6 +79890,29 @@ exports.createRepositoryVersionTagsClient = createRepositoryVersionTagsClient;
 
 /***/ }),
 
+/***/ 36459:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGithubRuntimeDoctorPorts = createGithubRuntimeDoctorPorts;
+const runtime_doctor_repository_1 = __nccwpck_require__(25282);
+function createGithubRuntimeDoctorPorts(binding, pullRequests) {
+    const repository = new runtime_doctor_repository_1.RuntimeDoctorRepository(binding.owner, binding.repository, binding.token);
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        readRepository: (id) => repository.readRepository(id),
+        readIssue: (number) => repository.readIssue(number),
+        readLinkedBranch: (number) => repository.readLinkedBranch(number),
+        readApprovalPolicy: () => repository.readApprovalPolicy(),
+        pullRequests: Object.freeze({ getPullRequest: (number) => pullRequests.getPullRequest(number),
+            getPullRequestHeadSha: (number) => pullRequests.getPullRequestHeadSha(number) }),
+    });
+}
+
+
+/***/ }),
+
 /***/ 29839:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -79610,6 +80321,7 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const commit_use_case_1 = __nccwpck_require__(28001);
@@ -79727,7 +80439,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -79743,7 +80455,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());

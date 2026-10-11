@@ -33,7 +33,7 @@ export async function runCommentAutomation(
       return [invalidCommentCommandResult(options.taskId, command.reason)];
     }
     const isPublicMetadataCommand = command.kind === 'command'
-      && (command.command.name === 'help' || command.command.name === 'status');
+      && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'doctor');
     if (!isPublicMetadataCommand && param.membersOnly
       && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
       logInfo('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');

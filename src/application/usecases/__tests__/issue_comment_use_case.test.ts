@@ -2,6 +2,7 @@ import { IssueCommentUseCase } from "../issue_comment_use_case";
 import type { Execution } from "../../../data/model/execution";
 import { Ai } from "../../../data/model/ai";
 import { Result } from "../../../data/model/result";
+import { doctorFixture } from './fixtures/runtime_doctor_fixture';
 import type { BugbotContext } from "../steps/commit/bugbot/types";
 
 jest.mock("../../../utils/logger", () => ({
@@ -203,6 +204,40 @@ describe("IssueCommentUseCase", () => {
       .mockResolvedValue({ success: true, committed: true });
     mockMarkFindingsResolved.mockReset().mockResolvedValue([]);
     mockDoUserRequestInvoke.mockReset();
+  });
+
+  it('diagnoses incompatible SDD flags through the real issue route without evaluating the mutation gate', async () => {
+    const fixture = doctorFixture();
+    const continuation = jest.fn();
+    const model = jest.fn();
+    const mutation = jest.fn();
+    const authorization = jest.fn();
+    const routed = new IssueCommentUseCase(
+      { invoke: model } as never, { invoke: model } as never,
+      { invoke: model } as never, { invoke: model } as never,
+      { invoke: model } as never, { isActorAllowedToModifyFiles: authorization,
+        isActorAllowedToUseMemberOnlyAutomation: authorization } as never,
+      { execute: mutation } as never, undefined, undefined, undefined, undefined, undefined,
+      { invoke: continuation } as never, undefined, undefined, fixture.ports,
+    );
+    const execution = baseExecution({
+      preBranchSdd: true, issueWorkflowProfile: { schemaVersion: 1, enabled: ['feature', 'help'] },
+      branches: { development: 'develop' } as never,
+      inputs: { repository: { id: 42 } } as never,
+      issue: { isIssueComment: true, issueManagedBranches: false, commentBody: '/copilot doctor',
+        commentAuthor: 'participant', number: 296, commentId: 42 } as never,
+    });
+    Object.defineProperty(execution, 'issueStartDecision', { get: () => { throw new Error('invalid mutation configuration'); } });
+    const results = await routed.invoke(execution);
+    expect(results[0]).toMatchObject({ id: 'IssueCommentUseCase.Doctor', success: true,
+      payload: { doctor: { report: { checks: expect.arrayContaining([
+        expect.objectContaining({ group: 'effective-configuration', state: 'blocked' }),
+      ]) } } } });
+    expect(fixture.ports.readRepository).toHaveBeenCalledTimes(1);
+    expect(continuation).not.toHaveBeenCalled();
+    expect(model).not.toHaveBeenCalled();
+    expect(mutation).not.toHaveBeenCalled();
+    expect(authorization).not.toHaveBeenCalled();
   });
 
   it('routes an active numbered SDD answer to issue continuation without a slash command', async () => {

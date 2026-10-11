@@ -853,7 +853,7 @@ describe("runCommentAutomation", () => {
     });
   });
 
-  it('keeps doctor deterministic and fails closed without invoking language or agent capabilities', async () => {
+  it('keeps doctor deterministic and reports unavailable evidence without invoking language or agent capabilities', async () => {
     const language = { invoke: jest.fn() };
     const think = { invoke: jest.fn() };
     const results = await runCommentAutomation(
@@ -872,9 +872,11 @@ describe("runCommentAutomation", () => {
       {} as never,
     );
     expect(results[0]).toMatchObject({
-      id: 'CommentAutomation.Doctor', success: false, executed: true,
+      id: 'CommentAutomation.Doctor', success: true, executed: true,
     });
-    expect(results[0].errors[0].message).not.toContain('token');
+    expect(results[0].errors).toEqual([]);
+    expect(results[0].steps.join('\n')).toContain('Unavailable');
+    expect(results[0].steps.join('\n')).not.toContain('token');
     expect(language.invoke).not.toHaveBeenCalled();
     expect(think.invoke).not.toHaveBeenCalled();
   });

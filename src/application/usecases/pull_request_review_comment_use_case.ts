@@ -1,3 +1,4 @@
+import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -46,6 +47,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -77,6 +79,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        doctorReadPorts: this.doctorReadPorts,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

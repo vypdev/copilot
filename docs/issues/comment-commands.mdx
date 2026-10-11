@@ -120,11 +120,33 @@ separate from an issue with the same number. Status and description queries
 preserve existing lifecycle and waiting labels when they make no lifecycle
 decision.
 
-`/copilot doctor` is registered as a deterministic read-only command. Its full
-seven-group runtime evidence collection and correlated report are still being
-implemented; until those adapters are installed, the command returns a safe
-unavailable response and does not invoke an agent. It does not inspect secret
-values, test write access, or infer grants from workflow contents.
+`/copilot doctor` reads seven bounded groups: effective workflow and dependency
+settings, eligible issue/SDD prerequisites, the issue's native linked branch,
+installed workflow structure, the trusted approval policy, declared approval
+prerequisites, and the exact current PR identity. It has no arguments and
+never invokes a model or repairs the repository. Participants can request this
+metadata report even when model automation is restricted to organization members.
+
+The reply distinguishes **pass**, **warning**, **blocked**, **unavailable**, and
+**not applicable**. A successfully read invalid policy is blocked; a denied or
+failed read is unavailable. Completed independent checks remain visible. Only
+verified absence of both repository and organization policy values selects the
+existing off default. Active approval settings are declared prerequisites,
+which need independent producer verification and do not certify write access.
+
+Workflow files and specification prerequisites are read at one verified immutable
+default-branch revision, linked in the report. A moved default head makes that
+sample unavailable. Native linked branches require complete same-repository
+association and a matching live ref. A PR request checks only its exact event
+PR and fences its current head; optional issue context is not inferred from
+an equal conversation number. Reports use the repository locale in English or
+Spanish with atomic fallback and one correlated reply per source comment.
+
+Inspect the displayed primary action and the workflow run, correct any proven
+invalid configuration through the usual maintainer flow, then retry
+`/copilot doctor`. The command does not read secret values, test write access,
+provision setup, change labels or approvals, or infer grants from workflow text.
+
 
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to

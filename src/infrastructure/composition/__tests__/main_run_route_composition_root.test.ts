@@ -118,6 +118,8 @@ describe("main run route composition root", () => {
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 14 }, () => expect.anything()),
       mockContext,
+      expect.objectContaining({ readRepository: expect.any(Function), readApprovalPolicy: expect.any(Function),
+        pullRequests: expect.objectContaining({ getPullRequest: expect.any(Function), getPullRequestHeadSha: expect.any(Function) }) }),
     );
   });
 
@@ -129,6 +131,8 @@ describe("main run route composition root", () => {
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 13 }, () => expect.anything()),
       mockContext,
+      expect.objectContaining({ readRepository: expect.any(Function), readApprovalPolicy: expect.any(Function),
+        pullRequests: expect.objectContaining({ getPullRequest: expect.any(Function), getPullRequestHeadSha: expect.any(Function) }) }),
     );
   });
 
