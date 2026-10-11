@@ -94,10 +94,16 @@ export type SemanticReplyProjection =
         readonly translation?: TranslationPublication;
     }
     | { readonly kind: 'application-error'; readonly error: ApplicationErrorPresentationSource }
+    | StateCommandReplyProjection
     | BranchSyncReplyProjection
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
+
+type StateCommandReplyProjection =
+    | { readonly kind: 'state-command-result'; readonly command: 'remember' | 'dismiss'; readonly outcome: 'not-applied' }
+    | { readonly kind: 'state-command-result'; readonly command: 'remember'; readonly outcome: 'saved' | 'already-exists'; readonly branch: string }
+    | { readonly kind: 'state-command-result'; readonly command: 'dismiss'; readonly outcome: 'completed'; readonly count: number };
 
 export interface SemanticPublicationContext {
     readonly locale: string;
@@ -164,6 +170,8 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         if (!result.success) return [];
         const payload = getResultPayload(result.payload);
         if (!payload) return [];
+        const stateCommand = stateCommandReplyProjection(result.id, payload, context.correlationId);
+        if (stateCommand) return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
         const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
         if (branchSync) return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
         if (!result.executed) return [];
@@ -224,6 +232,16 @@ export function renderSemanticReply(
 }
 
 function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessageCatalog): string {
+    if (intent.projection.kind === 'state-command-result') {
+        const command = intent.projection;
+        if (command.outcome === 'not-applied') return safeCatalogSentence(catalog.render('interaction.stateCommand.notApplied'));
+        if (command.command === 'remember') return safeCatalogSentence(catalog.render(
+            command.outcome === 'saved' ? 'interaction.remember.saved' : 'interaction.remember.exists',
+            { branch: inlineRef(command.branch) },
+        ));
+        return safeCatalogSentence(command.count === 0 ? catalog.render('interaction.dismiss.none')
+            : catalog.render('interaction.dismiss.completed', { count: command.count }));
+    }
     if (intent.projection.kind === 'implementation-plan') {
         return [renderImplementationPlanCard(intent.projection.plan, catalog),
             intent.projection.translation ? renderTranslationContext(intent.projection.translation, catalog) : '']
@@ -406,6 +424,28 @@ function directAnswerProjection(payload: Record<string, unknown>): SemanticReply
         answer: publication.answer.trim(),
         ...(translation ? { translation } : {}),
     });
+}
+
+function stateCommandReplyProjection(resultId: string, payload: Record<string, unknown>, correlationId?: string): StateCommandReplyProjection | undefined {
+    const publication = getResultPayload(payload.publication);
+    if (resultId !== 'CommentAutomation.StateCommandReply' || !correlationId?.startsWith('comment:')
+        || publication?.kind !== 'state-command-result') return undefined;
+    const { command, outcome } = publication;
+    if (command !== 'remember' && command !== 'dismiss') return undefined;
+    if (outcome === 'not-applied') {
+        return Object.freeze({ kind: 'state-command-result', command, outcome });
+    }
+    if (command === 'remember' && (outcome === 'saved' || outcome === 'already-exists')
+        && typeof publication.branch === 'string' && publication.branch.trim()
+        && publication.branch.length <= 255 && !/[\r\n]/u.test(publication.branch)) {
+        return Object.freeze({ kind: 'state-command-result', command, outcome, branch: publication.branch.trim() });
+    }
+    if (command === 'dismiss' && outcome === 'completed'
+        && typeof publication.count === 'number' && Number.isSafeInteger(publication.count)
+        && publication.count >= 0 && publication.count <= 20) {
+        return Object.freeze({ kind: 'state-command-result', command, outcome, count: publication.count });
+    }
+    return undefined;
 }
 
 function branchSyncResultProjection(

@@ -45065,6 +45065,11 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.translation.interpretedRequest',
     'interaction.translation.originalRequest',
     'interaction.error.heading',
+    'interaction.stateCommand.notApplied',
+    'interaction.remember.saved',
+    'interaction.remember.exists',
+    'interaction.dismiss.none',
+    'interaction.dismiss.completed',
     'interaction.branchSync.heading',
     'interaction.branchSync.alreadyAligned',
     'interaction.branchSync.dryRunClean',
@@ -45156,6 +45161,14 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.translation.interpretedRequest': 'Interpreted request',
     'interaction.translation.originalRequest': 'Original request',
     'interaction.error.heading': 'Request could not be completed',
+    'interaction.stateCommand.notApplied': 'This command was not applied. It requires an authorized maintainer and the command capability to be available.',
+    'interaction.remember.saved': 'The rule was saved in `.copilot/BUGBOT.learned.md` on {branch}. The configured checks passed and the commit was pushed.',
+    'interaction.remember.exists': 'The rule already exists in `.copilot/BUGBOT.learned.md` on {branch}. No change or additional commit was needed.',
+    'interaction.dismiss.none': 'No matching findings were found. Nothing was dismissed.',
+    'interaction.dismiss.completed': Object.freeze({
+        one: '{count} finding was dismissed.',
+        other: '{count} findings were dismissed.',
+    }),
     'interaction.branchSync.heading': 'Branch synchronized',
     'interaction.branchSync.alreadyAligned': 'No changes were needed — {workingBranch} already contains {parentBranch}.',
     'interaction.branchSync.dryRunClean': 'Dry run complete — {parentBranch} can be merged into {workingBranch} without conflicts. Nothing was pushed.',
@@ -45253,6 +45266,15 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.translation.interpretedRequest': 'Solicitud interpretada',
     'interaction.translation.originalRequest': 'Solicitud original',
     'interaction.error.heading': 'No se pudo completar la solicitud',
+    'interaction.stateCommand.notApplied': 'Este comando no se aplicó. Requiere un mantenedor autorizado y que la función esté disponible.',
+    'interaction.remember.saved': 'La regla se guardó en `.copilot/BUGBOT.learned.md` en {branch}. Las verificaciones configuradas pasaron y se publicó el commit.',
+    'interaction.remember.exists': 'La regla ya existe en `.copilot/BUGBOT.learned.md` en {branch}. No se necesitó ningún cambio ni otro commit.',
+    'interaction.dismiss.none': 'No se encontraron hallazgos coincidentes. No se descartó ninguno.',
+    'interaction.dismiss.completed': Object.freeze({
+        one: 'Se descartó {count} hallazgo.',
+        many: 'Se descartaron {count} hallazgos.',
+        other: 'Se descartaron {count} hallazgos.',
+    }),
     'interaction.branchSync.heading': 'Rama sincronizada',
     'interaction.branchSync.alreadyAligned': 'No fue necesario hacer cambios: {workingBranch} ya contiene {parentBranch}.',
     'interaction.branchSync.dryRunClean': 'Simulación completada: {parentBranch} se puede integrar en {workingBranch} sin conflictos. No se envió ningún cambio.',
@@ -46266,6 +46288,9 @@ function selectSemanticReplyIntents(context) {
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
             return [];
+        const stateCommand = stateCommandReplyProjection(result.id, payload, context.correlationId);
+        if (stateCommand)
+            return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
         const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
         if (branchSync)
             return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
@@ -46328,6 +46353,15 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
     return `${marker}\n\n${body}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'state-command-result') {
+        const command = intent.projection;
+        if (command.outcome === 'not-applied')
+            return safeCatalogSentence(catalog.render('interaction.stateCommand.notApplied'));
+        if (command.command === 'remember')
+            return safeCatalogSentence(catalog.render(command.outcome === 'saved' ? 'interaction.remember.saved' : 'interaction.remember.exists', { branch: inlineRef(command.branch) }));
+        return safeCatalogSentence(command.count === 0 ? catalog.render('interaction.dismiss.none')
+            : catalog.render('interaction.dismiss.completed', { count: command.count }));
+    }
     if (intent.projection.kind === 'implementation-plan') {
         return [renderImplementationPlanCard(intent.projection.plan, catalog),
             intent.projection.translation ? (0, comment_translation_policy_1.renderTranslationContext)(intent.projection.translation, catalog) : '']
@@ -46484,6 +46518,29 @@ function directAnswerProjection(payload) {
         answer: publication.answer.trim(),
         ...(translation ? { translation } : {}),
     });
+}
+function stateCommandReplyProjection(resultId, payload, correlationId) {
+    const publication = (0, result_1.getResultPayload)(payload.publication);
+    if (resultId !== 'CommentAutomation.StateCommandReply' || !correlationId?.startsWith('comment:')
+        || publication?.kind !== 'state-command-result')
+        return undefined;
+    const { command, outcome } = publication;
+    if (command !== 'remember' && command !== 'dismiss')
+        return undefined;
+    if (outcome === 'not-applied') {
+        return Object.freeze({ kind: 'state-command-result', command, outcome });
+    }
+    if (command === 'remember' && (outcome === 'saved' || outcome === 'already-exists')
+        && typeof publication.branch === 'string' && publication.branch.trim()
+        && publication.branch.length <= 255 && !/[\r\n]/u.test(publication.branch)) {
+        return Object.freeze({ kind: 'state-command-result', command, outcome, branch: publication.branch.trim() });
+    }
+    if (command === 'dismiss' && outcome === 'completed'
+        && typeof publication.count === 'number' && Number.isSafeInteger(publication.count)
+        && publication.count >= 0 && publication.count <= 20) {
+        return Object.freeze({ kind: 'state-command-result', command, outcome, count: publication.count });
+    }
+    return undefined;
 }
 function branchSyncResultProjection(resultId, payload, correlationId) {
     const outcomes = [
@@ -51826,10 +51883,11 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.rememberBugbotRuleUseCase) {
         return [new result_1.Result({
-                id: `${options.taskId}.Remember`,
+                id: 'CommentAutomation.StateCommandReply',
                 success: true,
                 executed: false,
                 steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
+                payload: { publication: { kind: 'state-command-result', command: 'remember', outcome: 'not-applied' } },
             })];
     }
     let targetBranch;
@@ -51847,8 +51905,12 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
         return [rememberFailure(error)];
     }
     const results = await options.rememberBugbotRuleUseCase.invoke({ rule: command.arguments.join(' ') });
-    if (!results.some((result) => result.executed))
-        return results;
+    if (!results.some((result) => result.executed)) {
+        return results.length > 0 && results.every(result => result.success)
+            && results.some(result => result.payload?.learnedRule === 'existing')
+            ? [...results, stateCommandReceipt('remember', 'already-exists', { branch: targetBranch })]
+            : results;
+    }
     try {
         const { workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(options.bugbotGitMutationPort, mutation.workspacePathsBefore, 'Remember Bugbot rule');
         if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
@@ -51862,7 +51924,9 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
         return [...results, rememberFailure(error)];
     }
     const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, targetBranch, results, options.bugbotGitMutationPort);
-    return [...results, ...commitResults];
+    const committed = commitResults.at(-1);
+    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
+            ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
 }
 async function resolveRememberBranch(param, options) {
     const operation = param.bugbot.fixIntent;
@@ -51939,16 +52003,26 @@ async function runDismissCommand(param, options, command, actorAuthorizationPort
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.dismissBugbotFindingsUseCase) {
         return [new result_1.Result({
-                id: options.taskId,
+                id: 'CommentAutomation.StateCommandReply',
                 success: true,
                 executed: false,
                 steps: ['Explicit dismiss command skipped because the actor is not authorized or dismissal is unavailable.'],
+                payload: { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'not-applied' } },
             })];
     }
-    return options.dismissBugbotFindingsUseCase.invoke({
+    const results = await options.dismissBugbotFindingsUseCase.invoke({
         operation: param.bugbot.fixIntent,
         findingIds: command.arguments,
     });
+    const last = results.at(-1);
+    const count = last?.payload?.dismissedCount;
+    return results.every(result => result.success) && typeof count === 'number'
+        ? [...results, stateCommandReceipt('dismiss', 'completed', { count })]
+        : results;
+}
+function stateCommandReceipt(command, outcome, details = {}) {
+    return new result_1.Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: false,
+        payload: { publication: { kind: 'state-command-result', command, outcome, ...details } } });
 }
 async function runReviewCommand(param, options, command) {
     const parsedOptions = (0, review_command_1.parseBugbotReviewCommandOptions)(command.arguments);
@@ -56772,6 +56846,7 @@ class DismissBugbotFindingsUseCase {
                         success: true,
                         executed: true,
                         steps: ['No matching Bugbot findings were found; nothing was dismissed.'],
+                        payload: { dismissedCount: 0 },
                     })];
             }
             const errors = await (0, mark_findings_resolved_workflow_1.markFindingsResolved)({
@@ -56790,6 +56865,7 @@ class DismissBugbotFindingsUseCase {
                     executed: true,
                     steps: [`Dismissed ${dismissibleIds.size} Bugbot ${dismissibleIds.size === 1 ? 'finding' : 'findings'} by explicit user command.`],
                     errors: errors.map(error => (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'A Bugbot finding could not be dismissed.')),
+                    payload: { dismissedCount: errors.length === 0 ? dismissibleIds.size : undefined },
                 })];
         }
         catch (error) {

@@ -884,6 +884,22 @@ describe("runCommentAutomation", () => {
     expect(dismiss.invoke).toHaveBeenCalledWith(expect.objectContaining({ findingIds: [id] }));
   });
 
+  it.each([0, 1, undefined])('publishes only a verified dismissal count (%s)', async count => {
+    const dismissed = new Result({ id: 'DismissBugbotFindingsUseCase', success: count !== undefined,
+      executed: true, payload: { dismissedCount: count } });
+    const results = await runCommentAutomation({
+      owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' },
+      commit: { branch: 'feature/work' }, issueNumber: 7, ai: configuredAi(),
+    } as unknown as Execution, {
+      taskId: 'CommentAutomation', languageUseCase: {} as never, intentUseCase: {} as never,
+      thinkUseCase: {} as never, autofixUseCase: {} as never, doUserRequestUseCase: {} as never,
+      dismissBugbotFindingsUseCase: { invoke: jest.fn().mockResolvedValue([dismissed]) } as never,
+      userComment: '/copilot dismiss "finding with spaces"',
+    }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never);
+    if (count === undefined) expect(results).toEqual([dismissed]);
+    else expect(results.at(-1)?.payload).toEqual({ publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count } });
+  });
+
   function rememberFixture(settings: {
     duplicate?: boolean;
     changedPaths?: string;
@@ -894,11 +910,13 @@ describe("runCommentAutomation", () => {
     identity?: Record<string, unknown>;
     noLinkedBranch?: boolean;
     linkedBranch?: { name: string; headSha: string };
+    storeResults?: Result[];
   } = {}) {
     let changed = false;
     const remember = { invoke: jest.fn(async () => {
       changed = !settings.duplicate;
-      return [new Result({ id: 'remember', success: true, executed: changed })];
+      return settings.storeResults ?? [new Result({ id: 'remember', success: true, executed: changed,
+        payload: { learnedRule: changed ? 'created' : 'existing' } })];
     }) };
     const git = {
       execute: jest.fn(async (program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
@@ -972,7 +990,8 @@ describe("runCommentAutomation", () => {
     expect(git.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
     expect(git.stageAll).not.toHaveBeenCalled();
     expect(git.push).toHaveBeenCalledWith(branch);
-    expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: true });
+    expect(results).toContainEqual(expect.objectContaining({ id: 'DoUserRequestCommitAndPush', success: true }));
+    expect(results.at(-1)?.payload).toEqual({ publication: { kind: 'state-command-result', command: 'remember', outcome: 'saved', branch } });
   });
 
   const ordinaryPullRequestComment = {
@@ -1055,10 +1074,23 @@ describe("runCommentAutomation", () => {
   it('does not verify or commit an already remembered rule', async () => {
     const { git, run } = rememberFixture({ duplicate: true });
     const results = await run();
-    expect(results).toHaveLength(1);
+    expect(results).toHaveLength(2);
     expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(results.at(-1)?.payload).toEqual({ publication: { kind: 'state-command-result', command: 'remember', outcome: 'already-exists', branch: 'feature/1-safe' } });
     expect(git.execute.mock.calls.some(([program]) => program === 'pnpm')).toBe(false);
     expect(git.stagePaths).not.toHaveBeenCalled();
+    expect(git.commit).not.toHaveBeenCalled();
+    expect(git.push).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: 'empty', storeResults: [] },
+    { label: 'unknown', storeResults: [new Result({ id: 'remember', success: true, executed: false })] },
+    { label: 'failed', storeResults: [new Result({ id: 'remember', success: false, executed: false, payload: { learnedRule: 'existing' } })] },
+  ])('does not infer an existing rule from a $label storage outcome', async ({ storeResults }) => {
+    const { git, run } = rememberFixture({ duplicate: true, storeResults });
+    const results = await run();
+    expect(results).toEqual(storeResults);
     expect(git.commit).not.toHaveBeenCalled();
     expect(git.push).not.toHaveBeenCalled();
   });

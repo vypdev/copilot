@@ -36,7 +36,7 @@ describe('GitHub communication test-budget validator', () => {
       allocated: budget.allocatedCases,
       required: budget.requiredCases,
     }))).toEqual([
-      { id: 'semantic-github-publication', allocated: 160, required: 128 },
+      { id: 'semantic-github-publication', allocated: 163, required: 131 },
       { id: 'repository-locale-localization', allocated: 147, required: 144 },
     ]);
     for (const budget of ledger.budgets) {
@@ -61,7 +61,7 @@ describe('GitHub communication test-budget validator', () => {
     ledger.budgets[0].allocatedCases -= 1;
 
     expect(validateCommunicationTestBudget(process.cwd(), ledger)).toContain(
-      'semantic-github-publication allocatedCases is 159 but its file allocation totals 160.',
+      'semantic-github-publication allocatedCases is 162 but its file allocation totals 163.',
     );
   });
 

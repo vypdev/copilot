@@ -142,10 +142,22 @@ provider failure and closed/stale PRs fail before storage. Issue conversations
 verify their persisted branch against the bounded native linked-branch port
 (first 100 linked branches or closing PRs); no broad open-PR scan guesses a ref.
 
+The command MUST publish one correlated, localized confirmation after successful
+verification and push. A verified duplicate MUST explicitly say that no change
+or additional commit was needed. Empty, unknown or failed storage outcomes MUST
+NOT be interpreted as duplicates; failed verification MUST NOT announce a saved
+rule. These are typed application facts, never inferred from diagnostic steps.
+
 `/copilot dismiss` accepts plain IDs and JSON double-quoted IDs containing
 spaces. Quoted operands retain internal spaces, Unicode and escaped backslashes.
 Malformed, empty or multiline operands fail before finding mutation. The fixed
 2,000-character and 20-argument limits remain; other command grammars are unchanged.
+
+A successful dismissal MUST publish its verified count; zero matching findings
+MUST receive an explicit no-op reply. Authorization or unavailable capability
+MUST say the command was not applied. A failed mutation MUST NOT receive a
+success confirmation. Reply identity, locale and replay use the shared semantic
+publication boundary; no new configuration or marker schema is introduced.
 
 Post-autofix recovery adds one bounded read-only retry for superseded evidence;
 the existing mutation, authorization and freshness contracts remain in force.
@@ -324,11 +336,11 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 |---|---:|---|
 | Finding/config/identity policy | 49 | schema, fingerprint, rank, limits; 13 exact quoted-identifier, boundary and malformed-input cases |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
-| Use cases/autofix | 53 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases and one exact quoted-dismiss routing case |
+| Use cases/autofix | 59 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case and six receipt-outcome cases |
 | Provider/workflow contracts | 24 | diffs, reviews, threads, checks, ranges; exact and absent head repository names |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
 | Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **196** | no double counting |
+| **Total** | **202** | no double counting |
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
 coverage and security/identity policy 100% for enumerated branches. Fakes replace
@@ -400,7 +412,7 @@ screen reader, and controlled live model samples.
 
 ## 19. Definition of Done
 
-- [ ] The 196-case budget, coverage, quality eval, and architecture gates pass.
+- [ ] The 202-case budget, coverage, quality eval, and architecture gates pass.
 - [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.
