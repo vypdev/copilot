@@ -351,14 +351,14 @@ foreign or moved refs. Exact PR identity uses the existing canonical read policy
 and a final head fence. Group states and actions are closed; raw source text,
 provider errors and credentials never enter the report.
 
-The fixed 52-case floor is retained. Current evidence covers **135 distinct
-feature cases** without double counting existing observer tests: 25 domain and
+The fixed 52-case floor is retained. Current evidence covers **167 distinct
+feature cases** without double counting existing observer tests: 57 domain and
 configuration cases (the original ten domain cases plus fifteen new prerequisite
 cases); 23 application cases; 46 provider cases (39 metadata adapters plus seven
 new policy-reader cases); ten workflow structural cases; 17 presentation cases;
 and 14 integration cases (eight command/security, three composition, two
 semantic correlation cases, and one real issue-route configuration regression). The nine-suite focused run passed 138 tests; the additional real issue-route suite passed 18 tests,
-including compatibility tests outside this 135-case feature budget. The full managed-branch suite passed 569 suites and 7,454 tests (35 existing
+including compatibility tests outside this 167-case feature budget. The full managed-branch suite passed 569 suites and 7,454 tests (35 existing
 platform skips), with every repository coverage budget and setup ledger check
 passing. Doctor bypasses only the incompatible-configuration mutation guard and SDD-continuation getter so it can report their blocked state; mutation commands retain those gates. Generated bundles, live issue/PR commands and narrow-screen browser
 acceptance must be recorded separately before final readiness.
@@ -390,3 +390,22 @@ Bugbot review `38162038624` on PR #466 found that a contents API 404 was falsely
 The managed correction now proves absence independently: a lazily shared read resolves the exact default commit to its tree, then reads a complete recursive tree at that immutable tree SHA. It rejects changed identities, truncation, duplicate/unsafe/malformed entries, and metadata beyond 10,000 entries. Only verified absence may become `missing`; a file present in the tree with contents 404, denied proof, or incomplete proof is unavailable. The six fixed content paths and 200,000-byte decoded-file budget stay unchanged; at most two additional immutable reads are shared across all 404s. Eleven distinct provider cases cover the live finding and proof boundaries. Fresh full validation and a live review of this correction remain pending.
 
 The managed absence correction passed 572 full suites and 7,544 tests, with 35 existing platform skips (7,579 total). All existing budgets passed; the changed provider reached 100% lines/statements/functions and 95.53% branches. This evidence validates the manual correction, not a successful Windows agent write. The second read-only diagnosis with explicit `login=false` also reported rejection before process startup, so login handling is not established as the cause and no runtime permission was relaxed.
+
+
+### Workflow eligibility correction from live Bugbot review
+
+Review `4242759214` correctly found that any Action step in any job could make
+the workflow group pass. The group now requires a job and Action step eligible
+for the expected event. Disabled jobs/steps, event-name contradictions and empty
+activity filters are blocked. A bounded three-valued condition policy recognizes
+booleans, event-name comparisons, negation, parentheses and AND/OR; runtime facts
+or unsupported expressions remain unavailable. YAML/expressions are never
+executed. A separate enabled Action job can establish evidence independently of
+a disabled candidate. This structural check does not certify a future job run,
+runner availability or all configured activity filters.
+
+The repair adds 32 distinct pure-policy cases (25 condition cases and 7 workflow
+scenarios), increasing this feature from 135 to 167 cases. Fresh hosted checks
+and a new independent review remain required before promotion.
+
+The workflow eligibility repair passed 573 full suites and 7,576 tests, with 35 existing platform skips (7,611 total). Its condition policy reached 100% lines/functions, 98.33% statements and 92.64% branches. Specification/catalog, documentation, lint, graph update and bundle compilation passed; hosted verification and review remain separate live gates.

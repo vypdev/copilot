@@ -1,3 +1,4 @@
+import { doctorWorkflowCondition } from './doctor_workflow_condition_policy';
 import { load, JSON_SCHEMA } from 'js-yaml';
 import { parseIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { decideIssueStart } from '../../domain/issue_start_policy';
@@ -44,23 +45,38 @@ export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'b
         ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
         ['.github/workflows/copilot_pull_request.yml', 'pull_request'],
     ] as const;
+    let unknown = false;
     try {
-        return expected.every(([path, event]) => {
+        for (const [path, event] of expected) {
             const file = read.files[path];
-            if (file?.state !== 'present') return false;
+            if (file?.state !== 'present') return 'blocked';
             const document = object(load(file.text, { schema: JSON_SCHEMA }));
             const events = document.on;
             const admitted = typeof events === 'string' ? events === event : Array.isArray(events)
                 ? events.includes(event) : Object.prototype.hasOwnProperty.call(object(events), event);
-            return admitted && Object.values(object(document.jobs)).some(job => {
-                const steps = object(job).steps;
-                return Array.isArray(steps) && steps.some(raw => {
-                    const step = object(raw);
-                    return step.uses === './' || typeof step.uses === 'string'
-                        && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses);
-                });
-            });
-        }) ? 'pass' : 'blocked';
+            if (!admitted) return 'blocked';
+            const filter = object(object(events)[event]);
+            if (Array.isArray(filter.types) && filter.types.length === 0) return 'blocked';
+            let eligible = false;
+            let possible = false;
+            for (const rawJob of Object.values(object(document.jobs))) {
+                const job = object(rawJob);
+                const enabled = doctorWorkflowCondition(job.if, event);
+                if (enabled === false || !Array.isArray(job.steps)) continue;
+                for (const rawStep of job.steps) {
+                    const step = object(rawStep);
+                    if (!(step.uses === './' || typeof step.uses === 'string'
+                        && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses))) continue;
+                    const stepEnabled = doctorWorkflowCondition(step.if, event);
+                    if (stepEnabled === false) continue;
+                    if (enabled === true && stepEnabled === true) eligible = true;
+                    else possible = true;
+                }
+            }
+            if (!eligible && !possible) return 'blocked';
+            if (!eligible) unknown = true;
+        }
+        return unknown ? 'unavailable' : 'pass';
     } catch { return 'blocked'; }
 }
 function object(value: unknown): Record<string, unknown> {

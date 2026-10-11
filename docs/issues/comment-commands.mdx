@@ -305,3 +305,9 @@ A contents API 404 needs an independent complete tree at the same verified
 commit before it can be reported as missing. Denied or incomplete tree reads
 remain unavailable. The proof adds at most two shared read requests and never
 changes repository files or permissions.
+
+The doctor workflow group checks that Copilot is in an eligible job and step for
+the required event. Disabled jobs or steps cannot make it pass. Runtime-dependent
+or unsupported conditions are reported as unavailable because a repository
+snapshot cannot establish their result. Inspect those conditions and the actual
+workflow run; a structural pass still does not prove runner availability.

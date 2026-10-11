@@ -44198,6 +44198,95 @@ function shortSha(value) {
 
 /***/ }),
 
+/***/ 61833:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.doctorWorkflowCondition = doctorWorkflowCondition;
+/** Bounded three-valued interpretation; unsupported runtime facts remain unknown. Never eval YAML. */
+function doctorWorkflowCondition(value, event) {
+    if (value === undefined)
+        return true;
+    if (typeof value === 'boolean')
+        return value;
+    if (typeof value !== 'string' || value.length > 1000)
+        return undefined;
+    const input = value.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/u, '$1');
+    const tokens = input.match(/\s+|&&|\|\||==|!=|[!()]|'(?:[^']|'')*'|[A-Za-z_][A-Za-z0-9_.]*|./gu)?.filter(token => !/^\s+$/u.test(token)) ?? [];
+    let cursor = 0;
+    let depth = 0;
+    const truth = (item) => typeof item === 'string' ? item.length > 0 : item;
+    function atom() {
+        if (++depth > 32)
+            throw new Error('Condition too deep.');
+        const token = tokens[cursor++];
+        let result;
+        if (token === '(') {
+            result = or();
+            if (tokens[cursor++] !== ')')
+                throw new Error('Missing bracket.');
+        }
+        else if (token === '!') {
+            const inner = truth(atom());
+            result = inner === undefined ? undefined : !inner;
+        }
+        else if (token === 'true' || token === 'false')
+            result = token === 'true';
+        else if (token === 'github.event_name')
+            result = event;
+        else if (token?.startsWith("'") && token.endsWith("'"))
+            result = token.slice(1, -1).replace(/''/gu, "'");
+        else if (token && /^[A-Za-z_][A-Za-z0-9_.]*$/u.test(token))
+            result = undefined;
+        else
+            throw new Error('Unsupported condition.');
+        depth--;
+        return result;
+    }
+    function comparison() {
+        const left = atom();
+        if (tokens[cursor] === '==' || tokens[cursor] === '!=') {
+            const operator = tokens[cursor++];
+            const right = atom();
+            if (left === undefined || right === undefined)
+                return undefined;
+            const equal = typeof left === 'string' && typeof right === 'string' ? left.toLowerCase() === right.toLowerCase() : left === right;
+            return operator === '==' ? equal : !equal;
+        }
+        return truth(left);
+    }
+    function and() {
+        let result = comparison();
+        while (tokens[cursor] === '&&') {
+            cursor++;
+            const right = comparison();
+            result = result === false || right === false ? false : result === undefined || right === undefined ? undefined : true;
+        }
+        return result;
+    }
+    function or() {
+        let result = and();
+        while (tokens[cursor] === '||') {
+            cursor++;
+            const right = and();
+            result = result === true || right === true ? true : result === undefined || right === undefined ? undefined : false;
+        }
+        return result;
+    }
+    try {
+        const result = or();
+        return cursor === tokens.length ? result : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
 /***/ 20542:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -44348,6 +44437,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validDoctorConfiguration = validDoctorConfiguration;
 exports.doctorRepositoryPrerequisites = doctorRepositoryPrerequisites;
 exports.doctorWorkflowContracts = doctorWorkflowContracts;
+const doctor_workflow_condition_policy_1 = __nccwpck_require__(61833);
 const js_yaml_1 = __nccwpck_require__(783);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const issue_start_policy_1 = __nccwpck_require__(90332);
@@ -44405,24 +44495,48 @@ function doctorWorkflowContracts(read) {
         ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
         ['.github/workflows/copilot_pull_request.yml', 'pull_request'],
     ];
+    let unknown = false;
     try {
-        return expected.every(([path, event]) => {
+        for (const [path, event] of expected) {
             const file = read.files[path];
             if (file?.state !== 'present')
-                return false;
+                return 'blocked';
             const document = object((0, js_yaml_1.load)(file.text, { schema: js_yaml_1.JSON_SCHEMA }));
             const events = document.on;
             const admitted = typeof events === 'string' ? events === event : Array.isArray(events)
                 ? events.includes(event) : Object.prototype.hasOwnProperty.call(object(events), event);
-            return admitted && Object.values(object(document.jobs)).some(job => {
-                const steps = object(job).steps;
-                return Array.isArray(steps) && steps.some(raw => {
-                    const step = object(raw);
-                    return step.uses === './' || typeof step.uses === 'string'
-                        && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses);
-                });
-            });
-        }) ? 'pass' : 'blocked';
+            if (!admitted)
+                return 'blocked';
+            const filter = object(object(events)[event]);
+            if (Array.isArray(filter.types) && filter.types.length === 0)
+                return 'blocked';
+            let eligible = false;
+            let possible = false;
+            for (const rawJob of Object.values(object(document.jobs))) {
+                const job = object(rawJob);
+                const enabled = (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(job.if, event);
+                if (enabled === false || !Array.isArray(job.steps))
+                    continue;
+                for (const rawStep of job.steps) {
+                    const step = object(rawStep);
+                    if (!(step.uses === './' || typeof step.uses === 'string'
+                        && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses)))
+                        continue;
+                    const stepEnabled = (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(step.if, event);
+                    if (stepEnabled === false)
+                        continue;
+                    if (enabled === true && stepEnabled === true)
+                        eligible = true;
+                    else
+                        possible = true;
+                }
+            }
+            if (!eligible && !possible)
+                return 'blocked';
+            if (!eligible)
+                unknown = true;
+        }
+        return unknown ? 'unavailable' : 'pass';
     }
     catch {
         return 'blocked';
