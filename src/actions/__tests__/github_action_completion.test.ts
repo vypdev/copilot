@@ -502,6 +502,23 @@ describe('finishGithubAction', () => {
         );
     });
 
+    it.each(['issue_comment', 'pull_request_review_comment'])('publishes verified comment review evidence for %s using the step token', async (eventName) => {
+        process.env.COPILOT_EVIDENCE_TOKEN = 'github-actions-token';
+        const verifiedHead = 'a'.repeat(40);
+        const action = Object.assign(execution(), { eventName, isIssue: false, isPullRequest: true,
+            pullRequest: { number: 11 },
+            inputs: eventName === 'issue_comment' ? {} : { pull_request: { head: { sha: 'b'.repeat(40) } } },
+        });
+        await finishGithubAction(action, [new Result({ id: 'review', success: true, executed: true,
+            payload: { bugbotTelemetry: { schemaVersion: 1, outcome: 'no-findings', elapsedMs: 12,
+                configuredEffort: 'smart', headSha: verifiedHead }, findingStates: completeFindingStates() },
+        })], {} as never, {} as never, { publish: mockEvidencePublish });
+        expect(mockEvidencePublish).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Copilot / Review', headSha: verifiedHead, conclusion: 'success' }),
+            'test-owner', 'test-repo', 'github-actions-token',
+        );
+    });
+
     it('renders a PR Check title and summary in the pull-request locale while the Job Summary stays in the repository locale', async () => {
         const action = Object.assign(execution(), {
             eventName: 'pull_request',

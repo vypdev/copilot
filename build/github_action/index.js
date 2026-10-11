@@ -42998,16 +42998,23 @@ exports.buildCopilotEvidence = buildCopilotEvidence;
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const review_state_1 = __nccwpck_require__(79200);
+const git_object_id_1 = __nccwpck_require__(88623);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const action_summary_message_catalog_1 = __nccwpck_require__(61544);
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
 function buildCopilotEvidence(context) {
-    const headSha = context.headSha?.trim();
-    if (!headSha)
-        return undefined;
-    const isReviewEvent = context.eventName.startsWith('pull_request');
     const telemetryProjection = (0, bugbot_telemetry_projection_policy_1.projectBugbotResultTelemetry)(context.results);
     const bugbotTelemetry = telemetryProjection.status === 'valid' ? telemetryProjection.telemetry : undefined;
+    const isCommentReview = ['issue_comment', 'pull_request_review_comment'].includes(context.eventName)
+        && bugbotTelemetry !== undefined;
+    // Conversation payloads omit the PR head; thread payloads can precede an
+    // autofix commit. Only canonical owned review telemetry supplies that SHA.
+    const headSha = isCommentReview
+        ? (0, git_object_id_1.canonicalGitObjectId)(bugbotTelemetry.headSha)
+        : context.headSha?.trim();
+    if (!headSha)
+        return undefined;
+    const isReviewEvent = context.eventName.startsWith('pull_request') || isCommentReview;
     if (!isEligibleEvidenceSource(isReviewEvent, bugbotTelemetry, headSha))
         return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;

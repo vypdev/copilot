@@ -1618,7 +1618,9 @@
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/usecases/push_single_action_contexts.ts",
         "src/application/usecases/actions/synchronize_agent_activity_use_case.ts",
-        "src/application/policies/lifecycle_waiting_state_policy.ts"
+        "src/application/policies/lifecycle_waiting_state_policy.ts",
+        "src/application/policies/copilot_evidence_policy.ts",
+        "src/actions/github_action_completion.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -1642,7 +1644,9 @@
         "src/application/policies/__tests__/agent_activity_policy.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
         "src/application/usecases/actions/__tests__/synchronize_agent_activity_use_case.test.ts",
-        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts"
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
+        "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
+        "src/actions/__tests__/github_action_completion.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",

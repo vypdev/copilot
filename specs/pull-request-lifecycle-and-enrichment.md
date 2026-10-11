@@ -393,14 +393,14 @@ not altered.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Event/description/label policy | 31 | action matrix, optional/self linkage, modes, markers, bounds |
-| Orchestration/idempotency | 24 | order, unlinked route, replay, partial, merge closure |
+| Event/description/label policy | 43 | action matrix, optional/self linkage, modes, markers, bounds |
+| Orchestration/idempotency | 26 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
 | Workflow/config contracts | 17 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
 | Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **121** | no double counting |
+| **Total** | **135** | no double counting |
 
 Seven draft-to-ready regression cases cover authorized and unauthorized review,
 semantic failure, reviewer-only activation, activity availability, reviewing
@@ -491,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 121-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 135-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
@@ -529,3 +529,15 @@ clean recheck, run description and status; `state:ready` and
 Activity updates preserve business labels read from GitHub, including labels
 changed while runtime preparation was pending. Documentation covers these
 query semantics and all four review-producing workflow token contracts.
+
+
+The ordinary PR-comment payload has no head SHA, and a native thread payload
+may still name the commit before autofix. Check publication takes the real
+SHA-1/SHA-256 object ID from exactly one valid owned Bugbot telemetry result
+for these two comment transports. That result classifies the Check as
+`Copilot / Review`. Missing, malformed, duplicate, null-SHA and dry-run
+telemetry cannot publish it; status/description metadata cannot overwrite it.
+PR events retain their event-head correlation. Twelve pure-policy cases and
+two completion/token-binding cases cover this contract, owned by this SDD.
+Live discovery: recheck 38104992977 verified PR #460/head 7be27aa but produced
+no Check because completion only read the webhook head.
