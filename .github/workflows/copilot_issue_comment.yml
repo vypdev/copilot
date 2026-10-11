@@ -8,7 +8,8 @@ jobs:
   copilot-issues:
     if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Issue Comment
-    runs-on: [self-hosted, codex]
+    # Round 2 recovery: use Linux agents while Windows sandbox setup is investigated.
+    runs-on: [self-hosted, codex, Linux]
     timeout-minutes: 120
     permissions:
       checks: write

@@ -25,4 +25,3 @@ export function approvalCoverageZip(value: unknown, name = 'copilot-diff-coverag
   eocd.writeUInt32LE(offset, 16);
   return Buffer.concat([local, fileName, data, central, fileName, eocd]);
 }
-
