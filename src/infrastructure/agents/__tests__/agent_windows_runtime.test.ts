@@ -337,6 +337,37 @@ describe('isolated Windows agent runtime', () => {
         }
     }, 30_000);
 
+    windowsIt.each([true, false])('starts PowerShell from the actual private shell policy with host app data present=%s and leaves the checkout clean', async hostDataPresent => {
+        const command = "$ErrorActionPreference='Stop'; Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Write-Output 'ready'";
+        const source = `if(process.argv.includes('--version')){process.stdout.write('codex-cli 0.156.1')}else{
+            const {spawnSync}=require('node:child_process');const {join}=require('node:path');
+            const args=process.argv;const setting=args.find(x=>x.startsWith('shell_environment_policy.include_only='));
+            const keys=JSON.parse(setting.slice(setting.indexOf('=')+1));const env={};
+            for(const key of keys){if(process.env[key]!==undefined)env[key]=process.env[key]}
+            for(const key of ['APPDATA','LOCALAPPDATA']){const value=args.find(x=>x.startsWith('shell_environment_policy.set.'+key+'='));env[key]=JSON.parse(value.slice(value.indexOf('=')+1))}
+            const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env,encoding:'utf8',timeout:15000,windowsHide:true});
+            if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
+        }`;
+        const fixture = fakeRuntime(source);
+        try {
+            const environment = { ...fixture.environment };
+            if (!hostDataPresent) {
+                delete environment.APPDATA;
+                delete environment.LOCALAPPDATA;
+            }
+            const plan = prepare(fixture.workspace, environment, 20_000);
+            for (const kind of ['roaming', 'local']) {
+                expect(() => verifyWindowsRuntimePathPrivate(join(plan.runtimeDirectory, 'shell', kind), true)).not.toThrow();
+            }
+            await expect(runAgentCli(plan, 'read-only native shell fixture')).resolves.toBe('ready');
+            expect(execFileSync('git', ['status', '--porcelain'], { cwd: fixture.workspace, encoding: 'utf8' }).trim()).toBe('');
+            expect(existsSync(join(fixture.workspace, 'Microsoft'))).toBe(false);
+            expect(existsSync(plan.runtimeDirectory)).toBe(false);
+        } finally {
+            rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    }, 60_000);
+
     windowsIt('reports fake Codex readiness through the standalone operator verifier', () => {
         const source = 'if(process.argv.includes("--version")){process.stdout.write("codex-cli 0.156.1")}'
             + 'else if(process.argv.includes("--help")){process.stdout.write("usage: codex exec")}'

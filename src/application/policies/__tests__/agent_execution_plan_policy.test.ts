@@ -70,11 +70,33 @@ describe('provider execution plan policy', () => {
         expect(policy.argv).toContain('shell_environment_policy.ignore_default_excludes=false');
         const inclusion = policy.argv.find(value => value.startsWith('shell_environment_policy.include_only='));
         expect(JSON.parse(inclusion!.split('=')[1])).toEqual([
-            'PATH', 'SystemRoot', 'WINDIR', 'PATHEXT', 'TMPDIR', 'TEMP', 'TMP', 'LANG', 'LC_ALL',
+            'PATH', 'SystemRoot', 'WINDIR', 'PATHEXT', 'TMPDIR', 'TEMP', 'TMP', 'LANG', 'LC_ALL', 'APPDATA', 'LOCALAPPDATA',
         ]);
         expect(inclusion).not.toMatch(/TOKEN|KEY|SECRET|HOME|USERPROFILE|GIT_|SSH_|PROXY|\*/);
         expect(policy.argv).toContain('sandbox_workspace_write.network_access=false');
         expect(policy.argv).toContain('approval_policy="never"');
+    });
+
+    it('overrides shell application data with private paths without inheriting a host profile or widening the sandbox', () => {
+        const policy = build('codex', 'findings');
+        expect(policy.argv).toContain('shell_environment_policy.set.APPDATA="/runtime/shell/roaming"');
+        expect(policy.argv).toContain('shell_environment_policy.set.LOCALAPPDATA="/runtime/shell/local"');
+        expect(policy.environment).toEqual({});
+        expect(policy.argv).toContain('sandbox_workspace_write.writable_roots=[]');
+        expect(policy.argv).toContain('sandbox_workspace_write.exclude_tmpdir_env_var=true');
+        expect(policy.argv).toContain('allow_login_shell=false');
+    });
+
+    it('encodes Windows shell paths as literal TOML values even with spaces, backslashes and quotes', () => {
+        const root = 'C:\\private runtime\\quoted "folder"';
+        const policy = buildCodexExecutionPolicy({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'fixer',
+            workspace: 'C:\\checkout', runtimeDirectory: root,
+        });
+        for (const [key, suffix] of [['APPDATA', 'roaming'], ['LOCALAPPDATA', 'local']]) {
+            const setting = policy.argv.find(value => value.startsWith(`shell_environment_policy.set.${key}=`))!;
+            expect(JSON.parse(setting.slice(setting.indexOf('=') + 1))).toBe(`${root}/shell/${suffix}`);
+        }
     });
 
     it('builds OpenCode default-deny permissions with fixer-only edit authority', () => {

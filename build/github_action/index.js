@@ -39685,7 +39685,9 @@ function buildCodexExecutionPolicy(input) {
         '--config', 'allow_login_shell=false',
         '--config', 'shell_environment_policy.inherit="core"',
         '--config', 'shell_environment_policy.ignore_default_excludes=false',
-        '--config', 'shell_environment_policy.include_only=["PATH","SystemRoot","WINDIR","PATHEXT","TMPDIR","TEMP","TMP","LANG","LC_ALL"]',
+        '--config', 'shell_environment_policy.include_only=["PATH","SystemRoot","WINDIR","PATHEXT","TMPDIR","TEMP","TMP","LANG","LC_ALL","APPDATA","LOCALAPPDATA"]',
+        '--config', `shell_environment_policy.set.APPDATA=${tomlString((0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'shell/roaming'))}`,
+        '--config', `shell_environment_policy.set.LOCALAPPDATA=${tomlString((0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'shell/local'))}`,
         '--config', 'project_doc_max_bytes=0',
         '--config', 'mcp_servers={}',
         '--config', 'hooks={}',
@@ -77233,6 +77235,13 @@ class AgentExecutionPlanner {
             stage = 'artifacts';
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
             (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(runtimeDirectory, true);
+            if (request.configuration.provider === 'codex') {
+                for (const kind of ['roaming', 'local']) {
+                    const directory = (0, node_path_1.join)(runtimeDirectory, 'shell', kind);
+                    (0, node_fs_1.mkdirSync)(directory, { recursive: true, mode: 0o700 });
+                    (0, windows_runtime_acl_1.makeWindowsRuntimePathPrivate)(directory, true);
+                }
+            }
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
             stage = 'policy';
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({

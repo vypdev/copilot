@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-05
+- Last updated: 2026-10-11
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -204,6 +204,34 @@ The fixture MUST separately confirm that `whoami.exe` and a no-op Windows
 PowerShell command start under that bounded non-secret environment. The shell
 startup probe allows the same 15-second deadline as the real ACL query; a failed
 verifier ACL query identifies identity versus descriptor timeout by fixed code.
+
+### Private shell application data (dogfooding issue #454)
+
+The Windows implementation retry on master `fa7eb447` stopped before its fixer
+because a preceding read-only agent left an untracked `Microsoft/` directory in
+the checkout. The workspace guard correctly refused mutation. Missing child
+shell application-data context is the suspected cause; a live Windows repeat is
+required to establish recovery.
+
+Codex child shells MUST receive explicit `APPDATA` and `LOCALAPPDATA` values
+inside the Action-owned, private per-execution runtime directory. The planner
+creates those directories and validates their Windows ACLs before execution;
+normal, failed and cancelled execution retains existing runtime cleanup. The
+Codex process's authentication environment and explicit `CODEX_HOME` remain
+unchanged. The child shell allowlist admits the two explicit private values,
+but still excludes host `HOME`, `USERPROFILE`, credentials and repository tokens.
+These paths do not add sandbox writable roots, network access, shell profiles,
+login shells, or approval authority. Do not ignore, delete or commit unexpected
+checkout files as a substitute for isolating runtime state.
+
+A native Windows fixture MUST start Windows PowerShell with the actual generated
+shell policy, load its file-hash module, and prove a clean Git workspace and
+private runtime cleanup with both present and absent host application-data
+variables. Pure policy and planner fixtures MUST also prove literal Windows path
+encoding, private directories, preserved parent authentication and exclusion of
+host profiles and tokens. This adds **6 distinct cases** to the 130-case baseline
+and 18-case Windows extension; the two native cases run on Windows. Live Windows
+agent execution is separate evidence and cannot be inferred from the fixtures.
 
 ### 6.2 Alternative paths
 
