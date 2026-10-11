@@ -23,6 +23,7 @@ const READ_ONLY_COMMANDS: readonly [string, PublicationMessageId][] = Object.fre
     ['/copilot recheck', 'interaction.help.command.recheck'],
     ['/copilot description', 'interaction.help.command.description'],
     ['/copilot status', 'interaction.help.command.status'],
+    ['/copilot doctor', 'interaction.help.command.doctor'],
 ]);
 
 const CHANGE_COMMANDS: readonly [string, PublicationMessageId][] = Object.freeze([

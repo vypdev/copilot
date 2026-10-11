@@ -4,8 +4,7 @@ import {
     type PullRequestApprovalPolicy,
 } from './pull_request_approval_policy';
 
-// Domain contracts and trusted policy parsing are implemented here. Application
-// orchestration, adapters, command routing, rendering, and reply publication remain pending.
+// Domain contracts and trusted policy parsing for the issue/PR runtime doctor.
 
 /** The fixed, ordered evidence groups in the GitHub runtime doctor contract. */
 export const GITHUB_RUNTIME_DOCTOR_GROUPS = [
@@ -71,4 +70,29 @@ export function parseTrustedDoctorApprovalPolicy(read: TrustedApprovalPolicyRead
         // Do not leak parser/provider text into a report or user-facing surface.
         return { status: 'invalid' };
     }
+}
+
+/** Aggregate explicit independent evidence. Missing groups are unavailable, never assumed healthy. */
+export function aggregateGithubRuntimeDoctorReport(input: {
+    readonly target: GithubRuntimeDoctorTarget;
+    readonly checks: readonly GithubRuntimeDoctorCheck[];
+}): GithubRuntimeDoctorReport {
+    const byGroup = new Map<GithubRuntimeDoctorGroup, GithubRuntimeDoctorCheck>();
+    for (const check of input.checks) {
+        if (byGroup.has(check.group)) throw new Error(`Duplicate GitHub runtime doctor group: ${check.group}.`);
+        byGroup.set(check.group, Object.freeze({ ...check }));
+    }
+    const checks: readonly GithubRuntimeDoctorCheck[] = GITHUB_RUNTIME_DOCTOR_GROUPS.map(group => byGroup.get(group)
+        ?? Object.freeze({ group, state: 'unavailable' as const }));
+    const priority: readonly GithubRuntimeDoctorSeverity[] = ['blocked', 'unavailable', 'warning', 'pass'];
+    const applicable = checks.filter(check => check.state !== 'not-applicable');
+    const severity = applicable.length === 0 ? 'not-applicable'
+        : priority.find(state => applicable.some(check => check.state === state)) ?? 'unavailable';
+    const primaryAction = applicable.find(check => check.state === severity && check.action)?.action;
+    return Object.freeze({
+        target: Object.freeze({ ...input.target }),
+        checks: Object.freeze(checks),
+        severity,
+        ...(primaryAction ? { primaryAction } : {}),
+    });
 }

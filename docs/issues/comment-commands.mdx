@@ -45,6 +45,7 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 | `/copilot findings` | Reconcile and publish current findings. | No |
 | `/copilot recheck` | Re-run the review against the current branch. | No |
 | `/copilot status` | Show the current Copilot status. | No |
+| `/copilot doctor` | Check runtime prerequisites using bounded read-only evidence. | No |
 | `/copilot description` | Refresh the PR description when that action is configured. | No |
 | `/copilot fix <finding-id> [finding-id ...]` | Fix one or more existing Bugbot findings. | Yes, if authorized |
 | `/copilot dismiss <finding-id> [finding-id ...]` | Dismiss one or more findings. | No file changes |
@@ -118,6 +119,12 @@ exact PR to resolve its linked issue and working branch. An unlinked PR remains
 separate from an issue with the same number. Status and description queries
 preserve existing lifecycle and waiting labels when they make no lifecycle
 decision.
+
+`/copilot doctor` is registered as a deterministic read-only command. Its full
+seven-group runtime evidence collection and correlated report are still being
+implemented; until those adapters are installed, the command returns a safe
+unavailable response and does not invoke an agent. It does not inspect secret
+values, test write access, or infer grants from workflow contents.
 
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to

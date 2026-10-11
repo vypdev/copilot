@@ -16,6 +16,7 @@ describe('Copilot command policy', () => {
         ['/copilot implement add a regression test', 'implement'],
         ['/copilot review security regression', 'review'],
         ['/copilot status', 'status'],
+        ['/copilot doctor', 'doctor'],
         ['/copilot description', 'description'],
         ['/copilot fix FINDING-1 FINDING-2', 'fix'],
         ['/copilot sync-branch --dry-run', 'sync-branch'],

@@ -31,6 +31,7 @@ Facts supported by the issue: the prior live round produced a policy-unavailable
 ### 2.3 Evidence
 
 - Code/workflow/documentation references: issue #461 identifies the existing setup/doctor policies, comment-automation, semantic GitHub communication, issue-start-and-sdd-readiness, `specs/catalog.json`, and the feature workflow as the relevant owners and sources. Exact file paths and contract details require repository verification.
+- Verified implementation baseline on 2026-10-11: `src/domain/github_runtime_doctor.ts` contains the fixed seven-group contract, trusted approval-policy parsing, and deterministic aggregate priority. `/copilot doctor` is recognized and listed in English/Spanish help, but the comment route intentionally returns a sanitized unavailable error until evidence adapters and correlated rendering are composed. No runtime evidence group is currently complete.
 - Incidents or concrete examples: a live recommendation assessment reported policy unavailable although the policy was valid; investigation required workflow logs and local doctor.
 - External primary sources: not required to define this repository behavior.
 - Unknowns: current concrete port APIs, workflow contract shape, existing test commands and thresholds, and documentation route names must be confirmed before implementation.
@@ -331,6 +332,14 @@ Document that local setup operator PAT and Action runtime PAT are distinct and t
 8. Run repository validation, coverage, workflow/security checks, and manual English/Spanish narrow-screen UX review before readiness.
 
 ## 19. Definition of Done
+
+Implementation status: **incomplete**. The current code covers the domain contract,
+trusted strict policy parsing, aggregate ordering/priority, command recognition,
+and bilingual help discoverability. The route fails closed with an unavailable
+response; it does not claim that any runtime prerequisite passed. This partial
+state does not satisfy the numeric 52-case budget or the capability acceptance
+scenarios below. Do not mark this specification implemented or its catalog
+capability complete until every unchecked item is verified.
 
 - [ ] Every normative requirement has acceptance and traceability.
 - [ ] Architecture boundaries are implemented and automatically enforced; doctor has no mutation or model capability.
