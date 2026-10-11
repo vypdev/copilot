@@ -155,6 +155,12 @@ Every command finishes with a comment in the conversation. The report distinguis
 - merged after fixer-agent conflict resolution; or
 - safely aborted, with a publishable reason and no provider-secret details.
 
+When workspace validation rejects a resolution, the reply and workflow log
+include a closed diagnostic code such as `sdd-catalog-invalid`,
+`unstaged-changes` or `unexpected-paths`. Inspect that code before retrying;
+Copilot preserves the remote branches and does not publish the rejected merge.
+Private paths and provider output are excluded from the public diagnosis.
+
 Successful and no-change reports use the issue or pull-request surface locale,
 are correlated to the requesting comment, and are reconciled at most once on
 event replay. For example, an already aligned branch receives one sentence:

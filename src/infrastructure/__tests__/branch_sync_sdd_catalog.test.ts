@@ -151,7 +151,7 @@ describe('branch synchronization generated SDD catalog', () => {
         writeFileSync(join(workspace, SDD_CATALOG_PATH), scenario === 'invalid resolution' ? '{ unresolved' : JSON.stringify(resolved, null, 2) + '\n');
         const validation = await adapter.validatePreparedMerge(conflicts);
         if (scenario === 'invalid resolution') {
-            expect(validation).toEqual({ valid: false, reason: 'The resolved SDD catalog is invalid.' });
+            expect(validation).toEqual({ valid: false, code: 'sdd-catalog-invalid', reason: 'The resolved SDD catalog is invalid.' });
             expect(git.stagePaths).not.toHaveBeenCalled();
         } else {
             expect(validation).toEqual({ valid: true });
@@ -162,7 +162,7 @@ describe('branch synchronization generated SDD catalog', () => {
             expect(readFileSync(join(workspace, 'docs/child.mdx'), 'utf8')).toBe('child\n');
             if (scenario === 'verification mutation') {
                 writeFileSync(join(workspace, SDD_CATALOG_INDEX_PATH), 'changed by verification\n');
-                await expect(adapter.validatePreparedMerge(conflicts)).resolves.toEqual({ valid: false, reason: 'The prepared merge contains unstaged changes.' });
+                await expect(adapter.validatePreparedMerge(conflicts)).resolves.toEqual({ valid: false, code: 'unstaged-changes', reason: 'The prepared merge contains unstaged changes.' });
                 expect(git.stagePaths).toHaveBeenCalledTimes(1);
                 gitAt(workspace, ['checkout', '--', SDD_CATALOG_INDEX_PATH]);
             } else await expect(adapter.validatePreparedMerge(conflicts)).resolves.toEqual({ valid: true });

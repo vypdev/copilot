@@ -1570,7 +1570,8 @@
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/infrastructure/git_commit_adapter.ts",
-        "src/infrastructure/branch_sync_sdd_catalog.ts"
+        "src/infrastructure/branch_sync_sdd_catalog.ts",
+        "src/domain/branch_sync_validation.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",

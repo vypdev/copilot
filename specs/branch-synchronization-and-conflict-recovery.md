@@ -304,7 +304,16 @@ existing synchronization command or configuration action, offer dry-run
 inspection, and state that no synchronization commit was pushed. The descriptor
 accepts only the fixed `/copilot sync-branch` command; translated catalog prose
 cannot invent a command or override conflict, sensitive-path, verification or
-remote-head safeguards. Other failures keep their existing semantic handling.
+remote-head safeguards. Workspace validation failures MUST carry a closed diagnostic code from
+`src/domain/branch_sync_validation.ts` through the adapter, use case, workflow
+log and correlated English/Spanish reply. Raw reasons, path names and provider
+output MUST NOT become public recovery variables. Unknown codes map to
+`unclassified`; constructing a forged public descriptor is rejected. These
+codes distinguish invalid catalog evidence, unstaged changes, protected paths,
+merge identity, staging, whitespace and remote races. The failure still aborts
+without a push. Dogfooding run 38140515377 motivated this contract because the
+resolution was rejected before verification, but the published failure hid which
+workspace control rejected it.
 
 ## 14. Testing strategy and numeric budget
 
@@ -312,11 +321,11 @@ remote-head safeguards. Other failures keep their existing semantic handling.
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 35 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort |
+| Use cases/workspace | 49 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fourteen closed/forged diagnostic cases with localized replies and no push |
 | Adapters/workflow contracts | 30 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks |
-| UX/localization/sanitization | 18 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations |
-| Integration/security/cutover | 18 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections |
-| **Total** | **149** | no double counting |
+| UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
+| Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **165** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests

@@ -40576,6 +40576,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
     }),
+    'branch-sync-resolution-invalid': Object.freeze({
+        impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
+        action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
+        retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+    }),
     'branch-sync-agent-disabled': Object.freeze({
         impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
         action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
@@ -40632,6 +40637,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
         action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+    }),
+    'branch-sync-resolution-invalid': Object.freeze({
+        impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',
+        action: 'Revisa este código de validación en los logs del workflow y corrige la resolución antes de reintentar {command}.',
+        retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
     }),
     'branch-sync-agent-disabled': Object.freeze({
         impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
@@ -51821,6 +51831,7 @@ function failedBranchSyncResult(reason, cause, recovery) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SyncBranchUseCase = void 0;
+const branch_sync_validation_1 = __nccwpck_require__(90981);
 const branch_sync_conflicts_1 = __nccwpck_require__(84434);
 const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
@@ -51869,11 +51880,11 @@ class SyncBranchUseCase {
             return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
         const verification = await this.verifyPreparedMerge(context, preparation);
         if (verification.failure)
-            return [await this.abortFailure(verification.failure)];
+            return [await this.abortFailure(verification.failure, verification.recovery)];
         const author = await this.authenticatedUser.getUserDetails();
         const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(parentBranch, preparation.parentSha, target.workingBranch, preparation.childSha);
         if (!remoteValidation.valid) {
-            return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.")];
+            return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.", validationRecovery(remoteValidation.code))];
         }
         const commitSha = await this.workspace.commitAndPush(target.workingBranch, `Merge ${parentBranch} into ${target.workingBranch}`, author);
         const outcome = conflictResolution.agentUsed ? "merged-with-agent" : "merged-cleanly";
@@ -51902,7 +51913,10 @@ class SyncBranchUseCase {
         const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
         return validation.valid
             ? { agentUsed: true }
-            : { agentUsed: false, failure: { reason: validation.reason ?? "The agent resolution did not pass workspace safety validation." } };
+            : { agentUsed: false, failure: {
+                    reason: validation.reason ?? "The agent resolution did not pass workspace safety validation.",
+                    recovery: validationRecovery(validation.code),
+                } };
     }
     async verifyPreparedMerge(context, preparation) {
         const commands = (0, verify_command_policy_1.limitVerifyCommands)([...context.verifyCommands]);
@@ -51919,7 +51933,7 @@ class SyncBranchUseCase {
         const validation = await this.workspace.validatePreparedMerge(conflictPaths);
         return validation.valid
             ? { commandCount: commands.length }
-            : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly." };
+            : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly.", recovery: validationRecovery(validation.code) };
     }
     completed(preparation, parentBranch, target, outcome, verificationCount, commitSha) {
         return (0, branch_sync_execution_policy_1.completedBranchSyncResult)({
@@ -51933,6 +51947,9 @@ class SyncBranchUseCase {
     }
     async abortFailure(reason, recovery) {
         await this.safeAbort();
+        if (recovery?.id === 'branch-sync-resolution-invalid') {
+            (0, logging_ports_1.logInfo)(`Branch synchronization validation rejected: ${recovery.variables.validationCode}.`);
+        }
         return (0, branch_sync_execution_policy_1.failedBranchSyncResult)(reason, undefined, recovery);
     }
     async safeAbort() {
@@ -51945,6 +51962,9 @@ class SyncBranchUseCase {
     }
 }
 exports.SyncBranchUseCase = SyncBranchUseCase;
+function validationRecovery(code) {
+    return { id: 'branch-sync-resolution-invalid', variables: { validationCode: (0, branch_sync_validation_1.admittedBranchSyncValidationCode)(code), command: '/copilot sync-branch' } };
+}
 
 
 /***/ }),
@@ -64079,7 +64099,7 @@ exports.Ai = Ai;
 /***/ }),
 
 /***/ 97790:
-/***/ (function(__unused_webpack_module, exports) {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
@@ -64093,6 +64113,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const branch_sync_validation_1 = __nccwpck_require__(90981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'pull-request-link-restored',
     'pull-request-link-base-retained',
@@ -64103,6 +64124,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-blocks-pending',
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
+    'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
 ]);
@@ -64293,6 +64315,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
 });
@@ -64326,9 +64349,13 @@ function normalizeApplicationErrorRecovery(recovery) {
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
     }
-    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable')
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable' || recovery.id === 'branch-sync-resolution-invalid')
         && variables.command !== '/copilot sync-branch') {
         throw new TypeError('Application error recovery synchronization command is invalid.');
+    }
+    if (recovery.id === 'branch-sync-resolution-invalid'
+        && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
+        throw new TypeError('Application error recovery synchronization validation code is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -74082,6 +74109,29 @@ function escapeRegExp(value) {
 
 /***/ }),
 
+/***/ 90981:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BRANCH_SYNC_VALIDATION_CODES = void 0;
+exports.admittedBranchSyncValidationCode = admittedBranchSyncValidationCode;
+/** Closed diagnostic vocabulary; workspace paths and provider output stay private. */
+exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
+    'merge-state-mismatch', 'head-changed', 'merge-parent-changed',
+    'unresolved-conflicts', 'unexpected-paths', 'unstaged-changes',
+    'protected-index-changed', 'sdd-catalog-invalid', 'staging-failed',
+    'whitespace-or-conflict-markers', 'parent-head-changed', 'working-head-changed',
+    'unclassified',
+]);
+function admittedBranchSyncValidationCode(value) {
+    return exports.BRANCH_SYNC_VALIDATION_CODES.find(code => code === value) ?? 'unclassified';
+}
+
+
+/***/ }),
+
 /***/ 14712:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -78599,30 +78649,30 @@ class BranchSyncWorkspaceAdapter {
     async validatePreparedMerge(conflictPaths) {
         const snapshot = this.snapshot;
         if (!snapshot || !sameSet(snapshot.conflictPaths, conflictPaths))
-            return invalid("Merge state does not match the expected conflict set.");
+            return invalid("Merge state does not match the expected conflict set.", "merge-state-mismatch");
         if (await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha)
-            return invalid("The agent changed HEAD.");
+            return invalid("The agent changed HEAD.", "head-changed");
         if (await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha)
-            return invalid("The agent changed the merge parent.");
+            return invalid("The agent changed the merge parent.", "merge-parent-changed");
         const unresolved = await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"]);
         if (unresolved.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unresolved.length > 0)) {
-            return invalid("Unresolved merge conflicts remain.");
+            return invalid("Unresolved merge conflicts remain.", "unresolved-conflicts");
         }
         if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths))
-            return invalid("The agent changed paths outside the prepared merge.");
+            return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
         const unstaged = await this.readPaths(["diff", "--name-only", "-z"]);
         if (unstaged.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unstaged.length > 0)) {
-            return invalid("The prepared merge contains unstaged changes.");
+            return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
         }
         const indexEntries = await this.readIndexEntries();
         for (const [path, entry] of snapshot.protectedIndexEntries) {
             if (indexEntries.get(path) !== entry)
-                return invalid(`The agent changed non-conflicted path ${path}.`);
+                return invalid(`The agent changed non-conflicted path ${path}.`, "protected-index-changed");
         }
         try {
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
                 && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
-                return invalid('The resolved SDD catalog is invalid.');
+                return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
             await this.git.execute("git", ["diff", "--check"]);
             // The agent edits files without Git write authority. Only this trusted
             // adapter stages the verified original conflict set, once before checks.
@@ -78631,19 +78681,19 @@ class BranchSyncWorkspaceAdapter {
                     await this.git.stagePaths([...new Set(unresolved)]);
                 }
                 catch {
-                    return invalid("Trusted staging of the conflict resolution failed.");
+                    return invalid("Trusted staging of the conflict resolution failed.", "staging-failed");
                 }
             }
             if ((await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"])).length > 0) {
-                return invalid("Unresolved merge conflicts remain.");
+                return invalid("Unresolved merge conflicts remain.", "unresolved-conflicts");
             }
             if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0) {
-                return invalid("The prepared merge contains unstaged changes.");
+                return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
             }
             await this.git.execute("git", ["diff", "--cached", "--check"]);
         }
         catch {
-            return invalid("The resolution contains whitespace errors or conflict markers.");
+            return invalid("The resolution contains whitespace errors or conflict markers.", "whitespace-or-conflict-markers");
         }
         this.resolutionValidated = true;
         return { valid: true };
@@ -78651,10 +78701,10 @@ class BranchSyncWorkspaceAdapter {
     async assertRemoteHeadsUnchanged(parentBranch, parentSha, workingBranch, childSha, token) {
         await this.git.fetch(parentBranch, token);
         if (await this.read("git", ["rev-parse", "FETCH_HEAD"]) !== parentSha)
-            return invalid(`Parent branch ${parentBranch} changed during synchronization.`);
+            return invalid(`Parent branch ${parentBranch} changed during synchronization.`, "parent-head-changed");
         await this.git.fetch(workingBranch, token);
         if (await this.read("git", ["rev-parse", "FETCH_HEAD"]) !== childSha)
-            return invalid(`Working branch ${workingBranch} changed during synchronization.`);
+            return invalid(`Working branch ${workingBranch} changed during synchronization.`, "working-head-changed");
         return { valid: true };
     }
     async commitAndPush(workingBranch, message, author, token) {
@@ -78719,8 +78769,8 @@ exports.BranchSyncWorkspaceAdapter = BranchSyncWorkspaceAdapter;
 function sameSet(left, right) {
     return left.length === right.length && left.every((value) => right.includes(value));
 }
-function invalid(reason) {
-    return { valid: false, reason };
+function invalid(reason, code) {
+    return { valid: false, reason, code };
 }
 
 
