@@ -11,7 +11,7 @@ import { isBugbotStatusComment } from '../policies/bugbot_review_presentation_po
 import { selectCanonicalBugbotPullRequest } from '../../domain/bugbot/context';
 import { projectBugbotContextRequest } from './steps/commit/bugbot/bugbot_context_request';
 import { parsePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
-import { projectPullRequestReadiness, unavailablePullRequestReadiness, type ReadinessRevision,
+import { projectPullRequestReadiness, unavailablePullRequestReadiness,
     type PullRequestReadinessSnapshot } from '../policies/pull_request_readiness_policy';
 
 export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
@@ -87,21 +87,22 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
             if (candidates.length === 1) counts = readBugbotStatusCounts(candidates[0].body ?? '', number, pull.headSha);
         }
     } catch { /* Retain all independently verified facts. */ }
-    let revision: ReadinessRevision | undefined;
+    let observedRevisionHead: string | undefined;
     if (evidence && ports.approval) {
         try {
-            revision = await ports.approval.readRevision(target);
+            const revision = await ports.approval.readRevision(target);
             const finalPolicy = await ports.approval.readPolicy(target);
             if (revision.repositoryId !== repositoryId || revision.pullNumber !== number) return fail('target-mismatch');
+            observedRevisionHead = revision.headSha;
             readiness = projectPullRequestReadiness(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
             if (pull.headSha !== evidence.headSha) readiness = Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
                 action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         } catch { readiness = unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }
     let finalHead: string | undefined;
-    try { finalHead = revision && sha(revision.headSha) ? revision.headSha : await ports.getPullRequestHeadSha(number); }
+    try { finalHead = await ports.getPullRequestHeadSha(number); }
     catch { /* A denied freshness read cannot certify counts. */ }
-    if (finalHead === pull.headSha && counts) snapshot = { ...snapshot, findingStateEvidence: undefined,
+    if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts) snapshot = { ...snapshot, findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
             resolved: counts.fixed + counts.obsolete + counts.dismissed } };
     if (finalHead !== pull.headSha && readiness.readiness !== 'pending') readiness = unavailablePullRequestReadiness('final-identity-unavailable');

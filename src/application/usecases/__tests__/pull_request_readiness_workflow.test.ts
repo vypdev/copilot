@@ -11,6 +11,21 @@ describe('readiness workflow identity and independent evidence', () => {
         expect(f.ports.approval.loadEvidence).toHaveBeenCalledTimes(1); expect(f.ports.approval.readRevision).toHaveBeenCalledTimes(1);
         expect(f.ports.approval.readPolicy).toHaveBeenCalledTimes(2);
     });
+    it('discards old counts and readiness when head moves after the revision fence during the policy read', async () => {
+        const f = readinessFixture();
+        f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy()).mockImplementationOnce(async () => {
+            f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
+            return readinessPolicy();
+        });
+        expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
+            pullRequestReadiness: { readiness: 'unavailable', code: 'final-identity-unavailable' } });
+        expect(f.ports.getPullRequestHeadSha).toHaveBeenCalledTimes(1);
+    });
+    it('cannot certify readiness or counts when the independent final head read is denied', async () => {
+        const f = readinessFixture(); f.ports.getPullRequestHeadSha.mockRejectedValue({ status: 403 });
+        expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
+            pullRequestReadiness: { readiness: 'unavailable', code: 'final-identity-unavailable' } });
+    });
     it('uses only the event PR when the same-number issue exists', async () => {
         const f=readinessFixture(); await status(f); expect(f.ports.readLinkedPullRequests).not.toHaveBeenCalled(); expect(f.ports.getPullRequest).toHaveBeenCalledWith(11);
     });

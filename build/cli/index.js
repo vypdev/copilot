@@ -56246,13 +56246,14 @@ async function readCopilotStatus(param, taskId, ports) {
         }
     }
     catch { /* Retain all independently verified facts. */ }
-    let revision;
+    let observedRevisionHead;
     if (evidence && ports.approval) {
         try {
-            revision = await ports.approval.readRevision(target);
+            const revision = await ports.approval.readRevision(target);
             const finalPolicy = await ports.approval.readPolicy(target);
             if (revision.repositoryId !== repositoryId || revision.pullNumber !== number)
                 return fail('target-mismatch');
+            observedRevisionHead = revision.headSha;
             readiness = (0, pull_request_readiness_policy_1.projectPullRequestReadiness)(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
             if (pull.headSha !== evidence.headSha)
                 readiness = Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
@@ -56264,10 +56265,10 @@ async function readCopilotStatus(param, taskId, ports) {
     }
     let finalHead;
     try {
-        finalHead = revision && sha(revision.headSha) ? revision.headSha : await ports.getPullRequestHeadSha(number);
+        finalHead = await ports.getPullRequestHeadSha(number);
     }
     catch { /* A denied freshness read cannot certify counts. */ }
-    if (finalHead === pull.headSha && counts)
+    if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts)
         snapshot = { ...snapshot, findingStateEvidence: undefined,
             findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
                 resolved: counts.fixed + counts.obsolete + counts.dismissed } };
