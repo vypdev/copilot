@@ -1177,7 +1177,8 @@
       "lastVerified": "2026-10-10",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
-        "specs/pre-branch-sdd-gate.md"
+        "specs/pre-branch-sdd-gate.md",
+        "specs/pre-branch-sdd-diff.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
