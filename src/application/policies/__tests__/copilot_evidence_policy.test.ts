@@ -276,3 +276,26 @@ describe('buildCopilotEvidence', () => {
         })).toMatchObject({ conclusion: 'failure', title: 'Copilot found actionable failures' });
     });
 });
+
+describe('comment review Check identity', () => {
+    const verifiedHead = 'a'.repeat(40);
+    it.each(['issue_comment', 'pull_request_review_comment'])('uses verified review SHA for %s, including a newer autofix head', (eventName) => {
+        const evidence = buildCopilotEvidence({ eventName,
+            ...(eventName === 'pull_request_review_comment' ? { headSha: 'b'.repeat(40) } : {}),
+            summary: 'review', results: [new Result({ id: 'review', executed: true, success: true,
+                payload: { ...telemetry('completed', verifiedHead), findingStates: findingStates() } })],
+        });
+        expect(evidence).toMatchObject({ name: 'Copilot / Review', headSha: verifiedHead, conclusion: 'success' });
+    });
+    it.each(['issue_comment', 'pull_request_review_comment'].flatMap(event =>
+        ['absent', 'malformed', 'duplicate', 'dry-run', 'null-sha'].map(reason => [event, reason])))(
+        'does not invent Review evidence for %s with %s telemetry', (eventName, reason) => {
+            const payload = reason === 'absent' ? {} : reason === 'malformed'
+                ? { bugbotTelemetry: { schemaVersion: 2 } }
+                : telemetry(reason === 'dry-run' ? 'dry-run' : 'completed', reason === 'null-sha' ? '0'.repeat(40) : verifiedHead);
+            const result = new Result({ id: 'review', executed: true, success: true, payload });
+            expect(buildCopilotEvidence({ eventName, summary: 'review',
+                results: reason === 'duplicate' ? [result, result] : [result],
+            })).toBeUndefined();
+        });
+});
