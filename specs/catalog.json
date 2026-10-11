@@ -126,7 +126,8 @@
         "src/data/repository/github/github_error_policy.ts",
         "src/infrastructure/github/ports/github_issue_provider_ports.ts",
         "src/application/usecases/comment_automation_command_workflow.ts",
-        "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts"
+        "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
+        "src/application/policies/inactivity_result_counts_projection_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",

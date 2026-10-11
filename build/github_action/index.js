@@ -38892,6 +38892,7 @@ const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
     'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
+    'inactivity', 'unavailable',
     'sourceFreshness', 'staleSourceSuppressed',
     'duplicateCleanup', 'actionNotifications', 'actionNotificationCreated',
     'actionNotificationReused',
@@ -38912,6 +38913,7 @@ const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.duplicateCleanup.multiple',
     'summary.duplicateCleanup.bounded',
     'summary.actionNotification.entry',
+    'summary.inactivityCounts',
 ]);
 const FINDING_STATE_KEYS = Object.freeze([
     'open', 'reopened', 'fixed', 'obsolete', 'dismissed',
@@ -38934,6 +38936,8 @@ const ENGLISH_SIMPLE = Object.freeze({
     lifecycle: 'Lifecycle',
     descriptionPolicy: 'PR description policy',
     results: 'Results',
+    inactivity: 'Issue inactivity',
+    unavailable: 'unavailable',
     findingStates: 'Finding states',
     bugbotReview: 'Bugbot review',
     sourceFreshness: 'Source freshness',
@@ -38981,6 +38985,8 @@ const SPANISH_SIMPLE = Object.freeze({
     lifecycle: 'Ciclo de vida',
     descriptionPolicy: 'Política de descripción de PR',
     results: 'Resultados',
+    inactivity: 'Inactividad de issues',
+    unavailable: 'no disponible',
     findingStates: 'Estados de los hallazgos',
     bugbotReview: 'Revisión de Bugbot',
     sourceFreshness: 'Vigencia del origen',
@@ -39026,6 +39032,7 @@ const ENGLISH_TEMPLATES = Object.freeze({
     'summary.duplicateCleanup.multiple': 'Deletion was forbidden; retained compact pointers for {count} comments (IDs: {ids})',
     'summary.duplicateCleanup.bounded': 'Deletion was forbidden; retained compact pointers for {count} comments (first {reported} IDs: {ids})',
     'summary.actionNotification.entry': '{topic} on {target}: {effect} (fingerprint {fingerprint})',
+    'summary.inactivityCounts': 'Scanned: {scanned} · Closed: {closed} · Skipped: {skipped}',
 });
 const SPANISH_TEMPLATES = Object.freeze({
     'summary.target.pullRequest': 'PR n.º {number}',
@@ -39036,6 +39043,7 @@ const SPANISH_TEMPLATES = Object.freeze({
     'summary.duplicateCleanup.multiple': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (ID: {ids})',
     'summary.duplicateCleanup.bounded': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (primeros {reported} ID: {ids})',
     'summary.actionNotification.entry': '{topic} en {target}: {effect} (huella {fingerprint})',
+    'summary.inactivityCounts': 'Examinadas: {scanned} · Cerradas: {closed} · Omitidas: {skipped}',
 });
 const ENGLISH_FINDING_STATES = Object.freeze({
     open: 'open',
@@ -39098,6 +39106,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildActionSummary = buildActionSummary;
 exports.actionSummaryLocalizationLabels = actionSummaryLocalizationLabels;
 exports.renderLocalizationSummarySection = renderLocalizationSummarySection;
+const inactivity_result_counts_projection_policy_1 = __nccwpck_require__(14960);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
@@ -39145,6 +39154,7 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         `| ${catalogText(catalog, 'summary.lifecycle')} | ${lifecycle} |`,
         `| ${catalogText(catalog, 'summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
+        ...inactivitySummaryRows(context.results, catalog),
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
         ...(staleSourceSuppressed ? [
@@ -39174,6 +39184,15 @@ function buildActionSummary(context, catalog = (0, action_summary_message_catalo
         ] : []),
         ...(localization ? ['', localization] : []),
     ].join('\n');
+}
+function inactivitySummaryRows(results, catalog) {
+    const projection = (0, inactivity_result_counts_projection_policy_1.projectInactivityResultCounts)(results);
+    if (projection.status === 'absent')
+        return [];
+    const value = projection.status === 'valid'
+        ? catalogText(catalog, 'summary.inactivityCounts', projection.counts)
+        : catalogText(catalog, 'summary.unavailable');
+    return [`| ${catalogText(catalog, 'summary.inactivity')} | ${value} |`];
 }
 function formatTransitionPublications(outcomes, catalog) {
     return outcomes.map(outcome => catalogText(catalog, 'summary.actionNotification.entry', {
@@ -44390,6 +44409,35 @@ function buildInactivitySummarySteps(input) {
     if (input.closed === 0)
         steps.push(input.messages.message('inactivity.summary.none'));
     return steps;
+}
+
+
+/***/ }),
+
+/***/ 14960:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectInactivityResultCounts = projectInactivityResultCounts;
+const result_1 = __nccwpck_require__(73817);
+/** Projects scan evidence without exposing the capability's internal result or step prose. */
+function projectInactivityResultCounts(results) {
+    const scans = results.filter(result => result.id === 'CloseInactiveIssuesUseCase');
+    if (scans.length === 0)
+        return { status: 'absent' };
+    const payload = scans.length === 1 ? (0, result_1.getResultPayload)(scans[0].payload) : undefined;
+    if (!payload || !isInactivityCount(payload.scanned) || !isInactivityCount(payload.closed)
+        || !isInactivityCount(payload.skipped) || payload.closed + payload.skipped > payload.scanned) {
+        return { status: 'invalid' };
+    }
+    return { status: 'valid', counts: {
+            scanned: payload.scanned, closed: payload.closed, skipped: payload.skipped,
+        } };
+}
+function isInactivityCount(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
 

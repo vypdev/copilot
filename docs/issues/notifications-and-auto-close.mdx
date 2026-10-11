@@ -122,7 +122,9 @@ labels, issue numbers, hidden ownership markers, error codes, and result payload
 keys are never translated.
 
 The workflow Job Summary reports locale-aware scanned, closed, and skipped
-counts. Provider failures identify whether Copilot could not recheck the issue,
+counts in its **Issue inactivity** row, including a no-op such as
+`Scanned: 1 · Closed: 0 · Skipped: 1`. Missing or inconsistent scan evidence
+appears as `unavailable`, rather than guessed zero counts. Provider failures identify whether Copilot could not recheck the issue,
 could not close it, or closed it successfully but could not publish the terminal
 explanation. That last partial failure never claims that the close itself failed.
 Because a later scan ignores closed issues, this partial state is marked

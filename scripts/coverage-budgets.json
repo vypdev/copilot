@@ -284,7 +284,8 @@
         {
           "files": [
             "src/domain/git_object_id.ts",
-            "src/application/policies/publication_outcome_policy.ts"
+            "src/application/policies/publication_outcome_policy.ts",
+            "src/application/policies/inactivity_result_counts_projection_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -302,7 +303,7 @@
           "thresholdProfile": "default"
         }
       ],
-      "successMessage": "semantic publication freshness coverage: PASS (object-id/outcome policies 100%; guarded path 95% lines/statements, 90% branches/functions)"
+      "successMessage": "semantic publication freshness coverage: PASS (object-id/outcome/inactivity-count policies 100%; guarded path 95% lines/statements, 90% branches/functions)"
     },
     {
       "name": "Repository localization",

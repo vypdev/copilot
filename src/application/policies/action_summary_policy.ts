@@ -1,4 +1,5 @@
 import type { Result } from '../../data/model/result';
+import { projectInactivityResultCounts } from './inactivity_result_counts_projection_policy';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import {
     projectBugbotResultTelemetry,
@@ -94,6 +95,7 @@ export function buildActionSummary(
         `| ${catalogText(catalog, 'summary.lifecycle')} | ${lifecycle} |`,
         `| ${catalogText(catalog, 'summary.descriptionPolicy')} | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| ${catalogText(catalog, 'summary.results')} | ${formatResultCounts(context.results, catalog)} |`,
+        ...inactivitySummaryRows(context.results, catalog),
         `| ${catalogText(catalog, 'summary.findingStates')} | ${formatFindingStates(findingStateProjection, catalog)} |`,
         `| ${catalogText(catalog, 'summary.bugbotReview')} | ${formatBugbotTelemetry(telemetryProjection, catalog)} |`,
         ...(staleSourceSuppressed ? [
@@ -128,6 +130,15 @@ export function buildActionSummary(
         ] : []),
         ...(localization ? ['', localization] : []),
     ].join('\n');
+}
+
+function inactivitySummaryRows(results: readonly Result[], catalog: ActionSummaryMessageCatalog): string[] {
+    const projection = projectInactivityResultCounts(results);
+    if (projection.status === 'absent') return [];
+    const value = projection.status === 'valid'
+        ? catalogText(catalog, 'summary.inactivityCounts', projection.counts)
+        : catalogText(catalog, 'summary.unavailable');
+    return [`| ${catalogText(catalog, 'summary.inactivity')} | ${value} |`];
 }
 
 function formatTransitionPublications(
