@@ -134,6 +134,15 @@ conflict paths, merge identity, protected index entries and remaining markers,
 then stages only those resolved conflicts through trusted Git code. It rejects
 later changes introduced by verification rather than staging them again.
 
+If `specs/CATALOG.md` is conflicted, Copilot treats it as a generated index:
+after the catalog metadata is resolved, the Action validates that metadata and
+regenerates the index with its bundled catalog renderer before verification.
+The fixer must preserve both branches' specification ownership and evidence in
+`specs/catalog.json`. The Action also refreshes a stale index when a clean merge
+already changes both catalog files. It never adds an unrelated file to the merge
+or loads a generator from the merged branch. Invalid metadata, missing evidence,
+external links, or a later verification change still abort the synchronization.
+
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 
 ## Result report

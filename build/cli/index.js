@@ -83674,6 +83674,72 @@ exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
 
 /***/ }),
 
+/***/ 88632:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_CATALOG_INDEX_PATH = exports.SDD_CATALOG_PATH = void 0;
+exports.refreshBranchSyncSddCatalog = refreshBranchSyncSddCatalog;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+exports.SDD_CATALOG_PATH = 'specs/catalog.json';
+exports.SDD_CATALOG_INDEX_PATH = 'specs/CATALOG.md';
+const MAX_BYTES = 10 * 1024 * 1024;
+// Use the Action's bundled validator, never code loaded from the merged branch.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const validator = __nccwpck_require__(29617);
+/** Refreshes one already-authorized generated file; it neither stages nor executes repository code. */
+function refreshBranchSyncSddCatalog(repositoryRoot) {
+    try {
+        const root = (0, node_fs_1.realpathSync)(repositoryRoot);
+        const specs = (0, node_path_1.join)(root, 'specs');
+        if (!(0, node_fs_1.lstatSync)(specs).isDirectory() || (0, node_fs_1.lstatSync)(specs).isSymbolicLink())
+            return false;
+        const metadataPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_PATH);
+        const indexPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_INDEX_PATH);
+        for (const path of [metadataPath, indexPath]) {
+            const stat = (0, node_fs_1.lstatSync)(path);
+            if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_BYTES)
+                return false;
+        }
+        const catalog = JSON.parse((0, node_fs_1.readFileSync)(metadataPath, 'utf8'));
+        // Reject links before the shared validator follows any evidence paths.
+        const capabilities = catalog?.capabilities;
+        if (!Array.isArray(capabilities))
+            return false;
+        for (const capability of capabilities) {
+            for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                if (!Array.isArray(capability?.[field]))
+                    return false;
+                for (const entry of capability[field]) {
+                    if (typeof entry !== 'string')
+                        return false;
+                    const file = (0, node_path_1.join)(root, entry);
+                    const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
+                    if ((0, node_path_1.isAbsolute)(entry) || !(0, node_fs_1.lstatSync)(file).isFile() || target === '..' || target.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(target))
+                        return false;
+                }
+            }
+        }
+        if (validator.validateCatalog(root, catalog).length)
+            return false;
+        const expected = validator.renderCatalog(catalog);
+        if (Buffer.byteLength(expected, 'utf8') > MAX_BYTES)
+            return false;
+        if (validator.normalizeCheckoutLineEndings((0, node_fs_1.readFileSync)(indexPath, 'utf8')) !== expected)
+            (0, node_fs_1.writeFileSync)(indexPath, expected, 'utf8');
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+
+
+/***/ }),
+
 /***/ 81849:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -83682,10 +83748,12 @@ exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
 const workspace_changes_1 = __nccwpck_require__(93370);
+const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
 /** Owns Git's merge state while keeping credentials confined to fetch/push subprocesses. */
 class BranchSyncWorkspaceAdapter {
-    constructor(git) {
+    constructor(git, repositoryRoot = process.cwd()) {
         this.git = git;
+        this.repositoryRoot = repositoryRoot;
         this.mergeInProgress = false;
         this.resolutionValidated = false;
     }
@@ -83720,7 +83788,13 @@ class BranchSyncWorkspaceAdapter {
             await this.abort();
             throw new Error("Git could not prepare the parent branch merge.");
         }
-        const workspacePaths = await this.listWorkspacePaths();
+        let workspacePaths = await this.listWorkspacePaths();
+        if (conflictPaths.length === 0 && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)) {
+            if (!(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
+                throw new Error('The merged SDD catalog is invalid.');
+            await this.git.stagePaths([branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH]);
+            workspacePaths = await this.listWorkspacePaths();
+        }
         const indexEntries = await this.readIndexEntries();
         const conflicts = new Set(conflictPaths);
         this.snapshot = {
@@ -83758,6 +83832,9 @@ class BranchSyncWorkspaceAdapter {
                 return invalid(`The agent changed non-conflicted path ${path}.`);
         }
         try {
+            if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+                && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
+                return invalid('The resolved SDD catalog is invalid.');
             await this.git.execute("git", ["diff", "--check"]);
             // The agent edits files without Git write authority. Only this trusted
             // adapter stages the verified original conflict set, once before checks.
@@ -90728,7 +90805,7 @@ Working branch: {{workingBranch}}
 Files with merge conflicts:
 {{conflictPaths}}
 
-Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. Trusted Action code validates and stages only the original conflicted files. Run focused checks when useful, then give a concise summary of the decisions you made.`;
+Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. Run focused checks when useful, then give a concise summary of the decisions you made.`;
 function getBranchSyncConflictsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, params);
 }
