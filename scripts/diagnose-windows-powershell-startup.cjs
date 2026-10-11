@@ -18,12 +18,13 @@ const metadataKeys = ["SystemDrive", "OS", "ComSpec", "PATHEXT", "USERPROFILE", 
 const metadata = Object.fromEntries(metadataKeys.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
 try {
 for (const [environment, env] of [
-  ['isolated-acl', buildWindowsAclProbeEnvironment()],
   ['runner-baseline', process.env],
-  ['isolated-combined-windows-metadata', { ...buildWindowsAclProbeEnvironment(), ...metadata }],
-  ['isolated-combined-private-profile', { ...buildWindowsAclProbeEnvironment(), ...metadata, ...profile }],
-  ['isolated-runner-module-path', { ...buildWindowsAclProbeEnvironment(), PSModulePath: process.env.PSModulePath }],
-  ['isolated-combined-metadata-runner-module-path', { ...buildWindowsAclProbeEnvironment(), ...metadata, PSModulePath: process.env.PSModulePath }],
+  ['isolated-acl', buildWindowsAclProbeEnvironment()],
+  ['isolated-runner-path', { ...buildWindowsAclProbeEnvironment(), PATH: process.env.PATH }],
+  ['isolated-metadata-runner-path', { ...buildWindowsAclProbeEnvironment(), ...metadata, PATH: process.env.PATH }],
+  ['runner-baseline-system-path', { ...process.env, PATH: buildWindowsAclProbeEnvironment().PATH }],
+  ['runner-baseline-acl-module-cache', { ...process.env,
+    PSModulePath: buildWindowsAclProbeEnvironment().PSModulePath, PSModuleAnalysisCachePath: 'NUL' }],
 ]) {
   const start = performance.now();
   const result = spawnSync(executable, args, { env, encoding: 'utf8', timeout: 20_000, maxBuffer: 4096, windowsHide: true });

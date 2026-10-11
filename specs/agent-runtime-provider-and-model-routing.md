@@ -957,9 +957,9 @@ authenticated fixer works on either runner.
 
 The existing platform smoke workflow now offers a bounded, read-only
 `windows_startup_probe` dispatch. One hosted Windows job compares six fixed 20-second probes in order: isolated
-ACL environment, runner baseline, combined allowlisted Windows metadata, that
-metadata with disposable profile directories, the runner module path alone,
-and metadata with that module path. Disposable directories are removed after
+runner baseline, isolated ACL environment, isolated runner PATH, allowlisted
+metadata with runner PATH, runner baseline with the isolated system PATH, and
+runner baseline with isolated module/cache settings. Disposable directories are removed after
 the comparison and are never passed to an agent. It records only the fixed
 environment label, closed status and elapsed milliseconds. It never records
 stdout, stderr, errors, environment values, credentials or paths. It does not
@@ -991,3 +991,10 @@ absolute and disabled cache selections with disposable profiles did not isolate
 the cause. The next six-probe comparison tests combined non-secret Windows
 metadata and module-path selection. It never copies token/proxy/auth variables,
 prints metadata values, or changes the agent environment.
+
+Combined comparison run 38152468447 timed out all five isolated variants at
+20 seconds; the runner baseline completed in 622 ms. Combined metadata,
+disposable profiles and the runner module path did not remove the difference.
+The next six probes separate PATH from module/cache settings in both directions.
+This remains diagnosis only: no production process environment or trust check
+is relaxed, and process output/environment values are never reported.
