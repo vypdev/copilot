@@ -45,18 +45,22 @@ export function prepareWindowsInstallRoot(
     parent: string,
     verify: (path: string) => void = verifyWindowsAgentExecutableAcl,
 ): string {
+    return prepareWindowsPrivateRoot(parent, verify, INSTALL_PREFIX);
+}
+
+function prepareWindowsPrivateRoot(parent: string, verify: (path: string) => void, prefix: string): string {
     try {
-        return prepareWindowsInstallRootOnce(parent, verify);
+        return prepareWindowsInstallRootOnce(parent, verify, prefix);
     } catch (error) {
         // Cold Windows services can time out a read-only ACL query once.
         // Every other failure remains final for this candidate.
         if (!(error instanceof TransientWindowsAclTimeout)) throw error;
-        return prepareWindowsInstallRootOnce(parent, verify);
+        return prepareWindowsInstallRootOnce(parent, verify, prefix);
     }
 }
 
-function prepareWindowsInstallRootOnce(parent: string, verify: (path: string) => void): string {
-    const root = mkdtempSync(join(parent, INSTALL_PREFIX));
+function prepareWindowsInstallRootOnce(parent: string, verify: (path: string) => void, prefix: string): string {
+    const root = mkdtempSync(join(parent, prefix));
     const probe = join(root, '.acl-probe');
     let checkingAcl = false;
     try {
@@ -81,13 +85,22 @@ function prepareWindowsInstallRootOnce(parent: string, verify: (path: string) =>
 }
 
 export function createPrivateAgentInstallRoot(): string {
+    return createPrivateRuntimeRoot(INSTALL_PREFIX);
+}
+
+/** Verification uses the same owner and ancestor guarantees before replacing the child's profile. */
+export function createPrivateVerificationRuntimeRoot(): string {
+    return createPrivateRuntimeRoot('copilot-verify-runtime-');
+}
+
+function createPrivateRuntimeRoot(prefix: string): string {
     if (process.platform === 'win32') {
         return selectPrivateInstallRoot([
             process.env.RUNNER_TEMP || tmpdir(),
             join(homedir(), 'AppData', 'Local', 'Temp'),
-        ], prepareWindowsInstallRoot);
+        ], parent => prepareWindowsPrivateRoot(parent, verifyWindowsAgentExecutableAcl, prefix));
     }
-    const root = mkdtempSync(join(process.env.RUNNER_TEMP || tmpdir(), INSTALL_PREFIX));
+    const root = mkdtempSync(join(process.env.RUNNER_TEMP || tmpdir(), prefix));
     chmodSync(root, 0o700);
     return root;
 }

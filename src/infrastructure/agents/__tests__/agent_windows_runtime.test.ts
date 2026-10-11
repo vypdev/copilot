@@ -22,6 +22,29 @@ import {
 
 const windowsIt = process.platform === 'win32' ? it : it.skip;
 
+windowsIt('preflights a private agent replacement inside the isolated verification profile and temp directory', () => {
+    const runtime = prepareUntrustedCommandEnvironment(process.env);
+    const keys = ['HOME', 'USERPROFILE', 'TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP'] as const;
+    const original = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+    let installRoot: string | undefined;
+    try {
+        for (const key of keys) process.env[key] = runtime.environment[key];
+        installRoot = createPrivateAgentInstallRoot();
+        expect(installRoot.startsWith(runtime.environment.RUNNER_TEMP)).toBe(true);
+        const executable = join(installRoot, 'dummy.exe');
+        writeFileSync(executable, 'local verification fixture');
+        expect(securePrivateInstalledAgent(installRoot, executable)).toBe(executable);
+        expect(() => verifyWindowsAgentExecutableAcl(executable)).not.toThrow();
+    } finally {
+        if (installRoot) rmSync(installRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        for (const key of keys) {
+            if (original[key] === undefined) delete process.env[key];
+            else process.env[key] = original[key];
+        }
+        runtime.cleanup();
+    }
+}, 90_000);
+
 windowsIt('runs exact Windows system-root validation and PowerShell under the verification environment without dirtying the checkout', () => {
     const root = mkdtempSync(join(tmpdir(), 'copilot-verify-windows-cache-'));
     const environment = prepareUntrustedCommandEnvironment(process.env);

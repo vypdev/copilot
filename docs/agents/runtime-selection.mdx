@@ -35,6 +35,14 @@ module cache. Required Windows machine facts and the configured Jest worker
 recycling flag are preserved; operator profile paths and authentication-store
 references remain excluded.
 
+On Windows, that verification home must also pass the existing private-directory
+and ancestor permission checks before it is used. Verification commands receive
+`TMP`, `TEMP`, `TMPDIR` and `RUNNER_TEMP` pointing to a private subdirectory of
+their temporary home. This keeps nested fixtures and installers in the same
+protected scope. The Action can fall back to a safe profile-local parent; it
+blocks execution when no safe parent is available and never changes host
+directory permissions.
+
 The parent process and child shells also use an explicit PowerShell module-cache
 filename inside that private runtime directory. Ambient cache locations cannot
 redirect it into the checkout. Agent failures retain their specific timeout,

@@ -78038,6 +78038,7 @@ exports.PrivateInstalledAgentValidationError = void 0;
 exports.selectPrivateInstallRoot = selectPrivateInstallRoot;
 exports.prepareWindowsInstallRoot = prepareWindowsInstallRoot;
 exports.createPrivateAgentInstallRoot = createPrivateAgentInstallRoot;
+exports.createPrivateVerificationRuntimeRoot = createPrivateVerificationRuntimeRoot;
 exports.securePrivateInstalledAgent = securePrivateInstalledAgent;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
@@ -78077,19 +78078,22 @@ function selectPrivateInstallRoot(parents, prepare) {
     throw new Error('No protected agent installation directory is available.');
 }
 function prepareWindowsInstallRoot(parent, verify = windows_runtime_acl_1.verifyWindowsAgentExecutableAcl) {
+    return prepareWindowsPrivateRoot(parent, verify, INSTALL_PREFIX);
+}
+function prepareWindowsPrivateRoot(parent, verify, prefix) {
     try {
-        return prepareWindowsInstallRootOnce(parent, verify);
+        return prepareWindowsInstallRootOnce(parent, verify, prefix);
     }
     catch (error) {
         // Cold Windows services can time out a read-only ACL query once.
         // Every other failure remains final for this candidate.
         if (!(error instanceof TransientWindowsAclTimeout))
             throw error;
-        return prepareWindowsInstallRootOnce(parent, verify);
+        return prepareWindowsInstallRootOnce(parent, verify, prefix);
     }
 }
-function prepareWindowsInstallRootOnce(parent, verify) {
-    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(parent, INSTALL_PREFIX));
+function prepareWindowsInstallRootOnce(parent, verify, prefix) {
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(parent, prefix));
     const probe = (0, node_path_1.join)(root, '.acl-probe');
     let checkingAcl = false;
     try {
@@ -78114,13 +78118,20 @@ function prepareWindowsInstallRootOnce(parent, verify) {
     }
 }
 function createPrivateAgentInstallRoot() {
+    return createPrivateRuntimeRoot(INSTALL_PREFIX);
+}
+/** Verification uses the same owner and ancestor guarantees before replacing the child's profile. */
+function createPrivateVerificationRuntimeRoot() {
+    return createPrivateRuntimeRoot('copilot-verify-runtime-');
+}
+function createPrivateRuntimeRoot(prefix) {
     if (process.platform === 'win32') {
         return selectPrivateInstallRoot([
             process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(),
             (0, node_path_1.join)((0, node_os_1.homedir)(), 'AppData', 'Local', 'Temp'),
-        ], prepareWindowsInstallRoot);
+        ], parent => prepareWindowsPrivateRoot(parent, windows_runtime_acl_1.verifyWindowsAgentExecutableAcl, prefix));
     }
-    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), INSTALL_PREFIX));
+    const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)(process.env.RUNNER_TEMP || (0, node_os_1.tmpdir)(), prefix));
     (0, node_fs_1.chmodSync)(root, 0o700);
     return root;
 }
@@ -81771,8 +81782,8 @@ exports.TimerWorkflowPollingDelayAdapter = TimerWorkflowPollingDelayAdapter;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareUntrustedCommandEnvironment = prepareUntrustedCommandEnvironment;
 const node_fs_1 = __nccwpck_require__(87561);
-const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
 const ALLOWED_VARIABLES = [
     'PATH',
     'LANG',
@@ -81806,13 +81817,19 @@ const ALLOWED_VARIABLES = [
  * credentials or paths to local agent authentication stores.
  */
 function prepareUntrustedCommandEnvironment(source = process.env, platform = process.platform) {
-    const runtimeHome = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-verify-runtime-'));
+    const runtimeHome = (0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)();
     const environment = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
         if (value !== undefined)
             environment[variable] = value;
     }
+    // Nested fixtures/installers must not fall back into host temp directories
+    // whose ancestors may be replaceable by another Windows principal.
+    const runtimeTemp = (0, node_path_1.join)(runtimeHome, 'temp');
+    (0, node_fs_1.mkdirSync)(runtimeTemp, { mode: 0o700 });
+    for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP'])
+        environment[key] = runtimeTemp;
     if (platform === 'win32') {
         environment.USERPROFILE = runtimeHome;
         environment.APPDATA = (0, node_path_1.join)(runtimeHome, 'roaming');
