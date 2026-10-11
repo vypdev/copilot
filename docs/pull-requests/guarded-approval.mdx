@@ -153,3 +153,5 @@ runtime PAT's access to that scope and rerun the observer after recovery.
 Successfully read malformed policy still has the separate `invalid-policy`
 recovery path. This diagnostic does not change credentials, precedence, fallback
 or approval authority.
+
+The dedicated observer initializes runtime logging before reading policy, including manual rechecks. Safe policy-read diagnostics do not require the general agent pipeline or debug mode.

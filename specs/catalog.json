@@ -2095,6 +2095,7 @@
         "src/domain/__tests__/pull_request_approval.test.ts",
         "src/domain/__tests__/setup_approval_workflow.test.ts",
         "src/actions/__tests__/pull_request_approval_action.test.ts",
+        "src/actions/__tests__/pull_request_approval_logging.test.ts",
         "src/data/repository/pull_request/__tests__/approval_coverage_artifact.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_review_comment_command_repository.test.ts",

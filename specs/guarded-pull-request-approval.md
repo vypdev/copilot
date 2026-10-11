@@ -286,17 +286,17 @@ The observer Job Summary records wakeup, PR, head/base, configured/effective mod
 
 ## 14. Testing strategy and numeric budget
 
-The minimum **168 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Dogfooding adds 49 SDK contracts for native artifact/provenance, rule inventories, current attempts, Bugbot ownership and assessment/review publication. Parameter rows count separately only for distinct behavior.
+The minimum **171 distinct cases** derives from five high-risk boundaries: authorization, stale approval, multi-provider evidence, non-atomic review writes, and privileged event handling. Four additional recovery cases distinguish denied Variable access and unavailable transport from malformed JSON, and verify safe actionable summaries for both policy outcomes. Dogfooding adds 49 SDK contracts for native artifact/provenance, rule inventories, current attempts, Bugbot ownership and assessment/review publication. Parameter rows count separately only for distinct behavior.
 
 | Area | Minimum cases | Required risk cases |
 |---|---:|---|
 | Domain/eligibility and config | 30 | every reason precedence; author/bot/last-pusher; scope; exclusions; completeness; coverage modes; human reviews |
 | Application/state/idempotency/races | 26 | duplicate/out-of-order wakeups, head/base/rule movement at each guard, cancellation before/after POST, read-first replay; denied/unavailable policy reads without writes |
 | GitHub/coverage adapters | 68 | pagination, exact App/source/attempt, malformed artifact, 403/422/timeout/rate limit, review readback, artifact SDK encodings and identity substitutions, ruleset schema, owned assessment replay and current Bugbot cards |
-| Workflow/schema/architecture | 16 | `workflow_run` producers, trusted default-branch code, no PR checkout/cache/agent, loop guard, permissions, no check collision; actionable safe summaries for unreadable/malformed policy |
+| Workflow/schema/architecture | 19 | `workflow_run` producers, trusted default-branch code, no PR checkout/cache/agent, loop guard, permissions, no check collision; actionable safe summaries for unreadable/malformed policy |
 | UI/localization/accessibility/sanitization | 12 | five primary states, one action, en/es/fallback, hostile links/mentions/markers, narrow output |
 | Integration/security/migration | 16 | human/bot PRs, full Bugbot projection, numeric producer, stale rules, fresh vs absent config, rollback, live-shaped replay |
-| **Total** | **168** | no double counting |
+| **Total** | **171** | no double counting |
 
 Global Jest gates remain 90% lines/statements, 88% functions, and 82% branches ([configuration](../jest.config.js)). New pure decision/schema/renderer modules MUST reach 100% statements/branches/functions/lines; changed application/adapters MUST meet at least 95% lines/statements and 90% branches/functions. Tests use deterministic clocks, fake GitHub ports, recorded but sanitized webhook/review fixtures, no sleeps or live mutations. Contract tests parse YAML and JSON rather than grep prose; golden Markdown is paired with semantic assertions. Controlled live evidence MUST cover human-owned approval, bot-owned recommendation, a post-approval push under stale-dismissal rules, and check-order inversion; manual review covers desktop/mobile, light/dark, and screen-reader reading order.
 
@@ -379,3 +379,10 @@ Docs lead with the normal journey and a text-equivalent flow before internals. T
 ### Live policy-read diagnostic correction
 
 Recommendation observer runs `38165545004` and `38165297893` failed before assessment with `policy-unavailable`. The adapter now reports only the closed scope (`repository-variable` or `organization-variable`) and one recognized HTTP code or `http-unavailable`; it never logs error messages, values, URLs, tokens or response bodies. Three additional provider cases verify organization-scope denial and containment of unrecognized string/numeric statuses, raising the minimum runtime budget from 116 to 119. The existing repository-denial case also asserts the closed diagnostic. Precedence and fail-closed behavior remain intact: only a real repository 404 reaches organization fallback; denied reads never become off and never use operator credentials. The exact live runtime failure remains unproven until a fresh instrumented run.
+
+
+### Dedicated observer logging lifecycle
+
+Native manual run `38173551844` checked out trusted default head `972e11d52dee5d6bb00df4b0b3d4ab262751b101` and failed closed with `policy-unavailable`, without an assessment or native approval. It also reproduced a separate diagnostic defect: the dedicated observer bypasses `mainRun`, so its application logging port still used the no-op default. The route now initializes the same existing runtime logger before provider reads. It does not initialize an agent, check out PR source, broaden credentials, or trust the input Variable as policy authority.
+
+Three composed SDK/action/logger fixtures first failed, then passed for repository HTTP 403, organization HTTP 403 after repository 404, and unavailable transport status. They verify the closed diagnostic reaches both process output and accumulated logs without provider messages, response bodies or tokens. This raises the budget to 171 distinct cases. Full local verification passed 566 suites and 7,471 tests with 35 configured skips (7,506 total), alongside unchanged coverage budgets, typecheck and lint. The exact native policy-read HTTP remains unconfirmed until this correction is published and a fresh observer runs.

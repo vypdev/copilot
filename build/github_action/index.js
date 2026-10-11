@@ -38259,8 +38259,11 @@ const github_action_input_1 = __nccwpck_require__(8824);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const github_action_locale_inputs_1 = __nccwpck_require__(58893);
 const pull_request_approval_presentation_policy_1 = __nccwpck_require__(79017);
+const logging_ports_1 = __nccwpck_require__(6152);
+const logger_adapter_1 = __nccwpck_require__(72762);
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 async function runPullRequestApprovalAction(token) {
+    (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {
