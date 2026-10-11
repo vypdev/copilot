@@ -399,8 +399,8 @@ not altered.
 | Workflow/config contracts | 17 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
-| Complete diff evidence | 9 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **138** | no double counting |
+| Complete diff evidence | 12 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
+| **Total** | **141** | no double counting |
 
 Seven draft-to-ready regression cases cover authorized and unauthorized review,
 semantic failure, reviewer-only activation, activity availability, reviewing
@@ -491,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 138-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 141-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
@@ -555,7 +555,8 @@ read complete diff -> empty: skip and retain body
                    -> within limits: existing generation path
                    -> beyond limits + automatic: skip and retain body
                    -> beyond limits + explicit: workflow evidence rejection
-read incomplete/missing patch -> workflow evidence rejection, retain body
+read incomplete/missing patch -> automatic: skip and retain body
+                              -> explicit: workflow evidence rejection, retain body
 ```
 
 A skipped automatic optional operation has no application error and is not
@@ -567,3 +568,10 @@ Three new cases cover explicit character/file budget refusal and empty automatic
 diffs; the existing automatic boundary cases now verify absence of provider
 errors and writes. Live acceptance awaits default-runtime publication and a new
 PR lifecycle execution; offline checks cannot establish live completion.
+
+
+### Dogfooding correction: optional incomplete descriptions (2026-10-11)
+
+On PR #467 head `4122bd6c8cf65542aea8ebce0e09ec8bb8b2641a`, native run `38173442245` completed review with zero new findings and resolved the last open finding, but the overall job failed with `workflow.stale`. The description adapter retained 32 changed files and GitHub omitted the text patch for `build/cli/index.js` (2,687 changed lines). This is unavailable description evidence, not proof that the PR head moved or that review failed.
+
+Automatic generation now skips incomplete inventories and missing changed-text patches without creating an application error. It retains the human body and performs no model call or body write. Explicit authorized generation still rejects partial, unavailable and missing-patch evidence with the existing safe error. No partial evidence is described as complete, and the fixed file/character limits remain unchanged. Three new explicit-request contracts retain that distinction; three existing automatic cases first reproduced the failure, then passed with omission semantics. The extension budget is 141 distinct cases. Focused verification passed 38 cases; full local verification passed 565 suites and 7,468 tests with 35 configured skips (7,503 total), with unchanged coverage budgets, typecheck and lint. Live lifecycle verification remains required after runtime publication.

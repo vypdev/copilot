@@ -63732,7 +63732,10 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         const diffEvidence = JSON.stringify(changes);
         if (diff.coverage.status !== 'complete'
             || changes.some(change => (change.additions > 0 || change.deletions > 0) && !change.patch)) {
-            throw new application_error_1.ApplicationError('workflow.stale', 'Complete PR diff evidence is unavailable. Existing body retained.');
+            const retained = 'Complete PR diff evidence is unavailable. Existing body retained. Retry when the required patches are available.';
+            if (request.trigger === 'automatic')
+                return skipped(taskId, retained);
+            throw new application_error_1.ApplicationError('workflow.stale', retained);
         }
         if (changes.length === 0)
             return skipped(taskId, 'The PR has no changed files to describe. Existing body retained.');
