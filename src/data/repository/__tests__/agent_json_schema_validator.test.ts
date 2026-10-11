@@ -1,6 +1,19 @@
 import { assertAgentResponseSchema } from '../agent_json_schema_validator';
+import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 
 describe('assertAgentResponseSchema', () => {
+    it('reports only typed local path and maximum metadata for an oversized nested string', () => {
+        try {
+            assertAgentResponseSchema({ markdown: 'secret provider content' }, {
+                type: 'object', properties: { markdown: { type: 'string', maxLength: 3 } },
+            });
+            throw new Error('Expected schema rejection');
+        } catch (error) {
+            expect(error).toBeInstanceOf(AgentResponseLengthFailure);
+            expect(error).toMatchObject({ path: '$.markdown', maximum: 3 });
+            expect(String(error)).not.toContain('secret provider content');
+        }
+    });
     it('accepts the supported schema subset, including nested and additional properties', () => {
         expect(() => assertAgentResponseSchema({
             name: 'bug',

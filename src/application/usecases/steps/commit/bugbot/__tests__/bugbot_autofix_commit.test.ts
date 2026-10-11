@@ -113,7 +113,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
 
         expect(mockExec.mock.calls).toContainEqual(["git", ["fetch", "origin", "feature/42-from-pr"], expect.any(Object)]);
         expect(mockExec).toHaveBeenCalledWith("git", ["checkout", "feature/42-from-pr"]);
-        expect(mockExec).toHaveBeenCalledWith("git", ["status", "--porcelain"], expect.any(Object));
+        expect(mockExec).toHaveBeenCalledWith("git", ["status", "--porcelain", "--untracked-files=all"], expect.any(Object));
         expect(result.success).toBe(true);
         expect(result.committed).toBe(false);
     });

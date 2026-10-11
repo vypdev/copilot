@@ -257,13 +257,13 @@ managed branches after exact validation; merged commits are not erased.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Strategy/name/lifecycle policy | 28 | precedence, origins, labels, names, successful/skipped/failed help answers, other issues/events and planning precedence |
+| Strategy/name/lifecycle policy | 36 | precedence, origins, labels, names, successful/skipped/failed help answers, other issues/events and planning precedence; eight typed implementation recovery/negative cases |
 | Issue sequencing/idempotency | 22 | permission, reuse, replay, cleanup, authoritative help-kind projection |
 | Branch/project/provider adapters | 24 | linking, pagination, errors |
 | Workflow/template/config contract | 10 | events, inputs, issue types |
 | Issue UX/localization/sanitization | 12 | views, links, one welcome |
-| Integration/security/migration | 13 | issue→branch→PR, stale state, injection, help-label recovery |
-| **Total** | **109** | no double counting |
+| Integration/security/migration | 14 | issue→branch→PR, stale state, injection, help-label recovery and retained-label implementation recovery |
+| **Total** | **118** | no double counting |
 
 Global coverage remains mandatory; changed pure branch/lifecycle policy SHOULD
 reach 95% branch coverage. The P2-E issue/PR context path additionally enforces
@@ -347,3 +347,13 @@ existing waiting labels. Receiving a human comment alone does not satisfy a
 pending maintainer or issue-author action. Explicit working/help recovery and
 other lifecycle transitions retain their documented clearing rules. The two
 PR query regression cases are owned by the PR lifecycle SDD budget.
+
+An issue-comment implementation operation can recover an earlier blocked issue
+only from the closed `CommentAutomation.ImplementationReply` receipt described
+in the comment automation SDD. Successful pushed and no-change outcomes move to
+working and clear obsolete waiting state. Missing, malformed, skipped, foreign
+or unrelated-event receipts preserve state; any executed failure takes priority.
+The label adapter re-reads current labels before replacement and retains all
+unrelated labels. This is operation recovery, not proof of feature acceptance or
+permission to merge. Eight policy cases and one label integration case cover
+this extension; the comment capability owns its separate receipt/rendering cases.

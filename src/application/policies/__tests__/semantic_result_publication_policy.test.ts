@@ -78,6 +78,53 @@ describe('state command confirmations', () => {
   });
 });
 
+describe('verified implementation receipts', () => {
+  const publication = { kind: 'implementation-result', outcome: 'changes-pushed', branch: 'feature/42-managed' };
+  function context(overrides: { id?: string; success?: boolean; executed?: boolean; correlationId?: string; publication?: unknown } = {}) {
+    return { locale: 'en-US', target: { kind: 'issue' as const, number: 42 }, correlationId: overrides.correlationId ?? 'comment:42',
+      results: [new Result({ id: overrides.id ?? 'CommentAutomation.ImplementationReply', success: overrides.success ?? true,
+        executed: overrides.executed ?? true, payload: { publication: overrides.publication ?? publication }, steps: ['SECRET completion claim'] })] };
+  }
+
+  it.each([
+    ['en-US', 'changes-pushed', 'committed and pushed', 'before considering the feature complete'],
+    ['es-ES', 'changes-pushed', 'se publicaron', 'antes de dar la feature por terminada'],
+    ['en-US', 'no-changes', 'without changes', 'No commit or push was needed'],
+    ['es-ES', 'no-changes', 'sin cambios', 'No hizo falta commit ni push'],
+  ])('renders the %s %s receipt with review as the next action', (locale, outcome, expected, next) => {
+    const input = { ...context({ publication: { ...publication, outcome } }), locale };
+    const [intent] = selectSemanticReplyIntents(input);
+    const body = renderSemanticReply(intent);
+    expect(body).toContain(expected);
+    expect(body).toContain(next);
+    expect(body).toContain('`feature/42-managed`');
+    expect(body).not.toContain('SECRET');
+    expect(body.length).toBeLessThan(800);
+    expect(selectSemanticReplyIntents(input)).toEqual([intent]);
+  });
+
+  it.each([
+    { id: 'ThinkUseCase' }, { success: false }, { executed: false }, { correlationId: 'event:push' },
+    { publication: { ...publication, kind: 'other' } }, { publication: { ...publication, outcome: 'complete' } },
+    { publication: { ...publication, branch: undefined } }, { publication: { ...publication, branch: 1 } },
+    { publication: { ...publication, branch: ' ' } }, { publication: { ...publication, branch: 'a'.repeat(256) } },
+    { publication: { ...publication, branch: 'feature/42\nforged' } },
+    { publication: { ...publication, branch: 'feature/42\u0000forged' } },
+    { publication: { ...publication, commitSha: 'a'.repeat(40) } },
+  ])('rejects non-authoritative or malformed implementation evidence %j', overrides => {
+    expect(selectSemanticReplyIntents(context(overrides))).toEqual([]);
+  });
+
+  it('neutralizes branch markup and mentions without interpreting completion prose', () => {
+    const [intent] = selectSemanticReplyIntents(context({ publication: { ...publication, branch: 'feature/`<@team>' } }));
+    const body = renderSemanticReply(intent);
+    expect(body).not.toContain('<@team>');
+    expect(body).not.toContain('@team');
+    expect(body).toContain('@\u200bteam');
+    expect(body).not.toContain('SECRET');
+  });
+});
+
 function implementationPlan() {
   return {
     steps: [

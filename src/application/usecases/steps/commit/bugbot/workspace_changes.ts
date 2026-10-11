@@ -50,7 +50,7 @@ export function selectWorkspacePathsToCommit(before: string[], after: string[]):
 /** Reads the current working tree paths without executing a shell. */
 export async function listWorkspacePaths(gitCommitPort: Pick<BugbotGitMutationPort, 'execute'>): Promise<string[]> {
     let output = "";
-    await gitCommitPort.execute("git", ["status", "--porcelain"], {
+    await gitCommitPort.execute("git", ["status", "--porcelain", "--untracked-files=all"], {
         stdout: (data: Buffer) => {
             output += data.toString();
         },

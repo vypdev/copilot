@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -27,10 +27,12 @@ const ALLOWED_VARIABLES = [
     'TMP',
     'TEMP',
     'SystemRoot',
+    'SystemDrive',
     'WINDIR',
     'OS',
     'ComSpec',
     'PATHEXT',
+    'COPILOT_JEST_WINDOWS_SERVICE_COVERAGE',
 ] as const;
 
 /**
@@ -40,12 +42,20 @@ const ALLOWED_VARIABLES = [
  */
 export function prepareUntrustedCommandEnvironment(
     source: NodeJS.ProcessEnv = process.env,
+    platform: NodeJS.Platform = process.platform,
 ): PreparedUntrustedCommandEnvironment {
     const runtimeHome = mkdtempSync(join(tmpdir(), 'copilot-verify-runtime-'));
     const environment: Record<string, string> = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
         if (value !== undefined) environment[variable] = value;
+    }
+    if (platform === 'win32') {
+        environment.USERPROFILE = runtimeHome;
+        environment.APPDATA = join(runtimeHome, 'roaming');
+        environment.LOCALAPPDATA = join(runtimeHome, 'local');
+        for (const directory of [environment.APPDATA, environment.LOCALAPPDATA]) mkdirSync(directory, { mode: 0o700 });
+        environment.PSModuleAnalysisCachePath = join(environment.LOCALAPPDATA, 'powershell-module-analysis.cache');
     }
     return {
         environment,

@@ -17,11 +17,13 @@ import { runVerifyCommands } from "../steps/commit/bugbot/verify_command_runner"
 import type { ParamUseCase } from "../base/param_usecase";
 import {
   BRANCH_SYNC_TASK_ID,
-  branchSyncConflictEligibilityError,
+  branchSyncConflictEligibilityFailure,
+  type BranchSyncConflictFailure,
   completedBranchSyncResult,
   failedBranchSyncResult,
   unavailableBranchSyncResult,
 } from "./branch_sync_execution_policy";
+import type { ApplicationErrorRecovery } from '../../errors/application_error';
 
 export interface SyncBranchRequest {
   readonly context: BranchSyncContext;
@@ -75,7 +77,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     }
 
     const conflictResolution = await this.resolveConflicts(context, preparation, parentBranch, target, options.useAgent);
-    if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure)];
+    if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
 
     const verification = await this.verifyPreparedMerge(context, preparation);
     if (verification.failure) return [await this.abortFailure(verification.failure)];
@@ -106,9 +108,9 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     parentBranch: string,
     target: BranchSyncTarget,
     useAgent: boolean,
-  ): Promise<{ readonly agentUsed: boolean; readonly failure?: string }> {
+  ): Promise<{ readonly agentUsed: boolean; readonly failure?: BranchSyncConflictFailure }> {
     if (preparation.kind !== "conflicted") return { agentUsed: false };
-    const failure = branchSyncConflictEligibilityError(preparation, useAgent, context.agentConfiguration);
+    const failure = branchSyncConflictEligibilityFailure(preparation, useAgent, context.agentConfiguration);
     if (failure) return { agentUsed: false, failure };
 
     logInfo(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
@@ -123,12 +125,12 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       }),
     });
     if (!response?.text?.trim()) {
-      return { agentUsed: false, failure: "The conflict-resolution agent returned no usable response." };
+      return { agentUsed: false, failure: { reason: "The conflict-resolution agent returned no usable response." } };
     }
     const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
     return validation.valid
       ? { agentUsed: true }
-      : { agentUsed: false, failure: validation.reason ?? "The agent resolution did not pass workspace safety validation." };
+      : { agentUsed: false, failure: { reason: validation.reason ?? "The agent resolution did not pass workspace safety validation." } };
   }
 
   private async verifyPreparedMerge(
@@ -172,9 +174,9 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     });
   }
 
-  private async abortFailure(reason: string): Promise<Result> {
+  private async abortFailure(reason: string, recovery?: ApplicationErrorRecovery): Promise<Result> {
     await this.safeAbort();
-    return failedBranchSyncResult(reason);
+    return failedBranchSyncResult(reason, undefined, recovery);
   }
 
   private async safeAbort(): Promise<void> {

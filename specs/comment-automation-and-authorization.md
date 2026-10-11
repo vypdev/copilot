@@ -58,6 +58,9 @@ modify the wrong branch.
 6. Unauthorized file-modifying intent routes to read-only Think or a visible no-op.
 7. Successful workspace mutations pass preflight, path checks, verification,
    authenticated commit, and push before publication.
+   Workspace status enumerates every untracked file inside a new directory.
+   A directory cannot hide sensitive files or bypass the 100-file mutation limit.
+   Diagnostics report repository-relative paths without reading file contents.
 8. Unaddressed comments are successful no-ops before project/provider reads, so
    documentation, coverage, and other machine-authored reports cannot activate agents.
 9. `fix` and `implement` require a PR review-comment event with its
@@ -356,10 +359,13 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
 | PR conversation context/runtime | 9 | Four live-head resolution cases including unavailable authority, two status branch cases, three specialist preparation cases |
 | PR status identity | 2 | Linked issue differs from PR; unlinked PR never invents an issue |
-| Conversation branch authority | 3 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn |
+| Conversation branch authority | 15 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn; twelve linked-issue/canonical-PR implementation, denied/foreign evidence, intent disagreement and exact prompt-target cases |
 | Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
 | Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
-| **Total** | **154** | no double counting |
+| Implementation receipt and truthful outcome | 27 | Nine orchestration cases and eighteen authority/localization/rendering cases; no success inferred from agent prose or an incomplete commit result |
+| Semantic agent failure preservation | 3 | Timeout, cancellation and agent failure retain their exact code and correlation through the comment route |
+| Untracked-directory mutation boundary | 2 | Real Git reveals nested runtime/sensitive paths and rejects 101 files in one new directory before commit |
+| **Total** | **198** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -467,3 +473,66 @@ English/non-English requests.
 Live status recovery for #459 uses the setup-resolved issue #453 rather than the PR number carried in an issue-comment payload. The target line names PR and linked issue separately; absent linkage does not fabricate an issue.
 
 Branchless help conversations remain on the read-only answer route regardless of classified mutation intent. A file-changing use case requires an authoritative branch before agent or Git execution. No changed paths after an admitted agent maps to agent.failed, preserving the distinction from a pre-spawn policy rejection.
+
+
+### Live implementation branch recovery (2026-10-11)
+
+Dogfooding issue #454 proved that an admitted, linked feature branch could reach
+the explicit implementation route while the issue-comment commit branch was
+empty. The implementation route MUST resolve the same authoritative conversation
+target used by persisted learned-rule commands: the exact issue-linked branch
+with a valid live SHA, or the exact current same-repository PR. A conflicting
+intent branch, missing/denied read, foreign PR or malformed evidence blocks the
+agent and commit. The selected branch MUST reach both implementation and commit,
+and be named in the agent prompt. A branchless conversation retains its existing
+read-only route. No configuration or authority grant changes.
+
+Acceptance: an authorized implement request on a verified linked issue runs on
+that exact ref despite an empty event commit branch; negative evidence invokes
+neither the agent nor commit. The twelve new cases belong only to this capability.
+
+### Live implementation outcome receipt (2026-10-11)
+
+Issue #454 pushed `a396c0fc9baf837b548522b3cbcb2ef4e826ec6d` without a
+conversation reply. The implementation included only part of its SDD. A green
+workflow or push MUST NOT imply that the feature meets its acceptance criteria.
+
+```mermaid
+flowchart LR
+  Request[Authorized implement request] --> Branch[Exact verified conversation ref]
+  Branch --> Agent[Agent changes and configured verification]
+  Agent --> Commit[Trusted commit and push]
+  Commit --> Receipt[Closed typed outcome]
+  Receipt --> Reply[One correlated localized reply]
+  Receipt --> Working[Issue working; clear obsolete failure waiting state]
+```
+
+Only `CommentAutomation.ImplementationReply` with a successful, executed result
+and a bounded `implementation-result` projection is eligible. Outcomes are
+`changes-pushed` and `no-changes`; the branch is the verified target. No commit
+SHA, verification count, acceptance claim or agent prose is manufactured. Empty,
+skipped or failed agent work and absent, failed or foreign commit results produce
+no success receipt. Errors in any agent result prevent the commit even if the
+last result is successful. Existing correlated reply replay protection applies.
+
+Representative English reply: “The requested changes were committed and pushed
+to `feature/454-…`. Review the diff and acceptance criteria before considering
+the feature complete.” Spanish has the same meaning. A no-change receipt states
+that no commit or push was needed. Existing Markdown/mention neutralization
+applies; the normal receipt remains below 800 characters. No configuration,
+permission, runtime, provider or branch-management boundary changes.
+
+Acceptance: successful push and no-change completion each publish one truthful
+localized reply; a failed or skipped operation never publishes a success claim.
+For issues, this typed evidence recovers `state:working` and removes obsolete
+waiting labels while retaining unrelated labels. PR review state retains its
+existing evidence rules. Documentation work covers the command page; the nine
+lifecycle cases belong solely to the managed issue lifecycle budget.
+
+The live #461 implementation exceeded the bounded 15-minute agent execution
+time but its reply reported `workflow.failed`. Comment exception handling MUST
+preserve a semantic application error's identity, retryability, recovery and
+correlation. Plain unknown exceptions still map to the safe workflow fallback.
+Three route cases cover timeout, cancellation and agent failure; the runtime SDD
+owns the separate CLI-to-semantic mapping cases. A timeout publishes no success
+receipt and does not reach commit/push. The existing bounded runtime stays fixed.
