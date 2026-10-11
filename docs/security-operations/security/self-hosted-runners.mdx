@@ -67,3 +67,11 @@ The Action passes agent children an allowlisted runtime environment plus only th
 Configured verification commands also receive a temporary `HOME` and credential-free allowlisted environment. They are repository processes, not model tools, so the runner must still prevent them from reading unrelated host paths through OS-level isolation.
 
 Timeout and cancellation terminate the complete POSIX process group, with a bounded graceful period before a forced kill, so abandoned CLI descendants do not occupy the runner indefinitely.
+
+Windows PowerShell 5.1 can spend the first invocation discovering cmdlet modules
+inside a fresh isolated profile. Bounded native shell fixtures explicitly import
+the absolute system `Microsoft.PowerShell.Utility.psd1` manifest before hashing.
+Their timeout stays unchanged. This avoids depending on a host's warm module
+cache and keeps the runtime's private profile and checkout-cleanliness checks.
+A runner-disconnection annotation is an infrastructure failure; passing tests on
+another platform does not turn that job into a successful smoke run.
