@@ -37214,6 +37214,9 @@ function buildCodexExecutionPolicy(input) {
         '--model', configuration.model,
         '--config', `model_provider=${tomlString(configuration.modelProvider || 'openai')}`,
         '--config', 'approval_policy="never"',
+        // Ignoring user configuration also drops Windows' sandbox selector.
+        // Select the isolated backend explicitly; never fall back to full access.
+        '--config', 'windows.sandbox="elevated"',
         '--config', 'web_search="disabled"',
         '--config', 'features.multi_agent=false',
         '--config', 'features.skill_mcp_dependency_install=false',
