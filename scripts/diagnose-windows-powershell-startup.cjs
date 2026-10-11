@@ -5,19 +5,23 @@ const { buildWindowsAclProbeEnvironment, systemTool } = require('../src/infrastr
 
 if (process.platform !== 'win32') throw new Error('This diagnostic requires Windows.');
 const executable = systemTool('WindowsPowerShell\\v1.0\\powershell.exe');
-const args = ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', "Write-Output 'copilot-probe-ready'"];
+const ready = "Write-Output 'copilot-probe-ready'";
+const consoleReady = "[Console]::Out.WriteLine('copilot-probe-ready')";
+const utilityDll = systemTool('WindowsPowerShell\\v1.0\\Microsoft.PowerShell.Commands.Utility.dll').replace(/'/gu, "''");
+const utilityManifest = systemTool('WindowsPowerShell\\v1.0\\Modules\\Microsoft.PowerShell.Utility\\Microsoft.PowerShell.Utility.psd1').replace(/'/gu, "''");
+const importDll = `Import-Module -Name '${utilityDll}' -ErrorAction Stop;`;
+const importManifest = `Import-Module -Name '${utilityManifest}' -ErrorAction Stop;`;
 const results = [];
-const minimal = { SystemRoot: buildWindowsAclProbeEnvironment().SystemRoot,
-  WINDIR: buildWindowsAclProbeEnvironment().WINDIR, PATH: buildWindowsAclProbeEnvironment().PATH };
-for (const [environment, env] of [
-  ['runner-baseline', process.env],
-  ['runner-baseline-cache-off', { ...process.env, PSModuleAnalysisCachePath: 'NUL' }],
-  ['runner-baseline-system-module-path', { ...process.env, PSModulePath: buildWindowsAclProbeEnvironment().PSModulePath }],
-  ['isolated-without-module-overrides', minimal],
-  ['isolated-cache-off-only', { ...minimal, PSModuleAnalysisCachePath: 'NUL' }],
-  ['isolated-system-module-path-only', { ...minimal, PSModulePath: buildWindowsAclProbeEnvironment().PSModulePath }],
+for (const [environment, env, command] of [
+  ['runner-baseline', process.env, ready],
+  ['isolated-acl', buildWindowsAclProbeEnvironment(), ready],
+  ['isolated-acl-console', buildWindowsAclProbeEnvironment(), consoleReady],
+  ['isolated-acl-system-utility-manifest', buildWindowsAclProbeEnvironment(), `${importManifest}${ready}`],
+  ['isolated-acl-system-utility-dll', buildWindowsAclProbeEnvironment(), `${importDll}${ready}`],
+  ['isolated-acl-system-utility-json', buildWindowsAclProbeEnvironment(), `${importDll}[void](ConvertTo-Json -InputObject @('safe'));${consoleReady}`],
 ]) {
   const start = performance.now();
+  const args = ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command];
   const result = spawnSync(executable, args, { env, encoding: 'utf8', timeout: 20_000, maxBuffer: 4096, windowsHide: true });
   results.push({
     environment,

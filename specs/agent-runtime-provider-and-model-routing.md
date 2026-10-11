@@ -957,9 +957,10 @@ authenticated fixer works on either runner.
 
 The existing platform smoke workflow now offers a bounded, read-only
 `windows_startup_probe` dispatch. One hosted Windows job compares six fixed
-20-second probes: runner baseline, baseline with cache-off only, baseline with
-system module path only, minimal environment without module overrides, and that
-minimal environment with cache-off or system module path independently.
+20-second probes: baseline and isolated Write-Output; isolated .NET console
+output; isolated explicit system Utility manifest or DLL followed by Write-Output;
+and isolated explicit Utility DLL followed by the ACL helper's JSON cmdlet.
+These use fixed commands and trusted absolute Windows system paths only.
 It records only the fixed
 environment label, closed status and elapsed milliseconds. It never records
 stdout, stderr, errors, environment values, credentials or paths. It does not
@@ -1004,3 +1005,11 @@ replaced by the isolated system PATH (311 ms). Replacing the module-path/cache
 pair in the baseline instead caused a 20-second timeout. All three isolated
 PATH variants also timed out. This narrows the next comparison to the two
 module settings independently; it does not yet identify which causes the delay.
+
+Control comparison run 38154093700 found that adding cache-off alone to the
+ready runner baseline caused a 20-second timeout. The isolated system module
+path alone retained a 527 ms baseline. Every minimal environment still timed
+out, including without cache overrides. The next comparison distinguishes
+process startup from command discovery using .NET console output and explicit
+trusted system Utility imports. This is a hypothesis test, not a proven repair;
+ACL checks, the agent environment and process timeouts remain unchanged.
