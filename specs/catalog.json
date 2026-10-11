@@ -1280,7 +1280,8 @@
         "src/domain/copilot_lifecycle.ts",
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/usecases/actions/lifecycle_synchronization_context.ts",
-        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts"
+        "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
+        "src/application/policies/implementation_result_policy.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1357,7 +1358,8 @@
         "src/application/policies/bugbot_status_count_marker_policy.ts",
         "src/application/usecases/read_copilot_status_workflow.ts",
         "src/infrastructure/composition/main_run_route_composition_root.ts",
-        "src/application/usecases/comment_mutation_target_workflow.ts"
+        "src/application/usecases/comment_mutation_target_workflow.ts",
+        "src/application/policies/implementation_result_policy.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",

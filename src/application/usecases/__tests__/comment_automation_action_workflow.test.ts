@@ -165,6 +165,34 @@ describe('implementation conversation branch authority', () => {
     return { branch, target, invoke, linked, candidate, getPullRequest, opts, intent, run };
   }
 
+  it.each([true, false])('confirms a verified implementation with committed=%s', async committed => {
+    const h = fixture();
+    mockCommitUserRequest.mockResolvedValue([new Result({ id: 'DoUserRequestCommitAndPush', success: true, executed: committed })]);
+    const results = await h.run();
+    expect(results.at(-1)).toMatchObject({ id: 'CommentAutomation.ImplementationReply', success: true, executed: true,
+      payload: { publication: { kind: 'implementation-result', outcome: committed ? 'changes-pushed' : 'no-changes', branch: h.branch } } });
+    expect(results.at(-1)?.payload).not.toHaveProperty('commitSha');
+  });
+
+  it.each(['empty', 'failed', 'wrong-producer'])('does not confirm an %s commit result', async mode => {
+    const h = fixture();
+    mockCommitUserRequest.mockResolvedValue(mode === 'empty' ? [] : [new Result({
+      id: mode === 'wrong-producer' ? 'UnknownCommit' : 'DoUserRequestCommitAndPush', success: mode !== 'failed', executed: true,
+    })]);
+    expect((await h.run()).some(r => r.id === 'CommentAutomation.ImplementationReply')).toBe(false);
+  });
+
+  it.each(['preceding-failure', 'errors', 'empty', 'skipped'])('does not commit or confirm %s agent results', async mode => {
+    const h = fixture();
+    const successful = new Result({ id: 'implementation', success: true, executed: mode !== 'skipped' });
+    h.invoke.mockResolvedValue(mode === 'empty' ? [] : mode === 'preceding-failure'
+      ? [new Result({ id: 'failed-preparation', success: false, executed: true }), successful]
+      : mode === 'errors' ? [new Result({ id: 'implementation', success: true, executed: true,
+        errors: [{ code: 'workflow.failed' } as never] })] : [successful]);
+    expect((await h.run()).some(r => r.id === 'CommentAutomation.ImplementationReply')).toBe(false);
+    expect(mockCommitUserRequest).not.toHaveBeenCalled();
+  });
+
   it('passes the exact verified linked issue branch to both implementation and commit', async () => {
     const h = fixture();
     await h.run();

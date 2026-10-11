@@ -359,7 +359,8 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Conversation branch authority | 15 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn; twelve linked-issue/canonical-PR implementation, denied/foreign evidence, intent disagreement and exact prompt-target cases |
 | Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
 | Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
-| **Total** | **166** | no double counting |
+| Implementation receipt and truthful outcome | 27 | Nine orchestration cases and eighteen authority/localization/rendering cases; no success inferred from agent prose or an incomplete commit result |
+| **Total** | **193** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -484,3 +485,41 @@ read-only route. No configuration or authority grant changes.
 Acceptance: an authorized implement request on a verified linked issue runs on
 that exact ref despite an empty event commit branch; negative evidence invokes
 neither the agent nor commit. The twelve new cases belong only to this capability.
+
+### Live implementation outcome receipt (2026-10-11)
+
+Issue #454 pushed `a396c0fc9baf837b548522b3cbcb2ef4e826ec6d` without a
+conversation reply. The implementation included only part of its SDD. A green
+workflow or push MUST NOT imply that the feature meets its acceptance criteria.
+
+```mermaid
+flowchart LR
+  Request[Authorized implement request] --> Branch[Exact verified conversation ref]
+  Branch --> Agent[Agent changes and configured verification]
+  Agent --> Commit[Trusted commit and push]
+  Commit --> Receipt[Closed typed outcome]
+  Receipt --> Reply[One correlated localized reply]
+  Receipt --> Working[Issue working; clear obsolete failure waiting state]
+```
+
+Only `CommentAutomation.ImplementationReply` with a successful, executed result
+and a bounded `implementation-result` projection is eligible. Outcomes are
+`changes-pushed` and `no-changes`; the branch is the verified target. No commit
+SHA, verification count, acceptance claim or agent prose is manufactured. Empty,
+skipped or failed agent work and absent, failed or foreign commit results produce
+no success receipt. Errors in any agent result prevent the commit even if the
+last result is successful. Existing correlated reply replay protection applies.
+
+Representative English reply: “The requested changes were committed and pushed
+to `feature/454-…`. Review the diff and acceptance criteria before considering
+the feature complete.” Spanish has the same meaning. A no-change receipt states
+that no commit or push was needed. Existing Markdown/mention neutralization
+applies; the normal receipt remains below 800 characters. No configuration,
+permission, runtime, provider or branch-management boundary changes.
+
+Acceptance: successful push and no-change completion each publish one truthful
+localized reply; a failed or skipped operation never publishes a success claim.
+For issues, this typed evidence recovers `state:working` and removes obsolete
+waiting labels while retaining unrelated labels. PR review state retains its
+existing evidence rules. Documentation work covers the command page; the nine
+lifecycle cases belong solely to the managed issue lifecycle budget.

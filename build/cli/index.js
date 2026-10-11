@@ -41602,6 +41602,34 @@ function neutralizeGithubControls(value) {
 
 /***/ }),
 
+/***/ 30203:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IMPLEMENTATION_REPLY_RESULT_ID = void 0;
+exports.readImplementationResult = readImplementationResult;
+const result_1 = __nccwpck_require__(73817);
+exports.IMPLEMENTATION_REPLY_RESULT_ID = 'CommentAutomation.ImplementationReply';
+/** A receipt proves the operation's outcome, not feature acceptance or completeness. */
+function readImplementationResult(resultId, payload) {
+    if (resultId !== exports.IMPLEMENTATION_REPLY_RESULT_ID)
+        return undefined;
+    const publication = (0, result_1.getResultPayload)((0, result_1.getResultPayload)(payload)?.publication);
+    if (publication?.kind !== 'implementation-result'
+        || (publication.outcome !== 'changes-pushed' && publication.outcome !== 'no-changes')
+        || typeof publication.branch !== 'string' || !publication.branch.trim()
+        || publication.branch.length > 255 || /\p{Cc}/u.test(publication.branch)
+        || Object.keys(publication).some(key => !['kind', 'outcome', 'branch'].includes(key)))
+        return undefined;
+    return Object.freeze({ kind: 'implementation-result', outcome: publication.outcome,
+        branch: publication.branch.trim() });
+}
+
+
+/***/ }),
+
 /***/ 74902:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -42394,6 +42422,8 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.error.heading',
     'interaction.stateCommand.notApplied',
     'interaction.remember.saved',
+    'interaction.implementation.pushed',
+    'interaction.implementation.noChanges',
     'interaction.remember.exists',
     'interaction.dismiss.none',
     'interaction.dismiss.completed',
@@ -42490,6 +42520,8 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.error.heading': 'Request could not be completed',
     'interaction.stateCommand.notApplied': 'This command was not applied. It requires an authorized maintainer and the command capability to be available.',
     'interaction.remember.saved': 'The rule was saved in `.copilot/BUGBOT.learned.md` on {branch}. The configured checks passed and the commit was pushed.',
+    'interaction.implementation.pushed': 'The requested changes were committed and pushed to {branch}. Review the diff and acceptance criteria before considering the feature complete.',
+    'interaction.implementation.noChanges': 'The implementation command finished without changes on {branch}. No commit or push was needed. Review the acceptance criteria before considering the feature complete.',
     'interaction.remember.exists': 'The rule already exists in `.copilot/BUGBOT.learned.md` on {branch}. No change or additional commit was needed.',
     'interaction.dismiss.none': 'No matching findings were found. Nothing was dismissed.',
     'interaction.dismiss.completed': Object.freeze({
@@ -42595,6 +42627,8 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.error.heading': 'No se pudo completar la solicitud',
     'interaction.stateCommand.notApplied': 'Este comando no se aplicó. Requiere un mantenedor autorizado y que la función esté disponible.',
     'interaction.remember.saved': 'La regla se guardó en `.copilot/BUGBOT.learned.md` en {branch}. Las verificaciones configuradas pasaron y se publicó el commit.',
+    'interaction.implementation.pushed': 'Los cambios solicitados se guardaron en un commit y se publicaron en {branch}. Revisa el diff y los criterios de aceptación antes de dar la feature por terminada.',
+    'interaction.implementation.noChanges': 'El comando de implementación terminó sin cambios en {branch}. No hizo falta commit ni push. Revisa los criterios de aceptación antes de dar la feature por terminada.',
     'interaction.remember.exists': 'La regla ya existe en `.copilot/BUGBOT.learned.md` en {branch}. No se necesitó ningún cambio ni otro commit.',
     'interaction.dismiss.none': 'No se encontraron hallazgos coincidentes. No se descartó ninguno.',
     'interaction.dismiss.completed': Object.freeze({
@@ -43443,6 +43477,7 @@ const status_command_policy_1 = __nccwpck_require__(3449);
 const comment_translation_policy_1 = __nccwpck_require__(27150);
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const git_object_id_1 = __nccwpck_require__(88623);
+const implementation_result_policy_1 = __nccwpck_require__(30203);
 const implementation_plan_1 = __nccwpck_require__(77001);
 function selectSemanticStatusIntents(context) {
     return Object.freeze(context.results.flatMap(result => {
@@ -43504,6 +43539,10 @@ function selectSemanticReplyIntents(context) {
         const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
         if (branchSync)
             return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
+        const implementation = context.correlationId?.startsWith('comment:') && result.executed && result.errors.length === 0
+            ? (0, implementation_result_policy_1.readImplementationResult)(result.id, payload) : undefined;
+        if (implementation)
+            return [replyIntent(context, correlationId, 'implementation-result', implementation)];
         if (!result.executed)
             return [];
         const planReply = implementationPlanReplyProjection(payload);
@@ -43563,6 +43602,10 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
     return `${marker}\n\n${body}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'implementation-result') {
+        return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
+            ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges', { branch: inlineRef(intent.projection.branch) }));
+    }
     if (intent.projection.kind === 'state-command-result') {
         const command = intent.projection;
         if (command.outcome === 'not-applied')
@@ -52034,6 +52077,7 @@ exports.CheckCliUpdateUseCase = CheckCliUpdateUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomationAction = runCommentAutomationAction;
 const result_1 = __nccwpck_require__(73817);
+const implementation_result_policy_1 = __nccwpck_require__(30203);
 const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -52132,8 +52176,19 @@ async function runDoUserRequestAction(param, options, intentPayload) {
         userComment: intentPayload.requestText?.trim() || param.userComment,
         branchOverride,
     });
+    if (!doResults.some(result => result.executed) || doResults.some(result => !result.success || result.errors.length > 0)) {
+        return doResults;
+    }
     const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, branchOverride, doResults, options.bugbotGitMutationPort);
-    return [...doResults, ...commitResults];
+    const results = [...doResults, ...commitResults];
+    const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
+    if (!committed || commitResults.some(result => !result.success || result.errors.length > 0))
+        return results;
+    const publication = Object.freeze({
+        kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+    });
+    return [...results, new result_1.Result({ id: implementation_result_policy_1.IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
+            payload: { publication } })];
 }
 
 

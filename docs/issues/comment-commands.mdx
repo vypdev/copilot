@@ -70,6 +70,12 @@ they operate on:
 - `/copilot fix` and `/copilot implement` apply changes to the authoritative
   working branch, run configured verification, then commit and push through the
   trusted workflow. A verification failure prevents the commit.
+
+  `/copilot implement` then confirms whether changes were pushed or no commit
+  was needed. Review the diff and acceptance criteria before considering the
+  feature complete. A successful implementation clears an earlier blocked
+  lifecycle state on the issue and returns it to working.
+
 - `/copilot remember` appends the rule to `.copilot/BUGBOT.learned.md` and
   commits it to the repository.
 - `/copilot dismiss` records dismissal against the existing Bugbot finding in

@@ -29,6 +29,7 @@ import {
     type ApplicationErrorPresentationSource,
 } from './application_error_presentation_policy';
 import { canonicalGitObjectId } from '../../domain/git_object_id';
+import { readImplementationResult, type ImplementationResultProjection } from './implementation_result_policy';
 import {
     implementationPlanFingerprintInput,
     parseImplementationPlan,
@@ -96,6 +97,7 @@ export type SemanticReplyProjection =
     | { readonly kind: 'application-error'; readonly error: ApplicationErrorPresentationSource }
     | StateCommandReplyProjection
     | BranchSyncReplyProjection
+    | ImplementationResultProjection
     | { readonly kind: 'access-policy' }
     | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
@@ -174,6 +176,9 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         if (stateCommand) return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
         const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
         if (branchSync) return [replyIntent(context, correlationId, 'branch-sync-result', branchSync)];
+        const implementation = context.correlationId?.startsWith('comment:') && result.executed && result.errors.length === 0
+            ? readImplementationResult(result.id, payload) : undefined;
+        if (implementation) return [replyIntent(context, correlationId, 'implementation-result', implementation)];
         if (!result.executed) return [];
         const planReply = implementationPlanReplyProjection(payload);
         if (planReply) return [replyIntent(context, correlationId, 'implementation-plan', planReply)];
@@ -232,6 +237,11 @@ export function renderSemanticReply(
 }
 
 function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessageCatalog): string {
+    if (intent.projection.kind === 'implementation-result') {
+        return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
+            ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges',
+        { branch: inlineRef(intent.projection.branch) }));
+    }
     if (intent.projection.kind === 'state-command-result') {
         const command = intent.projection;
         if (command.outcome === 'not-applied') return safeCatalogSentence(catalog.render('interaction.stateCommand.notApplied'));

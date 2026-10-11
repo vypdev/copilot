@@ -1,4 +1,5 @@
 import { Result } from "../../data/model/result";
+import { IMPLEMENTATION_REPLY_RESULT_ID, type ImplementationResultProjection } from '../policies/implementation_result_policy';
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
 import type { CommentAutomationContext } from './comment_automation_context';
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
@@ -131,11 +132,21 @@ async function runDoUserRequestAction(
     userComment: intentPayload.requestText?.trim() || param.userComment,
     branchOverride,
   });
+  if (!doResults.some(result => result.executed) || doResults.some(result => !result.success || result.errors.length > 0)) {
+    return doResults;
+  }
   const commitResults = await commitUserRequestIfSuccessful(
     param.bugbot.commit,
     branchOverride,
     doResults,
     options.bugbotGitMutationPort,
   );
-  return [...doResults, ...commitResults];
+  const results = [...doResults, ...commitResults];
+  const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
+  if (!committed || commitResults.some(result => !result.success || result.errors.length > 0)) return results;
+  const publication: ImplementationResultProjection = Object.freeze({
+    kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+  });
+  return [...results, new Result({ id: IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
+    payload: { publication } })];
 }
