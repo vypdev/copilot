@@ -363,12 +363,14 @@ describe('setup token permission policy', () => {
         ]);
     });
 
-    it('adds guarded approval PR writes without unrelated Actions, Contents, or Issues writes', () => {
+    it.each(['guarded', 'recommend'] as const)('adds %s assessment permissions without unrelated Actions, Contents, or Issues writes', mode => {
         const configuration = disabledRuntimeConfiguration();
-        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
-        expect(buildWorkflowPatPermissionRequirements(configuration).map(item => item.permission)).toEqual([
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode };
+        const requirements = buildWorkflowPatPermissionRequirements(configuration);
+        expect(requirements.map(item => item.permission)).toEqual([
             'Metadata', 'Actions', 'Contents', 'Pull requests', 'Administration', 'Checks', 'Variables',
         ]);
+        expect(requirements.filter(item => item.level === 'write').map(item => item.permission)).toEqual(['Pull requests']);
     });
 
     it('adds Administration read for release or hotfix automation', () => {
@@ -397,16 +399,16 @@ describe('setup token permission policy', () => {
             .some(item => item.permission === 'Administration')).toBe(false);
     });
 
-    it('adds Checks and Variables read for guarded approval', () => {
+    it.each(['guarded', 'recommend'] as const)('adds Checks and Variables read for %s assessment', mode => {
         const configuration = createDefaultSetupConfiguration();
-        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode };
         const permissions = buildWorkflowPatPermissionRequirements(configuration).map(item => `${item.permission}:${item.level}`);
         expect(permissions).toEqual(expect.arrayContaining(['Checks:read', 'Variables:read']));
     });
 
-    it('adds organization permissions only for selected organization capabilities', () => {
+    it.each(['guarded', 'recommend'] as const)('adds %s organization permissions only for selected organization capabilities', mode => {
         const configuration = createDefaultSetupConfiguration();
-        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode };
         configuration.projects.ids = '2';
         configuration.storage.variables.defaultScope = 'organization';
         const organizationPermissions = buildWorkflowPatPermissionRequirements(configuration, organization)
@@ -508,9 +510,9 @@ describe('setup token permission policy', () => {
             ]));
     });
 
-    it('uses a per-variable scope override for guarded approval', () => {
+    it.each(['guarded', 'recommend'] as const)('uses a per-variable scope override for %s assessment', mode => {
         const configuration = createDefaultSetupConfiguration();
-        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode };
         configuration.storage.variables.defaultScope = 'repository';
         configuration.storage.variables.overrides.PR_APPROVAL_POLICY = 'organization';
         expect(buildWorkflowPatPermissionRequirements(configuration, organization)).toEqual(expect.arrayContaining([
@@ -518,9 +520,9 @@ describe('setup token permission policy', () => {
         ]));
     });
 
-    it('uses the preserved organization scope of an existing guarded approval variable', () => {
+    it.each(['guarded', 'recommend'] as const)('uses the preserved organization scope of an existing %s assessment variable', mode => {
         const configuration = createDefaultSetupConfiguration();
-        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'guarded' };
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode };
         configuration.storage.variables.defaultScope = 'repository';
         configuration.storage.variables.preserveExisting = true;
         const configuredRemote = {

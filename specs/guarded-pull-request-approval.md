@@ -356,7 +356,7 @@ Docs lead with the normal journey and a text-equivalent flow before internals. T
 
 - [ ] Every `MUST` and `A1`–`A9` requirement has an observable acceptance case and traceability.
 - [ ] Architecture, schema, workflow safety, dependency, cycle, and package contract checks pass.
-- [ ] At least 112 distinct runtime tests and stated coverage thresholds pass with deterministic race/security fixtures.
+- [ ] At least 116 distinct runtime tests and stated coverage thresholds pass with deterministic race/security fixtures.
 - [ ] Native reviews are exact-head, one-per-head, and never bot-self, stale, fork, deployment, or trust-path approvals.
 - [ ] Pending, human-action, blocked, partial, and complete UX, localization, sanitization, accessibility, responsive behavior, and noise budgets pass.
 - [ ] Setup/doctor companion gates and user/setup/operator/contributor documentation are complete.

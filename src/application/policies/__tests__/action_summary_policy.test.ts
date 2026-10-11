@@ -24,6 +24,73 @@ describe('action summary policy', () => {
         })).toContain('| Target | Repository run |');
     });
 
+    describe('inactivity scan evidence', () => {
+        const base = {
+            owner: 'owner', repository: 'repo', eventName: 'workflow_dispatch',
+            issueNumber: -1, pullRequestNumber: -1,
+        };
+
+        it.each([
+            ['empty scan', { scanned: 0, closed: 0, skipped: 0 }, false, 'Scanned: 0 · Closed: 0 · Skipped: 0'],
+            ['recent issue', { scanned: 1, closed: 0, skipped: 1 }, false, 'Scanned: 1 · Closed: 0 · Skipped: 1'],
+            ['native closes', { scanned: 3, closed: 3, skipped: 0 }, true, 'Scanned: 3 · Closed: 3 · Skipped: 0'],
+            ['mixed scan', { scanned: 4, closed: 2, skipped: 2 }, true, 'Scanned: 4 · Closed: 2 · Skipped: 2'],
+            ['failed terminal explanation', { scanned: 1, closed: 1, skipped: 0 }, true, 'Scanned: 1 · Closed: 1 · Skipped: 0'],
+        ] as const)('preserves issue counts for %s without publishing scan prose', (name, payload, executed, expected) => {
+            const errors = name === 'failed terminal explanation'
+                ? [new ApplicationError('provider.unavailable', 'private provider detail')]
+                : [];
+            const summary = buildActionSummary({ ...base, results: [new Result({
+                id: 'CloseInactiveIssuesUseCase', success: errors.length === 0, executed,
+                payload, errors, steps: ['private scan prose token-marker'],
+            })] });
+            expect(summary).toContain(`| Issue inactivity | ${expected} |`);
+            expect(summary).toContain(`| Status | ${errors.length > 0 ? '❌ Failure' : executed ? '✅ Success' : '⏭️ Skipped'} |`);
+            expect(summary).not.toContain('private scan prose');
+            expect(summary).not.toContain('token-marker');
+            expect(summary).not.toContain('private provider detail');
+            expect(summary).not.toContain('CloseInactiveIssuesUseCase');
+        });
+
+        it.each([
+            undefined, null, [], 'private payload', {},
+            { scanned: 1, closed: 0 },
+            { scanned: -1, closed: 0, skipped: 0 },
+            { scanned: 1.5, closed: 0, skipped: 0 },
+            { scanned: Number.NaN, closed: 0, skipped: 0 },
+            { scanned: Number.POSITIVE_INFINITY, closed: 0, skipped: 0 },
+            { scanned: Number.MAX_SAFE_INTEGER + 1, closed: 0, skipped: 0 },
+            { scanned: '1', closed: 0, skipped: 0 },
+            { scanned: 1, closed: -1, skipped: 0 },
+            { scanned: 1, closed: 0, skipped: -1 },
+            { scanned: 1, closed: 1, skipped: 1 },
+        ])('marks unavailable scan evidence instead of claiming zero for %j', payload => {
+            const summary = buildActionSummary({ ...base, results: [new Result({
+                id: 'CloseInactiveIssuesUseCase', success: true, executed: false, payload,
+            })] });
+            expect(summary).toContain('| Issue inactivity | unavailable |');
+            expect(summary).not.toContain('Scanned: 0');
+            expect(summary).not.toContain('private payload');
+        });
+
+        it('does not interpret unrelated result payloads as an inactivity scan', () => {
+            const summary = buildActionSummary({ ...base, results: [new Result({
+                id: 'OtherUseCase', success: true, executed: true,
+                payload: { scanned: 1, closed: 1, skipped: 0 },
+            })] });
+            expect(summary).not.toContain('Issue inactivity');
+        });
+
+        it.each([0, 1])('rejects repeated scan results without guessing which result is current (%i)', closed => {
+            const summary = buildActionSummary({ ...base, results: [0, closed].map(value => new Result({
+                id: 'CloseInactiveIssuesUseCase', success: true, executed: true,
+                payload: { scanned: 1, closed: value, skipped: 1 - value },
+            })) });
+            expect(summary).toContain('| Issue inactivity | unavailable |');
+            expect(summary).not.toContain('Scanned: 1');
+        });
+    });
+
     it('renders reusable content-free locale evidence for specialized summaries', () => {
         expect(renderLocalizationSummarySection({
             repository: 'fr-FR',

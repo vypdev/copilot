@@ -504,9 +504,12 @@ Metadata read is unconditional. An enabled runtime route adds Actions read for
 queue inspection and Contents read for branch/commit/file access. Managed issue
 branches, file-editing comments or release/hotfix use Contents write instead;
 release/hotfix also upgrades Actions to write. Issues and PR write are selected
-by their actual routes. Guarded approval adds Administration, Checks and
+by their actual routes. Recommendation and guarded assessment add Administration, Checks and
 Variables read, including organization Variables when the effective approval
-policy is inherited there. Organization Members follows assignment/reviewer
+policy is inherited there, and PR write for the assessment card. Approval-only
+assessment does not request Actions, Contents or Issues write. The five new
+recommend-mode cases are counted in the approval setup/doctor SDD's 87-case
+budget rather than double-counted in this audit budget. Organization Members follows assignment/reviewer
 counts, protected authorization and members-only agent actions. Disabled issue
 routes do not gain authority from a retained workflow profile. Selected
 organization Projects and Issue Types receive their own write requirements.

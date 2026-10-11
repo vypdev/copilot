@@ -48263,7 +48263,9 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
     const releaseOrHotfix = configuration.features.release
         || configuration.features.hotfix
         || enabledIssueWorkflows.some(kind => kind === 'release' || kind === 'hotfix');
-    const guardedApproval = configuration.pullRequestApproval.mode === 'guarded';
+    // Recommendation runs read the same evidence and publish a PR assessment.
+    // Only the runtime policy decides whether a native approval may be submitted.
+    const approvalEnabled = configuration.pullRequestApproval.mode !== 'off';
     const organization = remote?.ownerType === 'Organization';
     const organizationMembers = organization && requiresWorkflowOrganizationMembers(configuration);
     const hasProjects = (issues || pullRequests) && configuration.projects.ids.trim().length > 0;
@@ -48273,11 +48275,11 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
     const writesIssues = issues || issueComments || commits
         || configuration.features.inactiveIssueClosure === true || releaseOrHotfix;
     const writesPullRequests = pullRequests || pullRequestComments || commits
-        || issueComments || guardedApproval || releaseOrHotfix;
+        || issueComments || approvalEnabled || releaseOrHotfix;
     const hasRuntimeRoute = issues || pullRequests || commits || issueComments
         || pullRequestComments || releaseOrHotfix
-        || configuration.features.inactiveIssueClosure === true || guardedApproval;
-    const organizationVariables = guardedApproval
+        || configuration.features.inactiveIssueClosure === true || approvalEnabled;
+    const organizationVariables = approvalEnabled
         && organization
         && (0, setup_configuration_storage_policy_1.resolveSetupResourceTarget)(configuration, 'variable', 'PR_APPROVAL_POLICY', remote).scope === 'organization';
     return normalizePermissionRequirements([
@@ -48287,13 +48289,13 @@ function buildWorkflowPatPermissionRequirements(configuration, remote) {
         ...(writesContents ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Contents', level: 'write', reason: 'Create managed branches, edit files, or merge selected release/hotfix changes.', probe: 'contents' })] : []),
         ...(writesIssues ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Issues', level: 'write', reason: 'Manage selected issue lifecycles, comments, and progress.', probe: 'issues' })] : []),
         ...(writesPullRequests ? [requirement({ role: 'workflow', scope: 'repository', permission: 'Pull requests', level: 'write', reason: 'Manage selected pull request workflows, reviews, or autofix.', probe: 'pull-requests' })] : []),
-        ...(releaseOrHotfix || guardedApproval ? [requirement({
+        ...(releaseOrHotfix || approvalEnabled ? [requirement({
                 role: 'workflow', scope: 'repository', permission: 'Administration', level: 'read',
                 reason: 'Inspect branch protection and effective rulesets.', probe: 'administration',
             })] : []),
-        ...(guardedApproval ? [
+        ...(approvalEnabled ? [
             requirement({ role: 'workflow', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Verify current-head required checks and producer identities.', probe: 'checks' }),
-            requirement({ role: 'workflow', scope: 'repository', permission: 'Variables', level: 'read', reason: 'Load the guarded approval policy.', probe: 'variables' }),
+            requirement({ role: 'workflow', scope: 'repository', permission: 'Variables', level: 'read', reason: 'Load the PR approval assessment policy.', probe: 'variables' }),
         ] : []),
         ...(organizationMembers ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Members', level: 'read', reason: 'Select or authorize organization members for enabled workflows.', probe: 'members' })] : []),
         ...(organization && issueTypes ? [requirement({ role: 'workflow', scope: 'organization', permission: 'Issue Types', level: 'write', reason: 'Assign configured organization issue types.', probe: 'issue-types' })] : []),

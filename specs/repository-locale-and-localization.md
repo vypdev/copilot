@@ -1083,7 +1083,7 @@ The implementation requires at least **146 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 148 qualifying
+`src/architecture/github_communication_test_budget.json` records 149 qualifying
 localization cases from the implementation diff against the specification
 baseline. No listed test file appears in the semantic allocation, and the
 contract is enforced by `pnpm run validate:specifications`.
@@ -1243,7 +1243,7 @@ hyphenated tags and never imply that fallback is a successful translation.
 | §11 privacy/security | sanitizer, minimizer, telemetry projection | injection/bidi/secret/body-absence tests | security operations |
 | §12 observability/cost | summary/log/metric projections and run cache | fields, one-call, no-body assertions | quality observability |
 | §13 greenfield cutover | strict readers and required locale state | removed-name/invalid-marker/state/rollback tests | configuration guide |
-| §14 quality budget | coverage scripts and disjoint communication test ledger | 148 allocated localization cases plus CI coverage evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 149 allocated localization cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
