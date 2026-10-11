@@ -410,7 +410,7 @@ provider page limits and partition execution failures.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns **24 distinct context-selection cases**, including six draft-state
+This SDD owns **25 distinct context-selection cases**, including six draft-state
 regressions (four use-case cases and two adapter cases, with parameter rows
 counted once). The partitioned
 analysis extension adds the separate 67-case budget in
@@ -420,11 +420,31 @@ analysis extension adds the separate 67-case budget in
 |---|---:|---|
 | Selection/pure packing | 4 | event, none, unique, ambiguity/stale; newest packing |
 | State/freshness/eligibility | 3 | partial clean prohibition, omitted resolution, SHA change |
-| Application loader | 7 | PR, issue-only, unavailable abort; omitted comment draft, enabled setting, stale event, exact-head draft |
+| Application loader | 8 | PR, issue-only, unavailable abort; omitted comment draft, enabled setting, stale event, exact-head draft |
 | Provider adapters | 6 | exact encoding, two-result cap, page caps, rate/error mapping; draft mapping and malformed-state rejection |
 | UX/sanitization | 2 | partial and ambiguous/unavailable content |
 | Integration/security | 2 | 10,000 unrelated candidates and max concurrency/call ledger |
-| **Total** | **24** | no double counting |
+| **Total** | **25** | no double counting |
+
+One additional application-loader case verifies that an ordinary comment passes
+the provider-verified PR head to the credential-free rule query port and exposes
+that learned source in review context. The twelve Git-object adapter cases are
+owned by the Bugbot analysis/autofix SDD and are not counted here.
+
+For a canonical pull-request review, repository, path-specific, and learned rules
+are read from the same provider-verified head SHA as the diff. This includes
+reviews requested from ordinary PR comments whose workflow checkout is the
+default branch. Rule reads use local Git objects without changing the checkout,
+index, refs, or files; they do not fall back to rules from another revision.
+The checkout must contain that commit. The supplied workflows fetch complete
+history; for custom or local runners, fetch the verified commit before retrying.
+Git rule reads have fixed limits of 64 paths and 12,000 argument characters per
+batch, 2 MiB output and 30 seconds per command. Missing objects, invalid identities,
+oversized sources, and command failures stop the review before publication.
+Only regular file blobs are read, so committed file or directory symlinks are
+never followed. Issue-only contexts without a canonical PR retain workspace rule
+reads. These source limits are not configurable and do not change the prompt
+limits of 30,000 characters per rule and 100,000 combined characters.
 
 Selection, packing, coverage, and resolution-eligibility policies require 100%
 enumerated branch coverage. Changed loader/adapters require 95% lines/statements
@@ -499,7 +519,7 @@ and catalog evidence in the implementation slice.
 - [x] Required read failures abort before model/publication/resolution.
 - [x] Partial coverage cannot declare clean or resolve omitted findings.
 - [x] The same identity is used end to end and freshness is rechecked.
-- [x] At least 24 distinct cases and changed-module/repository thresholds pass.
+- [x] At least 25 distinct cases and changed-module/repository thresholds pass.
 - [x] Active behavior, docs, UX, telemetry, SDD, catalog, and ports agree.
 - [x] No open decision, unbounded pagination/fan-out, legacy context/marker,
       compatibility method, dual field, or translator remains.

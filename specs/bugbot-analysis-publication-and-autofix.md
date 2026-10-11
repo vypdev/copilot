@@ -339,10 +339,35 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 | Finding/config/identity policy | 62 | schema, fingerprint, rank, limits; 26 exact quoted-identifier, boundary and malformed-input cases across fix and dismissal |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
 | Use cases/autofix | 61 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case, six receipt-outcome cases and two exact single-finding selection cases |
-| Provider/workflow contracts | 24 | diffs, reviews, threads, checks, ranges; exact and absent head repository names |
+| Provider/workflow contracts | 36 | diffs, reviews, threads, checks, ranges; exact and absent head repository names |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
 | Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **217** | no double counting |
+| **Total** | **229** | no double counting |
+
+Twelve committed-rule adapter cases cover precedence, stale-workspace isolation,
+absent-file isolation, missing objects, three malformed revisions, inherited Git
+selectors, symlinks, oversized blobs, oversized paths, and count/character batch
+bounds. The separate context SDD owns one canonical-head forwarding case, with
+no double counting. PR #460 supplied the live evidence: a native remember saved
+a branch rule, while ordinary comment reviews reported `rulesLoaded=0` until
+revision-pinned reads were introduced. Acceptance: after remember, a comment
+review must report the learned source for the current verified head without
+changing the checkout or falling back to another revision.
+
+For a canonical pull-request review, repository, path-specific, and learned rules
+are read from the same provider-verified head SHA as the diff. This includes
+reviews requested from ordinary PR comments whose workflow checkout is the
+default branch. Rule reads use local Git objects without changing the checkout,
+index, refs, or files; they do not fall back to rules from another revision.
+The checkout must contain that commit. The supplied workflows fetch complete
+history; for custom or local runners, fetch the verified commit before retrying.
+Git rule reads have fixed limits of 64 paths and 12,000 argument characters per
+batch, 2 MiB output and 30 seconds per command. Missing objects, invalid identities,
+oversized sources, and command failures stop the review before publication.
+Only regular file blobs are read, so committed file or directory symlinks are
+never followed. Issue-only contexts without a canonical PR retain workspace rule
+reads. These source limits are not configurable and do not change the prompt
+limits of 30,000 characters per rule and 100,000 combined characters.
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
 coverage and security/identity policy 100% for enumerated branches. Fakes replace

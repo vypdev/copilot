@@ -64,7 +64,7 @@ describe('Bugbot SCM port factory', () => {
     await ports.getReviewDiffSnapshot(7);
     await ports.getPullRequestHeadSha(7);
     await ports.getPullRequestReviewCommentBody(7, 99);
-    await ports.loadRules(['src/a.ts']);
+    await ports.loadRules(['src/a.ts'], 'a'.repeat(40));
 
     expect(lifecycle.getBugbotPullRequestIdentity).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
     expect(lifecycle.findOpenBugbotPullRequestsByExactHead).toHaveBeenCalledWith('base-owner', 'repo', 'fork-owner', 'feature', 'secret');
@@ -76,7 +76,7 @@ describe('Bugbot SCM port factory', () => {
     expect(pullRequests.getPullRequestReviewCommentBody).toHaveBeenCalledWith(
       'base-owner', 'repo', 7, 99, 'secret',
     );
-    expect(rules.loadRules).toHaveBeenCalledWith(['src/a.ts']);
+    expect(rules.loadRules).toHaveBeenCalledWith(['src/a.ts'], 'a'.repeat(40));
 
     await scm.publication.issueComments.addComment(11, 'body');
     await scm.publication.issueComments.updateComment(11, 21, 'updated', { commitSha: 'head' });

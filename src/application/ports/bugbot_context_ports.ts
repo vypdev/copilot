@@ -33,7 +33,7 @@ export interface BoundBugbotContextReadPorts {
         pullRequestNumber: number,
         commentId: number,
     ): Promise<string | null>;
-    loadRules(paths: readonly string[]): ReturnType<BugbotRuleFileQueryPort['loadRules']>;
+    loadRules(paths: readonly string[], revision?: string): ReturnType<BugbotRuleFileQueryPort['loadRules']>;
 }
 
 /** Repository-bound, credential-free context reads exposed to Bugbot use cases. */
