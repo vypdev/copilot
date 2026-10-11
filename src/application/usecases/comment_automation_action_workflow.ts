@@ -7,6 +7,8 @@ import { commitUserRequestIfSuccessful } from "./steps/commit/bugbot/commit_user
 import { logInfo } from "../ports/logging_ports";
 import { ApplicationError, toApplicationError } from "../errors/application_error";
 
+import { resolveCommentMutationBranch } from './comment_mutation_target_workflow';
+
 export type CommentAutomationAction = "autofix" | "do-user-request" | "review" | "think";
 
 /** Runs the selected mutating action and returns any result records it produces. */
@@ -112,14 +114,26 @@ async function runDoUserRequestAction(
   intentPayload: BugbotFixIntentPayload | undefined,
 ): Promise<Result[]> {
   if (!intentPayload) return [];
+  let branchOverride: string;
+  try {
+    branchOverride = await resolveCommentMutationBranch(param, options);
+    if (!branchOverride || (intentPayload.branchOverride && intentPayload.branchOverride !== branchOverride)) {
+      throw new ApplicationError('workflow.stale', 'Implementation requires the exact current conversation branch.');
+    }
+  } catch (error) {
+    return [new Result({
+      id: `${options.taskId}.Implementation`, success: false, executed: false,
+      errors: [toApplicationError(error, 'provider.unavailable', 'The implementation branch could not be verified.')],
+    })];
+  }
   logInfo("Running do user request.");
   const doResults = await options.doUserRequestUseCase.invoke({
     userComment: intentPayload.requestText?.trim() || param.userComment,
-    branchOverride: intentPayload.branchOverride,
+    branchOverride,
   });
   const commitResults = await commitUserRequestIfSuccessful(
     param.bugbot.commit,
-    intentPayload.branchOverride,
+    branchOverride,
     doResults,
     options.bugbotGitMutationPort,
   );

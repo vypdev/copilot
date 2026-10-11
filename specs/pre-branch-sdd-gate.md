@@ -547,7 +547,7 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **80 distinct cases** are a floor derived from eligibility,
+The following **92 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -565,7 +565,8 @@ ownership/validation.
 | Owner preservation and publication replay | 5 | Original contract and fenced examples, appendix bound, combined bound, real Git publication of narrower output, retry after the third clarification round |
 | Canonical owner line endings | 1 | CRLF scratch checkout preserves the exact committed owner prefix and verified publication |
 | Native branch-to-PR linkage transition | 7 | Exact live same-repository head; closed, fork, wrong branch, stale SHA, deleted ref and invalid SHA rejected |
-| **Total** | **80** | No case counted twice |
+| Bounded draft generation and recovery | 12 | Three action-specific schema boundaries, one safe regeneration, one exhausted size repair, three malformed outputs, one provider failure, two validation/freshness integration routes and one closed localized recovery presentation |
+| **Total** | **92** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -707,3 +708,25 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 When GitHub opens a PR for an issue-linked branch, it removes the direct branch connection and retains the native issue-to-PR connection. Readiness MUST preserve this evidence only for an open PR associated with the exact issue, from the same repository, whose exact head name and full commit SHA match the current remote ref. The bounded query reads at most 100 direct linked branches and 100 native associated PRs; no repository-wide search, branch-name inference, PR-body parsing or configurable expansion is permitted. A closed PR, fork, stale head or missing remote ref never proves readiness. Live evidence: issue #453 and PR #460 on 2026-10-10. Primary source: [GitHub branch-to-issue behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue).
 
 Automated SDD extension reads the existing owner from the selected immutable Git commit after checking the scratch file boundary. Checkout line-ending conversion cannot change the retained contract or introduce mixed line endings. A real Git fixture with core.autocrlf=true exercises validation, publication, and first-commit verification.
+
+
+### Live draft size recovery (2026-10-11)
+
+The answered doctor issue #461 failed because the update writer allowed 18,000
+characters while the agent schema allowed 70,000. Draft schemas MUST share the
+immutable domain limits: 1,800 minimum, 18,000 update maximum, 70,000
+companion/new maximum. An oversized structured response may be regenerated once
+for the same owner and answered plan, without echoing its untrusted contents.
+It must retain requirements, architecture, numeric tests, documentation and
+acceptance; no truncation, automatic owner change or skipped clarification.
+
+The regenerated document passes every existing workspace, catalog, owner,
+combined-size and freshness validation before any branch/publication. Provider
+failures and malformed output are not size retries. A second oversized response
+blocks with a closed localized recovery explaining proportional/companion
+preparation and retained answers/SDDs. No new configuration flag.
+
+Flow: analysis and required answers -> bounded draft -> optional single size
+regeneration -> unchanged validation/freshness -> publication, or blocked.
+Acceptance: the provider schema for an update has maxLength 18000; two oversized
+responses publish no draft; a base change after regeneration remains blocked.

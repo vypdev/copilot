@@ -20,6 +20,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
+        english: 'Existing answers and published SDDs were preserved; no draft was published.',
+        spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+    },
+    {
         recovery: { id: 'branch-sync-agent-disabled', variables: { command: '/copilot sync-branch' } },
         english: 'No synchronization commit was pushed; remote branches were preserved.',
         spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',

@@ -356,10 +356,10 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
 | PR conversation context/runtime | 9 | Four live-head resolution cases including unavailable authority, two status branch cases, three specialist preparation cases |
 | PR status identity | 2 | Linked issue differs from PR; unlinked PR never invents an issue |
-| Conversation branch authority | 3 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn |
+| Conversation branch authority | 15 | Branchless implementation/fix intents stay read-only; ambiguous mutation rejected before spawn; twelve linked-issue/canonical-PR implementation, denied/foreign evidence, intent disagreement and exact prompt-target cases |
 | Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
 | Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
-| **Total** | **154** | no double counting |
+| **Total** | **166** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -467,3 +467,20 @@ English/non-English requests.
 Live status recovery for #459 uses the setup-resolved issue #453 rather than the PR number carried in an issue-comment payload. The target line names PR and linked issue separately; absent linkage does not fabricate an issue.
 
 Branchless help conversations remain on the read-only answer route regardless of classified mutation intent. A file-changing use case requires an authoritative branch before agent or Git execution. No changed paths after an admitted agent maps to agent.failed, preserving the distinction from a pre-spawn policy rejection.
+
+
+### Live implementation branch recovery (2026-10-11)
+
+Dogfooding issue #454 proved that an admitted, linked feature branch could reach
+the explicit implementation route while the issue-comment commit branch was
+empty. The implementation route MUST resolve the same authoritative conversation
+target used by persisted learned-rule commands: the exact issue-linked branch
+with a valid live SHA, or the exact current same-repository PR. A conflicting
+intent branch, missing/denied read, foreign PR or malformed evidence blocks the
+agent and commit. The selected branch MUST reach both implementation and commit,
+and be named in the agent prompt. A branchless conversation retains its existing
+read-only route. No configuration or authority grant changes.
+
+Acceptance: an authorized implement request on a verified linked issue runs on
+that exact ref despite an empty event commit branch; negative evidence invokes
+neither the agent nor commit. The twelve new cases belong only to this capability.

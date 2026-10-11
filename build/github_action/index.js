@@ -40539,6 +40539,11 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'sdd-draft-size-exceeded': Object.freeze({
+        impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
+        action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+    }),
     'branch-sync-agent-disabled': Object.freeze({
         impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
         action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
@@ -40586,6 +40591,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'sdd-draft-size-exceeded': Object.freeze({
+        impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
+        action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+    }),
     'branch-sync-agent-disabled': Object.freeze({
         impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
         action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
@@ -51867,6 +51877,7 @@ const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const comment_mutation_target_workflow_1 = __nccwpck_require__(81324);
 /** Runs the selected mutating action and returns any result records it produces. */
 async function runCommentAutomationAction(param, options, route, intentPayload) {
     if (route === "review")
@@ -51942,12 +51953,25 @@ function isSupersededReviewResult(result) {
 async function runDoUserRequestAction(param, options, intentPayload) {
     if (!intentPayload)
         return [];
+    let branchOverride;
+    try {
+        branchOverride = await (0, comment_mutation_target_workflow_1.resolveCommentMutationBranch)(param, options);
+        if (!branchOverride || (intentPayload.branchOverride && intentPayload.branchOverride !== branchOverride)) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'Implementation requires the exact current conversation branch.');
+        }
+    }
+    catch (error) {
+        return [new result_1.Result({
+                id: `${options.taskId}.Implementation`, success: false, executed: false,
+                errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The implementation branch could not be verified.')],
+            })];
+    }
     (0, logging_ports_1.logInfo)("Running do user request.");
     const doResults = await options.doUserRequestUseCase.invoke({
         userComment: intentPayload.requestText?.trim() || param.userComment,
-        branchOverride: intentPayload.branchOverride,
+        branchOverride,
     });
-    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, intentPayload.branchOverride, doResults, options.bugbotGitMutationPort);
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, branchOverride, doResults, options.bugbotGitMutationPort);
     return [...doResults, ...commitResults];
 }
 
@@ -51970,10 +51994,8 @@ const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 const branch_sync_comment_command_1 = __nccwpck_require__(4643);
 const application_error_1 = __nccwpck_require__(75999);
-const context_1 = __nccwpck_require__(14712);
-const bugbot_context_request_1 = __nccwpck_require__(98299);
-const git_object_id_1 = __nccwpck_require__(88623);
 const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const comment_mutation_target_workflow_1 = __nccwpck_require__(81324);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
@@ -52010,7 +52032,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     let targetBranch;
     let mutation;
     try {
-        targetBranch = await resolveRememberBranch(param, options);
+        targetBranch = await (0, comment_mutation_target_workflow_1.resolveCommentMutationBranch)(param, options);
         if (!targetBranch)
             throw new application_error_1.ApplicationError('workflow.invalid-event', 'Remembering a Bugbot rule requires an authoritative PR/branch target.');
         mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(options.bugbotGitMutationPort, {
@@ -52044,39 +52066,6 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     const committed = commitResults.at(-1);
     return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
             ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
-}
-async function resolveRememberBranch(param, options) {
-    const operation = param.bugbot.fixIntent;
-    if (!operation.target.isPullRequest) {
-        const branch = (param.status.branch || operation.target.headBranch).trim();
-        if (!branch)
-            return '';
-        if (!options.rememberBranchPorts)
-            throw new application_error_1.ApplicationError('configuration.unsupported', 'Canonical branch reads are unavailable for remember.');
-        const linked = await options.rememberBranchPorts.linkedBranches.getLinkedBranch(operation.target.issueNumber, branch);
-        if (linked?.name !== branch || !(0, git_object_id_1.canonicalGitObjectId)(linked.headSha)) {
-            throw new application_error_1.ApplicationError('workflow.stale', 'Remember requires a verified issue-linked branch.');
-        }
-        return branch;
-    }
-    const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(operation);
-    const selection = request.target.pullRequestSelection;
-    if (selection.kind !== 'event' || selection.number === undefined) {
-        throw new application_error_1.ApplicationError('workflow.invalid-event', 'Remember requires the exact pull-request conversation identity.');
-    }
-    if (!options.rememberBranchPorts) {
-        throw new application_error_1.ApplicationError('configuration.unsupported', 'Canonical pull-request reads are unavailable for remember.');
-    }
-    const candidate = await options.rememberBranchPorts.pullRequests.getPullRequest(selection.number);
-    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [candidate], 'event');
-    if (canonical.kind !== 'canonical') {
-        throw new application_error_1.ApplicationError('workflow.stale', 'Remember requires a verified current pull request.');
-    }
-    if (canonical.pullRequest.headRepositoryOwner.toLowerCase() !== operation.repository.owner.toLowerCase()
-        || canonical.pullRequest.headRepositoryName?.toLowerCase() !== operation.repository.name.toLowerCase()) {
-        throw new application_error_1.ApplicationError('workflow.invalid-event', 'Remember cannot push to a fork pull request.');
-    }
-    return canonical.pullRequest.headRef.trim();
 }
 function rememberFailure(error) {
     return new result_1.Result({
@@ -52472,6 +52461,54 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
                 errors: [semanticError],
             })];
     }
+}
+
+
+/***/ }),
+
+/***/ 81324:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveCommentMutationBranch = resolveCommentMutationBranch;
+const application_error_1 = __nccwpck_require__(75999);
+const git_object_id_1 = __nccwpck_require__(88623);
+const context_1 = __nccwpck_require__(14712);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+async function resolveCommentMutationBranch(param, options) {
+    const operation = param.bugbot.fixIntent;
+    if (!operation.target.isPullRequest) {
+        const branch = (param.status.branch || operation.target.headBranch).trim();
+        if (!branch)
+            return '';
+        if (!options.rememberBranchPorts)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'Canonical branch reads are unavailable for file-changing commands.');
+        const linked = await options.rememberBranchPorts.linkedBranches.getLinkedBranch(operation.target.issueNumber, branch);
+        if (linked?.name !== branch || !(0, git_object_id_1.canonicalGitObjectId)(linked.headSha)) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'File-changing commands require a verified issue-linked branch.');
+        }
+        return branch;
+    }
+    const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(operation);
+    const selection = request.target.pullRequestSelection;
+    if (selection.kind !== 'event' || selection.number === undefined) {
+        throw new application_error_1.ApplicationError('workflow.invalid-event', 'File-changing commands require the exact pull-request conversation identity.');
+    }
+    if (!options.rememberBranchPorts) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Canonical pull-request reads are unavailable for file-changing commands.');
+    }
+    const candidate = await options.rememberBranchPorts.pullRequests.getPullRequest(selection.number);
+    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [candidate], 'event');
+    if (canonical.kind !== 'canonical') {
+        throw new application_error_1.ApplicationError('workflow.stale', 'File-changing commands require a verified current pull request.');
+    }
+    if (canonical.pullRequest.headRepositoryOwner.toLowerCase() !== operation.repository.owner.toLowerCase()
+        || canonical.pullRequest.headRepositoryName?.toLowerCase() !== operation.repository.name.toLowerCase()) {
+        throw new application_error_1.ApplicationError('workflow.invalid-event', 'File-changing commands cannot push to a fork pull request.');
+    }
+    return canonical.pullRequest.headRef.trim();
 }
 
 
@@ -54456,6 +54493,45 @@ function unavailableStatus() {
 
 /***/ }),
 
+/***/ 93454:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.draftSddMarkdown = draftSddMarkdown;
+const application_error_1 = __nccwpck_require__(75999);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+/** A provider schema and one bounded size repair share the writer's immutable limits. */
+async function draftSddMarkdown(agent, configuration, plan, prompt) {
+    const maximum = plan.action === 'update' ? pre_branch_sdd_1.SDD_MAX_UPDATE_CHARACTERS : pre_branch_sdd_1.SDD_MAX_DRAFT_CHARACTERS;
+    const schema = {
+        type: 'object',
+        properties: { markdown: { type: 'string', minLength: pre_branch_sdd_1.SDD_MIN_DRAFT_CHARACTERS, maxLength: maximum } },
+        required: ['markdown'], additionalProperties: false,
+    };
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const value = await agent.query({
+            configuration, agentId: 'pre-branch-sdd-draft',
+            prompt: attempt === 0 ? prompt : `${prompt}\n\nThe previous response exceeded the ${maximum}-character draft limit. Regenerate a concise complete draft for this same owner and plan. Preserve all resolved requirements, architecture, numeric test budget, documentation and acceptance. Target at most ${Math.floor(maximum * 2 / 3)} characters. Do not change ownership or truncate a requirement. Return only the required JSON.`,
+            options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
+        });
+        if (!value || typeof value !== 'object' || Array.isArray(value)
+            || typeof value.markdown !== 'string') {
+            throw new application_error_1.ApplicationError('validation.invalid-input', 'The drafting agent returned no SDD Markdown.');
+        }
+        const markdown = value.markdown;
+        if (markdown.length <= maximum)
+            return markdown;
+    }
+    throw new application_error_1.ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {
+        recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
+    });
+}
+
+
+/***/ }),
+
 /***/ 29475:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54470,6 +54546,7 @@ const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const pre_branch_sdd_draft_workflow_1 = __nccwpck_require__(93454);
 const ANALYSIS_SCHEMA = {
     type: 'object',
     properties: {
@@ -54503,11 +54580,6 @@ const ANALYSIS_SCHEMA = {
     },
     required: ['action', 'path', 'capabilityId', 'reason', 'questions', 'newCapability'],
     additionalProperties: false,
-};
-const DRAFT_SCHEMA = {
-    type: 'object',
-    properties: { markdown: { type: 'string', minLength: 1800, maxLength: 70000 } },
-    required: ['markdown'], additionalProperties: false,
 };
 /** Two separate agent calls enforce that blockers are answered before any SDD draft exists. */
 class PreBranchSddGateUseCase {
@@ -54617,17 +54689,9 @@ class PreBranchSddGateUseCase {
             const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
             if (plan.action === 'update' && !currentSdd)
                 throw new Error('The catalogued SDD owner is missing from the selected base.');
-            const drafted = await this.agent.query({
-                configuration: context.agentConfiguration,
-                agentId: 'pre-branch-sdd-draft',
-                prompt: buildDraftPrompt(context, snapshot, plan, answers, currentSdd),
-                options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema: DRAFT_SCHEMA },
-            });
-            const draftValue = asRecord(drafted);
-            if (typeof draftValue.markdown !== 'string')
-                throw new Error('The drafting agent returned no SDD Markdown.');
+            const markdown = await (0, pre_branch_sdd_draft_workflow_1.draftSddMarkdown)(this.agent, context.agentConfiguration, plan, buildDraftPrompt(context, snapshot, plan, answers, currentSdd));
             const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
-            const prepared = await this.workspace.validateDraft(snapshot, plan, draftValue.markdown, newCapability);
+            const prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
             await this.assertFresh(context, snapshot.baseSha, sourceBranch);
             return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
         }
@@ -59588,7 +59652,7 @@ class DoUserRequestUseCase {
             projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
             owner: context.repository.owner,
             repo: context.repository.name,
-            headBranch: context.headBranch,
+            headBranch: targetBranch,
             baseBranch: context.baseBranch,
             issueNumber: String(context.issueNumber),
             userComment: (0, sanitize_user_comment_for_prompt_1.sanitizeUserCommentForPrompt)(userComment),
@@ -63890,6 +63954,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'bugbot-review-blocks-pending',
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
+    'sdd-draft-size-exceeded',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -64078,6 +64143,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
+    'sdd-draft-size-exceeded': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -76073,7 +76139,7 @@ function parsePositiveSafeInteger(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SDD_GATE_MARKER = void 0;
+exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
 exports.normalizeSddIssueTitle = normalizeSddIssueTitle;
 exports.isSafeSddPath = isSafeSddPath;
 exports.parseSddPlan = parseSddPlan;
@@ -76084,6 +76150,9 @@ exports.parseSddAnswer = parseSddAnswer;
 exports.validateSddMarkdown = validateSddMarkdown;
 exports.composeSddUpdate = composeSddUpdate;
 exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
+exports.SDD_MIN_DRAFT_CHARACTERS = 1800;
+exports.SDD_MAX_DRAFT_CHARACTERS = 70000;
+exports.SDD_MAX_UPDATE_CHARACTERS = 18000;
 const SDD_PATH = /^specs\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.md$/;
 const CAPABILITY_ID = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const SHA = /^[a-f0-9]{40}$/i;
@@ -76251,7 +76320,7 @@ function parseSddAnswer(body, questionId) {
     return text.length >= 3 && text.length <= 3000 ? text : undefined;
 }
 function validateSddMarkdown(markdown) {
-    if (markdown.length < 1800 || markdown.length > 70000)
+    if (markdown.length < exports.SDD_MIN_DRAFT_CHARACTERS || markdown.length > exports.SDD_MAX_DRAFT_CHARACTERS)
         throw new Error('The SDD draft length is outside the supported range.');
     for (const heading of ['## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance']) {
         if (!markdown.includes(heading))
@@ -76265,7 +76334,7 @@ function validateSddMarkdown(markdown) {
 function composeSddUpdate(existing, change) {
     validateSddMarkdown(existing);
     validateSddMarkdown(change);
-    if (change.length > 18000)
+    if (change.length > exports.SDD_MAX_UPDATE_CHARACTERS)
         throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
     let fence;
     const appendix = change.split('\n').map(line => {

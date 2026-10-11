@@ -24,6 +24,7 @@ import {
 import { getVisibleIssueDescription } from '../../policies/recommendation_policy';
 import { logError } from '../../ports/logging_ports';
 import { toApplicationError } from '../../errors/application_error';
+import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
 
 export interface PreBranchSddContext {
   readonly issueNumber: number;
@@ -78,12 +79,6 @@ const ANALYSIS_SCHEMA = {
   },
   required: ['action', 'path', 'capabilityId', 'reason', 'questions', 'newCapability'],
   additionalProperties: false,
-} as const;
-
-const DRAFT_SCHEMA = {
-  type: 'object',
-  properties: { markdown: { type: 'string', minLength: 1800, maxLength: 70000 } },
-  required: ['markdown'], additionalProperties: false,
 } as const;
 
 /** Two separate agent calls enforce that blockers are answered before any SDD draft exists. */
@@ -199,16 +194,10 @@ export class PreBranchSddGateUseCase {
 
       const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
       if (plan.action === 'update' && !currentSdd) throw new Error('The catalogued SDD owner is missing from the selected base.');
-      const drafted = await this.agent.query({
-        configuration: context.agentConfiguration,
-        agentId: 'pre-branch-sdd-draft',
-        prompt: buildDraftPrompt(context, snapshot, plan, answers, currentSdd),
-        options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema: DRAFT_SCHEMA as unknown as Record<string, unknown> },
-      });
-      const draftValue = asRecord(drafted);
-      if (typeof draftValue.markdown !== 'string') throw new Error('The drafting agent returned no SDD Markdown.');
+      const markdown = await draftSddMarkdown(this.agent, context.agentConfiguration, plan,
+        buildDraftPrompt(context, snapshot, plan, answers, currentSdd));
       const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
-      const prepared = await this.workspace.validateDraft(snapshot, plan, draftValue.markdown, newCapability);
+      const prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
       await this.assertFresh(context, snapshot.baseSha, sourceBranch);
       return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
     } catch (error) {

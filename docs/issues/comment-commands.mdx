@@ -77,6 +77,11 @@ they operate on:
 - `/copilot sync-branch` merges the parent into the working branch and pushes
   the result unless `--dry-run` was supplied.
 
+An implementation request in an issue uses its verified linked branch, even
+when the comment event has no commit branch. In a PR conversation it uses the
+exact current PR head in this repository. Missing or conflicting branch
+evidence stops implementation before the agent runs.
+
 The agent runtime does not retain a session between runs. Repository changes
 that are committed and pushed, plus finding/review state stored by GitHub, are
 the durable record. A prepared but uncommitted workspace is not durable.

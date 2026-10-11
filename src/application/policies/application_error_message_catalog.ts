@@ -196,6 +196,11 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'sdd-draft-size-exceeded': Object.freeze({
+    impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
+    action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+  }),
   'branch-sync-agent-disabled': Object.freeze({
     impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
     action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
@@ -244,6 +249,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'sdd-draft-size-exceeded': Object.freeze({
+    impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
+    action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
   'branch-sync-agent-disabled': Object.freeze({
     impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
     action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',

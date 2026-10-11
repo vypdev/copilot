@@ -70,7 +70,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             owner: context.repository.owner,
             repo: context.repository.name,
-            headBranch: context.headBranch,
+            headBranch: targetBranch,
             baseBranch: context.baseBranch,
             issueNumber: String(context.issueNumber),
             userComment: sanitizeUserCommentForPrompt(userComment),

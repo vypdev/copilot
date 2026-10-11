@@ -63,6 +63,31 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('validates a regenerated bounded draft before any publication', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
+      .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) })
+      .mockResolvedValueOnce({ markdown: '# Regenerated draft' });
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('drafted');
+    expect(h.query).toHaveBeenCalledTimes(3);
+    expect(h.validateDraft).toHaveBeenCalledTimes(1);
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, plan, '# Regenerated draft', undefined);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('rejects a changed base after size repair without publishing the regenerated draft', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null })
+      .mockResolvedValueOnce({ markdown: 'x'.repeat(18001) })
+      .mockResolvedValueOnce({ markdown: '# Regenerated draft' });
+    h.loadSnapshot.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ ...snapshot, baseSha: 'c'.repeat(40) });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.validateDraft).toHaveBeenCalledTimes(1);
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.addComment).not.toHaveBeenCalled();
+  });
+
   it('retries a pending publication without consuming another clarification round or changing the owner', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });

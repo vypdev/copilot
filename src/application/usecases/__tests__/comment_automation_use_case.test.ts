@@ -698,12 +698,16 @@ describe("runCommentAutomation", () => {
     })]) };
     const mutation = { invoke: jest.fn().mockResolvedValue([]) };
     const results = await runCommentAutomation(
-      { actor: 'actor', tokenUser: 'vypbot', isPullRequest: true, tokens: { token: 't' } } as Execution,
+      { actor: 'actor', tokenUser: 'vypbot', isPullRequest: true, tokens: { token: 't' }, pullRequest: { number: 77, head: 'feature/42-managed' } } as Execution,
       {
         taskId: 'CommentAutomation',
         languageUseCase: { taskId: 'language', invoke: request => workflow.invoke({ ...request, taskId: 'language' }) },
         intentUseCase: intent as never, thinkUseCase: { invoke: jest.fn() } as never,
         autofixUseCase: {} as never, doUserRequestUseCase: mutation as never,
+        rememberBranchPorts: { pullRequests: { getPullRequest: jest.fn().mockResolvedValue({
+          number: 77, state: 'open', draft: false, baseRepository: { owner: 'o', name: 'r' },
+          headRepositoryOwner: 'o', headRepositoryName: 'r', headRef: 'feature/42-managed', headSha: 'a'.repeat(40),
+        }) } } as never,
         userComment: '@vypbot añade una prueba',
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
@@ -728,7 +732,7 @@ describe("runCommentAutomation", () => {
     };
 
     const results = await runCommentAutomation(
-      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' }, issueNumber: 42, issue: { number: 42 }, commit: { branch: 'feature/42-managed' } } as Execution,
       {
         taskId: 'CommentAutomation',
         languageUseCase: { invoke: jest.fn().mockResolvedValue([]) } as never,
@@ -736,6 +740,7 @@ describe("runCommentAutomation", () => {
         thinkUseCase: { invoke: jest.fn() } as never,
         autofixUseCase: {} as never,
         doUserRequestUseCase: doUserRequest as never,
+        rememberBranchPorts: { linkedBranches: { getLinkedBranch: jest.fn().mockResolvedValue({ name: 'feature/42-managed', headSha: 'a'.repeat(40) }) } } as never,
         userComment: '/copilot implement add a regression test',
         bugbotGitMutationPort: {} as never,
       },

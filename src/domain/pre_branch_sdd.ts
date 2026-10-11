@@ -40,6 +40,9 @@ export interface SddGateRecord {
 }
 
 export const SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
+export const SDD_MIN_DRAFT_CHARACTERS = 1800;
+export const SDD_MAX_DRAFT_CHARACTERS = 70_000;
+export const SDD_MAX_UPDATE_CHARACTERS = 18_000;
 const SDD_PATH = /^specs\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.md$/;
 const CAPABILITY_ID = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const SHA = /^[a-f0-9]{40}$/i;
@@ -201,7 +204,7 @@ export function parseSddAnswer(body: string, questionId: string): string | undef
 }
 
 export function validateSddMarkdown(markdown: string): void {
-  if (markdown.length < 1800 || markdown.length > 70_000) throw new Error('The SDD draft length is outside the supported range.');
+  if (markdown.length < SDD_MIN_DRAFT_CHARACTERS || markdown.length > SDD_MAX_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
   for (const heading of ['## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance']) {
     if (!markdown.includes(heading)) throw new Error(`The SDD draft is missing ${heading}.`);
   }
@@ -214,7 +217,7 @@ export function validateSddMarkdown(markdown: string): void {
 export function composeSddUpdate(existing: string, change: string): string {
   validateSddMarkdown(existing);
   validateSddMarkdown(change);
-  if (change.length > 18_000) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+  if (change.length > SDD_MAX_UPDATE_CHARACTERS) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
   let fence: string | undefined;
   const appendix = change.split('\n').map(line => {
     const boundary = line.match(/^\s*(`{3,}|~{3,})/);

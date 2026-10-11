@@ -53,3 +53,13 @@ See [Branch management](/issues/branch-management) for the standard flow and [Sp
 Opening a PR replaces GitHub's direct issue-to-branch connection with its issue-to-PR connection. Copilot retains branch readiness by verifying that the associated open PR belongs to this repository and its exact head name and commit still match the live remote branch. Closed PRs, forks and missing or stale heads cannot establish readiness.
 
 Automatic updates retain the owning SDD from its original Git commit, including when Windows converts checkout line endings.
+
+
+### Draft size recovery
+
+Copilot limits proposed update appendices to 18,000 characters and complete new
+or companion specifications to 70,000. If a generated draft exceeds its limit,
+it tries one concise regeneration for the same owner and answers. All validation
+and freshness checks still apply. If the draft remains oversized, no draft is
+published; existing answers and SDDs are retained. Retry with a proportional
+change or an approved companion specification.
