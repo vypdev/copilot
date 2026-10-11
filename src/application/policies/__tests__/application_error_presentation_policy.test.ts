@@ -20,6 +20,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'branch-sync-resolution-invalid', variables: { validationCode: 'sdd-catalog-invalid', command: '/copilot sync-branch' } },
+        english: 'No synchronization commit was pushed; remote branches were preserved.',
+        spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    },
+    {
         recovery: { id: 'sdd-draft-format-invalid', variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published.',
         spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',

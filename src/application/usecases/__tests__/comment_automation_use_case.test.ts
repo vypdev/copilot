@@ -681,10 +681,10 @@ describe("runCommentAutomation", () => {
     expect(think.invoke).not.toHaveBeenCalled();
   });
 
-  it('stops an expanded translated command before intent, answer, or mutation', async () => {
+  it('stops a translated command exceeding the character limit before intent, answer, or mutation', async () => {
     const workflow = new CommentLanguageTranslationWorkflow({ query: jest.fn().mockResolvedValue({
       status: 'translated', sourceLocale: 'es', targetLocale: 'en-US',
-      adaptedText: 'word '.repeat(21).trim(), reasonCode: 'none',
+      adaptedText: 'word '.repeat(410).trim(), reasonCode: 'none',
     }) });
     const intent = { invoke: jest.fn() };
     const think = { invoke: jest.fn() };

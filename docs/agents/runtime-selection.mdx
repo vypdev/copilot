@@ -35,6 +35,14 @@ module cache. Required Windows machine facts and the configured Jest worker
 recycling flag are preserved; operator profile paths and authentication-store
 references remain excluded.
 
+On Windows, that verification home must also pass the existing private-directory
+and ancestor permission checks before it is used. Verification commands receive
+`TMP`, `TEMP`, `TMPDIR` and `RUNNER_TEMP` pointing to a private subdirectory of
+their temporary home. This keeps nested fixtures and installers in the same
+protected scope. The Action can fall back to a safe profile-local parent; it
+blocks execution when no safe parent is available and never changes host
+directory permissions.
+
 The parent process and child shells also use an explicit PowerShell module-cache
 filename inside that private runtime directory. Ambient cache locations cannot
 redirect it into the checkout. Agent failures retain their specific timeout,
@@ -43,3 +51,18 @@ cancellation, policy or execution code in the conversation reply. The agent's
 timed-out implementation.
 
 There is no runtime registry or provider fallback. The exhaustive dispatcher recognizes exactly these three values and rejects every other value before spawn.
+
+Codex invocations explicitly select the Windows `elevated` sandbox while ignoring
+operator configuration. This selects a sandbox backend; commands still receive
+only the capability's read-only or workspace-write scope, with approvals disabled
+and network access denied. The runner owner must provision that backend before
+unattended use. A missing backend remains a failure, and Copilot does not run a
+sandbox setup command or select full access as recovery. Consult the
+[official Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+for administrator provisioning and managed restrictions.
+
+The native shell hash fixtures explicitly load the system Utility and Management
+manifests, because the hash script depends on Management commands. They retain
+private profiles, disabled module discovery and their bounded startup deadline.
+A missing command in those fixtures is separate from a real Codex sandbox setup
+failure; neither a probe job nor a fixture proves successful agent editing.

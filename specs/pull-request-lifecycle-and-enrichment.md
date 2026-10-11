@@ -399,8 +399,8 @@ not altered.
 | Workflow/config contracts | 17 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
-| Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **135** | no double counting |
+| Complete diff evidence | 9 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
+| **Total** | **138** | no double counting |
 
 Seven draft-to-ready regression cases cover authorized and unauthorized review,
 semantic failure, reviewer-only activation, activity availability, reviewing
@@ -491,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 135-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 138-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
@@ -541,3 +541,29 @@ PR events retain their event-head correlation. Twelve pure-policy cases and
 two completion/token-binding cases cover this contract, owned by this SDD.
 Live discovery: recheck 38104992977 verified PR #460/head 7be27aa but produced
 no Check because completion only read the webhook head.
+
+### Dogfooding correction: optional description context limits (2026-10-11)
+
+PR #465 retained all patches, but its raw GitHub patch inventory alone exceeded
+120,000 characters. The automatic description guard rejected it before a model
+call and misleadingly reported a provider contract error, while the human body
+remained intact. Fixed evidence limits and complete-patch requirements remain
+unchanged.
+
+```text
+read complete diff -> empty: skip and retain body
+                   -> within limits: existing generation path
+                   -> beyond limits + automatic: skip and retain body
+                   -> beyond limits + explicit: workflow evidence rejection
+read incomplete/missing patch -> workflow evidence rejection, retain body
+```
+
+A skipped automatic optional operation has no application error and is not
+reported as completed generation. An explicit over-budget request reports the
+existing localized workflow-stale category and directs the maintainer to reduce
+scope. Incomplete required evidence still fails closed. No partial patches are
+sent to a model, no evidence limits increase, and no body is overwritten.
+Three new cases cover explicit character/file budget refusal and empty automatic
+diffs; the existing automatic boundary cases now verify absence of provider
+errors and writes. Live acceptance awaits default-runtime publication and a new
+PR lifecycle execution; offline checks cannot establish live completion.

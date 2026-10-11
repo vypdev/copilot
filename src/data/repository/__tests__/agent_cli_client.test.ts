@@ -169,6 +169,16 @@ describe('AgentCliClient admitted process execution', () => {
         expect(JSON.stringify(observe.mock.calls)).not.toMatch(/secret prompt|secret-model|secret-key|OPENAI_API_KEY/);
     });
 
+    it('propagates the bounded empty-output cause through a real child without retaining the request or provider bytes', async () => {
+        const observe = jest.fn();
+        await expect(client(plan('process.stdout.write("   ")'), { observe }).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'fixer', prompt: 'PRIVATE_PROMPT', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'output', outputDiagnostic: 'empty-output' });
+        expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({ state: 'failed', phase: 'run',
+            semanticCode: 'provider.contract-invalid', outputDiagnostic: 'empty-output' }));
+        expect(JSON.stringify(observe.mock.calls)).not.toContain('PRIVATE_PROMPT');
+    });
+
     it('emits semantic preflight and run failures and ignores observer failures', async () => {
         const observe = jest.fn();
         const request = {
@@ -264,13 +274,13 @@ describe('AgentCliClient admitted process execution', () => {
         })).rejects.toMatchObject({ category: 'process' });
         await expect(client(plan('process.stdout.write("   ")')).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
-        })).rejects.toMatchObject({ category: 'output' });
+        })).rejects.toMatchObject({ category: 'output', outputDiagnostic: 'empty-output' });
         await expect(client(plan('process.stderr.write("large")', { maxOutputBytes: 4 })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
-        })).rejects.toMatchObject({ category: 'output' });
+        })).rejects.toMatchObject({ category: 'output', outputDiagnostic: 'output-limit' });
         await expect(client(plan('process.stdout.write("large")', { maxOutputBytes: 4 })).execute({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'p', timeoutMs: 5_000,
-        })).rejects.toMatchObject({ category: 'output' });
+        })).rejects.toMatchObject({ category: 'output', outputDiagnostic: 'output-limit' });
     }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('suppresses stderr and marks only the designated provider exit as retryable', async () => {

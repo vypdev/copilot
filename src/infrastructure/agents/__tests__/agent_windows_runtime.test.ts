@@ -22,6 +22,29 @@ import {
 
 const windowsIt = process.platform === 'win32' ? it : it.skip;
 
+windowsIt('preflights a private agent replacement inside the isolated verification profile and temp directory', () => {
+    const runtime = prepareUntrustedCommandEnvironment(process.env);
+    const keys = ['HOME', 'USERPROFILE', 'TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP'] as const;
+    const original = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+    let installRoot: string | undefined;
+    try {
+        for (const key of keys) process.env[key] = runtime.environment[key];
+        installRoot = createPrivateAgentInstallRoot();
+        expect(installRoot.startsWith(runtime.environment.RUNNER_TEMP)).toBe(true);
+        const executable = join(installRoot, 'dummy.exe');
+        writeFileSync(executable, 'local verification fixture');
+        expect(securePrivateInstalledAgent(installRoot, executable)).toBe(executable);
+        expect(() => verifyWindowsAgentExecutableAcl(executable)).not.toThrow();
+    } finally {
+        if (installRoot) rmSync(installRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        for (const key of keys) {
+            if (original[key] === undefined) delete process.env[key];
+            else process.env[key] = original[key];
+        }
+        runtime.cleanup();
+    }
+}, 90_000);
+
 windowsIt('runs exact Windows system-root validation and PowerShell under the verification environment without dirtying the checkout', () => {
     const root = mkdtempSync(join(tmpdir(), 'copilot-verify-windows-cache-'));
     const environment = prepareUntrustedCommandEnvironment(process.env);
@@ -439,7 +462,7 @@ describe('isolated Windows agent runtime', () => {
     }, 30_000);
 
     windowsIt.each([true, false])('starts PowerShell from the actual private shell policy with host app data present=%s and leaves the checkout clean', async hostDataPresent => {
-        const command = "$ErrorActionPreference='Stop'; Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Write-Output 'ready'";
+        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Management','Microsoft.PowerShell.Management.psd1')) -ErrorAction Stop; Get-FileHash -Algorithm SHA256 -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Write-Output 'ready'";
         const source = `if(process.argv.includes('--version')){process.stdout.write('codex-cli 0.156.1')}else{
             const {spawnSync}=require('node:child_process');const {join}=require('node:path');
             const args=process.argv;const setting=args.find(x=>x.startsWith('shell_environment_policy.include_only='));
@@ -447,7 +470,7 @@ describe('isolated Windows agent runtime', () => {
             for(const key of keys){if(process.env[key]!==undefined)env[key]=process.env[key]}
             for(const key of ['APPDATA','LOCALAPPDATA','PSModuleAnalysisCachePath']){const value=args.find(x=>x.startsWith('shell_environment_policy.set.'+key+'='));env[key]=JSON.parse(value.slice(value.indexOf('=')+1))}
             const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env,encoding:'utf8',timeout:15000,windowsHide:true});
-            if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
+            if(result.status!==0){process.stdout.write(result.error?.code==='ETIMEDOUT'?'fixture-shell-timeout':/CommandNotFoundException/.test(result.stderr)?'fixture-command-not-found':'fixture-shell-failed')}else{process.stdout.write(result.stdout.trim())}process.stdin.resume();
         }`;
         const fixture = fakeRuntime(source);
         try {
@@ -470,12 +493,12 @@ describe('isolated Windows agent runtime', () => {
     }, 60_000);
 
     windowsIt('starts native PowerShell before applying the shell policy with a private parent cache and clean checkout', async () => {
-        const command = "$ErrorActionPreference='Stop'; if (-not [IO.Path]::IsPathRooted($env:PSModuleAnalysisCachePath)) { throw 'Unbounded module cache' }; Get-Command Get-FileHash -ErrorAction Stop | Out-Null; Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Write-Output 'ready'";
+        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Management','Microsoft.PowerShell.Management.psd1')) -ErrorAction Stop; if (-not [IO.Path]::IsPathRooted($env:PSModuleAnalysisCachePath)) { throw 'Unbounded module cache' }; Get-Command Get-FileHash -ErrorAction Stop | Out-Null; Get-FileHash -Algorithm SHA256 -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Write-Output 'ready'";
         const source = `if(process.argv.includes('--version')){process.stdout.write('codex-cli 0.156.1')}else{
             const {spawnSync}=require('node:child_process');const {join}=require('node:path');
             if(!process.env.PSModuleAnalysisCachePath.includes('copilot-agent-runtime-'))process.exit(3);
             const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env:process.env,encoding:'utf8',timeout:15000,windowsHide:true});
-            if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
+            if(result.status!==0){process.stdout.write(result.error?.code==='ETIMEDOUT'?'fixture-shell-timeout':/CommandNotFoundException/.test(result.stderr)?'fixture-command-not-found':'fixture-shell-failed')}else{process.stdout.write(result.stdout.trim())}process.stdin.resume();
         }`;
         const fixture = fakeRuntime(source);
         try {
