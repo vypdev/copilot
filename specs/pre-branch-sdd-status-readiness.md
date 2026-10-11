@@ -308,19 +308,19 @@ No schema or configuration migration is introduced. Existing gate records remain
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **181 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
+Minimum: **195 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Existing basic status presentation | 30 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
 | Issue identity | 8 | Canonical visible body/title normalization, profile, kind, issue number and original base digest |
-| Owned card selection | 16 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
-| Authority/application/fences | 60 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes |
+| Owned card selection | 28 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
+| Authority/application/fences | 62 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes |
 | Closed projection/UX | 60 | Canonical requirement/configuration, eight evidence outcomes, explicitly historical first publication during a pending revision and alongside a different verified revision, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
 | Native linked ref adapter | 4 | Stale/deleted refs, foreign/missing repository identity; none may fall back to another PR |
 | Immutable workspace reads | 2 | Read the original catalog without checkout/current-file mutation; reject non-SHA identifiers |
 | Read-only composition | 1 | Repository-bound live publication query and current maintainer authorization without mutation capability |
-| **Total** | **181** | No case counted twice |
+| **Total** | **195** | No case counted twice |
 
 
 Maintain repository-wide thresholds. New pure readiness policy should meet at least 95% branch coverage; changed status modules should meet existing module thresholds, with a target of 90% branches and 95% lines/statements. Use deterministic records, clocks, provider fakes, and publication proofs; no sleeps or live services. Parse catalog structures and gate records rather than grep prose. UI fixtures require semantic assertions beyond snapshots. Manual acceptance confirms the section is readable on mobile and desktop and preserves the existing status ordering.
@@ -368,7 +368,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 2. Define typed readiness result and semantic read/verification ports; add pure policy tests for ownership, identity, pending IDs, and state mapping.
 3. Integrate read-only orchestration into status while retaining the original snapshot on retrieval errors.
 4. Add catalog messages and compact rendering for all states; ensure no timeline-card path is invoked.
-5. Add adapter, integration, localization, security, and compatibility tests within the 181-case implementation budget.
+5. Add adapter, integration, localization, security, and compatibility tests within the 195-case implementation budget.
 6. Update command/operator documentation and contract examples.
 7. Run specification, architecture, catalog, and repository validation required by the existing project workflow.
 
@@ -378,7 +378,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 - [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
 - [x] English and Spanish catalogs cover the readiness section.
 - [x] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [x] All 181 distinct extension cases, full coverage budgets and generated bundles pass before publication.
+- [x] All 195 distinct extension cases, full coverage budgets and generated bundles pass before publication.
 - [x] User documentation explains the evidence limit and fail-closed behavior.
 - [x] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
 - [x] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
@@ -462,3 +462,34 @@ Attempt 2 re-read the same implementation head `14a539a09b9a8e03ce5f8b08116417db
 ### Reconciled case-count evidence
 
 Native finding `4243268247` identified that the initial 141-case verification paragraph could be read as the current implemented total. The evidence now labels that historical baseline explicitly and accounts for all later increments: 141 + 8 + 21 + 11 = 181 distinct extension cases. This documentation correction introduces no new test or runtime behavior and preserves the separate pending live-acceptance gate.
+
+### Complete card-body loss and current authority budget
+
+Native finding `4243323229` exposed fallback to an older record when a newer
+bot-owned SDD card lost both its metadata marker and heading. Selection now
+retains unidentified owned comments as potential damaged cards and orders them
+by stable native comment ID before parsing their body. A newer unknown, empty
+or null body blocks older readiness. Unsafe native IDs and ambiguous duplicate
+bodies cannot be excluded as another product surface; the original safe-ID
+and latest-ID contradiction guards remain intact. A failed final selection
+fence drops all publication proof.
+
+The reader excludes only one canonical header for a different, typed product
+publication (status, reply or transition), belonging to the exact same issue
+and containing no SDD metadata or heading anywhere. Quoted, foreign-target,
+multiple or malformed headers cannot hide unknown ownership. This conservative
+rule may withhold readiness for an unclassified bot message; a maintainer must
+inspect and reconcile the damaged conversation. It adds no stored registry,
+mutable identity hint, mutation capability, model call or authorization bypass.
+An unclassified bot answer still cannot satisfy a blocking question and now
+invalidates ambiguous ownership rather than exposing an older pending view.
+
+Twelve new pure authority cases cover full identifier loss, three other
+canonical surfaces, foreign/quoted identities, duplicate native-ID ambiguity,
+embedded SDD corruption and a newer valid replacement. Two application cases
+cover initial selection and final-fence loss. The current extension budget is
+181 + 12 + 2 = 195, distributed in section 14. The historical 30 presentation
+cases remain a subset of this total; the gate's own budget is separate. Live
+command acceptance remains pending promotion.
+
+Full local validation of this correction passed 570 suites, 7,608 tests and 35 existing platform skips (7,643 total). The card selection policy has 100% statement/branch/function coverage and the evidence reader has 96.97% statements, 97.44% branches and 100% functions; all existing coverage budgets passed. Typecheck, lint, specification and documentation validation passed. Fresh native review and live command acceptance remain independent gates.

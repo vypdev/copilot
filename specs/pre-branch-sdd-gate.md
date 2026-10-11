@@ -718,7 +718,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 
 ## Proposed status readiness extension
 
-The read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its original 30 rendering/localization regression cases are included in the companion's distinct extension budget, separate from the gate's acceptance budget above. The managed implementation reads the latest owned gate record, verifies immutable catalog ownership and remote publication, and fences current issue/card/branch evidence. Live command acceptance and promotion remain pending; local implementation evidence alone does not certify them.
+The read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its authoritative current extension minimum is 195 distinct cases, including the original 30 rendering/localization cases as a subset. This is separate from the owning gate's current 149-case budget above. The managed implementation reads the latest owned gate record, verifies immutable catalog ownership and remote publication, and fences current issue/card/branch evidence. Live command acceptance and promotion remain pending; local implementation evidence alone does not certify them.
 
 ### 1. Executive summary
 
@@ -757,19 +757,17 @@ Eligibility is derived from existing issue classification and pre-branch gate po
 
 ### 14. Testing strategy and numeric budget
 
-The extension has a minimum budget of **30 distinct cases**, comprising the reviewed companion proposal's 28 cases and two additional revision cases below. This budget is separate from the existing owning gate's 80-case minimum, which remains intact.
+The companion's section 14 is the single authoritative distribution for the
+current **195 distinct status-extension cases**. The initial 30-case proposal
+(28 baseline and two revision cases) is a historical subset, not an alternative
+acceptance threshold. The owning gate retains its separate current 149-case
+budget. Neither suite recounts the other's existing cases.
 
-| Area | Minimum distinct cases | Behaviors/risks covered |
-|---|---:|---|
-| Classification and evidence policy | 6 | Required/exempt, pending answers, first publication, ready, revision pending, invalid evidence |
-| State, replay, and existing snapshot compatibility | 5 | Latest record, stale/foreign record, unchanged status fields, bounded question IDs, no timeline duplication |
-| Read ports and provider evidence | 5 | Read failures, ownership, identity/digest, safe path, exact branch and commit proof |
-| Localization and presentation | 6 | Complete en-US/es messages, fallback, links, statuses, field order, sanitization |
-| Integration, security, and read-only behavior | 6 | No writes, help branchless, malformed records, commit ancestry/path checks, lifecycle and counts preserved |
-| Revision-specific acceptance | 2 | Historical first SHA with pending changed revision; invalid/incomplete latest revision never falls back to ready |
-| **Total** | **30** | No case counted twice |
-
-Retain repository-wide thresholds and existing gate coverage requirements. New pure classification policy SHOULD receive at least 95% branch coverage; changed status paths SHOULD meet 95% lines/statements and 90% branches/functions in the dedicated gate. Use deterministic provider/Git fakes and no live services or real waits. Assert rendered semantics as well as fixtures. Manual review confirms readability on desktop and mobile and screen-reader order. The companion's detailed 28 cases and existing gate controls remain applicable without being replaced by this appendix.
+Retain repository-wide thresholds and existing gate coverage requirements.
+Pure classification targets at least 95% branch coverage; changed status paths
+retain 95% lines/statements and 90% branches/functions. Deterministic provider
+and Git fixtures avoid live services and real waits. Semantic presentation
+assertions and separate desktop/mobile/screen-reader evidence remain required.
 
 ### 15. Documentation plan
 

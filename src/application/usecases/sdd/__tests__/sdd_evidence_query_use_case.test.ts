@@ -229,7 +229,8 @@ describe('read-only SDD authority and publication query', () => {
         const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan, questions: [{ id: 'Q1', text: 'What should this behavior be?', owner: 'issue-author' }] } });
         return f.comments().then(async current => {
             current.value.push(f.comment('SDD Q1: An unauthorized answer.', 9, author)); f.comments.mockResolvedValue(current);
-            expect(await f.query.read(f.context)).toMatchObject({ state: 'awaiting-answers', pendingQuestionIds: ['Q1'] });
+            expect(await f.query.read(f.context)).toMatchObject(author === 'vypbot'
+                ? { state: 'invalid' } : { state: 'awaiting-answers', pendingQuestionIds: ['Q1'] });
         });
     });
     it('reports first publication pending from validated new-owner metadata without a branch', async () => {
@@ -280,5 +281,17 @@ describe('read-only SDD authority and publication query', () => {
         expect(Object.keys(bound.labels)).toEqual(['getLabels']);
         expect(Object.keys(bound.workspace)).toEqual(['loadSnapshot', 'loadSnapshotAtCommit', 'verifyPublication', 'isAncestor']);
         expect(Object.isFrozen(bound)).toBe(true); expect(Object.isFrozen(bound.workspace)).toBe(true);
+    });
+});
+
+describe('complete owned SDD-card identity loss across query fences', () => {
+    it.each(['initial read', 'final fence'])('withholds readiness when a newer owned card lost all metadata during %s', async stage => {
+        const f = fixture();
+        const complete = await f.comments();
+        const damaged = { ...complete, value: [...complete.value, f.comment('Unidentified replacement body', 8)] };
+        if (stage === 'initial read') f.comments.mockResolvedValue(damaged);
+        else f.comments.mockResolvedValueOnce(complete).mockResolvedValue(damaged);
+        expect(await f.query.read(f.context)).toEqual({ state: stage === 'initial read' ? 'invalid' : 'stale' });
+        if (stage === 'initial read') expect(f.ports.workspace.verifyPublication).not.toHaveBeenCalled();
     });
 });

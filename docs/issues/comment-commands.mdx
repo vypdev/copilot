@@ -131,6 +131,12 @@ read-only and preserves its existing fields. SDD readiness confirms the publishe
 specification and its branch evidence. It does not certify that implementation
 is finished, that CI or review passed, or that the PR can be merged.
 
+A newer bot-owned comment that lost its SDD identification prevents an older
+card from certifying readiness. Canonical replies, progress cards and branch
+notifications for the same issue remain separate surfaces. An unidentified or
+corrupted bot comment can therefore make SDD evidence invalid; inspect and
+reconcile that conversation before relying on an older publication.
+
 After the first verified publication, a new clarification round reports
 **Revision pending**. Its first-publication link is explicitly historical; it
 does not certify the pending revision. The section keeps unanswered question

@@ -1,4 +1,5 @@
 import { renderSddGateRecord, type SddGateRecord } from '../../../domain/pre_branch_sdd';
+import { buildPublicationMarker, buildPublicationReplyMarker, buildPublicationTransitionMarker } from '../publication_identity_policy';
 import { selectOwnedSddCard, type SddQueryComment } from '../sdd_query_card_policy';
 
 const record: SddGateRecord = { version: 1, issueNumber: 42, phase: 'published', issueDigest: 'd'.repeat(64),
@@ -44,5 +45,36 @@ describe('owned SDD card authority', () => {
     });
     it('recognizes a latest localized owned card that lost its marker as invalid', () => {
         expect(select([card(7), card(8, '## Estado del SDD\n\nMetadata unavailable.')])).toEqual({ state: 'invalid' });
+    });
+});
+
+const otherPublication = (kind: 'status' | 'reply' | 'transition', issueNumber = 42) => {
+    const identity = { topic: 'branch-sync' as const, target: { kind: 'issue' as const, number: issueNumber }, key: 'dependency:abc' };
+    if (kind === 'status') return buildPublicationMarker({ identity, sourceVersion: 'comparison:abc', digest: '12345678' });
+    if (kind === 'transition') return buildPublicationTransitionMarker({ identity, fingerprint: '12345678', messageKey: 'branchSync.transition.required' });
+    return buildPublicationReplyMarker({ target: `issue:${issueNumber}`, correlationId: 'comment:9', messageKey: 'status-command', digest: '12345678' });
+};
+
+describe('native identity survives complete SDD-card body loss', () => {
+    it.each([null, '', 'Both the metadata and the heading have been removed.'])('never revives an older publication behind a newer unidentified owned body: %s', content => {
+        expect(select([card(7), { ...card(8), body: content }])).toEqual({ state: 'invalid' });
+    });
+    it.each(['status', 'reply', 'transition'] as const)('preserves readiness after a canonical exact-issue %s publication', kind => {
+        expect(select([card(7), card(8, `${otherPublication(kind)}\n\nAnother product surface.`)])).toMatchObject({ state: 'valid', id: 7 });
+    });
+    it.each(['foreign issue', 'foreign PR', 'quoted header'])('does not use a %s marker to exclude unknown newer ownership', scenario => {
+        let newer = otherPublication('reply', scenario === 'foreign issue' ? 43 : 42);
+        if (scenario === 'foreign PR') newer = newer.replace('target="issue:42"', 'target="pr:42"');
+        if (scenario === 'quoted header') newer = `Quoted content:\n${newer}`;
+        expect(select([card(7), card(8, newer)])).toEqual({ state: 'invalid' });
+    });
+    it('rejects contradictory native IDs before excluding a canonical other surface', () => {
+        expect(select([card(7), card(8, 'Damaged card'), card(8, otherPublication('reply'))])).toEqual({ state: 'invalid' });
+    });
+    it('never masks SDD metadata behind a canonical other publication header', () => {
+        expect(select([card(7), card(8, `${otherPublication('reply')}\n<!-- copilot:sdd-gate:v1\nbad\n-->`)])).toEqual({ state: 'invalid' });
+    });
+    it('allows a newer identified SDD card to supersede an older unknown owned comment', () => {
+        expect(select([card(6, 'Older damaged card'), card(7)])).toMatchObject({ state: 'valid', id: 7 });
     });
 });
