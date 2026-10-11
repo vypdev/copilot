@@ -45,7 +45,8 @@ describe('SDD status projection and safe navigation', () => {
     it.each([
         'http://github.com/acme/demo/issues/42', 'https://github.com/foreign/demo/issues/42',
         'https://github.com/acme/foreign/issues/42', 'https://github.com/acme/demo/issues/43',
-        'https://user:secret@github.com/acme/demo/issues/42', 'https://github.com/acme/demo/issues/42?token=secret', 'broken',
+        'https://attacker.example/acme/demo/issues/42', 'https://github.com.attacker.example/acme/demo/issues/42',
+        'https://github.com:444/acme/demo/issues/42', 'https://user:secret@github.com/acme/demo/issues/42', 'https://github.com/acme/demo/issues/42?token=secret', 'broken',
     ])('omits all evidence links for an invalid issue identity %s', url => {
         const status = projectSddStatus({ state: 'published', path: verified.path, verified, cardId: 7 });
         const body = render(status, url);
@@ -69,5 +70,21 @@ describe('SDD status projection and safe navigation', () => {
             expect(body).not.toMatch(/interaction\.status|undefined|TOKEN/u);
             expect(body).toContain(locale === 'es-ES' ? 'Preparación del SDD' : 'SDD readiness');
         }
+    });
+});
+
+ describe('trusted GitHub server navigation', () => {
+    it('retains GitHub Enterprise links only for the independently configured origin', () => {
+        const status = projectSddStatus({ state: 'published', path: verified.path, verified, cardId: 7 });
+        const body = formatSddStatus(status, resolveStaticPublicationCatalog('en-US').catalog, 'https://github.example/acme/demo/issues/42', 42, { ...identity, serverOrigin: 'https://github.example' }).join('\n');
+        expect(body).toContain(`https://github.example/acme/demo/blob/${sha}/specs/feature.md`);
+        expect(body).toContain('https://github.example/acme/demo/issues/42#issuecomment-7');
+    });
+    it('omits links when the trusted server configuration has credentials', () => {
+        const status = projectSddStatus({ state: 'published', path: verified.path, verified, cardId: 7 });
+        const body = formatSddStatus(status, resolveStaticPublicationCatalog('en-US').catalog, issueUrl, 42, { ...identity, serverOrigin: 'https://user:secret@github.com' }).join('\n');
+        expect(body).not.toContain('](');
+        expect(body).not.toContain('secret');
+        expect(body).toContain(sha);
     });
 });

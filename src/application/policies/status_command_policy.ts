@@ -64,6 +64,7 @@ export interface CopilotStatusSnapshot {
     readonly pullRequestDescriptionMode: string;
     readonly sddReadiness?: SddStatusReadiness;
     readonly issueUrl?: string;
+    readonly serverOrigin?: string;
 }
 
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
@@ -123,7 +124,7 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' as const } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
         ...(execution.issue?.url ? { issueUrl: execution.issue.url } : {}),
-        ...(execution.issueWorkflowKind ? { sddReadiness: initialSddStatus({
+        ...(!isPullRequestTarget && !execution.isPush && (execution.issue?.number > 0 || execution.isIssue) ? { sddReadiness: initialSddStatus({
             admittedKind: ISSUE_WORKFLOW_KINDS.find(kind => kind === execution.issueWorkflowKind),
             issueManagedBranches: execution.issue.issueManagedBranches,
             preBranchSdd: execution.preBranchSdd,
@@ -167,6 +168,6 @@ export function formatCopilotStatus(
     } else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
-    if (snapshot.sddReadiness) lines.push(...formatSddStatus(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository }));
+    if (snapshot.sddReadiness) lines.push(...formatSddStatus(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
     return lines.join('\n');
 }

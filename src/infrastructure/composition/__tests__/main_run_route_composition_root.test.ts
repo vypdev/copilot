@@ -121,7 +121,7 @@ describe("main run route composition root", () => {
       expect.objectContaining({ read: expect.any(Function) }),
     );
     const query = jest.mocked(IssueCommentUseCase).mock.calls[0][15];
-    expect(Object.keys(query!)).toEqual(['read']);
+    expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
     expect(Object.isFrozen(query)).toBe(true);
   });
 

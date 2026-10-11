@@ -15,7 +15,7 @@ export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
 
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
 export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts, sddQuery?: SddEvidenceQueryPort) {
-    let status = param.status;
+    let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
     if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
         const evidence = await sddQuery.read(param.sdd);
         status = Object.freeze({ ...status, sddReadiness: projectSddStatus(evidence, status.sddReadiness) });

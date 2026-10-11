@@ -68,5 +68,7 @@ export interface SddEvidenceSnapshot {
 
 /** Application query capability supplied by composition; it cannot expose raw adapters. */
 export interface SddEvidenceQueryPort {
+    /** Trusted workflow server origin; never inferred from issue or comment content. */
+    readonly serverOrigin?: string;
     read(context: SddEvidenceQueryContext): Promise<SddEvidenceSnapshot>;
 }

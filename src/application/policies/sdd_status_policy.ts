@@ -38,7 +38,7 @@ export function projectSddStatus(evidence: SddEvidenceSnapshot, initial?: SddSta
 }
 
 /** Receives only the closed projection, never question prose, record reasons or provider errors. */
-export function formatSddStatus(readiness: SddStatusReadiness, catalog: PublicationMessageCatalog, issueUrl?: string, issueNumber?: number, identity?: { readonly owner: string; readonly repository: string }): string[] {
+export function formatSddStatus(readiness: SddStatusReadiness, catalog: PublicationMessageCatalog, issueUrl?: string, issueNumber?: number, identity?: { readonly owner: string; readonly repository: string; readonly serverOrigin?: string }): string[] {
     const path = readiness.path && isSafeSddPath(readiness.path) ? readiness.path : undefined;
     const commitSha = readiness.commitSha && /^[a-f0-9]{40}$/u.test(readiness.commitSha) ? readiness.commitSha : undefined;
     const pending = readiness.pendingQuestionIds?.filter(id => /^Q[1-8]$/u.test(id));
@@ -70,10 +70,13 @@ export function formatSddStatus(readiness: SddStatusReadiness, catalog: Publicat
     return lines;
 }
 
-function safeIssueUrl(value: string | undefined, issueNumber: number | undefined, identity: { readonly owner: string; readonly repository: string } | undefined): { repository: string; issue: string } | undefined {
+function safeIssueUrl(value: string | undefined, issueNumber: number | undefined, identity: { readonly owner: string; readonly repository: string; readonly serverOrigin?: string } | undefined): { repository: string; issue: string } | undefined {
     if (!identity || !value || value.length > 2048 || !Number.isSafeInteger(issueNumber) || issueNumber! < 1) return undefined;
     try {
         const url = new URL(value);
+        const server = new URL(identity.serverOrigin ?? 'https://github.com');
+        if (server.protocol !== 'https:' || server.username || server.password || server.search || server.hash
+            || server.pathname !== '/' || url.origin !== server.origin) return undefined;
         if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash
             || !/^\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/issues\/[1-9][0-9]*$/u.test(url.pathname)
             || url.pathname.toLowerCase() !== `/${identity.owner}/${identity.repository}/issues/${issueNumber}`.toLowerCase()) return undefined;

@@ -497,3 +497,16 @@ describe('status command policy', () => {
         expect(body).not.toContain('ready');
     });
 });
+
+describe('unknown issue admission status', () => {
+    it('shows unknown requirement and unavailable SDD evidence for an issue with no admitted kind', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({ isIssue: true, isPullRequest: false, issueNumber: 17, issue: { number: 17 }, pullRequest: { number: -1 }, issueWorkflowKind: undefined }) as never);
+        expect(snapshot.target).toBe('issue');
+        expect(snapshot.sddReadiness).toEqual({ required: null, state: 'unavailable' });
+        expect(formatCopilotStatus(snapshot)).toContain('SDD readiness');
+    });
+    it.each(['pull-request', 'push'])('does not infer issue SDD eligibility for a %s target', target => {
+        const snapshot = buildCopilotStatusSnapshot(execution({ isPush: target === 'push', isPullRequest: target === 'pull-request', pullRequest: { number: target === 'push' ? -1 : 21 }, issueWorkflowKind: 'feature' }) as never);
+        expect(snapshot.sddReadiness).toBeUndefined();
+    });
+});

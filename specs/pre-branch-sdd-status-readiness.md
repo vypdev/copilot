@@ -308,7 +308,7 @@ No schema or configuration migration is introduced. Existing gate records remain
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **141 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
+Minimum: **149 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
@@ -316,11 +316,11 @@ Minimum: **141 distinct cases** for this extension. Existing gate and PR status 
 | Issue identity | 8 | Canonical visible body/title normalization, profile, kind, issue number and original base digest |
 | Owned card selection | 16 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
 | Authority/application/fences | 51 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities and three status integration outcomes |
-| Closed projection/UX | 29 | Canonical requirement/configuration, eight evidence outcomes, withheld historical SHA, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
+| Closed projection/UX | 37 | Canonical requirement/configuration, eight evidence outcomes, withheld historical SHA, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
 | Native linked ref adapter | 4 | Stale/deleted refs, foreign/missing repository identity; none may fall back to another PR |
 | Immutable workspace reads | 2 | Read the original catalog without checkout/current-file mutation; reject non-SHA identifiers |
 | Read-only composition | 1 | Repository-bound live publication query and current maintainer authorization without mutation capability |
-| **Total** | **141** | No case counted twice |
+| **Total** | **149** | No case counted twice |
 
 
 Maintain repository-wide thresholds. New pure readiness policy should meet at least 95% branch coverage; changed status modules should meet existing module thresholds, with a target of 90% branches and 95% lines/statements. Use deterministic records, clocks, provider fakes, and publication proofs; no sleeps or live services. Parse catalog structures and gate records rather than grep prose. UI fixtures require semantic assertions beyond snapshots. Manual acceptance confirms the section is readable on mobile and desktop and preserves the existing status ordering.
@@ -368,7 +368,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 2. Define typed readiness result and semantic read/verification ports; add pure policy tests for ownership, identity, pending IDs, and state mapping.
 3. Integrate read-only orchestration into status while retaining the original snapshot on retrieval errors.
 4. Add catalog messages and compact rendering for all states; ensure no timeline-card path is invoked.
-5. Add adapter, integration, localization, security, and compatibility tests within the 141-case implementation budget.
+5. Add adapter, integration, localization, security, and compatibility tests within the 149-case implementation budget.
 6. Update command/operator documentation and contract examples.
 7. Run specification, architecture, catalog, and repository validation required by the existing project workflow.
 
@@ -378,7 +378,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 - [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
 - [x] English and Spanish catalogs cover the readiness section.
 - [x] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [x] All 141 distinct extension cases, full coverage budgets and generated bundles pass before publication.
+- [x] All 149 distinct extension cases, full coverage budgets and generated bundles pass before publication.
 - [x] User documentation explains the evidence limit and fail-closed behavior.
 - [x] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
 - [x] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
@@ -412,3 +412,24 @@ this extension; the gate's existing numeric budget does not count them again.
 ### Offline implementation validation — 2026-10-11
 
 The 141 distinct extension cases are implemented. Full validation on the Action-managed head `43d710770972df3443b519ca0bd61c6ad6256c93` plus this contribution passed 567 Jest suites with 7,485 tests passed and 35 configured skips. Repository coverage budgets and the setup acceptance ledger passed; the ledger retains its 42 explicitly open cases. New identity and card policies and the read-only composition have 100% coverage; projection branch coverage is 96% and query branch coverage is 97.36%. Typecheck, lint, documentation, specification validation and generated bundles passed. Live acceptance remains pending promotion and is not inferred from these offline checks.
+
+### PR #465 review corrections (2026-10-11)
+
+The review identified two status defects. Evidence navigation now compares an
+issue URL against the trusted workflow server origin supplied by the read-only
+composition, defaulting to github.com. Matching owner/repository/issue paths on
+another origin cannot produce links. Independently configured GitHub Enterprise
+origins remain supported; unsafe server configuration suppresses navigation
+without changing the evidence state or exposing its value.
+
+An issue with unknown admitted workflow kind now retains the SDD section with
+unknown requirement and unavailable evidence. PR and push targets do not infer
+issue eligibility from a coincidental kind. No model or new mutation capability
+is introduced. Eight distinct cases extend the presentation allocation: three
+foreign-origin URLs, configured Enterprise navigation, credential-bearing server
+configuration, missing issue admission, and PR/push compatibility.
+
+The initial autofix run 38146515770 admitted the Windows agent but produced no
+safe changed paths. These corrections are a normal contributor response on the
+exact Action branch and are not evidence that the authenticated fixer succeeded.
+Live recheck and native status acceptance remain pending.

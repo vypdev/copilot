@@ -43680,6 +43680,10 @@ function safeIssueUrl(value, issueNumber, identity) {
         return undefined;
     try {
         const url = new URL(value);
+        const server = new URL(identity.serverOrigin ?? 'https://github.com');
+        if (server.protocol !== 'https:' || server.username || server.password || server.search || server.hash
+            || server.pathname !== '/' || url.origin !== server.origin)
+            return undefined;
         if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash
             || !/^\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/issues\/[1-9][0-9]*$/u.test(url.pathname)
             || url.pathname.toLowerCase() !== `/${identity.owner}/${identity.repository}/issues/${issueNumber}`.toLowerCase())
@@ -48751,7 +48755,7 @@ function buildCopilotStatusSnapshot(execution) {
         ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
         ...(execution.issue?.url ? { issueUrl: execution.issue.url } : {}),
-        ...(execution.issueWorkflowKind ? { sddReadiness: (0, sdd_status_policy_1.initialSddStatus)({
+        ...(!isPullRequestTarget && !execution.isPush && (execution.issue?.number > 0 || execution.isIssue) ? { sddReadiness: (0, sdd_status_policy_1.initialSddStatus)({
                 admittedKind: issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.find(kind => kind === execution.issueWorkflowKind),
                 issueManagedBranches: execution.issue.issueManagedBranches,
                 preBranchSdd: execution.preBranchSdd,
@@ -48791,7 +48795,7 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
     if (snapshot.sddReadiness)
-        lines.push(...(0, sdd_status_policy_1.formatSddStatus)(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository }));
+        lines.push(...(0, sdd_status_policy_1.formatSddStatus)(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
     return lines.join('\n');
 }
 
@@ -54817,7 +54821,7 @@ const bugbot_context_request_1 = __nccwpck_require__(98299);
 const application_error_1 = __nccwpck_require__(75999);
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
 async function readCopilotStatus(param, taskId, ports, sddQuery) {
-    let status = param.status;
+    let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
     if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
         const evidence = await sddQuery.read(param.sdd);
         status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
@@ -86336,7 +86340,7 @@ function createSddEvidenceReadPorts(binding, comments) {
 }
 function createSddEvidenceQueryPort(binding, comments) {
     const query = new sdd_evidence_query_use_case_1.SddEvidenceQueryUseCase(createSddEvidenceReadPorts(binding, comments));
-    return Object.freeze({ read: query.read.bind(query) });
+    return Object.freeze({ read: query.read.bind(query), serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com' });
 }
 
 

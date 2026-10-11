@@ -47,7 +47,8 @@ describe('composed read-only SDD query', () => {
                 omittedItems: 0, truncatedItems: 0, limitReached: false } }));
         const query = createSddEvidenceQueryPort(binding, { listIssueComments });
         expect(Object.isFrozen(query)).toBe(true);
-        expect(Object.keys(query)).toEqual(['read']);
+        expect(Object.keys(query)).toEqual(['read', 'serverOrigin']);
+        expect(query.serverOrigin).toBe(process.env.GITHUB_SERVER_URL ?? 'https://github.com');
         expect(await query.read(context)).toMatchObject({ state: 'publication-pending', pendingQuestionIds: [], verified: { firstSha: mockFirst, branchHeadSha: mockHead } });
         expect(mockTitle).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
         expect(mockDescription).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');

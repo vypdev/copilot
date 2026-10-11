@@ -29,5 +29,5 @@ export function createSddEvidenceReadPorts(binding: BugbotScmBinding, comments: 
 
 export function createSddEvidenceQueryPort(binding: BugbotScmBinding, comments: Pick<BoundBugbotContextReadPorts, 'listIssueComments'>): SddEvidenceQueryPort {
     const query = new SddEvidenceQueryUseCase(createSddEvidenceReadPorts(binding, comments));
-    return Object.freeze({ read: query.read.bind(query) });
+    return Object.freeze({ read: query.read.bind(query), serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com' });
 }
