@@ -10,7 +10,8 @@
       "lastVerified": "2026-10-11",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
-        "specs/repository-locale-and-localization.md"
+        "specs/repository-locale-and-localization.md",
+        "specs/copilot-history.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
