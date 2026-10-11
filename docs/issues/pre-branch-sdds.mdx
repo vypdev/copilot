@@ -22,7 +22,7 @@ regenerating a proposed appendix cannot repair that retained contract.
 
 `pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
 
-The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. It does not generate PRDs or ADRs in this flow.
+The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. Drafting receives the selected owner's verified source, test and documentation paths at the immutable base, the canonical issue link and retained authorized answers. A new companion identifies the existing owner; its own new path is proposed evidence. It does not generate PRDs or ADRs in this flow.
 
 ## Issue flow
 

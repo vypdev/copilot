@@ -297,10 +297,10 @@ remote-head safeguards. Other failures keep their existing semantic handling.
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 30 | clean/conflict/dry-run/verify/push; four real-Git conflict cases (unstaged resolution, markers, outside edit, verification mutation), two trusted-staging failures, and two localized conflict-recovery/no-push routes |
-| Adapters/workflow contracts | 16 | pagination, git states, all-branch/no-agent |
+| Adapters/workflow contracts | 17 | pagination, git states, all-branch/no-agent; exact captured NUL records without corrupting Actions logs |
 | UX/localization/sanitization | 18 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations |
 | Integration/security/cutover | 18 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections |
-| **Total** | **130** | no double counting |
+| **Total** | **131** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests

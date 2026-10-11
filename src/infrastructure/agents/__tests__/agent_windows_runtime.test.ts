@@ -9,6 +9,7 @@ import { AgentExecutionPlanner } from '../agent_execution_planner';
 import { validateAgentExecutableFile } from '../agent_executable_file';
 import { installerEnvironment } from '../agent_official_installer';
 import { buildWindowsAclProbeEnvironment } from '../windows_executable_trust.cjs';
+import { prepareUntrustedCommandEnvironment } from '../../untrusted_command_environment';
 import { createPrivateAgentInstallRoot, prepareWindowsInstallRoot,
     securePrivateInstalledAgent, selectPrivateInstallRoot } from '../agent_private_install_root';
 import {
@@ -20,6 +21,27 @@ import {
 } from '../windows_runtime_acl';
 
 const windowsIt = process.platform === 'win32' ? it : it.skip;
+
+windowsIt('runs exact Windows system-root validation and PowerShell under the verification environment without dirtying the checkout', () => {
+    const root = mkdtempSync(join(tmpdir(), 'copilot-verify-windows-cache-'));
+    const environment = prepareUntrustedCommandEnvironment(process.env);
+    try {
+        execFileSync('git', ['init', '-q', root], { stdio: 'ignore' });
+        const modulePath = join(__dirname, '..', 'windows_system_root.cjs');
+        const script = `const {spawnSync}=require('node:child_process');const {join}=require('node:path');const root=require(${JSON.stringify(modulePath)}).trustedWindowsSystemRoot();const result=spawnSync(join(root,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',"$ErrorActionPreference='Stop'; Get-FileHash -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Start-Sleep -Seconds 1; Write-Output 'verified'"],{env:process.env,encoding:'utf8',timeout:60000,windowsHide:true});if(result.error||result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());`;
+        const result = spawnSync(process.execPath, ['-e', script], {
+            cwd: root, env: environment.environment, encoding: 'utf8', timeout: 70_000, windowsHide: true,
+        });
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe(0);
+        expect(result.stdout).toBe('verified');
+        expect(execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf8' })).toBe('');
+        expect(existsSync(join(root, 'Microsoft'))).toBe(false);
+    } finally {
+        environment.cleanup();
+        rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+}, 75_000);
 
 function fakeRuntime(source: string) {
     const root = mkdtempSync(join(tmpdir(), 'copilot agent windows '));
@@ -274,6 +296,37 @@ describe('isolated Windows agent runtime', () => {
             expect(result.stdout.trim().toLowerCase()).toBe(
                 createHash('sha256').update('isolated installer module fixture').digest('hex'),
             );
+        } finally {
+            rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    }, 75_000);
+
+    windowsIt.each([true, false])('keeps a Git checkout clean during installer PowerShell startup with host app data present=%s', hostDataPresent => {
+        const root = mkdtempSync(join(tmpdir(), 'copilot-installer-cache-'));
+        const workspace = join(root, 'workspace');
+        const installer = join(root, 'installer');
+        try {
+            mkdirSync(workspace);
+            mkdirSync(installer);
+            execFileSync('git', ['init', '-q', workspace], { stdio: 'ignore' });
+            const source: NodeJS.ProcessEnv = { ...process.env, PSModuleAnalysisCachePath: join(workspace, 'poisoned-cache') };
+            if (!hostDataPresent) {
+                delete source.APPDATA;
+                delete source.LOCALAPPDATA;
+            }
+            const environment = installerEnvironment(installer, source);
+            expect(environment.PSModuleAnalysisCachePath).toBe('NUL');
+            expect(source.PSModuleAnalysisCachePath).toBe(join(workspace, 'poisoned-cache'));
+            const command = "$ErrorActionPreference='Stop'; Get-Command Get-FileHash | Out-Null; Get-FileHash -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Start-Sleep -Seconds 1; Write-Output 'verified'";
+            const result = spawnSync(join(environment.SystemRoot!, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), [
+                '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64'),
+            ], { cwd: workspace, env: environment, encoding: 'utf8', timeout: 60_000, windowsHide: true });
+            expect(result.error).toBeUndefined();
+            expect(result.status).toBe(0);
+            expect(result.stdout.trim()).toBe('verified');
+            expect(execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: workspace, encoding: 'utf8' })).toBe('');
+            expect(existsSync(join(workspace, 'Microsoft'))).toBe(false);
+            expect(existsSync(join(workspace, 'poisoned-cache'))).toBe(false);
         } finally {
             rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }

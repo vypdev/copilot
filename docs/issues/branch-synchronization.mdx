@@ -107,6 +107,10 @@ Options:
 
 The command fetches the current remote heads, checks out the working branch, and prepares a no-fast-forward merge. A clean merge proceeds without an agent. Before the push, Copilot runs the configured `bugbot-fix-verify-commands`, verifies that those commands did not mutate the prepared merge, and confirms that neither remote head changed while the operation was running.
 
+Captured Git reads retain their exact file paths without printing NUL-delimited
+records into the Actions log. Verification and abort diagnostics remain visible
+in the GitHub log viewer.
+
 If `--no-agent` encounters conflicts, the reply identifies that option as the
 blocker and explains that no synchronization commit was pushed. Run
 `/copilot sync-branch` to allow the configured fixer to resolve eligible conflicts,

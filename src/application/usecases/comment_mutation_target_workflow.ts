@@ -36,4 +36,3 @@ export async function resolveCommentMutationBranch(param: CommentAutomationConte
     }
     return canonical.pullRequest.headRef.trim();
 }
-

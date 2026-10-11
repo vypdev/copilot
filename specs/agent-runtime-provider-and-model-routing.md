@@ -822,6 +822,22 @@ environment, absence of credential/profile inheritance without ambient mutation,
 and two native exact-probe clean-workspace cases with host application data
 present/absent. They are additional to the 130 + 18 + 6 + 9 case budgets.
 
+The installer-cache extension adds **2 distinct native Windows cases** with
+host application data present/absent. They start PowerShell 5.1 hash-module
+commands in a real Git checkout using the actual private installer environment,
+allow its cache worker to run and prove no checkout-relative or inherited cache
+is created. Trusted installers disable their module-analysis cache before
+PowerShell starts; provider execution keeps its separate private cache policy.
+These cases are additional to the baseline and all previous extensions.
+
+The verification-environment extension adds **3 distinct cases**: two private
+Windows profile/cache/cleanup cases with host data present/absent and one native
+child that imports the actual system-root validator and invokes PowerShell from
+a real Git checkout. Verification preserves the non-secret `SystemDrive` machine
+fact required by the validator and the declared Jest worker-recycling flag;
+profile and module-cache paths always belong to the fresh temporary home.
+Credentials and operator authentication-store references remain excluded.
+
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
 provider in unit/integration tests. Each provider requires controlled smoke tests

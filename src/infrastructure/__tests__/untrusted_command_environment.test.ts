@@ -2,6 +2,28 @@ import { existsSync } from 'node:fs';
 import { prepareUntrustedCommandEnvironment } from '../untrusted_command_environment';
 
 describe('prepareUntrustedCommandEnvironment', () => {
+    it.each([true, false])('creates private Windows profile and cache paths with host application data present=%s', present => {
+        const runtime = prepareUntrustedCommandEnvironment({
+            SystemRoot: 'C:\\Windows', WINDIR: 'C:\\Windows', SystemDrive: 'C:',
+            COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1',
+            ...(present ? { APPDATA: 'host-roaming', LOCALAPPDATA: 'host-local', USERPROFILE: 'host-user' } : {}),
+            PSModuleAnalysisCachePath: 'host-cache', PAT: 'secret',
+        }, 'win32');
+        try {
+            const environment = runtime.environment;
+            expect(environment.SystemDrive).toBe('C:');
+            expect(environment.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE).toBe('1');
+            expect(environment.USERPROFILE).toBe(environment.HOME);
+            expect(existsSync(environment.APPDATA)).toBe(true);
+            expect(existsSync(environment.LOCALAPPDATA)).toBe(true);
+            expect(environment.PSModuleAnalysisCachePath).toContain(environment.LOCALAPPDATA);
+            expect(JSON.stringify(environment)).not.toMatch(/host-|secret/);
+        } finally {
+            const root = runtime.environment.HOME;
+            runtime.cleanup();
+            expect(existsSync(root)).toBe(false);
+        }
+    });
     it('keeps only runtime metadata and removes every credential/auth-store reference', () => {
         const runtime = prepareUntrustedCommandEnvironment({
             PATH: '/usr/bin',

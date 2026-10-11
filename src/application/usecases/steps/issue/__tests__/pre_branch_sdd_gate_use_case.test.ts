@@ -63,6 +63,28 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('supplies a canonical issue URL and the validated immutable owner evidence when drafting a companion', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/payment-status.md', newCapability: null })
+      .mockResolvedValueOnce({ markdown: '# Draft companion' });
+    await h.useCase.begin({ ...context(), issueUrl: 'https://github.com/vypdev/copilot/issues/42' });
+    expect(h.query.mock.calls[0][0].prompt).toContain('Canonical issue URL: https://github.com/vypdev/copilot/issues/42');
+    const draft = h.query.mock.calls[1][0].prompt;
+    expect(draft).toContain(`Validated owning catalog at ${baseSha}`);
+    expect(draft).toContain(JSON.stringify(snapshot.capabilities[0]));
+    expect(draft).toContain('the new companion does not already own itself');
+  });
+
+  it.each(['https://github.com/vypdev/copilot/issues/99', 'https://user:password@github.com/vypdev/copilot/issues/42?token=secret'])(
+    'does not inject an unverified or credential-bearing issue URL: %s', async issueUrl => {
+      const h = harness();
+      h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+      await h.useCase.begin({ ...context(), issueUrl });
+      for (const [request] of h.query.mock.calls) {
+        expect(request.prompt).toContain('Canonical issue URL: (unavailable; do not invent');
+        expect(request.prompt).not.toContain(issueUrl);
+      }
+    });
   async function twoClarificationRounds(owner = 'issue-author') {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });

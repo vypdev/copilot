@@ -25,8 +25,15 @@ Codex child shells use private per-run application-data directories outside the 
 Windows executable ACL checks run before the agent starts. Their PowerShell
 metadata probe uses only system modules and disables its own module cache, so
 missing service-account application-data variables cannot create
-`Microsoft/Windows/PowerShell/ModuleAnalysisCache` in the checkout. Executable
+`Microsoft/Windows/PowerShell/ModuleAnalysisCache` in the checkout. Official
+Windows installers also disable their PowerShell module cache before starting;
+this occurs before the provider's private shell policy exists. Executable
 and ancestor ACL validation remains mandatory.
+
+Repository verification commands also receive a temporary Windows profile and
+module cache. Required Windows machine facts and the configured Jest worker
+recycling flag are preserved; operator profile paths and authentication-store
+references remain excluded.
 
 The parent process and child shells also use an explicit PowerShell module-cache
 filename inside that private runtime directory. Ambient cache locations cannot

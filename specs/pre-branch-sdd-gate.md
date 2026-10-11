@@ -547,7 +547,14 @@ not a hidden compatibility path in this version.
 
 ## 14. Testing strategy and numeric budget
 
-The following **146 distinct cases** are a floor derived from eligibility,
+Draft prompts carry the selected validated catalog entry at the immutable base,
+including existing specification, code, test and documentation locations, and a
+bounded canonical HTTPS issue URL without credentials, query or fragment. Missing
+authority is explicit; placeholder repository links and self-owned new companions
+are not supported evidence. Authorized retained answers resolve their decisions
+across rounds. These inputs remain data and grant no model or workspace authority.
+
+The following **149 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -555,7 +562,7 @@ ownership/validation.
 |---|---:|---|
 | Pure selection/configuration/catalog planning | 10 | Boolean mode, feature/label eligibility, owner |
 | State, answers, idempotency, cancellation, races | 12 | Q IDs, replay, edits, parallel runs |
-| Application use cases | 8 | Analyze through publish and revise |
+| Application use cases | 11 | Analyze through publish and revise; immutable owner evidence and canonical/foreign/credential-bearing issue URL cases |
 | Provider/agent/Git adapters | 8 | Comment, scratch workspace, exact ref, errors |
 | Workflow/setup/SDD schema | 8 | Forms, profile, template, catalog |
 | UX/localization/accessibility/sanitization | 6 | Five states, links, notification budget |
@@ -570,7 +577,7 @@ ownership/validation.
 | Draft format and final clarification recovery | 11 | Two typed content repair reasons, exhausted format, unexpected writer failure, both mixed size/format orders, final round completion, fourth question rejection, full writer/freshness revalidation, missing prepared value and localized closed recovery |
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
-| **Total** | **146** | No case counted twice |
+| **Total** | **149** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the

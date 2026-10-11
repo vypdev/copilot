@@ -1568,7 +1568,8 @@
         "src/infrastructure/branch_sync_workspace_adapter.ts",
         "src/prompts/branch_sync_conflicts.ts",
         "src/data/model/application_error.ts",
-        "src/application/policies/application_error_message_catalog.ts"
+        "src/application/policies/application_error_message_catalog.ts",
+        "src/infrastructure/git_commit_adapter.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1582,7 +1583,8 @@
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/usecases/branch_sync/__tests__/branch_sync_execution_policy.test.ts",
         "src/application/errors/__tests__/application_error.test.ts",
-        "src/application/policies/__tests__/application_error_presentation_policy.test.ts"
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/infrastructure/__tests__/git_commit_adapter.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -1742,7 +1744,8 @@
         "scripts/verify-windows-job-npm.cjs",
         "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-workflow-contract.cjs",
-        "src/application/policies/agent_execution_failure_policy.ts"
+        "src/application/policies/agent_execution_failure_policy.ts",
+        "src/infrastructure/untrusted_command_environment.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1768,7 +1771,8 @@
         "src/infrastructure/agents/__tests__/agent_official_version.test.ts",
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
-        "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts"
+        "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
