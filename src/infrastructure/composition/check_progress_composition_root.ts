@@ -1,4 +1,5 @@
-import { createBranchClient } from './github_branch_client_factory';
+import { ProgressDiffRepository } from '../../data/repository/progress_diff_repository';
+import { createBranchClient, createBranchComparisonClient } from './github_branch_client_factory';
 import { createIssueContentClient, createIssueLabelsClient } from './github_issue_client_factory';
 import { createPullRequestLifecycleClient } from './github_pull_request_client_factory';
 import { CheckProgressUseCase } from "../../application/usecases/actions/check_progress_use_case";
@@ -18,6 +19,7 @@ import { bindBranchListQuery, bindIssueProgress, bindPullRequestBranchQuery } fr
 export function createCheckProgressCompositionRoot(binding: RepositoryCredentialBinding): CheckProgressUseCase {
     const labels = new IssueLabelRepository(createIssueLabelsClient());
     const content = new IssueContentRepository(createIssueContentClient());
+    const diff = new ProgressDiffRepository(createBranchComparisonClient());
     return new CheckProgressUseCase(
         bindIssueDescriptionQuery(content, binding),
         bindIssueLabels(labels, binding),
@@ -30,5 +32,6 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
         bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
         createFindingsQueryPort(),
         bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding),
+        Object.freeze({ getDiff: (baseSha: string, headSha: string) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }),
     );
 }

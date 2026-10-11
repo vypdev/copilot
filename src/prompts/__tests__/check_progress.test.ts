@@ -9,6 +9,7 @@ describe('getCheckProgressPrompt', () => {
             currentBranch: 'feature/wip',
             issueDescription: 'Build the API.',
             targetLocale: 'pt-BR',
+            diffEvidence: '{"baseSha":"PINNED_BASE","headSha":"PINNED_HEAD","changes":[]}',
         });
         expect(prompt).toContain('**Context.**');
         expect(prompt).toContain('issue #3');
@@ -19,5 +20,9 @@ describe('getCheckProgressPrompt', () => {
         expect(prompt).toContain('remaining');
         expect(prompt).toContain('"outputLocale": "pt-BR"');
         expect(prompt).not.toContain('{{');
+        expect(prompt).toContain('PINNED_BASE');
+        expect(prompt).not.toContain('git diff');
+        expect(prompt).not.toContain('git branch');
+        expect(prompt).toContain('No shell command or workspace inspection');
     });
 });

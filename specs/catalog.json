@@ -127,7 +127,9 @@
         "src/infrastructure/github/ports/github_issue_provider_ports.ts",
         "src/application/usecases/comment_automation_command_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
-        "src/application/policies/inactivity_result_counts_projection_policy.ts"
+        "src/application/policies/inactivity_result_counts_projection_policy.ts",
+        "src/application/ports/progress_diff_query_ports.ts",
+        "src/data/repository/progress_diff_repository.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -202,7 +204,8 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
         "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
-        "src/application/usecases/__tests__/comment_automation_use_case.test.ts"
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
+        "src/data/repository/__tests__/progress_diff_repository.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -238,7 +241,8 @@
         "docs/security-operations/security/prompt-injection.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/development/architecture.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "docs/issues/branch-management.mdx"
       ]
     },
     {
