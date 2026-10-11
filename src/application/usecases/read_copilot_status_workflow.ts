@@ -7,9 +7,17 @@ import { isBugbotStatusComment } from '../policies/bugbot_review_presentation_po
 import { selectCanonicalBugbotPullRequest } from '../../domain/bugbot/context';
 import { projectBugbotContextRequest } from './steps/commit/bugbot/bugbot_context_request';
 import { ApplicationError } from '../errors/application_error';
+import type { ApprovalObservationTarget } from '../ports/pull_request_approval_ports';
+import { projectPullRequestReadiness } from '../policies/pull_request_readiness_policy';
+import type { ApprovalEvidence } from '../../domain/pull_request_approval';
 
 export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
-    'getPullRequest' | 'listIssueComments' | 'getPullRequestHeadSha'>;
+    'getPullRequest' | 'listIssueComments' | 'getPullRequestHeadSha'> & {
+        readonly approval?: {
+            readPolicy(target: ApprovalObservationTarget): Promise<string | undefined>;
+            loadEvidence(target: ApprovalObservationTarget): Promise<ApprovalEvidence>;
+        };
+    };
 
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
 export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts) {
@@ -20,6 +28,28 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     const canonical = selectCanonicalBugbotPullRequest(request.target, [await ports.getPullRequest(selection.number)], 'event');
     if (canonical.kind !== 'canonical') throw unavailableStatus();
     const pull = canonical.pullRequest;
+    let snapshot = param.status;
+    if (ports.approval) {
+        try {
+            const target: ApprovalObservationTarget = {
+                owner: request.target.repository.owner, repository: request.target.repository.name,
+                repositoryId: request.target.repository.id!, pullNumber: pull.number,
+            };
+            const rawPolicy = await ports.approval.readPolicy(target);
+            const evidence = await ports.approval.loadEvidence(target);
+            const finalEvidence = await ports.approval.loadEvidence(target);
+            const finalPolicy = await ports.approval.readPolicy(target);
+            const readiness = projectPullRequestReadiness(rawPolicy, evidence, {
+                repositoryId: finalEvidence.repositoryId, pullNumber: finalEvidence.pullNumber,
+                headSha: finalEvidence.headSha, baseSha: finalEvidence.baseSha, rawPolicy: finalPolicy,
+            });
+            snapshot = { ...snapshot, pullRequestReadiness: readiness };
+        } catch {
+            snapshot = { ...snapshot, pullRequestReadiness: { readiness: 'unavailable' as const,
+                mode: 'off' as const, headSha: pull.headSha, baseSha: '',
+                code: 'evidence-unavailable', humanReviewRequired: true } };
+        }
+    }
     const comments = await ports.listIssueComments(pull.number);
     if (comments.coverage.status !== 'complete') throw unavailableStatus();
     const candidates = comments.value.filter(comment => isTrustedBugbotAuthor(comment.user?.login, param.trustedBotLogin)
@@ -27,7 +57,7 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     if (candidates.length !== 1) throw unavailableStatus();
     const counts = readBugbotStatusCounts(candidates[0].body ?? '', pull.number, pull.headSha);
     if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha) throw unavailableStatus();
-    return buildCopilotStatusResult({ ...param.status,
+    return buildCopilotStatusResult({ ...snapshot,
         findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened,
             verificationRequired: counts['verification-required'], unknown: counts.unknown,

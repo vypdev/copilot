@@ -2,6 +2,7 @@ import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
+import type { PullRequestReadinessSnapshot } from './pull_request_readiness_policy';
 import {
     resolveStaticPublicationCatalog,
     type PublicationMessageCatalog,
@@ -55,6 +56,7 @@ export interface CopilotStatusSnapshot {
         resolved: number;
     };
     readonly findingStateEvidence?: 'invalid';
+    readonly pullRequestReadiness?: PullRequestReadinessSnapshot;
     readonly pullRequestDescriptionMode: string;
 }
 
@@ -152,6 +154,11 @@ export function formatCopilotStatus(
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
     } else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
+    }
+    if (snapshot.pullRequestReadiness) {
+        const readiness = snapshot.pullRequestReadiness;
+        lines.push(`- **${catalog.render('interaction.status.prReadiness')}:** ${catalog.render(`interaction.status.prReadiness.${readiness.readiness}` as PublicationMessageId)} (${readiness.mode}; head ${readiness.headSha.slice(0, 8)}; ${readiness.code})`);
+        if (readiness.humanReviewRequired) lines.push(`  ${catalog.render('interaction.status.prReadiness.humanReview')}`);
     }
     return lines.join('\n');
 }
