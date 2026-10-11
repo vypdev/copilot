@@ -14,24 +14,38 @@ jobs:
       - name: Report bounded Linux resource counters
         shell: bash
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const os = require('node:os');
-          const read = path => { try { return fs.readFileSync(path, 'utf8').slice(0, 16384); } catch { return ''; } };
-          const count = (text, key) => {
-            const match = text.match(new RegExp(`^${key}[ \\t]+([0-9]+)$`, 'm'));
-            return match && Number.isSafeInteger(Number(match[1])) ? Number(match[1]) : 'unavailable';
-          };
-          const limit = read('/sys/fs/cgroup/memory.max').trim();
-          console.log(JSON.stringify({
-            totalMemoryMiB: Math.floor(os.totalmem() / 1048576),
-            freeMemoryMiB: Math.floor(os.freemem() / 1048576),
-            logicalCpus: os.cpus().length,
-            kernelOomKillsSinceBoot: count(read('/proc/vmstat'), 'oom_kill'),
-            cgroupOomKills: count(read('/sys/fs/cgroup/memory.events'), 'oom_kill'),
-            cgroupMemoryLimitBytes: limit === 'max' ? 'unbounded' : /^[0-9]{1,15}$/.test(limit) ? Number(limit) : 'unavailable'
-          }));
-          NODE
+          read_counter() {
+            local path="$1" expected="$2" metric value ignored rows=0
+            if [[ -r "$path" ]]; then
+              while read -r metric value ignored; do
+                rows=$((rows + 1))
+                if [[ "$metric" == "$expected" && "$value" =~ ^[0-9]{1,15}$ ]]; then
+                  printf '%s' "$((10#$value))"
+                  return
+                fi
+                if (( rows >= 512 )); then break; fi
+              done < "$path"
+            fi
+            printf '"unavailable"'
+          }
+          to_mib() {
+            local value="$1"
+            if [[ "$value" =~ ^[0-9]{1,15}$ ]]; then printf '%s' "$((value / 1024))"; else printf '"unavailable"'; fi
+          }
+          cpus=0
+          while read -r metric ignored; do
+            if [[ "$metric" =~ ^cpu[0-9]+$ ]]; then cpus=$((cpus + 1)); fi
+          done < /proc/stat
+          limit='"unavailable"'
+          if [[ -r /sys/fs/cgroup/memory.max ]]; then
+            read -r value < /sys/fs/cgroup/memory.max || true
+            if [[ "$value" == max ]]; then limit='"unbounded"'; elif [[ "$value" =~ ^[0-9]{1,15}$ ]]; then limit="$((10#$value))"; fi
+          fi
+          printf '{"totalMemoryMiB":%s,"availableMemoryMiB":%s,"logicalCpus":%s,"kernelOomKillsSinceBoot":%s,"rootCgroupOomKills":%s,"rootCgroupMemoryLimitBytes":%s}\n' \
+            "$(to_mib "$(read_counter /proc/meminfo MemTotal:)")" \
+            "$(to_mib "$(read_counter /proc/meminfo MemAvailable:)")" \
+            "$cpus" "$(read_counter /proc/vmstat oom_kill)" \
+            "$(read_counter /sys/fs/cgroup/memory.events oom_kill)" "$limit"
       - name: Check tool and sandbox prerequisites
         shell: bash
         run: |
