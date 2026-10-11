@@ -22,6 +22,9 @@ export interface SddAnswer {
   readonly author: string;
   readonly commentId: number;
   readonly text: string;
+  /** Legacy records may lack question provenance; never infer it from reused Q IDs. */
+  readonly round?: number;
+  readonly questionText?: string;
 }
 
 export interface SddGateRecord {
@@ -40,6 +43,18 @@ export interface SddGateRecord {
 }
 
 export const SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
+export const SDD_MIN_DRAFT_CHARACTERS = 1800;
+export const SDD_MAX_DRAFT_CHARACTERS = 70_000;
+export const SDD_MAX_UPDATE_CHARACTERS = 18_000;
+
+/** Prior answers are context only; the use case must independently satisfy the current questions. */
+export function retainSddAnswers(previous: readonly SddAnswer[], current: readonly SddAnswer[]): readonly SddAnswer[] {
+  const answers = [...previous, ...current];
+  if (answers.length > 24 || serializeSddGateValue(answers).length > 64_000) {
+    throw new Error('The retained SDD answer history exceeds its supported bound; use concise explicit answers.');
+  }
+  return Object.freeze(answers);
+}
 const SDD_PATH = /^specs\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.md$/;
 const CAPABILITY_ID = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const SHA = /^[a-f0-9]{40}$/i;
@@ -136,7 +151,10 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
         || !/^Q[1-8]$/.test(String(answer.questionId))
         || typeof answer.author !== 'string' || answer.author.length > 100
         || !Number.isInteger(answer.commentId) || (answer.commentId as number) <= 0
-        || typeof answer.text !== 'string' || answer.text.length > 3000))) return undefined;
+        || typeof answer.text !== 'string' || answer.text.length > 3000
+        || ((answer.round !== undefined || answer.questionText !== undefined)
+          && (!Number.isInteger(answer.round) || (answer.round as number) < 1 || (answer.round as number) > 3
+            || typeof answer.questionText !== 'string' || answer.questionText.length < 12 || answer.questionText.length > 1000))))) return undefined;
     return value as unknown as SddGateRecord;
   } catch {
     return undefined;
@@ -145,7 +163,7 @@ export function readSddGateRecord(body: string | null | undefined, issueNumber: 
 
 export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', issueUrl?: string): string {
   const spanish = /^es(?:-|$)/i.test(locale);
-  const marker = `<!-- ${SDD_GATE_MARKER}\n${JSON.stringify(record)}\n-->`;
+  const marker = `<!-- ${SDD_GATE_MARKER}\n${serializeSddGateValue(record)}\n-->`;
   if (record.phase === 'published') {
     const links = sddPublicationLinks(record, issueUrl, spanish);
     return spanish
@@ -169,8 +187,8 @@ export function renderSddGateRecord(record: SddGateRecord, locale = 'en-US', iss
     ? spanish ? 'Vuelve a ejecutar el workflow de la issue para reintentar la publicación en esta misma rama.' : 'Run the issue workflow again to retry publication on this same branch.'
     : spanish ? 'Responde con `SDD Q1: tu respuesta` (una línea por pregunta). La Action continuará cuando las personas indicadas respondan todas las preguntas.' : 'Reply with `SDD Q1: your answer` (one line per question). The Action will continue after the required people answer every question.';
   return spanish
-    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n${questions}\n\n${nextStep}\n\n${marker}`
-    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n${questions}\n\n${nextStep}\n\n${marker}`;
+    ? `## Estado del SDD\n\n**Estado actual:** ${pendingPublication ? 'La publicación del primer SDD está pendiente.' : 'A la espera de respuestas para la especificación.'} ${retained}\n\n**SDD responsable:** \`${record.plan.path}\`\n\n**Ronda de aclaración:** ${record.round}\n\n${questions}\n\n${nextStep}\n\n${marker}`
+    : `## SDD work status\n\n**Current status:** ${pendingPublication ? 'First SDD publication is pending.' : 'Waiting for specification answers.'} ${retained}\n\n**Owning SDD:** \`${record.plan.path}\`\n\n**Clarification round:** ${record.round}\n\n${questions}\n\n${nextStep}\n\n${marker}`;
 }
 
 function sddPublicationLinks(record: SddGateRecord, issueUrl: string | undefined, spanish: boolean): string {
@@ -200,21 +218,97 @@ export function parseSddAnswer(body: string, questionId: string): string | undef
   return text.length >= 3 && text.length <= 3000 ? text : undefined;
 }
 
+/** Only these content failures may trigger a bounded draft regeneration. */
+export class SddDraftFormatFailure extends Error {
+  constructor(readonly reason: 'required-heading' | 'test-budget', message: string) { super(message); }
+}
+
+/** An immutable owner cannot be repaired by regenerating its proposed appendix. */
+export class SddOwnerFormatFailure extends Error {
+  constructor(readonly reason: 'required-heading' | 'test-budget') {
+    super(`The existing owning SDD violates its ${reason} contract; review the owner before retrying.`);
+  }
+}
+
+export const SDD_REQUIRED_HEADINGS = Object.freeze([
+  '## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance',
+]);
+
 export function validateSddMarkdown(markdown: string): void {
-  if (markdown.length < 1800 || markdown.length > 70_000) throw new Error('The SDD draft length is outside the supported range.');
-  for (const heading of ['## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance']) {
-    if (!markdown.includes(heading)) throw new Error(`The SDD draft is missing ${heading}.`);
+  if (markdown.length < SDD_MIN_DRAFT_CHARACTERS || markdown.length > SDD_MAX_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
+  for (const heading of SDD_REQUIRED_HEADINGS) {
+    if (!markdown.includes(heading)) throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
   }
-  if (!/\b\d+\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)) {
-    throw new Error('The SDD must include a numeric test budget.');
+  if (!/\b[1-9]\d*\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)
+    && !hasNumericSddBudgetTable(markdown)) {
+    throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.');
   }
+}
+
+/** Accept the canonical template table only when its allocations prove its total. */
+function hasNumericSddBudgetTable(markdown: string): boolean {
+  let fence: string | undefined;
+  let testing = false;
+  let table = false;
+  let separator = false;
+  let sum = 0;
+  let allocations = 0;
+  let total: number | undefined;
+  const finish = () => table && separator && allocations > 0 && total === sum;
+  for (const line of markdown.split(/\r?\n/)) {
+    const boundary = line.match(/^\s*(`{3,}|~{3,})/);
+    if (boundary) {
+      if (!fence) fence = boundary[1];
+      else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length) fence = undefined;
+      continue;
+    }
+    if (fence) continue;
+    if (/^##\s/.test(line)) {
+      if (testing) return finish();
+      testing = /^## 14\. Testing strategy\b/.test(line);
+      continue;
+    }
+    if (!testing) continue;
+    if (!/^\s*\|/.test(line)) {
+      if (table) return finish();
+      continue;
+    }
+    const cells = line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.replace(/[*_`]/g, '').trim());
+    if (!table) {
+      if (!/^(?:area|área)$/i.test(cells[0] ?? '')
+        || !/^(?:minimum(?: distinct)? (?:cases|tests)|(?:casos|pruebas) mínim[oa]s)$/i.test(cells[1] ?? '')) continue;
+      table = true;
+      continue;
+    }
+    if (!separator) {
+      if (cells.length < 2 || !cells.every(cell => /^:?-{3,}:?$/.test(cell))) return false;
+      separator = true;
+      continue;
+    }
+    if (!cells[0] || !/^[1-9]\d*$/.test(cells[1] ?? '')) return false;
+    const count = Number(cells[1]);
+    if (!Number.isSafeInteger(count)) return false;
+    if (/^total$/i.test(cells[0])) {
+      if (total !== undefined) return false;
+      total = count;
+    } else {
+      if (total !== undefined || !Number.isSafeInteger(sum + count)) return false;
+      sum += count;
+      allocations++;
+    }
+  }
+  return finish();
 }
 
 /** Automated extensions retain the owning contract verbatim; contributors integrate revisions explicitly. */
 export function composeSddUpdate(existing: string, change: string): string {
-  validateSddMarkdown(existing);
+  try { validateSddMarkdown(existing); }
+  catch (error) {
+    if (error instanceof SddDraftFormatFailure) throw new SddOwnerFormatFailure(error.reason);
+    throw error;
+  }
   validateSddMarkdown(change);
-  if (change.length > 18_000) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+  if (change.length > SDD_MAX_UPDATE_CHARACTERS) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
   let fence: string | undefined;
   const appendix = change.split('\n').map(line => {
     const boundary = line.match(/^\s*(`{3,}|~{3,})/);
@@ -228,6 +322,11 @@ export function composeSddUpdate(existing: string, change: string): string {
   const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
   validateSddMarkdown(merged);
   return merged;
+}
+
+function serializeSddGateValue(value: SddGateRecord | readonly SddAnswer[]): string {
+  // Human answer text must never terminate its hidden state comment.
+  return JSON.stringify(value).replace(/</gu, '\\u003c').replace(/>/gu, '\\u003e');
 }
 
 function sanitize(value: string): string {

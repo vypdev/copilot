@@ -5,6 +5,7 @@ import type {
 } from "../application/ports/branch_sync_ports";
 import type { GitCommitPort } from "../application/ports/git_ports";
 import { listWorkspacePaths as inspectWorkspacePaths } from "../application/usecases/steps/commit/bugbot/workspace_changes";
+import { refreshBranchSyncSddCatalog, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from './branch_sync_sdd_catalog';
 
 interface MergeWorkspaceSnapshot {
   readonly parentSha: string;
@@ -20,7 +21,7 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
   private mergeInProgress = false;
   private resolutionValidated = false;
 
-  constructor(private readonly git: GitCommitPort) {}
+  constructor(private readonly git: GitCommitPort, private readonly repositoryRoot: string = process.cwd()) {}
 
   async prepare(parentBranch: string, workingBranch: string, token: string): Promise<BranchMergePreparation> {
     this.snapshot = undefined;
@@ -53,7 +54,12 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
       throw new Error("Git could not prepare the parent branch merge.");
     }
 
-    const workspacePaths = await this.listWorkspacePaths();
+    let workspacePaths = await this.listWorkspacePaths();
+    if (conflictPaths.length === 0 && workspacePaths.includes(SDD_CATALOG_PATH) && workspacePaths.includes(SDD_CATALOG_INDEX_PATH)) {
+      if (!refreshBranchSyncSddCatalog(this.repositoryRoot)) throw new Error('The merged SDD catalog is invalid.');
+      await this.git.stagePaths([SDD_CATALOG_INDEX_PATH]);
+      workspacePaths = await this.listWorkspacePaths();
+    }
     const indexEntries = await this.readIndexEntries();
     const conflicts = new Set(conflictPaths);
     this.snapshot = {
@@ -88,6 +94,8 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
       if (indexEntries.get(path) !== entry) return invalid(`The agent changed non-conflicted path ${path}.`);
     }
     try {
+      if (!this.resolutionValidated && conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
+        && !refreshBranchSyncSddCatalog(this.repositoryRoot)) return invalid('The resolved SDD catalog is invalid.');
       await this.git.execute("git", ["diff", "--check"]);
       // The agent edits files without Git write authority. Only this trusted
       // adapter stages the verified original conflict set, once before checks.

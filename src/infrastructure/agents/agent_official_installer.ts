@@ -97,6 +97,10 @@ export function installerEnvironment(root: string, source: NodeJS.ProcessEnv): N
         environment.PSModulePath = [
             join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'Modules'),
         ].join(delimiter);
+        // Installer probes run before the provider's private shell policy.
+        // PowerShell 5.1 may resolve its default cache relative to the checkout
+        // when the service account has no known local application-data folder.
+        environment.PSModuleAnalysisCachePath = 'NUL';
     }
     environment.HOME = root;
     environment.USERPROFILE = root;

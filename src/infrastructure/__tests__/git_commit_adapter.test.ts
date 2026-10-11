@@ -3,8 +3,24 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import * as actionsExec from '@actions/exec';
 
 describe('GitCommitAdapter', () => {
+    it('retains exact NUL-delimited bytes without emitting them into Actions logs', async () => {
+        const records = Buffer.from('100644 sha 0\tsrc/one.ts\0' + '100644 sha 0\tsrc/two.ts\0');
+        const execution = jest.spyOn(actionsExec, 'exec').mockImplementation(async (_program, _args, options) => {
+            expect(options?.silent).toBe(true);
+            options?.listeners?.stdout?.(records);
+            return 0;
+        });
+        try {
+            const stdout = jest.fn();
+            await new GitCommitAdapter().execute('git', ['ls-files', '-s', '-z'], { stdout });
+            expect(stdout).toHaveBeenCalledWith(records);
+        } finally {
+            execution.mockRestore();
+        }
+    });
     it('configures author, stages, commits and pushes through the port', async () => {
         const calls: string[][] = [];
         const adapter = new GitCommitAdapter(async (program: string, args: string[]) => {

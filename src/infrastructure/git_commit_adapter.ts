@@ -11,6 +11,9 @@ export class GitCommitAdapter implements GitCommitPort {
     constructor(
         private readonly executeCommand: GitCommandExecutor = (program, args, options) => options
             ? exec.exec(program, args, {
+                // Captured Git reads can contain NUL-delimited records that
+                // hide subsequent lines in GitHub's Actions log viewer.
+                ...(options.stdout ? { silent: true } : {}),
                 ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
                 ...(options.env ? { env: options.env } : {}),
             })

@@ -4,6 +4,7 @@ import type { ApplicationError } from '../../data/model/application_error';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
 import { projectBugbotResultTelemetry } from './bugbot_telemetry_projection_policy';
 import { countActionableBugbotFindings } from '../../domain/bugbot/review_state';
+import { readImplementationResult } from './implementation_result_policy';
 
 export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
 export type LifecycleReviewEvidence = 'approved' | 'changes-requested' | 'commented' | 'dismissed';
@@ -79,6 +80,8 @@ export function resolveLifecycleState(
     }
 
     // A verified branch is evidence even when reconciliation made no label change.
+    if (input.eventName === 'issue_comment' && input.results.some(result => result.success && result.executed
+        && result.errors.length === 0 && readImplementationResult(result.id, result.payload))) return 'working';
     if (input.results.some(result => result.id === 'ReconcileBranchReadinessUseCase'
       && result.success && getResultPayload(result.payload)?.branchName)) return 'working';
     if (hasResult(input.results, 'PreBranchSddGateUseCase')) return 'specifying';

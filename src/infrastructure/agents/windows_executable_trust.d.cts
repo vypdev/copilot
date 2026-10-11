@@ -9,4 +9,5 @@ export function parseWindowsExecutableDescriptors(output: string, expectedCount:
 export function currentWindowsUserIdentity(): WindowsUserIdentity;
 export function isLocalWindowsAdministrator(sid: string, accountDomain: string | undefined, computerName: string): boolean;
 export function systemTool(name: string): string;
+export function buildWindowsAclProbeEnvironment(root?: string): Record<string, string>;
 export function verifyWindowsAgentExecutableAcl(path: string): void;

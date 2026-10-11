@@ -65,6 +65,13 @@ describe("DoUserRequestUseCase", () => {
         expect(mockGitExecute).not.toHaveBeenCalled();
     });
 
+    it('uses the verified override in the agent prompt when an issue event has no commit branch', async () => {
+        mockCopilotMessage.mockResolvedValue({ text: 'Applied' });
+        await useCase.invoke({ context: baseContext({ headBranch: '' }), userComment: 'Add the feature', branchOverride: 'feature/42-managed' });
+        expect(mockCopilotMessage).toHaveBeenCalledTimes(1);
+        expect(mockCopilotMessage.mock.calls[0][1]).toContain('feature/42-managed');
+    });
+
     it("returns empty results when OpenCode not configured", async () => {
         const context = baseContext({ agentConfiguration: { provider: 'opencode', model: '' } });
 
