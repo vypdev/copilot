@@ -196,6 +196,16 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'branch-sync-agent-disabled': Object.freeze({
+    impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
+    action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
+    retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+  }),
+  'branch-sync-fixer-unavailable': Object.freeze({
+    impact: 'Branch synchronization stopped because the merge has conflicts and no fixer agent is configured.',
+    action: 'Configure a supported fixer and retry {command}; use --dry-run to inspect the merge without publishing it.',
+    retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+  }),
   'pull-request-link-restored': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
     action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
@@ -234,6 +244,16 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'branch-sync-agent-disabled': Object.freeze({
+    impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
+    action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
+    retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+  }),
+  'branch-sync-fixer-unavailable': Object.freeze({
+    impact: 'La sincronización se detuvo porque el merge tiene conflictos y no hay un fixer configurado.',
+    action: 'Configura un fixer compatible y reintenta {command}; usa --dry-run para inspeccionar el merge sin publicarlo.',
+    retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+  }),
   'pull-request-link-restored': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
     action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',

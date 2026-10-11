@@ -1549,7 +1549,9 @@
         "src/infrastructure/composition/main_run_route_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
         "src/infrastructure/branch_sync_workspace_adapter.ts",
-        "src/prompts/branch_sync_conflicts.ts"
+        "src/prompts/branch_sync_conflicts.ts",
+        "src/data/model/application_error.ts",
+        "src/application/policies/application_error_message_catalog.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1560,7 +1562,10 @@
         "src/data/repository/branch_sync/__tests__/branch_dependency_policy.test.ts",
         "src/data/repository/branch_sync/__tests__/branch_dependency_repository.test.ts",
         "src/infrastructure/__tests__/branch_sync_workspace_adapter.test.ts",
-        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts"
+        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
+        "src/application/usecases/branch_sync/__tests__/branch_sync_execution_policy.test.ts",
+        "src/application/errors/__tests__/application_error.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

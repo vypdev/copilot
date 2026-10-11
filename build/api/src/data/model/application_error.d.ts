@@ -1,6 +1,6 @@
 export type ApplicationErrorKind = 'configuration' | 'authorization' | 'provider' | 'agent' | 'validation' | 'workflow' | 'unknown';
 export type ApplicationErrorCode = 'configuration.invalid' | 'configuration.unsupported' | 'authorization.denied' | 'authorization.credential-invalid' | 'provider.not-found' | 'provider.conflict' | 'provider.rate-limited' | 'provider.unavailable' | 'provider.contract-invalid' | 'agent.policy-rejected' | 'agent.failed' | 'locale.output-invalid' | 'locale.translation-failed' | 'validation.invalid-input' | 'workflow.invalid-event' | 'workflow.stale' | 'workflow.cancelled' | 'workflow.failed' | 'workflow.presentation-pending' | 'timeout' | 'unexpected';
-export declare const APPLICATION_ERROR_RECOVERY_IDS: readonly ["pull-request-link-restored", "pull-request-link-base-retained", "pull-request-link-reference-retained", "pull-request-link-base-and-reference-retained", "managed-branch-enrichment-failed", "inactivity-explanation-failed", "bugbot-review-blocks-pending"];
+export declare const APPLICATION_ERROR_RECOVERY_IDS: readonly ["pull-request-link-restored", "pull-request-link-base-retained", "pull-request-link-reference-retained", "pull-request-link-base-and-reference-retained", "managed-branch-enrichment-failed", "inactivity-explanation-failed", "bugbot-review-blocks-pending", "branch-sync-agent-disabled", "branch-sync-fixer-unavailable"];
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 interface ApplicationErrorRecoveryVariables {
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
@@ -15,6 +15,12 @@ interface ApplicationErrorRecoveryVariables {
     }>;
     readonly 'bugbot-review-blocks-pending': Readonly<{
         pendingCount: number;
+    }>;
+    readonly 'branch-sync-agent-disabled': Readonly<{
+        command: '/copilot sync-branch';
+    }>;
+    readonly 'branch-sync-fixer-unavailable': Readonly<{
+        command: '/copilot sync-branch';
     }>;
 }
 export type ApplicationErrorRecovery = {

@@ -5158,6 +5158,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
     'bugbot-review-blocks-pending',
+    'branch-sync-agent-disabled',
+    'branch-sync-fixer-unavailable',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -5344,6 +5346,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
+    'branch-sync-agent-disabled': Object.freeze(['command']),
+    'branch-sync-fixer-unavailable': Object.freeze(['command']),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -5374,6 +5378,10 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !Number.isSafeInteger(variables.pendingCount)
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
+    }
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable')
+        && variables.command !== '/copilot sync-branch') {
+        throw new TypeError('Application error recovery synchronization command is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

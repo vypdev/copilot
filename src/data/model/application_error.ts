@@ -38,6 +38,8 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
     'bugbot-review-blocks-pending',
+    'branch-sync-agent-disabled',
+    'branch-sync-fixer-unavailable',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
@@ -50,6 +52,8 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'managed-branch-enrichment-failed': Readonly<{ branchName: string }>;
     readonly 'inactivity-explanation-failed': Readonly<{ issueNumber: number }>;
     readonly 'bugbot-review-blocks-pending': Readonly<{ pendingCount: number }>;
+    readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
 }
 
 export type ApplicationErrorRecovery = {
@@ -286,6 +290,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
+    'branch-sync-agent-disabled': Object.freeze(['command']),
+    'branch-sync-fixer-unavailable': Object.freeze(['command']),
 });
 
 function normalizeApplicationErrorRecovery(
@@ -318,6 +324,10 @@ function normalizeApplicationErrorRecovery(
             || !Number.isSafeInteger(variables.pendingCount)
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
+    }
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable')
+        && variables.command !== '/copilot sync-branch') {
+        throw new TypeError('Application error recovery synchronization command is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

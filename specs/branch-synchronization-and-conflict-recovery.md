@@ -277,17 +277,30 @@ branch history. Rollback restores one complete known-good code/schema bundle;
 existing cards and immutable notifications remain ordinary GitHub comments, and
 any completed merge remains an auditable commit reverted normally if necessary.
 
+### Explicit conflict recovery
+
+Live dogfooding on 2026-10-11 found that `--no-agent` correctly aborted the
+conflicted synchronization of issue #454, but its correlated reply discarded the
+known cause and gave only generic workflow recovery. Conflict eligibility MUST
+retain a closed recovery descriptor for agent-disabled and fixer-unavailable
+states. English and Spanish presentation MUST identify the blocker, name the
+existing synchronization command or configuration action, offer dry-run
+inspection, and state that no synchronization commit was pushed. The descriptor
+accepts only the fixed `/copilot sync-branch` command; translated catalog prose
+cannot invent a command or override conflict, sensitive-path, verification or
+remote-head safeguards. Other failures keep their existing semantic handling.
+
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 28 | clean/conflict/dry-run/verify/push; four real-Git conflict cases (unstaged resolution, markers, outside edit, verification mutation) and two trusted-staging failures |
+| Use cases/workspace | 30 | clean/conflict/dry-run/verify/push; four real-Git conflict cases (unstaged resolution, markers, outside edit, verification mutation), two trusted-staging failures, and two localized conflict-recovery/no-push routes |
 | Adapters/workflow contracts | 16 | pagination, git states, all-branch/no-agent |
-| UX/localization/sanitization | 16 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors |
-| Integration/security/cutover | 16 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection |
-| **Total** | **124** | no double counting |
+| UX/localization/sanitization | 18 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations |
+| Integration/security/cutover | 18 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections |
+| **Total** | **130** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests

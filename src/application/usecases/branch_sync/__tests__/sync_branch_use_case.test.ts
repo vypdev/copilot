@@ -2,6 +2,8 @@ import type { Execution } from "../../../../data/model/execution";
 import type { BranchMergePreparation } from "../../../ports/branch_sync_ports";
 import { SyncBranchUseCase } from "../sync_branch_use_case";
 import { projectBranchSyncContext } from '../../push_single_action_contexts';
+import { renderApplicationErrorMarkdown } from '../../../policies/application_error_presentation_policy';
+import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
 
 const target = {
   issueNumber: 42,
@@ -54,6 +56,32 @@ function setup(preparation: BranchMergePreparation) {
 const options = { dryRun: false, useAgent: true };
 
 describe("SyncBranchUseCase", () => {
+  it.each([
+    ['agent disabled', false, true, 'branch-sync-agent-disabled', '--no-agent'],
+    ['fixer unavailable', true, false, 'branch-sync-fixer-unavailable', 'no fixer agent'],
+  ] as const)('explains conflict recovery when %s without invoking the fixer or publishing a commit', async (_name, useAgent, configured, recoveryId, cause) => {
+    const context = setup({ kind: 'conflicted', parentSha: 'parent', childSha: 'child', conflictPaths: ['src/a.ts'] });
+    const requestContext = execution(configured ? {} : {
+      ai: { getAgentConfiguration: () => ({ provider: 'codex', model: '' }), getBugbotFixVerifyCommands: () => ['pnpm test'] },
+    });
+    const results = await context.useCase.invoke({ context: requestContext, options: { dryRun: false, useAgent } });
+    const error = results[0].errors[0];
+    expect(error.recovery).toEqual({ id: recoveryId, variables: { command: '/copilot sync-branch' } });
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.fixer.fix).not.toHaveBeenCalled();
+    expect(context.git.execute).not.toHaveBeenCalled();
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+    const english = renderApplicationErrorMarkdown(error);
+    expect(english).toContain(cause);
+    expect(english).toContain('/copilot sync-branch');
+    expect(english).toContain('--dry-run');
+    expect(english).toContain('No synchronization commit was pushed');
+    const spanish = renderApplicationErrorMarkdown(error, resolveStaticApplicationErrorCatalog('es-ES').message);
+    expect(spanish).toContain('La sincronización se detuvo');
+    expect(spanish).toContain('/copilot sync-branch');
+    expect(spanish).toContain('se conservaron las ramas remotas');
+  });
+
   it("merges a clean parent update, verifies it, checks for races, and pushes", async () => {
     const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     const results = await context.useCase.invoke({ context: execution(), options });

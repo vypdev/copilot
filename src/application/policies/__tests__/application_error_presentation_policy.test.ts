@@ -20,6 +20,16 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'branch-sync-agent-disabled', variables: { command: '/copilot sync-branch' } },
+        english: 'No synchronization commit was pushed; remote branches were preserved.',
+        spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    },
+    {
+        recovery: { id: 'branch-sync-fixer-unavailable', variables: { command: '/copilot sync-branch' } },
+        english: 'No synchronization commit was pushed; remote branches were preserved.',
+        spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    },
+    {
         recovery: { id: 'pull-request-link-restored', variables: {} },
         english: 'The original pull-request base and description were restored.',
         spanish: 'Se restauraron la rama base y la descripción originales de la pull request.',

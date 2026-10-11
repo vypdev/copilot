@@ -37933,6 +37933,16 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'branch-sync-agent-disabled': Object.freeze({
+        impact: 'Branch synchronization stopped because the merge has conflicts and --no-agent disables automatic resolution.',
+        action: 'Run {command} to let the configured fixer resolve eligible conflicts, or use --dry-run to inspect the merge without publishing it.',
+        retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+    }),
+    'branch-sync-fixer-unavailable': Object.freeze({
+        impact: 'Branch synchronization stopped because the merge has conflicts and no fixer agent is configured.',
+        action: 'Configure a supported fixer and retry {command}; use --dry-run to inspect the merge without publishing it.',
+        retainedState: 'No synchronization commit was pushed; remote branches were preserved.',
+    }),
     'pull-request-link-restored': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
         action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
@@ -37970,6 +37980,16 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'branch-sync-agent-disabled': Object.freeze({
+        impact: 'La sincronización se detuvo porque el merge tiene conflictos y --no-agent desactiva la resolución automática.',
+        action: 'Ejecuta {command} para que el fixer configurado resuelva los conflictos admitidos, o usa --dry-run para inspeccionar el merge sin publicarlo.',
+        retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    }),
+    'branch-sync-fixer-unavailable': Object.freeze({
+        impact: 'La sincronización se detuvo porque el merge tiene conflictos y no hay un fixer configurado.',
+        action: 'Configura un fixer compatible y reintenta {command}; usa --dry-run para inspeccionar el merge sin publicarlo.',
+        retainedState: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    }),
     'pull-request-link-restored': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
         action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',
@@ -51749,7 +51769,7 @@ function unauthorized(taskId) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BRANCH_SYNC_TASK_ID = void 0;
-exports.branchSyncConflictEligibilityError = branchSyncConflictEligibilityError;
+exports.branchSyncConflictEligibilityFailure = branchSyncConflictEligibilityFailure;
 exports.completedBranchSyncResult = completedBranchSyncResult;
 exports.unavailableBranchSyncResult = unavailableBranchSyncResult;
 exports.failedBranchSyncResult = failedBranchSyncResult;
@@ -51759,18 +51779,24 @@ const workspace_changes_1 = __nccwpck_require__(93370);
 const application_error_1 = __nccwpck_require__(75999);
 exports.BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
 const MAX_AGENT_CONFLICT_PATHS = 20;
-function branchSyncConflictEligibilityError(preparation, useAgent, agentConfiguration) {
+function branchSyncConflictEligibilityFailure(preparation, useAgent, agentConfiguration) {
     if (!useAgent)
-        return "The merge has conflicts and agent resolution was disabled with --no-agent.";
+        return {
+            reason: "The merge has conflicts and agent resolution was disabled with --no-agent.",
+            recovery: { id: 'branch-sync-agent-disabled', variables: { command: '/copilot sync-branch' } },
+        };
     if (!(0, agent_1.isAgentConfigurationReady)(agentConfiguration)) {
-        return "The merge has conflicts, but no fixer agent is configured.";
+        return {
+            reason: "The merge has conflicts, but no fixer agent is configured.",
+            recovery: { id: 'branch-sync-fixer-unavailable', variables: { command: '/copilot sync-branch' } },
+        };
     }
     if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {
-        return `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.`;
+        return { reason: `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.` };
     }
     const sensitive = preparation.conflictPaths.filter(workspace_changes_1.isSensitiveWorkspacePath);
     return sensitive.length > 0
-        ? `Automated conflict resolution is not allowed for sensitive paths: ${sensitive.join(", ")}.`
+        ? { reason: `Automated conflict resolution is not allowed for sensitive paths: ${sensitive.join(", ")}.` }
         : undefined;
 }
 function completedBranchSyncResult(input) {
@@ -51803,15 +51829,15 @@ function completedBranchSyncResult(input) {
 function unavailableBranchSyncResult(reason) {
     return new result_1.Result({ id: exports.BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [new application_error_1.ApplicationError('agent.policy-rejected', reason)] });
 }
-function failedBranchSyncResult(reason, cause) {
+function failedBranchSyncResult(reason, cause, recovery) {
     return new result_1.Result({
         id: exports.BRANCH_SYNC_TASK_ID,
         success: false,
         executed: true,
         steps: [reason],
         errors: [cause === undefined
-                ? new application_error_1.ApplicationError('workflow.failed', reason)
-                : (0, application_error_1.toApplicationError)(cause, 'workflow.failed', reason)],
+                ? new application_error_1.ApplicationError('workflow.failed', reason, { recovery })
+                : (0, application_error_1.toApplicationError)(cause, 'workflow.failed', reason, { recovery })],
     });
 }
 
@@ -51870,7 +51896,7 @@ class SyncBranchUseCase {
         }
         const conflictResolution = await this.resolveConflicts(context, preparation, parentBranch, target, options.useAgent);
         if (conflictResolution.failure)
-            return [await this.abortFailure(conflictResolution.failure)];
+            return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
         const verification = await this.verifyPreparedMerge(context, preparation);
         if (verification.failure)
             return [await this.abortFailure(verification.failure)];
@@ -51886,7 +51912,7 @@ class SyncBranchUseCase {
     async resolveConflicts(context, preparation, parentBranch, target, useAgent) {
         if (preparation.kind !== "conflicted")
             return { agentUsed: false };
-        const failure = (0, branch_sync_execution_policy_1.branchSyncConflictEligibilityError)(preparation, useAgent, context.agentConfiguration);
+        const failure = (0, branch_sync_execution_policy_1.branchSyncConflictEligibilityFailure)(preparation, useAgent, context.agentConfiguration);
         if (failure)
             return { agentUsed: false, failure };
         (0, logging_ports_1.logInfo)(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
@@ -51901,12 +51927,12 @@ class SyncBranchUseCase {
             }),
         });
         if (!response?.text?.trim()) {
-            return { agentUsed: false, failure: "The conflict-resolution agent returned no usable response." };
+            return { agentUsed: false, failure: { reason: "The conflict-resolution agent returned no usable response." } };
         }
         const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
         return validation.valid
             ? { agentUsed: true }
-            : { agentUsed: false, failure: validation.reason ?? "The agent resolution did not pass workspace safety validation." };
+            : { agentUsed: false, failure: { reason: validation.reason ?? "The agent resolution did not pass workspace safety validation." } };
     }
     async verifyPreparedMerge(context, preparation) {
         const commands = (0, verify_command_policy_1.limitVerifyCommands)([...context.verifyCommands]);
@@ -51935,9 +51961,9 @@ class SyncBranchUseCase {
             commitSha,
         });
     }
-    async abortFailure(reason) {
+    async abortFailure(reason, recovery) {
         await this.safeAbort();
-        return (0, branch_sync_execution_policy_1.failedBranchSyncResult)(reason);
+        return (0, branch_sync_execution_policy_1.failedBranchSyncResult)(reason, undefined, recovery);
     }
     async safeAbort() {
         try {
@@ -70358,6 +70384,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'managed-branch-enrichment-failed',
     'inactivity-explanation-failed',
     'bugbot-review-blocks-pending',
+    'branch-sync-agent-disabled',
+    'branch-sync-fixer-unavailable',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -70544,6 +70572,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'managed-branch-enrichment-failed': Object.freeze(['branchName']),
     'inactivity-explanation-failed': Object.freeze(['issueNumber']),
     'bugbot-review-blocks-pending': Object.freeze(['pendingCount']),
+    'branch-sync-agent-disabled': Object.freeze(['command']),
+    'branch-sync-fixer-unavailable': Object.freeze(['command']),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -70574,6 +70604,10 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !Number.isSafeInteger(variables.pendingCount)
             || variables.pendingCount < 1)) {
         throw new TypeError('Application error recovery pending count is invalid.');
+    }
+    if ((recovery.id === 'branch-sync-agent-disabled' || recovery.id === 'branch-sync-fixer-unavailable')
+        && variables.command !== '/copilot sync-branch') {
+        throw new TypeError('Application error recovery synchronization command is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

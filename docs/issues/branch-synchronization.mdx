@@ -107,6 +107,13 @@ Options:
 
 The command fetches the current remote heads, checks out the working branch, and prepares a no-fast-forward merge. A clean merge proceeds without an agent. Before the push, Copilot runs the configured `bugbot-fix-verify-commands`, verifies that those commands did not mutate the prepared merge, and confirms that neither remote head changed while the operation was running.
 
+If `--no-agent` encounters conflicts, the reply identifies that option as the
+blocker and explains that no synchronization commit was pushed. Run
+`/copilot sync-branch` to allow the configured fixer to resolve eligible conflicts,
+or use `--dry-run` to inspect the merge. If no fixer is configured, the reply
+instead asks you to configure a supported fixer before retrying. These are
+distinct recovery states; neither response claims that a remote branch changed.
+
 ## Conflict resolution boundary
 
 When Git reports conflicts, the configured fixer agent may resolve them under a narrow contract:
