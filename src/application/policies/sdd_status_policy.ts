@@ -26,16 +26,17 @@ export function initialSddStatus(context: Pick<SddEvidenceQueryContext, 'admitte
 }
 
 export function projectSddStatus(evidence: SddEvidenceSnapshot, initial?: SddStatusReadiness): SddStatusReadiness {
-    const firstCommitSha = evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.firstSha ?? '')
+    const path = evidence.path ?? (evidence.state === 'stale' ? evidence.verified?.path : undefined);
+    const firstCommitSha = evidence.verified?.path === path && /^[a-f0-9]{40}$/u.test(evidence.verified?.firstSha ?? '')
         ? evidence.verified!.firstSha : undefined;
-    const revisionPending = (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending') && Boolean(firstCommitSha);
+    const revisionPending = (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending' || evidence.state === 'stale') && Boolean(firstCommitSha);
     const state: SddStatusReadiness['state'] = evidence.state === 'not-required' ? 'not-required'
         : evidence.state === 'absent' || evidence.state === 'unavailable' ? 'unavailable'
-        : evidence.state === 'stale' || evidence.state === 'invalid' ? 'unverified'
+        : evidence.state === 'stale' ? (revisionPending ? 'revision-pending' : 'unverified') : evidence.state === 'invalid' ? 'unverified'
         : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
         : revisionPending ? 'revision-pending' : evidence.state;
     return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
-        ...(evidence.path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path: evidence.path } : {}),
+        ...(path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path } : {}),
         ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
         ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
         ...((state === 'revision-pending' || state === 'ready') && firstCommitSha ? { firstCommitSha } : {}),

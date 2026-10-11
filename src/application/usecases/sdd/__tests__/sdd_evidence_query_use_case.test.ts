@@ -154,6 +154,57 @@ describe('read-only SDD authority and publication query', () => {
         const f = fixture(); f.ports.descriptions.getDescription.mockResolvedValue('Changed requirements');
         expect(await f.query.read(f.context)).toMatchObject({ state: 'stale', verified: { firstSha: first } });
     });
+    it('authorizes a repeated candidate account once across questions and login case variants', async () => {
+        const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan, questions: [
+            { id: 'Q1', text: 'First decision?', owner: 'maintainer' }, { id: 'Q2', text: 'Second decision?', owner: 'maintainer' },
+        ] } });
+        const current = await f.comments(); current.value.push(f.comment('SDD Q1: Proposed choice', 9, 'untrusted'), f.comment('SDD Q2: Proposed choice', 10, 'UNTRUSTED'));
+        f.comments.mockResolvedValue(current);
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'awaiting-answers', pendingQuestionIds: ['Q1', 'Q2'] });
+        expect(f.ports.actors.isActorAllowedToModifyFiles).toHaveBeenCalledTimes(1);
+    });
+    it('never carries cached authorization into a subsequent status query', async () => {
+        const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan,
+            questions: [{ id: 'Q1', text: 'Current decision?', owner: 'maintainer' }] } });
+        const current = await f.comments(); current.value.push(f.comment('SDD Q1: Current choice', 9, 'candidate')); f.comments.mockResolvedValue(current);
+        f.ports.actors.isActorAllowedToModifyFiles.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'awaiting-answers' });
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'publication-pending', pendingQuestionIds: [] });
+        expect(f.ports.actors.isActorAllowedToModifyFiles).toHaveBeenCalledTimes(2);
+    });
+    it.each([16, 17])('bounds distinct maintainer candidates to 16 lookups with %s candidates', async candidates => {
+        const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan,
+            questions: [{ id: 'Q1', text: 'Current decision?', owner: 'maintainer' }] } });
+        const current = await f.comments(); for (let i = 0; i < candidates; i++) current.value.push(f.comment('SDD Q1: Proposed choice', 9 + i, `candidate-${i}`));
+        f.comments.mockResolvedValue(current);
+        expect(await f.query.read(f.context)).toMatchObject({ state: candidates === 16 ? 'awaiting-answers' : 'unavailable' });
+        expect(f.ports.actors.isActorAllowedToModifyFiles).toHaveBeenCalledTimes(16);
+    });
+    it('shares one authorization for retained and live answers without changing answer provenance', async () => {
+        const f = fixture(); const text = 'Current decision?'; Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan,
+            questions: [{ id: 'Q1', text, owner: 'maintainer' }] }, answers: [{ questionId: 'Q1', author: 'untrusted', commentId: 6,
+            text: 'Retained choice', round: 1, questionText: text }] });
+        const current = await f.comments(); current.value.push(f.comment('SDD Q1: Current choice', 9, 'UNTRUSTED')); f.comments.mockResolvedValue(current);
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'awaiting-answers', pendingQuestionIds: ['Q1'] });
+        expect(f.ports.actors.isActorAllowedToModifyFiles).toHaveBeenCalledTimes(1);
+    });
+    it('does not spend the maintainer API budget on issue-author questions', async () => {
+        const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan,
+            questions: [{ id: 'Q1', text: 'Author decision?', owner: 'issue-author' }] } });
+        const current = await f.comments(); for (let i = 0; i < 17; i++) current.value.push(f.comment('SDD Q1: Proposed choice', 9 + i, `candidate-${i}`));
+        f.comments.mockResolvedValue(current);
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'awaiting-answers', pendingQuestionIds: ['Q1'] });
+        expect(f.ports.actors.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
+    });
+    it('contains a denied authorization and retries it freshly on the next query', async () => {
+        const f = fixture(); Object.assign(f.record, { phase: 'awaiting-answer', plan: { ...f.record.plan,
+            questions: [{ id: 'Q1', text: 'Current decision?', owner: 'maintainer' }] } });
+        const current = await f.comments(); current.value.push(f.comment('SDD Q1: Current choice', 9, 'candidate')); f.comments.mockResolvedValue(current);
+        f.ports.actors.isActorAllowedToModifyFiles.mockRejectedValueOnce(new Error('PRIVATE-CREDENTIAL')).mockResolvedValueOnce(true);
+        expect(await f.query.read(f.context)).toEqual({ state: 'unavailable' });
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'publication-pending' });
+        expect(f.ports.actors.isActorAllowedToModifyFiles).toHaveBeenCalledTimes(2);
+    });
     it('never restores readiness from an older valid card after the latest owned card is corrupted', async () => {
         const f = fixture(); f.comments.mockResolvedValue({ ...(await f.comments()), value: [f.comment(), f.comment('<!-- copilot:sdd-gate:v1\nbad\n-->', 8)] });
         expect(await f.query.read(f.context)).toEqual({ state: 'invalid' });

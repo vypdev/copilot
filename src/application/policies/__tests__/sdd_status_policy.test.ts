@@ -25,7 +25,7 @@ describe('SDD status projection and safe navigation', () => {
 
     it.each([
         ['not-required', 'not-required'], ['absent', 'unavailable'], ['unavailable', 'unavailable'],
-        ['invalid', 'unverified'], ['stale', 'unverified'], ['awaiting-answers', 'revision-pending'],
+        ['invalid', 'unverified'], ['stale', 'revision-pending'], ['awaiting-answers', 'revision-pending'],
         ['publication-pending', 'revision-pending'], ['published', 'ready'],
     ] as const)('projects %s with no historical SHA mistaken for readiness', (state, expected) => {
         const status = projectSddStatus({ state, path: verified.path, verified, pendingQuestionIds: ['Q1'], cardId: 7 }, { state: 'unavailable', required: true });
@@ -105,6 +105,21 @@ describe('SDD status projection and safe navigation', () => {
     it('keeps a verified current revision visible without echoing a malformed historical SHA', () => {
         const body = render({ state: 'ready', required: true, path: verified.path, commitSha: sha, firstCommitSha: 'PRIVATE-CREDENTIAL' });
         expect(body).toContain(`/blob/${sha}/${verified.path}`); expect(body).not.toContain('PRIVATE-'); expect(body).not.toContain('(history)');
+    });
+    it.each(['en-US', 'es-ES'])('retains only verified publication history after a stable issue edit in %s', locale => {
+        const status = projectSddStatus({ state: 'stale', verified: { ...verified, currentSha: 'b'.repeat(40) } });
+        expect(status).toMatchObject({ state: 'revision-pending', firstCommitSha: sha, path: verified.path }); expect(status.commitSha).toBeUndefined();
+        const body = formatSddStatus(status, resolveStaticPublicationCatalog(locale).catalog, issueUrl, 42, identity).join('\n');
+        expect(body).toContain(`/blob/${sha}/${verified.path}`); expect(body).not.toContain(`/blob/${'b'.repeat(40)}/`);
+        expect(body).toContain(locale === 'es-ES' ? 'Revisión pendiente' : 'Revision pending');
+    });
+    it('does not revive history after a stale result loses publication proof at its final fence', () => {
+        const status = projectSddStatus({ state: 'stale' });
+        expect(status).toEqual({ state: 'unverified', required: true }); expect(render(status)).not.toContain('/blob/');
+    });
+    it('does not substitute a mismatched path to restore stale publication history', () => {
+        const status = projectSddStatus({ state: 'stale', path: 'specs/foreign.md', verified });
+        expect(status.state).toBe('unverified'); expect(status.firstCommitSha).toBeUndefined(); expect(render(status)).not.toContain('/blob/');
     });
 
     it.each(['no proof', 'wrong path', 'abbreviated SHA'])('rejects a published projection with %s', scenario => {

@@ -43637,16 +43637,17 @@ function initialSddStatus(context, labels) {
     }
 }
 function projectSddStatus(evidence, initial) {
-    const firstCommitSha = evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.firstSha ?? '')
+    const path = evidence.path ?? (evidence.state === 'stale' ? evidence.verified?.path : undefined);
+    const firstCommitSha = evidence.verified?.path === path && /^[a-f0-9]{40}$/u.test(evidence.verified?.firstSha ?? '')
         ? evidence.verified.firstSha : undefined;
-    const revisionPending = (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending') && Boolean(firstCommitSha);
+    const revisionPending = (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending' || evidence.state === 'stale') && Boolean(firstCommitSha);
     const state = evidence.state === 'not-required' ? 'not-required'
         : evidence.state === 'absent' || evidence.state === 'unavailable' ? 'unavailable'
-            : evidence.state === 'stale' || evidence.state === 'invalid' ? 'unverified'
+            : evidence.state === 'stale' ? (revisionPending ? 'revision-pending' : 'unverified') : evidence.state === 'invalid' ? 'unverified'
                 : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
                     : revisionPending ? 'revision-pending' : evidence.state;
     return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
-        ...(evidence.path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path: evidence.path } : {}),
+        ...(path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path } : {}),
         ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
         ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
         ...((state === 'revision-pending' || state === 'ready') && firstCommitSha ? { firstCommitSha } : {}),
@@ -55321,6 +55322,7 @@ const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
 const sdd_issue_identity_policy_1 = __nccwpck_require__(99167);
 const sdd_query_card_policy_1 = __nccwpck_require__(56285);
+const MAX_AUTHORIZATION_LOOKUPS = 16;
 /** Reads gate authority and immutable publication evidence without any mutation or model capability. */
 class SddEvidenceQueryUseCase {
     constructor(ports) { this.ports = (0, sdd_evidence_read_ports_1.bindSddEvidenceReadPorts)(ports); }
@@ -55342,7 +55344,7 @@ class SddEvidenceQueryUseCase {
             const { record, id: cardId } = selection;
             const digest = this.digest(context, facts, record.baseSha);
             const stale = digest !== record.issueDigest;
-            const result = await this.inspectRecord(context, facts, record, cardId, stale);
+            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
             if (!['invalid', 'unavailable'].includes(result.state)
                 && !await this.fence(context, facts, selection.body, cardId, record, result.verified))
                 return { state: 'stale' };
@@ -55352,7 +55354,7 @@ class SddEvidenceQueryUseCase {
             return { state: 'unavailable' };
         }
     }
-    async inspectRecord(context, facts, record, cardId, stale) {
+    async inspectRecord(context, facts, record, cardId, stale, authorizations) {
         const path = record.plan.path;
         let verified;
         if (record.commitSha) {
@@ -55404,11 +55406,11 @@ class SddEvidenceQueryUseCase {
             return { state: 'stale', ...(verified ? { verified } : {}) };
         if (record.phase === 'published')
             return { state: 'published', path, cardId, verified };
-        const pendingQuestionIds = await this.pendingQuestions(context, facts.comments, record, cardId);
+        const pendingQuestionIds = await this.pendingQuestions(context, facts.comments, record, cardId, authorizations);
         return { state: pendingQuestionIds.length ? 'awaiting-answers' : 'publication-pending', path, cardId,
             pendingQuestionIds: Object.freeze(pendingQuestionIds), ...(verified ? { verified } : {}) };
     }
-    async pendingQuestions(context, comments, record, cardId) {
+    async pendingQuestions(context, comments, record, cardId, authorizations) {
         const pending = [];
         const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
         for (const question of record.plan.questions) {
@@ -55419,7 +55421,7 @@ class SddEvidenceQueryUseCase {
             });
             let answered = false;
             for (const answer of retained)
-                if (await this.authorized(context, question.owner, answer.author)) {
+                if (await this.authorized(context, question.owner, answer.author, authorizations)) {
                     answered = true;
                     break;
                 }
@@ -55429,7 +55431,7 @@ class SddEvidenceQueryUseCase {
                         || comment.user.login.toLowerCase() === context.trustedBotLogin.toLowerCase()
                         || !comment.body || !(0, pre_branch_sdd_1.parseSddAnswer)(comment.body, question.id))
                         continue;
-                    if (await this.authorized(context, question.owner, comment.user.login)) {
+                    if (await this.authorized(context, question.owner, comment.user.login, authorizations)) {
                         answered = true;
                         break;
                     }
@@ -55440,9 +55442,18 @@ class SddEvidenceQueryUseCase {
         }
         return pending;
     }
-    async authorized(context, owner, author) {
-        return owner === 'issue-author' ? Boolean(context.issueAuthor && author.toLowerCase() === context.issueAuthor.toLowerCase())
-            : this.ports.actors.isActorAllowedToModifyFiles(author);
+    async authorized(context, owner, author, authorizations) {
+        if (owner === 'issue-author')
+            return Boolean(context.issueAuthor && author.toLowerCase() === context.issueAuthor.toLowerCase());
+        const key = author.toLowerCase();
+        let authorization = authorizations.get(key);
+        if (!authorization) {
+            if (authorizations.size >= MAX_AUTHORIZATION_LOOKUPS)
+                throw new Error('SDD authorization inventory exceeds its bound.');
+            authorization = this.ports.actors.isActorAllowedToModifyFiles(author);
+            authorizations.set(key, authorization);
+        }
+        return authorization;
     }
     async fence(context, original, cardBody, cardId, record, verified) {
         const fresh = await this.readFacts(context.issueNumber);

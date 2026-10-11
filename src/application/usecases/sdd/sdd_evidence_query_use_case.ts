@@ -13,6 +13,7 @@ interface ReadFacts {
     readonly labels: readonly string[];
     readonly comments: readonly SddQueryComment[];
 }
+const MAX_AUTHORIZATION_LOOKUPS = 16;
 
 /** Reads gate authority and immutable publication evidence without any mutation or model capability. */
 export class SddEvidenceQueryUseCase {
@@ -33,14 +34,15 @@ export class SddEvidenceQueryUseCase {
             const { record, id: cardId } = selection;
             const digest = this.digest(context, facts, record.baseSha);
             const stale = digest !== record.issueDigest;
-            const result = await this.inspectRecord(context, facts, record, cardId, stale);
+            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
             if (!['invalid', 'unavailable'].includes(result.state)
                 && !await this.fence(context, facts, selection.body, cardId, record, result.verified)) return { state: 'stale' };
             return Object.freeze(result);
         } catch { return { state: 'unavailable' }; }
     }
 
-    private async inspectRecord(context: SddEvidenceQueryContext, facts: ReadFacts, record: SddGateRecord, cardId: number, stale: boolean): Promise<SddEvidenceSnapshot> {
+    private async inspectRecord(context: SddEvidenceQueryContext, facts: ReadFacts, record: SddGateRecord, cardId: number, stale: boolean,
+        authorizations: Map<string, Promise<boolean>>): Promise<SddEvidenceSnapshot> {
         const path = record.plan.path;
         let verified: VerifiedSddEvidence | undefined;
         if (record.commitSha) {
@@ -76,12 +78,13 @@ export class SddEvidenceQueryUseCase {
         }
         if (stale) return { state: 'stale', ...(verified ? { verified } : {}) };
         if (record.phase === 'published') return { state: 'published', path, cardId, verified };
-        const pendingQuestionIds = await this.pendingQuestions(context, facts.comments, record, cardId);
+        const pendingQuestionIds = await this.pendingQuestions(context, facts.comments, record, cardId, authorizations);
         return { state: pendingQuestionIds.length ? 'awaiting-answers' : 'publication-pending', path, cardId,
             pendingQuestionIds: Object.freeze(pendingQuestionIds), ...(verified ? { verified } : {}) };
     }
 
-    private async pendingQuestions(context: SddEvidenceQueryContext, comments: readonly SddQueryComment[], record: SddGateRecord, cardId: number): Promise<string[]> {
+    private async pendingQuestions(context: SddEvidenceQueryContext, comments: readonly SddQueryComment[], record: SddGateRecord, cardId: number,
+        authorizations: Map<string, Promise<boolean>>): Promise<string[]> {
         const pending: string[] = [];
         const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
         for (const question of record.plan.questions) {
@@ -91,13 +94,13 @@ export class SddEvidenceQueryUseCase {
                     && answer.questionId === question.id && provenance.questionText === question.text;
             });
             let answered = false;
-            for (const answer of retained) if (await this.authorized(context, question.owner, answer.author)) { answered = true; break; }
+            for (const answer of retained) if (await this.authorized(context, question.owner, answer.author, authorizations)) { answered = true; break; }
             if (!answered) {
                 for (const comment of [...comments].sort((a, b) => b.id - a.id)) {
                     if (!Number.isSafeInteger(comment.id) || comment.id <= cutoff || !comment.user?.login
                         || comment.user.login.toLowerCase() === context.trustedBotLogin.toLowerCase()
                         || !comment.body || !parseSddAnswer(comment.body, question.id)) continue;
-                    if (await this.authorized(context, question.owner, comment.user.login)) { answered = true; break; }
+                    if (await this.authorized(context, question.owner, comment.user.login, authorizations)) { answered = true; break; }
                 }
             }
             if (!answered) pending.push(question.id);
@@ -105,9 +108,17 @@ export class SddEvidenceQueryUseCase {
         return pending;
     }
 
-    private async authorized(context: SddEvidenceQueryContext, owner: 'issue-author' | 'maintainer', author: string): Promise<boolean> {
-        return owner === 'issue-author' ? Boolean(context.issueAuthor && author.toLowerCase() === context.issueAuthor.toLowerCase())
-            : this.ports.actors.isActorAllowedToModifyFiles(author);
+    private async authorized(context: SddEvidenceQueryContext, owner: 'issue-author' | 'maintainer', author: string,
+        authorizations: Map<string, Promise<boolean>>): Promise<boolean> {
+        if (owner === 'issue-author') return Boolean(context.issueAuthor && author.toLowerCase() === context.issueAuthor.toLowerCase());
+        const key = author.toLowerCase();
+        let authorization = authorizations.get(key);
+        if (!authorization) {
+            if (authorizations.size >= MAX_AUTHORIZATION_LOOKUPS) throw new Error('SDD authorization inventory exceeds its bound.');
+            authorization = this.ports.actors.isActorAllowedToModifyFiles(author);
+            authorizations.set(key, authorization);
+        }
+        return authorization;
     }
 
     private async fence(context: SddEvidenceQueryContext, original: ReadFacts, cardBody: string, cardId: number, record: SddGateRecord, verified?: VerifiedSddEvidence): Promise<boolean> {
