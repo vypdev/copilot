@@ -1562,7 +1562,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1596,7 +1596,10 @@
         "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/domain/pull_request_description.ts",
         "src/data/repository/pull_request/pull_request_lifecycle_repository.ts",
-        "src/application/usecases/steps/pull_request/update_pull_request_description_workflow.ts"
+        "src/application/usecases/steps/pull_request/update_pull_request_description_workflow.ts",
+        "src/application/policies/agent_task_activation_policy.ts",
+        "src/application/policies/agent_activity_policy.ts",
+        "src/application/policies/lifecycle_state_policy.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -1615,7 +1618,10 @@
         "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/infrastructure/composition/__tests__/lifecycle_capability_port_binding.test.ts",
-        "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts"
+        "src/data/repository/__tests__/pull_request_lifecycle_repository.test.ts",
+        "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
+        "src/application/policies/__tests__/agent_activity_policy.test.ts",
+        "src/application/policies/__tests__/lifecycle_state_policy.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",
@@ -1623,7 +1629,10 @@
         "docs/pull-requests/configuration.mdx",
         "docs/features.mdx",
         "docs/bugbot/how-it-works.mdx",
-        "docs/bugbot/configuration.mdx"
+        "docs/bugbot/configuration.mdx",
+        "docs/bugbot/detection.mdx",
+        "docs/pull-requests/workflow-setup.mdx",
+        "docs/pull-requests/examples.mdx"
       ]
     },
     {

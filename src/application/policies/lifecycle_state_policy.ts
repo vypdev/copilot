@@ -74,7 +74,7 @@ export function resolveLifecycleState(
         if (input.externalEvidence?.review === 'approved') return 'ready';
         if (input.externalEvidence?.checks === 'success') return 'reviewing';
         if (input.externalEvidence?.review !== undefined) return 'reviewing';
-        if (['opened', 'reopened', 'synchronize'].includes(input.action)) return 'reviewing';
+        if (['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(input.action)) return 'reviewing';
         return undefined;
     }
 

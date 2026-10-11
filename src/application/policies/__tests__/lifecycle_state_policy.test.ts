@@ -13,6 +13,14 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('lifecycle state policy', () => {
+    it('moves a newly ready PR to reviewing while it awaits review evidence', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request', action: 'ready_for_review',
+            isIssue: false, isPullRequest: true, issueOpened: false, issueDescriptionEdited: false,
+            pullRequestMerged: false, pullRequestClosed: false, results: [],
+        })).toBe('reviewing');
+    });
+
     it.each([
         { label: 'successful help answer', help: true, event: 'issue_comment', results: [result('ThinkUseCase')], expected: 'working' },
         { label: 'ordinary issue answer', help: false, event: 'issue_comment', results: [result('ThinkUseCase')], expected: undefined },

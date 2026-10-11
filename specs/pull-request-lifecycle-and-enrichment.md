@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-15
-- Last verified: 2026-10-10 on `master`; PR #459 exposed missing agent workspace access during dogfooding
+- Last verified: 2026-10-11 on `master`; PR #460 exposed a missing draft-to-ready review trigger during dogfooding
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
 - Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), [PR #393](https://github.com/vypdev/copilot/pull/393), and [PR #394](https://github.com/vypdev/copilot/pull/394)
@@ -25,6 +25,7 @@ is explicit full ownership with `replace`.
 ```text
 opened/reopened -> resolve optional distinct issue -> enrich PR -> concise description -> review
 synchronize -> concise description policy -> review
+ready_for_review -> full read-only review, without repeating enrichment
 edited metadata -> no Copilot PR workflow
 merged -> close distinct linked issue only
 ```
@@ -51,7 +52,9 @@ descriptions can also overwrite human content unless ownership is explicit.
    description from the merge-base diff and optional distinct issue context.
 4. `replace` owns the body; `append` upserts a marker-bounded Copilot section;
    `preserve` updates only on authorized `/copilot description`; `disabled` never updates.
-5. Open/reopen/synchronize run read-only review when configured/authorized.
+5. Open/reopen/synchronize and draft-to-ready events run read-only review when
+   configured/authorized. Draft-to-ready activates only the reviewer and does
+   not regenerate descriptions, assignments, links, or project status.
 6. Metadata-only edited events do not start the supplied workflow. Merged PRs
    close only a distinct linked issue.
 7. Runs expose event/action identity and review-state events use a distinct job
@@ -390,14 +393,22 @@ not altered.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Event/description/label policy | 26 | action matrix, optional/self linkage, modes, markers, bounds |
-| Orchestration/idempotency | 20 | order, unlinked route, replay, partial, merge closure |
+| Event/description/label policy | 29 | action matrix, optional/self linkage, modes, markers, bounds |
+| Orchestration/idempotency | 23 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
-| Workflow/config contracts | 14 | event exclusion, identity, forks, permissions, inputs |
+| Workflow/config contracts | 15 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
 | Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **109** | no double counting |
+| **Total** | **116** | no double counting |
+
+Seven draft-to-ready regression cases cover authorized and unauthorized review,
+semantic failure, reviewer-only activation, activity availability, reviewing
+lifecycle, and a missing-event rejection for both workflow copies. Existing
+canonical draft checks, fork guards, bot-event admission, and stale-head guards
+remain authoritative. The live acceptance is: convert PR #460 to draft, mark it
+ready without pushing, and observe `pull_request:ready_for_review` plus a review
+for its current head. No new input, permission, or publication authority is added.
 
 Global thresholds remain; description/marker policy SHOULD reach 100% branch
 coverage. The P2-E context/orchestration path enforces 95% lines/statements and
@@ -480,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 107-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 116-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.

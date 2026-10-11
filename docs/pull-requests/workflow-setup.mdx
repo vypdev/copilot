@@ -16,7 +16,7 @@ Use separate workflows for code/lifecycle analysis and review-state observation:
 ```yaml
 on:
   pull_request:
-    types: [opened, reopened, closed, synchronize]
+    types: [opened, reopened, closed, synchronize, ready_for_review]
 ```
 
 ```yaml
@@ -52,7 +52,7 @@ run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
   pull_request:
-    types: [opened, reopened, closed, synchronize]
+    types: [opened, reopened, closed, synchronize, ready_for_review]
 
 jobs:
   copilot-pull-requests:

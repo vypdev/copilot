@@ -62,7 +62,7 @@ function projectPullRequestWorkflowRouteContext(param: Execution): PullRequestWo
     closed: param.pullRequest.isClosed,
     merged: param.pullRequest.isMerged,
     automaticDescription: mode === 'replace' || mode === 'append',
-    reviewable: ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action),
+    reviewable: ['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(param.pullRequest.action),
     review: projectBugbotReviewOperationContext(param),
   });
 }

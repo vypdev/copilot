@@ -39389,6 +39389,8 @@ function shouldTrackAgentActivity(execution, route) {
                     || isAgentReady(execution, 'findings')
                     || isAgentReady(execution, 'fixer'));
         case 'pull-request':
+            if (execution.pullRequest.action === 'ready_for_review')
+                return isAgentReady(execution, 'reviewer');
             return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
                 && (isAgentReady(execution, 'reviewer')
                     || (['replace', 'append'].includes(execution.ai.getPullRequestDescriptionMode())
@@ -40214,6 +40216,8 @@ function activeAgentTasks(event, singleAction, botLogin = '', pullRequestDescrip
         case 'issues':
             return activeIssueTasks(event, preBranchSddEnabled);
         case 'pull_request':
+            if (eventAction(event) === 'ready_for_review')
+                return ['reviewer'];
             if (!['opened', 'reopened', 'synchronize'].includes(eventAction(event)))
                 return [];
             return pullRequestDescriptionEnabled ? ['planner', 'reviewer'] : ['reviewer'];
@@ -44517,7 +44521,7 @@ function resolveLifecycleState(input) {
             return 'reviewing';
         if (input.externalEvidence?.review !== undefined)
             return 'reviewing';
-        if (['opened', 'reopened', 'synchronize'].includes(input.action))
+        if (['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(input.action))
             return 'reviewing';
         return undefined;
     }
@@ -53872,7 +53876,7 @@ function projectPullRequestWorkflowRouteContext(param) {
         closed: param.pullRequest.isClosed,
         merged: param.pullRequest.isMerged,
         automaticDescription: mode === 'replace' || mode === 'append',
-        reviewable: ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action),
+        reviewable: ['opened', 'reopened', 'synchronize', 'ready_for_review'].includes(param.pullRequest.action),
         review: (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param),
     });
 }
@@ -53923,6 +53927,9 @@ async function runPullRequestWorkflow(context, taskId, ports) {
             if (agentAllowed)
                 results.push(...(await runPullRequestReview(context, ports)));
             return results;
+        }
+        if (context.action === 'ready_for_review') {
+            return agentAllowed ? await runPullRequestReview(context, ports) : [];
         }
         if (context.action === 'edited') {
             return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
