@@ -11,6 +11,11 @@ for (const [environment, env] of [
   ['isolated-acl', buildWindowsAclProbeEnvironment()],
   ['runner-baseline', process.env],
   ['isolated-acl-after-baseline', buildWindowsAclProbeEnvironment()],
+  ['isolated-acl-system-metadata', { ...buildWindowsAclProbeEnvironment(),
+    SystemDrive: process.env.SystemDrive, OS: 'Windows_NT', PATHEXT: '.EXE;.CMD', ComSpec: systemTool('cmd.exe') }],
+  ['isolated-acl-runner-temp', { ...buildWindowsAclProbeEnvironment(), TEMP: process.env.TEMP, TMP: process.env.TMP }],
+  ['isolated-acl-runner-profile', { ...buildWindowsAclProbeEnvironment(), USERPROFILE: process.env.USERPROFILE,
+    APPDATA: process.env.APPDATA, LOCALAPPDATA: process.env.LOCALAPPDATA }],
 ]) {
   const start = performance.now();
   const result = spawnSync(executable, args, { env, encoding: 'utf8', timeout: 20_000, maxBuffer: 4096, windowsHide: true });

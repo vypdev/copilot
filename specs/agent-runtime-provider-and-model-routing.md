@@ -956,15 +956,23 @@ fixtures. This difference does not identify a root cause or prove the
 authenticated fixer works on either runner.
 
 The existing platform smoke workflow now offers a bounded, read-only
-`windows_startup_probe` dispatch. One hosted Windows job compares three
-20-second probes in order: isolated ACL environment, runner baseline, and the
-same isolated environment after the baseline. It records only the fixed
+`windows_startup_probe` dispatch. One hosted Windows job compares six
+20-second probes in order: isolated ACL environment, runner baseline, the
+same isolated environment after the baseline, then isolated environments
+with system metadata, runner temp variables, and runner profile variables. It records only the fixed
 environment label, closed status and elapsed milliseconds. It never records
 stdout, stderr, errors, environment values, credentials or paths. It does not
 change process permissions, ACL policy, sandboxing or verification requirements.
 
 This investigation tool makes no feature-readiness claim and does not replace
-the mandatory smoke fixtures. Its three live probes are operational evidence,
+the mandatory smoke fixtures. Its six live probes are operational evidence,
 not additional unit cases or a completed acceptance gate. The default workflow
 behavior and coverage export stay unchanged; probe-only dispatch does not start
 self-hosted smoke jobs or export coverage.
+
+Initial diagnostic run 38150007571 on master 4575bbc3 proved that a minimal
+PowerShell command times out in the isolated ACL environment both before and
+after a successful 947 ms runner-baseline invocation. Subsequent probes separate
+non-secret system metadata, temp variables, and profile variables; this does not
+change the admitted agent environment or execution permissions. The success of
+the diagnostic workflow itself is not a successful isolated startup result.
