@@ -6,15 +6,15 @@
     {
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
-      "requiredCases": 128,
-      "allocatedCases": 160,
+      "requiredCases": 131,
+      "allocatedCases": 163,
       "files": [
         { "path": "src/domain/__tests__/github_publication.test.ts", "qualifyingCases": 5 },
         { "path": "src/domain/__tests__/git_object_id.test.ts", "qualifyingCases": 2 },
         { "path": "src/domain/__tests__/implementation_plan.test.ts", "qualifyingCases": 2 },
         { "path": "src/application/policies/__tests__/publication_identity_policy.test.ts", "qualifyingCases": 14 },
         { "path": "src/application/policies/__tests__/publication_outcome_policy.test.ts", "qualifyingCases": 7 },
-        { "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts", "qualifyingCases": 30 },
+        { "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts", "qualifyingCases": 33 },
         { "path": "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts", "qualifyingCases": 16 },
         { "path": "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts", "qualifyingCases": 8 },
         { "path": "src/application/usecases/steps/common/__tests__/transition_notification_workflow.test.ts", "qualifyingCases": 10 },

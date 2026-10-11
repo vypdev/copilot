@@ -48,10 +48,11 @@ async function runRememberCommand(
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.rememberBugbotRuleUseCase) {
         return [new Result({
-            id: `${options.taskId}.Remember`,
+            id: 'CommentAutomation.StateCommandReply',
             success: true,
             executed: false,
             steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
+            payload: { publication: { kind: 'state-command-result', command: 'remember', outcome: 'not-applied' } },
         })];
     }
     let targetBranch;
@@ -68,7 +69,12 @@ async function runRememberCommand(
         return [rememberFailure(error)];
     }
     const results = await options.rememberBugbotRuleUseCase.invoke({ rule: command.arguments.join(' ') });
-    if (!results.some((result) => result.executed)) return results;
+    if (!results.some((result) => result.executed)) {
+        return results.length > 0 && results.every(result => result.success)
+            && results.some(result => (result.payload as { learnedRule?: unknown } | undefined)?.learnedRule === 'existing')
+            ? [...results, stateCommandReceipt('remember', 'already-exists', { branch: targetBranch })]
+            : results;
+    }
     try {
         const { workspacePaths } = await finalizeWorkspaceMutation(
             options.bugbotGitMutationPort,
@@ -92,7 +98,9 @@ async function runRememberCommand(
         results,
         options.bugbotGitMutationPort,
     );
-    return [...results, ...commitResults];
+    const committed = commitResults.at(-1);
+    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
+        ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
 }
 
 async function resolveRememberBranch(param: CommentAutomationContext, options: CommentAutomationOptions): Promise<string> {
@@ -184,16 +192,27 @@ async function runDismissCommand(
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.dismissBugbotFindingsUseCase) {
         return [new Result({
-            id: options.taskId,
+            id: 'CommentAutomation.StateCommandReply',
             success: true,
             executed: false,
             steps: ['Explicit dismiss command skipped because the actor is not authorized or dismissal is unavailable.'],
+            payload: { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'not-applied' } },
         })];
     }
-    return options.dismissBugbotFindingsUseCase.invoke({
+    const results = await options.dismissBugbotFindingsUseCase.invoke({
         operation: param.bugbot.fixIntent,
         findingIds: command.arguments,
     });
+    const last = results.at(-1);
+    const count = (last?.payload as { dismissedCount?: unknown } | undefined)?.dismissedCount;
+    return results.every(result => result.success) && typeof count === 'number'
+        ? [...results, stateCommandReceipt('dismiss', 'completed', { count })]
+        : results;
+}
+
+function stateCommandReceipt(command: 'remember' | 'dismiss', outcome: string, details: Record<string, unknown> = {}): Result {
+    return new Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: false,
+        payload: { publication: { kind: 'state-command-result', command, outcome, ...details } } });
 }
 
 async function runReviewCommand(

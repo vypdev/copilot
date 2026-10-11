@@ -17,6 +17,67 @@ import {
 
 const SOURCE_HEAD = 'a'.repeat(40);
 
+describe('state command confirmations', () => {
+  const saved = { kind: 'state-command-result', command: 'remember', outcome: 'saved', branch: 'docs/work' };
+  const outcomes = [
+    { publication: saved, en: 'The rule was saved', es: 'La regla se guardó' },
+    { publication: { ...saved, outcome: 'already-exists' }, en: 'No change or additional commit', es: 'ningún cambio ni otro commit' },
+    { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count: 0 }, en: 'Nothing was dismissed', es: 'No se descartó ninguno' },
+    { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count: 1 }, en: '1 finding was dismissed.', es: 'Se descartó 1 hallazgo.' },
+    { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count: 2 }, en: '2 findings were dismissed.', es: 'Se descartaron 2 hallazgos.' },
+    { publication: { kind: 'state-command-result', command: 'remember', outcome: 'not-applied' }, en: 'requires an authorized maintainer', es: 'Requiere un mantenedor autorizado' },
+    { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'not-applied' }, en: 'requires an authorized maintainer', es: 'Requiere un mantenedor autorizado' },
+  ];
+
+  it.each(outcomes.flatMap(outcome => ['en-US', 'es-ES'].map(locale => ({ ...outcome, locale }))))(
+    'renders the verified $publication.command $publication.outcome confirmation in $locale', ({ publication, en, es, locale }) => {
+      const results = [new Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: false,
+        payload: { publication }, steps: ['SECRET raw diagnostic'] })];
+      const context = { locale, results, target: { kind: 'pull-request' as const, number: 460 }, correlationId: 'comment:42' };
+      const [intent] = selectSemanticReplyIntents(context);
+      expect(intent.messageKey).toBe('state-command-result');
+      const body = renderSemanticReply(intent);
+      expect(body).toContain(locale === 'es-ES' ? es : en);
+      expect(body).not.toContain('SECRET');
+      expect(body.length).toBeLessThan(1_000);
+      expect(selectSemanticReplyIntents(context)).toEqual([intent]);
+    },
+  );
+
+  it.each([
+    { label: 'untrusted producer', id: 'ThinkUseCase' },
+    { label: 'legacy producer suffix', id: 'IssueCommentUseCase' },
+    { label: 'failed result', success: false },
+    { label: 'background event', correlationId: 'event:push' },
+    { label: 'missing correlation', correlationId: '' },
+    { label: 'wrong kind', publication: { ...saved, kind: 'other' } },
+    { label: 'unknown command', publication: { ...saved, command: 'implement' } },
+    { label: 'unknown outcome', publication: { ...saved, outcome: 'pending' } },
+    { label: 'missing branch', publication: { ...saved, branch: undefined } },
+    { label: 'non-string branch', publication: { ...saved, branch: 1 } },
+    { label: 'empty branch', publication: { ...saved, branch: ' ' } },
+    { label: 'oversized branch', publication: { ...saved, branch: 'a'.repeat(256) } },
+    { label: 'multiline branch', publication: { ...saved, branch: 'docs/work\nforge' } },
+    ...[undefined, '1', -1, 0.5, 21].map(count => ({ label: `invalid dismissal count ${count}`,
+      publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count } })),
+  ])('rejects a $label confirmation', ({ id = 'CommentAutomation.StateCommandReply', success = true, correlationId = 'comment:42', publication = saved }: {
+    id?: string; success?: boolean; correlationId?: string; publication?: Record<string, unknown>;
+  }) => {
+    expect(selectSemanticReplyIntents({ locale: 'en-US', target: { kind: 'issue', number: 7 }, correlationId,
+      results: [new Result({ id, success, executed: false, payload: { publication } })] })).toEqual([]);
+  });
+
+  it('neutralizes branch markup and mentions in the saved confirmation', () => {
+    const [intent] = selectSemanticReplyIntents({ locale: 'en-US', target: { kind: 'issue', number: 7 }, correlationId: 'comment:42',
+      results: [new Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: false,
+        payload: { publication: { ...saved, branch: 'docs/`<@team>' } } })] });
+    const body = renderSemanticReply(intent);
+    expect(body).not.toContain('<@team>');
+    expect(body).not.toContain('@team');
+    expect(body).toContain('@\u200bteam');
+  });
+});
+
 function implementationPlan() {
   return {
     steps: [

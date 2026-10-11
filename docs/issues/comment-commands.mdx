@@ -177,6 +177,15 @@ that reply uses the complete English fallback so it cannot mix languages.
 
 ## Authorization and safety
 
+`remember` confirms when the rule was saved, verified and pushed to the exact
+working branch. Repeating an existing rule confirms that no change or additional
+commit was needed. `dismiss` confirms the number of matching findings dismissed;
+if no finding matched, its reply explicitly says nothing was dismissed. A
+permission or capability refusal says the command was not applied. A failed
+verification or mutation receives an error reply, never a success confirmation.
+These replies use the conversation language and reuse the same response on an
+event replay.
+
 - Read-only commands and answers can be requested by any participant who can comment.
 - File- and finding-state-modifying requests require the comment author to be the repository owner or have `push`, `maintain`, or `admin` permission; organization membership alone is not sufficient. `ai-members-only` remains a separate membership gate.
 - In personal repositories, the author must be the repository owner or a collaborator with `push`, `maintain`, or `admin` permission.

@@ -756,6 +756,26 @@ The same fingerprint never creates that notification twice.
 Completion updates the existing dashboard. It does not create a celebratory
 comment.
 
+#### Explicit state-command confirmations
+
+`remember` and `dismiss` MUST emit at most one correlated localized reply from
+validated application facts. The explicit-command producer owns a typed receipt;
+model results, arbitrary producer IDs, diagnostic steps and background events
+MUST NOT manufacture this reply. Successful saved rules require completed
+verification and push; verified duplicates and zero-match dismissals have an
+explicit no-op response. Malformed refs/counts and failed results are rejected.
+The existing reply identity/digest/reconciliation handles replay. No new input,
+configuration, migration or marker schema is required.
+
+Representative English result: “The rule already exists in
+`.copilot/BUGBOT.learned.md` on `docs/work`. No change or additional commit was
+needed.” Spanish zero-match result: “No se encontraron hallazgos coincidentes.
+No se descartó ninguno.” Permission/capability refusals say the command was not
+applied; failed verification/mutation uses the existing semantic error boundary.
+User documentation is `docs/issues/comment-commands.mdx`. Pure receipt tests own
+presentation/trust/replay coverage; the Bugbot SDD separately owns six routing
+outcome cases, with no cross-budget double counting.
+
 #### Bugbot and direct reply
 
 ```markdown
@@ -1126,12 +1146,12 @@ Job-Summary-only; debug-in-comment and generic step dumps remain disabled.
 
 ## 14. Testing strategy and numeric budget
 
-The implementation requires at least **128 distinct new or materially rewritten
+The implementation requires at least **131 distinct new or materially rewritten
 test cases**. This budget covers semantic publication only; locale resolution,
 translation correctness, and multilingual matrices are counted in the companion
 SDD and MUST NOT be double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 160 qualifying
+`src/architecture/github_communication_test_budget.json` records 163 qualifying
 semantic cases from the implementation diff against the specification baseline.
 Its files are disjoint from the localization allocation and are enforced by
 `pnpm run validate:specifications`.
@@ -1142,9 +1162,9 @@ Its files are disjoint from the localization allocation and are enforced by
 | State/application/idempotency/races | 30 | create/update/unchanged, stale source, out-of-order revision, duplicate create healing, partial publication, per-feature coordination |
 | Adapters/provider contracts | 18 | ownership filtering, pagination, create/update/delete, review threads, rate-limit/error mapping, trusted URLs |
 | Workflows/setup/schema | 16 | issue/PR/push/single-action routes, completion omission, setup defaults, doctor warnings, marker/workflow contracts |
-| UI/UX/accessibility/sanitization | 26 | all primary states and topics, narrow Markdown, headings, links, truncation, hostile text, no retired chrome |
+| UI/UX/accessibility/sanitization | 29 | all primary states and topics, narrow Markdown, headings, links, truncation, hostile text, no retired chrome; three state-command receipt families (33 semantic rows) cover localized outcomes/replay, malformed or forged evidence and inert ref rendering |
 | Integration/security/cutover | 12 | end-to-end lifecycles, permissions, forged/removed markers, strict rejection, rollback, live fixture matrix |
-| **Total** | **128** | No double counting |
+| **Total** | **131** | No double counting |
 
 Required quality gates:
 
@@ -1236,7 +1256,7 @@ per-push commit comments are generated after rollout.
     exactly that bounded create/update/append occurs without a generic wrapper;
     existing authorization and sanitization contracts remain in force.
 18. Given the implementation change, then catalog, action/setup schemas,
-    generated bundles, documentation, architecture checks, 128-case budget, and
+    generated bundles, documentation, architecture checks, 131-case budget, and
     repository validations agree.
 19. Given one push creates both `push` and `pull_request:synchronize` runs, then
     neither workflow cancels the other, Commit retains progress without running
@@ -1270,7 +1290,7 @@ per-push commit comments are generated after rollout.
 | §11 trust/ownership | marker parser, sanitizer, authorization | forged marker/mention/secret tests | security operations |
 | §12 evidence/metrics | Job Summary and telemetry ports | summary/metric assertions | quality observability |
 | §13 cutover | exact current markers and greenfield input removal | strict-marker, rollback, and schema-absence tests | architecture and configuration guides |
-| §14 quality budget | coverage scripts and disjoint communication test ledger | 160 allocated semantic cases plus CI coverage evidence | contributor testing guide |
+| §14 quality budget | coverage scripts and disjoint communication test ledger | 163 allocated semantic cases plus CI coverage evidence | contributor testing guide |
 
 ## 18. Implementation sequence
 
@@ -1314,7 +1334,7 @@ per-push commit comments are generated after rollout.
       actionable UI.
 - [x] Architecture boundaries and direct-mutation inventory are automatically
       enforced.
-- [x] The 128-case numeric budget and changed-module coverage gates pass without
+- [x] The 131-case numeric budget and changed-module coverage gates pass without
       double counting localization tests.
 - [x] Action schema, runtime configuration, setup, CLI, docs, dependencies, and
       generated bundles contain no decorative-image configuration surface.

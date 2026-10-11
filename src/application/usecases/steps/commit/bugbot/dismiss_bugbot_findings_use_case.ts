@@ -48,6 +48,7 @@ export class DismissBugbotFindingsUseCase {
                     success: true,
                     executed: true,
                     steps: ['No matching Bugbot findings were found; nothing was dismissed.'],
+                    payload: { dismissedCount: 0 },
                 })];
             }
 
@@ -75,6 +76,7 @@ export class DismissBugbotFindingsUseCase {
                     'provider.unavailable',
                     'A Bugbot finding could not be dismissed.',
                 )),
+                payload: { dismissedCount: errors.length === 0 ? dismissibleIds.size : undefined },
             })];
         } catch (error) {
             const semanticError = toApplicationError(
