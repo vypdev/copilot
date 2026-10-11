@@ -48357,6 +48357,21 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
 
 /***/ }),
 
+/***/ 31811:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = void 0;
+/** Fixed local output rejection cause; never derived by interpolating provider bytes. */
+exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
+    'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
+];
+
+
+/***/ }),
+
 /***/ 6152:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -66109,6 +66124,8 @@ function failureObservation(request, error, phase, startedAt) {
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
         exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
         exitDiagnostic: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitDiagnostic : undefined,
+        ...(phase === 'run' && category === 'output' && error instanceof agent_cli_contracts_1.AgentCliError
+            ? { outputDiagnostic: error.outputDiagnostic ?? 'unclassified' } : {}),
     };
 }
 function observeSafely(observer, observation) {
@@ -66269,7 +66286,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             return;
         outputBytes += chunk.byteLength;
         if (outputBytes > plan.maxOutputBytes) {
-            beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
+            beginTermination(outputFailure(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output-limit'));
             return;
         }
         stdoutChunks.push(chunk);
@@ -66279,7 +66296,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             return;
         outputBytes += chunk.byteLength;
         if (outputBytes > plan.maxOutputBytes) {
-            beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
+            beginTermination(outputFailure(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output-limit'));
             return;
         }
         if (stderrBytes < MAX_STDERR_BYTES) {
@@ -66309,7 +66326,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
         catch (error) {
             finishReject(error instanceof agent_cli_contracts_1.AgentCliError
                 ? error
-                : new agent_cli_contracts_1.AgentCliError('Agent CLI returned invalid output.', 'output'));
+                : outputFailure('Agent CLI returned invalid output.', 'unclassified'));
         }
     };
     timers.timeout = setTimeout(() => {
@@ -66317,11 +66334,16 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
     }, plan.timeoutMs);
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
 }
+function outputFailure(message, diagnostic) {
+    const error = new agent_cli_contracts_1.AgentCliError(message, 'output');
+    error.outputDiagnostic = diagnostic;
+    return error;
+}
 function decodeAgentCliOutput(protocol, raw) {
     if (protocol === 'plain-text') {
         const output = raw.trim();
         if (!output)
-            throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned empty output.', 'output');
+            throw outputFailure('Agent CLI returned empty output.', 'empty-output');
         return output;
     }
     if (protocol === 'json-lines-text-events')
@@ -66337,10 +66359,10 @@ function decodeJsonLinesTextEvents(raw) {
             event = JSON.parse(line);
         }
         catch {
-            throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned malformed JSON event output.', 'output');
+            throw outputFailure('Agent CLI returned malformed JSON event output.', 'malformed-json-event');
         }
         if (!event || typeof event !== 'object' || Array.isArray(event)) {
-            throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned an invalid JSON event.', 'output');
+            throw outputFailure('Agent CLI returned an invalid JSON event.', 'invalid-json-event');
         }
         const record = event;
         const part = record.part;
@@ -66352,7 +66374,7 @@ function decodeJsonLinesTextEvents(raw) {
     }
     const output = text.join('').trim();
     if (!output)
-        throw new agent_cli_contracts_1.AgentCliError('Agent CLI returned no text completion events.', 'output');
+        throw outputFailure('Agent CLI returned no text completion events.', 'missing-text-events');
     return output;
 }
 function assertNeverOutputProtocol(protocol) {
@@ -81178,16 +81200,21 @@ function createLogReportAdapter() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerAgentExecutionObserverAdapter = void 0;
+const agent_execution_observation_ports_1 = __nccwpck_require__(31811);
 const agent_runtime_manifest_1 = __nccwpck_require__(57104);
 const logger_1 = __nccwpck_require__(91151);
 class LoggerAgentExecutionObserverAdapter {
     observe(observation) {
         if (observation.state === 'failed') {
+            const outputDiagnostic = observation.phase === 'run' && observation.failureCategory === 'output'
+                ? agent_execution_observation_ports_1.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS.find(code => code === observation.outputDiagnostic) ?? 'unclassified'
+                : undefined;
+            const output = outputDiagnostic ? `, ${outputDiagnostic}` : '';
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
             const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
             const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
             const preflightDiagnostic = observation.preflightDiagnostic ? `, ${observation.preflightDiagnostic}` : '';
-            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}).`, false, { agentExecution: observation });
+            (0, logger_1.logInfo)(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}${output}).`, false, { agentExecution: { ...observation, outputDiagnostic } });
             return;
         }
         if (observation.state === 'completed') {
