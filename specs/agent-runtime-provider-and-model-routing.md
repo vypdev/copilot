@@ -1083,3 +1083,14 @@ explicit system Utility manifest against Utility plus Management. The probe coun
 is eight and every process remains capped at 20 seconds; fixture subprocesses
 remain capped at 15 seconds. No probe result is counted as a unit test or native
 agent acceptance. A successful diagnostic job can still contain failed probes.
+
+
+Hosted probe run `38165897450` on `c3394562` established the remaining hash
+fixture cause: Utility alone returned `command-not-found` in 445 ms; explicit
+Utility plus Management returned `ready` in 1083 ms. The same immutable system
+file and environment were used. The three fixtures now import both absolute
+system manifests while retaining disabled discovery and their 15-second bound.
+Fresh hosted smoke remains required; successful timing probes do not certify
+that smoke or the authenticated agent. The actual agent diagnosis after explicit
+backend selection reported `open sandbox setup mutex`; this is a separate runner
+provisioning failure and leaves actual Windows shell/edit acceptance open.

@@ -60,3 +60,9 @@ unattended use. A missing backend remains a failure, and Copilot does not run a
 sandbox setup command or select full access as recovery. Consult the
 [official Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
 for administrator provisioning and managed restrictions.
+
+The native shell hash fixtures explicitly load the system Utility and Management
+manifests, because the hash script depends on Management commands. They retain
+private profiles, disabled module discovery and their bounded startup deadline.
+A missing command in those fixtures is separate from a real Codex sandbox setup
+failure; neither a probe job nor a fixture proves successful agent editing.

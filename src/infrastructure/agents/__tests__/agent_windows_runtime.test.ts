@@ -462,7 +462,7 @@ describe('isolated Windows agent runtime', () => {
     }, 30_000);
 
     windowsIt.each([true, false])('starts PowerShell from the actual private shell policy with host app data present=%s and leaves the checkout clean', async hostDataPresent => {
-        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; Get-FileHash -Algorithm SHA256 -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Write-Output 'ready'";
+        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Management','Microsoft.PowerShell.Management.psd1')) -ErrorAction Stop; Get-FileHash -Algorithm SHA256 -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Write-Output 'ready'";
         const source = `if(process.argv.includes('--version')){process.stdout.write('codex-cli 0.156.1')}else{
             const {spawnSync}=require('node:child_process');const {join}=require('node:path');
             const args=process.argv;const setting=args.find(x=>x.startsWith('shell_environment_policy.include_only='));
@@ -493,7 +493,7 @@ describe('isolated Windows agent runtime', () => {
     }, 60_000);
 
     windowsIt('starts native PowerShell before applying the shell policy with a private parent cache and clean checkout', async () => {
-        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; if (-not [IO.Path]::IsPathRooted($env:PSModuleAnalysisCachePath)) { throw 'Unbounded module cache' }; Get-Command Get-FileHash -ErrorAction Stop | Out-Null; Get-FileHash -Algorithm SHA256 -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Write-Output 'ready'";
+        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Management','Microsoft.PowerShell.Management.psd1')) -ErrorAction Stop; if (-not [IO.Path]::IsPathRooted($env:PSModuleAnalysisCachePath)) { throw 'Unbounded module cache' }; Get-Command Get-FileHash -ErrorAction Stop | Out-Null; Get-FileHash -Algorithm SHA256 -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Write-Output 'ready'";
         const source = `if(process.argv.includes('--version')){process.stdout.write('codex-cli 0.156.1')}else{
             const {spawnSync}=require('node:child_process');const {join}=require('node:path');
             if(!process.env.PSModuleAnalysisCachePath.includes('copilot-agent-runtime-'))process.exit(3);
