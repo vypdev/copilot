@@ -185,3 +185,9 @@ lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and
 bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
+
+For this repository's Windows service runners, verification uses `test:coverage`
+with the existing bounded worker recycling. Forcing the whole suite into one
+process with `--runInBand` can exhaust the heap before synchronization publishes.
+A failed verification retains the managed remote head; inspect the failure and
+retry `/copilot sync-branch` after correcting the verification configuration.
