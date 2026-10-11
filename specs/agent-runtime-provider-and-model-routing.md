@@ -1032,3 +1032,25 @@ and authentication isolation are unchanged. Five new invocation contracts check
 trusted import ordering, literal escaping, unsafe owner refusal, complete ancestor
 batches and timeout classification. Actual hosted/native Windows smoke proof is
 pending and must be recorded independently; diagnostic success is not acceptance.
+
+Native Windows run 38156569251 on source fe3e7ed72f454f5db54059636dddd26ec5fbef1a
+passed all five isolated runtime suites (95 passed, eight platform skips), then
+all 565 full suites (7,421 passed, 20 platform skips), every coverage budget and
+the documentation/contract validators. Its overall job was cancelled at the
+30-minute deadline during setup-node's post-job pnpm cache archive, after those
+checks had completed. This proves the descriptor repair on the native runner,
+but does not count as an end-to-end successful job or hosted Windows acceptance.
+
+Persistent self-hosted smoke runners now disable dependency-cache backup and
+automatic package-manager caching, while hosted pnpm caching is unchanged.
+The complete test path, worker memory bounds and 30-minute job deadline remain
+unchanged. Two workflow contracts prevent explicit or automatic cache backup
+from reappearing. A fresh completed native run remains required.
+
+### Hosted Windows shell-fixture correction (2026-10-11)
+
+Hosted run `38159744824`, head `c62f303a`, passed 92 isolated runtime cases but failed the three native shell hash fixtures at their existing 15-second subprocess boundary. All ACL probes passed. Native Windows run `38159821530` subsequently passed full coverage and cleanup after the cache-export correction; that independent success does not certify hosted startup.
+
+The shell fixtures now disable automatic module discovery and import the absolute system `Microsoft.PowerShell.Utility.psd1` manifest before their hash operation, using .NET path construction. They still exercise the actual private parent and Codex shell environments, both presence/absence of host application data, correct hash-module operation, checkout cleanliness, private-directory ACLs, cleanup and the unchanged 15-second boundary. They neither inherit host profiles nor require ambient module caches. This measures bounded startup with an explicitly selected system module; it does not promise that arbitrary first-time cmdlet discovery fits the same boundary. Fresh hosted acceptance remains pending.
+
+Cache-free native Windows job `114530212856` finished successfully, including all post steps, on master `45d8aeeb`. Ubuntu also completed. The macOS job lost runner communication during build and supplied no final log, so the run is not classified as cross-platform success; recovery and a fresh macOS execution are required.
