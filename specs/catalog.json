@@ -1998,7 +1998,8 @@
       "lastVerified": "2026-10-11",
       "specs": [
         "specs/guarded-pull-request-approval.md",
-        "specs/guarded-pull-request-approval-setup-and-doctor.md"
+        "specs/guarded-pull-request-approval-setup-and-doctor.md",
+        "specs/guarded-pull-request-approval-status.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
