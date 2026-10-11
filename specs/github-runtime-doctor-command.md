@@ -409,3 +409,10 @@ scenarios), increasing this feature from 135 to 167 cases. Fresh hosted checks
 and a new independent review remain required before promotion.
 
 The workflow eligibility repair passed 573 full suites and 7,576 tests, with 35 existing platform skips (7,611 total). Its condition policy reached 100% lines/functions, 98.33% statements and 92.64% branches. Specification/catalog, documentation, lint, graph update and bundle compilation passed; hosted verification and review remain separate live gates.
+
+
+### Native synchronization and independent review
+
+The Action resolved both the ambiguous-absence finding `4242617946` and the workflow-eligibility finding `4242759214` in subsequent independent review. Run `38167519200` on `windows-intel-runner-2` completed 573 suites and 7,596 tests, with 20 platform skips (7,616 total), validated the integrated branch and published synchronized head `00fef5bdcc31c010e4755e696512ed973df6c2f7`. The correlated receipt is PR comment `6113381932` for request `6112743331`. The contributor checkout confirms the common parent `c47f612f3fceac6ae54908f62bdad9977da06a4d` is an ancestor and validates the published bundles.
+
+This is successful native Windows verification and an Action-owned remote synchronization. It does not establish successful Codex sandbox commands on the Windows service account, nor live `/copilot doctor` acceptance before promotion. Hosted CI and a fresh review of the synchronized head remain separate gates.
