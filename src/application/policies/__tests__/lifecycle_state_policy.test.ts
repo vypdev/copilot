@@ -13,6 +13,22 @@ const findingStates = (overrides: Record<string, number> = {}) => ({
 });
 
 describe('lifecycle state policy', () => {
+    it.each([
+        { label: 'pushed implementation', expected: 'working' },
+        { label: 'no-change implementation', outcome: 'no-changes', expected: 'working' },
+        { label: 'failed operation', success: false, expected: 'blocked' },
+        { label: 'skipped receipt', executed: false, expected: undefined },
+        { label: 'untrusted producer', id: 'ThinkUseCase', expected: undefined },
+        { label: 'malformed branch', branch: '', expected: undefined },
+        { label: 'unrelated event', eventName: 'issues', expected: undefined },
+        { label: 'other failing result', extra: [result('CommitFailed', false)], expected: 'blocked' },
+    ])('resolves $label from typed operation evidence', ({ expected, outcome = 'changes-pushed', success = true,
+        executed = true, id = 'CommentAutomation.ImplementationReply', branch = 'feature/42-managed', eventName = 'issue_comment', extra = [] }) => {
+        expect(resolveLifecycleState({ eventName, action: 'created', isIssue: true, isPullRequest: false,
+            issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false,
+            results: [{ ...result(id, success), executed, payload: { publication: { kind: 'implementation-result', outcome, branch } } }, ...extra],
+        })).toBe(expected);
+    });
     it('moves a newly ready PR to reviewing while it awaits review evidence', () => {
         expect(resolveLifecycleState({
             eventName: 'pull_request', action: 'ready_for_review',

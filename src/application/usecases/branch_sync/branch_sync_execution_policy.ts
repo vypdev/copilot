@@ -3,7 +3,7 @@ import type { AgentConfiguration } from '../../../domain/agent';
 import { Result } from "../../../data/model/result";
 import type { BranchMergePreparation } from "../../ports/branch_sync_ports";
 import { isSensitiveWorkspacePath } from "../steps/commit/bugbot/workspace_changes";
-import { ApplicationError, toApplicationError } from "../../errors/application_error";
+import { ApplicationError, toApplicationError, type ApplicationErrorRecovery } from "../../errors/application_error";
 
 export const BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
 const MAX_AGENT_CONFLICT_PATHS = 20;
@@ -15,21 +15,32 @@ export type BranchSyncOutcome =
   | "merged-cleanly"
   | "merged-with-agent";
 
-export function branchSyncConflictEligibilityError(
+export interface BranchSyncConflictFailure {
+  readonly reason: string;
+  readonly recovery?: ApplicationErrorRecovery;
+}
+
+export function branchSyncConflictEligibilityFailure(
   preparation: Extract<BranchMergePreparation, { kind: "conflicted" }>,
   useAgent: boolean,
   agentConfiguration: Readonly<AgentConfiguration>,
-): string | undefined {
-  if (!useAgent) return "The merge has conflicts and agent resolution was disabled with --no-agent.";
+): BranchSyncConflictFailure | undefined {
+  if (!useAgent) return {
+    reason: "The merge has conflicts and agent resolution was disabled with --no-agent.",
+    recovery: { id: 'branch-sync-agent-disabled', variables: { command: '/copilot sync-branch' } },
+  };
   if (!isAgentConfigurationReady(agentConfiguration)) {
-    return "The merge has conflicts, but no fixer agent is configured.";
+    return {
+      reason: "The merge has conflicts, but no fixer agent is configured.",
+      recovery: { id: 'branch-sync-fixer-unavailable', variables: { command: '/copilot sync-branch' } },
+    };
   }
   if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {
-    return `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.`;
+    return { reason: `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.` };
   }
   const sensitive = preparation.conflictPaths.filter(isSensitiveWorkspacePath);
   return sensitive.length > 0
-    ? `Automated conflict resolution is not allowed for sensitive paths: ${sensitive.join(", ")}.`
+    ? { reason: `Automated conflict resolution is not allowed for sensitive paths: ${sensitive.join(", ")}.` }
     : undefined;
 }
 
@@ -72,14 +83,14 @@ export function unavailableBranchSyncResult(reason: string): Result {
   return new Result({ id: BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [new ApplicationError('agent.policy-rejected', reason)] });
 }
 
-export function failedBranchSyncResult(reason: string, cause?: unknown): Result {
+export function failedBranchSyncResult(reason: string, cause?: unknown, recovery?: ApplicationErrorRecovery): Result {
   return new Result({
     id: BRANCH_SYNC_TASK_ID,
     success: false,
     executed: true,
     steps: [reason],
     errors: [cause === undefined
-      ? new ApplicationError('workflow.failed', reason)
-      : toApplicationError(cause, 'workflow.failed', reason)],
+      ? new ApplicationError('workflow.failed', reason, { recovery })
+      : toApplicationError(cause, 'workflow.failed', reason, { recovery })],
   });
 }

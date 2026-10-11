@@ -24,6 +24,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Diagnose Windows checkout before tool preparation
+        if: runner.os == 'Windows' && vars.DEBUG == 'true'
+        shell: bash
+        run: git status --porcelain --untracked-files=all
+
       - name: Prepare repository pnpm
         if: env.COPILOT_PREPARE_VERIFICATION == 'true'
         uses: pnpm/action-setup@v5
@@ -38,10 +43,20 @@ jobs:
         with:
           node-version: '24.x'
 
+      - name: Diagnose Windows checkout after tool preparation
+        if: runner.os == 'Windows' && vars.DEBUG == 'true'
+        shell: bash
+        run: git status --porcelain --untracked-files=all
+
       - name: Install repository verification dependencies
         if: env.COPILOT_PREPARE_VERIFICATION == 'true'
         shell: bash
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Diagnose Windows checkout before the Action
+        if: runner.os == 'Windows' && vars.DEBUG == 'true'
+        shell: bash
+        run: git status --porcelain --untracked-files=all
 
       - uses: ./
         with:

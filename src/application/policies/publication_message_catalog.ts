@@ -68,6 +68,8 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.error.heading',
     'interaction.stateCommand.notApplied',
     'interaction.remember.saved',
+    'interaction.implementation.pushed',
+    'interaction.implementation.noChanges',
     'interaction.remember.exists',
     'interaction.dismiss.none',
     'interaction.dismiss.completed',
@@ -207,6 +209,8 @@ const ENGLISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'interaction.error.heading': 'Request could not be completed',
     'interaction.stateCommand.notApplied': 'This command was not applied. It requires an authorized maintainer and the command capability to be available.',
     'interaction.remember.saved': 'The rule was saved in `.copilot/BUGBOT.learned.md` on {branch}. The configured checks passed and the commit was pushed.',
+    'interaction.implementation.pushed': 'The requested changes were committed and pushed to {branch}. Review the diff and acceptance criteria before considering the feature complete.',
+    'interaction.implementation.noChanges': 'The implementation command finished without changes on {branch}. No commit or push was needed. Review the acceptance criteria before considering the feature complete.',
     'interaction.remember.exists': 'The rule already exists in `.copilot/BUGBOT.learned.md` on {branch}. No change or additional commit was needed.',
     'interaction.dismiss.none': 'No matching findings were found. Nothing was dismissed.',
     'interaction.dismiss.completed': Object.freeze({
@@ -313,6 +317,8 @@ const SPANISH_MESSAGES: Readonly<Record<PublicationMessageId, CatalogMessage>> =
     'interaction.error.heading': 'No se pudo completar la solicitud',
     'interaction.stateCommand.notApplied': 'Este comando no se aplicó. Requiere un mantenedor autorizado y que la función esté disponible.',
     'interaction.remember.saved': 'La regla se guardó en `.copilot/BUGBOT.learned.md` en {branch}. Las verificaciones configuradas pasaron y se publicó el commit.',
+    'interaction.implementation.pushed': 'Los cambios solicitados se guardaron en un commit y se publicaron en {branch}. Revisa el diff y los criterios de aceptación antes de dar la feature por terminada.',
+    'interaction.implementation.noChanges': 'El comando de implementación terminó sin cambios en {branch}. No hizo falta commit ni push. Revisa los criterios de aceptación antes de dar la feature por terminada.',
     'interaction.remember.exists': 'La regla ya existe en `.copilot/BUGBOT.learned.md` en {branch}. No se necesitó ningún cambio ni otro commit.',
     'interaction.dismiss.none': 'No se encontraron hallazgos coincidentes. No se descartó ninguno.',
     'interaction.dismiss.completed': Object.freeze({

@@ -1,6 +1,6 @@
 import type { AgentConfiguration } from '../../../../domain/agent';
 import {
-  branchSyncConflictEligibilityError,
+  branchSyncConflictEligibilityFailure,
   completedBranchSyncResult,
   failedBranchSyncResult,
 } from "../branch_sync_execution_policy";
@@ -20,19 +20,19 @@ function configuration(configured = true): AgentConfiguration {
 
 describe("branch sync execution policy", () => {
   it("accepts only configured, non-sensitive conflict sets within the limit", () => {
-    expect(branchSyncConflictEligibilityError(preparation, true, configuration())).toBeUndefined();
-    expect(branchSyncConflictEligibilityError(preparation, false, configuration())).toContain("--no-agent");
-    expect(branchSyncConflictEligibilityError(preparation, true, configuration(false))).toContain("no fixer agent");
-    expect(branchSyncConflictEligibilityError(
+    expect(branchSyncConflictEligibilityFailure(preparation, true, configuration())).toBeUndefined();
+    expect(branchSyncConflictEligibilityFailure(preparation, false, configuration())?.reason).toContain("--no-agent");
+    expect(branchSyncConflictEligibilityFailure(preparation, true, configuration(false))?.reason).toContain("no fixer agent");
+    expect(branchSyncConflictEligibilityFailure(
       { ...preparation, conflictPaths: [".github/workflows/release.yml"] },
       true,
       configuration(),
-    )).toContain("sensitive paths");
-    expect(branchSyncConflictEligibilityError(
+    )?.reason).toContain("sensitive paths");
+    expect(branchSyncConflictEligibilityFailure(
       { ...preparation, conflictPaths: Array.from({ length: 21 }, (_, index) => `src/${index}.ts`) },
       true,
       configuration(),
-    )).toContain("automated limit is 20");
+    )?.reason).toContain("automated limit is 20");
   });
 
   it("builds a structured, publishable completion result", () => {

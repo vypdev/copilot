@@ -107,6 +107,17 @@ Options:
 
 The command fetches the current remote heads, checks out the working branch, and prepares a no-fast-forward merge. A clean merge proceeds without an agent. Before the push, Copilot runs the configured `bugbot-fix-verify-commands`, verifies that those commands did not mutate the prepared merge, and confirms that neither remote head changed while the operation was running.
 
+Captured Git reads retain their exact file paths without printing NUL-delimited
+records into the Actions log. Verification and abort diagnostics remain visible
+in the GitHub log viewer.
+
+If `--no-agent` encounters conflicts, the reply identifies that option as the
+blocker and explains that no synchronization commit was pushed. Run
+`/copilot sync-branch` to allow the configured fixer to resolve eligible conflicts,
+or use `--dry-run` to inspect the merge. If no fixer is configured, the reply
+instead asks you to configure a supported fixer before retrying. These are
+distinct recovery states; neither response claims that a remote branch changed.
+
 ## Conflict resolution boundary
 
 When Git reports conflicts, the configured fixer agent may resolve them under a narrow contract:
@@ -122,6 +133,15 @@ The agent resolves files without staging them. Copilot checks the original
 conflict paths, merge identity, protected index entries and remaining markers,
 then stages only those resolved conflicts through trusted Git code. It rejects
 later changes introduced by verification rather than staging them again.
+
+If `specs/CATALOG.md` is conflicted, Copilot treats it as a generated index:
+after the catalog metadata is resolved, the Action validates that metadata and
+regenerates the index with its bundled catalog renderer before verification.
+The fixer must preserve both branches' specification ownership and evidence in
+`specs/catalog.json`. The Action also refreshes a stale index when a clean merge
+already changes both catalog files. It never adds an unrelated file to the merge
+or loads a generator from the merged branch. Invalid metadata, missing evidence,
+external links, or a later verification change still abort the synchronization.
 
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 

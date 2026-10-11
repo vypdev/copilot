@@ -1127,6 +1127,11 @@ resolve atomically in the effective issue, pull-request, or repository locale.
 An explicitly addressed `sync-branch` request produces one source-correlated
 semantic reply for aligned, dry-run, and successful merge outcomes; replay
 reuses the reply and never exposes the command's internal `Result.steps`.
+Known agent-disabled and fixer-unavailable conflicts also retain their closed
+recovery descriptor through that reply. The owning branch-sync specification
+allocates six additional route, forged-command and closed presentation cases; they do not count
+toward this communication ledger. Command text is a validated fixed descriptor
+variable, so dynamic catalog safety still excludes arbitrary commands.
 
 The 2026-09-15 closure audit runs two first-publication calls simultaneously for
 status cards, correlated replies, and immutable transition notifications. All

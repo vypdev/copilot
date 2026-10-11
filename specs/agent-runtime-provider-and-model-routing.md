@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-05
+- Last updated: 2026-10-11
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -204,6 +204,89 @@ The fixture MUST separately confirm that `whoami.exe` and a no-op Windows
 PowerShell command start under that bounded non-secret environment. The shell
 startup probe allows the same 15-second deadline as the real ACL query; a failed
 verifier ACL query identifies identity versus descriptor timeout by fixed code.
+
+### Private shell application data (dogfooding issue #454)
+
+The Windows implementation retry on master `fa7eb447` stopped before its fixer
+because a preceding read-only agent left an untracked `Microsoft/` directory in
+the checkout. The workspace guard correctly refused mutation. Missing child
+shell application-data context is the suspected cause; a live Windows repeat is
+required to establish recovery.
+
+Codex child shells MUST receive explicit `APPDATA` and `LOCALAPPDATA` values
+inside the Action-owned, private per-execution runtime directory. The planner
+creates those directories and validates their Windows ACLs before execution;
+normal, failed and cancelled execution retains existing runtime cleanup. The
+Codex process's authentication environment and explicit `CODEX_HOME` remain
+unchanged. The child shell allowlist admits the two explicit private values,
+but still excludes host `HOME`, `USERPROFILE`, credentials and repository tokens.
+These paths do not add sandbox writable roots, network access, shell profiles,
+login shells, or approval authority. Do not ignore, delete or commit unexpected
+checkout files as a substitute for isolating runtime state.
+
+The repeated Windows implementation run `38133560682` identified the exact
+unexpected file as `Microsoft/Windows/PowerShell/ModuleAnalysisCache`. ACL
+descriptor collection starts Windows PowerShell before the private agent plan
+exists. Those trusted metadata probes MUST use a fixed minimal environment:
+the captured canonical system root and its system modules, with
+`PSModuleAnalysisCachePath=NUL` (Microsoft's documented cache-off setting).
+They inherit no authentication, host profile, repository module path or ambient
+cache override. This setting applies only to the metadata probe; it neither
+disables the private cache for agent execution nor changes its authentication.
+No process-global environment mutation, cache deletion, workspace ignore or
+ACL-validation bypass is permitted.
+
+Flow: trusted system root -> cache-free system-module ACL probe -> unchanged
+executable/ancestor descriptor validation -> private agent plan -> execution.
+Native fixtures MUST call the exact descriptor verifier in a child Node process
+with present and absent host application data and deliberately poisoned module/
+cache paths. Both must validate the executable and leave Git completely clean.
+A subsequent real Windows implementation remains the live acceptance gate.
+Source: [Windows PowerShell module cache](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1).
+
+A native Windows fixture MUST start Windows PowerShell with the actual generated
+shell policy, load its file-hash module, and prove a clean Git workspace and
+private runtime cleanup with both present and absent host application-data
+variables. Pure policy and planner fixtures MUST also prove literal Windows path
+encoding, private directories, preserved parent authentication and exclusion of
+host profiles and tokens. This adds **6 distinct cases** to the 130-case baseline
+and 18-case Windows extension; the two native cases run on Windows. Live Windows
+agent execution is separate evidence and cannot be inferred from the fixtures.
+
+The #462 Windows repeat on `c0dc3864` again left `Microsoft/` before the fixer;
+the first application-data isolation did not prove recovery. Codex MUST bind
+`PSModuleAnalysisCachePath` to one absolute filename under its private runtime
+`shell/local` directory in both the parent process environment and the explicit
+child-shell environment. Ambient cache paths cannot override it. The generated
+value is literal TOML, including Windows backslashes, spaces and quotes. Parent
+authentication and the existing shell credential/profile exclusions remain.
+The cache directory already has the private ACL; cleanup removes it with the
+runtime. No additional sandbox root or write/network/approval grant is added.
+
+[Microsoft's Windows PowerShell 5.1 contract](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1)
+specifies a cache filename override before process startup and background cache
+writes after module import. This is a bounded isolation fix, not a claim of
+successful live recovery. Four additional cases cover a literal parent/child
+policy, ambient cache rejection with present/absent host data, and actual native
+PowerShell startup before child-policy application with a clean checkout and
+runtime cleanup. The two existing child-shell native cases use the same cache
+override and are not counted again.
+
+### Semantic agent execution failures
+
+The #461 live implementation timed out after 900,000 ms. Telemetry retained the
+timeout category, but a generic comment exception wrapper discarded it. The CLI
+observation and capability adapter MUST share a closed mapping: configuration
+to `agent.policy-rejected`, timeout to `timeout`, cancellation to
+`workflow.cancelled`, output to `provider.contract-invalid`, process to
+`agent.failed`. Only typed CLI failures are mapped; unrelated exceptions retain
+their identity. Adapter errors publish no raw executable, token or provider
+diagnostic. Retryability is never broadened beyond either the typed CLI fact or
+the closed application metadata. The route retains that semantic error and its
+correlation. Five
+adapter cases cover all categories, distinct from the comment SDD's three
+preservation cases. Deadline, verification, sandbox and credential limits stay
+unchanged; no fallback provider, model or automatic execution retry is added.
 
 ### 6.2 Alternative paths
 
@@ -727,6 +810,52 @@ descendant cancellation, timeout, and cleanup. This is an extension to the
 130-case baseline, with no reused case counted twice. CI MUST run these cases on
 Windows and retain macOS/Ubuntu coverage. A live agent run is a separate human
 gate and is not part of automated acceptance.
+
+The live failure/cache extension adds **9 distinct cases**: five typed CLI
+category mappings and four private module-cache policy/planner/native scenarios.
+This is separate from the 130-case baseline, 18-case Windows extension and
+6-case private application-data extension. Required native cases run on Windows;
+fixture success never substitutes for a live agent execution.
+
+The trusted ACL-probe cache extension adds **4 distinct cases**: exact system-only
+environment, absence of credential/profile inheritance without ambient mutation,
+and two native exact-probe clean-workspace cases with host application data
+present/absent. They are additional to the 130 + 18 + 6 + 9 case budgets.
+
+The installer-cache extension adds **2 distinct native Windows cases** with
+host application data present/absent. They start PowerShell 5.1 hash-module
+commands in a real Git checkout using the actual private installer environment,
+allow its cache worker to run and prove no checkout-relative or inherited cache
+is created. Trusted installers disable their module-analysis cache before
+PowerShell starts; provider execution keeps its separate private cache policy.
+These cases are additional to the baseline and all previous extensions.
+
+The verification-environment extension adds **3 distinct cases**: two private
+Windows profile/cache/cleanup cases with host data present/absent and one native
+child that imports the actual system-root validator and invokes PowerShell from
+a real Git checkout. Verification preserves the non-secret `SystemDrive` machine
+fact required by the validator and the declared Jest worker-recycling flag;
+profile and module-cache paths always belong to the fresh temporary home.
+Credentials and operator authentication-store references remain excluded.
+
+The protected verification-temp extension adds **2 distinct cases**: a portable
+isolation/cleanup case for all four temporary-directory variables, and a native
+Windows preflight of a private dummy agent inside the actual isolated profile.
+These are additional to every preceding budget. Windows verification homes MUST
+pass the existing owner/ancestor ACL checks before use, with the existing safe
+profile-local fallback. `TMP`, `TEMP`, `TMPDIR` and `RUNNER_TEMP` MUST identify one
+private temporary subdirectory inside that home rather than inherited host
+directories. The child profile MUST NOT inherit operator authentication paths.
+Nested fixtures and installers use those protected ancestors; unsafe candidates
+still fail closed and no host directory ACL may be modified.
+
+Live [run 38137358379](https://github.com/vypdev/copilot/actions/runs/38137358379)
+reproduced three private-installation preflight failures inside verification on
+`windows-intel-runner-1`, although the native smoke on another runner passed.
+It was canceled after more than twenty minutes without new test output. The
+installed repository verification command now requests Jest `--runInBand` for
+the repeat; serialization is an operational experiment, not proof that either
+the full verification or live agent operation succeeded.
 
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
