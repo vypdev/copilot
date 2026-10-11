@@ -1174,7 +1174,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-10",
+      "lastVerified": "2026-10-11",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1210,7 +1210,10 @@
         "src/infrastructure/pre_branch_sdd_workspace_adapter.ts",
         "src/infrastructure/specification_catalog_validator.cjs",
         "src/actions/input_boolean_policy.ts",
-        "src/domain/issue_workflow_profile.ts"
+        "src/domain/issue_workflow_profile.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/application/policies/status_command_policy.ts",
+        "src/application/policies/publication_message_catalog.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1227,7 +1230,8 @@
         "src/infrastructure/__tests__/pre_branch_sdd_workspace_adapter.test.ts",
         "src/architecture/__tests__/github_publication_boundaries.test.ts",
         "src/actions/__tests__/input_boolean_policy.test.ts",
-        "src/domain/__tests__/issue_workflow_profile.test.ts"
+        "src/domain/__tests__/issue_workflow_profile.test.ts",
+        "src/application/policies/__tests__/status_command_policy.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

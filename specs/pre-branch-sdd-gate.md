@@ -706,7 +706,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 
 ## Proposed status readiness extension
 
-The prospective read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its additional 28-test budget preserves all gate invariants and the implemented gate acceptance budget above. This proposal is not implementation evidence.
+The proposed read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its 30-case rendering/localization regression budget is separate from the gate's acceptance budget above. The current partial projection fails closed for required evidence, but does not yet project gate records or publication proofs.
 
 ### 1. Executive summary
 

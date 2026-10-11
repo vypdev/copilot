@@ -195,4 +195,305 @@ describe('status command policy', () => {
         expect(body).toContain('pull-request / PR #21 / issue #17');
         expect(body).toContain('1 abiertos, 2 reabiertos, 3 requieren verificación, 4 desconocidos, 5 resueltos');
     });
+    // SDD readiness regression budget: 30 independent semantic cases.
+    it('renders required English heading', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('required');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders required Spanish heading', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('obligatoria');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders not required English', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: false, state: 'not-required' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('not required');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders not required Spanish', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: false, state: 'not-required' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no obligatoria');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders unavailable English', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body.toLowerCase()).toContain('evidence unavailable');
+        expect(body.toLowerCase()).toContain('required');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders unavailable Spanish', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body.toLowerCase()).toContain('obligatoria');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 01', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 02', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 03', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 04', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 05', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 06', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 07', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 08', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 09', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 10', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 11', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 12', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 13', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 14', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 15', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 16', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 17', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 18', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 19', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 20', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 21', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 22', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 23', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders readiness remains fail-closed on evidence variant 24', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
 });

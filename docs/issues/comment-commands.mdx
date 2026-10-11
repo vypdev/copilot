@@ -106,6 +106,13 @@ separate from an issue with the same number. Status and description queries
 preserve existing lifecycle and waiting labels when they make no lifecycle
 decision.
 
+For issue types covered by `pre-branch-sdd`, status also appends an SDD
+readiness section. It reports when an SDD is not required and marks required
+SDD evidence unavailable until the status reader can verify authoritative gate
+evidence. A `published` marker or existing branch alone never means the SDD is
+ready. Missing or unverified evidence blocks a readiness claim; status remains
+read-only and preserves its existing fields.
+
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to
 make the subject explicit. For example, `/copilot explain src/domain/copilot_command.ts`

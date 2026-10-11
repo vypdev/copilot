@@ -18,6 +18,8 @@ export interface CopilotStatusExecutionContext {
     readonly isPullRequest: boolean;
     readonly inputs?: { readonly action?: string };
     readonly issue: { readonly number: number };
+    readonly issueWorkflowKind?: string;
+    readonly preBranchSdd?: boolean;
     readonly pullRequest: {
         readonly number: number;
         readonly isPullRequestReviewComment: boolean;
@@ -56,6 +58,7 @@ export interface CopilotStatusSnapshot {
     };
     readonly findingStateEvidence?: 'invalid';
     readonly pullRequestDescriptionMode: string;
+    readonly sddReadiness?: { readonly state: 'not-required' | 'unavailable'; readonly required: boolean };
 }
 
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
@@ -114,6 +117,12 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         }) } : {}),
         ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' as const } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        ...(execution.issueWorkflowKind ? { sddReadiness: {
+            required: Boolean(execution.preBranchSdd && (execution.issueWorkflowKind === 'feature'
+                || issueLabels.some(label => label.toLowerCase() === 'contract-change'))),
+            state: execution.preBranchSdd && (execution.issueWorkflowKind === 'feature'
+                || issueLabels.some(label => label.toLowerCase() === 'contract-change')) ? 'unavailable' as const : 'not-required' as const,
+        } } : {}),
     });
 }
 
@@ -152,6 +161,13 @@ export function formatCopilotStatus(
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
     } else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
+    }
+    if (snapshot.sddReadiness) {
+        lines.push('', `## ${catalog.render('interaction.status.sddHeading')}`);
+        lines.push(label('interaction.status.sddRequirement', catalog.render(snapshot.sddReadiness.required
+            ? 'interaction.status.sddRequired' : 'interaction.status.sddNotRequired')));
+        lines.push(label('interaction.status.sddState', catalog.render(snapshot.sddReadiness.state === 'not-required'
+            ? 'interaction.status.sddNotRequired' : 'interaction.status.sddUnavailable')));
     }
     return lines.join('\n');
 }

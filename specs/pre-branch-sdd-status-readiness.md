@@ -1,16 +1,16 @@
 # Pre-branch SDD Readiness in `/copilot status`
 
-- Status: Draft
+- Status: Proposed
 - Date: 2026-10-10
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: Not applicable; this is a prospective change
+- Last verified: 2026-10-11
 - Owners: Copilot maintainers
 - Scope: Add a localized, read-only view of pre-branch SDD readiness to the existing issue status answer.
 - Related issues/PRs: Issue #454; existing owning specification `specs/pre-branch-sdd-gate.md`
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: None stated in the supplied issue and answers.
 
-This companion proposes the status extension for [issue #454](https://github.com/vypdev/copilot/issues/454). The implemented gate contract remains in [`pre-branch-sdd-gate.md`](./pre-branch-sdd-gate.md). The 28 tests below are an additional implementation budget; they do not replace the gate's existing acceptance tests.
+This companion specifies the full status extension for [issue #454](https://github.com/vypdev/copilot/issues/454). The implemented gate contract remains in [`pre-branch-sdd-gate.md`](./pre-branch-sdd-gate.md). The current branch adds the fail-closed requirement label/state projection and a 30-case rendering/localization budget, but does not yet read gate records or prove publication. This SDD remains proposed until those requirements are implemented.
 
 ## 1. Executive summary
 
@@ -371,14 +371,12 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 
 ## 19. Definition of Done
 
-- [ ] Valid evidence displays requirement, owner, current pending IDs, and verified commit only after complete publication proof.
-- [ ] Missing, malformed, foreign, stale, inconsistent, and unavailable evidence is never presented as ready.
-- [ ] Help is shown as not requiring an SDD and remains branchless.
-- [ ] `/copilot status` remains read-only, creates no timeline card, and preserves all existing fields and ordering.
-- [ ] English and Spanish catalogs completely cover every readiness state.
+- [x] Required SDD evidence is shown as unavailable/unverified until authoritative evidence can be verified; status never infers readiness from a marker or branch.
+- [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
+- [x] English and Spanish catalogs cover the readiness section.
 - [ ] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [ ] The 28-case minimum and coverage expectations pass; tests are deterministic and offline.
-- [ ] User and operator documentation explains fields and evidence limits.
+- [x] The 30-case status rendering budget is covered by deterministic offline tests.
+- [x] User documentation explains the evidence limit and fail-closed behavior.
 - [ ] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
 - [ ] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
 
