@@ -14,6 +14,7 @@ export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): 
     const outputSchemaPath = input.outputSchema
         ? managedArtifactPath(input.runtimeDirectory, 'response.schema.json')
         : undefined;
+    const moduleCache = managedArtifactPath(input.runtimeDirectory, 'shell/local/powershell-module-analysis.cache');
     const artifacts = outputSchemaPath ? [{
         path: outputSchemaPath,
         contents: JSON.stringify(input.outputSchema),
@@ -40,9 +41,10 @@ export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): 
         '--config', 'allow_login_shell=false',
         '--config', 'shell_environment_policy.inherit="core"',
         '--config', 'shell_environment_policy.ignore_default_excludes=false',
-        '--config', 'shell_environment_policy.include_only=["PATH","SystemRoot","WINDIR","PATHEXT","TMPDIR","TEMP","TMP","LANG","LC_ALL","APPDATA","LOCALAPPDATA"]',
+        '--config', 'shell_environment_policy.include_only=["PATH","SystemRoot","WINDIR","PATHEXT","TMPDIR","TEMP","TMP","LANG","LC_ALL","APPDATA","LOCALAPPDATA","PSModuleAnalysisCachePath"]',
         '--config', `shell_environment_policy.set.APPDATA=${tomlString(managedArtifactPath(input.runtimeDirectory, 'shell/roaming'))}`,
         '--config', `shell_environment_policy.set.LOCALAPPDATA=${tomlString(managedArtifactPath(input.runtimeDirectory, 'shell/local'))}`,
+        '--config', `shell_environment_policy.set.PSModuleAnalysisCachePath=${tomlString(moduleCache)}`,
         '--config', 'project_doc_max_bytes=0',
         '--config', 'mcp_servers={}',
         '--config', 'hooks={}',
@@ -57,7 +59,7 @@ export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): 
         outputProtocol: 'plain-text',
         workspaceMode,
         output: outputSchemaPath ? 'native-and-local-json-schema' : 'text',
-        environment: {},
+        environment: { PSModuleAnalysisCachePath: moduleCache },
         artifacts,
     };
 }

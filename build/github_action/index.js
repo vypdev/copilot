@@ -39659,6 +39659,7 @@ function buildCodexExecutionPolicy(input) {
     const outputSchemaPath = input.outputSchema
         ? (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'response.schema.json')
         : undefined;
+    const moduleCache = (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'shell/local/powershell-module-analysis.cache');
     const artifacts = outputSchemaPath ? [{
             path: outputSchemaPath,
             contents: JSON.stringify(input.outputSchema),
@@ -39685,9 +39686,10 @@ function buildCodexExecutionPolicy(input) {
         '--config', 'allow_login_shell=false',
         '--config', 'shell_environment_policy.inherit="core"',
         '--config', 'shell_environment_policy.ignore_default_excludes=false',
-        '--config', 'shell_environment_policy.include_only=["PATH","SystemRoot","WINDIR","PATHEXT","TMPDIR","TEMP","TMP","LANG","LC_ALL","APPDATA","LOCALAPPDATA"]',
+        '--config', 'shell_environment_policy.include_only=["PATH","SystemRoot","WINDIR","PATHEXT","TMPDIR","TEMP","TMP","LANG","LC_ALL","APPDATA","LOCALAPPDATA","PSModuleAnalysisCachePath"]',
         '--config', `shell_environment_policy.set.APPDATA=${tomlString((0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'shell/roaming'))}`,
         '--config', `shell_environment_policy.set.LOCALAPPDATA=${tomlString((0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'shell/local'))}`,
+        '--config', `shell_environment_policy.set.PSModuleAnalysisCachePath=${tomlString(moduleCache)}`,
         '--config', 'project_doc_max_bytes=0',
         '--config', 'mcp_servers={}',
         '--config', 'hooks={}',
@@ -39702,7 +39704,7 @@ function buildCodexExecutionPolicy(input) {
         outputProtocol: 'plain-text',
         workspaceMode,
         output: outputSchemaPath ? 'native-and-local-json-schema' : 'text',
-        environment: {},
+        environment: { PSModuleAnalysisCachePath: moduleCache },
         artifacts,
     };
 }
@@ -39967,6 +39969,29 @@ function schemaTypes(value, path = '$') {
 }
 function isRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+
+/***/ }),
+
+/***/ 37253:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.agentExecutionFailureCode = agentExecutionFailureCode;
+/** Closed provider categories share the same semantic identity in telemetry and replies. */
+function agentExecutionFailureCode(category) {
+    if (category === 'configuration')
+        return 'agent.policy-rejected';
+    if (category === 'timeout')
+        return 'timeout';
+    if (category === 'cancelled')
+        return 'workflow.cancelled';
+    if (category === 'output')
+        return 'provider.contract-invalid';
+    return 'agent.failed';
 }
 
 
@@ -52522,7 +52547,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
         return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults);
     }
     catch (cause) {
-        const semanticError = new application_error_1.ApplicationError('workflow.failed', "Comment automation failed.", { cause });
+        const semanticError = (0, application_error_1.toApplicationError)(cause, 'workflow.failed', "Comment automation failed.");
         (0, logging_ports_1.logError)(semanticError);
         return [...languageResults, new result_1.Result({
                 id: options.taskId,
@@ -54573,6 +54598,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.draftSddMarkdown = draftSddMarkdown;
 const application_error_1 = __nccwpck_require__(75999);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const agent_response_length_failure_1 = __nccwpck_require__(28528);
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     const maximum = plan.action === 'update' ? pre_branch_sdd_1.SDD_MAX_UPDATE_CHARACTERS : pre_branch_sdd_1.SDD_MAX_DRAFT_CHARACTERS;
@@ -54582,12 +54608,24 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
         required: ['markdown'], additionalProperties: false,
     };
     let problem = 'size';
+    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nThe test strategy must include an explicit sentence stating the justified integer number of distinct tests or cases, not only numbers in a table. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
-        const value = await agent.query({
-            configuration, agentId: 'pre-branch-sdd-draft',
-            prompt: attempt === 0 ? prompt : `${prompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : 'The previous response failed the required SDD headings or numeric test-budget contract.'} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template, including Executive summary, Goals, Clean Architecture, Testing strategy and Acceptance, and an explicit numeric budget of distinct tests/cases. Preserve all resolved requirements, architecture, documentation and acceptance. Target at most ${Math.floor(maximum * 2 / 3)} characters. Do not change ownership or truncate a requirement. Return only the required JSON.`,
-            options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
-        });
+        let value;
+        try {
+            value = await agent.query({
+                configuration, agentId: 'pre-branch-sdd-draft',
+                prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : 'The previous response failed the required SDD headings or numeric test-budget contract.'} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
+                options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
+            });
+        }
+        catch (error) {
+            // Only the exact local schema's maximum-length rejection is recoverable.
+            // Provider failures and other schema violations retain their original identity.
+            if (!(error instanceof agent_response_length_failure_1.AgentResponseLengthFailure) || error.path !== '$.markdown' || error.maximum !== maximum)
+                throw error;
+            problem = 'size';
+            continue;
+        }
         if (!value || typeof value !== 'object' || Array.isArray(value)
             || typeof value.markdown !== 'string') {
             throw new application_error_1.ApplicationError('validation.invalid-input', 'The drafting agent returned no SDD Markdown.');
@@ -65962,6 +66000,7 @@ exports.AgentCliClient = void 0;
 const agent_cli_execution_1 = __nccwpck_require__(30248);
 const agent_execution_planner_1 = __nccwpck_require__(11800);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const agent_execution_failure_policy_1 = __nccwpck_require__(37253);
 const NOOP_OBSERVER = { observe: () => undefined };
 class AgentCliClient {
     constructor(planner = new agent_execution_planner_1.AgentExecutionPlanner(), observer = NOOP_OBSERVER) {
@@ -66022,22 +66061,11 @@ function failureObservation(request, error, phase, startedAt) {
             ? { preflightStage: error.preflightStage } : {}),
         ...(phase === 'preflight' && error instanceof agent_cli_contracts_1.AgentCliError && error.preflightDiagnostic
             ? { preflightDiagnostic: error.preflightDiagnostic } : {}),
-        semanticCode: semanticCodeForFailure(category),
+        semanticCode: (0, agent_execution_failure_policy_1.agentExecutionFailureCode)(category),
         retryable: error instanceof agent_cli_contracts_1.AgentCliError && error.retryable,
         exitCode: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitCode : undefined,
         exitDiagnostic: error instanceof agent_cli_contracts_1.AgentCliError ? error.exitDiagnostic : undefined,
     };
-}
-function semanticCodeForFailure(category) {
-    if (category === 'configuration')
-        return 'agent.policy-rejected';
-    if (category === 'timeout')
-        return 'timeout';
-    if (category === 'cancelled')
-        return 'workflow.cancelled';
-    if (category === 'output')
-        return 'provider.contract-invalid';
-    return 'agent.failed';
 }
 function observeSafely(observer, observation) {
     try {
@@ -66904,12 +66932,13 @@ function parseStrictJsonFromAgentText(text) {
 /***/ }),
 
 /***/ 52663:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.assertAgentResponseSchema = assertAgentResponseSchema;
+const agent_response_length_failure_1 = __nccwpck_require__(28528);
 /** Validates the JSON Schema subset used by all public agent response contracts. */
 function assertAgentResponseSchema(value, schema, path = '$') {
     assertType(value, schema.type, path);
@@ -66953,7 +66982,7 @@ function validateString(value, schema, path) {
         throw new Error(`Agent response schema violation at ${path}: string is too short.`);
     }
     if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
-        throw new Error(`Agent response schema violation at ${path}: string is too long.`);
+        throw new agent_response_length_failure_1.AgentResponseLengthFailure(path, schema.maxLength);
     }
 }
 function validateNumber(value, schema, path) {
@@ -67066,6 +67095,9 @@ function extractReasoningFromParts(parts) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCapabilityAdapter = void 0;
 const agent_constants_1 = __nccwpck_require__(46927);
+const agent_cli_contracts_1 = __nccwpck_require__(48254);
+const application_error_1 = __nccwpck_require__(75999);
+const agent_execution_failure_policy_1 = __nccwpck_require__(37253);
 const agent_configuration_policy_1 = __nccwpck_require__(49616);
 class AgentCapabilityAdapter {
     constructor(infrastructure) {
@@ -67073,13 +67105,24 @@ class AgentCapabilityAdapter {
     }
     async execute(request) {
         const taskConfiguration = (0, agent_configuration_policy_1.getValidatedAgentConfiguration)(request.configuration, request.capability);
-        const output = await this.cliAdapter.execute({
-            configuration: taskConfiguration,
-            prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
-            timeoutMs: agent_constants_1.AGENT_REQUEST_TIMEOUT_MS,
-            capability: request.capability,
-            ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
-        });
+        let output;
+        try {
+            output = await this.cliAdapter.execute({
+                configuration: taskConfiguration,
+                prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
+                timeoutMs: agent_constants_1.AGENT_REQUEST_TIMEOUT_MS,
+                capability: request.capability,
+                ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
+            });
+        }
+        catch (error) {
+            if (!(error instanceof agent_cli_contracts_1.AgentCliError))
+                throw error;
+            const code = (0, agent_execution_failure_policy_1.agentExecutionFailureCode)(error.category);
+            throw new application_error_1.ApplicationError(code, 'The configured agent did not complete its operation.', {
+                cause: error, retryable: error.retryable && application_error_1.APPLICATION_ERROR_METADATA[code].retryable,
+            });
+        }
         return request.mapCliOutput(output);
     }
     addEffortInstruction(prompt, effort) {
@@ -73944,6 +73987,27 @@ function workspaceModeForCapability(capability) {
 
 /***/ }),
 
+/***/ 28528:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentResponseLengthFailure = void 0;
+/** Structured schema rejection with no provider content or parsed-response authority. */
+class AgentResponseLengthFailure extends Error {
+    constructor(path, maximum) {
+        super(`Agent response schema violation at ${path}: string is too long.`);
+        this.path = path;
+        this.maximum = maximum;
+        this.name = 'AgentResponseLengthFailure';
+    }
+}
+exports.AgentResponseLengthFailure = AgentResponseLengthFailure;
+
+
+/***/ }),
+
 /***/ 51114:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -76235,7 +76299,7 @@ function parsePositiveSafeInteger(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SddDraftFormatFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
+exports.SDD_REQUIRED_HEADINGS = exports.SddDraftFormatFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
 exports.retainSddAnswers = retainSddAnswers;
 exports.normalizeSddIssueTitle = normalizeSddIssueTitle;
 exports.isSafeSddPath = isSafeSddPath;
@@ -76435,10 +76499,13 @@ class SddDraftFormatFailure extends Error {
     }
 }
 exports.SddDraftFormatFailure = SddDraftFormatFailure;
+exports.SDD_REQUIRED_HEADINGS = Object.freeze([
+    '## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance',
+]);
 function validateSddMarkdown(markdown) {
     if (markdown.length < exports.SDD_MIN_DRAFT_CHARACTERS || markdown.length > exports.SDD_MAX_DRAFT_CHARACTERS)
         throw new Error('The SDD draft length is outside the supported range.');
-    for (const heading of ['## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance']) {
+    for (const heading of exports.SDD_REQUIRED_HEADINGS) {
         if (!markdown.includes(heading))
             throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
     }

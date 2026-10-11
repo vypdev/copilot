@@ -1212,7 +1212,9 @@
         "src/domain/issue_workflow_profile.ts",
         "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.ts",
         "src/data/model/application_error.ts",
-        "src/application/policies/application_error_message_catalog.ts"
+        "src/application/policies/application_error_message_catalog.ts",
+        "src/domain/agent_response_length_failure.ts",
+        "src/data/repository/agent_json_schema_validator.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1231,7 +1233,8 @@
         "src/actions/__tests__/input_boolean_policy.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
         "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.test.ts",
-        "src/application/policies/__tests__/application_error_presentation_policy.test.ts"
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1359,7 +1362,8 @@
         "src/application/usecases/read_copilot_status_workflow.ts",
         "src/infrastructure/composition/main_run_route_composition_root.ts",
         "src/application/usecases/comment_mutation_target_workflow.ts",
-        "src/application/policies/implementation_result_policy.ts"
+        "src/application/policies/implementation_result_policy.ts",
+        "src/application/policies/agent_execution_failure_policy.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
@@ -1734,7 +1738,8 @@
         "scripts/verify-agent-clis.cjs",
         "scripts/verify-windows-job-npm.cjs",
         "scripts/smoke-test-npm-package.cjs",
-        "scripts/validate-workflow-contract.cjs"
+        "scripts/validate-workflow-contract.cjs",
+        "src/application/policies/agent_execution_failure_policy.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1759,7 +1764,8 @@
         "src/infrastructure/agents/__tests__/agent_official_installer.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_version.test.ts",
         "src/tooling/__tests__/verify_agent_clis.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

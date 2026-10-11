@@ -344,7 +344,7 @@ describe('isolated Windows agent runtime', () => {
             const args=process.argv;const setting=args.find(x=>x.startsWith('shell_environment_policy.include_only='));
             const keys=JSON.parse(setting.slice(setting.indexOf('=')+1));const env={};
             for(const key of keys){if(process.env[key]!==undefined)env[key]=process.env[key]}
-            for(const key of ['APPDATA','LOCALAPPDATA']){const value=args.find(x=>x.startsWith('shell_environment_policy.set.'+key+'='));env[key]=JSON.parse(value.slice(value.indexOf('=')+1))}
+            for(const key of ['APPDATA','LOCALAPPDATA','PSModuleAnalysisCachePath']){const value=args.find(x=>x.startsWith('shell_environment_policy.set.'+key+'='));env[key]=JSON.parse(value.slice(value.indexOf('=')+1))}
             const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env,encoding:'utf8',timeout:15000,windowsHide:true});
             if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
         }`;
@@ -360,6 +360,29 @@ describe('isolated Windows agent runtime', () => {
                 expect(() => verifyWindowsRuntimePathPrivate(join(plan.runtimeDirectory, 'shell', kind), true)).not.toThrow();
             }
             await expect(runAgentCli(plan, 'read-only native shell fixture')).resolves.toBe('ready');
+            expect(execFileSync('git', ['status', '--porcelain'], { cwd: fixture.workspace, encoding: 'utf8' }).trim()).toBe('');
+            expect(existsSync(join(fixture.workspace, 'Microsoft'))).toBe(false);
+            expect(existsSync(plan.runtimeDirectory)).toBe(false);
+        } finally {
+            rmSync(fixture.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        }
+    }, 60_000);
+
+    windowsIt('starts native PowerShell before applying the shell policy with a private parent cache and clean checkout', async () => {
+        const command = "$ErrorActionPreference='Stop'; if (-not [IO.Path]::IsPathRooted($env:PSModuleAnalysisCachePath)) { throw 'Unbounded module cache' }; Get-Command Get-FileHash -ErrorAction Stop | Out-Null; Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Write-Output 'ready'";
+        const source = `if(process.argv.includes('--version')){process.stdout.write('codex-cli 0.156.1')}else{
+            const {spawnSync}=require('node:child_process');const {join}=require('node:path');
+            if(!process.env.PSModuleAnalysisCachePath.includes('copilot-agent-runtime-'))process.exit(3);
+            const result=spawnSync(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env:process.env,encoding:'utf8',timeout:15000,windowsHide:true});
+            if(result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());process.stdin.resume();
+        }`;
+        const fixture = fakeRuntime(source);
+        try {
+            const environment = { ...fixture.environment, PSModuleAnalysisCachePath: join(fixture.workspace, 'untrusted-cache') };
+            delete environment.APPDATA;
+            delete environment.LOCALAPPDATA;
+            const plan = prepare(fixture.workspace, environment, 20_000);
+            await expect(runAgentCli(plan, 'parent native shell fixture')).resolves.toBe('ready');
             expect(execFileSync('git', ['status', '--porcelain'], { cwd: fixture.workspace, encoding: 'utf8' }).trim()).toBe('');
             expect(existsSync(join(fixture.workspace, 'Microsoft'))).toBe(false);
             expect(existsSync(plan.runtimeDirectory)).toBe(false);

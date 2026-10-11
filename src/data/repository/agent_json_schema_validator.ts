@@ -1,3 +1,5 @@
+import { AgentResponseLengthFailure } from '../../domain/agent_response_length_failure';
+
 type JsonSchema = Record<string, unknown>;
 
 /** Validates the JSON Schema subset used by all public agent response contracts. */
@@ -36,7 +38,7 @@ function validateString(value: string, schema: JsonSchema, path: string): void {
         throw new Error(`Agent response schema violation at ${path}: string is too short.`);
     }
     if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
-        throw new Error(`Agent response schema violation at ${path}: string is too long.`);
+        throw new AgentResponseLengthFailure(path, schema.maxLength);
     }
 }
 

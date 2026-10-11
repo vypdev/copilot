@@ -220,6 +220,22 @@ describe('AgentExecutionPlanner', () => {
         expect(existsSync(plan.runtimeDirectory)).toBe(false);
     });
 
+    it.each([true, false])('overrides ambient PowerShell cache authority with private runtime data (host app data=%s)', present => {
+        const plan = new AgentExecutionPlanner(system('codex')).prepare({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'language', prompt: 'fixture', timeoutMs: 1_000,
+            environment: { PATH: '', CODEX_HOME: '/operator-codex-session', PSModuleAnalysisCachePath: '/untrusted/checkout-cache',
+                ...(present ? { APPDATA: '/host/roaming', LOCALAPPDATA: '/host/local' } : {}) },
+        });
+        try {
+            const cache = join(plan.runtimeDirectory, 'shell', 'local', 'powershell-module-analysis.cache').replace(/\\/gu, '/');
+            expect(plan.environment.PSModuleAnalysisCachePath?.replace(/\\/gu, '/')).toBe(cache);
+            expect(plan.environment.CODEX_HOME).toBe('/operator-codex-session');
+            expect(existsSync(join(plan.runtimeDirectory, 'shell', 'local'))).toBe(true);
+        } finally {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
     it('preserves parent Codex authentication while admitting only private application data to child shells', () => {
         const environment = {
             PATH: '', CODEX_HOME: '/operator-codex-session', HOME: '/host-profile',

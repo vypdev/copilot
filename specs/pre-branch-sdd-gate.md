@@ -568,7 +568,8 @@ ownership/validation.
 | Bounded draft generation and recovery | 12 | Three action-specific schema boundaries, one safe regeneration, one exhausted size repair, three malformed outputs, one provider failure, two validation/freshness integration routes and one closed localized recovery presentation |
 | Answer history and state encoding | 14 | Four cumulative/current-authorization/base-reset routes, one legacy/new provenance roundtrip with visible round, six invalid-provenance cases, count/encoded-size bounds and comment-terminator isolation |
 | Draft format and final clarification recovery | 11 | Two typed content repair reasons, exhausted format, unexpected writer failure, both mixed size/format orders, final round completion, fourth question rejection, full writer/freshness revalidation, missing prepared value and localized closed recovery |
-| **Total** | **117** | No case counted twice |
+| Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
+| **Total** | **126** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -732,6 +733,24 @@ Flow: analysis and required answers -> bounded draft -> optional single size
 regeneration -> unchanged validation/freshness -> publication, or blocked.
 Acceptance: the provider schema for an update has maxLength 18000; two oversized
 responses publish no draft; a base change after regeneration remains blocked.
+
+The live #463 retry rejected an oversized response in local schema validation
+before the draft helper received a value. The schema validator MUST expose a
+typed maximum-length rejection with the local field path and maximum, never
+provider content. Only `$.markdown` with this request's exact action-specific
+maximum may enter the existing single regeneration. String-matched diagnostics,
+foreign fields/bounds, minimum-length violations, malformed JSON and provider
+failures never authorize a retry. Native schema rejection, accepted oversized
+output and writer format failure share the same two-attempt ceiling. Nine
+additional cases include the real adapter/parser/helper path.
+
+Both attempts receive the literal canonical heading prefixes from the same
+constant used by writer validation, preserving capitalization and Markdown
+syntax. The prompt requires an explicit sentence with the justified integer
+test budget; a table alone does not satisfy that contract. The first attempt
+also targets two thirds of the hard maximum. These instructions do not relax
+validation, change ownership or truncate a resolved requirement. This addresses
+the repeated required-format rejection in the final clarification of #464.
 
 
 ### Clarification history and safe durable state (2026-10-11)

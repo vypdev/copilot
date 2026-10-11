@@ -223,9 +223,13 @@ export class SddDraftFormatFailure extends Error {
   constructor(readonly reason: 'required-heading' | 'test-budget', message: string) { super(message); }
 }
 
+export const SDD_REQUIRED_HEADINGS = Object.freeze([
+  '## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance',
+]);
+
 export function validateSddMarkdown(markdown: string): void {
   if (markdown.length < SDD_MIN_DRAFT_CHARACTERS || markdown.length > SDD_MAX_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
-  for (const heading of ['## 1. Executive summary', '## 4. Goals', '## 8. Clean Architecture', '## 14. Testing strategy', '## 16. Acceptance']) {
+  for (const heading of SDD_REQUIRED_HEADINGS) {
     if (!markdown.includes(heading)) throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
   }
   if (!/\b\d+\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)) {

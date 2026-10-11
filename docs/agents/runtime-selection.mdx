@@ -22,4 +22,11 @@ If agent preflight fails, the Action log identifies a fixed stage such as `resol
 
 Codex child shells use private per-run application-data directories outside the checkout. The parent Codex login context is preserved; host profile paths and credentials remain excluded from child shells. Unexpected untracked files still block implementation rather than being ignored or committed.
 
+The parent process and child shells also use an explicit PowerShell module-cache
+filename inside that private runtime directory. Ambient cache locations cannot
+redirect it into the checkout. Agent failures retain their specific timeout,
+cancellation, policy or execution code in the conversation reply. The agent's
+15-minute deadline stays bounded; inspect the current state before retrying a
+timed-out implementation.
+
 There is no runtime registry or provider fallback. The exhaustive dispatcher recognizes exactly these three values and rejects every other value before spawn.

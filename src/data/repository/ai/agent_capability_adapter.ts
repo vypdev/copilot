@@ -1,4 +1,7 @@
 import { AGENT_REQUEST_TIMEOUT_MS } from './agent_constants';
+import { AgentCliError } from '../agent_cli_contracts';
+import { ApplicationError, APPLICATION_ERROR_METADATA } from '../../../application/errors/application_error';
+import { agentExecutionFailureCode } from '../../../application/policies/agent_execution_failure_policy';
 
 import { getValidatedAgentConfiguration } from '../agent_configuration_policy';
 
@@ -25,13 +28,22 @@ export abstract class AgentCapabilityAdapter {
         outputSchema?: Record<string, unknown>;
     }): Promise<T | undefined> {
         const taskConfiguration = getValidatedAgentConfiguration(request.configuration, request.capability);
-        const output = await this.cliAdapter.execute({
+        let output: string;
+        try {
+            output = await this.cliAdapter.execute({
             configuration: taskConfiguration,
             prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
             timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
             capability: request.capability,
             ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
-        });
+            });
+        } catch (error) {
+            if (!(error instanceof AgentCliError)) throw error;
+            const code = agentExecutionFailureCode(error.category);
+            throw new ApplicationError(code, 'The configured agent did not complete its operation.', {
+                cause: error, retryable: error.retryable && APPLICATION_ERROR_METADATA[code].retryable,
+            });
+        }
         return request.mapCliOutput(output);
     }
 

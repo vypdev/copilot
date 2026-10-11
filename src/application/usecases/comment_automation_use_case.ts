@@ -7,7 +7,7 @@ import type { CommentAutomationContext } from './comment_automation_context';
 import { copilotCommandAcceptsAdaptableProse, parseCopilotCommand } from '../../domain/copilot_command';
 import { invalidCommentCommandResult, runExplicitCommentCommand } from './comment_automation_command_workflow';
 import { runNaturalLanguageCommentAutomation } from './comment_automation_natural_language_workflow';
-import { ApplicationError } from '../errors/application_error';
+import { toApplicationError } from '../errors/application_error';
 import { isNaturalLanguageBranchSyncRequest } from '../../domain/branch_sync_command';
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 import { withCommentLanguageAdaptation } from './comment_automation_context';
@@ -66,7 +66,7 @@ export async function runCommentAutomation(
     }
     return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults);
   } catch (cause) {
-    const semanticError = new ApplicationError('workflow.failed', "Comment automation failed.", { cause });
+    const semanticError = toApplicationError(cause, 'workflow.failed', "Comment automation failed.");
     logError(semanticError);
     return [...languageResults, new Result({
         id: options.taskId,

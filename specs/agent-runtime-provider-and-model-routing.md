@@ -233,6 +233,41 @@ host profiles and tokens. This adds **6 distinct cases** to the 130-case baselin
 and 18-case Windows extension; the two native cases run on Windows. Live Windows
 agent execution is separate evidence and cannot be inferred from the fixtures.
 
+The #462 Windows repeat on `c0dc3864` again left `Microsoft/` before the fixer;
+the first application-data isolation did not prove recovery. Codex MUST bind
+`PSModuleAnalysisCachePath` to one absolute filename under its private runtime
+`shell/local` directory in both the parent process environment and the explicit
+child-shell environment. Ambient cache paths cannot override it. The generated
+value is literal TOML, including Windows backslashes, spaces and quotes. Parent
+authentication and the existing shell credential/profile exclusions remain.
+The cache directory already has the private ACL; cleanup removes it with the
+runtime. No additional sandbox root or write/network/approval grant is added.
+
+[Microsoft's Windows PowerShell 5.1 contract](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_windows_powershell_5.1?view=powershell-5.1)
+specifies a cache filename override before process startup and background cache
+writes after module import. This is a bounded isolation fix, not a claim of
+successful live recovery. Four additional cases cover a literal parent/child
+policy, ambient cache rejection with present/absent host data, and actual native
+PowerShell startup before child-policy application with a clean checkout and
+runtime cleanup. The two existing child-shell native cases use the same cache
+override and are not counted again.
+
+### Semantic agent execution failures
+
+The #461 live implementation timed out after 900,000 ms. Telemetry retained the
+timeout category, but a generic comment exception wrapper discarded it. The CLI
+observation and capability adapter MUST share a closed mapping: configuration
+to `agent.policy-rejected`, timeout to `timeout`, cancellation to
+`workflow.cancelled`, output to `provider.contract-invalid`, process to
+`agent.failed`. Only typed CLI failures are mapped; unrelated exceptions retain
+their identity. Adapter errors publish no raw executable, token or provider
+diagnostic. Retryability is never broadened beyond either the typed CLI fact or
+the closed application metadata. The route retains that semantic error and its
+correlation. Five
+adapter cases cover all categories, distinct from the comment SDD's three
+preservation cases. Deadline, verification, sandbox and credential limits stay
+unchanged; no fallback provider, model or automatic execution retry is added.
+
 ### 6.2 Alternative paths
 
 - Different active roles in one workflow may use different runtimes/models.
@@ -755,6 +790,12 @@ descendant cancellation, timeout, and cleanup. This is an extension to the
 130-case baseline, with no reused case counted twice. CI MUST run these cases on
 Windows and retain macOS/Ubuntu coverage. A live agent run is a separate human
 gate and is not part of automated acceptance.
+
+The live failure/cache extension adds **9 distinct cases**: five typed CLI
+category mappings and four private module-cache policy/planner/native scenarios.
+This is separate from the 130-case baseline, 18-case Windows extension and
+6-case private application-data extension. Required native cases run on Windows;
+fixture success never substitutes for a live agent execution.
 
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live

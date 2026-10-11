@@ -6,6 +6,7 @@ import type { CommentAutomationOptions } from '../comment_automation_contracts';
 import type { ActorAuthorizationPort } from '../../ports/actor_authorization_ports';
 import { projectCommentAutomationContext } from '../comment_automation_context';
 import { CommentLanguageTranslationWorkflow, projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
+import { ApplicationError } from '../../errors/application_error';
 
 type TestActorAuthorizationPort = Pick<ActorAuthorizationPort, 'isActorAllowedToModifyFiles'>
   & Partial<Pick<ActorAuthorizationPort, 'isActorAllowedToUseMemberOnlyAutomation'>>;
@@ -32,6 +33,23 @@ jest.mock("../steps/commit/bugbot/commit_autofix_and_resolve_workflow", () => ({
 const {
   commitAutofixAndResolveFindings,
 } = require("../steps/commit/bugbot/commit_autofix_and_resolve_workflow");
+
+it.each(['timeout', 'workflow.cancelled', 'agent.failed'] as const)('retains %s and its correlation through comment automation', async code => {
+  const correlationId = '7f83363c-6b69-43d2-9f40-b91c9c77ec3c';
+  const error = new ApplicationError(code, 'Closed semantic failure', { correlationId });
+  const intent = { invoke: jest.fn().mockRejectedValue(error) };
+  const results = await runCommentAutomation({ owner: 'o', repo: 'r', actor: 'actor',
+    tokens: { token: 't' }, isPullRequest: true, eventName: 'pull_request_review_comment',
+    commit: { branch: '' }, pullRequest: { number: 460, head: 'docs/work', isPullRequestReviewComment: true,
+      commentBody: '/copilot fix finding-1' },
+  } as unknown as Execution, {
+    taskId: 'CommentAutomation', languageUseCase: { invoke: jest.fn().mockResolvedValue([]) } as never,
+    intentUseCase: intent as never, thinkUseCase: {} as never, autofixUseCase: {} as never,
+    doUserRequestUseCase: {} as never, userComment: '/copilot fix finding-1',
+  }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) });
+  expect(results.at(-1)?.errors[0]).toBe(error);
+  expect(results.at(-1)?.errors[0].correlationId).toBe(correlationId);
+});
 
 function successfulResult(id: string, payload?: unknown): Result {
   return new Result({

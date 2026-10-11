@@ -360,7 +360,8 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Current command focus | 9 | Five trusted command tasks, three absent/unsupported task keys and one unrelated-issue-context integration case |
 | Canonical PR status counts | 24 | Ten strict marker cases and fourteen exact-target, trusted-card, bounded-coverage, freshness and snapshot-route cases |
 | Implementation receipt and truthful outcome | 27 | Nine orchestration cases and eighteen authority/localization/rendering cases; no success inferred from agent prose or an incomplete commit result |
-| **Total** | **193** | no double counting |
+| Semantic agent failure preservation | 3 | Timeout, cancellation and agent failure retain their exact code and correlation through the comment route |
+| **Total** | **196** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -523,3 +524,11 @@ For issues, this typed evidence recovers `state:working` and removes obsolete
 waiting labels while retaining unrelated labels. PR review state retains its
 existing evidence rules. Documentation work covers the command page; the nine
 lifecycle cases belong solely to the managed issue lifecycle budget.
+
+The live #461 implementation exceeded the bounded 15-minute agent execution
+time but its reply reported `workflow.failed`. Comment exception handling MUST
+preserve a semantic application error's identity, retryability, recovery and
+correlation. Plain unknown exceptions still map to the safe workflow fallback.
+Three route cases cover timeout, cancellation and agent failure; the runtime SDD
+owns the separate CLI-to-semantic mapping cases. A timeout publishes no success
+receipt and does not reach commit/push. The existing bounded runtime stays fixed.
