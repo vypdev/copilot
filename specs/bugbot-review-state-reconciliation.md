@@ -1591,3 +1591,13 @@ evidence.
   provider-neutral now.
 
 Live PRs #459/#460 showed a 2,119-character Codecov report posted by a provider-classified User account, legitimately retained as discussion. The fixed per-item limit is 4,000 characters; the total 24,000-character and 50-item bounds remain enforced. Provider author classification remains authoritative: account names never bypass completeness. Reports above the item bound and aggregate omissions still produce partial coverage. A representative positive case and the existing clipping case cover both boundaries.
+
+
+The canonical PR status card also publishes a bounded schema-1
+`copilot-bugbot-state-counts` marker with PR, verified head, digest, outcome,
+coverage and all seven counts. It preserves the existing canonical status and
+approval marker grammars. The status command accepts this read-only marker only
+from one trusted bot-owned complete current-head card; it grants no approval
+or mutation authority. Marker/reader tests (24 cases) belong exclusively to
+the comment automation SDD budget. User documentation explains recheck recovery
+when evidence is absent or stale.

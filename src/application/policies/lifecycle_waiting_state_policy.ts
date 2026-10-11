@@ -25,21 +25,8 @@ export function resolveLifecycleWaitingState(
     if (input.lifecycleState === 'changes-requested') {
         return { kind: 'set', state: 'awaiting-issue-author' };
     }
-    if (input.lifecycleState !== undefined || isHumanInteraction(input.eventName)) {
+    if (input.lifecycleState !== undefined) {
         return { kind: 'clear' };
     }
     return { kind: 'preserve' };
-}
-
-function isHumanInteraction(eventName: string): boolean {
-    return [
-        'issues',
-        'issue_comment',
-        'pull_request',
-        'pull_request_review',
-        'pull_request_review_comment',
-        'check_suite',
-        'workflow_run',
-        'push',
-    ].includes(eventName);
 }

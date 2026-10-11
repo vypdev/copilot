@@ -9,6 +9,7 @@ import type { BoundLinkedBranchReadinessPort } from '../ports/linked_branch_read
 import type { BranchSyncCommandOptions } from '../../domain/branch_sync_command';
 import type { CommentLanguageRequest } from './steps/common/comment_language_translation_workflow';
 import type { ThinkContext } from './steps/common/think_workflow';
+import type { CopilotStatusReadPorts } from './read_copilot_status_workflow';
 import type {
   BugbotFixIntentContext,
   BugbotReviewOperationContext,
@@ -34,6 +35,7 @@ export interface RememberBranchQueryPorts {
 }
 
 export interface CommentAutomationOptions {
+  readonly statusReadPorts?: CopilotStatusReadPorts;
   readonly taskId: string;
   readonly languageUseCase: ParamUseCase<CommentLanguageRequest, Result[]>;
   readonly intentUseCase: ParamUseCase<BugbotFixIntentContext, Result[]>;

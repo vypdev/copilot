@@ -520,7 +520,9 @@ function assertNoJobLevelSecrets(file, workflow) {
 function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
-  const expectedPermissions = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml'].includes(path.basename(file))
+  const reviewEvidenceWorkflow = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
+    'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].includes(path.basename(file));
+  const expectedPermissions = reviewEvidenceWorkflow
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
@@ -531,6 +533,10 @@ function assertAgentWorkflowPermissions(file, workflow) {
       || permissionKeys.some((key, index) => key !== expectedKeys[index])
       || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
       throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
+    }
+    if (reviewEvidenceWorkflow && !(job.steps ?? []).some(step =>
+      isCopilotAction(step) && step?.env?.COPILOT_EVIDENCE_TOKEN === '${{ github.token }}')) {
+      throw new Error(`${relativeFile} job ${jobId} must scope COPILOT_EVIDENCE_TOKEN to the Action step for exact-head review Checks.`);
     }
   }
 }

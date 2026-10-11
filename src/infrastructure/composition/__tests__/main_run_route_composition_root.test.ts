@@ -117,6 +117,7 @@ describe("main run route composition root", () => {
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 14 }, () => expect.anything()),
+      mockContext,
     );
   });
 
@@ -127,6 +128,7 @@ describe("main run route composition root", () => {
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 13 }, () => expect.anything()),
+      mockContext,
     );
   });
 

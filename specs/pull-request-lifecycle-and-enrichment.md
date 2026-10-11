@@ -393,14 +393,14 @@ not altered.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Event/description/label policy | 29 | action matrix, optional/self linkage, modes, markers, bounds |
-| Orchestration/idempotency | 23 | order, unlinked route, replay, partial, merge closure |
+| Event/description/label policy | 31 | action matrix, optional/self linkage, modes, markers, bounds |
+| Orchestration/idempotency | 24 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
-| Workflow/config contracts | 15 | event exclusion, identity, forks, permissions, inputs |
+| Workflow/config contracts | 17 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
 | Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
 | Complete diff evidence | 6 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **116** | no double counting |
+| **Total** | **121** | no double counting |
 
 Seven draft-to-ready regression cases cover authorized and unauthorized review,
 semantic failure, reviewer-only activation, activity availability, reviewing
@@ -491,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 116-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 121-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
@@ -509,3 +509,23 @@ body mutation that produces no follow-up PR workflow.
 - Follow-up: changing the recommended description default needs product evidence.
 
 Hyphenated words retain their boundaries during automatic issue and PR title formatting. For example, `issue-to-pr` becomes the readable `issue to pr`; both map to the same managed branch slug. Formatting and replay MUST preserve that slug. Two title-policy cases cover the issue and PR renderers, including idempotent formatting and branch-name equivalence. Live evidence: issue #453 and PR #460 on 2026-10-10.
+
+
+Live PR #460 evidence on 2026-10-11 exposed a long-running description request
+restoring issue-derived `state:planned` over a fresh PR review. Agent activity
+uses semantic PR identity for ordinary PR conversation comments and reads the
+current target labels immediately before both start and cleanup writes. Status
+and description results without a lifecycle decision preserve existing waiting
+labels. Five additional cases cover these two queries, semantic activity
+identity/current labels, and the two supplied comment workflow contracts.
+
+Both installed and setup comment workflows grant only `contents: read` and
+`checks: write`, passing `${{ github.token }}` as `COPILOT_EVIDENCE_TOKEN` only
+on the Action step. Ordinary conversation and native thread reviews therefore
+publish the same current-head `Copilot / Review` Check as PR events. No new
+configuration input or agent credential is introduced. Acceptance: after a
+clean recheck, run description and status; `state:ready` and
+`state:awaiting-maintainer` remain, and the Check SHA equals the canonical head.
+Activity updates preserve business labels read from GitHub, including labels
+changed while runtime preparation was pending. Documentation covers these
+query semantics and all four review-producing workflow token contracts.

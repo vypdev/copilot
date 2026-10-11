@@ -31,12 +31,10 @@ export class SynchronizeAgentActivityUseCase {
         }
 
         try {
-            // Route steps may have changed labels through their own ports. Read
-            // the latest server inventory before cleanup so removing the
-            // transient marker cannot overwrite those changes.
-            const currentLabels = active
-                ? target.labels
-                : await this.issueLabelsPort.getLabels(target.number);
+            // Runtime preparation and route work can outlive the initial
+            // snapshot. Read both boundaries so the transient marker cannot
+            // restore an older lifecycle, waiting state or business label.
+            const currentLabels = await this.issueLabelsPort.getLabels(target.number);
             const configuredLabel = context.activityLabel;
             const nextLabels = replaceAgentActivityLabel(currentLabels, configuredLabel, active);
             if (sameLabels(currentLabels, nextLabels)) return Object.freeze({ target, labels: Object.freeze([...currentLabels]) });

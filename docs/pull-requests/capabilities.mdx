@@ -92,7 +92,7 @@ configuration for adding it.
 
 ## Bugbot on PRs
 
-**Bugbot** (potential problems) reviews the full PR on `opened` and `reopened`. On `synchronize`, the PR workflow exclusively owns Bugbot: it reviews the newly pushed commit range and checks every open finding against current code. The paired **push** workflow still updates issue progress but skips Bugbot after discovering the open PR; push-time Bugbot remains available for issue-linked branches without an open PR. The single action `detect_potential_problems_action` remains available on demand. Bugbot posts up to the configured comment limit as **review comments** at validated file/line or file-level anchors and summarizes overflow in the review. Each submitted review remains a historical snapshot; after every mutation Bugbot re-reads GitHub, projects durable per-review facts into generated review status blocks, and projects every accepted current finding—including overflow—into one canonical PR status card, labels, Job Summary, and Check. The review block explicitly flags historical overflow because those entries have no individual thread to reconcile. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
+**Bugbot** (potential problems) reviews the full PR on `opened`, `reopened`, and `ready_for_review`. Marking a draft ready triggers review without regenerating its description, assignments or project linkage. On `synchronize`, the PR workflow exclusively owns Bugbot: it reviews the newly pushed commit range and checks every open finding against current code. The paired **push** workflow still updates issue progress but skips Bugbot after discovering the open PR; push-time Bugbot remains available for issue-linked branches without an open PR. The single action `detect_potential_problems_action` remains available on demand. Bugbot posts up to the configured comment limit as **review comments** at validated file/line or file-level anchors and summarizes overflow in the review. Each submitted review remains a historical snapshot; after every mutation Bugbot re-reads GitHub, projects durable per-review facts into generated review status blocks, and projects every accepted current finding—including overflow—into one canonical PR status card, labels, Job Summary, and Check. The review block explicitly flags historical overflow because those entries have no individual thread to reconcile. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
 
 ## Review state and evidence
 
@@ -104,7 +104,13 @@ review: it sets `state:blocked` with `state:awaiting-maintainer`, never
 `state:ready`, until complete current-head evidence is available. While the reviewer is running,
 `state:ai-processing` may coexist with these labels and is removed at the end.
 
-Each run writes a bounded Job Summary. The supplied workflow grants
+Activity writes read current GitHub labels immediately before updating them.
+A PR conversation targets the PR even when its event is `issue_comment`;
+read-only status and description requests preserve lifecycle and waiting labels
+unless they produce an explicit lifecycle decision.
+
+Each run writes a bounded Job Summary. The supplied PR, review-state, ordinary
+comment and native review-comment workflows grant
 `checks: write` to a short-lived `GITHUB_TOKEN` and passes it only as
 `COPILOT_EVIDENCE_TOKEN`, keeping it out of agent processes. Copilot publishes
 one stable `Copilot / Review` Check for the PR head. Actionable findings are
