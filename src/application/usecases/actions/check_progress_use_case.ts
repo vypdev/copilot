@@ -1,3 +1,4 @@
+import type { BoundProgressDiffQueryPort } from '../../ports/progress_diff_query_ports';
 import { Result } from '../../../data/model/result';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../ports/issue_description_ports';
@@ -21,6 +22,7 @@ export class CheckProgressUseCase implements ParamUseCase<ProgressContext, Resul
         private readonly pullRequestRepository: BoundPullRequestBranchQueryPort,
         private readonly aiRepository: FindingsQueryPort,
         private readonly publicationSourceQuery: BoundPublicationSourceQueryPort,
+        private readonly progressDiffQuery: BoundProgressDiffQueryPort,
     ) {}
 
     async invoke(param: ProgressContext): Promise<Result[]> {
@@ -32,6 +34,7 @@ export class CheckProgressUseCase implements ParamUseCase<ProgressContext, Resul
             issueProgressPort: this.issueProgressPort,
             aiRepository: this.aiRepository,
             publicationSourceQuery: this.publicationSourceQuery,
+            progressDiffQuery: this.progressDiffQuery,
         });
     }
 }

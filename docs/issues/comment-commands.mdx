@@ -29,7 +29,7 @@ This starts a read-only analysis when the mention matches the bot account. It do
 
 ## Explicit commands
 
-Commands are recognized at the beginning of a comment, case-insensitively. They are deterministic and easier to audit in automation logs.
+Commands are recognized at the beginning of a comment, case-insensitively. The complete command is limited to 2,000 characters. Prose requests such as implement, plan, explain and remember may exceed twenty words; structured commands retain the twenty-argument limit. They are deterministic and easier to audit in automation logs.
 
 | Command | Purpose | Writes files? |
 | --- | --- | --- |

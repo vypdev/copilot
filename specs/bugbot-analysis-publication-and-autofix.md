@@ -338,11 +338,11 @@ gateway shapes are invalid immediately and receive no compatibility adapter.
 |---|---:|---|
 | Finding/config/identity policy | 62 | schema, fingerprint, rank, limits; 26 exact quoted-identifier, boundary and malformed-input cases across fix and dismissal |
 | Lifecycle/idempotency/races | 30 | stale heads, replay, partial transitions |
-| Use cases/autofix | 61 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case, six receipt-outcome cases and two exact single-finding selection cases |
+| Use cases/autofix | 67 | context, publish, verify, commit, bounded re-review, canonical result, learned-rule PR/issue checkout, branchless rejection, checkout failure, deduplication, path guard and failed verification; 15 canonical write-target cases, one exact quoted-dismiss routing case, six receipt-outcome cases, two exact single-finding selection cases, and six nonzero Git preparation outcomes |
 | Provider/workflow contracts | 36 | diffs, reviews, threads, checks, ranges; exact and absent head repository names |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
-| Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
-| **Total** | **229** | no double counting |
+| Integration/security/cutover | 23 | E2E lifecycle, injection, credentials, sole marker schema; three real Git remote checkout cases: stale local, unpublished local, and divergent local |
+| **Total** | **238** | no double counting |
 
 Twelve committed-rule adapter cases cover precedence, stale-workspace isolation,
 absent-file isolation, missing objects, three malformed revisions, inherited Git
@@ -460,3 +460,33 @@ screen reader, and controlled live model samples.
 - Decision: independent evidence, not fixer assertion, owns resolution.
 - Rejected: guessed anchors, model-only validation, provider-ID-only identity.
 - Follow-up: model-specific quality tuning remains benchmark-governed.
+
+### Dogfooding correction: retained runner branches (2026-10-11)
+
+PR #465 autofix run 38146515770 fetched the exact feature ref, then selected a
+retained local branch 16 commits behind its remote. The admitted agent produced
+no safe changes. The stale checkout is independently established by Git's log;
+it is not proof of why the model produced no edits.
+
+The trusted preparation now uses this flow before restoring any saved changes:
+
+```text
+clean/status -> fetch exact ref -> checkout -> fast-forward-only FETCH_HEAD
+             -> HEAD ancestor of FETCH_HEAD -> restore stash -> agent
+```
+
+A fast-forward merge establishes that FETCH_HEAD is an ancestor of HEAD. The
+reverse ancestry check establishes equality and rejects an unpublished local
+head that merge would otherwise accept as already current. Divergence refuses
+the operation without a merge commit, reset, force push, or discarded work.
+Every status, checkout, stash, merge, ancestry, and restore exit code is checked.
+Failure preserves the existing branch and any retained stash and publishes the
+existing semantic failure response; it never announces preparation success.
+
+Nine distinct regression cases extend the budget: three isolated real Git
+repositories prove exact remote checkout and local work retention; six nonzero
+command outcomes exercise status, checkout, stash push/pop, fast-forward, and
+reverse ancestry rejection. These are not counted in another capability.
+The autofix documentation and catalog evidence change with this contract.
+Live acceptance remains pending until a new Action execution demonstrates the
+verified fetched head and subsequent authenticated fixer behavior.

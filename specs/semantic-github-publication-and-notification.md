@@ -1168,7 +1168,7 @@ test cases**. This budget covers semantic publication only; locale resolution,
 translation correctness, and multilingual matrices are counted in the companion
 SDD and MUST NOT be double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 167 qualifying
+`src/architecture/github_communication_test_budget.json` records 177 qualifying
 semantic cases from the implementation diff against the specification baseline.
 The 2026-10-11 inactivity-summary correction adds four conservative semantic
 Jest declarations (23 runtime rows) for no-op/close/partial outcomes, malformed
@@ -1427,3 +1427,13 @@ implementation change so current and proposed documentation cannot be confused.
 
 - Measuring reader comprehension or notification-open rates requires product
   analytics and user consent not currently available.
+
+### Pinned progress comparison repair — 2026-10-11
+
+Live PR #465 push run `38146036421` on `windows-intel-runner-1` returned 0% because the model reported that workspace commands were blocked. That statement does not establish the underlying sandbox cause. Progress now receives a trusted GitHub comparison pinned to complete base/head object IDs through a physically read-only repository-bound query. The agent is explicitly asked to assess only the supplied requirements and evidence, without commands or workspace inspection.
+
+All source patches must be present inside a 256,000-byte UTF-8 evidence budget. Generated `build/` files retain their path/status/addition/deletion metadata only; these facts never certify a build or test. Missing source patches, invalid identities/paths/counts, duplicate paths, or the 300-file provider ceiling stop analysis before any model or progress mutation. GitHub documents that comparison files are confined to the first page and capped at 300: [compare-two-commits](https://docs.github.com/en/rest/commits/commits#compare-two-commits). A boundary-sized list is conservatively incomplete.
+
+The live source head and development base are checked again after analysis, before native progress mutations. The existing downstream head freshness gate remains. No permission, sandbox, process, prompt or schema limit is expanded, and no runtime flag is added.
+
+The repair owns **28 distinct cases**: 24 provider-bound immutable-comparison cases and four application outcomes (wrong base, wrong head, unavailable comparison, and a changed base during analysis). The existing head-race and prompt cases are retained, with explicit supplied-evidence and no-shell assertions. The conservative semantic ledger adds ten declarations rather than counting parameterized rows again. User documentation and catalog evidence change with implementation. Live acceptance must prove a supplied-source assessment and retained state on incomplete evidence; successful offline tests alone do not close that acceptance.

@@ -1,3 +1,4 @@
+import { AGENT_EXECUTION_OUTPUT_DIAGNOSTICS } from '../../application/ports/agent_execution_observation_ports';
 import type {
     AgentExecutionObservation,
     AgentExecutionObserverPort,
@@ -8,12 +9,16 @@ import { logDebugInfo, logInfo } from '../../utils/logger';
 export class LoggerAgentExecutionObserverAdapter implements AgentExecutionObserverPort {
     observe(observation: AgentExecutionObservation): void {
         if (observation.state === 'failed') {
+            const outputDiagnostic = observation.phase === 'run' && observation.failureCategory === 'output'
+                ? AGENT_EXECUTION_OUTPUT_DIAGNOSTICS.find(code => code === observation.outputDiagnostic) ?? 'unclassified'
+                : undefined;
+            const output = outputDiagnostic ? `, ${outputDiagnostic}` : '';
             const exit = observation.exitCode === undefined ? '' : `, exit ${observation.exitCode}`;
             const diagnostic = observation.exitDiagnostic ? `, ${observation.exitDiagnostic}` : '';
             const stage = observation.preflightStage ? `, stage ${observation.preflightStage}` : '';
             const preflightDiagnostic = observation.preflightDiagnostic ? `, ${observation.preflightDiagnostic}` : '';
-            logInfo(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}).`, false,
-                { agentExecution: observation });
+            logInfo(`Agent execution failed (${observation.phase}/${observation.failureCategory}${stage}${preflightDiagnostic}${exit}${diagnostic}${output}).`, false,
+                { agentExecution: { ...observation, outputDiagnostic } });
             return;
         }
         if (observation.state === 'completed') {
