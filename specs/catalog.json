@@ -2094,7 +2094,9 @@
         "src/infrastructure/composition/pull_request_status_composition_root.ts",
         "src/domain/action_input_source.ts",
         "src/domain/input_values_policy.ts",
-        "src/infrastructure/github_action_input.ts"
+        "src/infrastructure/github_action_input.ts",
+        "src/application/usecases/read_pull_request_status_readiness_workflow.ts",
+        "src/application/policies/pull_request_readiness_status_policy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",

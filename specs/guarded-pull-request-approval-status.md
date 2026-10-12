@@ -287,9 +287,9 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 | State/application/idempotency/races | 41 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
-| UI/UX/localization/sanitization | 16 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
+| UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **122** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **124** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -413,3 +413,14 @@ Six additional application contracts cover denied optional reads, denied or chan
 PR sync `38253642889` on the current default Action source preserved the previously lost missing-readiness-adapter fallback, but its conflict resolution removed `listIssueComments` from the route-scoped read fixture. Both existing composition tests then failed while binding the shared SDD evidence reader; the Action retained the remote branch and withheld the merge push. This is a failed test-fixture integration, not proof of a runtime read failure.
 
 The feature fixture now explicitly supplies that read method while retaining its readiness query mock. No shared foundation source is copied, no parent merge is performed locally, and no production adapter is made optional to hide the error. The existing 122-case feature budget and global thresholds are unchanged. A fresh Action-managed parent synchronization and current-head PR review remain required.
+
+
+### Keep feature-owned readiness contracts out of shared merge bodies (2026-10-12)
+
+Parent sync `38270513838` incorporated the current shared tests but its resolution lost both the whole-response 6,000-character guard (7,147 rendered characters) and the ready SDD projection. Both tests rejected the resolution and no remote merge was published.
+
+The feature-owned collector is now `read_pull_request_status_readiness_workflow.ts`, and readiness presentation/whole-response bounds live in `pull_request_readiness_status_policy.ts`. The shared entrypoint delegates the already projected snapshot; its merge must retain independent SDD projection before delegation. The shared formatter calls the feature-owned append/boundary helper after all existing sections. This reduces shared conflict bodies while preserving every identity, policy, head/base fence and unavailable fallback.
+
+All existing 122 feature cases remain required, without recounting shared SDD bridge tests. Coverage gates retain the shared entrypoint's 95/90 floor and additionally enforce it for the new collector; the pure presentation helper has a 100% gate. No bound is raised and no failed check is removed. Fresh Action parent integration, review and live status acceptance remain pending.
+
+Two additional presentation contracts ensure unknown provider evidence states and unknown policy modes render as unavailable without reflecting prose or inventing approval authority. The feature inventory is now 124 distinct cases; the 40-case minimum and all original acceptance cases remain unchanged.

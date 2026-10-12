@@ -44692,6 +44692,59 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
 
 /***/ }),
 
+/***/ 99448:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.appendPullRequestReadiness = appendPullRequestReadiness;
+/** Append exact-head facts and bound the entire combined status, including independent SDD sections. */
+function appendPullRequestReadiness(baseLines, snapshot, catalog) {
+    const lines = [...baseLines];
+    if (snapshot.pullRequestReadiness) {
+        const readiness = snapshot.pullRequestReadiness;
+        const states = ['unavailable', 'pending', 'blocked', 'satisfied', 'not-applicable'];
+        const renderState = (state) => catalog.render(`interaction.status.prReadiness.${states.includes(state) ? state : 'unavailable'}`);
+        const mode = ['off', 'recommend', 'guarded', 'unavailable'].includes(readiness.mode) ? readiness.mode : 'unavailable';
+        const head = /^[a-f0-9]{40}$/u.test(readiness.headSha) ? readiness.headSha.slice(0, 8) : catalog.render('interaction.status.notSet');
+        const code = /^[a-z0-9-]{1,60}$/u.test(readiness.code) ? readiness.code : 'evidence-unavailable';
+        lines.push(`- **${catalog.render('interaction.status.prReadiness')}:** ${renderState(readiness.readiness)} (${mode}; ${catalog.render('interaction.status.prReadiness.revision')} ${head}; ${code})`);
+        if (readiness.evidence)
+            for (const group of ['ci', 'coverage', 'bugbot', 'reviews']) {
+                lines.push(`- **${catalog.render(`interaction.status.prReadiness.${group}`)}:** ${renderState(readiness.evidence[group])}`);
+            }
+        const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
+        if (url)
+            lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
+        if (readiness.humanReviewRequired)
+            lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
+        const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
+        const action = readiness.action && actions.includes(readiness.action) ? readiness.action : 'retry';
+        if (action !== 'none')
+            lines.push(`${catalog.render('interaction.status.prReadiness.next')}: ${catalog.render(`interaction.status.prReadiness.action.${action}`)}`);
+    }
+    const rendered = lines.join('\n');
+    return snapshot.pullRequestReadiness && rendered.length > 6000
+        ? `${catalog.render('interaction.status.prReadiness.oversize')}\n${catalog.render('interaction.status.prReadiness.action.retry')}` : rendered;
+}
+function verifiedReadinessLink(snapshot, number) {
+    if (!Number.isSafeInteger(number) || !number || number <= 0 || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.owner)
+        || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.repository) || [snapshot.owner, snapshot.repository].some(value => value === '.' || value === '..'))
+        return undefined;
+    try {
+        const url = new URL(snapshot.serverOrigin ?? '');
+        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
+            ? `${url.origin}/${snapshot.owner}/${snapshot.repository}/pull/${number}` : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
 /***/ 39410:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50017,6 +50070,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
+const pull_request_readiness_status_policy_1 = __nccwpck_require__(99448);
 const result_1 = __nccwpck_require__(73817);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
@@ -50110,44 +50164,7 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
     else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
-    if (snapshot.pullRequestReadiness) {
-        const readiness = snapshot.pullRequestReadiness;
-        const states = ['unavailable', 'pending', 'blocked', 'satisfied', 'not-applicable'];
-        const renderState = (state) => catalog.render(`interaction.status.prReadiness.${states.includes(state) ? state : 'unavailable'}`);
-        const mode = ['off', 'recommend', 'guarded', 'unavailable'].includes(readiness.mode) ? readiness.mode : 'unavailable';
-        const head = /^[a-f0-9]{40}$/u.test(readiness.headSha) ? readiness.headSha.slice(0, 8) : catalog.render('interaction.status.notSet');
-        const code = /^[a-z0-9-]{1,60}$/u.test(readiness.code) ? readiness.code : 'evidence-unavailable';
-        lines.push(`- **${catalog.render('interaction.status.prReadiness')}:** ${renderState(readiness.readiness)} (${mode}; ${catalog.render('interaction.status.prReadiness.revision')} ${head}; ${code})`);
-        if (readiness.evidence)
-            for (const group of ['ci', 'coverage', 'bugbot', 'reviews']) {
-                lines.push(`- **${catalog.render(`interaction.status.prReadiness.${group}`)}:** ${renderState(readiness.evidence[group])}`);
-            }
-        const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
-        if (url)
-            lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
-        if (readiness.humanReviewRequired)
-            lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
-        const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
-        const action = readiness.action && actions.includes(readiness.action) ? readiness.action : 'retry';
-        if (action !== 'none')
-            lines.push(`${catalog.render('interaction.status.prReadiness.next')}: ${catalog.render(`interaction.status.prReadiness.action.${action}`)}`);
-    }
-    const rendered = lines.join('\n');
-    return snapshot.pullRequestReadiness && rendered.length > 6000
-        ? `${catalog.render('interaction.status.prReadiness.oversize')}\n${catalog.render('interaction.status.prReadiness.action.retry')}` : rendered;
-}
-function verifiedReadinessLink(snapshot, number) {
-    if (!Number.isSafeInteger(number) || !number || number <= 0 || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.owner)
-        || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.repository) || [snapshot.owner, snapshot.repository].some(value => value === '.' || value === '..'))
-        return undefined;
-    try {
-        const url = new URL(snapshot.serverOrigin ?? '');
-        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
-            ? `${url.origin}/${snapshot.owner}/${snapshot.repository}/pull/${number}` : undefined;
-    }
-    catch {
-        return undefined;
-    }
+    return (0, pull_request_readiness_status_policy_1.appendPullRequestReadiness)(lines, snapshot, catalog);
 }
 
 
@@ -56144,6 +56161,22 @@ function deepFreezeCopy(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readCopilotStatus = readCopilotStatus;
+const read_pull_request_status_readiness_workflow_1 = __nccwpck_require__(18874);
+/** Shared entrypoint: retain any independent SDD projection before delegating the resulting snapshot. */
+async function readCopilotStatus(param, taskId, ports) {
+    return (0, read_pull_request_status_readiness_workflow_1.readPullRequestStatusReadiness)(param, taskId, ports);
+}
+
+
+/***/ }),
+
+/***/ 18874:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readPullRequestStatusReadiness = readPullRequestStatusReadiness;
 const status_command_policy_1 = __nccwpck_require__(3449);
 const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
 const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
@@ -56155,7 +56188,7 @@ const pull_request_readiness_policy_1 = __nccwpck_require__(79794);
 const positive = (value) => Number.isSafeInteger(value) && value > 0;
 const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
 /** Independent reads retain verified facts. Unknown identity or freshness never becomes a clean snapshot. */
-async function readCopilotStatus(param, taskId, ports) {
+async function readPullRequestStatusReadiness(param, taskId, ports) {
     const original = param.status;
     if (original.target !== 'issue' && original.target !== 'pull-request')
         return (0, status_command_policy_1.buildCopilotStatusResult)(original, taskId);

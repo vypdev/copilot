@@ -42,6 +42,16 @@ describe('localized, bounded readiness status',()=>{
         const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,headSha:'@everyone',code:'[credential](https://evil.test)'}});
         expect(text).not.toContain('@everyone');expect(text).not.toContain('evil.test');expect(text).toContain('evidence-unavailable');
     });
+    it('renders an unrecognized evidence state as unavailable without reflecting provider prose',()=>{
+        const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,readiness:'@everyone' as never,evidence:{...s.pullRequestReadiness!.evidence!,ci:'satisfied-by-name' as never}}});
+        expect(text).toContain('**Exact-head PR readiness:** unavailable');expect(text).toContain('**CI:** unavailable');
+        expect(text).not.toContain('@everyone');expect(text).not.toContain('satisfied-by-name');
+    });
+    it('renders an unrecognized policy mode as unavailable without inventing approval authority',()=>{
+        const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,mode:'auto-approve' as never}});
+        expect(text).toContain('(unavailable;');expect(text).not.toContain('auto-approve');
+        expect(text).toContain('A human review is still required');
+    });
     it('turns an unknown action into a safe localized retry',()=>{
         const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,action:'@everyone' as never}});
         expect(text).not.toContain('@everyone');expect(text).toContain('Inspect this run and retry status.');
