@@ -61,7 +61,7 @@ whitespace-separated, and commands are limited to 2,000 characters and 20
 arguments. Missing or malformed required arguments produce a validation reply;
 they never mean “all” or authorize a broad change.
 
-`help`, `status`, `dismiss`, `remember` and rejected commands do not run a
+`help`, `status`, `doctor`, `dismiss`, `remember` and rejected commands do not run a
 model or change the temporary agent activity label. `sync-branch --dry-run`
 and `--no-agent` also avoid model activity. Ordinary sync may use the conflict
 fixer, and `findings` runs a fresh review. These distinctions preserve each

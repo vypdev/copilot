@@ -416,3 +416,10 @@ The workflow eligibility repair passed 573 full suites and 7,576 tests, with 35 
 The Action resolved both the ambiguous-absence finding `4242617946` and the workflow-eligibility finding `4242759214` in subsequent independent review. Run `38167519200` on `windows-intel-runner-2` completed 573 suites and 7,596 tests, with 20 platform skips (7,616 total), validated the integrated branch and published synchronized head `00fef5bdcc31c010e4755e696512ed973df6c2f7`. The correlated receipt is PR comment `6113381932` for request `6112743331`. The contributor checkout confirms the common parent `c47f612f3fceac6ae54908f62bdad9977da06a4d` is an ancestor and validates the published bundles.
 
 This is successful native Windows verification and an Action-owned remote synchronization. It does not establish successful Codex sandbox commands on the Windows service account, nor live `/copilot doctor` acceptance before promotion. Hosted CI and a fresh review of the synchronized head remain separate gates.
+
+
+### Native current-parent integration and activity isolation (2026-10-12)
+
+The Action synchronized the exact managed branch as `dd3921f44f51edce6b79a46a52412517497d01ed` in run `38254943897` on `apple-intel-runner-3`, passing 580 suites, 7,902 tests and all five configured checks with the existing 35 skips. No manual parent merge or foundation copy was used.
+
+The integrated shared activity policy treated the newly recognized `doctor` command as agent-capable, despite the query having no model port. Two actual issue/review-comment policy contracts failed before the correction. `doctor` is now included in the deterministic command set, so it does not inspect agent configuration or acquire activity labels. These two cases extend the current distinct feature inventory from 167 to 169 without changing the original 52-case floor or recounting shared activity tests. Fresh current-head review and live command acceptance remain required.

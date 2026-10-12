@@ -654,7 +654,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -770,7 +770,8 @@
         "src/application/policies/github_runtime_doctor_presentation_policy.ts",
         "src/application/usecases/read_copilot_doctor_workflow.ts",
         "src/data/repository/github/runtime_doctor_repository.ts",
-        "src/infrastructure/composition/github_runtime_doctor_composition_root.ts"
+        "src/infrastructure/composition/github_runtime_doctor_composition_root.ts",
+        "src/application/policies/agent_activity_policy.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -846,7 +847,8 @@
         "src/application/usecases/__tests__/read_copilot_doctor_workflow.test.ts",
         "src/application/usecases/__tests__/runtime_doctor_security_integration.test.ts",
         "src/data/repository/github/__tests__/runtime_doctor_repository.test.ts",
-        "src/infrastructure/composition/__tests__/github_runtime_doctor_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/github_runtime_doctor_composition_root.test.ts",
+        "src/application/policies/__tests__/runtime_doctor_agent_activity.test.ts"
       ],
       "documentation": [
         "README.md",
