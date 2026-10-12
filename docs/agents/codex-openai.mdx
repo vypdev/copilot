@@ -21,6 +21,31 @@ Copilot separates two concepts:
 
 Do not describe `codex` and `openai` as interchangeable values. `codex` is a runtime; `openai` is a model/authentication provider.
 
+## Windows runners executed as a service
+
+**Codex no soportado en runners Windows ejecutados como servicio.** Run Codex
+jobs on macOS or Ubuntu. This limitation concerns unattended Windows services
+in session 0, not every Windows environment. The same account and managed
+configuration succeeded in an interactive session during the operator's
+2026-10-12 reproduction.
+
+The official CLI, including 0.162.1, could authenticate and answer the model
+while tool startup failed with `0xc0000142` and a command-runner pipe timeout
+under `--strict-config`, `--ignore-user-config`, and
+`windows.sandbox="elevated"`. Official setup did not resolve the service failure.
+A successful CLI exit or model response therefore does not certify repository
+reads, edits, or command execution. Tool acceptance requires an actual bounded
+read or write, its verifiable result, and trusted post-execution checks.
+
+This repository retains `[self-hosted, codex]` for the shared macOS/Ubuntu pool.
+Windows service registrations MUST omit `codex`; existing registrations MUST
+lose that label when recreated. Windows services remain available for other
+jobs. Remove explicit Windows Codex matrix entries instead of leaving jobs
+queued for an unavailable runner. General hosted Windows coverage and fake
+platform-safety fixtures remain; they do not execute or certify real Codex tools.
+Do not deploy a community CLI build, disable the sandbox, or convert these
+services into interactive sessions to work around this limitation.
+
 ## CLI runtime
 
 The built-in Codex command is:
@@ -71,7 +96,7 @@ The allowlists are policy controls. They do not create credentials, and they do 
 
 ## Verification boundary
 
-A help command proves only that the binary is available. It does not prove authentication, model entitlement, quota, billing, or permission to use a personal ChatGPT session in CI. Run a real smoke test only with explicit authorization, a bounded cost, and read-only instructions.
+A help command proves only that the binary is available. It does not prove authentication, model entitlement, quota, billing, or permission to use a personal ChatGPT session in CI. Run a real smoke test only with explicit authorization, a bounded cost, and read-only instructions. A model-only reply proves neither a sandbox command nor successful tool execution.
 
 ## Related pages
 

@@ -5465,7 +5465,7 @@ exports.admittedBranchSyncValidationCode = admittedBranchSyncValidationCode;
 exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
     'merge-state-mismatch', 'head-changed', 'merge-parent-changed',
     'unresolved-conflicts', 'unexpected-paths', 'unstaged-changes',
-    'protected-index-changed', 'sdd-catalog-invalid', 'staging-failed',
+    'protected-index-changed', 'sdd-catalog-invalid', 'communication-budget-invalid', 'staging-failed',
     'whitespace-or-conflict-markers', 'parent-head-changed', 'working-head-changed',
     'unclassified',
 ]);

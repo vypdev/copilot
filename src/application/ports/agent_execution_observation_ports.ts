@@ -30,7 +30,11 @@ export type AgentExecutionPreflightDiagnostic =
     | 'acl-identity' | 'acl-unavailable';
 
 /** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+export const AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'] as const;
+export type AgentExecutionToolDiagnostic = typeof AGENT_EXECUTION_TOOL_DIAGNOSTICS[number];
+
 export type AgentExecutionExitDiagnostic =
+    | AgentExecutionToolDiagnostic
     | 'reported-authentication'
     | 'reported-model-unavailable'
     | 'reported-unsupported-option'
@@ -69,6 +73,7 @@ export type AgentExecutionObservation =
         readonly phase: 'run';
         readonly durationMilliseconds: number;
         readonly outputBytes: number;
+        readonly toolDiagnostic?: AgentExecutionToolDiagnostic;
     })
     | (AgentExecutionIdentityObservation & {
         readonly state: 'failed';

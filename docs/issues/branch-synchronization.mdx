@@ -149,6 +149,18 @@ already changes both catalog files. It never adds an unrelated file to the merge
 or loads a generator from the merged branch. Invalid metadata, missing evidence,
 external links, or a later verification change still abort the synchronization.
 
+When the communication test-budget ledger is an original merge conflict,
+Copilot derives its totals from the retained test-file allocations and validates
+the complete ledger before staging. It preserves the minimum budgets and checks
+that every allocation has real test evidence. Invalid input produces
+`communication-budget-invalid`; inspect the closed validation phase in the run,
+correct the resolution and retry. A later verification change is rejected and
+cannot trigger another normalization.
+
+If verification prevents a normal Git abort, Copilot restores the captured
+child only while both prepared merge identities remain unchanged. A moved
+HEAD or parent is retained and requires inspection of the run.
+
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 
 ## Result report
@@ -199,11 +211,11 @@ bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
 
-For this repository's Windows service runners, verification uses `test:coverage`
-with the existing bounded worker recycling. Forcing the whole suite into one
-process with `--runInBand` can exhaust the heap before synchronization publishes.
-A failed verification retains the managed remote head; inspect the failure and
-retry `/copilot sync-branch` after correcting the verification configuration.
+This repository runs agent-capable synchronization on the shared Mac/Ubuntu
+`codex` pool. Windows services omit `codex`; no new Windows Codex synchronization
+is scheduled. Verification retains `test:coverage`, its two-worker limit and all
+coverage/acceptance budgets. A failed verification retains the managed remote
+head; inspect the failure before retrying `/copilot sync-branch`.
 
 Commands accept leading whitespace, line breaks and repeated whitespace between
 `/copilot` and the command name. This repository prepares its verification
@@ -212,3 +224,21 @@ Preparation is only a conservative scheduling hint; the Action's parser, actor
 permissions, original conflict set and dry-run/no-agent rules remain authoritative.
 The fixer must check existing offline tests for affected modules and typecheck
 when tools are available; mandatory Action verification still runs independently.
+
+
+A completed issue synchronization returns the issue to working, including an
+already-aligned retry after a previous failure. The Action verifies the retained
+completion facts before that transition. Dry-runs and unavailable results keep
+existing state; another error in the same run still blocks it. Synchronizing a
+branch does not establish PR approval or current SDD readiness.
+
+A conflict resolved to the working branch's unchanged content or deletion may
+disappear from Git status after trusted staging. Copilot uses that resolved
+workspace as the verification baseline while still rejecting added files, lost
+non-conflicted parent changes, and later changes to the resolved path set.
+
+
+For `unexpected-paths`, the run also shows a fixed validation phase and counts
+of added paths, removed conflict/protected paths and added canonical bundles.
+Use that distinction to inspect the resolution or verification step before
+retrying. Copilot omits private filenames and preserves the same merge guards.

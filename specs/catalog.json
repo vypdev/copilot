@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -559,7 +559,7 @@
       "status": "implemented",
       "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/architecture-quality-and-scalability-hardening.md",
         "specs/issue-and-pull-request-context-hardening.md"
@@ -1284,7 +1284,8 @@
         "src/data/repository/sdd/__tests__/sdd_diff_link_repository.test.ts",
         "src/infrastructure/composition/__tests__/sdd_diff_composition_root.test.ts",
         "src/application/usecases/__tests__/sdd_diff_comment_interaction.test.ts",
-        "src/application/usecases/steps/common/__tests__/sdd_diff_reply_publication.test.ts"
+        "src/application/usecases/steps/common/__tests__/sdd_diff_reply_publication.test.ts",
+        "src/application/usecases/__tests__/sdd_status_workflow_integration.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1623,7 +1624,9 @@
         "src/application/policies/application_error_message_catalog.ts",
         "src/infrastructure/git_commit_adapter.ts",
         "src/infrastructure/branch_sync_sdd_catalog.ts",
-        "src/domain/branch_sync_validation.ts"
+        "src/domain/branch_sync_validation.ts",
+        "src/application/policies/lifecycle_state_policy.ts",
+        "src/infrastructure/branch_sync_communication_budget.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1640,7 +1643,10 @@
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
         "src/infrastructure/__tests__/git_commit_adapter.test.ts",
         "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
-        "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts"
+        "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts",
+        "src/application/policies/__tests__/branch_sync_lifecycle_recovery.test.ts",
+        "src/infrastructure/__tests__/branch_sync_resolved_workspace.test.ts",
+        "src/infrastructure/__tests__/branch_sync_communication_budget.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -1806,7 +1812,8 @@
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/infrastructure/untrusted_command_environment.ts",
         "scripts/diagnose-windows-powershell-startup.cjs",
-        "scripts/diagnose-windows-sandbox-prerequisites.cjs"
+        "scripts/diagnose-windows-sandbox-prerequisites.cjs",
+        "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1834,7 +1841,8 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
-        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts"
+        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts",
+        "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
@@ -1853,7 +1861,9 @@
         "docs/security-operations/operations/provisioning.mdx",
         "docs/security-operations/operations/version-pinning.mdx",
         "docs/security-operations/security/self-hosted-runners.mdx",
-        "docs/security-operations/operations/upgrade-rollback.mdx"
+        "docs/security-operations/operations/upgrade-rollback.mdx",
+        "docs/security-operations/operations/smoke-tests.mdx",
+        "docs/development/testing.mdx"
       ]
     },
     {
@@ -2024,7 +2034,7 @@
       "status": "implemented",
       "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/repository-agent-collaboration-contract.md"
       ],
@@ -2049,7 +2059,10 @@
         "scripts/mdx-frontmatter.cjs",
         "scripts/validate-agent-documentation.cjs",
         "scripts/validate-npm-package.cjs",
-        "scripts/smoke-test-npm-package.cjs"
+        "scripts/smoke-test-npm-package.cjs",
+        "scripts/install-git-hooks.cjs",
+        "scripts/git-hooks/pre-commit.cjs",
+        "scripts/git-hooks/verification-environment.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
@@ -2063,7 +2076,9 @@
         "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
         "src/tooling/__tests__/mdx_frontmatter.test.ts",
-        "src/utils/__tests__/setup_files.test.ts"
+        "src/utils/__tests__/setup_files.test.ts",
+        "src/tooling/__tests__/install_git_hooks.test.ts",
+        "src/tooling/__tests__/git_hook_environment.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -2076,7 +2091,8 @@
         "docs/issues/configurable-workflows.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/security-operations/security/prompt-injection.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "CONTRIBUTING.md"
       ]
     },
     {

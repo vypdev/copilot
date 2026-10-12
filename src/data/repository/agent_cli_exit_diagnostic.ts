@@ -1,7 +1,15 @@
-import type { AgentExecutionExitDiagnostic } from '../../application/ports/agent_execution_observation_ports';
+import type { AgentExecutionExitDiagnostic, AgentExecutionToolDiagnostic } from '../../application/ports/agent_execution_observation_ports';
+
+/** A provider-reported tool hint, independent of the CLI's process exit status. */
+export function classifyAgentCliToolDiagnostic(stderr: string): AgentExecutionToolDiagnostic | undefined {
+    return /\b(?:Failed to create unified exec process|windows sandbox failed):\s*helper_unknown_error:\s*open sandbox setup mutex\b/iu.test(stderr)
+        ? 'reported-sandbox-setup-mutex' : undefined;
+}
 
 /** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
 export function classifyAgentCliExitDiagnostic(stderr: string): AgentExecutionExitDiagnostic {
+    const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
+    if (toolDiagnostic) return toolDiagnostic;
     if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
         return 'reported-authentication';
     }

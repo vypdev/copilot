@@ -308,19 +308,19 @@ No schema or configuration migration is introduced. Existing gate records remain
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **200 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
+Minimum: **182 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Existing basic status presentation | 30 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
+| Existing basic status presentation | 8 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
 | Issue identity | 8 | Canonical visible body/title normalization, profile, kind, issue number and original base digest |
 | Owned card selection | 28 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
-| Authority/application/fences | 67 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes; three native Execution profile projection contracts |
+| Authority/application/fences | 71 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes; three native Execution profile projection contracts |
 | Closed projection/UX | 60 | Canonical requirement/configuration, eight evidence outcomes, explicitly historical first publication during a pending revision and alongside a different verified revision, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
 | Native linked ref adapter | 4 | Stale/deleted refs, foreign/missing repository identity; none may fall back to another PR |
 | Immutable workspace reads | 2 | Read the original catalog without checkout/current-file mutation; reject non-SHA identifiers |
 | Read-only composition | 1 | Repository-bound live publication query and current maintainer authorization without mutation capability |
-| **Total** | **200** | No case counted twice |
+| **Total** | **182** | No case counted twice |
 
 
 Maintain repository-wide thresholds. New pure readiness policy should meet at least 95% branch coverage; changed status modules should meet existing module thresholds, with a target of 90% branches and 95% lines/statements. Use deterministic records, clocks, provider fakes, and publication proofs; no sleeps or live services. Parse catalog structures and gate records rather than grep prose. UI fixtures require semantic assertions beyond snapshots. Manual acceptance confirms the section is readable on mobile and desktop and preserves the existing status ordering.
@@ -368,7 +368,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 2. Define typed readiness result and semantic read/verification ports; add pure policy tests for ownership, identity, pending IDs, and state mapping.
 3. Integrate read-only orchestration into status while retaining the original snapshot on retrieval errors.
 4. Add catalog messages and compact rendering for all states; ensure no timeline-card path is invoked.
-5. Add adapter, integration, localization, security, and compatibility tests within the 200-case implementation budget.
+5. Add adapter, integration, localization, security, and compatibility tests within the 182-case implementation budget.
 6. Update command/operator documentation and contract examples.
 7. Run specification, architecture, catalog, and repository validation required by the existing project workflow.
 
@@ -378,7 +378,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 - [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
 - [x] English and Spanish catalogs cover the readiness section.
 - [x] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [x] All 200 distinct extension cases, full coverage budgets and generated bundles pass before publication.
+- [x] All 182 distinct extension cases, full coverage budgets and generated bundles pass before publication.
 - [x] User documentation explains the evidence limit and fail-closed behavior.
 - [x] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
 - [x] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
@@ -528,4 +528,33 @@ these offline checks do not certify that live result.
 
 The shared read-only snapshot optionally exposes `authorityDigest`, a SHA-256 fingerprint of the exact fenced bot-owned card body, canonical current issue digest/labels and relevant awaiting-answer provenance. It exposes none of those contents. Existing status presentation ignores this optional field and the stored schema-v1 gate record is unchanged. The structural comparison consumer requires and rechecks this digest, so a card-body mutation that preserves the visible publication fields cannot reuse old current counts.
 
-Two distinct authority-reader regressions prove stable opaque output and changed identity after a same-projection card-body replacement. They raise only this companion's authority allocation from 65 to 67 and total from 198 to 200. The separate gate's 149 cases and the structural comparison's 217 cases exclude these two regressions. Prior dated validation counts remain historical evidence.
+Two distinct authority-reader regressions prove stable opaque output and changed identity after a same-projection card-body replacement. These two cases belong to the separate structural comparison inventory and do not change the corrected 182-case readiness extension budget. Prior dated validation counts remain historical evidence.
+
+### Shared workflow coverage for independent SDD reads (2026-10-12)
+
+Readiness parent integration `38255933907` passed its full Jest cases but failed the stricter per-module coverage gate because the existing SDD status bridge lacked direct workflow tests. Six contracts now exercise verified/unavailable projection independently of the PR adapter and exclude foreign issue, missing initial readiness, PR target and missing context. They cover the existing bridge without copying shared implementation into a managed feature or lowering a coverage threshold.
+
+These six shared status cases were added to the authority/application/fences allocation. The separate structural comparison contribution retains its own tests and coverage entry; the gate's 149 cases remain separate.
+
+### Correct the distinct-case inventory (2026-10-12)
+
+The 24 `evidence variant` status cases added in `a396c0fc` contained only two
+distinct callback bodies, alternating English and Spanish. Changing the title
+created no additional scenario, assertion or coverage. Retain the two heading/
+identity contracts, give them descriptive names, and remove the other 22 exact
+copies. The separate required/unavailable copy assertions remain.
+
+The existing-basic-presentation allocation is therefore 8, not 30, and the
+current distinct extension inventory/budget is **182**, not 204. This corrects
+a miscount instead of manufacturing more cases to reach that number. Every
+functional assertion and risk requirement remains; coverage thresholds, the
+135/146 communication floors and 350-row setup acceptance ledger are unchanged.
+Historical physical Jest totals remain execution evidence; earlier extension
+figures 141/181/198/204 included these 22 copies and must not be read as
+independent behaviors. Their corrected distinct counts are 119/159/176/182.
+The separate comparison's two opaque-authority contracts remain outside this
+companion's readiness budget.
+
+Focused status tests and full coverage MUST retain the same production-module
+coverage after deduplication. No runtime, label, model, platform, publication
+or deployment behavior changes in this correction.

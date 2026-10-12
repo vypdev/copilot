@@ -1,3 +1,4 @@
+import { canonicalGitObjectId } from '../../domain/git_object_id';
 import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
 import { getResultPayload } from '../../data/model/result';
 import type { ApplicationError } from '../../data/model/application_error';
@@ -79,6 +80,9 @@ export function resolveLifecycleState(
         return undefined;
     }
 
+    if (input.eventName === 'issue_comment' && !input.issueBranchlessHelp
+        && input.results.some(hasCompletedBranchSynchronization)) return 'working';
+
     // A verified branch is evidence even when reconciliation made no label change.
     if (input.eventName === 'issue_comment' && input.results.some(result => result.success && result.executed
         && result.errors.length === 0 && readImplementationResult(result.id, result.payload))) return 'working';
@@ -144,4 +148,21 @@ function hasResult(results: readonly LifecycleStatePolicyResult[], id: string): 
 
 function hasSuccessfulResult(results: readonly LifecycleStatePolicyResult[], id: string): boolean {
     return hasResult(results, id);
+}
+
+
+/** Only current application-owned completion facts can recover an issue's working state. */
+function hasCompletedBranchSynchronization(result: LifecycleStatePolicyResult): boolean {
+    if (result.id !== 'SyncBranchUseCase' || !result.success || result.errors.length !== 0) return false;
+    const payload = getResultPayload(result.payload);
+    if (!payload || !canonicalGitObjectId(payload.parentSha) || !canonicalGitObjectId(payload.childSha)
+        || !boundedBranchName(payload.parentBranch) || !boundedBranchName(payload.workingBranch)
+        || payload.parentBranch === payload.workingBranch
+        || !Number.isSafeInteger(payload.verificationCount) || (payload.verificationCount as number) < 0) return false;
+    if (payload.outcome === 'already-aligned') return true;
+    return result.executed && (payload.outcome === 'merged-cleanly' || payload.outcome === 'merged-with-agent')
+        && canonicalGitObjectId(payload.commitSha) !== undefined;
+}
+function boundedBranchName(value: unknown): boolean {
+    return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/u.test(value);
 }

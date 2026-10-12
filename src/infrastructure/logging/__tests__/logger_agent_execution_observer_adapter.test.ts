@@ -27,6 +27,18 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         );
     });
 
+    it.each(['reported-sandbox-setup-mutex', 'PRIVATE_FORGED_PROVIDER_TEXT'] as const)(
+        'admits only a closed sandbox tool hint on CLI completion: %s', value => {
+            const observer = new LoggerAgentExecutionObserverAdapter();
+            observer.observe({state:'completed', phase:'run', provider:'codex', capability:'findings', durationMilliseconds:10,
+                outputBytes:20, toolDiagnostic:value as never});
+            const expected = value === 'reported-sandbox-setup-mutex' ? value : undefined;
+            expect(logInfo).toHaveBeenCalledWith(value === 'reported-sandbox-setup-mutex'
+                ? 'Agent CLI completed; provider reported a sandbox tool failure (reported-sandbox-setup-mutex). Inspect the runner sandbox setup.'
+                : 'Agent execution completed.', false, {agentExecution:expect.objectContaining({toolDiagnostic:expected})});
+            expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE_FORGED_PROVIDER_TEXT');
+        });
+
     it('emits only semantic failure metadata', () => {
         const observer = new LoggerAgentExecutionObserverAdapter();
         observer.observe({

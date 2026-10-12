@@ -879,3 +879,42 @@ package validation when bundles change, and `graphify update .` after code chang
   remains a security contract, not product legacy support.
 - Decision: quality is satisfied by observable invariants and evidence. Static
   scores guide review but are never optimized independently of cohesion and risk.
+
+
+### Share the real compiler graph in raw-error boundary checks (2026-10-12)
+
+Native doctor synchronization `38277723562` on Ubuntu reported an out-of-memory Jest worker in `raw_error_logging_boundaries.test.ts` after 7,955 other passing tests. The corrected test infrastructure from commit `be4ac4fe` now applies on master as well: one real TypeScript Program/checker includes every unchanged production root and six isolated fixture modules. The repository scan, five unsafe-flow cases and semantic-mapper case retain all seven original assertions and resolve real production symbols. No mock, skip, heap/worker setting, threshold or platform selector changes. Fixture files remain owned temporary resources and are removed after the suite.
+
+This is test infrastructure, not a new acceptance case or runtime behavior. The independent later readiness cancellation `38290271182` supplied only “The operation was canceled”; its cause is not attributed to this known OOM. The optimization addresses the confirmed compiler-graph duplication and will be certified by fresh unchanged CI gates.
+
+### Share the compiler graph in the Execution ratchet (2026-10-13)
+
+Native CI `38313238462` on `ubuntu-runner-4` built, validated package/bundles,
+audited dependencies and typechecked successfully. Coverage then reported
+`execution_import_ratchet.test.ts`: a Jest worker terminated with `SIGKILL`,
+followed by cancellation. This establishes interruption of that worker, not
+the operating system's reason for the signal.
+
+The suite previously retained one full production Program/checker while
+constructing another full Program/checker for the two alias fixtures. All six
+existing contracts now share one real compiler graph containing every original
+production root and both isolated fixtures. Full syntactic/semantic diagnostics,
+exact canonical symbol/consumer inventory, alias/re-export/type indirection,
+leaf authority, projected contracts and credential assertions remain. Owned
+fixtures are removed after the suite, including setup failure. No test is
+removed or counted again; the 219-case program floor is unchanged. No runtime,
+heap/worker setting, timeout, coverage gate or platform selector changes.
+
+In sequential focused measurements on the same local Mac, all six cases passed
+before and after. Maximum resident set size reported by `/usr/bin/time -l`
+decreased from 1,958,952,960 to 1,782,415,360 bytes (about 9%), and Jest time from
+6.811 to 5.784 seconds. These measurements support lower local compiler cost;
+they do not certify the cause of Ubuntu's signal or replace unchanged full
+coverage, hooks and a fresh native CI result.
+
+Full local validation passes 578 suites / 7,813 tests with 35 existing skips,
+every unchanged coverage gate and 308/350 setup acceptance (42 explicitly open).
+Types, lint, documentation/workflow/specification checks, bundle synchronization
+and the AST graph update pass. A restricted local run could not open the
+loopback servers used by 39 web fixtures; the unchanged full run with ordinary
+fixture-server access passed. Fresh native CI remains a separate gate.
