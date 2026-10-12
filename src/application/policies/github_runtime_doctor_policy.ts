@@ -57,7 +57,9 @@ export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'b
                 ? events.includes(event) : Object.prototype.hasOwnProperty.call(object(events), event);
             if (!admitted) return 'blocked';
             const filter = object(object(events)[event]);
-            if (Array.isArray(filter.types) && filter.types.length === 0) return 'blocked';
+            if (Object.prototype.hasOwnProperty.call(filter, 'types')
+                && (!Array.isArray(filter.types) || filter.types.length === 0
+                    || filter.types.some(type => typeof type !== 'string' || type.length === 0))) return 'blocked';
             let eligible = false;
             let possible = false;
             for (const rawJob of Object.values(object(document.jobs))) {

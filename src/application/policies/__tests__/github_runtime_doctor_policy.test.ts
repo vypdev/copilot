@@ -39,6 +39,10 @@ describe('installed workflow structural contracts', () => {
         'on: [issues]\njobs: {a: {steps: [{uses: "vypdev/copilot@v3"}]}}'))).toBe('pass'));
     it('accepts event maps parsed with the JSON YAML schema', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml',
         'on: {issues: {types: [opened]}}\njobs: {a: {steps: [{uses: "./"}]}}'))).toBe('pass'));
+    it.each(['opened','null','{unexpected: opened}','[opened, 5]'])('blocks malformed workflow activity types %s', types => {
+        expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml',
+            `on: {issues: {types: ${types}}}\njobs: {a: {steps: [{uses: "./"}]}}`))).toBe('blocked');
+    });
     it('keeps an incomplete repository sample unavailable', () => expect(doctorWorkflowContracts({ state: 'unavailable' })).toBe('unavailable'));
     it('blocks a missing required comment workflow', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue_comment.yml'))).toBe('blocked'));
     it('blocks the wrong event instead of searching another workflow', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml',

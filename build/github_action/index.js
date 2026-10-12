@@ -44533,7 +44533,9 @@ function doctorWorkflowContracts(read) {
             if (!admitted)
                 return 'blocked';
             const filter = object(object(events)[event]);
-            if (Array.isArray(filter.types) && filter.types.length === 0)
+            if (Object.prototype.hasOwnProperty.call(filter, 'types')
+                && (!Array.isArray(filter.types) || filter.types.length === 0
+                    || filter.types.some(type => typeof type !== 'string' || type.length === 0)))
                 return 'blocked';
             let eligible = false;
             let possible = false;
@@ -71035,13 +71037,13 @@ class RuntimeDoctorRepository {
     async readIssue(issueNumber) {
         const response = await this.client.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber });
         const issue = response.data;
-        if (issue.number !== issueNumber || issue.pull_request || typeof issue.body !== 'string' || issue.body.length > 70000
+        if (issue.number !== issueNumber || issue.pull_request || (issue.body !== null && typeof issue.body !== 'string') || (issue.body?.length ?? 0) > 70000
             || typeof issue.title !== 'string' || issue.title.length > 256 || !Array.isArray(issue.labels) || issue.labels.length > 100)
             throw new Error('Malformed bounded issue response.');
         const labels = issue.labels.map((label) => typeof label === 'string' ? label : label.name);
         if (labels.some((label) => typeof label !== 'string' || label.length > 120))
             throw new Error('Malformed issue labels.');
-        return Object.freeze({ number: issue.number, title: issue.title, body: issue.body, labels: Object.freeze(labels) });
+        return Object.freeze({ number: issue.number, title: issue.title, body: issue.body ?? '', labels: Object.freeze(labels) });
     }
     async readLinkedBranch(issueNumber) {
         try {
@@ -76932,6 +76934,8 @@ function parseTrustedDoctorApprovalPolicy(read) {
 function aggregateGithubRuntimeDoctorReport(input) {
     const byGroup = new Map();
     for (const check of input.checks) {
+        if (!exports.GITHUB_RUNTIME_DOCTOR_GROUPS.includes(check.group))
+            throw new Error('Unknown GitHub runtime doctor group.');
         if (byGroup.has(check.group))
             throw new Error(`Duplicate GitHub runtime doctor group: ${check.group}.`);
         byGroup.set(check.group, Object.freeze({ ...check, ...(check.evidence ? { evidence: Object.freeze({ ...check.evidence }) } : {}) }));

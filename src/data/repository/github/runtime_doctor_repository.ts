@@ -67,12 +67,12 @@ export class RuntimeDoctorRepository {
     async readIssue(issueNumber: number): Promise<DoctorIssue> {
         const response = await this.client.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber });
         const issue = response.data;
-        if (issue.number !== issueNumber || issue.pull_request || typeof issue.body !== 'string' || issue.body.length > 70_000
+        if (issue.number !== issueNumber || issue.pull_request || (issue.body !== null && typeof issue.body !== 'string') || (issue.body?.length ?? 0) > 70_000
             || typeof issue.title !== 'string' || issue.title.length > 256 || !Array.isArray(issue.labels) || issue.labels.length > 100)
             throw new Error('Malformed bounded issue response.');
         const labels = issue.labels.map((label: string | { name?: string }) => typeof label === 'string' ? label : label.name);
         if (labels.some((label: string | undefined) => typeof label !== 'string' || label.length > 120)) throw new Error('Malformed issue labels.');
-        return Object.freeze({ number: issue.number, title: issue.title, body: issue.body, labels: Object.freeze(labels as string[]) });
+        return Object.freeze({ number: issue.number, title: issue.title, body: issue.body ?? '', labels: Object.freeze(labels as string[]) });
     }
     async readLinkedBranch(issueNumber: number): Promise<DoctorBranchRead> {
         try {

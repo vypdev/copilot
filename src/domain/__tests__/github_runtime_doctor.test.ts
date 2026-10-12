@@ -47,6 +47,12 @@ describe('parseTrustedDoctorApprovalPolicy', () => {
         })).toThrow('Duplicate GitHub runtime doctor group');
     });
 
+    it('rejects unknown blocked evidence instead of producing an all-not-applicable report', () => {
+        expect(() => aggregateGithubRuntimeDoctorReport({target:{kind:'issue',repositoryId:42,issueNumber:7},
+            checks:[...GITHUB_RUNTIME_DOCTOR_GROUPS.map(group => ({group,state:'not-applicable' as const})),
+                {group:'private-unknown-group' as never,state:'blocked'}]})).toThrow('Unknown GitHub runtime doctor group');
+    });
+
     it('parses a valid repository policy from the trusted effective read', () => {
         const read: TrustedApprovalPolicyRead = {
             status: 'available', source: 'repository', value: JSON.stringify(validPolicy),

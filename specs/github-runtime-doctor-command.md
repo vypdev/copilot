@@ -436,3 +436,12 @@ Native review found three concrete defects: `4249698862` dropped unavailable lin
 Ten additional distinct cases cover four incomplete native pages, five coerced non-string branch values and the canonical empty-catalog contract. The own feature inventory increases from 169 to 179; the original 52-case floor, six fixed content reads, permissions, query-only ownership and all coverage gates remain unchanged. Fresh native review, parent integration and live command acceptance remain required.
 
 Local verification of these findings passed 581 suites and 7,914 tests with 35 configured platform skips (7,949 total), every unchanged global/module coverage budget and 308/350 setup acceptance with 42 explicitly open. Types, lint, documentation, specification/catalog validation and graph update passed.
+
+
+### Native nullable bodies and malformed report/workflow boundaries (2026-10-12)
+
+Native findings `4251088780`, `4251088791` and `4251088796` exposed three additional boundaries. A valid native null issue body MUST normalize to an empty body while preserving independently verified issue fields; missing or malformed body values remain rejected. Aggregation MUST reject an unknown check group rather than drop blocked evidence, with a fixed error that excludes the supplied group. A present workflow activity filter MUST be a non-empty array of non-empty strings; scalar, null, object or mixed non-string forms are blocked. These checks neither execute workflow content nor certify write permission.
+
+Six new cases reproduced all three findings: one native null body, one unknown blocked group among otherwise not-applicable groups and four malformed activity-filter shapes. The own feature inventory is 185 distinct cases, with the original 52-case floor and all read/provenance/coverage boundaries retained. Native review, parent recovery and post-promotion live acceptance remain required.
+
+Local verification of the second native findings passed 581 suites and 7,920 tests with 35 configured platform skips (7,955 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Bundles were rebuilt before staging.

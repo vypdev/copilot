@@ -353,3 +353,9 @@ workflow run; a structural pass still does not prove runner availability.
 SDD status keeps an unknown requirement visible when the issue has no admitted
 workflow kind. Evidence links use the configured GitHub server origin and the
 same issue identity; an untrusted or mismatched URL is shown without navigation.
+
+
+Doctor treats a valid native issue with no description as an empty body, so
+independent checks can still complete. Unknown evidence groups are rejected;
+installed workflow activity filters must contain a non-empty array of text
+values. A malformed filter is blocked rather than reported as a valid trigger.

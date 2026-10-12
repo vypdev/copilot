@@ -79,6 +79,7 @@ export function aggregateGithubRuntimeDoctorReport(input: {
 }): GithubRuntimeDoctorReport {
     const byGroup = new Map<GithubRuntimeDoctorGroup, GithubRuntimeDoctorCheck>();
     for (const check of input.checks) {
+        if (!GITHUB_RUNTIME_DOCTOR_GROUPS.includes(check.group)) throw new Error('Unknown GitHub runtime doctor group.');
         if (byGroup.has(check.group)) throw new Error(`Duplicate GitHub runtime doctor group: ${check.group}.`);
         byGroup.set(check.group, Object.freeze({ ...check, ...(check.evidence ? { evidence: Object.freeze({ ...check.evidence }) } : {}) }));
     }

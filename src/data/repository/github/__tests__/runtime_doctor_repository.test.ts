@@ -144,6 +144,10 @@ describe('bounded SDK doctor reads', () => {
     it('maps a bounded exact issue without publishing its source text', async () => {
         expect(await new RuntimeDoctorRepository('o', 'r', 't').readIssue(7)).toEqual({ number: 7, title: 'Safe', body: '', labels: ['feature'] });
     });
+    it('normalizes a valid native null issue body while preserving independent issue metadata', async () => {
+        mockClient.rest.issues.get.mockResolvedValue({data:{number:7,title:'Issue',body:null,labels:[{name:'help'}]}});
+        expect(await new RuntimeDoctorRepository('o','r','t').readIssue(7)).toEqual({number:7,title:'Issue',body:'',labels:['help']});
+    });
     it.each([
         { number: 8, title: 'wrong', body: '', labels: [] },
         { number: 7, title: 'PR', body: '', labels: [], pull_request: {} },
