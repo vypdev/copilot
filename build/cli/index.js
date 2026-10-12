@@ -62806,14 +62806,17 @@ class CommentLanguageTranslationWorkflow {
             if (responseTarget !== targetLocale) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned a mismatched target locale.')];
             }
-            if (status === 'matches' || status === 'ambiguous') {
-                return [adaptationResult(context, targetLocale, status, context.commentBody, this.optionalStringProperty(response, 'sourceLocale'), reasonCode)];
+            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
+            const redundantTranslation = status === 'translated' && reasonCode === 'none' && sourceLocale !== undefined
+                && (0, locale_1.localeLanguagesMatch)(sourceLocale, targetLocale)
+                && new Intl.Locale(sourceLocale).maximize().script === new Intl.Locale(targetLocale).maximize().script;
+            if (status === 'matches' || status === 'ambiguous' || redundantTranslation) {
+                return [adaptationResult(context, targetLocale, redundantTranslation ? 'matches' : status, context.commentBody, sourceLocale, reasonCode)];
             }
             if (status !== 'translated') {
                 return [failedAdaptation(context, targetLocale, `Language adaptation ended with ${status || 'an invalid status'}.`)];
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
-            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
             const restoredProse = (0, comment_translation_policy_1.restoreLanguageAdaptationOutput)(input, adaptedText);
             const interpretedComment = (0, comment_translation_policy_1.rebuildAdaptedComment)(input, adaptedText);
             if (restoredProse === undefined || interpretedComment === undefined) {

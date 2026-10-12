@@ -10,7 +10,7 @@ debt or convert unknown historic intent into a design decision.
 
 | Capability ID | Status | Scope | Primary SDD | Evidence |
 |---|---|---|---|---|
-| `github-communication-experience` | Implemented | English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces | [Semantic GitHub communication and repository localization](./semantic-github-publication-and-notification.md) + 1 companion | 222 paths · 2026-10-11 |
+| `github-communication-experience` | Implemented | English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces | [Semantic GitHub communication and repository localization](./semantic-github-publication-and-notification.md) + 1 companion | 222 paths · 2026-10-12 |
 | `release-orchestration` | Implemented | Release and hotfix promotion, publication, reconciliation, and durable recovery | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 52 paths · 2026-09-16 |
 | `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-09-15 |
 | `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 59 paths · 2026-10-11 |
@@ -37,7 +37,7 @@ debt or convert unknown historic intent into a design decision.
 ### `github-communication-experience` — Semantic GitHub communication and repository localization
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-11
+- Last verified: 2026-10-12
 - Specifications: [`specs/semantic-github-publication-and-notification.md`](./semantic-github-publication-and-notification.md) · [`specs/repository-locale-and-localization.md`](./repository-locale-and-localization.md)
 - Workflows: [`.github/workflows/copilot_issue.yml`](../.github/workflows/copilot_issue.yml) · [`.github/workflows/copilot_issue_comment.yml`](../.github/workflows/copilot_issue_comment.yml) · [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/copilot_pull_request_review_state.yml`](../.github/workflows/copilot_pull_request_review_state.yml) · [`.github/workflows/copilot_pull_request_comment.yml`](../.github/workflows/copilot_pull_request_comment.yml) · [`.github/workflows/copilot_commit.yml`](../.github/workflows/copilot_commit.yml) · [`.github/workflows/copilot_close_inactive_issues.yml`](../.github/workflows/copilot_close_inactive_issues.yml) · [`.github/workflows/copilot_deployment_orchestration.yml`](../.github/workflows/copilot_deployment_orchestration.yml)
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts) · [`src/actions/github_action_completion.ts`](../src/actions/github_action_completion.ts) · [`src/actions/github_event_inputs.ts`](../src/actions/github_event_inputs.ts) · [`src/cli_context.ts`](../src/cli_context.ts) · [`src/cli/commands/check_progress.ts`](../src/cli/commands/check_progress.ts) · [`src/cli/commands/issue_command_policy.ts`](../src/cli/commands/issue_command_policy.ts) · [`src/api.ts`](../src/api.ts) · [`src/cli.ts`](../src/cli.ts) · [`package.json`](../package.json)
