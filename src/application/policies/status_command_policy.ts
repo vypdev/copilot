@@ -21,7 +21,7 @@ export interface CopilotStatusExecutionContext {
     readonly inputs?: { readonly action?: string };
     readonly issue: { readonly number: number; readonly issueManagedBranches?: boolean; readonly creator?: string; readonly url?: string };
     readonly issueWorkflowKind?: string;
-    readonly profileDigest?: string;
+    readonly issueWorkflowProfileDigest?: string;
     readonly branches?: { readonly development?: string };
     readonly preBranchSdd?: boolean;
     readonly pullRequest: {

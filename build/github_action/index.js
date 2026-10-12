@@ -52709,7 +52709,7 @@ function projectCommentAutomationContext(source, language, userComment) {
         ...(source.issue?.number > 0 && !(source.pullRequest?.number > 0) ? { sdd: Object.freeze({
                 issueNumber: source.issue.number,
                 admittedKind: issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.find(kind => kind === source.issueWorkflowKind),
-                profileDigest: source.profileDigest,
+                profileDigest: source.issueWorkflowProfileDigest,
                 issueAuthor: source.issue.creator ?? '',
                 trustedBotLogin: source.tokenUser?.trim() ?? '',
                 issueManagedBranches: source.issue.issueManagedBranches,
