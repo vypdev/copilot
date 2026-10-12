@@ -9,6 +9,10 @@ on:
         description: Export hosted Windows coverage to Codecov
         type: boolean
         default: false
+      windows_startup_probe:
+        description: Compare isolated Windows PowerShell startup with the runner baseline
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,6 +22,21 @@ defaults:
     shell: bash
 
 jobs:
+  windows-startup-probe:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}
+    name: Windows PowerShell startup evidence
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+      - name: Compare bounded startup probes without exposing process data
+        run: node scripts/diagnose-windows-powershell-startup.cjs
+
   setup-platform-smoke:
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}
     name: Setup package and local session (${{ matrix.os }})
@@ -100,18 +119,16 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   setup-self-hosted-codex-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
-    # Includes build, isolated fixtures and the full coverage suite. Windows
-    # service runners exceeded 20 minutes in the 2026-10-10 live smoke test.
-    timeout-minutes: 30
+    # Codex integration fixtures run only on macOS and Ubuntu. General Windows
+    # fixtures and full coverage remain in the hosted three-platform matrix.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: Windows
-            labels: [self-hosted, codex, Windows]
           - platform: macOS
             labels: [self-hosted, codex, macOS]
           - platform: Ubuntu
@@ -122,9 +139,6 @@ jobs:
       - name: Verify Ubuntu distribution
         if: runner.os == 'Linux'
         run: . /etc/os-release && test "$ID" = ubuntu
-      - name: Git Bash in runner service PATH
-        if: runner.os == 'Windows'
-        run: where.exe bash && bash --version
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
@@ -137,18 +151,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
-          cache: pnpm
-      - name: Verify Windows job Node npm CLI
-        if: runner.os == 'Windows'
-        run: node scripts/verify-windows-job-npm.cjs
+          # Persistent runners already retain their local pnpm store. Avoid a
+          # dependency-cache archive after the required validation has passed.
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - name: Validate generated guidance checkout on codex runner
         run: |
           git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
           pnpm run validate:agent-docs
       - run: pnpm run build
-      - if: runner.os != 'Windows'
-        run: pnpm run validate:build
+      - run: pnpm run validate:build
       - run: pnpm run typecheck
       - name: Local setup fixtures only
         run: pnpm exec jest src/application/usecases/setup/__tests__/setup_session_coordinator.test.ts src/cli/__tests__/web_setup_server.test.ts src/cli/__tests__/setup_session_guard.test.ts src/cli/__tests__/setup_apply_snapshot.test.ts src/tooling/__tests__/setup_acceptance_path.test.ts --runInBand --silent
@@ -157,8 +169,6 @@ jobs:
       - name: Isolated npm package checks
         run: pnpm run validate:npm-package && pnpm run smoke:npm-package
       - name: Full platform coverage and acceptance budgets
-        env:
-          COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
         run: pnpm run test:coverage
       - name: Full platform documentation and contract validators
         run: |

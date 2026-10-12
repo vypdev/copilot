@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 235,
+      "allocatedCases": 247,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -63,7 +63,7 @@
         },
         {
           "path": "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
-          "qualifyingCases": 5
+          "qualifyingCases": 7
         },
         {
           "path": "src/application/usecases/actions/__tests__/close_inactive_issues_use_case.test.ts",
@@ -108,6 +108,10 @@
         {
           "path": "src/infrastructure/composition/__tests__/copilot_history_port_factory.test.ts",
           "qualifyingCases": 5
+        },
+        {
+          "path": "src/data/repository/__tests__/progress_diff_repository.test.ts",
+          "qualifyingCases": 10
         }
       ]
     },
@@ -115,7 +119,7 @@
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
       "requiredCases": 146,
-      "allocatedCases": 149,
+      "allocatedCases": 153,
       "files": [
         {
           "path": "src/actions/__tests__/github_action_locale_inputs.test.ts",
@@ -187,7 +191,7 @@
         },
         {
           "path": "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts",
-          "qualifyingCases": 14
+          "qualifyingCases": 18
         },
         {
           "path": "src/architecture/__tests__/agent_output_locale_boundaries.test.ts",

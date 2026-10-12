@@ -19,7 +19,7 @@ import {
 
 const mockIssue = {};
 const mockPullRequest = {};
-const mockContext = { kind: 'context' };
+const mockContext = { kind: 'context', listIssueComments: jest.fn() };
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
@@ -115,11 +115,18 @@ describe("main run route composition root", () => {
     }));
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 14 }, () => expect.anything()),
-      mockContext,
-      expect.objectContaining({ serverOrigin: 'https://github.com', readComments: expect.any(Function) }),
-    );
+    const call = jest.mocked(IssueCommentUseCase).mock.calls[0];
+    expect(call.slice(0, 15)).toEqual([
+      ...Array.from({ length: 14 }, () => expect.anything()), mockContext,
+    ]);
+    const query = call.find(value => value && typeof value === 'object' && 'read' in value && 'serverOrigin' in value);
+    expect(query).toMatchObject({ read: expect.any(Function) });
+    expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(query)).toBe(true);
+    const historyPort = call.find(value => value && typeof value === 'object' && 'readComments' in value && 'serverOrigin' in value);
+    expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {
@@ -127,11 +134,13 @@ describe("main run route composition root", () => {
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 13 }, () => expect.anything()),
-      mockContext,
-      expect.objectContaining({ serverOrigin: 'https://github.com', readComments: expect.any(Function) }),
-    );
+    expect(jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0].slice(0, 14)).toEqual([
+      ...Array.from({ length: 13 }, () => expect.anything()), mockContext,
+    ]);
+    const historyPort = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0][14];
+    expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
   });
 
   it("exposes one handler for every executable route", () => {

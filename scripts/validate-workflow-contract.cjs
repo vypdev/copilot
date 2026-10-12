@@ -292,19 +292,39 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
-    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage'])) {
+    if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
       throw new Error(`${relativeFile} must retain hosted and manually dispatched self-hosted platform fixture jobs and Windows coverage upload.`);
     }
     const uploadInput = workflow.on?.workflow_dispatch?.inputs?.upload_windows_coverage;
     if (uploadInput?.type !== 'boolean' || uploadInput.default !== false) {
       throw new Error(`${relativeFile} must default Windows Codecov export to disabled on manual fixture runs.`);
     }
+    const probeInput = workflow.on?.workflow_dispatch?.inputs?.windows_startup_probe;
+    if (probeInput?.type !== 'boolean' || probeInput.default !== false) {
+      throw new Error(`${relativeFile} must default Windows startup probes to disabled.`);
+    }
+  }
+  if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml'
+    && JSON.stringify(Object.keys(workflow.jobs ?? {})) !== JSON.stringify(['linux'])) {
+    throw new Error(`${relativeFile} must retain only the supported Linux Codex diagnostic job.`);
   }
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     if (Object.values(job.env ?? {}).some(value => typeof value === 'string' && /\$\{\{\s*runner\./u.test(value))) {
       throw new Error(`${relativeFile} job ${jobId} cannot use runner context in job-level env.`);
     }
     if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
+      if (jobId === 'windows-startup-probe') {
+        const steps = job.steps ?? [];
+        if (job['runs-on'] !== 'windows-latest' || job['timeout-minutes'] !== 5
+          || job.if !== "${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}"
+          || job.needs || steps.length !== 3
+          || steps[0]?.uses !== 'actions/checkout@v5' || steps[0]?.with?.['persist-credentials'] !== false
+          || steps[1]?.uses !== 'actions/setup-node@v7' || steps[1]?.with?.['node-version'] !== '24.x'
+          || steps[2]?.run !== 'node scripts/diagnose-windows-powershell-startup.cjs') {
+          throw new Error(`${relativeFile} must retain its bounded manual hosted Windows startup diagnostic without credentials or export.`);
+        }
+        continue;
+      }
       if (jobId === 'upload-windows-coverage') {
         const steps = job.steps ?? [];
         const checkout = steps[0];
@@ -351,7 +371,6 @@ function assertRunner(file, workflow) {
         }
       } else {
         const expectedMatrix = [
-          { platform: 'Windows', labels: ['self-hosted', 'codex', 'Windows'] },
           { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
           { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
         ];
@@ -359,28 +378,29 @@ function assertRunner(file, workflow) {
           || job.name !== 'Setup package and local session (self-hosted ${{ matrix.platform }} codex)'
           || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(expectedMatrix)
           || job.strategy?.['fail-fast'] !== false) {
-          throw new Error(`${relativeFile} must target self-hosted Windows, macOS and Ubuntu codex runners.`);
+          throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners; Windows services are unsupported.`);
         }
-        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}") {
+        if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}") {
           throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch from protected master.`);
         }
         const steps = job.steps ?? [];
         if (!steps.some(step => step?.name === 'Verify Ubuntu distribution'
-          && step.if === "runner.os == 'Linux'" && step.run === '. /etc/os-release && test "$ID" = ubuntu')
-          || !steps.some(step => step?.name === 'Git Bash in runner service PATH'
-            && step.if === "runner.os == 'Windows'")) {
-          throw new Error(`${relativeFile} must verify Ubuntu and Windows Bash on self-hosted runners.`);
+          && step.if === "runner.os == 'Linux'" && step.run === '. /etc/os-release && test "$ID" = ubuntu')) {
+          throw new Error(`${relativeFile} must verify Ubuntu on self-hosted Codex runners.`);
         }
         const pnpmSetup = steps.find(step => typeof step?.uses === 'string' && step.uses.startsWith('pnpm/action-setup@'));
         if (pnpmSetup?.with?.dest !== ISOLATED_PNPM_DEST) {
           throw new Error(`${relativeFile} must isolate self-hosted pnpm installation by job.`);
         }
+        const nodeSetup = steps.find(step => typeof step?.uses === 'string' && step.uses.startsWith('actions/setup-node@'));
+        if (nodeSetup?.with?.cache !== undefined || nodeSetup?.with?.['package-manager-cache'] !== false) {
+          throw new Error(`${relativeFile} must disable dependency-cache backup on persistent self-hosted smoke runners.`);
+        }
         assertPlatformCoverageAndValidators(relativeFile, job);
         const serviceCoverage = steps.find(step => step?.name === 'Full platform coverage and acceptance budgets');
-        if (serviceCoverage?.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== '1') {
-          throw new Error(`${relativeFile} must recycle Windows service-runner Jest workers before heap exhaustion.`);
+        if (serviceCoverage?.env?.COPILOT_JEST_WINDOWS_SERVICE_COVERAGE !== undefined) {
+          throw new Error(`${relativeFile} must not apply Windows service-runner settings to supported Codex fixtures.`);
         }
-        assertWindowsJobNpm(relativeFile, job);
         assertPlatformHistoryCheckout(relativeFile, job);
         const guidanceStep = steps.find(step => step?.name === 'Validate generated guidance checkout on codex runner');
         if (!guidanceStep?.run?.includes('pnpm run validate:agent-docs')
@@ -402,8 +422,8 @@ function assertRunner(file, workflow) {
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
       expected = ['self-hosted', 'codex', 'Linux'];
     } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {
-      if (!['linux', 'windows'].includes(jobId)) throw new Error(`${relativeFile} contains an unexpected diagnostic job.`);
-      expected = ['self-hosted', 'codex', jobId === 'linux' ? 'Linux' : 'Windows'];
+      if (jobId !== 'linux') throw new Error(`${relativeFile} contains an unsupported Codex diagnostic job.`);
+      expected = ['self-hosted', 'codex', 'Linux'];
     } else if (relativeFile === '.github/workflows/ci_check.yml'
       || relativeFile === '.github/workflows/repowise.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];
@@ -1251,6 +1271,28 @@ function assertIssueWorkflowProfileInput(file, workflow) {
   }
 }
 
+function assertIssueBranchConfigurationInputs(file, workflow) {
+  if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  const relativeFile = relativeWorkflow(file);
+  const distributed = relativeFile.startsWith('setup/workflows/');
+  const branches = JSON.parse(readFileSync(path.join(repositoryRoot, '.copilot/repository-profile.json'), 'utf8')).branches;
+  const expected = distributed
+    ? {
+      'issue-managed-branches': "${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}",
+      'pre-branch-sdd': "${{ vars.PRE_BRANCH_SDD || 'false' }}",
+    }
+    : {
+      'issue-managed-branches': branches.issueManagedBranches,
+      'pre-branch-sdd': branches.preBranchSdd,
+    };
+  const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
+    .filter(isCopilotAction);
+  if (actionSteps.length === 0 || actionSteps.some(step =>
+    Object.entries(expected).some(([input, value]) => step.with?.[input] !== value))) {
+    throw new Error(`${relativeFile} must pass consistent issue-managed-branches and pre-branch-sdd inputs to every Copilot callback.`);
+  }
+}
+
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
   assertDirectEventTriggers(file, workflow);
@@ -1273,6 +1315,7 @@ function validateWorkflow(file, workflow) {
   assertMajorActionReferences(file, workflow);
   assertCopilotActionInputs(file, workflow);
   assertIssueWorkflowProfileInput(file, workflow);
+  assertIssueBranchConfigurationInputs(file, workflow);
 }
 
 function main() {
@@ -1313,6 +1356,7 @@ module.exports = {
   assertMajorActionReferences,
   assertCopilotActionInputs,
   assertIssueWorkflowProfileInput,
+  assertIssueBranchConfigurationInputs,
   assertAgentInputs,
   assertRepositoryLocaleInputs,
   assertRepositoryBugbotContextExclusions,

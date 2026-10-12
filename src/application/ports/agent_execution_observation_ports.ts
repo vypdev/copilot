@@ -30,13 +30,23 @@ export type AgentExecutionPreflightDiagnostic =
     | 'acl-identity' | 'acl-unavailable';
 
 /** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+export const AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'] as const;
+export type AgentExecutionToolDiagnostic = typeof AGENT_EXECUTION_TOOL_DIAGNOSTICS[number];
+
 export type AgentExecutionExitDiagnostic =
+    | AgentExecutionToolDiagnostic
     | 'reported-authentication'
     | 'reported-model-unavailable'
     | 'reported-unsupported-option'
     | 'reported-unsupported-configuration'
     | 'reported-transport-or-rate-limit'
     | 'unclassified';
+
+/** Fixed local output rejection cause; never derived by interpolating provider bytes. */
+export const AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
+    'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
+] as const;
+export type AgentExecutionOutputDiagnostic = typeof AGENT_EXECUTION_OUTPUT_DIAGNOSTICS[number];
 
 interface AgentExecutionIdentityObservation {
     readonly provider: AgentProvider;
@@ -63,6 +73,7 @@ export type AgentExecutionObservation =
         readonly phase: 'run';
         readonly durationMilliseconds: number;
         readonly outputBytes: number;
+        readonly toolDiagnostic?: AgentExecutionToolDiagnostic;
     })
     | (AgentExecutionIdentityObservation & {
         readonly state: 'failed';
@@ -75,6 +86,7 @@ export type AgentExecutionObservation =
         readonly retryable: boolean;
         readonly exitCode?: number;
         readonly exitDiagnostic?: AgentExecutionExitDiagnostic;
+        readonly outputDiagnostic?: AgentExecutionOutputDiagnostic;
     });
 
 /** Receives bounded execution facts only; prompts, output, argv, paths, and environment are excluded by type. */

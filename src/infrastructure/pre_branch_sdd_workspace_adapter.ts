@@ -38,6 +38,11 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
     return this.readSnapshotAtSha(baseSha);
   }
 
+  async loadSnapshotAtCommit(commitSha: string): Promise<SddCatalogSnapshot> {
+    assertSha(commitSha);
+    return this.readSnapshotAtSha(commitSha);
+  }
+
   private async readSnapshotAtSha(baseSha: string): Promise<SddCatalogSnapshot> {
     const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
     const catalog = JSON.parse(raw) as Catalog;

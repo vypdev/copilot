@@ -14,4 +14,4 @@ Commands are parsed without a shell. Shell operators and empty commands are reje
 
 This repository's comment workflows prepare Node, pnpm and dependencies for configured verification when an explicit `fix`, `implement`, `remember`, or non-dry-run `sync-branch` command is requested. Learned-rule commits pass the same verification gate as other authorized file changes.
 
-For this repository's full suite, configure `pnpm run test` without `--runInBand`. The comment workflows enable the same 512 MB Jest worker recycling used by the self-hosted Windows smoke job, while limiting concurrency to two workers. A serial run bypasses recycling and can exhaust the service runner's Node heap before verification completes.
+For this repository's full suite, configure `pnpm run test:coverage` without `--runInBand`, retaining its two-worker limit and all coverage/acceptance gates. Agent-capable comment jobs use the shared Mac/Ubuntu `codex` pool; Windows services omit that label. The retained Windows worker-recycling option belongs to general Windows verification, not Codex service integration.

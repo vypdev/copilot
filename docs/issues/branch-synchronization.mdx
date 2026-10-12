@@ -134,6 +134,12 @@ conflict paths, merge identity, protected index entries and remaining markers,
 then stages only those resolved conflicts through trusted Git code. It rejects
 later changes introduced by verification rather than staging them again.
 
+The three checked-in `ncc` bundles (`build/cli/index.js`, `build/api/index.js`,
+`build/github_action/index.js`) retain their generator's whitespace. Source and
+all other paths retain strict whitespace checks. Conflict markers are rejected in
+all files, including those bundles, before staging and in the staged result.
+This changes no content, allowed edit paths or verification requirements.
+
 If `specs/CATALOG.md` is conflicted, Copilot treats it as a generated index:
 after the catalog metadata is resolved, the Action validates that metadata and
 regenerates the index with its bundled catalog renderer before verification.
@@ -142,6 +148,18 @@ The fixer must preserve both branches' specification ownership and evidence in
 already changes both catalog files. It never adds an unrelated file to the merge
 or loads a generator from the merged branch. Invalid metadata, missing evidence,
 external links, or a later verification change still abort the synchronization.
+
+When the communication test-budget ledger is an original merge conflict,
+Copilot derives its totals from the retained test-file allocations and validates
+the complete ledger before staging. It preserves the minimum budgets and checks
+that every allocation has real test evidence. Invalid input produces
+`communication-budget-invalid`; inspect the closed validation phase in the run,
+correct the resolution and retry. A later verification change is rejected and
+cannot trigger another normalization.
+
+If verification prevents a normal Git abort, Copilot restores the captured
+child only while both prepared merge identities remain unchanged. A moved
+HEAD or parent is retained and requires inspection of the run.
 
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 
@@ -154,6 +172,19 @@ Every command finishes with a comment in the conversation. The report distinguis
 - merged cleanly without an agent;
 - merged after fixer-agent conflict resolution; or
 - safely aborted, with a publishable reason and no provider-secret details.
+
+When workspace validation rejects a resolution, the reply and workflow log
+include a closed diagnostic code such as `sdd-catalog-invalid`,
+`unstaged-changes` or `unexpected-paths`. Inspect that code before retrying;
+Copilot preserves the remote branches and does not publish the rejected merge.
+Private paths and provider output are excluded from the public diagnosis.
+
+For `sdd-catalog-invalid`, the operator log also records the closed catalog
+validation phase before abort restores the worktree. This distinguishes
+remaining metadata conflict markers or invalid JSON from evidence-path or
+catalog-contract failures. It includes no metadata values, paths, parser errors
+or validator output. Correct the failing conflict resolution and retry the
+same command; the Action retains all validation and remote-head checks.
 
 Successful and no-change reports use the issue or pull-request surface locale,
 are correlated to the requesting comment, and are reconciled at most once on
@@ -179,3 +210,35 @@ lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and
 bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
+
+This repository runs agent-capable synchronization on the shared Mac/Ubuntu
+`codex` pool. Windows services omit `codex`; no new Windows Codex synchronization
+is scheduled. Verification retains `test:coverage`, its two-worker limit and all
+coverage/acceptance budgets. A failed verification retains the managed remote
+head; inspect the failure before retrying `/copilot sync-branch`.
+
+Commands accept leading whitespace, line breaks and repeated whitespace between
+`/copilot` and the command name. This repository prepares its verification
+toolchain for those requests and addressed bot mentions before the Action runs.
+Preparation is only a conservative scheduling hint; the Action's parser, actor
+permissions, original conflict set and dry-run/no-agent rules remain authoritative.
+The fixer must check existing offline tests for affected modules and typecheck
+when tools are available; mandatory Action verification still runs independently.
+
+
+A completed issue synchronization returns the issue to working, including an
+already-aligned retry after a previous failure. The Action verifies the retained
+completion facts before that transition. Dry-runs and unavailable results keep
+existing state; another error in the same run still blocks it. Synchronizing a
+branch does not establish PR approval or current SDD readiness.
+
+A conflict resolved to the working branch's unchanged content or deletion may
+disappear from Git status after trusted staging. Copilot uses that resolved
+workspace as the verification baseline while still rejecting added files, lost
+non-conflicted parent changes, and later changes to the resolved path set.
+
+
+For `unexpected-paths`, the run also shows a fixed validation phase and counts
+of added paths, removed conflict/protected paths and added canonical bundles.
+Use that distinction to inspect the resolution or verification step before
+retrying. Copilot omits private filenames and preserves the same merge guards.

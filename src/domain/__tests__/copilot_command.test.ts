@@ -1,6 +1,17 @@
 import { copilotCommandAcceptsAdaptableProse, parseCopilotCommand } from '../copilot_command';
 
 describe('Copilot command policy', () => {
+    it.each(['plan', 'clarify', 'estimate', 'test-plan', 'explain', 'diagnose', 'implement', 'remember'])('accepts bounded prose with more than twenty words for %s', name => {
+        const prose = Array.from({ length: 40 }, (_, index) => `word${index}`).join(' ');
+        const result = parseCopilotCommand(`/copilot ${name} ${prose}`);
+        expect(result.kind).toBe('command');
+        if (result.kind === 'command') expect(result.command.arguments.join(' ')).toBe(prose);
+    });
+
+    it.each(['implement', 'remember'])('retains the character limit for long %s prose', name => {
+        expect(parseCopilotCommand(`/copilot ${name} ${'a'.repeat(2_000)}`)).toMatchObject({ kind: 'invalid' });
+    });
+
     it('classifies only commands with natural-language arguments as adaptable prose', () => {
         expect(copilotCommandAcceptsAdaptableProse('fix')).toBe(false);
         expect(copilotCommandAcceptsAdaptableProse('sync-branch')).toBe(false);

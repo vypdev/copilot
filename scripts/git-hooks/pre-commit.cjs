@@ -6,23 +6,22 @@
 
 const { spawnSync } = require('child_process');
 const path = require('path');
+const { createVerificationEnvironment } = require('./verification-environment.cjs');
 
 const root = path.resolve(__dirname, '..', '..');
+const gitVariables = spawnSync('git', ['rev-parse', '--local-env-vars'], {
+  cwd: root, encoding: 'utf8', timeout: 10000, maxBuffer: 16384,
+});
+if (gitVariables.status !== 0 || typeof gitVariables.stdout !== 'string') {
+  console.error('Cannot determine repository-local Git bindings; commit verification was not started.');
+  process.exit(1);
+}
 const opts = {
   cwd: root,
   stdio: 'inherit',
   shell: true,
-  env: Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => ![
-      'AGENT_PROVIDER',
-      'AGENT_MODEL',
-      'AGENT_EXECUTABLE',
-      'AGENT_MODEL_PROVIDER',
-      'AGENT_ALLOWED_MODEL_PROVIDERS',
-      'AGENT_ALLOWED_MODELS',
-    ].includes(key)),
-  ),
-}; // Keep hooks deterministic and independent from local agent configuration
+  env: createVerificationEnvironment(process.env, gitVariables.stdout.trim().split(/\r?\n/u)),
+}; // Keep validation independent from the invoking hook's Git and agent context.
 const packageManager = process.env.COPILOT_PACKAGE_MANAGER || 'corepack pnpm@10.12.4';
 
 function run(name, args) {

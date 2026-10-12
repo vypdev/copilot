@@ -3,7 +3,7 @@
 - Status: Implemented — automated local gates and Codex dogfood complete; broader agent-discovery UX evidence remains pending
 - Date: 2026-09-16
 - Catalog capability ID: `repository-agent-collaboration`
-- Last verified: 2026-09-16
+- Last verified: 2026-10-12
 - Owners: Copilot maintainers
 - Scope: setup-generated, repository-local guidance that lets coding agents collaborate through configured issues, Action-managed branches, pull requests, and deployment boundaries
 - Related issues/PRs: none yet; related SDDs are listed in section 20
@@ -762,10 +762,10 @@ optional marker preserves all surrounding `AGENTS.md` text byte-for-byte.
 | Profile schema, safe projection, canonical rendering | 18 | enabled subsets, labels/forms/branches, allowlist, ordering, digest, unknown schema/keys, secret exclusion |
 | Ownership, setup planning, reconcile, retirement | 20 | new/matching/drifted/unowned, malformed markers, byte preservation, backup, manifest-last, partial rerun, disable/retire |
 | Guide and skill semantic contract | 18 | metadata, trigger scope, issue forms, help no-branch, exact branch rule, local tracking, PR flow, labels/deploy, recovery, internal-agent distinction |
-| Package, doctor, architecture, documentation | 14 | packed assets, installed smoke generation, named read-only checks, no internal prompt import, links/nav, schema fixtures |
+| Package, doctor, architecture, documentation | 29 | packed assets, installed smoke generation, named read-only checks, no internal prompt import, links/nav, schema fixtures |
 | UX, localization, sanitization, security | 12 | five states, narrow/no-color, escaping, no mentions/secrets/paths, locale fallback, conflict actions |
 | Integration, migration, rollback, dogfood | 12 | existing AGENTS/skills, pointer declined, schema migration, disable/restore, form/profile parity, positive and negative end-to-end flow |
-| **Total** | **94** | No double counting |
+| **Total** | **109** | No double counting |
 
 The issue-workflow domain and setup/rendering decision policies named by the
 `Configurable issue workflows and repository agent guidance` coverage budget
@@ -923,3 +923,30 @@ where possible and are checked against packaged/default repository fixtures.
 - Follow-up outside this specification: adapters for additional agent-specific
   instruction filenames, cryptographic signing/attestation of profiles, and a
   universal cross-vendor agent-discovery standard.
+
+
+### Local worktree verification hooks (2026-10-12)
+
+Dogfooding found that the hook installer skipped linked worktrees because `.git` is a file. The configured global hook chain delegates to the worktree's own Git metadata, so normal commits there could omit the repository build/test/lint hook. Directly selecting the source hook directory also did not execute its nonexecutable launchers. Explicit mandatory verification was completed before the feature push; no existing check or global chain was waived.
+
+The installer now reads the native local/common metadata directories through two bounded read-only Git calls for a linked checkout, then installs only repository hook files in both hooks directories with executable permissions where supported. Default Git uses common hooks; wrappers may use local metadata. Normal repositories retain their existing installation behavior. Nongit package installations and absent hook sources remain no-ops. Corrupt metadata produces a closed warning, creates no metadata and exposes no raw Git error. The installer never changes `core.hooksPath`, global chains, repository configuration, branch refs or contributor authority.
+
+```text
+normal repository -> existing .git/hooks
+linked worktree -> native local/common metadata -> repository hook files in both hooks directories
+commit -> configured hook chain -> repository build/test/lint checks
+```
+
+Eight actual temporary-Git contracts cover normal/nongit/source-missing/corrupt checkouts, both worktree locations, paths with spaces, executable permissions, file-only copying and a real commit invoking its installed hook. They increase this capability's package/tooling allocation from 14 to 22 and total from 94 to 102, without changing coverage thresholds or other budgets. Run `node scripts/install-git-hooks.cjs` from the checkout after installation when hooks need to be refreshed. Manual verification of current contribution worktrees remains distinct from fixture evidence.
+
+
+Native history sync `38254948906` also rejected a merged composition fixture that assumed the shared SDD reader was constructor argument 15 after a second read capability was added. Shared route assertions now verify the stable leading dependencies and identify read capabilities by their operations, preserving exact frozen read-only surface checks. This materially rewrites existing fixture assertions; no new case is counted in the 102-case budget and no runtime or permission is weakened.
+
+
+### Isolate Git hook environment from validation fixtures (2026-10-12)
+
+Executing the newly installed real hooks exposed inherited Git bindings in linked worktrees. Temporary Git fixtures received the invoking checkout's `GIT_DIR`/index/config bindings and could change its local metadata. Both commits were stopped. The original master and managed contribution heads remained intact; the origin was unchanged. Only the observed test-modified local settings were restored, including bare mode, fixture identity and a temporary hook path. Private metadata backups were retained before recovery.
+
+Pre-commit now obtains Git's native repository-local variable names through a bounded read-only call and removes those bindings, paired config key/value variables and the existing agent override fields only for validation child processes. The invoking commit's own environment remains unchanged. Runtime PATH, Windows settings, package manager and global Git policy remain available. Failure to enumerate the bindings stops commit verification with a closed message rather than running unisolated checks. No hook, test, platform or threshold is bypassed.
+
+Six pure environment contracts and one real linked-worktree commit prove preserved runtime/global settings, complete repository/config/agent isolation, immutable input and an unaffected checkout after another bare fixture is initialized. This adds seven to the earlier eight installer cases: package/tooling allocation 29 and total 109. The new pure CJS helper is collected by Jest and has an exhaustive 100% coverage gate. Normal commit hooks and cross-platform native smoke remain mandatory acceptance.

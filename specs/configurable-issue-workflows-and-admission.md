@@ -3,7 +3,7 @@
 - Status: Implemented — automated local gates complete; controlled live GitHub UX evidence remains pending
 - Date: 2026-09-16
 - Catalog capability ID: `configurable-issue-workflows`
-- Last verified: 2026-09-29
+- Last verified: 2026-10-13
 - Owners: Copilot maintainers
 - Scope: one selectable issue-workflow catalog that drives setup assets, runtime admission, branch behavior, release dependencies, diagnosis, and user guidance
 - Related issues/PRs: none yet; related SDDs are listed in section 20
@@ -743,9 +743,9 @@ rows count only when they assert a distinct decision branch.
 | Setup planning, selection, rendering, reconciliation | 27 | unchanged Enter/default All, Space clearing All then Enter/explicit none, empty-selection validation, fallback input, cancel/EOF, dependencies, effective labels, managed/unmanaged drift, retire/backup, idempotency |
 | Runtime admission, state, replay, continuation | 32 | passive/explicit matrix, queue/live state, disabled/unmanaged/conflict, body validation, legacy, continuation, durable operations, unlinked PR, zero-count assignment before target validation, deferred members-only lookup for every requested provider task, denied/failing authorization with fail-closed task configuration |
 | Adapters and provider contracts | 12 | Variable, issue snapshot, state, labels, org/no-org Issue Types, permission/rate-limit/error mapping |
-| Workflows, packaging, doctor, architecture | 16 | all workflow inputs, package contents, npm smoke, query-only doctor, mutation reachability, single catalog, parser/form contract |
+| Workflows, packaging, doctor, architecture | 20 | all workflow inputs, package contents, npm smoke, query-only doctor, mutation reachability, single catalog, parser/form contract; four callback branch/SDD configuration contracts |
 | UI, localization, security, integration, migration | 18 | five UI states, no-color/narrow, sanitization, comment budget, no secrets, old config/profile migration, dogfood and rollback |
-| **Total** | **131** | No double counting |
+| **Total** | **135** | No double counting |
 
 The issue-workflow domain and setup/rendering decision policies named by the
 `Configurable issue workflows and repository agent guidance` coverage budget
@@ -921,3 +921,35 @@ validated against setup forms and profile fixtures.
 - Follow-up outside this specification: arbitrary custom workflow plugins,
   transactional rollback across every remote resource, and independent Task or
   Question workflow definitions.
+
+## Dogfooding correction: consistent callback branch settings (2026-10-13)
+
+Observed: PR #469 is natively linked to feature issue #464 with verified SDD
+evidence, but its inline `sdd-diff` request returned `not-applicable`. Issue and
+issue-comment workflows enabled `pre-branch-sdd`; the PR-comment workflow omitted
+it and inherited the Action default `false`. The installed repository profile
+already declared managed branches and the SDD gate enabled.
+
+All six issue, comment, PR, review-state, and push callbacks MUST pass the same
+managed-branch and SDD configuration. The repository's callbacks use the installed
+profile's booleans; distributed setup callbacks retain their existing Variable
+expressions and defaults (`true` managed branches, `false` SDD). This adds no
+input, permission, default change, agent execution, or new lifecycle mutation.
+
+Text flow: installed configuration -> every event callback -> the same SDD
+applicability decision -> verified evidence or a truthful unavailable result.
+A missing or contradictory callback input MUST fail workflow contract validation
+before publication. Four distinct structural cases cover consistent wiring,
+missing/disabled managed branches, missing/disabled SDD, and an incorrect
+distributed SDD default; these are allocated once in the 135-case budget above.
+The current focused workflow suite has 163 physical cases; its full count is not
+allocated to this capability.
+
+Acceptance: rerun the existing inline PR #469 command after the Action integrates
+this configuration. A linked eligible feature must reach SDD evidence discovery
+instead of returning `not-applicable` because one callback omitted the input.
+That live rerun remains pending until parent synchronization completes. Existing
+read-only and immutable-evidence guards remain in force. Recovery is to restore
+consistent workflow inputs or rerun setup; never forge SDD records or change the
+installed profile merely to hide workflow drift. Operator instructions are in
+`docs/issues/workflow-setup.mdx`.

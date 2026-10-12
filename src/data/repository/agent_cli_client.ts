@@ -6,6 +6,7 @@ import type {
     AgentExecutionFailureCategory,
     AgentExecutionObservation,
     AgentExecutionObserverPort,
+    AgentExecutionToolDiagnostic,
 } from '../../application/ports/agent_execution_observation_ports';
 import { AgentCliError } from './agent_cli_contracts';
 import { agentExecutionFailureCode } from '../../application/policies/agent_execution_failure_policy';
@@ -49,11 +50,13 @@ export class AgentCliClient {
         });
         const runStartedAt = Date.now();
         try {
-            const output = await runAgentCli(plan, request.prompt, request.signal);
+            let toolDiagnostic: AgentExecutionToolDiagnostic | undefined;
+            const output = await runAgentCli(plan, request.prompt, request.signal, diagnostic => { toolDiagnostic = diagnostic; });
             observeSafely(this.observer, {
                 state: 'completed', phase: 'run', provider: plan.provider, capability: plan.capability,
                 durationMilliseconds: Date.now() - runStartedAt,
                 outputBytes: Buffer.byteLength(output, 'utf8'),
+                ...(toolDiagnostic ? { toolDiagnostic } : {}),
             });
             return output;
         } catch (error) {
@@ -85,6 +88,8 @@ function failureObservation(
         retryable: error instanceof AgentCliError && error.retryable,
         exitCode: error instanceof AgentCliError ? error.exitCode : undefined,
         exitDiagnostic: error instanceof AgentCliError ? error.exitDiagnostic : undefined,
+        ...(phase === 'run' && category === 'output' && error instanceof AgentCliError
+            ? { outputDiagnostic: error.outputDiagnostic ?? 'unclassified' } : {}),
     };
 }
 

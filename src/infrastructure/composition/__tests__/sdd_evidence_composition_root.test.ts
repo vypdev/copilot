@@ -1,0 +1,63 @@
+import { renderSddGateRecord, type SddGateRecord } from '../../../domain/pre_branch_sdd';
+import { buildSddIssueDigest } from '../../../application/policies/sdd_issue_identity_policy';
+import { createSddEvidenceQueryPort } from '../sdd_evidence_composition_root';
+
+const mockTitle = jest.fn(async () => 'Feature');
+const mockDescription = jest.fn(async () => 'Human requirements');
+const mockLabels = jest.fn(async () => ['feature', 'in-progress']);
+const mockPermission = jest.fn(async () => true);
+const mockWrite = jest.fn(() => { throw new Error('query must not mutate'); });
+const mockHead = 'e'.repeat(40), mockBase = 'a'.repeat(40), mockFirst = 'b'.repeat(40);
+const mockGraphql = jest.fn(async () => ({ repository: { ref: { target: { oid: mockHead } }, issue: { linkedBranches: { nodes: [{ ref: {
+    name: 'feature/42', repository: { nameWithOwner: 'acme/demo' }, target: { oid: mockHead },
+} }] } } } }));
+const mockGetClient = jest.fn(() => ({ graphql: mockGraphql }));
+const mockSnapshot = jest.fn(async (sha: string) => ({ baseSha: sha, template: '', standard: '', capabilities: [{
+    id: 'feature', title: 'Feature', status: 'implemented', scope: 'Feature', owner: 'Maintainer', lastVerified: '2026-10-11',
+    specs: ['specs/feature.md'], workflows: [], entrypoints: [], code: [], tests: [], documentation: [],
+}] }));
+const mockVerify = jest.fn(async () => true);
+const mockAncestor = jest.fn(async () => true);
+
+jest.mock('../issue_metadata_composition_root', () => ({ createIssueMetadataCompositionRoot: () => ({ getTitle: mockTitle, setTitle: mockWrite }) }));
+jest.mock('../issue_content_composition_root', () => ({ createIssueContentCompositionRoot: () => ({ getDescription: mockDescription, updateDescription: mockWrite }) }));
+jest.mock('../issue_labels_composition_root', () => ({ createIssueLabelRepository: () => ({ getLabels: mockLabels, setLabels: mockWrite }) }));
+jest.mock('../actor_authorization_composition_root', () => ({ createActorAuthorizationRepository: () => ({ isActorAllowedToModifyFiles: mockPermission }) }));
+jest.mock('../github_project_client_factory', () => ({ createGraphqlTransportClient: () => ({ getClient: mockGetClient }) }));
+jest.mock('../../pre_branch_sdd_workspace_adapter', () => ({ PreBranchSddWorkspaceAdapter: jest.fn(() => ({
+    loadSnapshot: mockSnapshot, loadSnapshotAtCommit: mockSnapshot, verifyPublication: mockVerify, isAncestor: mockAncestor,
+    publish: mockWrite, ensureBranch: mockWrite,
+})) }));
+
+describe('composed read-only SDD query', () => {
+    it('reads owned publication and currently authorized answers with the bound repository identity while discarding mutation capabilities', async () => {
+        const binding = { owner: 'acme', repository: 'demo', token: 'fixture-token' };
+        const context = { issueNumber: 42, admittedKind: 'feature' as const, profileDigest: 'profile', issueAuthor: 'author',
+            trustedBotLogin: 'vypbot', issueManagedBranches: true, preBranchSdd: true, baseBranch: 'develop' };
+        const questionText = 'Which current behavior should be adopted?';
+        const record: SddGateRecord = { version: 1, issueNumber: 42, phase: 'awaiting-answer', round: 2,
+            issueDigest: buildSddIssueDigest({ issueNumber: 42, issueTitle: 'Feature', issueBody: 'Human requirements', admittedKind: 'feature', profileDigest: 'profile' }, mockBase),
+            baseSha: mockBase, commitSha: mockFirst, branchName: 'feature/42',
+            plan: { action: 'update', path: 'specs/feature.md', capabilityId: 'feature', reason: 'This capability owns the feature contract.',
+                questions: [{ id: 'Q1', text: questionText, owner: 'maintainer' }] },
+            answers: [{ questionId: 'Q1', author: 'maintainer', commentId: 6, text: 'Current authorized answer', round: 2, questionText }],
+        };
+        const listIssueComments = jest.fn(async () => ({ value: [{ id: 7, body: renderSddGateRecord(record), user: { login: 'vypbot' } }],
+            coverage: { source: 'issue-comments' as const, status: 'complete' as const, pagesFetched: 1, itemsFetched: 1, itemsRetained: 1,
+                omittedItems: 0, truncatedItems: 0, limitReached: false } }));
+        const query = createSddEvidenceQueryPort(binding, { listIssueComments });
+        expect(Object.isFrozen(query)).toBe(true);
+        expect(Object.keys(query)).toEqual(['read', 'serverOrigin']);
+        expect(query.serverOrigin).toBe(process.env.GITHUB_SERVER_URL ?? 'https://github.com');
+        expect(await query.read(context)).toMatchObject({ state: 'publication-pending', pendingQuestionIds: [], verified: { firstSha: mockFirst, branchHeadSha: mockHead } });
+        expect(mockTitle).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
+        expect(mockDescription).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
+        expect(mockLabels).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
+        expect(mockPermission).toHaveBeenCalledWith('acme', 'demo', 'maintainer', 'fixture-token');
+        expect(mockGetClient).toHaveBeenCalledWith('fixture-token');
+        expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), { owner: 'acme', repository: 'demo', issueNumber: 42, ref: 'refs/heads/feature/42' });
+        expect(mockSnapshot).toHaveBeenCalledWith(mockFirst);
+        expect(mockVerify).toHaveBeenCalledWith('feature/42', mockBase, mockFirst, 'specs/feature.md');
+        expect(mockWrite).not.toHaveBeenCalled();
+    });
+});

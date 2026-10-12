@@ -27,6 +27,8 @@ const mockGetListOfBranches = jest.fn();
 const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
 const mockGetBranchHeadSha = jest.fn();
 const SOURCE_HEAD = 'a'.repeat(40);
+const BASE_HEAD = 'c'.repeat(40);
+const mockGetDiff = jest.fn();
 const NEWER_HEAD = 'b'.repeat(40);
 
 
@@ -74,6 +76,7 @@ describe('CheckProgressUseCase', () => {
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
       { query: localizedProgress },
       { getBranchHeadSha: mockGetBranchHeadSha },
+      { getDiff: mockGetDiff },
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
@@ -83,7 +86,9 @@ describe('CheckProgressUseCase', () => {
     mockGetListOfBranches.mockReset();
     mockGetOpenPullRequestNumbersByHeadBranch.mockReset();
     mockGetBranchHeadSha.mockReset();
-    mockGetBranchHeadSha.mockResolvedValue(SOURCE_HEAD);
+    mockGetBranchHeadSha.mockImplementation(async branch => branch === 'develop' ? BASE_HEAD : SOURCE_HEAD);
+    mockGetDiff.mockReset();
+    mockGetDiff.mockImplementation(async (baseSha, headSha) => ({ baseSha, headSha, evidence: 'PINNED_SOURCE_PATCH' }));
     mockAskAgent.mockReset();
   });
 
@@ -175,6 +180,9 @@ describe('CheckProgressUseCase', () => {
     expect(prompt).toContain('develop');
     expect(prompt).toContain('feature/123-add-feature');
     expect(prompt).toContain('Issue body');
+    expect(prompt).toContain('PINNED_SOURCE_PATCH');
+    expect(prompt).not.toContain('git diff');
+    expect(mockGetDiff).toHaveBeenCalledWith(BASE_HEAD, SOURCE_HEAD);
   });
 
   it('returns error result when askAgent returns undefined (OpenCode failure)', async () => {
@@ -298,7 +306,7 @@ describe('CheckProgressUseCase', () => {
   it('suppresses native and conversational state when the branch advances during analysis', async () => {
     mockGetDescription.mockResolvedValue('Issue body');
     mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Outdated source' });
-    mockGetBranchHeadSha.mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(NEWER_HEAD);
+    mockGetBranchHeadSha.mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(BASE_HEAD).mockResolvedValueOnce(NEWER_HEAD);
 
     const results = await invoke(baseParam());
 
@@ -310,6 +318,24 @@ describe('CheckProgressUseCase', () => {
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockSetProgressLabel).not.toHaveBeenCalled();
     expect(mockSetLabels).not.toHaveBeenCalled();
+  });
+
+  it.each(['wrong base', 'wrong head', 'unavailable comparison'])('retains progress without an agent call for %s', async scenario => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    if (scenario === 'unavailable comparison') mockGetDiff.mockRejectedValue(new Error('private transport'));
+    else mockGetDiff.mockResolvedValue({ baseSha: scenario === 'wrong base' ? NEWER_HEAD : BASE_HEAD,
+      headSha: scenario === 'wrong head' ? NEWER_HEAD : SOURCE_HEAD, evidence: 'wrong scope' });
+    const results = await invoke(baseParam());
+    expect(results[0].success).toBe(false); expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled(); expect(mockSetLabels).not.toHaveBeenCalled();
+    expect(JSON.stringify(results[0])).not.toContain('private transport');
+  });
+  it('withholds progress mutation when the base branch changes during analysis', async () => {
+    mockGetDescription.mockResolvedValue('Issue body'); mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Old base' });
+    mockGetBranchHeadSha.mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(BASE_HEAD).mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(NEWER_HEAD);
+    const results = await invoke(baseParam());
+    expect(results[0]).toMatchObject({ success: true, executed: false, payload: { publicationOutcome: { reason: 'stale-source' } } });
+    expect(mockAskAgent).toHaveBeenCalledTimes(1); expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
   it('maps authoritative source lookup failures without mutating labels', async () => {

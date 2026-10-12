@@ -304,19 +304,39 @@ existing synchronization command or configuration action, offer dry-run
 inspection, and state that no synchronization commit was pushed. The descriptor
 accepts only the fixed `/copilot sync-branch` command; translated catalog prose
 cannot invent a command or override conflict, sensitive-path, verification or
-remote-head safeguards. Other failures keep their existing semantic handling.
+remote-head safeguards. Workspace validation failures MUST carry a closed diagnostic code from
+`src/domain/branch_sync_validation.ts` through the adapter, use case, workflow
+log and correlated English/Spanish reply. Raw reasons, path names and provider
+output MUST NOT become public recovery variables. Unknown codes map to
+`unclassified`; constructing a forged public descriptor is rejected. These
+codes distinguish invalid catalog evidence, unstaged changes, protected paths,
+merge identity, staging, whitespace and remote races. The failure still aborts
+without a push. Dogfooding run 38140515377 motivated this contract because the
+resolution was rejected before verification, but the published failure hid which
+workspace control rejected it.
+
+When the trusted catalog refresh rejects a resolution, the operator log MUST
+identify its closed validation phase: workspace/file boundary, metadata JSON
+or remaining conflict markers, metadata/evidence shape, evidence path boundary,
+catalog contract, or index output. It MUST NOT include repository paths,
+metadata values, validator messages, exception text, or raw provider output.
+This diagnosis does not relax validation, rewrite metadata, or permit a push.
+Native dogfooding runs `38173557022` and `38176196334` returned
+`sdd-catalog-invalid` without identifying the failing catalog phase; the abort
+then restored the worktree, so inspecting retained Git status could not recover
+that information. The phase is captured by trusted validation before abort.
 
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 35 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort |
-| Adapters/workflow contracts | 30 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks |
-| UX/localization/sanitization | 18 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations |
-| Integration/security/cutover | 18 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections |
-| **Total** | **149** | no double counting |
+| State/idempotency/races | 50 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| Use cases/workspace | 74 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
+| Adapters/workflow contracts | 51 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
+| UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
+| Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **237** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -381,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The 118-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 206-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -396,3 +416,107 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 - Decision: observe cheaply on all branches; invoke fixer only for eligible conflicts.
 - Rejected: full commit workflow everywhere, force push, agent-owned git.
 - Follow-up: indexed dependency storage/performance study is outside this baseline.
+
+### Dogfooding correction: Windows verification heap (2026-10-11)
+
+Sync run 38149808386 merged develop e2b6b3e6 into the managed #454 workspace
+without conflicts, then failed before commit/push because the full Jest process
+exhausted its approximately 1.8 GB Node heap. The configured `pnpm run test
+--runInBand` bypassed the repository's existing Windows service-worker recycling.
+The remote feature head remained fb8f3d9b. This is a verification failure, not
+proof that synchronization was published or that the merge itself failed.
+
+The repository variable `BUGBOT_AUTOFIX_VERIFY_COMMANDS` now retains five checks:
+typecheck, `pnpm run test:coverage`, lint, documentation, and specifications.
+Coverage uses the existing maximum of two workers and the installed Windows
+service flag's 512 MB idle-worker recycling. The existing coverage budgets and
+setup acceptance validator also run. No tests, skips, thresholds, or runtime
+permissions were weakened. Comment 6110538037 starts the Action-owned retry;
+its final native verification and remote publication remain acceptance evidence
+to collect, not an assumed successful result.
+
+### Generated-bundle conflict recovery (2026-10-12)
+
+Native readiness sync `38240164032` on macOS resolved nine conflicts, then stopped
+before verification because ordinary ncc/vendor whitespace in the two generated
+bundles failed `git diff --check`. No source conflict markers remained in that log;
+no synchronization commit was pushed. Ten new real-Git cases reproduce three
+false rejections and retain seven independent source, marker, index and
+verification-mutation boundaries.
+
+Whitespace validation MUST remain strict on source and every unregistered
+path. Exactly `build/cli/index.js`, `build/api/index.js` and
+`build/github_action/index.js` MAY retain generator whitespace; Git conflict-marker
+validation MUST still run on all three, both before trusted staging and on the
+staged result. No content is normalized or rewritten by this check. Protected
+non-conflicted index entries, original conflict paths, HEAD/MERGE_HEAD, subsequent
+verification immutability and remote-head fences remain unchanged. The 180-case
+budget includes these ten additional cases; native recovery is pending.
+
+### Command preparation and integration checks (2026-10-12)
+
+Native38243835206 accepted a command with leading whitespace, prepared a clean
+merge, then failed its first verification because the workflow had skipped Node,
+pnpm and dependencies. Its literal prefix test disagreed with the whitespace-
+accepting domain parser. The same canonical command in38244493155 prepared
+tools, passed572suites7747tests20Windowsplatformskips and five verification
+commands, and published0f016278. Its later provider read failure during
+configuration persistence retained the completed push and durable reply;
+reconciliation38251354862 reportedalready-aligned and completedSUCCESS without
+a second merge/push. This distinguishes operation completion from run completion.
+
+The installed preparation expressions MUST cover parser whitespace and bot
+mentions when verification is configured. They MAY conservatively prepare an
+otherwise read-only request; this is a toolchain scheduling hint and MUST NOT
+authorize commands, edits, branch work or models. Existing fork/actor admission,
+runner selectors, dry-run/no-agent semantics, timeout and test budgets remain
+unchanged. Existing154structural workflow cases and fresh native whitespace
+acceptance validate this reversible workflow correction; no mirrored prose tests
+are added. The conflict prompt also requires available offline affected-module
+tests and typecheck, including missing optional adapters and both entrypoints.
+Independent mandatory verification remains the publication gate. This addresses
+readiness integration38243961378, where7852cases passed but the optional-adapter
+fallback was lost by the merge resolution. Native recovery remains pending.
+
+
+### Recover issue work state after completed synchronization (2026-10-12)
+
+Native run `38253646042` completed all five checks and published merge `86db9b1962915111f02613b4f49ec50a6a3f1cf6` on Windows, but issue #464 retained `state:blocked` and `state:awaiting-maintainer` while develop remained unchanged. Lifecycle policy recognized completed implementation and branch readiness, but not the completed synchronization result.
+
+For an issue-comment request on a branch-bearing issue, a current successful `SyncBranchUseCase` result now recovers `working` only with canonical parent/child object IDs, bounded distinct branch names and a nonnegative integer check count. A merged result must have executed and retain a canonical pushed commit. Already-aligned evidence can recover work without repeating the merge or push. Any other current executed failure takes precedence. Dry-runs, unavailable/malformed/foreign results, branchless help, unrelated events and PR readiness remain unchanged. This is a coarse work-state transition, not certification of current SDD or approval readiness.
+
+Twenty-four risk cases reproduce three missing transitions before the change; two additional nonexecuted-failure/count contracts complete 26 distinct regressions. They increase only the state allocation from 24 to 50 and the total from 180 to 206. No shared communication, SDD gate or feature case is recounted. Live recovery remains pending publication and replay on the aligned issue.
+
+### Freeze the resolved workspace after trusted staging (2026-10-12)
+
+Native diff synchronization `38270632343` passed all configured verification commands but was rejected by the final `unexpected-paths` guard. Six real-Git regressions reproduce original conflicts resolved to the child's unchanged bytes or deletion: trusted staging removes those paths from porcelain status, so the prepared unmerged path set is not the correct verification baseline.
+
+After the first trusted staging and all existing checks, the adapter MUST freeze the resolved workspace paths. Only disappearance of original conflicted paths is admitted at this transition; new paths and disappearance of non-conflicted parent changes remain rejected. Every later validation retains exact equality with this resolved baseline. This also rejects staged or unstaged verification mutations that reintroduce an unchanged resolved path. HEAD, MERGE_HEAD, original conflict authority, protected index entries, whitespace, catalog, verification and remote-head guards remain required. The inventory is now 212 distinct cases, including six new real-Git resolution and mutation cases. Native retry remains required to certify the observed incident.
+
+
+### Derive communication totals from verified evidence (2026-10-12)
+
+Native history sync `38277725099` passed its functional tests but rejected the merged communication ledger: semantic allocations totaled 247 with declared total 245; locale allocations totaled 153 with declared total 157. Within an original conflict on `src/architecture/github_communication_test_budget.json`, trusted infrastructure MUST derive only each `allocatedCases` value from the retained file rows before first staging. It MUST validate the derived ledger with the Action-bundled validator, preserving the fixed baseline, identities, specification ownership, required 135/146 minima, disjoint evidence and actual qualifying test declarations. No merged-branch script is loaded. Invalid or missing metadata/evidence aborts with `communication-budget-invalid` and a closed phase only.
+
+The ledger, specification and test files are regular files confined to the workspace and bounded to 512 KiB each; evidence remains within `src/…test.ts`, with at most 256 positive allocations per budget and at most 10,000 cases per row. These are fixed controls, without new configuration. Healthy ledger bytes remain untouched. Normalization MUST NOT occur for an unclaimed conflict, unrelated file or later verification pass. Sixteen adapter cases and five real-Git merge cases verify arithmetic-only repair, healthy preservation, unchanged invalid inputs, path/size/shape/privacy limits, evidence counts, original authority, verification mutation and moved-head protection. One additional existing localized diagnostic row covers the new closed code. The inventory is 234 distinct cases.
+
+A real verification-mutation test also showed that Git's normal `merge --abort` can refuse a tracked resolution changed after staging. If normal abort fails, infrastructure MAY restore the originally clean prepared workspace with `reset --hard` to its captured child SHA only after independently confirming both HEAD and MERGE_HEAD still match the prepared identities. A moved identity MUST remain untouched; no untracked file cleanup is authorized. This fallback runs only inside the Action-owned prepared workspace, never on a contributor checkout.
+
+Acceptance: a resolved ledger with correct retained rows and stale totals passes first validation with only totals changed; wrong minima/baseline, duplicate or overclaimed evidence never stage or push; a later verification mutation is rejected, never normalized again, and restores the original child when identities remain unchanged. A moved HEAD is retained. Every existing verification and final remote-head fence remains required. Native retry remains necessary to certify the observed history incident.
+
+Local verification passed all 578 suites and 7,813 tests, with 35 configured platform skips (7,848 total), unchanged global/module gates and the explicit 308/350 setup ledger. The new normalizer has 100% lines/functions, 98.3% statements and 97.82% branches in its focused coverage run. Typecheck, lint, documentation, catalog/specifications and graph update passed. The first restricted run could not bind the local web fixtures to 127.0.0.1; the identical full suite passed with loopback permitted, without skips or test changes.
+
+
+### Closed workspace-shape diagnosis (2026-10-12)
+
+Native history retry `38287091398` on macOS stopped with `unexpected-paths` before metadata normalization. The abort preserved both remote branches, but no retained evidence distinguished additions from disappearing prepared paths. On this rejection, trusted infrastructure MUST report only a fixed phase (resolution, trusted staging or verification) and numeric counts of added paths, removed conflicted/protected paths and added canonical generated bundles. Private names, paths, raw Git/provider output and metadata values remain excluded. Validation authority and abort behavior remain unchanged. Three distinct phase/count/privacy cases extend the inventory from 234 to 237. The log supports a targeted recovery; it does not establish which cause occurred in the earlier run.
+
+### Codex service platform scope (2026-10-12)
+
+The Windows heap incident above remains historical verification evidence.
+Agent-capable synchronization now uses the shared Mac/Ubuntu `codex` pool;
+Windows service registrations omit `codex`. No new Windows-service Codex
+sync/fixer retry is an acceptance requirement. General Windows fixtures and
+coverage budgets remain. Failed verification preserves the managed remote
+head, and model/CLI success is not proof of real tools. See the authoritative
+[service retirement and six-case routing budget](./agent-runtime-provider-and-model-routing.md).

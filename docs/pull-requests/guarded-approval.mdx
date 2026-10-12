@@ -109,6 +109,15 @@ Numeric mode consumes a single `copilot-diff-coverage-v1` workflow artifact cont
 
 No setting can make the bot approve its own PR, a fork, a draft, a deployment/release/hotfix PR, a changed file hidden from Bugbot by `AI_IGNORE_FILES`, or a change to protected workflow/policy files. Effective branch rules must be readable and dismiss stale approvals; `Copilot / Approval` must not be its own required check. The workflow PAT used at runtime is separate from the local setup PAT. The observer never checks out or runs PR-head code.
 
+A malformed ruleset response is unavailable evidence. It cannot be treated as
+an empty ruleset or overridden by otherwise valid classic branch protection.
+
+When the target branch advances, Copilot checks its current remote commit before
+evaluating merge evidence and publishing the assessment. GitHub's cached PR base
+can lag that push. Coverage from the previous base cannot authorize the new
+revision; unavailable base-ref access also withholds the assessment. Rerun the
+observer after fresh CI completes for the current base and PR head.
+
 ## What you will see
 
 The PR gets one editable “Copilot approval” assessment card. It says whether the bot is waiting, a human must review, a prerequisite blocks approval, a submission is uncertain, or a native review was confirmed. `Copilot / Approval` is a supplemental Check, not a prerequisite for itself. The native GitHub `APPROVE` review is the actual approval record and is tied to the head commit.
@@ -138,3 +147,17 @@ still determines whether a native approval may be submitted.
 Use the **Copilot - Pull Request Approval** workflow's manual dispatch with a positive PR number to re-evaluate a missed wakeup. The dispatcher needs repository write permission; re-evaluation never bypasses eligibility. Set the policy mode to `off` to stop future reviews. Existing native reviews remain in GitHub history and need human assessment; disabling does not dismiss them.
 
 See [workflow setup](/pull-requests/workflow-setup), [authentication](/authentication), and [operations troubleshooting](/security-operations/operations/troubleshooting) for related prerequisites.
+
+
+When the observer reports `policy-unavailable`, inspect its fixed log entry
+`Approval policy read failed (repository-variable, http-403)` or the
+`organization-variable` equivalent. It identifies the failed scope without
+printing the Variable, credential or provider response. A recognized HTTP code
+is reported literally; `http-unavailable` means no supported status was obtained
+and must not be interpreted as permission denial or policy absence. Verify the
+runtime PAT's access to that scope and rerun the observer after recovery.
+Successfully read malformed policy still has the separate `invalid-policy`
+recovery path. This diagnostic does not change credentials, precedence, fallback
+or approval authority.
+
+The dedicated observer initializes runtime logging before reading policy, including manual rechecks. Safe policy-read diagnostics do not require the general agent pipeline or debug mode.

@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-10-10
+- Last updated: 2026-10-12
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -13,6 +13,73 @@
 - Required review gates: product UX, architecture, testing, documentation,
   security/operations, provider runtime smoke
 - Open decisions blocking readiness: none
+
+### Codex Windows service retirement (2026-10-12)
+
+Current support policy: **Codex no soportado en runners Windows ejecutados como
+servicio**. This supersedes historical requirements below for another live Codex
+Windows service retry; it does not mark those acceptance gates successful or
+claim that all Windows environments fail.
+
+Operator evidence: all four services use the non-administrator `ci-runner`
+account in Windows session 0 and must start without login. The official CLI,
+including 0.162.1, under `--strict-config`, `--ignore-user-config`, and
+`windows.sandbox="elevated"` could authenticate and answer while tools failed
+with `0xc0000142` and command-runner pipe timeout. The same account/configuration
+worked interactively; official setup did not resolve service execution.
+
+Intentional contract:
+
+- Operational jobs MUST retain the shared `[self-hosted, codex]` Mac/Ubuntu pool.
+  Windows service registrations MUST omit `codex`; existing registrations lose
+  it when recreated. Until that migration is verified, no new Windows Codex
+  run may be requested. Runner recreation and Windows-only credential/CLI
+  removal belong to the operator in `vypdev/lab-runners`.
+- Codex integration jobs and their self-hosted fixture matrix MUST exclude
+  Windows. The matrix retains macOS and Ubuntu, with unchanged full coverage,
+  acceptance, package and documentation checks. The Codex diagnostics workflow
+  retains Linux only. Explicit Windows Codex jobs MUST be rejected structurally.
+- General hosted Ubuntu/Windows/macOS coverage and local fake platform-safety
+  fixtures MUST remain. These prove launcher/ACL/process/installer contracts,
+  not official Codex sandbox execution or authenticated model/tool success.
+- CLI exit 0, login, installation and model response MUST remain distinct from
+  actual tools. Acceptance requires a bounded fixture read/hash or edit and
+  trusted post-execution verification; a failed tool does not become successful
+  because the model explained it.
+- Sandbox, configuration isolation, credentials, runtime provenance and
+  process limits MUST remain. Community distributions, sandbox bypass, and
+  converting services to interactive sessions are excluded recovery options.
+
+Flow: remove Windows `codex` labels -> shared pool selects Mac/Ubuntu -> actual
+bounded tool operation -> trusted verification -> publish only verified results.
+If no supported runner is available, the job remains queued/unverified; never
+restore Windows eligibility to hide that state. Retries target only a supported
+runner. No provider fallback, new Action input, model call, comment or deployment
+is introduced. Rollback requires a new reviewed support decision and real tool
+evidence; restoring old labels/YAML alone is not acceptance.
+
+Operator UI: `Codex no soportado en runners Windows ejecutados como servicio.
+Ejecuta los jobs de Codex en Mac o Ubuntu.` This documented limitation produces
+no new timeline comment. Retained general Windows results are reported as
+platform fixture evidence, never as successful Codex integration.
+
+Additional risk-derived budget: **6 distinct workflow contract cases** in
+`src/tooling/__tests__/validate_workflow_contract.test.ts`: shared-pool migration
+(1), explicit Windows routing rejection (1), all installed static selectors (1),
+Windows Codex matrix rejection while preserving hosted Windows (1), and forbidden
+Windows/missing Linux diagnostics (2). Existing matrix-removal, full coverage,
+package, trusted-dispatch and documentation validator cases remain; no
+repository thresholds or acceptance rows are lowered. These six cases are
+counted once, not again in related specifications.
+
+Acceptance and traceability: the six structural cases and
+`pnpm run validate:workflows` enforce scheduling/fixture boundaries;
+`pnpm run test:coverage` preserves full platform-safety and coverage gates;
+`pnpm run validate:specifications` checks catalog/spec consistency. User/setup,
+execution, smoke, runner provisioning/security, verification and synchronization
+docs MUST agree. Manual runner inventory must show Windows without `codex`
+before new shared-pool dogfooding. Previously open Windows Codex service checks
+remain unsupported/unverified, not green; the setup 350-row budget is unchanged.
 
 ## 1. Executive summary
 
@@ -331,6 +398,14 @@ Managed argv includes `exec`, `--strict-config`, `--ignore-user-config`,
 explicit model/provider/effort, and terminal `-`. Managed configuration sets
 `approval_policy="never"`; the accepted CLI version does not expose an
 equivalent `exec` flag.
+Because ignoring user configuration also removes Windows backend selection,
+managed configuration MUST select `windows.sandbox="elevated"`. This backend
+still enforces the capability's sandbox scope and network denial; it does not
+give commands administrator authority. Runner administrators own prior setup,
+and Copilot MUST NOT recover by invoking setup, loading operator configuration,
+or selecting full access. Two independent read-only/fixer policy cases preserve
+these boundaries. The retained Windows backend policy does not establish Windows service support;
+Codex service integration is retired under the 2026-10-12 decision above.
 Structured roles also receive a managed `--output-schema` file and always undergo
 local validation. Before Codex can start, the provider policy validates that the
 schema uses the strict native subset: the root is an object, every object lists
@@ -560,7 +635,7 @@ runtime identity and fixed-plan checks before spawn.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **22 distinct cases**; parameterized provider/role rows
+This SDD owns at least **32 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -568,11 +643,12 @@ count separately only when authority/argv differs.
 | Plan/executable pure policy | 4 | exhaustive roles/providers, removed/unknown inputs |
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
-| Provider adapters | 8 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, fail-closed alternatives, and fixed secret-free child environment for read-only and fixer roles |
+| Provider adapters | 10 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, fail-closed alternatives, fixed secret-free child environment, and explicit isolated Windows backend for read-only and fixer roles |
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
-| **Total** | **22** | no double counting |
+| Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
+| **Total** | **32** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -652,7 +728,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
       secrets, Git, MCP/plugins/subagents, and persistence boundaries.
 - [x] Provisioning, preflight, setup doctor, workflow inputs, docs, and manifest
       agree within their explicit runtime versus configuration responsibilities.
-- [x] At least 18 distinct automated cases and all repository coverage/architecture/security gates pass.
+- [x] At least 32 distinct automated cases and all repository coverage/architecture/security gates pass.
 - [x] Removed command inputs fail negative fixtures and no legacy code ships.
 - [x] No fail-open path, raw spawn, unknown flag, ambient environment, temporary
       waiver, or unresolved provider decision remains.
@@ -676,3 +752,13 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
   publishes, and calls GitHub.
 
 Repository verification on Windows retains only the fixed non-secret OS metadata needed by system tools and official installer fixtures (`SystemRoot`, `WINDIR`, `OS`, `ComSpec`, `PATHEXT`). The verification environment still removes credentials and live workflow identity. Queue tests provide explicit fixture identity, and unsafe local Action metadata is exercised with an unprivileged directory junction rather than requiring file-symlink privilege.
+
+### Dogfooding output rejection diagnostics — 2026-10-11
+
+Issue #463 run `38144699470` on `ubuntu-runner-3` rejected agent output as `provider.contract-invalid` before verification or an implementation push. Its historical `run/output` log does not prove whether the output was empty or exceeded the existing limit. New terminal observations add only one admitted local code: `output-limit`, `empty-output`, `malformed-json-event`, `invalid-json-event`, `missing-text-events`, or `unclassified`. The process adapter assigns the code where it rejects bytes; the logger revalidates it and replaces unknown values with `unclassified`. No output, prompt, path or stderr is published; process limits and schema acceptance remain unchanged. A live retry after publication is required to identify any repeated rejection.
+
+### Full self-hosted verification deadline (2026-10-12)
+
+Run `38270745319` completed full macOS and Ubuntu verification, but Windows was canceled by GitHub with the explicit annotation `The job has exceeded the maximum execution time of 30m0s`. This is a confirmed job deadline, distinct from the earlier CI cancellation whose cause remains unconfirmed. The installed manual self-hosted smoke has a 60-minute deadline for each of its original Windows, macOS and Ubuntu jobs. Platform selectors, fail-fast behavior, coverage and acceptance budgets, tests and validators remain unchanged. This workflow-only timing correction adds no claimed test cases and does not certify native Windows agent tool access. This historical three-platform Codex service request is superseded by the
+2026-10-12 retirement above. General hosted three-platform coverage remains
+required; new Codex integration runs target macOS and Ubuntu only.

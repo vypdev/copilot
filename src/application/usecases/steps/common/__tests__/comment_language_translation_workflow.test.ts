@@ -50,7 +50,7 @@ describe('CommentLanguageTranslationWorkflow', () => {
     });
 
     it.each([
-        'word '.repeat(21).trim(),
+        'word '.repeat(410).trim(),
         'x'.repeat(2_000),
     ])('rejects translations that exceed the original command grammar', async adaptedText => {
         const query = jest.fn().mockResolvedValue({
@@ -141,6 +141,38 @@ describe('CommentLanguageTranslationWorkflow', () => {
         expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({
             status: 'matches', interpretedComment: '@vypbot inspect this',
         });
+    });
+
+    it.each(['en', 'en-US'])('preserves the original request when the provider unnecessarily translates %s to en-US', async sourceLocale => {
+        const query = jest.fn().mockResolvedValue({ status: 'translated', sourceLocale, targetLocale: 'en-US', adaptedText: 'a rewritten request', reasonCode: 'none' });
+        const commentBody = '/copilot explain calculate SHA-256 of src/domain/branch_sync_validation.ts';
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({ ...context, commentBody });
+        expect(results[0].success).toBe(true);
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({ status: 'matches', interpretedComment: commentBody });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.publication).toBeUndefined();
+        expect(query).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves a same-language regional request instead of publishing a redundant disclosure', async () => {
+        const query = jest.fn().mockResolvedValue({ status: 'translated', sourceLocale: 'en-GB', targetLocale: 'en-US', adaptedText: 'an Americanized rewrite', reasonCode: 'none' });
+        const commentBody = '@vypbot analyse this behaviour';
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({ ...context, commentBody });
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({ status: 'matches', interpretedComment: commentBody });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.publication).toBeUndefined();
+    });
+
+    it('retains translation for verified mixed-language prose even when the dominant language matches', async () => {
+        const query = jest.fn().mockResolvedValue({ status: 'translated', sourceLocale: 'en', targetLocale: 'en-US', adaptedText: 'please explain the error', reasonCode: 'mixed-language' });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({ ...context, commentBody: '@vypbot please explica el error' });
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({ status: 'translated', reasonCode: 'mixed-language', interpretedComment: '@vypbot please explain the error' });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.publication).toBeDefined();
+    });
+
+    it('retains translation when the primary language matches but the writing script differs', async () => {
+        const query = jest.fn().mockResolvedValue({ status: 'translated', sourceLocale: 'zh-Hans', targetLocale: 'zh-Hant-TW', adaptedText: '請解釋錯誤', reasonCode: 'none' });
+        const results = await new CommentLanguageTranslationWorkflow({ query }).invoke({ ...context, locale: 'zh-Hant-TW', commentBody: '@vypbot 请解释错误' });
+        expect(getCommentLanguageAdaptationPayload(results[0])).toMatchObject({ status: 'translated', interpretedComment: '@vypbot 請解釋錯誤' });
+        expect(getCommentLanguageAdaptationPayload(results[0])?.publication).toBeDefined();
     });
 
     it('continues safely with the original request when language is genuinely ambiguous', async () => {

@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-11
+- Last updated: 2026-10-12
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -29,6 +29,73 @@ event/command -> active roles -> common + role override -> validate allowlists
               -> installed-CLI/auth preflight -> provider adapter -> local schema
               -> semantic result
 ```
+
+### Codex Windows service retirement (2026-10-12)
+
+Current support policy: **Codex no soportado en runners Windows ejecutados como
+servicio**. This supersedes historical requirements below for another live Codex
+Windows service retry; it does not mark those acceptance gates successful or
+claim that all Windows environments fail.
+
+Operator evidence: all four services use the non-administrator `ci-runner`
+account in Windows session 0 and must start without login. The official CLI,
+including 0.162.1, under `--strict-config`, `--ignore-user-config`, and
+`windows.sandbox="elevated"` could authenticate and answer while tools failed
+with `0xc0000142` and command-runner pipe timeout. The same account/configuration
+worked interactively; official setup did not resolve service execution.
+
+Intentional contract:
+
+- Operational jobs MUST retain the shared `[self-hosted, codex]` Mac/Ubuntu pool.
+  Windows service registrations MUST omit `codex`; existing registrations lose
+  it when recreated. Until that migration is verified, no new Windows Codex
+  run may be requested. Runner recreation and Windows-only credential/CLI
+  removal belong to the operator in `vypdev/lab-runners`.
+- Codex integration jobs and their self-hosted fixture matrix MUST exclude
+  Windows. The matrix retains macOS and Ubuntu, with unchanged full coverage,
+  acceptance, package and documentation checks. The Codex diagnostics workflow
+  retains Linux only. Explicit Windows Codex jobs MUST be rejected structurally.
+- General hosted Ubuntu/Windows/macOS coverage and local fake platform-safety
+  fixtures MUST remain. These prove launcher/ACL/process/installer contracts,
+  not official Codex sandbox execution or authenticated model/tool success.
+- CLI exit 0, login, installation and model response MUST remain distinct from
+  actual tools. Acceptance requires a bounded fixture read/hash or edit and
+  trusted post-execution verification; a failed tool does not become successful
+  because the model explained it.
+- Sandbox, configuration isolation, credentials, runtime provenance and
+  process limits MUST remain. Community distributions, sandbox bypass, and
+  converting services to interactive sessions are excluded recovery options.
+
+Flow: remove Windows `codex` labels -> shared pool selects Mac/Ubuntu -> actual
+bounded tool operation -> trusted verification -> publish only verified results.
+If no supported runner is available, the job remains queued/unverified; never
+restore Windows eligibility to hide that state. Retries target only a supported
+runner. No provider fallback, new Action input, model call, comment or deployment
+is introduced. Rollback requires a new reviewed support decision and real tool
+evidence; restoring old labels/YAML alone is not acceptance.
+
+Operator UI: `Codex no soportado en runners Windows ejecutados como servicio.
+Ejecuta los jobs de Codex en Mac o Ubuntu.` This documented limitation produces
+no new timeline comment. Retained general Windows results are reported as
+platform fixture evidence, never as successful Codex integration.
+
+Additional risk-derived budget: **6 distinct workflow contract cases** in
+`src/tooling/__tests__/validate_workflow_contract.test.ts`: shared-pool migration
+(1), explicit Windows routing rejection (1), all installed static selectors (1),
+Windows Codex matrix rejection while preserving hosted Windows (1), and forbidden
+Windows/missing Linux diagnostics (2). Existing matrix-removal, full coverage,
+package, trusted-dispatch and documentation validator cases remain; no
+repository thresholds or acceptance rows are lowered. These six cases are
+counted once, not again in related specifications.
+
+Acceptance and traceability: the six structural cases and
+`pnpm run validate:workflows` enforce scheduling/fixture boundaries;
+`pnpm run test:coverage` preserves full platform-safety and coverage gates;
+`pnpm run validate:specifications` checks catalog/spec consistency. User/setup,
+execution, smoke, runner provisioning/security, verification and synchronization
+docs MUST agree. Manual runner inventory must show Windows without `codex`
+before new shared-pool dogfooding. Previously open Windows Codex service checks
+remain unsupported/unverified, not green; the setup 350-row budget is unchanged.
 
 ## 2. Problem, current behavior, and evidence
 
@@ -230,7 +297,9 @@ descriptor collection starts Windows PowerShell before the private agent plan
 exists. Those trusted metadata probes MUST use a fixed minimal environment:
 the captured canonical system root and its system modules, with
 `PSModuleAnalysisCachePath=NUL` (Microsoft's documented cache-off setting).
-They inherit no authentication, host profile, repository module path or ambient
+Descriptor commands explicitly import the trusted absolute system Utility
+manifest with automatic module loading disabled before serializing the unchanged
+ACL batch. They inherit no authentication, host profile, repository module path or ambient
 cache override. This setting applies only to the metadata probe; it neither
 disables the private cache for agent execution nor changes its authentication.
 No process-global environment mutation, cache deletion, workspace ignore or
@@ -838,6 +907,25 @@ fact required by the validator and the declared Jest worker-recycling flag;
 profile and module-cache paths always belong to the fresh temporary home.
 Credentials and operator authentication-store references remain excluded.
 
+The protected verification-temp extension adds **2 distinct cases**: a portable
+isolation/cleanup case for all four temporary-directory variables, and a native
+Windows preflight of a private dummy agent inside the actual isolated profile.
+These are additional to every preceding budget. Windows verification homes MUST
+pass the existing owner/ancestor ACL checks before use, with the existing safe
+profile-local fallback. `TMP`, `TEMP`, `TMPDIR` and `RUNNER_TEMP` MUST identify one
+private temporary subdirectory inside that home rather than inherited host
+directories. The child profile MUST NOT inherit operator authentication paths.
+Nested fixtures and installers use those protected ancestors; unsafe candidates
+still fail closed and no host directory ACL may be modified.
+
+Live [run 38137358379](https://github.com/vypdev/copilot/actions/runs/38137358379)
+reproduced three private-installation preflight failures inside verification on
+`windows-intel-runner-1`, although the native smoke on another runner passed.
+It was canceled after more than twenty minutes without new test output. The
+installed repository verification command now requests Jest `--runInBand` for
+the repeat; serialization is an operational experiment, not proof that either
+the full verification or live agent operation succeeded.
+
 Global thresholds remain; activation/configuration/executable policies SHOULD reach
 100% branch coverage. Use fake executables/processes/credentials and no live
 provider in unit/integration tests. Each provider requires controlled smoke tests
@@ -926,3 +1014,191 @@ errors and credential masking.
 - Decision: semantic role ports and explicit complete tuples; no fallback.
 - Rejected: eager provisioning, shell-string assembly, provider DTOs in use cases.
 - Follow-up: automatic model selection is outside this baseline.
+
+### Hosted Windows startup investigation (2026-10-11)
+
+PR #465 hosted Windows smoke run 38146124779 failed 29 isolated runtime
+fixtures. The native descriptor PowerShell process repeatedly reached its
+15-second timeout; a nested verification-environment probe also reached its
+60-second timeout. Earlier self-hosted Windows run 38142246677 passed those
+fixtures. This difference does not identify a root cause or prove the
+authenticated fixer works on either runner.
+
+The existing platform smoke workflow now offers a bounded, read-only
+`windows_startup_probe` dispatch. One hosted Windows job compares six fixed
+20-second probes: baseline and isolated Write-Output; isolated .NET console
+output; isolated explicit system Utility manifest or DLL followed by Write-Output;
+and isolated explicit Utility DLL followed by the ACL helper's JSON cmdlet.
+These use fixed commands and trusted absolute Windows system paths only.
+It records only the fixed
+environment label, closed status and elapsed milliseconds. It never records
+stdout, stderr, errors, environment values, credentials or paths. It does not
+change process permissions, ACL policy, sandboxing or verification requirements.
+
+This investigation tool makes no feature-readiness claim and does not replace
+the mandatory smoke fixtures. Its six live probes are operational evidence,
+not additional unit cases or a completed acceptance gate. The default workflow
+behavior and coverage export stay unchanged; probe-only dispatch does not start
+self-hosted smoke jobs or export coverage.
+
+Initial diagnostic run 38150007571 on master 4575bbc3 proved that a minimal
+PowerShell command times out in the isolated ACL environment both before and
+after a successful 947 ms runner-baseline invocation. Subsequent probes separate
+non-secret system metadata, temp variables, and profile variables; this does not
+change the admitted agent environment or execution permissions. The success of
+the diagnostic workflow itself is not a successful isolated startup result.
+
+Expanded run 38150471451 showed a different hosted VM with isolated startup
+18,757 ms initially and around 12,000 ms thereafter, versus 233 ms baseline.
+Adding each tested system/temp/profile group independently did not remove the
+delay. This demonstrates timing variability as well as the isolated overhead;
+it does not establish a single missing variable or justify disabling ACL checks.
+Disposable-profile cache comparisons remain investigation evidence only.
+
+Cache comparison run 38151029504 found that all eight isolated variants reached
+the 20-second timeout while the runner baseline completed in 651 ms. Native,
+absolute and disabled cache selections with disposable profiles did not isolate
+the cause. The next six-probe comparison tests combined non-secret Windows
+metadata and module-path selection. It never copies token/proxy/auth variables,
+prints metadata values, or changes the agent environment.
+
+Combined comparison run 38152468447 timed out all five isolated variants at
+20 seconds; the runner baseline completed in 622 ms. Combined metadata,
+disposable profiles and the runner module path did not remove the difference.
+The next six probes separate PATH from module/cache settings in both directions.
+This remains diagnosis only: no production process environment or trust check
+is relaxed, and process output/environment values are never reported.
+
+PATH comparison run 38153237008 preserved a ready baseline when PATH alone was
+replaced by the isolated system PATH (311 ms). Replacing the module-path/cache
+pair in the baseline instead caused a 20-second timeout. All three isolated
+PATH variants also timed out. This narrows the next comparison to the two
+module settings independently; it does not yet identify which causes the delay.
+
+Control comparison run 38154093700 found that adding cache-off alone to the
+ready runner baseline caused a 20-second timeout. The isolated system module
+path alone retained a 527 ms baseline. Every minimal environment still timed
+out, including without cache overrides. The next comparison distinguishes
+process startup from command discovery using .NET console output and explicit
+trusted system Utility imports. This is a hypothesis test, not a proven repair;
+ACL checks, the agent environment and process timeouts remain unchanged.
+
+
+Utility-discovery run 38154939851 kept the isolated environment unchanged: the
+ordinary Write-Output probe timed out at 20 seconds, direct .NET console output
+completed in 210 ms, and an explicit trusted system Utility manifest followed
+by Write-Output completed in 242 ms. This reproduces a command-discovery delay,
+not slow native PowerShell startup. Explicit DLL imports produced an unexpected
+result and are not used in the repair.
+
+The descriptor helper now explicitly imports that system Utility manifest,
+disables automatic module-loading fallback, and then runs the existing complete
+file/ancestor descriptor collection and JSON serialization. The fixed minimal
+environment, cache-off value, 15-second timeout, 1 MiB output bound, DACL rules
+and authentication isolation are unchanged. Five new invocation contracts check
+trusted import ordering, literal escaping, unsafe owner refusal, complete ancestor
+batches and timeout classification. Actual hosted/native Windows smoke proof is
+pending and must be recorded independently; diagnostic success is not acceptance.
+
+Native Windows run 38156569251 on source fe3e7ed72f454f5db54059636dddd26ec5fbef1a
+passed all five isolated runtime suites (95 passed, eight platform skips), then
+all 565 full suites (7,421 passed, 20 platform skips), every coverage budget and
+the documentation/contract validators. Its overall job was cancelled at the
+30-minute deadline during setup-node's post-job pnpm cache archive, after those
+checks had completed. This proves the descriptor repair on the native runner,
+but does not count as an end-to-end successful job or hosted Windows acceptance.
+
+Persistent self-hosted smoke runners now disable dependency-cache backup and
+automatic package-manager caching, while hosted pnpm caching is unchanged.
+The complete test path, worker memory bounds and 30-minute job deadline remain
+unchanged. Two workflow contracts prevent explicit or automatic cache backup
+from reappearing. A fresh completed native run remains required.
+
+### Hosted Windows shell-fixture correction (2026-10-11)
+
+Hosted run `38159744824`, head `c62f303a`, passed 92 isolated runtime cases but failed the three native shell hash fixtures at their existing 15-second subprocess boundary. All ACL probes passed. Native Windows run `38159821530` subsequently passed full coverage and cleanup after the cache-export correction; that independent success does not certify hosted startup.
+
+The shell fixtures now disable automatic module discovery and import the absolute system `Microsoft.PowerShell.Utility.psd1` manifest before their hash operation, using .NET path construction. They still exercise the actual private parent and Codex shell environments, both presence/absence of host application data, correct hash-module operation, checkout cleanliness, private-directory ACLs, cleanup and the unchanged 15-second boundary. They neither inherit host profiles nor require ambient module caches. This measures bounded startup with an explicitly selected system module; it does not promise that arbitrary first-time cmdlet discovery fits the same boundary. Fresh hosted acceptance remains pending.
+
+Cache-free native Windows job `114530212856` finished successfully, including all post steps, on master `45d8aeeb`. Ubuntu also completed. The macOS job lost runner communication during build and supplied no final log, so the run is not classified as cross-platform success; recovery and a fresh macOS execution are required.
+
+### Explicit Windows sandbox selection and fresh diagnostics (2026-10-11)
+
+Actual `/copilot fix` run `38162629567` and two read-only diagnosis commands on
+Windows could not execute shell tools. Explicit `login=false` did not repair the
+rejection. The official Codex 0.162.1 implementation returns a forbidden decision
+when Windows filesystem restrictions have no selected backend and approvals are
+disabled. Ignoring user configuration removes a user-supplied backend selection.
+This supports a configuration cause, but does not prove successful native agent
+access on these runners.
+
+The hermetic Codex policy MUST select `windows.sandbox="elevated"` explicitly,
+retain its capability's read-only/workspace-write scope, never load operator rules
+or configuration, and retain network denial, empty extra writable roots and
+disabled approvals. Runner administrators own provisioning; the Action adds no
+setup invocation or full-access recovery. Two distinct policy cases exercise
+read-only and fixer authority; live shell access and verified edit/push remain
+required acceptance evidence. Primary sources:
+[exact Codex exec policy](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/core/src/exec_policy.rs)
+and [Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox).
+
+Hosted run `38164031391` still failed three hash fixtures, now in approximately
+five seconds rather than at their timeout. Their failure assertions now expose
+only closed diagnostic tokens (timeout, command-not-found, or failed), never raw
+stderr. Two additional fixed, read-only startup probes compare the hash with an
+explicit system Utility manifest against Utility plus Management. The probe count
+is eight and every process remains capped at 20 seconds; fixture subprocesses
+remain capped at 15 seconds. No probe result is counted as a unit test or native
+agent acceptance. A successful diagnostic job can still contain failed probes.
+
+
+Hosted probe run `38165897450` on `c3394562` established the remaining hash
+fixture cause: Utility alone returned `command-not-found` in 445 ms; explicit
+Utility plus Management returned `ready` in 1083 ms. The same immutable system
+file and environment were used. The three fixtures now import both absolute
+system manifests while retaining disabled discovery and their 15-second bound.
+Fresh hosted smoke remains required; successful timing probes do not certify
+that smoke or the authenticated agent. The actual agent diagnosis after explicit
+backend selection reported `open sandbox setup mutex`; this is a separate runner
+provisioning failure and leaves actual Windows shell/edit acceptance open.
+
+### Restored runner diagnosis (2026-10-12)
+
+All three self-hosted smoke jobs obtained runners in native run38237789370.
+All three completed the full coverage/acceptance and post-job path: Windows
+passed 7,737 cases with 20 platform skips; macOS and Ubuntu each passed 7,723
+with 35 platform skips. All unchanged coverage and acceptance budgets passed. Actual native doctor parent-sync38237827284 on
+Windows admitted/completed the pinned CLI but left conflict markers; the
+workspace guard stopped publication. Actual macOS SDDdiff parent-sync38238399004
+resolved two conflicts, passed571suites7723tests35skips and publishedad279527.
+These distinguish runner availability, fixture acceptance and real agent writes.
+
+The existing manual diagnostic workflow adds a bounded, read-only Windows
+service observation. Its output MUST contain only fixed field names, numeric OS
+version, closed account/mutex states and booleans. It MUST NOT emit account names,
+paths, marker contents, credentials or raw process output. It opens an existing
+Global\CodexSandboxSetup object with the access requested by Codex's existing
+CreateMutexW operation, closes the handle immediately, and neither creates nor
+acquires a mutex or changes its descriptor. Marker presence alone MUST NOT count
+as operational agent acceptance. No backend, runtime, permission, platform, test
+budget or verification deadline changes. The current numeric test floors remain
+unchanged; existing154structural workflow cases and validators plus a native
+Windows observation validate this reversible operator diagnostic. Native observation `38240077874` succeeded on `windows-intel-runner-1`: Windows
+version `10.0.26300.0`, ordinary Windows account, administrator token false,
+configured Codex home true, setup marker present and existing setup mutex absent.
+An absent mutex is an observation, not proof of denied access or the reported
+agent failure's cause. Real Windows agent tool/write acceptance remains open. The official pinned mutex contract is
+[Codex0.162.1 setup mutex](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/windows-sandbox-rs/src/setup_mutex.rs).
+
+
+### Reported sandbox tool failure with a completed CLI (2026-10-12)
+
+Native Windows read canary `38277727370` produced no digest although Codex exited 0. The operator then reproduced the exact tool error under the runner identity: `Failed to create unified exec process: helper_unknown_error: open sandbox setup mutex`; the tool returned -1 before the model described its failure and the CLI completed. Authentication and process completion are not proof of sandboxed execution. Host provisioning remains operator-owned; no version-only repair, backend fallback or permission change is implied.
+
+Within the existing first-8-KiB stderr bound, runtime MUST recognize only the concrete unified-exec/Windows-sandbox error prefix and retain the closed hint `reported-sandbox-setup-mutex`. A nonzero CLI exit uses the existing failure observation. A zero CLI exit MAY retain that hint on the completed process observation and MUST display that the provider reported a sandbox tool failure, directing the operator to inspect runner setup. CLI output, exit status, retryability and workflow semantics remain unchanged. No stdout/model-prose classification, capability-success claim, raw stderr, paths, credentials or provider text may cross the observation port. Unknown, bare near-match or out-of-bound stderr does not create this hint. Observation callback failure cannot alter execution.
+
+The extension adds 14 distinct cases: three closed classifier cases; one real CLI-0 client/observer/privacy case and five process-boundary cases for stdout-only text, unknown stderr, split chunks, truncation and a throwing observer; two terminal logger cases for valid and forged hints; three unexpected planner/provider and missing-output-cause cases preserve bounded fallback failure observations. They are additional to every preceding test budget, with no double counting. All global and module thresholds remain required. There is no new user configuration or schema migration; absent hints retain the previous completion presentation.
+
+Acceptance: exact recognized stderr and valid CLI-0 output returns the unchanged output and a completed observation carrying only the fixed hint; stdout-only mentions, unknown/truncated diagnostics and forged logger values cannot produce or leak a hint. Native Windows acceptance must still prove an actual sandboxed read and write after operator recovery. A model completion alone remains insufficient.
+
+Local verification passed all 578 suites and 7,830 tests with 35 configured platform skips (7,865 total). All existing budgets passed. The changed client has 100% lines/statements/functions and 96.77% branches; classifier and terminal logger have 100% all four metrics. Those changed paths are now explicit per-file coverage gates. Build, types, lint, documentation, specifications/catalog and graph update passed. Native hint acceptance remains pending publication.

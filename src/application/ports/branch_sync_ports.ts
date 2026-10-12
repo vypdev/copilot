@@ -1,3 +1,5 @@
+import type { BranchSyncValidationCode } from '../../domain/branch_sync_validation';
+
 export interface BranchDependency {
   readonly issueNumber: number;
   readonly parentBranch: string;
@@ -59,6 +61,7 @@ export type BranchMergePreparation =
 export interface BranchSyncResolutionValidation {
   readonly valid: boolean;
   readonly reason?: string;
+  readonly code?: BranchSyncValidationCode;
 }
 
 export interface BranchSyncWorkspacePort {

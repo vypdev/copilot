@@ -5,14 +5,16 @@ import { basename, dirname, isAbsolute, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
-import { classifyAgentCliExitDiagnostic } from './agent_cli_exit_diagnostic';
+import type { AgentExecutionOutputDiagnostic, AgentExecutionToolDiagnostic } from '../../application/ports/agent_execution_observation_ports';
+import { classifyAgentCliExitDiagnostic, classifyAgentCliToolDiagnostic } from './agent_cli_exit_diagnostic';
 import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
 import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
 import { trustedWindowsSystemTool } from '../../infrastructure/agents/agent_trusted_system_tools';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
-export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: AbortSignal): Promise<string> {
+export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: AbortSignal,
+    onToolDiagnostic?: (diagnostic: AgentExecutionToolDiagnostic) => void): Promise<string> {
     return new Promise((resolve, reject) => {
         let runtimeDirectory: string | undefined;
         try {
@@ -53,6 +55,7 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
             signal,
             (value) => { cleanup(); resolve(value); },
             (error) => { cleanup(); reject(error); },
+            onToolDiagnostic,
         );
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
@@ -71,6 +74,7 @@ export function createAgentProcessLifecycle(
     signal: AbortSignal | undefined,
     resolve: (value: string) => void,
     reject: (error: Error) => void,
+    onToolDiagnostic?: (diagnostic: AgentExecutionToolDiagnostic) => void,
 ) {
     const stdoutChunks: Buffer[] = [];
     let stderrBytes = 0;
@@ -113,7 +117,7 @@ export function createAgentProcessLifecycle(
         if (settled || terminationError) return;
         outputBytes += chunk.byteLength;
         if (outputBytes > plan.maxOutputBytes) {
-            beginTermination(new AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
+            beginTermination(outputFailure(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output-limit'));
             return;
         }
         stdoutChunks.push(chunk);
@@ -122,7 +126,7 @@ export function createAgentProcessLifecycle(
         if (settled || terminationError) return;
         outputBytes += chunk.byteLength;
         if (outputBytes > plan.maxOutputBytes) {
-            beginTermination(new AgentCliError(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output'));
+            beginTermination(outputFailure(`Agent CLI output exceeded the ${plan.maxOutputBytes}-byte limit.`, 'output-limit'));
             return;
         }
         if (stderrBytes < MAX_STDERR_BYTES) {
@@ -147,11 +151,16 @@ export function createAgentProcessLifecycle(
             return;
         }
         try {
+            const toolDiagnostic = classifyAgentCliToolDiagnostic(Buffer.concat(stderrChunks).toString('utf8'));
+            if (toolDiagnostic) {
+                try { onToolDiagnostic?.(toolDiagnostic); }
+                catch { /* Diagnostic observers cannot change execution semantics. */ }
+            }
             finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
         } catch (error) {
             finishReject(error instanceof AgentCliError
                 ? error
-                : new AgentCliError('Agent CLI returned invalid output.', 'output'));
+                : outputFailure('Agent CLI returned invalid output.', 'unclassified'));
         }
     };
     timers.timeout = setTimeout(() => {
@@ -160,10 +169,16 @@ export function createAgentProcessLifecycle(
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
 }
 
+function outputFailure(message: string, diagnostic: AgentExecutionOutputDiagnostic): AgentCliError {
+    const error = new AgentCliError(message, 'output');
+    error.outputDiagnostic = diagnostic;
+    return error;
+}
+
 export function decodeAgentCliOutput(protocol: AgentOutputProtocol, raw: string): string {
     if (protocol === 'plain-text') {
         const output = raw.trim();
-        if (!output) throw new AgentCliError('Agent CLI returned empty output.', 'output');
+        if (!output) throw outputFailure('Agent CLI returned empty output.', 'empty-output');
         return output;
     }
     if (protocol === 'json-lines-text-events') return decodeJsonLinesTextEvents(raw);
@@ -178,10 +193,10 @@ function decodeJsonLinesTextEvents(raw: string): string {
         try {
             event = JSON.parse(line);
         } catch {
-            throw new AgentCliError('Agent CLI returned malformed JSON event output.', 'output');
+            throw outputFailure('Agent CLI returned malformed JSON event output.', 'malformed-json-event');
         }
         if (!event || typeof event !== 'object' || Array.isArray(event)) {
-            throw new AgentCliError('Agent CLI returned an invalid JSON event.', 'output');
+            throw outputFailure('Agent CLI returned an invalid JSON event.', 'invalid-json-event');
         }
         const record = event as Record<string, unknown>;
         const part = record.part;
@@ -191,7 +206,7 @@ function decodeJsonLinesTextEvents(raw: string): string {
         }
     }
     const output = text.join('').trim();
-    if (!output) throw new AgentCliError('Agent CLI returned no text completion events.', 'output');
+    if (!output) throw outputFailure('Agent CLI returned no text completion events.', 'missing-text-events');
     return output;
 }
 

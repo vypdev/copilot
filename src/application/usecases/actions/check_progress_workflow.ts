@@ -33,11 +33,11 @@ export async function runCheckProgressWorkflow(
             return [buildStaleSourceResult(taskId, analysis.branch, analysis.sourceHeadSha)];
         }
 
-        const { attemptResult, issueNumber, branch, developmentBranch, sourceHeadSha } = analysis;
+        const { attemptResult, issueNumber, branch, developmentBranch, baseSha, sourceHeadSha } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
 
-        if (!await sourceIsCurrent(branch, sourceHeadSha, dependencies.publicationSourceQuery)) {
+        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)) {
             logInfo(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
         }
@@ -83,9 +83,12 @@ export async function runCheckProgressWorkflow(
 async function sourceIsCurrent(
     branch: string,
     sourceHeadSha: string,
+    developmentBranch: string,
+    baseSha: string,
     sourceQuery: BoundPublicationSourceQueryPort,
 ): Promise<boolean> {
-    return await sourceQuery.getBranchHeadSha(branch) === sourceHeadSha;
+    return await sourceQuery.getBranchHeadSha(branch) === sourceHeadSha
+        && await sourceQuery.getBranchHeadSha(developmentBranch) === baseSha;
 }
 
 function buildStaleSourceResult(taskId: string, branch: string, sourceHeadSha: string): Result {

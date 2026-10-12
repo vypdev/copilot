@@ -27,6 +27,18 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         );
     });
 
+    it.each(['reported-sandbox-setup-mutex', 'PRIVATE_FORGED_PROVIDER_TEXT'] as const)(
+        'admits only a closed sandbox tool hint on CLI completion: %s', value => {
+            const observer = new LoggerAgentExecutionObserverAdapter();
+            observer.observe({state:'completed', phase:'run', provider:'codex', capability:'findings', durationMilliseconds:10,
+                outputBytes:20, toolDiagnostic:value as never});
+            const expected = value === 'reported-sandbox-setup-mutex' ? value : undefined;
+            expect(logInfo).toHaveBeenCalledWith(value === 'reported-sandbox-setup-mutex'
+                ? 'Agent CLI completed; provider reported a sandbox tool failure (reported-sandbox-setup-mutex). Inspect the runner sandbox setup.'
+                : 'Agent execution completed.', false, {agentExecution:expect.objectContaining({toolDiagnostic:expected})});
+            expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE_FORGED_PROVIDER_TEXT');
+        });
+
     it('emits only semantic failure metadata', () => {
         const observer = new LoggerAgentExecutionObserverAdapter();
         observer.observe({
@@ -84,6 +96,24 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         expect(logDebugInfo).toHaveBeenCalledWith('Agent execution admitted (codex invalid-version).', false,
             { agentExecution: expect.objectContaining({ version: 'invalid-version' }) });
         expect(JSON.stringify((logDebugInfo as jest.Mock).mock.calls)).not.toContain('FORGED');
+    });
+
+    it.each(['output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified'] as const)(
+        'emits the closed output rejection reason %s without provider content', outputDiagnostic => {
+            const observer = new LoggerAgentExecutionObserverAdapter();
+            observer.observe({ state: 'failed', phase: 'run', provider: 'codex', capability: 'fixer', durationMilliseconds: 10,
+                failureCategory: 'output', semanticCode: 'provider.contract-invalid', retryable: false, outputDiagnostic });
+            expect(logInfo).toHaveBeenCalledWith(`Agent execution failed (run/output, ${outputDiagnostic}).`, false,
+                { agentExecution: expect.objectContaining({ outputDiagnostic }) });
+        },
+    );
+    it('does not interpolate or attach a forged output diagnostic', () => {
+        const observer = new LoggerAgentExecutionObserverAdapter();
+        observer.observe({ state: 'failed', phase: 'run', provider: 'codex', capability: 'fixer', durationMilliseconds: 10,
+            failureCategory: 'output', semanticCode: 'provider.contract-invalid', retryable: false, outputDiagnostic: 'SECRET_PROVIDER_OUTPUT' as never });
+        expect(logInfo).toHaveBeenCalledWith('Agent execution failed (run/output, unclassified).', false,
+            { agentExecution: expect.objectContaining({ outputDiagnostic: 'unclassified' }) });
+        expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('SECRET_PROVIDER_OUTPUT');
     });
 
     it('logs only the fixed diagnostic code after a failed CLI process', () => {

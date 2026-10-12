@@ -195,4 +195,98 @@ describe('status command policy', () => {
         expect(body).toContain('pull-request / PR #21 / issue #17');
         expect(body).toContain('1 abiertos, 2 reabiertos, 3 requieren verificación, 4 desconocidos, 5 resueltos');
     });
+    // SDD readiness regression budget: 30 independent semantic cases.
+    it('renders required English heading', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('required');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders required Spanish heading', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('obligatoria');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders not required English', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: false, state: 'not-required' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('not required');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders not required Spanish', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: false, state: 'not-required' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no obligatoria');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders unavailable English', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body.toLowerCase()).toContain('evidence unavailable');
+        expect(body.toLowerCase()).toContain('required');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders unavailable Spanish', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body.toLowerCase()).toContain('obligatoria');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders the unavailable SDD heading and issue identity in English', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'en-US');
+        expect(body).toContain('## SDD readiness');
+        expect(body.toLowerCase()).toContain('unavailable');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+    it('renders the unavailable SDD heading and issue identity in Spanish', () => {
+        const body = formatCopilotStatus({ owner: 'acme', repository: 'demo', event: 'issue_comment', action: '', target: 'issue',
+            issueNumber: 17, issueLabels: [], pullRequestLabels: [], pullRequestDescriptionMode: 'disabled',
+            sddReadiness: { required: true, state: 'unavailable' },
+        }, 'es-ES');
+        expect(body).toContain('## Preparación del SDD');
+        expect(body.toLowerCase()).toContain('no disponible');
+        expect(body).toContain('issue #17');
+        expect(body).not.toContain('ready');
+    });
+});
+
+describe('unknown issue admission status', () => {
+    it('shows unknown requirement and unavailable SDD evidence for an issue with no admitted kind', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({ isIssue: true, isPullRequest: false, issueNumber: 17, issue: { number: 17 }, pullRequest: { number: -1 }, issueWorkflowKind: undefined }) as never);
+        expect(snapshot.target).toBe('issue');
+        expect(snapshot.sddReadiness).toEqual({ required: null, state: 'unavailable' });
+        expect(formatCopilotStatus(snapshot)).toContain('SDD readiness');
+    });
+    it.each(['pull-request', 'push'])('does not infer issue SDD eligibility for a %s target', target => {
+        const snapshot = buildCopilotStatusSnapshot(execution({ isPush: target === 'push', isPullRequest: target === 'pull-request', pullRequest: { number: target === 'push' ? -1 : 21 }, issueWorkflowKind: 'feature' }) as never);
+        expect(snapshot.sddReadiness).toBeUndefined();
+    });
 });

@@ -88,8 +88,33 @@ describe('Execution import ratchet', () => {
     const baseline = JSON.parse(readFileSync(baselinePath, 'utf8')) as ExecutionImportBaseline;
     const config = ts.readConfigFile(configPath, ts.sys.readFile);
     const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, repositoryRoot);
-    const program = ts.createProgram(parsed.fileNames, parsed.options);
     const baselineFiles = baseline.consumers.map(consumer => consumer.file);
+    let fixtureDirectory: string | undefined;
+    let barrelFile: string;
+    let fixtureFile: string;
+    let program: ts.Program;
+
+    beforeAll(() => {
+        fixtureDirectory = mkdtempSync(join(repositoryRoot, '.execution-alias-'));
+        barrelFile = join(fixtureDirectory, 'execution_alias_barrel.ts');
+        fixtureFile = join(fixtureDirectory, 'execution_alias_bypass.ts');
+        const barrel = readFileSync(
+            resolve(__dirname, '../__fixtures__/execution_alias_barrel.fixture'),
+            'utf8',
+        ).split('__EXECUTION_MODULE__').join(executionFile.replace(/\\/g, '/'));
+        const fixture = readFileSync(
+            resolve(__dirname, '../__fixtures__/execution_alias_bypass.fixture'),
+            'utf8',
+        ).split('__ALIAS_MODULE__').join(barrelFile.replace(/\\/g, '/'));
+        writeFileSync(barrelFile, barrel, 'utf8');
+        writeFileSync(fixtureFile, fixture, 'utf8');
+        // Production and alias fixtures resolve against one canonical compiler graph.
+        program = ts.createProgram([...parsed.fileNames, barrelFile, fixtureFile], parsed.options);
+    });
+
+    afterAll(() => {
+        if (fixtureDirectory) rmSync(fixtureDirectory, { recursive: true, force: true });
+    });
 
     it('uses a deterministic, justified and closed boundary schema', () => {
         expect(config.error).toBeUndefined();
@@ -117,31 +142,13 @@ describe('Execution import ratchet', () => {
     });
 
     it('detects renamed imports, re-exports, type aliases and utility-type indirection', () => {
-        const fixtureDirectory = mkdtempSync(join(repositoryRoot, '.execution-alias-'));
-        const barrelFile = join(fixtureDirectory, 'execution_alias_barrel.ts');
-        const fixtureFile = join(fixtureDirectory, 'execution_alias_bypass.ts');
-        try {
-            const barrel = readFileSync(
-                resolve(__dirname, '../__fixtures__/execution_alias_barrel.fixture'),
-                'utf8',
-            ).split('__EXECUTION_MODULE__').join(executionFile.replace(/\\/g, '/'));
-            const fixture = readFileSync(
-                resolve(__dirname, '../__fixtures__/execution_alias_bypass.fixture'),
-                'utf8',
-            ).split('__ALIAS_MODULE__').join(barrelFile.replace(/\\/g, '/'));
-            writeFileSync(barrelFile, barrel, 'utf8');
-            writeFileSync(fixtureFile, fixture, 'utf8');
-            const fixtureProgram = ts.createProgram([...parsed.fileNames, barrelFile, fixtureFile], parsed.options);
-            expect(fixtureProgram.getSyntacticDiagnostics()).toEqual([]);
-            expect(fixtureProgram.getSemanticDiagnostics()).toEqual([]);
-            expect(findExecutionConsumers(
-                fixtureProgram,
-                executionFile,
-                source => resolve(source.fileName) === barrelFile || resolve(source.fileName) === fixtureFile,
-            )).toEqual([barrelFile, fixtureFile]);
-        } finally {
-            rmSync(fixtureDirectory, { recursive: true, force: true });
-        }
+        expect(program.getSyntacticDiagnostics()).toEqual([]);
+        expect(program.getSemanticDiagnostics()).toEqual([]);
+        expect(findExecutionConsumers(
+            program,
+            executionFile,
+            source => resolve(source.fileName) === barrelFile || resolve(source.fileName) === fixtureFile,
+        )).toEqual([barrelFile, fixtureFile]);
     });
 
     it('keeps issue and pull-request leaf workflows free of aggregate and credential authority', () => {

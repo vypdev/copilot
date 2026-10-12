@@ -64,6 +64,18 @@ describe('provider execution plan policy', () => {
         })).toThrow('must require every property');
     });
 
+    it.each(['findings', 'fixer'] as const)('selects an isolated Windows backend for Codex %s without loading operator configuration', capability => {
+        const policy = build('codex', capability);
+        expect(policy.argv).toContain('--ignore-user-config');
+        expect(policy.argv).toContain('windows.sandbox="elevated"');
+        expect(policy.argv[policy.argv.indexOf('--sandbox') + 1])
+            .toBe(capability === 'fixer' ? 'workspace-write' : 'read-only');
+        expect(policy.argv).toContain('approval_policy="never"');
+        expect(policy.argv).toContain('sandbox_workspace_write.network_access=false');
+        expect(policy.argv).toContain('sandbox_workspace_write.writable_roots=[]');
+        expect(policy.argv.join(' ')).not.toMatch(/danger-full-access|bypass|windows\.sandbox="unelevated"/);
+    });
+
     it.each(['findings', 'fixer'] as const)('gives Codex %s only the system environment needed for sandbox startup', capability => {
         const policy = build('codex', capability);
         expect(policy.argv).toContain('shell_environment_policy.inherit="core"');

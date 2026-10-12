@@ -48,7 +48,9 @@ export function renderApprovalAssessment(input: ApprovalPresentationInput): stri
             : `[${spanish ? 'Ver checks' : 'See checks'}](${url}/checks)`,
         '<details>',
         `<summary>${spanish ? 'Evidencia técnica' : 'Technical evidence'}</summary>`,
-        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: \`${escapeMarkdown(decision.code)}\`.`,
+        '',
+        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: ${escapeMarkdown(decision.code)}.`,
+        '',
         '</details>',
     ];
     return lines.join('\n').slice(0, 1800);
