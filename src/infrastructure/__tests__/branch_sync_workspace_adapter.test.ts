@@ -36,7 +36,7 @@ const MERGE = "-c user.name=Copilot -c user.email=copilot@users.noreply.github.c
 async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
   const stableIndex = "100644 sha 0\tsrc/a.ts\0";
   const context = createGit({
-    [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n"],
+    [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n", "M  src/a.ts\n"],
     "rev-parse HEAD": ["child\n", "child\n"],
     "rev-parse FETCH_HEAD": ["parent\n"],
     "merge-base --is-ancestor parent child": [new Error("not ancestor")],
@@ -190,7 +190,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
 
   it("prepares, validates, commits, and pushes a clean merge", async () => {
     const { git } = createGit({
-      [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n"],
+      [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n", "M  src/a.ts\n"],
       "rev-parse HEAD": ["child\n", "child\n", "merge\n"],
       "rev-parse FETCH_HEAD": ["parent\n", "parent\n", "child\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],
@@ -225,7 +225,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
       "100644 stable 0\tsrc/b.ts",
     ].join("\0") + "\0";
     const { git } = createGit({
-      [STATUS]: ["", "UU src/a.ts\nM  src/b.ts\n", "M  src/a.ts\nM  src/b.ts\n"],
+      [STATUS]: ["", "UU src/a.ts\nM  src/b.ts\n", "M  src/a.ts\nM  src/b.ts\n", "M  src/a.ts\nM  src/b.ts\n"],
       "rev-parse HEAD": ["child\n", "child\n"],
       "rev-parse FETCH_HEAD": ["parent\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],

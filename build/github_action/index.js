@@ -79423,6 +79423,18 @@ class BranchSyncWorkspaceAdapter {
         catch {
             return invalid("The resolution contains whitespace errors or conflict markers.", "whitespace-or-conflict-markers");
         }
+        if (!this.resolutionValidated) {
+            // Trusted staging can remove an original conflict from status when its
+            // resolution equals the child bytes (or the child's deletion). Freeze
+            // that resolved path set before checks; added paths and disappearance of
+            // non-conflicted parent changes remain invalid.
+            const resolvedPaths = await this.listWorkspacePaths();
+            if (resolvedPaths.some(path => !snapshot.workspacePaths.includes(path))
+                || snapshot.workspacePaths.some(path => !resolvedPaths.includes(path) && !snapshot.conflictPaths.includes(path))) {
+                return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+            }
+            this.snapshot = { ...snapshot, workspacePaths: resolvedPaths };
+        }
         this.resolutionValidated = true;
         return { valid: true };
     }

@@ -219,3 +219,8 @@ already-aligned retry after a previous failure. The Action verifies the retained
 completion facts before that transition. Dry-runs and unavailable results keep
 existing state; another error in the same run still blocks it. Synchronizing a
 branch does not establish PR approval or current SDD readiness.
+
+A conflict resolved to the working branch's unchanged content or deletion may
+disappear from Git status after trusted staging. Copilot uses that resolved
+workspace as the verification baseline while still rejecting added files, lost
+non-conflicted parent changes, and later changes to the resolved path set.

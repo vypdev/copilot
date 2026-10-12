@@ -123,8 +123,9 @@ jobs:
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
     # Includes build, isolated fixtures and the full coverage suite. Windows
-    # service runners exceeded 20 minutes in the 2026-10-10 live smoke test.
-    timeout-minutes: 30
+    # service runners exceeded 30 minutes in live run 38270745319 (2026-10-12).
+    # Keep all platforms, tests and coverage budgets; allow full verification.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
