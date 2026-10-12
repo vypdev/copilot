@@ -532,6 +532,20 @@
         }
       ],
       "successMessage": "canonical PR status coverage: PASS (marker policy 100%; read workflow 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Git hook verification environment",
+      "missingEntryLabel": "Git hook verification environment",
+      "rules": [
+        {
+          "files": [
+            "scripts/git-hooks/verification-environment.cjs"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "Git hook verification environment coverage: PASS (100% lines/statements/branches/functions)"
     }
   ]
 }

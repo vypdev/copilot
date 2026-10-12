@@ -44713,6 +44713,7 @@ function resolveMode(mode, commentId) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveLifecycleState = resolveLifecycleState;
 exports.readLifecycleExternalEvidence = readLifecycleExternalEvidence;
+const git_object_id_1 = __nccwpck_require__(88623);
 const result_1 = __nccwpck_require__(73817);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
@@ -44756,6 +44757,9 @@ function resolveLifecycleState(input) {
             return 'reviewing';
         return undefined;
     }
+    if (input.eventName === 'issue_comment' && !input.issueBranchlessHelp
+        && input.results.some(hasCompletedBranchSynchronization))
+        return 'working';
     // A verified branch is evidence even when reconciliation made no label change.
     if (input.eventName === 'issue_comment' && input.results.some(result => result.success && result.executed
         && result.errors.length === 0 && (0, implementation_result_policy_1.readImplementationResult)(result.id, result.payload)))
@@ -44823,6 +44827,24 @@ function hasResult(results, id) {
 }
 function hasSuccessfulResult(results, id) {
     return hasResult(results, id);
+}
+/** Only current application-owned completion facts can recover an issue's working state. */
+function hasCompletedBranchSynchronization(result) {
+    if (result.id !== 'SyncBranchUseCase' || !result.success || result.errors.length !== 0)
+        return false;
+    const payload = (0, result_1.getResultPayload)(result.payload);
+    if (!payload || !(0, git_object_id_1.canonicalGitObjectId)(payload.parentSha) || !(0, git_object_id_1.canonicalGitObjectId)(payload.childSha)
+        || !boundedBranchName(payload.parentBranch) || !boundedBranchName(payload.workingBranch)
+        || payload.parentBranch === payload.workingBranch
+        || !Number.isSafeInteger(payload.verificationCount) || payload.verificationCount < 0)
+        return false;
+    if (payload.outcome === 'already-aligned')
+        return true;
+    return result.executed && (payload.outcome === 'merged-cleanly' || payload.outcome === 'merged-with-agent')
+        && (0, git_object_id_1.canonicalGitObjectId)(payload.commitSha) !== undefined;
+}
+function boundedBranchName(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/u.test(value);
 }
 
 

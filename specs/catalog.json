@@ -1263,7 +1263,8 @@
         "src/data/repository/branch/__tests__/linked_branch_readiness_repository.test.ts",
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
-        "src/infrastructure/composition/__tests__/sdd_evidence_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/sdd_evidence_composition_root.test.ts",
+        "src/application/usecases/__tests__/sdd_status_workflow_integration.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1602,7 +1603,8 @@
         "src/application/policies/application_error_message_catalog.ts",
         "src/infrastructure/git_commit_adapter.ts",
         "src/infrastructure/branch_sync_sdd_catalog.ts",
-        "src/domain/branch_sync_validation.ts"
+        "src/domain/branch_sync_validation.ts",
+        "src/application/policies/lifecycle_state_policy.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1619,7 +1621,8 @@
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
         "src/infrastructure/__tests__/git_commit_adapter.test.ts",
         "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
-        "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts"
+        "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts",
+        "src/application/policies/__tests__/branch_sync_lifecycle_recovery.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -2003,7 +2006,7 @@
       "status": "implemented",
       "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/repository-agent-collaboration-contract.md"
       ],
@@ -2028,7 +2031,10 @@
         "scripts/mdx-frontmatter.cjs",
         "scripts/validate-agent-documentation.cjs",
         "scripts/validate-npm-package.cjs",
-        "scripts/smoke-test-npm-package.cjs"
+        "scripts/smoke-test-npm-package.cjs",
+        "scripts/install-git-hooks.cjs",
+        "scripts/git-hooks/pre-commit.cjs",
+        "scripts/git-hooks/verification-environment.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
@@ -2042,7 +2048,9 @@
         "src/architecture/__tests__/setup_doctor_boundaries.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
         "src/tooling/__tests__/mdx_frontmatter.test.ts",
-        "src/utils/__tests__/setup_files.test.ts"
+        "src/utils/__tests__/setup_files.test.ts",
+        "src/tooling/__tests__/install_git_hooks.test.ts",
+        "src/tooling/__tests__/git_hook_environment.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -2055,7 +2063,8 @@
         "docs/issues/configurable-workflows.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/security-operations/security/prompt-injection.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "CONTRIBUTING.md"
       ]
     },
     {

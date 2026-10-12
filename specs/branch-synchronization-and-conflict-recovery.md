@@ -331,12 +331,12 @@ that information. The phase is captured by trusted validation before abort.
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| State/idempotency/races | 50 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 59 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fourteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
 | Adapters/workflow contracts | 35 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
 | Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **180** | no double counting |
+| **Total** | **206** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 180-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 206-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -477,3 +477,12 @@ tests and typecheck, including missing optional adapters and both entrypoints.
 Independent mandatory verification remains the publication gate. This addresses
 readiness integration38243961378, where7852cases passed but the optional-adapter
 fallback was lost by the merge resolution. Native recovery remains pending.
+
+
+### Recover issue work state after completed synchronization (2026-10-12)
+
+Native run `38253646042` completed all five checks and published merge `86db9b1962915111f02613b4f49ec50a6a3f1cf6` on Windows, but issue #464 retained `state:blocked` and `state:awaiting-maintainer` while develop remained unchanged. Lifecycle policy recognized completed implementation and branch readiness, but not the completed synchronization result.
+
+For an issue-comment request on a branch-bearing issue, a current successful `SyncBranchUseCase` result now recovers `working` only with canonical parent/child object IDs, bounded distinct branch names and a nonnegative integer check count. A merged result must have executed and retain a canonical pushed commit. Already-aligned evidence can recover work without repeating the merge or push. Any other current executed failure takes precedence. Dry-runs, unavailable/malformed/foreign results, branchless help, unrelated events and PR readiness remain unchanged. This is a coarse work-state transition, not certification of current SDD or approval readiness.
+
+Twenty-four risk cases reproduce three missing transitions before the change; two additional nonexecuted-failure/count contracts complete 26 distinct regressions. They increase only the state allocation from 24 to 50 and the total from 180 to 206. No shared communication, SDD gate or feature case is recounted. Live recovery remains pending publication and replay on the aligned issue.

@@ -212,3 +212,10 @@ Preparation is only a conservative scheduling hint; the Action's parser, actor
 permissions, original conflict set and dry-run/no-agent rules remain authoritative.
 The fixer must check existing offline tests for affected modules and typecheck
 when tools are available; mandatory Action verification still runs independently.
+
+
+A completed issue synchronization returns the issue to working, including an
+already-aligned retry after a previous failure. The Action verifies the retained
+completion facts before that transition. Dry-runs and unavailable results keep
+existing state; another error in the same run still blocks it. Synchronizing a
+branch does not establish PR approval or current SDD readiness.
