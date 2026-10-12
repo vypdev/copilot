@@ -80,6 +80,13 @@ required form headings and values are present.
 
 Add other inputs as needed: `issue-managed-branches`, `pre-branch-sdd`, `desired-assignees-count`, `main-branch`, `development-branch`, etc. See [Configuration](/issues/configuration) and [Examples](/issues/examples).
 
+Pass the same branch and SDD settings to issue, issue-comment, pull-request,
+review-comment, review-state, and push workflows. Otherwise, a PR command may
+report that SDD evidence is not applicable even though the linked issue required
+an SDD. Generated setup workflows inherit `ISSUE_MANAGED_BRANCHES` (default
+`true`) and `PRE_BRANCH_SDD` (default `false`) consistently. When wiring workflows
+manually, keep those inputs aligned with the installed repository profile.
+
 ## What runs when
 
 1. **Admission on every trigger** (with valid `token`): The action first compares the **event actor** with the **token owner**. If they are the same, the normal pipeline completes successfully before queueing or loading issue context (see [Authentication](/authentication)); use a **bot account** for the PAT if you want full behavior when you act as a user. Valid explicit single actions still run.

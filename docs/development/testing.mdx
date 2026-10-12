@@ -175,3 +175,13 @@ The workflow validator and six routing regressions prevent explicit Windows
 Codex jobs/matrix entries and retain ordinary Windows coverage. A green fixture
 or model-only `READY` response cannot certify real tool execution. See
 [tool smoke evidence](/security-operations/operations/smoke-tests).
+
+
+## Semantic component rendering
+
+The component suites use a real Vite/Svelte SSR renderer isolated from Jest.
+One renderer serves each suite; every request renders its own props and locale,
+including sequential English, Spanish, French and Portuguese assertions. HTML
+is not cached or replaced by snapshots. The helper closes the renderer after
+the suite and propagates startup, process and render failures. Keep these real
+semantic assertions when changing component content or controls.
