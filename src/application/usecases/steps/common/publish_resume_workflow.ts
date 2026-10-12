@@ -9,7 +9,7 @@ import { reconcileReply } from './reply_publication_workflow';
 import { reconcileStatusCard } from './status_card_publication_workflow';
 import type { AgentConfiguration } from '../../../../domain/agent';
 import type { MessageCatalogResolutionPort } from '../../../ports/message_catalog_ports';
-import { resolvePublicationCatalog } from '../../../policies/publication_message_catalog';
+import { resolvePublicationCatalog, resolveStaticPublicationCatalog } from '../../../policies/publication_message_catalog';
 import type { BoundPublicationSourceQueryPort } from '../../../ports/publication_freshness_ports';
 import {
     buildDuplicateCompactionPublicationPayload,
@@ -90,11 +90,9 @@ export async function runPublishResume(
             logInfo('Conversation publication omitted: the configured bot identity is unavailable.');
             return undefined;
         }
-        const catalog = await resolvePublicationCatalog(
-            param.locale,
-            param.languageConfiguration,
-            catalogResolver,
-        );
+        const catalog = statuses.length === 0 && replies.every(intent => intent.projection.kind === 'sdd-diff')
+            ? resolveStaticPublicationCatalog(replies[0].locale).catalog
+            : await resolvePublicationCatalog(param.locale, param.languageConfiguration, catalogResolver);
         let staleSourceEvidence: Readonly<{ branch: string; sha: string }> | undefined;
         const compactedCommentIds: number[] = [];
         for (const intent of replies) {

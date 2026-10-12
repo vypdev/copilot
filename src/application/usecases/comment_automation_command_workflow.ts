@@ -1,3 +1,5 @@
+import { renderSddDiff } from '../policies/sdd_diff_presentation_policy';
+import { resolveSddDiffCatalog } from '../policies/sdd_diff_message_catalog';
 import { Result } from '../../data/model/result';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
@@ -26,6 +28,15 @@ export async function runExplicitCommentCommand(
     actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
+    if (command.name === 'sdd-diff') {
+        const snapshot = param.sddDiff && options.sddDiffQueryPort
+            ? await options.sddDiffQueryPort.read(param.sddDiff) : { state: 'unavailable' as const };
+        const catalog = resolveSddDiffCatalog(param.language.locale);
+        const markdown = renderSddDiff(snapshot, { owner: param.status.owner, repository: param.status.repository,
+            serverOrigin: options.sddDiffQueryPort?.serverOrigin ?? 'https://github.com' }, catalog);
+        return [new Result({ id: `${options.taskId}.SddDiff`, success: true, executed: true, stepFormat: 'markdown',
+            steps: [markdown], payload: Object.freeze({ publication: Object.freeze({ kind: 'sdd-diff', markdown, locale: catalog.locale }) }) })];
+    }
     if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);

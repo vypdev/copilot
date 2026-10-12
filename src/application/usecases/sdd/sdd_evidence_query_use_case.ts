@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { decideIssueStart } from '../../../domain/issue_start_policy';
 import { parseSddAnswer, parseSddPlan, type SddGateRecord } from '../../../domain/pre_branch_sdd';
 import { bindSddEvidenceReadPorts, type SddEvidenceQueryContext, type SddEvidenceReadPorts, type VerifiedSddEvidence, type SddEvidenceSnapshot } from '../../ports/sdd_evidence_read_ports';
@@ -37,7 +38,10 @@ export class SddEvidenceQueryUseCase {
             const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
             if (!['invalid', 'unavailable'].includes(result.state)
                 && !await this.fence(context, facts, selection.body, cardId, record, result.verified)) return { state: 'stale' };
-            return Object.freeze(result);
+            return Object.freeze({ ...result, ...(!['invalid', 'unavailable'].includes(result.state) ? {
+                authorityDigest: createHash('sha256').update(JSON.stringify([cardId, selection.body, digest, canonicalLabels(facts.labels),
+                    record.phase === 'awaiting-answer' ? facts.comments : null])).digest('hex'),
+            } : {}) });
         } catch { return { state: 'unavailable' }; }
     }
 

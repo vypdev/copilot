@@ -1176,7 +1176,7 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-12",
       "specs": [
@@ -1188,7 +1188,8 @@
       "workflows": [
         ".github/workflows/copilot_issue.yml",
         ".github/workflows/copilot_issue_comment.yml",
-        ".github/workflows/copilot_commit.yml"
+        ".github/workflows/copilot_commit.yml",
+        ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "action.yml",
@@ -1235,7 +1236,19 @@
         "src/application/usecases/issue_comment_use_case.ts",
         "src/application/policies/semantic_result_publication_policy.ts",
         "src/infrastructure/composition/sdd_evidence_composition_root.ts",
-        "src/infrastructure/composition/main_run_route_composition_root.ts"
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/domain/pre_branch_sdd_diff.ts",
+        "src/application/policies/sdd_diff_message_catalog.ts",
+        "src/application/policies/sdd_diff_presentation_policy.ts",
+        "src/application/ports/sdd_diff_read_ports.ts",
+        "src/application/usecases/sdd/sdd_diff_query_use_case.ts",
+        "src/data/repository/sdd/sdd_diff_link_repository.ts",
+        "src/infrastructure/composition/sdd_diff_composition_root.ts",
+        "src/application/usecases/pull_request_review_comment_use_case.ts",
+        "src/application/usecases/steps/common/reply_publication_workflow.ts",
+        "src/application/usecases/steps/common/publish_resume_workflow.ts",
+        "scripts/coverage-budgets.json",
+        "src/architecture/github_publication_mutation_baseline.json"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1264,7 +1277,14 @@
         "src/data/repository/branch/__tests__/linked_branch_readiness_repository.test.ts",
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
-        "src/infrastructure/composition/__tests__/sdd_evidence_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/sdd_evidence_composition_root.test.ts",
+        "src/domain/__tests__/pre_branch_sdd_diff.test.ts",
+        "src/application/policies/__tests__/sdd_diff_presentation_policy.test.ts",
+        "src/application/usecases/sdd/__tests__/sdd_diff_query_use_case.test.ts",
+        "src/data/repository/sdd/__tests__/sdd_diff_link_repository.test.ts",
+        "src/infrastructure/composition/__tests__/sdd_diff_composition_root.test.ts",
+        "src/application/usecases/__tests__/sdd_diff_comment_interaction.test.ts",
+        "src/application/usecases/steps/common/__tests__/sdd_diff_reply_publication.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

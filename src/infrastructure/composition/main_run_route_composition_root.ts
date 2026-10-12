@@ -1,3 +1,4 @@
+import { createSddDiffQueryPort } from './sdd_diff_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
 import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
@@ -241,6 +242,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     rememberBranchPorts(binding, bugbot.scm.context),
     bugbot.scm.context,
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
+    createSddDiffQueryPort(binding, bugbot.scm.context),
   );
 }
 
@@ -298,6 +300,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     branchSync,
     rememberBranchPorts(binding, bugbot.scm.context),
     bugbot.scm.context,
+    createSddDiffQueryPort(binding, bugbot.scm.context),
   );
 }
 

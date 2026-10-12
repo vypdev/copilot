@@ -264,6 +264,32 @@ describe('Execution', () => {
       expect(nativeStatusContext(execution)?.profileDigest).toBeUndefined();
     });
 
+    it('binds SDD diff to the actual native repository ID, issue author and runtime profile', () => {
+      const execution = buildExecution({ eventName: 'issue_comment', repo: { owner: 'acme', repo: 'demo' }, repository: { id: 17 },
+        issue: { number: 42, user: { login: 'native-author' } } }, { issueWorkflowProfileDigest: 'a'.repeat(64) });
+      const projected = projectCommentAutomationContext(execution,
+        projectCommentLanguageRequest({ commentBody: '/copilot sdd-diff', locale: 'en-US', issueNumber: 42, commentId: 99, configuration: undefined }), '/copilot sdd-diff');
+      expect(projected.sddDiff).toMatchObject({ repositoryId: 17, issueAuthor: 'native-author', profileDigest: 'a'.repeat(64), target: { kind: 'issue', number: 42 } });
+      expect(Object.isFrozen(projected.sddDiff)).toBe(true);
+      expect(Object.isFrozen(projected.sddDiff?.profile.enabled)).toBe(true);
+      expect(Object.isFrozen(projected.sddDiff?.labelConfiguration.feature)).toBe(true);
+    });
+
+    it.each([undefined, 0, Number.MAX_SAFE_INTEGER + 1])('withholds SDD diff without a native repository identity: %s', repositoryId => {
+      const execution = buildExecution({ eventName: 'issue_comment', repository: { id: repositoryId }, issue: { number: 42 } });
+      expect(projectCommentAutomationContext(execution,
+        projectCommentLanguageRequest({ commentBody: '/copilot sdd-diff', locale: 'en-US', issueNumber: 42, commentId: 99, configuration: undefined }), '/copilot sdd-diff').sddDiff).toBeUndefined();
+    });
+
+    it('does not pass a PR author as the linked SDD issue author', () => {
+      const execution = buildExecution({ eventName: 'issue_comment', repo: { owner: 'acme', repo: 'demo' }, repository: { id: 17 },
+        issue: { number: 99, user: { login: 'pr-author' }, pull_request: {} }, pull_request: { number: 99, head: { ref: 'feature/42' } } });
+      const request = projectCommentAutomationContext(execution,
+        projectCommentLanguageRequest({ commentBody: '/copilot sdd-diff', locale: 'en-US', issueNumber: 99, commentId: 99, configuration: undefined }), '/copilot sdd-diff').sddDiff;
+      expect(request?.target).toEqual({ kind: 'pull-request', number: 99 });
+      expect(request).not.toHaveProperty('issueAuthor');
+    });
+
     it('eventName returns inputs.eventName when set', () => {
       const e = buildExecution({ eventName: 'issues' });
       expect(e.eventName).toBe('issues');

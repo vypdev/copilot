@@ -18,14 +18,14 @@ export interface ReplyPublicationContext {
 }
 
 export interface ReplyPublicationOutcome {
-    readonly effect: 'created' | 'unchanged';
+    readonly effect: 'created' | 'updated' | 'unchanged';
     readonly canonicalCommentId?: number;
     readonly duplicatesRemoved: number;
     readonly duplicatesCompacted: number;
     readonly compactedCommentIds: readonly number[];
 }
 
-/** Publishes an explicit reply at most once for a trusted request correlation. */
+/** Publishes trusted correlated replies; only deterministic SDD diff refreshes its existing reply. */
 export async function reconcileReply(
     context: ReplyPublicationContext,
     comments: BoundIssueCommentPublicationPort,
@@ -46,6 +46,13 @@ export async function reconcileReply(
     }
 
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    if (context.intent.projection.kind === 'sdd-diff' && context.intent.messageKey === 'copilot-sdd-diff') {
+        const rendered = renderSemanticReply(context.intent, context.catalog);
+        if (canonical.body !== rendered) {
+            await comments.updateComment(target.number, canonical.id, rendered);
+            effect = 'updated';
+        }
+    }
     let duplicatesRemoved = 0;
     let duplicatesCompacted = 0;
     const compactedCommentIds: number[] = [];

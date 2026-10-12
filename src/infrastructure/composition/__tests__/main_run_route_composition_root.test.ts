@@ -119,10 +119,14 @@ describe("main run route composition root", () => {
       ...Array.from({ length: 14 }, () => expect.anything()),
       mockContext,
       expect.objectContaining({ read: expect.any(Function) }),
+      expect.objectContaining({ read: expect.any(Function), serverOrigin: expect.any(String) }),
     );
     const query = jest.mocked(IssueCommentUseCase).mock.calls[0][15];
     expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
     expect(Object.isFrozen(query)).toBe(true);
+    const diff = jest.mocked(IssueCommentUseCase).mock.calls[0][16];
+    expect(Object.keys(diff!).sort()).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(diff)).toBe(true);
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {
@@ -133,6 +137,7 @@ describe("main run route composition root", () => {
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
       ...Array.from({ length: 13 }, () => expect.anything()),
       mockContext,
+      expect.objectContaining({ read: expect.any(Function), serverOrigin: expect.any(String) }),
     );
   });
 

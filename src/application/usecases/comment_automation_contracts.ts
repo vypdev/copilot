@@ -1,3 +1,4 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
 import type { Result } from "../../data/model/result";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
@@ -38,6 +39,7 @@ export interface RememberBranchQueryPorts {
 export interface CommentAutomationOptions {
   readonly statusReadPorts?: CopilotStatusReadPorts;
   readonly sddQueryPort?: SddEvidenceQueryPort;
+  readonly sddDiffQueryPort?: SddDiffQueryPort;
   readonly taskId: string;
   readonly languageUseCase: ParamUseCase<CommentLanguageRequest, Result[]>;
   readonly intentUseCase: ParamUseCase<BugbotFixIntentContext, Result[]>;

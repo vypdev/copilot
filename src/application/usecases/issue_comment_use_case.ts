@@ -1,3 +1,4 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -47,6 +48,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
     private readonly sddQueryPort?: SddEvidenceQueryPort,
+    private readonly sddDiffQueryPort?: SddDiffQueryPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -91,6 +93,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
         sddQueryPort: this.sddQueryPort,
+        sddDiffQueryPort: this.sddDiffQueryPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

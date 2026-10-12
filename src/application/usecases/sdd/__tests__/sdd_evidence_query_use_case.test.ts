@@ -31,6 +31,27 @@ function fixture() {
 }
 
 describe('read-only SDD authority and publication query', () => {
+    it('returns only a stable opaque authority digest without exposing the card or issue contents', async () => {
+        const f = fixture();
+        const firstRead = await f.query.read(f.context);
+        const replay = await f.query.read(f.context);
+        expect(firstRead.authorityDigest).toMatch(/^[a-f0-9]{64}$/u);
+        expect(replay.authorityDigest).toBe(firstRead.authorityDigest);
+        expect(JSON.stringify(firstRead)).not.toContain('Human requirements');
+        expect(JSON.stringify(firstRead)).not.toContain(f.record.plan.reason);
+    });
+    it('changes authority after a card edit even when all publication projections remain identical', async () => {
+        const f = fixture();
+        const original = await f.query.read(f.context);
+        const updated = { ...f.record, plan: { ...f.record.plan, reason: 'Updated decision explanation with the same immutable publications.' } };
+        const inventory = await f.comments();
+        f.comments.mockResolvedValue({ ...inventory, value: [f.comment(renderSddGateRecord(updated))] });
+        const edited = await f.query.read(f.context);
+        expect(edited.state).toBe('published');
+        expect(edited.verified).toEqual(original.verified);
+        expect(edited.cardId).toBe(original.cardId);
+        expect(edited.authorityDigest).not.toBe(original.authorityDigest);
+    });
     it.each(['string specs', 'duplicate capability id'])('rejects malformed immutable catalog: %s', async scenario => {
         const f = fixture(); const snapshot = f.snapshot(first);
         if (scenario === 'string specs') (snapshot.capabilities[0] as unknown as { specs: unknown }).specs = 'specs/feature.md';

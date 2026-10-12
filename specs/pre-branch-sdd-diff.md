@@ -1,14 +1,14 @@
 # Proposed change appendix: `/copilot sdd-diff`
 
-- Status: Draft
-- Date: 2026-10-11
+- Status: Ready
+- Date: 2026-10-12
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: not applicable (prospective companion)
+- Last verified: 2026-10-12 (local integration; live acceptance pending)
 - Owners: Existing `issue-start-and-sdd-readiness` capability owners; individual names are not established by the issue.
 - Scope: Add a deterministic, read-only command that compares the immutable first publication and current verified publication of the owning SDD for an eligible issue.
-- Related issues/PRs: [Issue #464](https://github.com/OWNER/REPO/issues/464); live issue #454 is identified as human UX evidence, but its repository URL is not established here.
+- Related issues/PRs: [Issue #464](https://github.com/vypdev/copilot/issues/464); [issue #454](https://github.com/vypdev/copilot/issues/454) provides the first/revised SDD human UX fixture.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None from the supplied answers. Repository-specific command syntax, existing reply marker, current limits for SDD files, exact catalog evidence format, and coverage thresholds must be confirmed against the owning implementation before readiness; do not invent or weaken them.
+- Open decisions blocking readiness: None. PR #465 is merged and the Action synchronized this exact managed branch to the shared foundation. Local implementation is verified; fresh PR review and live issue/PR acceptance remain separate completion gates.
 
 > This is a prospective companion appendix. Preserve the owning SDD and its existing contract verbatim; append this proposed change. Repository-specific paths and contracts cited below must be reconciled with the existing capability before implementation.
 
@@ -38,10 +38,10 @@ Developers can inspect an SDD gate's first publication and later revisions, but 
 
 ### 2.3 Evidence
 
-- Code/workflow/documentation references: supplied answers identify `readSddGateRecord` schema v1, `PreBranchSddWorkspacePort.readSdd`, `verifyPublication`, `isAncestor`, `BoundLinkedBranchReadinessPort.getLinkedBranch`, command parsing/help and comment orchestration. Exact source paths are unprovided and remain to be confirmed.
+- Code/workflow/documentation references: supplied answers identify `readSddGateRecord` schema v1, `PreBranchSddWorkspacePort.readSdd`, `verifyPublication`, `isAncestor`, `BoundLinkedBranchReadinessPort.getLinkedBranch`, command parsing/help and comment orchestration. The confirmed semantic boundary is `SddEvidenceQueryPort` in `src/application/ports/sdd_evidence_read_ports.ts` from PR #465. The existing immutable content read is `PreBranchSddWorkspacePort.readSdd` in `src/application/ports/pre_branch_sdd_ports.ts`; the command may receive only a read-only projection of it.
 - Incidents or concrete examples: issue #464 reports that developers cannot inspect bounded changes; issue #454 is named as a real first/revised SDD human UX fixture.
 - External primary sources: not applicable; the contract is repository-owned.
-- Unknowns: current implementation names, catalog evidence schema, exact existing SDD file limits, command catalogue syntax and repository coverage thresholds.
+- Remaining evidence: combined application/composition/routes against the Action-integrated shared query, fresh independent PR review, and live command/replay/locale acceptance. Operator GraphQL reads prove the native response shape, not bot-token permissions or a running command.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -55,7 +55,7 @@ Not applicable: this is a prospective specification, not a reconstruction of imp
 | PR participant | Query only an explicitly linked eligible issue | PR comment | One correlated PR reply, or not-applicable/ambiguous/unavailable result |
 | Maintainer | Preserve trust and operability | Catalog, docs, checks | Capability evidence and validation output |
 
-**First publication** is the immutable `commitSha`/`baseSha` pair. **Current publication** is `revisionSha`/`revisionBaseSha` when present. **Structural diff** means added/removed lines and changed section titles; it makes no claim about semantic requirements. **Stale** means the current normalized issue digest differs from the trusted record. **Pending-revision** means the digest matches an awaiting-answer record while the verified first publication remains available; the requested revision is not yet published.
+**First publication** is the immutable `commitSha`/`baseSha` pair. **Current publication** is `revisionSha`/`revisionBaseSha` when present. **Structural diff** means added/removed lines and changed section titles; it makes no claim about semantic requirements. **Stale** means the current normalized issue digest differs from the trusted record, or exact issue/card/branch/PR authority changed or disagreed during the final fence. **Pending-revision** means the digest matches an awaiting-answer record while the verified first publication remains available; the requested revision is not yet published.
 
 ## 4. Goals
 
@@ -76,7 +76,7 @@ Not applicable: this is a prospective specification, not a reconstruction of imp
 
 1. No current-comparison claim or counts without exact identity, valid trusted record, matching digest, verified publications/ancestry, exact linked branch and successful final freshness fence.
 2. No writer capability; no model; no source content in replies.
-3. Files and computation are bounded: per document at most 70,000 UTF-16 characters, 280,000 UTF-8 bytes and 2,000 lines; at most 2,000,000 line-comparison steps. Reply at most 6,000 characters.
+3. Files and computation are bounded: per document at most 70,000 UTF-16 characters, 280,000 UTF-8 bytes and 2,000 lines; at most 2,000,000 line-comparison steps. The complete reply remains at most 6,000 characters; the renderer reserves wrapper space by limiting its body to 5,600 characters. When both document byte and character ceilings are exceeded, the byte ceiling is reported first; neither limit is raised.
 4. At most eight changed section titles, each at most 120 characters, with omitted-title count disclosed. These fixed limits cannot be configured.
 
 ## 5. Current versus proposed product journey
@@ -106,7 +106,7 @@ Text equivalent: comment -> exact target and evidence verification -> bounded co
 
 1. Parse `/copilot sdd-diff` with no arguments using the existing deterministic parser. Invalid arguments follow existing help behavior and do not invoke a model.
 2. On an issue, apply existing admission/profile policy: feature issues and admitted branch-bearing contract-change issues for which the SDD gate applies are eligible. Unsupported, exempt and help targets return not-applicable without writes other than the correlated query reply.
-3. On a PR, query the exact event PR's native GitHub `closingIssuesReferences` relationship through a narrow read-only projection. Validate same-repository canonical PR identity and pagination completeness. Verify each candidate issue's admission/profile before considering it. Zero eligible linked issues is not-applicable; multiple eligible links or disagreeing authoritative identity is ambiguous/unavailable. Incomplete/unreadable authority is unavailable. Never infer from equal numbers, body text, branch scans, or a newest candidate.
+3. On a PR, query the exact event PR's native GitHub `closingIssuesReferences` relationship through a narrow read-only projection. Validate same-repository canonical PR identity and pagination completeness. Require exactly one native closing issue before reading its admission/profile. Zero native links or an ineligible sole issue is not-applicable; multiple native links are conservatively ambiguous, even if a subset might be eligible. Disagreeing authoritative identity is unavailable. Incomplete/unreadable authority is unavailable. Never infer from equal numbers, body text, branch scans, or a newest candidate.
 4. Read the latest configured-bot-owned valid schema-v1 gate record for the exact issue. Confirm current catalog ownership and its allowlisted SDD path. Preserve `commitSha`/`baseSha` as first publication; use `revisionSha`/`revisionBaseSha` as current publication when present. Do not weaken schema or create another store.
 5. Verify exact branch linkage and live branch name/head using existing readiness proof. Verify publication and ancestry at immutable SHAs. A missing, deleted, mismatched or unverifiable branch/publication cannot support a current comparison.
 6. Compute the same digest as the gate from current normalized title, visible human body, admitted kind, profile and original recorded base. Digest mismatch takes precedence and reports stale. A digest-matching awaiting-answer record with verified first publication reports pending-revision. Neither permits current counts. A current comparison requires matching digest and verified current publication.
@@ -122,7 +122,7 @@ Text equivalent: comment -> exact target and evidence verification -> bounded co
 - Digest mismatch: `stale`, with SDD question-card link; not pending-revision.
 - Forged, foreign, malformed or unknown-version record: invalid/unavailable, never a comparison.
 - Missing branch/publication and provider read errors: distinct missing/unavailable states where evidence permits; do not fabricate facts.
-- PR with no eligible native closing issue: not-applicable; ambiguity and authority failure are explicit.
+- PR with zero native closing issues or an ineligible sole issue: not-applicable; ambiguity and authority failure are explicit.
 - Changed documents that exceed limits: bounded/unavailable; safe verified revision links may be shown.
 
 ### 6.3 State machine
@@ -134,7 +134,7 @@ Text equivalent: comment -> exact target and evidence verification -> bounded co
 | Initial-only | First publication verified, no revision | Only first version exists | Compared after verified revision | Issue owner |
 | Current comparison | Digest, branch, publications and fence all verify | Structural comparison is current | Re-run on new source comment | Gate/application |
 | Pending-revision | Matching digest; trusted record awaits answers; first publication verified | Revision is being clarified; no current diff | Compared after publication; stale after issue edit | Issue owner |
-| Stale | Current digest differs | Issue changed since gate record | Re-run after gate refresh | Issue owner |
+| Stale | Current digest differs or authority/head fence changes | Current comparison cannot be certified | Retry the read; refresh clarifications if the issue changed | Issue owner |
 | Invalid/unavailable | Trust, linkage or provider evidence fails | Current comparison cannot be verified | Retry when evidence available | Maintainer/operator |
 | Bounded | Document or work limit exceeded | Exact comparison unavailable within safety bound | None until input changes | Issue/spec owner |
 
@@ -276,19 +276,23 @@ Errors use `impact -> cause -> action -> retained state`; a failed read must not
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: 30 distinct risk-derived cases, meeting the supplied minimum of 24. Each case counts once; parameter rows count only when behavior is distinct.
+Minimum: **217 distinct extension cases**, with a 24-case risk floor exceeded by the concrete inventory below. Existing shared gate/status/publication cases remain unchanged and are not counted again.
 
-| Area | Minimum distinct cases | Behaviors/risks covered |
+| Area | Distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 6 | eligibility, digest precedence, state mapping, bounds, diff counts, unsafe titles |
-| State/application/idempotency/races | 6 | no publication, initial-only, pending, stale, fence races, replay correlation |
-| Adapters/provider contracts | 5 | schema-v1 ownership, exact branch, immutable publication/ancestry, PR pagination/link identity, provider errors |
-| Workflows/setup/schema | 3 | read-only permissions, no writer/model wiring, existing record compatibility |
-| UI/UX/localization/sanitization | 6 | English/Spanish, atomic fallback, links, escaping, omission disclosure, reply budget |
-| Integration/security/migration | 4 | no-write end-to-end, forged/foreign record, excessive input/work, compatibility with gate |
-| **Total** | **30** | No double counting |
+| Pure bounded diff | 18 | Exact line/section changes, fenced headings, hostile input, all fixed resource ceilings |
+| Presentation/localization/navigation | 60 | Ten states in both catalogs, atomic fallback, immutable commit/blob/compare links, clarification cards, escaping and bounds |
+| Application/authority/fences | 52 | Admission, missing/invalid/pending/stale authority, immutable reads, issue/card/head/PR-link races, exact author and no writes |
+| Native PR-link adapter | 45 | Bound repository ID/name and head repository, exact PR/head/ref, author identity, complete pagination, malformed/foreign/duplicate rows and denial |
+| Read-only composition | 5 | Frozen repository binding, trusted server origin, native event repository ID and receiver-bound document read without writers |
+| Parser/routes/agent activity | 15 | Whitespace/case, no arguments, EN/ES/fallback, absent query, no agent activation or activity |
+| Correlated publication/replay | 17 | Same-source refresh, unchanged replay, distinct source, ownership/correlation/key isolation, duplicate healing, static catalogs and final sanitization |
+| Actual Execution projection | 5 | Native repository ID/issue author/profile digest, immutable input, missing/zero/unsafe identity and native PR target |
+| **Total** | **217** | Every case counted once |
 
-Keep all existing SDD gate coverage and budgets unchanged; shared helper changes require documented justification and regression coverage. Preserve repository-wide thresholds and meet or exceed them; exact thresholds are repository-specific and must be copied from current policy before Ready. New pure policies target at least 90% branch coverage. Changed modules must meet repository thresholds with no unexplained coverage decrease. Use deterministic clocks, IDs and fakes; no real waits/live services. Add table-driven state/bound tests, replay/race tests, adapter contracts and structural workflow permission checks. Golden replies require semantic assertions for states, links, counts, localization and forbidden content. Human UX evidence must review #454 first/revised SDD output and narrow-screen readability; do not rely on snapshots alone.
+The two new shared `SddEvidenceQueryUseCase` opaque-authority regressions are allocated only to the owning status companion (198 + 2 = 200); they are excluded from this 217-case budget. The gate's separate 149-case budget and both communication ledgers remain unchanged.
+
+Repository-wide thresholds remain 90% lines/statements, 88% functions and 82% branches. `scripts/coverage-budgets.json` additionally enforces 100% in every new pure module, and at least 95% lines/statements and 90% branches/functions in each new application, native adapter and composition module. All six new runtime modules currently achieve 100% in the focused scope. Deterministic fakes and actual Execution constructors provide local proof; live GitHub runs independently establish bot permissions, event wiring and human UX.
 
 Required distinct risk coverage includes eligibility/identity (4), record/ownership/publication trust (5), digest/revision races (4), diff/count/bounded work (5), and localization/sanitization/replay/no-write (6), totaling at least 24 cases within the 30-case distribution.
 
@@ -299,7 +303,7 @@ Required distinct risk coverage includes eligibility/identity (4), record/owners
 | User | `docs/issues/comment-commands.mdx` | Exact command, eligible targets, examples, states and links | Command catalog and link checks |
 | Issue owner | `docs/issues/pre-branch-sdds.mdx` | First/current revision distinction, stale/pending recovery, structural-only caveat | Examples checked against fixtures |
 | Operator | Same SDD guide | Invalid/unavailable evidence, retry and permission boundaries | State decision table review |
-| Contributor | Capability SDD and catalog evidence | Ports, trust boundaries, 30-case budget, workflow checks | `pnpm run validate:specifications`; catalog generation/check as repository requires |
+| Contributor | Capability SDD and catalog evidence | Ports, trust boundaries, 217-case budget, workflow checks | `pnpm run validate:specifications`; catalog generation/check as repository requires |
 
 Docs must explain PR exact-link rules, limits, no-write behavior and that line/title differences do not establish semantic requirement changes. Update the capability catalogue evidence and owning SDD or this approved bounded companion before branch creation. Keep documentation examples synchronized with fixtures.
 
@@ -312,7 +316,7 @@ Docs must explain PR exact-link rules, limits, no-write behavior and that line/t
 5. Given any current digest mismatch, including an awaiting-answer record, when queried, then stale takes precedence over pending; no current counts appear and the question-card link is provided.
 6. Given a foreign, forged, malformed or unknown-version record, when queried, then no current comparison is claimed and no untrusted values are rendered as authority.
 7. Given wrong owner/path, absent publication, deleted or mismatched branch, failed ancestry/publication proof, when queried, then the result is invalid, missing or unavailable as supported by verified facts, never current-ready.
-8. Given a PR with exact native same-repository closing-issue authority to zero eligible issues, when queried, then it reports not-applicable; with two eligible issues or disagreeing identity it reports ambiguous/unavailable.
+8. Given a PR with exact native same-repository closing-issue authority to zero eligible issues, when queried, then it reports not-applicable; with two native closing issues or disagreeing identity it reports ambiguous/unavailable.
 9. Given incomplete PR pagination or unreadable authority, when queried, then it reports unavailable and does not fall back to body numbers or equal PR/issue numbers.
 10. Given a document over any character, byte or line limit, or computation over 2,000,000 steps, when compared, then it reports bounded/unavailable without truncation or guessed counts.
 11. Given more than eight changed section titles or unsafe headings, when rendered, then only up to eight escaped, bounded titles appear and the omitted count is explicit; mentions/control/Markdown injection is inert.
@@ -345,7 +349,7 @@ Docs must explain PR exact-link rules, limits, no-write behavior and that line/t
 5. Add adapter mappings and structural PR identity/pagination tests.
 6. Add localized states and correlated reply integration with golden and semantic fixtures.
 7. Update both issue docs, capability catalogue evidence and this companion/owning SDD before branch creation.
-8. Complete 30-case minimum, all existing gate budgets, #454 UX review, architecture/workflow checks and specification validation.
+8. Complete 217-case minimum, all existing gate budgets, #454 UX review, architecture/workflow checks and specification validation.
 
 ## 19. Definition of Done
 
@@ -367,3 +371,73 @@ Docs must explain PR exact-link rules, limits, no-write behavior and that line/t
 - Related specs/ADRs/issues/PRs: owning `issue-start-and-sdd-readiness` SDD; live issue #454 as UX evidence; exact URLs and catalog identifiers beyond the supplied capability ID remain to be confirmed from repository metadata.
 - Decisions: companion SDD under the existing capability; exact native same-repository PR closing-issue relationship is authoritative; digest mismatch always reports stale; pending-revision requires matching digest and verified first publication; first publication fields remain immutable; no arbitrary paths, refs, body URLs, semantic inference, model, writes or new record store.
 - Follow-up outside this spec: any broader semantic SDD analysis, changes to gate lifecycle/record schema, or general PR-to-issue discovery.
+
+### Confirmed implementation bindings and dependency gate
+
+The verified shared query is `SddEvidenceQueryPort` in
+`src/application/ports/sdd_evidence_read_ports.ts`, implemented by
+`sdd_evidence_query_use_case.ts` from PR #465. Its closed snapshot distinguishes
+not-required, absent, unavailable, invalid, stale, awaiting-answers,
+publication-pending and published. Verified evidence contains the owning path,
+capability, exact branch name/head and immutable first/current SHAs. The diff
+must consume this query rather than duplicate its gate/digest/ancestry logic.
+`PreBranchSddWorkspacePort.readSdd(commitSha, path)` supplies the two immutable
+contents through a physically read-only projection; no draft, publish or repair
+method may reach the command.
+
+Composition must provide only the shared query, immutable content read and exact
+native PR closing-issue query. Both native association and shared evidence are
+reread after collecting the documents, with all relevant identities compared
+before any current count is rendered. A pending revision may expose a verified
+first publication as history, never current counts. An original-only publication
+has one immutable version and no fabricated second revision. Unavailable or
+bounded comparison produces no guessed counts or silently truncated documents.
+
+### Partial implementation evidence (2026-10-12)
+
+The initial local 33-case observation was 11 new comparator cases plus 22
+pre-existing shared card/digest cases. The latter are preserved separately and
+excluded from this extension; no shared gate or digest implementation is copied
+into the diff feature.
+
+The current independent contribution has **106 distinct new cases**:
+
+| Implemented area | Distinct new cases | Verified risks |
+|---|---:|---|
+| Pure structural comparator | 18 | Exact line counts, honest character/byte/line/work ceilings, matching Markdown fences, bounded title changes and propagation of unexpected computation faults |
+| Localized presentation | 52 | Ten states in English/Spanish, atomic fallback, historical-only pending/stale proof, exact safe repository links, missing projections, hostile headings, omitted titles and the 5,600-character body ceiling |
+| Native PR closing-issue adapter | 36 | Exact repository IDs/names, PR number/head, complete bounded inventory, duplicate/foreign/malformed rows, denials, immutable binding/output and a constant read-only query |
+| **Implemented partial total** | **106** | No shared helper case counted again |
+
+All four new runtime modules reach 100% lines/statements/branches/functions in
+the focused scope. Typecheck and lint passed. Full validation in the existing
+older diff worktree passed 563 suites, 7,270 tests and 26 configured skips
+(7,296 total), including every unchanged official coverage budget. The setup
+acceptance ledger retains 308/350 passing cases and 42 explicitly open cases.
+This is partial validation on that worktree's ancestor, not proof of a combined
+implementation on current master or the shared foundation.
+
+A read-only operator GraphQL query on real PR #465 confirmed the exact native
+contract: repository database ID/name, exact PR number/head, sole same-repository
+closing issue #454, totalCount 1 and hasNextPage false. It establishes response
+shape only. Bot permission, application orchestration, final evidence/link
+fences, parser/help/composition, correlated publication and live issue/PR UX
+remain unverified. The final numeric distribution must include their distinct
+risk cases before publication. The specification remains Draft.
+
+
+### Integrated local implementation (2026-10-12)
+
+The earlier 106-case report is a historical partial snapshot. The current implementation has 212 dedicated cases across seven suites plus five actual Execution producer contracts, totaling 217 without shared-case duplication. The six new runtime modules have 100% lines/statements/branches/functions in focused coverage. Native Action-only synchronization committed `ad27952768674c11bb225bcf9389917c3c4b7f9f` and later `0f016278e34a7cbba0bfa4ad290e759492064994`; no manual parent merge or foundation copy was used.
+
+The shared snapshot now carries an optional opaque SHA-256 authority digest over the exact fenced card and live issue authority. It exposes no card contents or raw provider data. The diff application requires that digest before current claims and compares it with canonical publication facts after reading immutable documents. Native PR relationships additionally bind current head repository, ref, SHA and original issue author, including a final association fence.
+
+Only the `copilot-sdd-diff` reply family refreshes its existing exact bot-owned target/source correlation when the newly verified reading changes. Unchanged replay makes no mutation; other reply families retain their existing create-once behavior. Complete static catalogs also bypass dynamic localization for this command. Publication still follows the ordinary non-atomic GitHub comment boundary: the final authority fence prevents changes observed during collection, but does not claim a server-side compare-and-swap transaction.
+
+Live command activation, #454 first/revised UX, PR native-link acceptance, replay and locale checks remain pending promotion. Local coverage is not proof of those outcomes.
+
+
+Stale presentation does not invent a cause: a card or head race is not described as an issue edit. The next action retries the current read first and directs the owner to clarifications conditionally when the issue itself changed. Existing state/fence cases cover this wording without adding mirrored prose tests or inflating the 217-case budget.
+
+
+Final local integration on Action merge `86db9b1962915111f02613b4f49ec50a6a3f1cf6` passes the official full validation: 579 suites, 7,952 passing tests and 35 unchanged platform skips. Overall coverage is 97.25% lines, 96.23% statements, 92.70% branches and 97.10% functions; every new comparison module remains at 100%. Type, lint, workflow, documentation/specification validation, generated catalog and graph update pass. Live whitespace/case/newline synchronization run `38253646042` also passed on Windows with all five configured checks before publishing that parent merge. This proves operational synchronization and combined local source; it does not yet activate the new command on master.

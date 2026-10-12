@@ -36940,7 +36940,7 @@ exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
 const agent_1 = __nccwpck_require__(89040);
 const copilot_command_1 = __nccwpck_require__(11771);
 const branch_sync_command_1 = __nccwpck_require__(51114);
-const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'dismiss', 'remember']);
+const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'sdd-diff', 'dismiss', 'remember']);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))
@@ -40583,6 +40583,7 @@ const READ_ONLY_COMMANDS = Object.freeze([
     ['/copilot recheck', 'interaction.help.command.recheck'],
     ['/copilot description', 'interaction.help.command.description'],
     ['/copilot status', 'interaction.help.command.status'],
+    ['/copilot sdd-diff', 'interaction.help.command.sddDiff'],
 ]);
 const CHANGE_COMMANDS = Object.freeze([
     ['/copilot fix <finding-id>', 'interaction.help.command.fixOne'],
@@ -42463,6 +42464,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.help.command.recheck',
     'interaction.help.command.description',
     'interaction.help.command.status',
+    'interaction.help.command.sddDiff',
     'interaction.help.command.fixOne',
     'interaction.help.command.fixAll',
     'interaction.help.command.dismiss',
@@ -42582,6 +42584,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 're-run the review and reconcile findings.',
     'interaction.help.command.description': 'refresh the pull-request description.',
     'interaction.help.command.status': 'show the current automation status.',
+    'interaction.help.command.sddDiff': 'compare verified first and current SDD publications without a model.',
     'interaction.help.command.fixOne': 'fix one reported finding.',
     'interaction.help.command.fixAll': 'fix all unresolved findings.',
     'interaction.help.command.dismiss': 'dismiss a finding.',
@@ -42710,6 +42713,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 'repite la revisión y reconcilia los hallazgos.',
     'interaction.help.command.description': 'actualiza la descripción del pull request.',
     'interaction.help.command.status': 'muestra el estado actual de la automatización.',
+    'interaction.help.command.sddDiff': 'compara las publicaciones inicial y actual verificadas del SDD sin modelo.',
     'interaction.help.command.fixOne': 'corrige un hallazgo.',
     'interaction.help.command.fixAll': 'corrige todos los hallazgos sin resolver.',
     'interaction.help.command.dismiss': 'descarta un hallazgo.',
@@ -43573,6 +43577,191 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 /***/ }),
 
+/***/ 2230:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_SDD_DIFF_DEFINITION = exports.ENGLISH_SDD_DIFF_DEFINITION = exports.SDD_DIFF_MESSAGE_IDS = void 0;
+exports.resolveSddDiffCatalog = resolveSddDiffCatalog;
+exports.isSddDiffResolvedLocale = isSddDiffResolvedLocale;
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+exports.SDD_DIFF_MESSAGE_IDS = Object.freeze([
+    'sddDiff.heading', 'sddDiff.status', 'sddDiff.action', 'sddDiff.not-applicable', 'sddDiff.no-publication',
+    'sddDiff.initial-only', 'sddDiff.stale', 'sddDiff.pending-revision', 'sddDiff.invalid', 'sddDiff.unavailable',
+    'sddDiff.ambiguous', 'sddDiff.bounded', 'sddDiff.compared', 'sddDiff.none', 'sddDiff.publish', 'sddDiff.refresh',
+    'sddDiff.answer', 'sddDiff.retry', 'sddDiff.choose', 'sddDiff.reduce', 'sddDiff.first', 'sddDiff.current',
+    'sddDiff.historical', 'sddDiff.card', 'sddDiff.commit', 'sddDiff.compare', 'sddDiff.lines', 'sddDiff.sections', 'sddDiff.omitted', 'sddDiff.structural',
+    'sddDiff.charactersLimit', 'sddDiff.bytesLimit', 'sddDiff.linesLimit', 'sddDiff.workLimit',
+]);
+const EN = Object.freeze({
+    'sddDiff.heading': 'SDD structural comparison', 'sddDiff.status': 'Current status', 'sddDiff.action': 'Next action',
+    'sddDiff.not-applicable': 'An SDD comparison is not applicable to this target.',
+    'sddDiff.no-publication': 'No verified SDD publication is available yet.',
+    'sddDiff.initial-only': 'Only the first publication is verified; there is no revision pair to compare.',
+    'sddDiff.stale': 'Current issue, SDD or branch evidence changed or disagrees. Historical evidence does not certify a current comparison.',
+    'sddDiff.pending-revision': 'The requested SDD revision is pending. Current change counts are unavailable.',
+    'sddDiff.invalid': 'The owning SDD evidence could not be verified.',
+    'sddDiff.unavailable': 'The comparison could not be verified. No current change counts are available.',
+    'sddDiff.ambiguous': 'More than one issue is linked to this PR.',
+    'sddDiff.bounded': 'The verified documents exceed a fixed comparison limit; exact counts are unavailable.',
+    'sddDiff.compared': 'Compared verified published revisions.', 'sddDiff.none': 'No action is required.',
+    'sddDiff.publish': 'Publish the SDD through the existing issue workflow, then retry this command.',
+    'sddDiff.refresh': 'Retry this command with current evidence; if the issue changed, resume its existing SDD clarification workflow.',
+    'sddDiff.answer': 'Answer the existing SDD questions or resume publication, then retry this command.',
+    'sddDiff.retry': 'Inspect the existing SDD evidence and read access, then retry this command.',
+    'sddDiff.choose': 'Run this command in the intended issue conversation.',
+    'sddDiff.reduce': 'Keep the SDD within the documented fixed limits, then retry this command.',
+    'sddDiff.first': 'First publication', 'sddDiff.current': 'Current publication', 'sddDiff.historical': 'Historical first publication',
+    'sddDiff.card': 'SDD clarification card', 'sddDiff.commit': 'Publication commit', 'sddDiff.compare': 'Compare publication commits',
+    'sddDiff.lines': 'Added lines: {added}; removed lines: {removed}.', 'sddDiff.sections': 'Changed section titles',
+    'sddDiff.omitted': 'Additional changed titles omitted: {count}.',
+    'sddDiff.charactersLimit': 'Limit: 70,000 characters per document.', 'sddDiff.bytesLimit': 'Limit: 280,000 UTF-8 bytes per document.',
+    'sddDiff.linesLimit': 'Limit: 2,000 content lines per document.', 'sddDiff.workLimit': 'Limit: 2,000,000 line-comparison steps.',
+    'sddDiff.structural': 'This compares structure and content lines; it does not assess semantic requirements.',
+});
+const ES = Object.freeze({
+    'sddDiff.heading': 'Comparación estructural del SDD', 'sddDiff.status': 'Estado actual', 'sddDiff.action': 'Siguiente acción',
+    'sddDiff.not-applicable': 'La comparación de SDD no corresponde a este destino.',
+    'sddDiff.no-publication': 'Todavía no hay una publicación de SDD verificada.',
+    'sddDiff.initial-only': 'Sólo está verificada la primera publicación; no hay dos revisiones que comparar.',
+    'sddDiff.stale': 'La evidencia de la issue, del SDD o de la rama cambió o no coincide. La evidencia histórica no certifica una comparación actual.',
+    'sddDiff.pending-revision': 'La revisión solicitada del SDD está pendiente. No hay recuentos de cambios actuales.',
+    'sddDiff.invalid': 'No se pudo verificar la evidencia del SDD propietario.',
+    'sddDiff.unavailable': 'No se pudo verificar la comparación. No hay recuentos de cambios actuales.',
+    'sddDiff.ambiguous': 'Esta PR enlaza más de una issue.',
+    'sddDiff.bounded': 'Los documentos verificados superan un límite fijo de comparación; no hay recuentos exactos.',
+    'sddDiff.compared': 'Se compararon las revisiones publicadas y verificadas.', 'sddDiff.none': 'No se requiere ninguna acción.',
+    'sddDiff.publish': 'Publica el SDD mediante el flujo existente de la issue y vuelve a ejecutar el comando.',
+    'sddDiff.refresh': 'Vuelve a ejecutar el comando con evidencia actual; si cambió la issue, retoma su flujo existente de aclaraciones del SDD.',
+    'sddDiff.answer': 'Responde las preguntas existentes del SDD o retoma su publicación y vuelve a ejecutar el comando.',
+    'sddDiff.retry': 'Revisa la evidencia existente del SDD y los permisos de lectura y vuelve a ejecutar el comando.',
+    'sddDiff.choose': 'Ejecuta el comando en la conversación de la issue deseada.',
+    'sddDiff.reduce': 'Mantén el SDD dentro de los límites fijos documentados y vuelve a ejecutar el comando.',
+    'sddDiff.first': 'Primera publicación', 'sddDiff.current': 'Publicación actual', 'sddDiff.historical': 'Primera publicación histórica',
+    'sddDiff.card': 'Tarjeta de aclaraciones del SDD', 'sddDiff.commit': 'Commit de publicación', 'sddDiff.compare': 'Comparar commits de publicación',
+    'sddDiff.lines': 'Líneas añadidas: {added}; líneas eliminadas: {removed}.', 'sddDiff.sections': 'Títulos de secciones modificadas',
+    'sddDiff.omitted': 'Títulos modificados adicionales omitidos: {count}.',
+    'sddDiff.charactersLimit': 'Límite: 70.000 caracteres por documento.', 'sddDiff.bytesLimit': 'Límite: 280.000 bytes UTF-8 por documento.',
+    'sddDiff.linesLimit': 'Límite: 2.000 líneas de contenido por documento.', 'sddDiff.workLimit': 'Límite: 2.000.000 pasos de comparación de líneas.',
+    'sddDiff.structural': 'La comparación incluye estructura y líneas de contenido; no evalúa requisitos semánticos.',
+});
+exports.ENGLISH_SDD_DIFF_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION, locale: 'en-US', compatibleBaseLanguage: 'en', messages: EN,
+});
+exports.SPANISH_SDD_DIFF_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION, locale: 'es-ES', compatibleBaseLanguage: 'es', messages: ES,
+});
+function resolveSddDiffCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_SDD_DIFF_DEFINITION, [exports.ENGLISH_SDD_DIFF_DEFINITION, exports.SPANISH_SDD_DIFF_DEFINITION]);
+}
+/** Locale admission belongs to the complete bundled catalog boundary. */
+function isSddDiffResolvedLocale(value) {
+    return value === 'en-US' || value === 'es-ES';
+}
+
+
+/***/ }),
+
+/***/ 63302:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderSddDiff = renderSddDiff;
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const STATES = ['not-applicable', 'no-publication', 'initial-only', 'stale', 'pending-revision', 'invalid', 'unavailable', 'ambiguous', 'bounded', 'compared'];
+const ACTIONS = Object.freeze({
+    'not-applicable': 'sddDiff.none', 'no-publication': 'sddDiff.publish', 'initial-only': 'sddDiff.none',
+    stale: 'sddDiff.refresh', 'pending-revision': 'sddDiff.answer', invalid: 'sddDiff.retry', unavailable: 'sddDiff.retry',
+    ambiguous: 'sddDiff.choose', bounded: 'sddDiff.reduce', compared: 'sddDiff.none',
+});
+/** Immutable links are constructed only from a bound server/repository and verified publication facts. */
+function renderSddDiff(snapshot, scope, catalog) {
+    const render = catalog.message;
+    const heading = `## ${render('sddDiff.heading')}`;
+    const fallback = `${heading}\n\n${render('sddDiff.unavailable')}\n\n**${render('sddDiff.action')}:** ${render('sddDiff.retry')}`;
+    const root = repositoryRoot(scope);
+    if (!root || !STATES.includes(snapshot.state))
+        return fallback;
+    const lines = [heading, '', `**${render('sddDiff.status')}:** ${render(`sddDiff.${snapshot.state}`)}`, '',
+        `**${render('sddDiff.action')}:** ${render(ACTIONS[snapshot.state])}`];
+    if ('publication' in snapshot && snapshot.publication) {
+        const publication = snapshot.publication;
+        if (!(0, pre_branch_sdd_1.isSafeSddPath)(publication.path) || !sha(publication.firstSha))
+            return fallback;
+        const historical = snapshot.state === 'stale' || snapshot.state === 'pending-revision';
+        if (historical)
+            lines.push('', link('sddDiff.historical', publication.firstSha, publication.path));
+        else {
+            lines.push('', link('sddDiff.first', publication.firstSha, publication.path));
+            if (snapshot.state !== 'initial-only') {
+                if (!sha(publication.currentSha) || publication.currentSha === publication.firstSha)
+                    return fallback;
+                lines.push(link('sddDiff.current', publication.currentSha, publication.path));
+            }
+        }
+    }
+    else if (snapshot.state === 'initial-only' || snapshot.state === 'compared' || snapshot.state === 'bounded')
+        return fallback;
+    if (snapshot.card && (snapshot.state === 'stale' || snapshot.state === 'pending-revision')) {
+        if (!positive(snapshot.card.issueNumber) || !positive(snapshot.card.commentId))
+            return fallback;
+        lines.push('', `[${render('sddDiff.card')}](${root}/issues/${snapshot.card.issueNumber}#issuecomment-${snapshot.card.commentId})`);
+    }
+    if (snapshot.state === 'compared' || snapshot.state === 'bounded') {
+        const publication = snapshot.publication;
+        lines.push('', `[${render('sddDiff.compare')}](${root}/compare/${publication.firstSha}...${publication.currentSha})`);
+    }
+    if (snapshot.state === 'bounded') {
+        if (!['characters', 'bytes', 'lines', 'work'].includes(snapshot.reason))
+            return fallback;
+        lines.push('', render(`sddDiff.${snapshot.reason}Limit`));
+    }
+    if (snapshot.state === 'compared') {
+        const changes = snapshot.changes;
+        if (changes.state !== 'compared' || !count(changes.addedLines, 2000) || !count(changes.removedLines, 2000)
+            || !count(changes.omittedSections, 4000) || !Array.isArray(changes.sections) || changes.sections.length > 8
+            || changes.sections.some(title => typeof title !== 'string' || title.length > 120))
+            return fallback;
+        lines.push('', render('sddDiff.lines', { added: changes.addedLines, removed: changes.removedLines }), '', render('sddDiff.structural'));
+        if (changes.sections.length)
+            lines.push('', `**${render('sddDiff.sections')}:**`, ...changes.sections.map(title => `- ${escapeTitle(title)}`));
+        if (changes.omittedSections)
+            lines.push('', render('sddDiff.omitted', { count: changes.omittedSections }));
+    }
+    const body = lines.join('\n');
+    return body.length <= 5600 ? body : fallback;
+    function link(label, commit, path) {
+        return `[${render(label)} · ${commit.slice(0, 9)}](${root}/blob/${commit}/${path}) · [${render('sddDiff.commit')}](${root}/commit/${commit})`;
+    }
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function count(value, max) { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max; }
+function sha(value) { return typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value); }
+function repositoryRoot(scope) {
+    if (scope.serverOrigin.length > 200 || ![scope.owner, scope.repository].every(value => /^[A-Za-z0-9_.-]{1,100}$/u.test(value) && !['.', '..'].includes(value)))
+        return undefined;
+    try {
+        const url = new URL(scope.serverOrigin);
+        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
+            ? `${url.origin}/${scope.owner}/${scope.repository}` : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function escapeTitle(value) {
+    return value.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, ' ').replace(/@/gu, '@\u200b')
+        .replace(/([\\`*_{}[\]()<>#|~!])/gu, '\\$1');
+}
+
+
+/***/ }),
+
 /***/ 99167:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -43778,6 +43967,7 @@ exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
+const sdd_diff_message_catalog_1 = __nccwpck_require__(2230);
 const github_publication_1 = __nccwpck_require__(35793);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
@@ -43865,6 +44055,11 @@ function selectSemanticReplyIntents(context) {
             return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = (0, result_1.getResultPayload)(payload.publication);
         const kind = publication?.kind;
+        if (kind === 'sdd-diff' && result.id.endsWith('.SddDiff')
+            && typeof publication?.markdown === 'string' && publication.markdown.trim() && publication.markdown.length <= 5600
+            && (0, sdd_diff_message_catalog_1.isSddDiffResolvedLocale)(publication.locale)) {
+            return [replyIntent({ ...context, locale: publication.locale }, correlationId, 'copilot-sdd-diff', Object.freeze({ kind: 'sdd-diff', markdown: publication.markdown }))];
+        }
         if (kind === 'help' || kind === 'welcome') {
             const botLogin = typeof publication?.botLogin === 'string' && publication.botLogin.trim()
                 ? publication.botLogin.trim()
@@ -43914,6 +44109,8 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
     return `${marker}\n\n${body}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'sdd-diff')
+        return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.markdown);
     if (intent.projection.kind === 'implementation-result') {
         return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
             ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges', { branch: inlineRef(intent.projection.branch) }));
@@ -52588,6 +52785,8 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
+const sdd_diff_presentation_policy_1 = __nccwpck_require__(63302);
+const sdd_diff_message_catalog_1 = __nccwpck_require__(2230);
 const result_1 = __nccwpck_require__(73817);
 const read_copilot_status_workflow_1 = __nccwpck_require__(57206);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
@@ -52603,6 +52802,15 @@ const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
     if (command.name === 'help')
         return runHelpCommand(param, options);
+    if (command.name === 'sdd-diff') {
+        const snapshot = param.sddDiff && options.sddDiffQueryPort
+            ? await options.sddDiffQueryPort.read(param.sddDiff) : { state: 'unavailable' };
+        const catalog = (0, sdd_diff_message_catalog_1.resolveSddDiffCatalog)(param.language.locale);
+        const markdown = (0, sdd_diff_presentation_policy_1.renderSddDiff)(snapshot, { owner: param.status.owner, repository: param.status.repository,
+            serverOrigin: options.sddDiffQueryPort?.serverOrigin ?? 'https://github.com' }, catalog);
+        return [new result_1.Result({ id: `${options.taskId}.SddDiff`, success: true, executed: true, stepFormat: 'markdown',
+                steps: [markdown], payload: Object.freeze({ publication: Object.freeze({ kind: 'sdd-diff', markdown, locale: catalog.locale }) }) })];
+    }
     if (command.name === 'status')
         return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
     if (command.name === 'dismiss')
@@ -52846,6 +53054,7 @@ function projectCommentAutomationContext(source, language, userComment) {
         }),
         think: (0, think_workflow_1.projectThinkContext)(source),
         status: (0, status_command_policy_1.buildCopilotStatusSnapshot)(source),
+        ...projectSddDiffRequest(source),
         ...(source.issue?.number > 0 && !(source.pullRequest?.number > 0) ? { sdd: Object.freeze({
                 issueNumber: source.issue.number,
                 admittedKind: issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.find(kind => kind === source.issueWorkflowKind),
@@ -52902,6 +53111,29 @@ function withCommentLanguageAdaptation(context, adaptation) {
             }),
         }),
     });
+}
+/** Copies trusted workflow/profile facts; PR issue identity/author come only from the native link query. */
+function projectSddDiffRequest(source) {
+    const status = (0, status_command_policy_1.buildCopilotStatusSnapshot)(source);
+    const repositoryId = source.inputs?.repository?.id;
+    const number = status.target === 'pull-request' ? status.pullRequestNumber : status.issueNumber;
+    if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId < 1 || !number || number < 1
+        || !source.issueWorkflowProfile || typeof source.issue.issueManagedBranches !== 'boolean'
+        || typeof source.preBranchSdd !== 'boolean')
+        return {};
+    const list = (...values) => Object.freeze(values.filter((value) => typeof value === 'string'));
+    const labels = source.labels;
+    return { sddDiff: Object.freeze({
+            target: Object.freeze({ kind: status.target, number }), repositoryId,
+            ...(status.target === 'issue' && source.inputs?.issue?.number === number
+                ? { issueAuthor: source.inputs.issue.user?.login } : {}),
+            profile: Object.freeze({ schemaVersion: source.issueWorkflowProfile.schemaVersion, enabled: Object.freeze([...source.issueWorkflowProfile.enabled]) }),
+            labelConfiguration: Object.freeze({ feature: list(labels.feature, labels.enhancement), bugfix: list(labels.bugfix, labels.bug),
+                documentation: list(labels.documentation, labels.docs), chore: list(labels.chore, labels.maintenance),
+                help: list(labels.help, labels.question), hotfix: list(labels.hotfix), release: list(labels.release) }),
+            profileDigest: source.issueWorkflowProfileDigest, trustedBotLogin: source.tokenUser?.trim() ?? '',
+            issueManagedBranches: source.issue.issueManagedBranches, preBranchSdd: source.preBranchSdd, baseBranch: source.branches?.development,
+        }) };
 }
 
 
@@ -53026,7 +53258,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
         const isPublicMetadataCommand = command.kind === 'command'
-            && (command.command.name === 'help' || command.command.name === 'status');
+            && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'sdd-diff');
         if (!isPublicMetadataCommand && param.membersOnly
             && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
@@ -53663,7 +53895,7 @@ const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, sddQueryPort) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, sddQueryPort, sddDiffQueryPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -53680,6 +53912,7 @@ class IssueCommentUseCase {
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
         this.sddQueryPort = sddQueryPort;
+        this.sddDiffQueryPort = sddDiffQueryPort;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -53718,6 +53951,7 @@ class IssueCommentUseCase {
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
             sddQueryPort: this.sddQueryPort,
+            sddDiffQueryPort: this.sddDiffQueryPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -54376,7 +54610,7 @@ const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, sddDiffQueryPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -54391,6 +54625,7 @@ class PullRequestReviewCommentUseCase {
         this.syncBranchUseCase = syncBranchUseCase;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.sddDiffQueryPort = sddDiffQueryPort;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -54416,6 +54651,7 @@ class PullRequestReviewCommentUseCase {
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
+            sddDiffQueryPort: this.sddDiffQueryPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -55356,6 +55592,151 @@ function canonicalIssueUrl(context) {
 
 /***/ }),
 
+/***/ 48684:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddDiffQueryUseCase = void 0;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const pre_branch_sdd_diff_1 = __nccwpck_require__(28558);
+/** Structural comparison over shared verified evidence, with no writer/model capability. */
+class SddDiffQueryUseCase {
+    constructor(ports) {
+        this.ports = Object.freeze({
+            evidence: Object.freeze({ read: ports.evidence.read.bind(ports.evidence) }),
+            links: Object.freeze({ readClosingIssues: ports.links.readClosingIssues.bind(ports.links) }),
+            labels: Object.freeze({ getLabels: ports.labels.getLabels.bind(ports.labels) }),
+            descriptions: Object.freeze({ getDescription: ports.descriptions.getDescription.bind(ports.descriptions) }),
+            documents: Object.freeze({ readSdd: ports.documents.readSdd.bind(ports.documents) }),
+        });
+    }
+    async read(request) {
+        try {
+            if (!positive(request.target.number) || !positive(request.repositoryId)
+                || !['issue', 'pull-request'].includes(request.target.kind))
+                return { state: 'unavailable' };
+            let issueNumber = request.target.number;
+            let issueAuthor = request.issueAuthor;
+            let links;
+            if (request.target.kind === 'pull-request') {
+                const association = await this.ports.links.readClosingIssues(request.target.number);
+                if (association.state !== 'verified' || association.pullNumber !== request.target.number)
+                    return { state: 'unavailable' };
+                if (association.issueNumbers.length === 0)
+                    return { state: 'not-applicable' };
+                if (association.issueNumbers.length !== 1)
+                    return { state: 'ambiguous' };
+                links = association;
+                issueNumber = association.issueNumbers[0];
+                issueAuthor = association.issueAuthors[issueNumber];
+            }
+            if (!issueAuthor?.trim())
+                return { state: 'unavailable' };
+            const context = await this.context(request, issueNumber, issueAuthor);
+            if (!context)
+                return { state: 'not-applicable' };
+            const original = await this.ports.evidence.read(context);
+            const projection = projectEvidence(original, issueNumber);
+            if (original.state !== 'published' || !original.verified?.currentSha)
+                return projection;
+            if (!/^[a-f0-9]{64}$/u.test(original.authorityDigest ?? ''))
+                return { state: 'unavailable' };
+            if (links && (links.headSha !== original.verified.branchHeadSha || links.headBranch !== original.verified.branchName)) {
+                return historicalStale(original, issueNumber);
+            }
+            const publication = publicationOf(original);
+            let result = { state: 'initial-only', publication };
+            if (original.verified.currentSha !== original.verified.firstSha) {
+                const [before, after] = await Promise.all([
+                    this.ports.documents.readSdd(original.verified.firstSha, original.verified.path),
+                    this.ports.documents.readSdd(original.verified.currentSha, original.verified.path),
+                ]);
+                if (before === undefined || after === undefined)
+                    return { state: 'unavailable' };
+                const changes = (0, pre_branch_sdd_diff_1.compareSddStructure)(before, after);
+                result = changes.state === 'bounded'
+                    ? { state: 'bounded', publication, reason: changes.reason }
+                    : { state: 'compared', publication, changes };
+            }
+            // Re-admit the exact issue, then re-read the shared fenced authority.
+            const freshContext = await this.context(request, issueNumber, issueAuthor);
+            if (!freshContext || freshContext.admittedKind !== context.admittedKind)
+                return { state: 'stale' };
+            const fresh = await this.ports.evidence.read(freshContext);
+            if (!original.authorityDigest || fresh.authorityDigest !== original.authorityDigest
+                || proofOf(fresh) !== proofOf(original)) {
+                return fresh.state === 'published' ? historicalStale(fresh, issueNumber) : projectEvidence(fresh, issueNumber);
+            }
+            if (links) {
+                const freshLinks = await this.ports.links.readClosingIssues(request.target.number);
+                if (freshLinks.state !== 'verified')
+                    return { state: 'unavailable' };
+                if (associationProof(freshLinks) !== associationProof(links))
+                    return historicalStale(fresh, issueNumber);
+            }
+            return Object.freeze(result);
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async context(request, issueNumber, issueAuthor) {
+        const [labels, body] = await Promise.all([
+            this.ports.labels.getLabels(issueNumber), this.ports.descriptions.getDescription(issueNumber),
+        ]);
+        if (body === undefined)
+            throw new Error('Issue admission is unavailable.');
+        const admission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(labels, request.profile, request.labelConfiguration, body);
+        return admission.status === 'eligible' ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
+            profileDigest: request.profileDigest, trustedBotLogin: request.trustedBotLogin,
+            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch }) : undefined;
+    }
+}
+exports.SddDiffQueryUseCase = SddDiffQueryUseCase;
+function projectEvidence(evidence, issueNumber) {
+    if (evidence.state === 'not-required')
+        return { state: 'not-applicable' };
+    if (evidence.state === 'absent')
+        return { state: 'no-publication' };
+    if (evidence.state === 'invalid' || evidence.state === 'unavailable')
+        return { state: evidence.state };
+    const publication = publicationOf(evidence);
+    if (evidence.state === 'stale')
+        return historicalStale(evidence, issueNumber);
+    if (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending') {
+        return publication ? { state: 'pending-revision', publication, ...cardOf(evidence, issueNumber) } : { state: 'no-publication' };
+    }
+    if (!publication?.currentSha)
+        return { state: 'invalid' };
+    return publication.currentSha === publication.firstSha ? { state: 'initial-only', publication } : { state: 'unavailable' };
+}
+function publicationOf(evidence) {
+    return evidence.verified ? Object.freeze({ path: evidence.verified.path, firstSha: evidence.verified.firstSha,
+        ...(evidence.verified.currentSha ? { currentSha: evidence.verified.currentSha } : {}) }) : undefined;
+}
+function historicalStale(evidence, issueNumber) {
+    const publication = publicationOf(evidence);
+    return { state: 'stale', ...(publication ? { publication } : {}), ...cardOf(evidence, issueNumber) };
+}
+function cardOf(evidence, issueNumber) {
+    return positive(evidence.cardId) ? { card: Object.freeze({ issueNumber, commentId: evidence.cardId }) } : {};
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function proofOf(evidence) {
+    const verified = evidence.verified;
+    return JSON.stringify([evidence.state, evidence.authorityDigest, evidence.cardId, evidence.path, evidence.pendingQuestionIds,
+        verified?.path, verified?.capabilityId, verified?.branchName, verified?.branchHeadSha, verified?.firstSha, verified?.currentSha]);
+}
+function associationProof(links) {
+    return JSON.stringify([links.pullNumber, links.headSha, links.headBranch,
+        links.issueNumbers.map(number => [number, links.issueAuthors[number].toLowerCase()])]);
+}
+
+
+/***/ }),
+
 /***/ 39893:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -55363,6 +55744,7 @@ function canonicalIssueUrl(context) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SddEvidenceQueryUseCase = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
@@ -55394,7 +55776,10 @@ class SddEvidenceQueryUseCase {
             if (!['invalid', 'unavailable'].includes(result.state)
                 && !await this.fence(context, facts, selection.body, cardId, record, result.verified))
                 return { state: 'stale' };
-            return Object.freeze(result);
+            return Object.freeze({ ...result, ...(!['invalid', 'unavailable'].includes(result.state) ? {
+                    authorityDigest: (0, node_crypto_1.createHash)('sha256').update(JSON.stringify([cardId, selection.body, digest, canonicalLabels(facts.labels),
+                        record.phase === 'awaiting-answer' ? facts.comments : null])).digest('hex'),
+                } : {}) });
         }
         catch {
             return { state: 'unavailable' };
@@ -68255,7 +68640,7 @@ function containsCredentialMaterial(value, insideStorage = false) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DryRunSetupPlanConfirmation = exports.SetupPlanConfirmationAdapter = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 class SetupPlanConfirmationAdapter {
     constructor(terminal, assumeYes) {
@@ -68388,7 +68773,7 @@ async function collectSetupCredentials(input) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const setup_token_permission_presenter_1 = __nccwpck_require__(63206);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
@@ -68666,7 +69051,7 @@ exports.SetupDoctorPresenter = void 0;
 exports.renderDoctorReport = renderDoctorReport;
 exports.doctorCheckLabel = doctorCheckLabel;
 const setup_doctor_message_catalog_1 = __nccwpck_require__(80226);
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 class SetupDoctorPresenter {
     constructor(catalog = (0, setup_doctor_message_catalog_1.resolveStaticSetupDoctorCatalog)()) {
         this.catalog = catalog;
@@ -68749,7 +69134,7 @@ function doctorCheckLabel(id, catalog = (0, setup_doctor_message_catalog_1.resol
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupJourneyPresenter = void 0;
 exports.renderSetupJourney = renderSetupJourney;
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 class ConsoleSetupJourneyPresenter {
     present(view) {
         console.log(renderSetupJourney(view));
@@ -69009,7 +69394,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupPlanPresenter = void 0;
 exports.renderSetupPlan = renderSetupPlan;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
 class ConsoleSetupPlanPresenter {
@@ -69087,7 +69472,7 @@ function storageLabel(policy) {
 
 /***/ }),
 
-/***/ 83434:
+/***/ 76673:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -69241,7 +69626,7 @@ function stripAnsi(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupQuestionRenderer = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
 const setup_question_guidance_policy_1 = __nccwpck_require__(42775);
 class ConsoleSetupQuestionRenderer {
@@ -69788,7 +70173,7 @@ exports.renderSetupTokenPermissionSummary = renderSetupTokenPermissionSummary;
 exports.renderSetupTokenPermissionRequirements = renderSetupTokenPermissionRequirements;
 exports.renderSetupTokenPermissionReport = renderSetupTokenPermissionReport;
 const node_process_1 = __nccwpck_require__(97742);
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const setup_permission_summary_policy_1 = __nccwpck_require__(10267);
 class ConsoleSetupTokenPermissionPresenter {
     constructor(mode = 'full') {
@@ -69937,7 +70322,7 @@ function workflowPatStorageCopy(storage) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupWorkflowUpdatePromptAdapter = void 0;
-const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 class SetupWorkflowUpdatePromptAdapter {
     constructor(terminal) {
@@ -80233,6 +80618,85 @@ exports.RepositorySecretsCommandRepository = RepositorySecretsCommandRepository;
 
 /***/ }),
 
+/***/ 85885:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddDiffLinkRepository = void 0;
+const QUERY = `query SddDiffClosingIssues($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    databaseId nameWithOwner
+    pullRequest(number: $number) {
+      number headRefOid headRefName headRepository { databaseId nameWithOwner } repository { databaseId nameWithOwner }
+      closingIssuesReferences(first: 100) {
+        totalCount pageInfo { hasNextPage }
+        nodes { number author { login } repository { databaseId nameWithOwner } }
+      }
+    }
+  }
+}`;
+/** One bounded native read; absent, incomplete or conflicting identities never become guessed links. */
+class SddDiffLinkRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = Object.freeze({ ...binding });
+    }
+    async readClosingIssues(pullNumber) {
+        const unavailable = Object.freeze({ state: 'unavailable' });
+        const binding = this.binding;
+        if (!positive(pullNumber) || !positive(binding.repositoryId)
+            || ![binding.owner, binding.repository].every(value => /^[A-Za-z0-9_.-]{1,100}$/u.test(value) && !['.', '..'].includes(value)))
+            return unavailable;
+        try {
+            const response = object(await this.client.getClient(binding.token).graphql(QUERY, {
+                owner: binding.owner, repo: binding.repository, number: pullNumber,
+            }));
+            const repository = object(response?.repository);
+            const pull = object(repository?.pullRequest);
+            const links = object(pull?.closingIssuesReferences);
+            const page = object(links?.pageInfo);
+            if (!sameRepository(repository, binding) || !sameRepository(object(pull?.repository), binding)
+                || !sameRepository(object(pull?.headRepository), binding)
+                || typeof pull?.headRefName !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,249}$/u.test(pull.headRefName)
+                || pull?.number !== pullNumber || typeof pull.headRefOid !== 'string' || !/^[a-f0-9]{40}$/u.test(pull.headRefOid)
+                || page?.hasNextPage !== false || !Array.isArray(links?.nodes)
+                || !Number.isSafeInteger(links.totalCount) || links.totalCount !== links.nodes.length || links.nodes.length > 100)
+                return unavailable;
+            const numbers = [];
+            const authors = {};
+            for (const value of links.nodes) {
+                const issue = object(value);
+                const author = object(issue?.author);
+                if (typeof author?.login !== 'string' || !author.login.trim() || author.login.length > 100
+                    || !positive(issue?.number) || !sameRepository(object(issue?.repository), binding)
+                    || numbers.includes(issue.number))
+                    return unavailable;
+                numbers.push(issue.number);
+                authors[issue.number] = author.login;
+            }
+            return Object.freeze({ state: 'verified', pullNumber, headSha: pull.headRefOid, headBranch: pull.headRefName,
+                issueNumbers: Object.freeze(numbers.sort((left, right) => left - right)), issueAuthors: Object.freeze(authors) });
+        }
+        catch {
+            return unavailable;
+        }
+    }
+}
+exports.SddDiffLinkRepository = SddDiffLinkRepository;
+function object(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function sameRepository(value, binding) {
+    return value?.databaseId === binding.repositoryId && typeof value.nameWithOwner === 'string'
+        && value.nameWithOwner.toLowerCase() === `${binding.owner}/${binding.repository}`.toLowerCase();
+}
+
+
+/***/ }),
+
 /***/ 40941:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -81270,6 +81734,7 @@ exports.COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'sdd-diff',
     'description',
     'explain',
     'diagnose',
@@ -81328,6 +81793,8 @@ function parseCopilotCommand(raw) {
         && name !== 'remember') {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
+    if (name === 'sdd-diff' && argumentsList.length > 0)
+        return { kind: 'invalid', reason: '/copilot sdd-diff does not accept arguments.' };
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
     }
@@ -83316,6 +83783,153 @@ function sanitize(value) {
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+
+/***/ }),
+
+/***/ 28558:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_DIFF_LIMITS = void 0;
+exports.compareSddStructure = compareSddStructure;
+exports.SDD_DIFF_LIMITS = Object.freeze({
+    characters: 70000, bytes: 280000, lines: 2000, comparisons: 2000000,
+    sectionTitles: 8, titleCharacters: 120,
+});
+class ComparisonBudgetExceeded extends Error {
+}
+/** Exact line counts with Hirschberg's linear-memory LCS; every equality consumes bounded work. */
+function compareSddStructure(before, after) {
+    for (const text of [before, after]) {
+        if (Buffer.byteLength(text, 'utf8') > exports.SDD_DIFF_LIMITS.bytes)
+            return Object.freeze({ state: 'bounded', reason: 'bytes' });
+        if (text.length > exports.SDD_DIFF_LIMITS.characters)
+            return Object.freeze({ state: 'bounded', reason: 'characters' });
+    }
+    const left = documentLines(before);
+    const right = documentLines(after);
+    if (left.length > exports.SDD_DIFF_LIMITS.lines || right.length > exports.SDD_DIFF_LIMITS.lines) {
+        return Object.freeze({ state: 'bounded', reason: 'lines' });
+    }
+    const leftMatches = new Uint8Array(left.length);
+    const rightMatches = new Uint8Array(right.length);
+    let comparisons = 0;
+    let common = 0;
+    const equal = (a, b) => {
+        if (comparisons === exports.SDD_DIFF_LIMITS.comparisons)
+            throw new ComparisonBudgetExceeded();
+        comparisons++;
+        return a === b;
+    };
+    const match = (a, b) => { leftMatches[a] = 1; rightMatches[b] = 1; common++; };
+    const row = (ls, le, rs, re, reverse) => {
+        let previous = new Uint16Array(re - rs + 1);
+        let current = new Uint16Array(re - rs + 1);
+        for (let i = 0; i < le - ls; i++) {
+            current[0] = 0;
+            for (let j = 1; j <= re - rs; j++) {
+                current[j] = equal(left[reverse ? le - i - 1 : ls + i], right[reverse ? re - j : rs + j - 1])
+                    ? previous[j - 1] + 1 : Math.max(previous[j], current[j - 1]);
+            }
+            [previous, current] = [current, previous];
+        }
+        return previous;
+    };
+    // Row arrays leave scope before recursion; no quadratic trace is retained.
+    const split = (ls, middle, le, rs, re) => {
+        const forward = row(ls, middle, rs, re, false);
+        const backward = row(middle, le, rs, re, true);
+        let best = -1;
+        let offset = 0;
+        for (let j = 0; j <= re - rs; j++) {
+            const score = forward[j] + backward[re - rs - j];
+            if (score > best) {
+                best = score;
+                offset = j;
+            }
+        }
+        return rs + offset;
+    };
+    const align = (ls, le, rs, re) => {
+        if (ls === le || rs === re)
+            return;
+        if (le - ls === 1) {
+            for (let j = rs; j < re; j++)
+                if (equal(left[ls], right[j])) {
+                    match(ls, j);
+                    break;
+                }
+            return;
+        }
+        const middle = ls + Math.floor((le - ls) / 2);
+        const rightMiddle = split(ls, middle, le, rs, re);
+        align(ls, middle, rs, rightMiddle);
+        align(middle, le, rightMiddle, re);
+    };
+    try {
+        let start = 0;
+        let leftEnd = left.length;
+        let rightEnd = right.length;
+        while (start < leftEnd && start < rightEnd && equal(left[start], right[start])) {
+            match(start, start);
+            start++;
+        }
+        while (start < leftEnd && start < rightEnd && equal(left[leftEnd - 1], right[rightEnd - 1])) {
+            match(--leftEnd, --rightEnd);
+        }
+        align(start, leftEnd, start, rightEnd);
+    }
+    catch (error) {
+        if (!(error instanceof ComparisonBudgetExceeded))
+            throw error;
+        return Object.freeze({ state: 'bounded', reason: 'work' });
+    }
+    const titles = new Set();
+    collectChangedSections(right, rightMatches, titles);
+    collectChangedSections(left, leftMatches, titles);
+    return Object.freeze({ state: 'compared', addedLines: right.length - common, removedLines: left.length - common,
+        sections: Object.freeze([...titles].slice(0, exports.SDD_DIFF_LIMITS.sectionTitles).map(boundedTitle)),
+        omittedSections: Math.max(0, titles.size - exports.SDD_DIFF_LIMITS.sectionTitles) });
+}
+/** CRLF and terminal newline markers do not count as added/removed content lines. */
+function documentLines(text) {
+    if (!text)
+        return [];
+    const lines = text.split(/\r?\n/u);
+    if (text.endsWith('\n'))
+        lines.pop();
+    return lines;
+}
+function collectChangedSections(lines, matches, titles) {
+    let fence;
+    let title;
+    for (let index = 0; index < lines.length; index++) {
+        const boundary = lines[index].match(/^ {0,3}(`{3,}|~{3,})(.*)$/u);
+        if (boundary) {
+            if (!fence && (boundary[1][0] !== '`' || !boundary[2].includes('`')))
+                fence = boundary[1];
+            else if (fence && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
+                && /^[ \t]*$/u.test(boundary[2]))
+                fence = undefined;
+        }
+        else if (!fence) {
+            const heading = lines[index].match(/^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$/u);
+            if (heading)
+                title = heading[1];
+        }
+        if (matches[index] === 0 && title)
+            titles.add(title);
+    }
+}
+function boundedTitle(title) {
+    let value = title.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, ' ').slice(0, exports.SDD_DIFF_LIMITS.titleCharacters);
+    if (/[\uD800-\uDBFF]$/u.test(value))
+        value = value.slice(0, -1);
+    return value;
 }
 
 
@@ -85954,6 +86568,7 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+const sdd_diff_composition_root_1 = __nccwpck_require__(83434);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
@@ -86072,7 +86687,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -86088,7 +86703,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -86517,6 +87132,38 @@ function bindSetupSecrets(port, binding) {
 }
 function bindSetupRemoteConfiguration(port, binding) {
     return Object.freeze({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
+}
+
+
+/***/ }),
+
+/***/ 83434:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSddDiffQueryPort = createSddDiffQueryPort;
+const sdd_evidence_query_use_case_1 = __nccwpck_require__(39893);
+const sdd_diff_query_use_case_1 = __nccwpck_require__(48684);
+const sdd_diff_link_repository_1 = __nccwpck_require__(85885);
+const pre_branch_sdd_workspace_adapter_1 = __nccwpck_require__(35849);
+const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+/** No agent, provisioning, approval or lifecycle writer is supplied. */
+function createSddDiffQueryPort(binding, comments) {
+    const bound = Object.freeze({ ...binding });
+    const reads = (0, sdd_evidence_composition_root_1.createSddEvidenceReadPorts)(bound, comments);
+    const evidence = new sdd_evidence_query_use_case_1.SddEvidenceQueryUseCase(reads);
+    const documents = new pre_branch_sdd_workspace_adapter_1.PreBranchSddWorkspaceAdapter(process.cwd(), bound.token);
+    const client = (0, github_project_client_factory_1.createGraphqlTransportClient)();
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        read: (request) => new sdd_diff_query_use_case_1.SddDiffQueryUseCase({ evidence: Object.freeze({ read: evidence.read.bind(evidence) }),
+            links: new sdd_diff_link_repository_1.SddDiffLinkRepository(client, { ...bound, repositoryId: request.repositoryId }),
+            labels: reads.labels, descriptions: reads.descriptions,
+            documents: Object.freeze({ readSdd: documents.readSdd.bind(documents) }),
+        }).read(request),
+    });
 }
 
 

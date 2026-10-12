@@ -532,6 +532,31 @@
         }
       ],
       "successMessage": "canonical PR status coverage: PASS (marker policy 100%; read workflow 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "SDD structural comparison",
+      "missingEntryLabel": "SDD structural comparison",
+      "rules": [
+        {
+          "files": [
+            "src/domain/pre_branch_sdd_diff.ts",
+            "src/application/policies/sdd_diff_message_catalog.ts",
+            "src/application/policies/sdd_diff_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/sdd/sdd_diff_query_use_case.ts",
+            "src/data/repository/sdd/sdd_diff_link_repository.ts",
+            "src/infrastructure/composition/sdd_diff_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "SDD structural comparison coverage: PASS (pure policies 100%; each application/adapter/composition 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

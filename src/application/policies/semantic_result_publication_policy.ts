@@ -1,3 +1,4 @@
+import { isSddDiffResolvedLocale } from './sdd_diff_message_catalog';
 import { publicationTargetToken, type PublicationTarget, type ReplyPublicationIntent, type StatusPublicationIntent } from '../../domain/github_publication';
 import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { Result } from '../../data/model/result';
@@ -87,6 +88,7 @@ type BranchSyncReplyProjection =
 
 export type SemanticReplyProjection =
     | { readonly kind: 'help'; readonly botLogin: string }
+    | { readonly kind: 'sdd-diff'; readonly markdown: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
     | { readonly kind: 'implementation-plan'; readonly plan: ImplementationPlan; readonly translation?: TranslationPublication }
     | {
@@ -186,6 +188,12 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         if (directAnswer) return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = getResultPayload(payload.publication);
         const kind = publication?.kind;
+        if (kind === 'sdd-diff' && result.id.endsWith('.SddDiff')
+            && typeof publication?.markdown === 'string' && publication.markdown.trim() && publication.markdown.length <= 5600
+            && isSddDiffResolvedLocale(publication.locale)) {
+            return [replyIntent({ ...context, locale: publication.locale }, correlationId, 'copilot-sdd-diff',
+                Object.freeze({ kind: 'sdd-diff' as const, markdown: publication.markdown }))];
+        }
         if (kind === 'help' || kind === 'welcome') {
             const botLogin = typeof publication?.botLogin === 'string' && publication.botLogin.trim()
                 ? publication.botLogin.trim()
@@ -237,6 +245,7 @@ export function renderSemanticReply(
 }
 
 function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessageCatalog): string {
+    if (intent.projection.kind === 'sdd-diff') return sanitizeAgentMarkdown(intent.projection.markdown);
     if (intent.projection.kind === 'implementation-result') {
         return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
             ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges',

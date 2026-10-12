@@ -44,6 +44,7 @@ Commands are recognized at the beginning of a comment, case-insensitively. The c
 | `/copilot review` | Run the read-only review flow. | No |
 | `/copilot findings` | Reconcile and publish current findings. | No |
 | `/copilot recheck` | Re-run the review against the current branch. | No |
+| `/copilot sdd-diff` | Compare verified first/current SDD publications without an agent. | No |
 | `/copilot status` | Show the current Copilot status. | No |
 | `/copilot description` | Refresh the PR description when that action is configured. | No |
 | `/copilot fix <finding-id> [finding-id ...]` | Fix one or more existing Bugbot findings. | Yes, if authorized |
@@ -60,7 +61,7 @@ whitespace-separated, and commands are limited to 2,000 characters and 20
 arguments. Missing or malformed required arguments produce a validation reply;
 they never mean “all” or authorize a broad change.
 
-`help`, `status`, `dismiss`, `remember` and rejected commands do not run a
+`help`, `status`, `sdd-diff`, `dismiss`, `remember` and rejected commands do not run a
 model or change the temporary agent activity label. `sync-branch --dry-run`
 and `--no-agent` also avoid model activity. Ordinary sync may use the conflict
 fixer, and `findings` runs a fresh review. These distinctions preserve each
@@ -309,3 +310,31 @@ See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do u
 SDD status keeps an unknown requirement visible when the issue has no admitted
 workflow kind. Evidence links use the configured GitHub server origin and the
 same issue identity; an untrusted or mismatched URL is shown without navigation.
+
+
+## Compare SDD publications
+
+Run `/copilot sdd-diff` without arguments in an eligible issue. The reply links
+verified immutable first/current SDD publications and their commits, and compares
+added/removed lines and up to eight changed section titles. The commit comparison
+link can include other files changed between those commits; the reported counts
+cover only the owning SDD. This is a structural comparison, without an assessment
+of semantic requirements or document excerpts.
+
+A first publication without a revision reports `initial-only`. Pending answers
+and a changed issue withhold current counts and link the existing clarification
+card when verified. Missing, invalid or unavailable evidence is explicit. The
+command reads current issue, record and branch facts again before claiming a
+current comparison. It does not run an agent, change activity labels or edit files.
+
+On a PR, exactly one native same-repository closing issue is required, and its
+current linked branch must match the PR head. Multiple native links report
+ambiguity; the command never guesses from issue numbers in text. Use the intended
+issue conversation to resolve ambiguity. A replay of the same source comment
+refreshes its existing owned reply; a new comment gets a separate reply.
+
+Comparison limits are fixed: 70,000 characters, 280,000 UTF-8 bytes and 2,000
+content lines per document, and 2,000,000 line-comparison steps. Over-limit
+results retain safe verified links and withhold exact counts. English and Spanish
+are bundled; other locales receive a complete English fallback without a model.
+Paths, refs, URLs and configurable limits are not accepted as command arguments.

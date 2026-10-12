@@ -58,6 +58,8 @@ export interface VerifiedSddEvidence {
 }
 
 export interface SddEvidenceSnapshot {
+    /** Opaque hash of the exact fenced card and live issue authority, never their contents. */
+    readonly authorityDigest?: string;
     readonly state: 'not-required' | 'absent' | 'unavailable' | 'invalid' | 'stale' | 'awaiting-answers' | 'publication-pending' | 'published';
     readonly path?: string;
     readonly pendingQuestionIds?: readonly string[];
