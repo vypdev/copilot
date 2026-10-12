@@ -143,7 +143,10 @@ which need independent producer verification and do not certify write access.
 Workflow files and specification prerequisites are read at one verified immutable
 default-branch revision, linked in the report. A moved default head makes that
 sample unavailable. Native linked branches require complete same-repository
-association and a matching live ref. A PR request checks only its exact event
+association and a matching live ref. A null or missing linked ref remains
+unavailable; only a complete empty page proves that no branch is linked.
+Specification prerequisites require a non-empty capability catalog and effective
+dependency branches must be text values. A PR request checks only its exact event
 PR and fences its current head; optional issue context is not inferred from
 an equal conversation number. Reports use the repository locale in English or
 Spanish with atomic fallback and one correlated reply per source comment.

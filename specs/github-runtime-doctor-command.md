@@ -427,3 +427,12 @@ The integrated shared activity policy treated the newly recognized `doctor` comm
 ### Bound compiler fixture memory after native worker exhaustion (2026-10-12)
 
 Native parent synchronization `38277723562` on Ubuntu resolved the conflict and passed 7,955 tests, but Jest reported “worker ran out of memory and crashed” while loading `raw_error_logging_boundaries.test.ts`. Its repository scan and six taint/sanitizer fixtures each rebuilt the full TypeScript project. The architecture test now constructs one real compiler/checker graph containing the unchanged project and all six isolated fixture modules. Every original assertion still resolves real production logger and sanitizer symbols; no mock, skip, worker/heap adjustment, coverage or platform reduction is introduced. The 169-case doctor inventory is unchanged because this is shared test infrastructure rather than a new capability. A fresh native integration must certify the correction.
+
+
+### Native prerequisite and absence-proof findings (2026-10-12)
+
+Native review found three concrete defects: `4249698862` dropped unavailable linked refs before claiming absence or uniqueness; `4249700033` accepted non-string dependency values through regular-expression coercion; `4249700043` accepted an empty capability catalog despite the canonical validator requiring a non-empty array. The provider MUST keep any null association, missing/null ref or mixed unavailable/valid page unavailable, without a fallback live-ref read. Only an actually empty complete page proves absence. Effective dependency branches MUST be strings before syntax validation. The prerequisite check MUST reject an empty catalog.
+
+Ten additional distinct cases cover four incomplete native pages, five coerced non-string branch values and the canonical empty-catalog contract. The own feature inventory increases from 169 to 179; the original 52-case floor, six fixed content reads, permissions, query-only ownership and all coverage gates remain unchanged. Fresh native review, parent integration and live command acceptance remain required.
+
+Local verification of these findings passed 581 suites and 7,914 tests with 35 configured platform skips (7,949 total), every unchanged global/module coverage budget and 308/350 setup acceptance with 42 explicitly open. Types, lint, documentation, specification/catalog validation and graph update passed.

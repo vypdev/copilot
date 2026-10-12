@@ -41763,6 +41763,7 @@ const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 function validDoctorConfiguration(value) {
     if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
+        || typeof value.dependencyBranch !== 'string'
         || !/^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u.test(value.dependencyBranch))
         return false;
     try {
@@ -41786,7 +41787,7 @@ function doctorRepositoryPrerequisites(read) {
         return 'blocked';
     try {
         const catalog = object(JSON.parse(catalogFile.text));
-        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities))
+        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities) || catalog.capabilities.length === 0)
             return 'blocked';
         const ids = new Set();
         for (const raw of catalog.capabilities) {
@@ -77523,6 +77524,8 @@ class RuntimeDoctorRepository {
                 || repo.issue?.number !== issueNumber || links?.pageInfo?.hasNextPage !== false || !Array.isArray(links.nodes))
                 return { state: 'unavailable' };
             const refs = links.nodes.flatMap((node) => node?.ref ? [node.ref] : []);
+            if (refs.length !== links.nodes.length)
+                return { state: 'unavailable' };
             if (refs.length === 0)
                 return { state: 'absent' };
             if (refs.length !== 1)

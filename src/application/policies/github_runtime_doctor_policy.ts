@@ -6,6 +6,7 @@ import type { DoctorConfiguration, DoctorRepositoryRead, DoctorRepositoryPath } 
 
 export function validDoctorConfiguration(value: DoctorConfiguration | undefined): value is DoctorConfiguration {
     if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
+        || typeof value.dependencyBranch !== 'string'
         || !/^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u.test(value.dependencyBranch)) return false;
     try {
         if ('error' in parseIssueWorkflowProfile(JSON.stringify(value.profile))) return false;
@@ -22,7 +23,7 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
     if (catalogFile.state !== 'present') return 'blocked';
     try {
         const catalog = object(JSON.parse(catalogFile.text));
-        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities)) return 'blocked';
+        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities) || catalog.capabilities.length === 0) return 'blocked';
         const ids = new Set<string>();
         for (const raw of catalog.capabilities) {
             const capability = object(raw);

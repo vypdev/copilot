@@ -14,6 +14,12 @@ describe('runtime doctor pure prerequisite decisions', () => {
     it('rejects retired issue-profile versions', () => expect(validDoctorConfiguration({ ...config, profile: { schemaVersion: 2 } } as unknown as DoctorConfiguration)).toBe(false));
     it('rejects unknown issue kinds', () => expect(validDoctorConfiguration({ ...config, profile: { schemaVersion: 1, enabled: ['made-up'] } } as unknown as DoctorConfiguration)).toBe(false));
     it('rejects unsafe dependency references', () => expect(validDoctorConfiguration({ ...config, dependencyBranch: '--upload=/private' })).toBe(false));
+    it.each([null, 123, true, ['develop'], undefined])('rejects non-string dependency branch %#', dependencyBranch => {
+        expect(validDoctorConfiguration({...config, dependencyBranch} as unknown as DoctorConfiguration)).toBe(false);
+    });
+    it('blocks an empty catalog according to the canonical specification contract', () => {
+        expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', JSON.stringify({version: 1, capabilities: []})))).toBe('blocked');
+    });
     it('validates catalog, template and standard from one snapshot', () => expect(doctorRepositoryPrerequisites(doctorRepositoryFixture())).toBe('pass'));
     it('keeps unreadable prerequisites unavailable', () => expect(doctorRepositoryPrerequisites({ state: 'unavailable' })).toBe('unavailable'));
     it('blocks a proven missing specification standard', () => expect(doctorRepositoryPrerequisites(changed('specs/README.md'))).toBe('blocked'));

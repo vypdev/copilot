@@ -112,6 +112,16 @@ describe('bounded SDK doctor reads', () => {
     it('distinguishes a complete empty native page from an unavailable page', async () => {
         mockClient.graphql.mockResolvedValue(links([])); expect(await new RuntimeDoctorRepository('o', 'r', 't').readLinkedBranch(7)).toEqual({ state: 'absent' });
     });
+    it.each([
+        { label: 'null association', nodes: [null] },
+        { label: 'missing ref', nodes: [{}] },
+        { label: 'null ref', nodes: [{ref: null}] },
+        { label: 'unavailable ref mixed with a valid branch', nodes: [{ref: null}, {ref: branch()}] },
+    ])('keeps $label unavailable rather than proven absent or unique', async ({nodes}) => {
+        mockClient.graphql.mockResolvedValue(links(nodes));
+        expect(await new RuntimeDoctorRepository('o','r','t').readLinkedBranch(7)).toEqual({state: 'unavailable'});
+        expect(mockClient.rest.git.getRef).not.toHaveBeenCalled();
+    });
     it('refuses incomplete native pagination', async () => {
         const result = links(); result.repository.issue.linkedBranches.pageInfo.hasNextPage = true; mockClient.graphql.mockResolvedValue(result);
         expect((await new RuntimeDoctorRepository('o', 'r', 't').readLinkedBranch(7)).state).toBe('unavailable');

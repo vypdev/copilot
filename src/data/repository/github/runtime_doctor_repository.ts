@@ -90,6 +90,7 @@ export class RuntimeDoctorRepository {
             if (!repo || !Number.isSafeInteger(repo.databaseId) || (repo.databaseId ?? 0) <= 0 || repo.nameWithOwner?.toLowerCase() !== expected
                 || repo.issue?.number !== issueNumber || links?.pageInfo?.hasNextPage !== false || !Array.isArray(links.nodes)) return { state: 'unavailable' };
             const refs = links.nodes.flatMap((node: { ref?: { name?: string; target?: { oid?: string }; repository?: { databaseId?: number; nameWithOwner?: string } } | null } | null) => node?.ref ? [node.ref] : []);
+            if (refs.length !== links.nodes.length) return { state: 'unavailable' };
             if (refs.length === 0) return { state: 'absent' };
             if (refs.length !== 1) return { state: 'unavailable' };
             const branch = refs[0];
