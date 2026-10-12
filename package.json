@@ -4,7 +4,12 @@
   "packageManager": "pnpm@10.12.4",
   "pnpm": {
     "overrides": {
-      "js-yaml@>=3.0.0 <3.15.2": "3.15.2"
+      "js-yaml@>=3.0.0 <3.15.2": "3.15.2",
+      "handlebars@>=4.0.0 <=4.7.9": "4.7.10",
+      "source-map-js@>=1.0.0 <1.2.2": "1.2.2",
+      "brace-expansion@>=2.0.0 <2.1.7": "2.1.7",
+      "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
+      "@istanbuljs/load-nyc-config>js-yaml": "4.3.2"
     }
   },
   "description": "Automates branch management, GitHub project linking, and issue/PR tracking with Git-Flow methodology.",
