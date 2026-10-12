@@ -76,6 +76,24 @@ describe('readiness workflow identity and independent evidence', () => {
         f.ports.approval.loadEvidence.mockRejectedValue({ status: 403 });
         expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'unavailable', mode: 'unavailable', code: 'policy-superseded' });
     });
+    it('keeps freshly verified off disabled after base-only movement', async () => {
+        const f=readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        f.ports.approval.readRevision.mockResolvedValue({repositoryId:1,pullNumber:11,headSha:READINESS_HEAD,baseSha:'d'.repeat(40)});
+        expect(await status(f)).toMatchObject({findingStates:{open:0},pullRequestReadiness:{readiness:'not-applicable',mode:'off',code:'disabled',baseSha:'',
+            evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}}});
+    });
+    it('does not resurrect disabled assessment when a policy with readable evidence becomes active', async () => {
+        const f=readinessFixture(); f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy('off')).mockResolvedValueOnce(readinessPolicy('guarded'));
+        f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
+        expect((await status(f)).pullRequestReadiness).toMatchObject({readiness:'unavailable',mode:'unavailable'});
+    });
+    it('keeps off disabled when evidence and the final revision moved beyond the canonical selected head', async () => {
+        const f=readinessFixture();f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
+        f.ports.approval.loadEvidence.mockResolvedValue({...readinessEvidence(),headSha:'d'.repeat(40)});
+        f.ports.approval.readRevision.mockResolvedValue({repositoryId:1,pullNumber:11,headSha:'d'.repeat(40),baseSha:READINESS_BASE});
+        expect((await status(f)).pullRequestReadiness).toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',headSha:'',
+            evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
+    });
     it('keeps off disabled after head movement while discarding all stale native groups', async () => {
         const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));
         f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));

@@ -107,7 +107,7 @@ export async function readPullRequestStatusReadiness(param: CommentAutomationCon
             if (revision.repositoryId !== repositoryId || revision.pullNumber !== number) return fail('target-mismatch');
             observedRevisionHead = revision.headSha;
             readiness = projectPullRequestReadiness(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
-            if (pull.headSha !== evidence.headSha) readiness = Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
+            if (pull.headSha !== evidence.headSha) readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
                 action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         } catch { readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }

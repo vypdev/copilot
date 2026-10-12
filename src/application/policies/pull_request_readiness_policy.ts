@@ -43,11 +43,13 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
     let policy;
     try { policy = parsePullRequestApprovalPolicy(rawPolicy); }
     catch { return Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' }); }
+    if (policy.mode === 'off' && rawPolicy !== final.rawPolicy) return unavailablePullRequestReadiness('policy-superseded');
     if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
         || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
-        || !objectId(final.headSha) || !objectId(final.baseSha)) return unavailablePullRequestReadiness('identity-unavailable');
+        || !objectId(final.headSha) || !objectId(final.baseSha)) return policy.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('identity-unavailable');
     const sameTarget = evidence.repositoryId === final.repositoryId && evidence.pullNumber === final.pullNumber;
     if (!sameTarget || evidence.headSha !== final.headSha || evidence.baseSha !== final.baseSha || rawPolicy !== final.rawPolicy) {
+        if (policy.mode === 'off') return disabledPullRequestReadiness();
         return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
             humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
     }

@@ -342,3 +342,9 @@ Check-mode PR readiness reports the configured coverage check independently of
 other CI checks. Coverage can be satisfied while another CI check is blocked,
 or pending when its current revision is missing or still running. Overall
 readiness continues to require every configured check and its trusted producer.
+
+
+A finally verified off approval policy remains disabled if optional PR revision
+evidence changes during collection. Stale gate claims are discarded. If the
+policy itself changes or its final read is denied, the report cannot reuse the
+earlier disabled assessment; retry status after the current policy is readable.

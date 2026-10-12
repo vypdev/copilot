@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 40 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
-| State/application/idempotency/races | 42 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
+| Domain/configuration/pure planning | 43 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| State/application/idempotency/races | 45 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **133** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **139** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -357,7 +357,7 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - [ ] Status has no approval, repair, model, or lifecycle mutation capability.
 - [ ] Issue linkage behavior for zero, one, and multiple PRs is deterministic.
 - [ ] Replay updates one correlated reply and respects existing notification/lifecycle budgets.
-- [x] Numeric test budget of 133 distinct cases and coverage requirements pass.
+- [x] Numeric test budget of 139 distinct cases and coverage requirements pass.
 - [ ] English and Spanish catalogs are complete with atomic fallback and safe rendering.
 - [ ] User, setup, operator, and contributor documentation is complete and discoverable.
 - [ ] Existing status and #454 SDD-readiness behavior remain compatible.
@@ -435,3 +435,12 @@ Native review finding `4250603568` showed that the coverage group reused the agg
 Eight additional cases cover successful, failed, missing, running, wrong-App, wrong-workflow, stale-head and ambiguous coverage while another CI check fails. Four reproduce the old defect. The own feature inventory is now 133 distinct cases; the existing 40-case acceptance floor and all coverage gates remain required. Native head review and post-promotion command acceptance remain pending.
 
 Local verification of this correction passed 583 suites and 7,922 tests with 35 configured platform skips (7,957 total). The readiness policy retained 100% lines/statements/branches/functions. Typecheck, lint, documentation, specifications and all existing coverage budgets passed. These results do not replace fresh native review or live command acceptance.
+
+
+### Preserve verified disabled policy across optional evidence races (2026-10-12)
+
+Native review `4250897634` on Action-integrated head `ae53433f` reproduced a base-only race that replaced the verified off assessment with pending readiness. A policy independently verified off at the final policy read MUST remain not-applicable/disabled after malformed or superseded optional revision evidence; all obsolete native gate claims MUST be discarded. A changed or denied final policy MUST never resurrect the old disabled assessment. The application must also preserve disabled assessment if the evidence has moved beyond the originally selected head. Fresh current-head finding counts may remain independent of a base-only movement.
+
+Six new regressions failed before correction: head/base pure projection, malformed optional identity, base-only application race, off-to-active policy with readable evidence and a moved evidence head. The own feature inventory is 139 distinct cases (43 policy,45 application,19 provider,5 workflow,18 presentation,9 integration); the 40-case floor and every freshness, target, producer and coverage guard remain required. Native current-head review and post-promotion acceptance remain pending.
+
+Local verification of this correction passed 584 suites and 7,950 tests with 35 configured platform skips (7,985 total). All existing global/module coverage gates, types, lint, documentation, specifications/catalog and graph update passed. Native final-head review remains required.

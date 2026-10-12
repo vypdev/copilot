@@ -35,6 +35,16 @@ describe('projectPullRequestReadiness', () => {
         expect(projectPullRequestReadiness(policy('guarded'), evidence, { ...final, [field]: 'c'.repeat(40) }))
             .toMatchObject({ readiness: 'pending', code: 'superseded' });
     });
+    it.each(['headSha','baseSha'] as const)('keeps verified off disabled after a changed %s, without stale native groups', field => {
+        const e = readinessEvidence(), rawPolicy = readinessPolicy('off');
+        expect(projectPullRequestReadiness(rawPolicy,e,{...e,rawPolicy,[field]:'d'.repeat(40)})).toMatchObject({
+            readiness:'not-applicable',mode:'off',code:'disabled',headSha:'',baseSha:'',
+            evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
+    });
+    it('keeps verified off disabled without certifying malformed native revision facts', () => {
+        const e=readinessEvidence(),rawPolicy=readinessPolicy('off');
+        expect(projectPullRequestReadiness(rawPolicy,{...e,baseSha:'short'},{...e,rawPolicy})).toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',baseSha:''});
+    });
     it('fences a changed policy identity', () => {
         expect(projectPullRequestReadiness(policy('guarded'), evidence, { ...final, rawPolicy: policy('recommend') }))
             .toMatchObject({ readiness: 'pending', code: 'superseded' });
