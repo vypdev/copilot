@@ -1904,7 +1904,7 @@
       "status": "implemented",
       "scope": "Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-29",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/configurable-issue-workflows-and-admission.md"
       ],
@@ -2004,7 +2004,8 @@
         "docs/issues/type/hotfix.mdx",
         "docs/issues/type/release.mdx",
         "docs/issues/deployment-orchestration.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "docs/issues/workflow-setup.mdx"
       ]
     },
     {
