@@ -259,6 +259,10 @@ symbol, so type-only imports, renamed imports, re-exports,
 synthetic negative fixture exercises those indirect forms. Any addition,
 removal, move, duplicate, unknown role, blank rationale, or inventory mismatch
 fails CI; an intentional reduction updates the file and its maximum together.
+The six compiler assertions share one real Program/checker containing the full
+production roots and both isolated alias fixtures. Diagnostics and exact
+consumer inventory checks remain complete; fixture files are removed after the
+suite. This avoids retaining a second full compiler graph on CI runners.
 The P2-A setup cut and exact-inventory correction reduced that ratchet from 140
 to 130 consumers: six setup imports were removed and four already-stale entries
 were deleted. P2-B then moved five Bugbot analysis leaves to nested immutable,

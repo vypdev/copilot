@@ -157,3 +157,17 @@ the complete coverage, build and packaged CLI checks. Retain Windows, macOS and
 Linux CI and every acceptance/coverage budget. Inspect the final resolved graph
 and refreshed Dependabot alerts after promotion to the default branch. An audit
 result applies to the current lockfile; it is not an exploitability assessment.
+
+## Codex fixture platforms
+
+Codex service integration is unsupported on Windows. Keep `[self-hosted, codex]`
+for Mac/Ubuntu and omit `codex` from Windows service registrations. The manual
+Codex fixture matrix includes only macOS and Ubuntu. Hosted general fixture and
+full-coverage jobs still include Ubuntu, Windows and macOS, including fake
+launcher, ACL, process and installer tests. These doubles do not authenticate a
+model or exercise the official Codex sandbox.
+
+The workflow validator and six routing regressions prevent explicit Windows
+Codex jobs/matrix entries and retain ordinary Windows coverage. A green fixture
+or model-only `READY` response cannot certify real tool execution. See
+[tool smoke evidence](/security-operations/operations/smoke-tests).
