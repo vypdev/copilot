@@ -134,6 +134,12 @@ conflict paths, merge identity, protected index entries and remaining markers,
 then stages only those resolved conflicts through trusted Git code. It rejects
 later changes introduced by verification rather than staging them again.
 
+The three checked-in `ncc` bundles (`build/cli/index.js`, `build/api/index.js`,
+`build/github_action/index.js`) retain their generator's whitespace. Source and
+all other paths retain strict whitespace checks. Conflict markers are rejected in
+all files, including those bundles, before staging and in the staged result.
+This changes no content, allowed edit paths or verification requirements.
+
 If `specs/CATALOG.md` is conflicted, Copilot treats it as a generated index:
 after the catalog metadata is resolved, the Action validates that metadata and
 regenerates the index with its bundled catalog renderer before verification.
