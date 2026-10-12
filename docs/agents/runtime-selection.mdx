@@ -66,3 +66,12 @@ manifests, because the hash script depends on Management commands. They retain
 private profiles, disabled module discovery and their bounded startup deadline.
 A missing command in those fixtures is separate from a real Codex sandbox setup
 failure; neither a probe job nor a fixture proves successful agent editing.
+
+
+A Codex process can exit successfully after a shell tool failed. If bounded
+provider stderr reports the known sandbox setup mutex error, the run logs
+`reported-sandbox-setup-mutex` and directs you to inspect runner setup, even
+when the CLI exits 0. This is a provider-reported hint; a completed process
+does not certify that repository reads or edits ran. Reproduce with the same
+runner identity, executable and managed policy before repairing host setup.
+Copilot does not expose raw stderr or change the sandbox backend in response.

@@ -123,7 +123,8 @@
             "src/application/policies/agent_execution/opencode_execution_plan_policy.ts",
             "src/application/policies/agent_execution/cursor_execution_plan_policy.ts",
             "src/infrastructure/agents/agent_runtime_manifest.ts",
-            "src/application/policies/agent_execution_failure_policy.ts"
+            "src/application/policies/agent_execution_failure_policy.ts",
+            "src/data/repository/agent_cli_exit_diagnostic.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -133,7 +134,9 @@
             "src/data/repository/agent_cli_execution.ts",
             "src/data/repository/agent_cli_provisioner.ts",
             "src/infrastructure/agents/agent_executable_file.ts",
-            "src/infrastructure/agents/agent_execution_planner.ts"
+            "src/infrastructure/agents/agent_execution_planner.ts",
+            "src/data/repository/agent_cli_client.ts",
+            "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"

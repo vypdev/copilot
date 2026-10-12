@@ -48905,7 +48905,9 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = void 0;
+exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = void 0;
+/** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'];
 /** Fixed local output rejection cause; never derived by interpolating provider bytes. */
 exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
     'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
@@ -73177,11 +73179,13 @@ class AgentCliClient {
         });
         const runStartedAt = Date.now();
         try {
-            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal);
+            let toolDiagnostic;
+            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal, diagnostic => { toolDiagnostic = diagnostic; });
             observeSafely(this.observer, {
                 state: 'completed', phase: 'run', provider: plan.provider, capability: plan.capability,
                 durationMilliseconds: Date.now() - runStartedAt,
                 outputBytes: Buffer.byteLength(output, 'utf8'),
+                ...(toolDiagnostic ? { toolDiagnostic } : {}),
             });
             return output;
         }
@@ -73269,7 +73273,7 @@ const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_STDERR_BYTES = 8 * 1024;
-function runAgentCli(plan, prompt, signal) {
+function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
     return new Promise((resolve, reject) => {
         let runtimeDirectory;
         try {
@@ -73308,7 +73312,7 @@ function runAgentCli(plan, prompt, signal) {
         })();
         if (!child)
             return;
-        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
+        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); }, onToolDiagnostic);
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
         child.stdin.once('error', lifecycle.onStdinError);
@@ -73320,7 +73324,7 @@ function runAgentCli(plan, prompt, signal) {
         child.stdin.end(plan.promptMode === 'stdin' ? prompt : undefined);
     });
 }
-function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
+function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToolDiagnostic) {
     const stdoutChunks = [];
     let stderrBytes = 0;
     const stderrChunks = [];
@@ -73406,6 +73410,13 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             return;
         }
         try {
+            const toolDiagnostic = (0, agent_cli_exit_diagnostic_1.classifyAgentCliToolDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'));
+            if (toolDiagnostic) {
+                try {
+                    onToolDiagnostic?.(toolDiagnostic);
+                }
+                catch { /* Diagnostic observers cannot change execution semantics. */ }
+            }
             finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
         }
         catch (error) {
@@ -73574,9 +73585,18 @@ function signalProcessTree(child, signal) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliToolDiagnostic = classifyAgentCliToolDiagnostic;
 exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** A provider-reported tool hint, independent of the CLI's process exit status. */
+function classifyAgentCliToolDiagnostic(stderr) {
+    return /\b(?:Failed to create unified exec process|windows sandbox failed):\s*helper_unknown_error:\s*open sandbox setup mutex\b/iu.test(stderr)
+        ? 'reported-sandbox-setup-mutex' : undefined;
+}
 /** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
 function classifyAgentCliExitDiagnostic(stderr) {
+    const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
+    if (toolDiagnostic)
+        return toolDiagnostic;
     if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
         return 'reported-authentication';
     }
@@ -84768,6 +84788,7 @@ function rejectCatalog(phase) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
 const branch_sync_communication_budget_1 = __nccwpck_require__(99786);
+const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_changes_1 = __nccwpck_require__(93370);
 const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
 // ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
@@ -84844,8 +84865,11 @@ class BranchSyncWorkspaceAdapter {
         if (unresolved.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unresolved.length > 0)) {
             return invalid("Unresolved merge conflicts remain.", "unresolved-conflicts");
         }
-        if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths))
+        const currentPaths = await this.listWorkspacePaths();
+        if (!sameSet(currentPaths, snapshot.workspacePaths)) {
+            reportWorkspacePathRejection(snapshot, currentPaths, this.resolutionValidated ? 'verification' : 'resolution');
             return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+        }
         const unstaged = await this.readPaths(["diff", "--name-only", "-z"]);
         if (unstaged.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unstaged.length > 0)) {
             return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
@@ -84892,6 +84916,7 @@ class BranchSyncWorkspaceAdapter {
             const resolvedPaths = await this.listWorkspacePaths();
             if (resolvedPaths.some(path => !snapshot.workspacePaths.includes(path))
                 || snapshot.workspacePaths.some(path => !resolvedPaths.includes(path) && !snapshot.conflictPaths.includes(path))) {
+                reportWorkspacePathRejection(snapshot, resolvedPaths, 'trusted-staging');
                 return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
             }
             this.snapshot = { ...snapshot, workspacePaths: resolvedPaths };
@@ -84986,6 +85011,14 @@ class BranchSyncWorkspaceAdapter {
     }
 }
 exports.BranchSyncWorkspaceAdapter = BranchSyncWorkspaceAdapter;
+/** Counts and fixed phases only; never disclose private workspace path names. */
+function reportWorkspacePathRejection(snapshot, current, phase) {
+    const added = current.filter(path => !snapshot.workspacePaths.includes(path));
+    const removed = snapshot.workspacePaths.filter(path => !current.includes(path));
+    const conflicts = removed.filter(path => snapshot.conflictPaths.includes(path)).length;
+    const bundles = added.filter(path => GENERATED_BUNDLES.includes(path)).length;
+    (0, logging_ports_1.logInfo)(`Branch synchronization workspace rejected (${phase}; added=${added.length}; removed-conflicts=${conflicts}; removed-protected=${removed.length - conflicts}; generated-bundles=${bundles}).`);
+}
 function sameSet(left, right) {
     return left.length === right.length && left.every((value) => right.includes(value));
 }
@@ -88024,7 +88057,11 @@ class LoggerAgentExecutionObserverAdapter {
             return;
         }
         if (observation.state === 'completed') {
-            (0, logger_1.logInfo)('Agent execution completed.', false, { agentExecution: observation });
+            const toolDiagnostic = agent_execution_observation_ports_1.AGENT_EXECUTION_TOOL_DIAGNOSTICS.find(code => code === observation.toolDiagnostic);
+            const message = toolDiagnostic
+                ? `Agent CLI completed; provider reported a sandbox tool failure (${toolDiagnostic}). Inspect the runner sandbox setup.`
+                : 'Agent execution completed.';
+            (0, logger_1.logInfo)(message, false, { agentExecution: { ...observation, toolDiagnostic } });
             return;
         }
         if (observation.state === 'admitted') {

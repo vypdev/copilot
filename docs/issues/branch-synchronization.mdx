@@ -236,3 +236,9 @@ A conflict resolved to the working branch's unchanged content or deletion may
 disappear from Git status after trusted staging. Copilot uses that resolved
 workspace as the verification baseline while still rejecting added files, lost
 non-conflicted parent changes, and later changes to the resolved path set.
+
+
+For `unexpected-paths`, the run also shows a fixed validation phase and counts
+of added paths, removed conflict/protected paths and added canonical bundles.
+Use that distinction to inspect the resolution or verification step before
+retrying. Copilot omits private filenames and preserves the same merge guards.

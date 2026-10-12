@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, sep } from 'node:path';
 import type { AgentExecutionObserverPort } from '../../../application/ports/agent_execution_observation_ports';
 import type { AgentExecutionPlan } from '../../../domain/agent_execution_plan';
+import * as agentExecution from '../agent_cli_execution';
 import { AgentCliClient } from '../agent_cli_client';
 import { AgentCliError } from '../agent_cli_contracts';
 import { createAgentProcessLifecycle, decodeAgentCliOutput, verifyWindowsLauncherTrust, windowsTaskkillArguments } from '../agent_cli_execution';
@@ -312,6 +313,65 @@ describe('AgentCliClient admitted process execution', () => {
         }));
         expect(JSON.stringify(observe.mock.calls)).not.toMatch(/fixture-private-key|private prompt|gpt-6-luna/);
     }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it('retains a reported sandbox tool failure when the real CLI exits zero without exposing provider bytes', async () => {
+        const observe = jest.fn();
+        const script = 'process.stderr.write("Failed to create unified exec process: helper_unknown_error: open sandbox setup mutex; token=fixture-private-value"); process.stdout.write("No digest was obtained.")';
+        await expect(client(plan(script), {observe}).execute({configuration: {provider: 'codex', model: 'model'},
+            capability: 'findings', prompt: 'private prompt', timeoutMs: 5_000})).resolves.toBe('No digest was obtained.');
+        expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({state: 'completed', toolDiagnostic: 'reported-sandbox-setup-mutex'}));
+        expect(JSON.stringify(observe.mock.calls)).not.toMatch(/fixture-private-value|private prompt|No digest/);
+        expect(observe.mock.calls.some(([value]) => value.state === 'failed')).toBe(false);
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
+
+    it.each(['stdout-only', 'unknown-stderr', 'split-stderr', 'beyond-bound', 'throwing-observer'] as const)(
+        'keeps successful process semantics and bounded sandbox hints: %s', scenario => {
+            jest.useFakeTimers();
+            const executionPlan = plan('unused');
+            const diagnostic = 'Failed to create unified exec process: helper_unknown_error: open sandbox setup mutex';
+            const resolve = jest.fn(), reject = jest.fn();
+            const report = jest.fn(() => { if (scenario === 'throwing-observer') throw new Error('private observer'); });
+            try {
+                const lifecycle = createAgentProcessLifecycle({exitCode: 0} as never, executionPlan, undefined, resolve, reject, report);
+                lifecycle.appendStdout(Buffer.from(scenario === 'stdout-only' ? diagnostic : 'model completion'));
+                if (scenario === 'unknown-stderr') lifecycle.appendStderr(Buffer.from('open sandbox setup mutex'));
+                if (scenario === 'split-stderr') {
+                    lifecycle.appendStderr(Buffer.from(diagnostic.slice(0, 40)));
+                    lifecycle.appendStderr(Buffer.from(diagnostic.slice(40)));
+                }
+                if (scenario === 'beyond-bound') { lifecycle.appendStderr(Buffer.from('x'.repeat(8*1024))); lifecycle.appendStderr(Buffer.from(diagnostic)); }
+                if (scenario === 'throwing-observer') lifecycle.appendStderr(Buffer.from(diagnostic));
+                lifecycle.onClose(0);
+                expect(reject).not.toHaveBeenCalled(); expect(resolve).toHaveBeenCalledTimes(1);
+                expect(resolve).toHaveBeenCalledWith(scenario === 'stdout-only' ? diagnostic : 'model completion');
+                if (scenario === 'split-stderr' || scenario === 'throwing-observer') expect(report).toHaveBeenCalledWith('reported-sandbox-setup-mutex');
+                else expect(report).not.toHaveBeenCalled();
+            } finally { jest.useRealTimers(); rmSync(executionPlan.runtimeDirectory, {recursive:true,force:true}); }
+        });
+
+    it('keeps an unexpected planner failure bounded before spawning a provider', async () => {
+        const observe = jest.fn(), error = new Error('private planner credentials');
+        const runtime = new AgentCliClient({prepare: () => {throw error;}}, {observe});
+        await expect(runtime.execute({configuration:{provider:'codex',model:'model'},capability:'findings',prompt:'private prompt',timeoutMs:5000})).rejects.toBe(error);
+        expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({state:'failed',phase:'preflight',failureCategory:'configuration',retryable:false}));
+        expect(JSON.stringify(observe.mock.calls)).not.toMatch(/credentials|private prompt/);
+    });
+
+    it.each(['unexpected provider error', 'output error without a closed cause'] as const)(
+        'keeps fallback provider failure observations closed: %s', scenario => {
+            const error = scenario === 'unexpected provider error' ? new Error('private provider bytes') : new AgentCliError('private output bytes','output');
+            const run = jest.spyOn(agentExecution,'runAgentCli').mockRejectedValueOnce(error);
+            const observe = jest.fn();
+            const executionPlan = plan('unused');
+            return client(executionPlan,{observe}).execute({configuration:{provider:'codex',model:'model'},capability:'findings',prompt:'private prompt',timeoutMs:5000})
+                .then(() => {throw new Error('Expected provider rejection');}, received => {
+                    expect(received).toBe(error);
+                    expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({state:'failed',phase:'run',
+                        failureCategory:scenario === 'unexpected provider error' ? 'process' : 'output', retryable:false,
+                        ...(scenario === 'output error without a closed cause' ? {outputDiagnostic:'unclassified'} : {})}));
+                    expect(JSON.stringify(observe.mock.calls)).not.toMatch(/private provider|private output|private prompt/);
+                }).finally(() => {run.mockRestore();rmSync(executionPlan.runtimeDirectory,{recursive:true,force:true});});
+        });
 
     it('bounds stderr classification to the first 8 KiB', () => {
         jest.useFakeTimers();

@@ -1122,3 +1122,16 @@ configured Codex home true, setup marker present and existing setup mutex absent
 An absent mutex is an observation, not proof of denied access or the reported
 agent failure's cause. Real Windows agent tool/write acceptance remains open. The official pinned mutex contract is
 [Codex0.162.1 setup mutex](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/windows-sandbox-rs/src/setup_mutex.rs).
+
+
+### Reported sandbox tool failure with a completed CLI (2026-10-12)
+
+Native Windows read canary `38277727370` produced no digest although Codex exited 0. The operator then reproduced the exact tool error under the runner identity: `Failed to create unified exec process: helper_unknown_error: open sandbox setup mutex`; the tool returned -1 before the model described its failure and the CLI completed. Authentication and process completion are not proof of sandboxed execution. Host provisioning remains operator-owned; no version-only repair, backend fallback or permission change is implied.
+
+Within the existing first-8-KiB stderr bound, runtime MUST recognize only the concrete unified-exec/Windows-sandbox error prefix and retain the closed hint `reported-sandbox-setup-mutex`. A nonzero CLI exit uses the existing failure observation. A zero CLI exit MAY retain that hint on the completed process observation and MUST display that the provider reported a sandbox tool failure, directing the operator to inspect runner setup. CLI output, exit status, retryability and workflow semantics remain unchanged. No stdout/model-prose classification, capability-success claim, raw stderr, paths, credentials or provider text may cross the observation port. Unknown, bare near-match or out-of-bound stderr does not create this hint. Observation callback failure cannot alter execution.
+
+The extension adds 14 distinct cases: three closed classifier cases; one real CLI-0 client/observer/privacy case and five process-boundary cases for stdout-only text, unknown stderr, split chunks, truncation and a throwing observer; two terminal logger cases for valid and forged hints; three unexpected planner/provider and missing-output-cause cases preserve bounded fallback failure observations. They are additional to every preceding test budget, with no double counting. All global and module thresholds remain required. There is no new user configuration or schema migration; absent hints retain the previous completion presentation.
+
+Acceptance: exact recognized stderr and valid CLI-0 output returns the unchanged output and a completed observation carrying only the fixed hint; stdout-only mentions, unknown/truncated diagnostics and forged logger values cannot produce or leak a hint. Native Windows acceptance must still prove an actual sandboxed read and write after operator recovery. A model completion alone remains insufficient.
+
+Local verification passed all 578 suites and 7,830 tests with 35 configured platform skips (7,865 total). All existing budgets passed. The changed client has 100% lines/statements/functions and 96.77% branches; classifier and terminal logger have 100% all four metrics. Those changed paths are now explicit per-file coverage gates. Build, types, lint, documentation, specifications/catalog and graph update passed. Native hint acceptance remains pending publication.

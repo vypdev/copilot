@@ -45,6 +45,12 @@ They MUST NOT include model names, API keys, OAuth tokens, authentication files,
 cookies, prompts, response content, argv, paths, environment values, raw stderr,
 or user identity.
 
+A completed CLI observation may carry the closed provider-reported hint
+`reported-sandbox-setup-mutex` from the first 8 KiB of stderr. The log distinguishes
+process completion from the reported sandbox tool failure. This hint does not
+change the process result, authorize a retry or certify capability success.
+Model prose and unknown or truncated provider text are not diagnostic evidence.
+
 ## Cost rule
 
 A real provider request MUST be authorized before execution when it can incur usage charges or consume plan quotas. Binary/version/help checks are not evidence of successful model authentication.

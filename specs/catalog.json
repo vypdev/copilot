@@ -1791,7 +1791,8 @@
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/infrastructure/untrusted_command_environment.ts",
         "scripts/diagnose-windows-powershell-startup.cjs",
-        "scripts/diagnose-windows-sandbox-prerequisites.cjs"
+        "scripts/diagnose-windows-sandbox-prerequisites.cjs",
+        "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1819,7 +1820,8 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
-        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts"
+        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts",
+        "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
