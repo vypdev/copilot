@@ -16,6 +16,10 @@ interface MergeWorkspaceSnapshot {
   readonly protectedIndexEntries: ReadonlyMap<string, string>;
 }
 
+// ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
+// on these exact artifacts; source and every other path retain strict checks.
+const GENERATED_BUNDLES = ['build/cli/index.js', 'build/api/index.js', 'build/github_action/index.js'];
+
 /** Owns Git's merge state while keeping credentials confined to fetch/push subprocesses. */
 export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
   private snapshot: MergeWorkspaceSnapshot | undefined;
@@ -97,7 +101,7 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     try {
       if (!this.resolutionValidated && conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
         && !refreshBranchSyncSddCatalog(this.repositoryRoot)) return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
-      await this.git.execute("git", ["diff", "--check"]);
+      await this.checkResolvedDiff(false);
       // The agent edits files without Git write authority. Only this trusted
       // adapter stages the verified original conflict set, once before checks.
       if (unresolved.length > 0) {
@@ -110,12 +114,20 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
       if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0) {
         return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
       }
-      await this.git.execute("git", ["diff", "--cached", "--check"]);
+      await this.checkResolvedDiff(true);
     } catch {
       return invalid("The resolution contains whitespace errors or conflict markers.", "whitespace-or-conflict-markers");
     }
     this.resolutionValidated = true;
     return { valid: true };
+  }
+
+  private async checkResolvedDiff(cached: boolean): Promise<void> {
+    const diff = ['diff', ...(cached ? ['--cached'] : []), '--check', '--'];
+    await this.git.execute('git', [...diff, '.', ...GENERATED_BUNDLES.map(path => `:(exclude)${path}`)]);
+    // Git detects conflict markers independently of its whitespace settings.
+    await this.git.execute('git', ['-c', 'core.whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab',
+      ...diff, ...GENERATED_BUNDLES]);
   }
 
   async assertRemoteHeadsUnchanged(

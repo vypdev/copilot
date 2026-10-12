@@ -1094,3 +1094,31 @@ Fresh hosted smoke remains required; successful timing probes do not certify
 that smoke or the authenticated agent. The actual agent diagnosis after explicit
 backend selection reported `open sandbox setup mutex`; this is a separate runner
 provisioning failure and leaves actual Windows shell/edit acceptance open.
+
+### Restored runner diagnosis (2026-10-12)
+
+All three self-hosted smoke jobs obtained runners in native run38237789370.
+All three completed the full coverage/acceptance and post-job path: Windows
+passed 7,737 cases with 20 platform skips; macOS and Ubuntu each passed 7,723
+with 35 platform skips. All unchanged coverage and acceptance budgets passed. Actual native doctor parent-sync38237827284 on
+Windows admitted/completed the pinned CLI but left conflict markers; the
+workspace guard stopped publication. Actual macOS SDDdiff parent-sync38238399004
+resolved two conflicts, passed571suites7723tests35skips and publishedad279527.
+These distinguish runner availability, fixture acceptance and real agent writes.
+
+The existing manual diagnostic workflow adds a bounded, read-only Windows
+service observation. Its output MUST contain only fixed field names, numeric OS
+version, closed account/mutex states and booleans. It MUST NOT emit account names,
+paths, marker contents, credentials or raw process output. It opens an existing
+Global\CodexSandboxSetup object with the access requested by Codex's existing
+CreateMutexW operation, closes the handle immediately, and neither creates nor
+acquires a mutex or changes its descriptor. Marker presence alone MUST NOT count
+as operational agent acceptance. No backend, runtime, permission, platform, test
+budget or verification deadline changes. The current numeric test floors remain
+unchanged; existing154structural workflow cases and validators plus a native
+Windows observation validate this reversible operator diagnostic. Native observation `38240077874` succeeded on `windows-intel-runner-1`: Windows
+version `10.0.26300.0`, ordinary Windows account, administrator token false,
+configured Codex home true, setup marker present and existing setup mutex absent.
+An absent mutex is an observation, not proof of denied access or the reported
+agent failure's cause. Real Windows agent tool/write acceptance remains open. The official pinned mutex contract is
+[Codex0.162.1 setup mutex](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/windows-sandbox-rs/src/setup_mutex.rs).

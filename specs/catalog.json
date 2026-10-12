@@ -1572,7 +1572,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],
@@ -1619,7 +1619,8 @@
         "src/application/errors/__tests__/application_error.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
         "src/infrastructure/__tests__/git_commit_adapter.test.ts",
-        "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts"
+        "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
+        "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -1727,7 +1728,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1741,7 +1742,8 @@
         ".github/workflows/copilot_issue_comment.yml",
         ".github/workflows/copilot_pull_request_comment.yml",
         ".github/workflows/copilot_pull_request_review_state.yml",
-        ".github/workflows/copilot_close_inactive_issues.yml"
+        ".github/workflows/copilot_close_inactive_issues.yml",
+        ".github/workflows/copilot_runner_diagnostics.yml"
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
@@ -1783,7 +1785,8 @@
         "scripts/validate-workflow-contract.cjs",
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/infrastructure/untrusted_command_environment.ts",
-        "scripts/diagnose-windows-powershell-startup.cjs"
+        "scripts/diagnose-windows-powershell-startup.cjs",
+        "scripts/diagnose-windows-sandbox-prerequisites.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",

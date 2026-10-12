@@ -75,3 +75,15 @@ Their timeout stays unchanged. This avoids depending on a host's warm module
 cache and keeps the runtime's private profile and checkout-cleanliness checks.
 A runner-disconnection annotation is an infrastructure failure; passing tests on
 another platform does not turn that job into a successful smoke run.
+
+The manual `Copilot - Runner diagnostics` workflow reports bounded Windows
+service prerequisites: OS version, account kind, administrator-token status,
+configured Codex-home presence, setup-marker presence and access to the existing
+setup mutex. It never prints account names, paths, environment values or marker
+contents; it creates no mutex and does not acquire it, provision users or change
+ACLs. An `observed` diagnostic means these facts were measured, not that an agent
+command succeeded. A present marker or accessible mutex alone does not certify
+the sandbox. Administrators must follow the
+[Windows sandbox setup guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+for the actual runner identity and Codex home. Keep all three platform smoke
+jobs and verify real read/write agent operations separately.
