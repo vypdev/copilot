@@ -26,8 +26,14 @@ describe('readiness workflow identity and independent evidence', () => {
             return readinessPolicy();
         });
         expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
-            pullRequestReadiness: { readiness: 'unavailable', code: 'final-identity-unavailable' } });
+            pullRequestReadiness: { readiness: 'pending', code: 'superseded', action:'wait', evidence:{ci:'pending',coverage:'pending',bugbot:'pending',reviews:'pending'} } });
         expect(f.ports.getPullRequestHeadSha).toHaveBeenCalledTimes(1);
+    });
+    it('keeps a known current head movement pending even when another evidence source was unavailable', async () => {
+        const f=readinessFixture(); f.ports.approval.loadEvidence.mockResolvedValue(readinessEvidence({reviewHistoryComplete:false}));
+        f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
+        expect(await status(f)).toMatchObject({findingStates:undefined,pullRequestReadiness:{readiness:'pending',code:'superseded',action:'wait',
+            evidence:{ci:'pending',coverage:'pending',bugbot:'pending',reviews:'pending'}}});
     });
     it('cannot certify readiness or counts when the independent final head read is denied', async () => {
         const f = readinessFixture(); f.ports.getPullRequestHeadSha.mockRejectedValue({ status: 403 });
@@ -51,8 +57,10 @@ describe('readiness workflow identity and independent evidence', () => {
         if (reason === 'changed head') f.ports.getPullRequestHeadSha.mockResolvedValue('d'.repeat(40));
         else f.ports.getPullRequestHeadSha.mockRejectedValue({ status: 403 });
         expect(await status(f)).toMatchObject({ findingStates: undefined, findingStateEvidence: 'invalid',
-            pullRequestReadiness: { readiness: 'unavailable', code: 'final-identity-unavailable',
-                evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } } });
+            pullRequestReadiness: { readiness: reason === 'changed head' ? 'pending' : 'unavailable',
+                code: reason === 'changed head' ? 'superseded' : 'final-identity-unavailable',
+                evidence: reason === 'changed head' ? {ci:'pending',coverage:'pending',bugbot:'pending',reviews:'pending'}
+                    : { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } } });
     });
     it('retains verified native groups in off mode without offering observer or approval actions', async () => {
         const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValue(readinessPolicy('off'));

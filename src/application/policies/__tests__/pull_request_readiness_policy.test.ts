@@ -145,7 +145,7 @@ describe('independent canonical readiness evidence', () => {
         expect(project(readinessEvidence({ reviews: [{ id: 4, userId: 20, state: 'DISMISSED', commitId: READINESS_HEAD, submittedAt: '2026-10-11T10:00:00Z' }] }))).toMatchObject({ readiness: 'not-applicable', evidence: { reviews: 'not-applicable' } });
     });
     it('does not discard a current human approval as unavailable', () => {
-        expect(project(readinessEvidence({ reviews: [{ id: 4, userId: 30, state: 'APPROVED', commitId: READINESS_HEAD, submittedAt: '2026-10-11T10:00:00Z' }] }))).toMatchObject({ action: 'none', humanReviewRequired: false, evidence: { reviews: 'satisfied' } });
+        expect(project(readinessEvidence({ reviews: [{ id: 4, userId: 30, state: 'APPROVED', commitId: READINESS_HEAD, submittedAt: '2026-10-11T10:00:00Z' }] }))).toMatchObject({ readiness:'satisfied', action: 'none', humanReviewRequired: false, evidence: { reviews: 'satisfied' } });
     });
     it('discards all satisfied gates when the final revision changes', () => {
         expect(project(readinessEvidence(), readinessPolicy(), { headSha: 'd'.repeat(40) })).toMatchObject({ readiness: 'pending', evidence: { ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' } });

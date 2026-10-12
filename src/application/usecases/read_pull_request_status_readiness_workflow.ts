@@ -114,7 +114,13 @@ export async function readPullRequestStatusReadiness(param: CommentAutomationCon
     if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts) snapshot = { ...snapshot, findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
             resolved: counts.fixed + counts.obsolete + counts.dismissed } };
-    if (finalHead !== pull.headSha) readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('final-identity-unavailable');
+    if (finalHead !== pull.headSha) {
+        if (readiness.mode === 'off') readiness = disabledPullRequestReadiness();
+        else if (sha(finalHead) && policyVerified && rawPolicy === finalPolicy) readiness = Object.freeze({ ...readiness,
+            readiness:'pending',code:'superseded',action:'wait',headSha:'',baseSha:'',humanReviewRequired:true,
+            evidence:Object.freeze({ci:'pending',coverage:'pending',bugbot:'pending',reviews:'pending'}) });
+        else readiness = unavailablePullRequestReadiness('final-identity-unavailable');
+    }
     if (fromIssue) {
         try {
             const final = await ports.readLinkedPullRequests!(original.issueNumber!);

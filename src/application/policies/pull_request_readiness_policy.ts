@@ -69,7 +69,7 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
         baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none', evidence: groups });
     const decision = decidePullRequestApproval(policy, evidence);
     let readiness: PullRequestReadiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
-        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' ? 'satisfied' : 'not-applicable';
+        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' || decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
     if (Object.values(groups).includes('unavailable')) readiness = 'unavailable';
     const action: ReadinessAction = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
         : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';

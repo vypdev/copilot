@@ -44771,7 +44771,7 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
             baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none', evidence: groups });
     const decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, evidence);
     let readiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
-        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' ? 'satisfied' : 'not-applicable';
+        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' || decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
     if (Object.values(groups).includes('unavailable'))
         readiness = 'unavailable';
     const action = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
@@ -56670,8 +56670,16 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
         snapshot = { ...snapshot, findingStateEvidence: undefined,
             findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
                 resolved: counts.fixed + counts.obsolete + counts.dismissed } };
-    if (finalHead !== pull.headSha)
-        readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
+    if (finalHead !== pull.headSha) {
+        if (readiness.mode === 'off')
+            readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+        else if (sha(finalHead) && policyVerified && rawPolicy === finalPolicy)
+            readiness = Object.freeze({ ...readiness,
+                readiness: 'pending', code: 'superseded', action: 'wait', headSha: '', baseSha: '', humanReviewRequired: true,
+                evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+        else
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
+    }
     if (fromIssue) {
         try {
             const final = await ports.readLinkedPullRequests(original.issueNumber);

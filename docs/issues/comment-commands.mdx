@@ -348,3 +348,9 @@ A finally verified off approval policy remains disabled if optional PR revision
 evidence changes during collection. Stale gate claims are discarded. If the
 policy itself changes or its final read is denied, the report cannot reuse the
 earlier disabled assessment; retry status after the current policy is readable.
+
+
+A verified current human approval can satisfy readiness with no further action.
+When a finally readable head has changed and the policy is still verified,
+status reports pending and asks you to wait and retry. Denied identity or policy
+reads remain unavailable; neither case retains stale satisfied gate claims.
