@@ -841,7 +841,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-09",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/local-web-setup-assistant.md",
         "specs/setup-configuration-management.md"
