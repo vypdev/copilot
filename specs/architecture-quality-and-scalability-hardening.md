@@ -879,3 +879,10 @@ package validation when bundles change, and `graphify update .` after code chang
   remains a security contract, not product legacy support.
 - Decision: quality is satisfied by observable invariants and evidence. Static
   scores guide review but are never optimized independently of cohesion and risk.
+
+
+### Share the real compiler graph in raw-error boundary checks (2026-10-12)
+
+Native doctor synchronization `38277723562` on Ubuntu reported an out-of-memory Jest worker in `raw_error_logging_boundaries.test.ts` after 7,955 other passing tests. The corrected test infrastructure from commit `be4ac4fe` now applies on master as well: one real TypeScript Program/checker includes every unchanged production root and six isolated fixture modules. The repository scan, five unsafe-flow cases and semantic-mapper case retain all seven original assertions and resolve real production symbols. No mock, skip, heap/worker setting, threshold or platform selector changes. Fixture files remain owned temporary resources and are removed after the suite.
+
+This is test infrastructure, not a new acceptance case or runtime behavior. The independent later readiness cancellation `38290271182` supplied only “The operation was canceled”; its cause is not attributed to this known OOM. The optimization addresses the confirmed compiler-graph duplication and will be certified by fresh unchanged CI gates.

@@ -216,38 +216,24 @@ describe('raw error logging boundaries', () => {
     const repositoryRoot = resolve(__dirname, '../../..');
     const config = ts.readConfigFile(resolve(repositoryRoot, 'tsconfig.json'), ts.sys.readFile);
     const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, repositoryRoot);
-    const program = ts.createProgram(parsed.fileNames, parsed.options);
-
-    it('never passes direct or locally derived caught values into application logging', () => {
-        expect(rawErrorLoggingViolations(
-            program,
-            repositoryRoot,
-            source => repositoryPath(repositoryRoot, source.fileName).startsWith('src/'),
-        )).toEqual([]);
-    });
-
-    it.each([
+    const unsafeCases = [
         ['direct', 'logError(error);'],
         ['interpolated', 'logError(`failed: ${error}`);'],
         ['declared alias', 'const message = error instanceof Error ? error.message : String(error); logError(message);'],
         ['assigned alias', "let message = 'fixed'; message = String(error); logError(message);"],
         ['console alias', 'const message = String(error); console.error(message);'],
-    ])('detects a %s caught-value flow', (_name, statement) => {
-        expect(analyzeFixture(statement)).toHaveLength(1);
-    });
+    ];
+    const mappedStatement = "const semanticError = toApplicationError(error, 'unexpected', 'Operation failed.'); logError(semanticError);";
+    const fixturePaths = new Map<string, string>();
+    let fixtureDirectory: string;
+    let program: ts.Program;
 
-    it('allows a caught value only after semantic error mapping', () => {
-        expect(analyzeFixture(
-            "const semanticError = toApplicationError(error, 'unexpected', 'Operation failed.'); logError(semanticError);",
-        )).toEqual([]);
-    });
-
-    function analyzeFixture(statement: string): string[] {
-        const fixtureDirectory = mkdtempSync(join(tmpdir(), 'copilot-error-taint-'));
-        const fixtureFile = join(fixtureDirectory, 'raw_error_fixture.ts');
-        try {
-            const loggingModule = resolve(repositoryRoot, 'src/application/ports/logging_ports').replace(/\\/g, '/');
-            const errorModule = resolve(repositoryRoot, 'src/application/errors/application_error').replace(/\\/g, '/');
+    beforeAll(() => {
+        fixtureDirectory = mkdtempSync(join(tmpdir(), 'copilot-error-taint-'));
+        const loggingModule = resolve(repositoryRoot, 'src/application/ports/logging_ports').replace(/\\/g, '/');
+        const errorModule = resolve(repositoryRoot, 'src/application/errors/application_error').replace(/\\/g, '/');
+        [...unsafeCases.map(([, statement]) => statement), mappedStatement].forEach((statement, index) => {
+            const fixtureFile = join(fixtureDirectory, `raw_error_fixture_${index}.ts`);
             writeFileSync(fixtureFile, [
                 `import { logError } from '${loggingModule}';`,
                 `import { toApplicationError } from '${errorModule}';`,
@@ -257,14 +243,39 @@ describe('raw error logging boundaries', () => {
                 '  }',
                 '}',
             ].join('\n'), 'utf8');
-            const fixtureProgram = ts.createProgram([...parsed.fileNames, fixtureFile], parsed.options);
-            return rawErrorLoggingViolations(
-                fixtureProgram,
-                repositoryRoot,
-                source => resolve(source.fileName) === fixtureFile,
-            );
-        } finally {
-            rmSync(fixtureDirectory, { recursive: true, force: true });
-        }
+            fixturePaths.set(statement, fixtureFile);
+        });
+        // Share one real compiler/checker graph across the unchanged repository
+        // scan and all six fixtures. Imports still resolve to production symbols.
+        program = ts.createProgram([...parsed.fileNames, ...fixturePaths.values()], parsed.options);
+    });
+
+    afterAll(() => {
+        if (fixtureDirectory) rmSync(fixtureDirectory, { recursive: true, force: true });
+    });
+
+    it('never passes direct or locally derived caught values into application logging', () => {
+        expect(rawErrorLoggingViolations(
+            program,
+            repositoryRoot,
+            source => repositoryPath(repositoryRoot, source.fileName).startsWith('src/'),
+        )).toEqual([]);
+    });
+
+    it.each(unsafeCases)('detects a %s caught-value flow', (_name, statement) => {
+        expect(analyzeFixture(statement)).toHaveLength(1);
+    });
+
+    it('allows a caught value only after semantic error mapping', () => {
+        expect(analyzeFixture(mappedStatement)).toEqual([]);
+    });
+
+    function analyzeFixture(statement: string): string[] {
+        const fixtureFile = fixturePaths.get(statement)!;
+        return rawErrorLoggingViolations(
+            program,
+            repositoryRoot,
+            source => resolve(source.fileName) === fixtureFile,
+        );
     }
 });

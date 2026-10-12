@@ -135,3 +135,9 @@ approval and backups, `.env` exclusion, and the read-only doctor path.
 The reproducible `metrics:architecture` collector is the full evidence
 workflow; it requires a clean working tree and writes reports outside the
 repository.
+
+
+The raw-error boundary suite shares one real TypeScript compiler graph across
+the repository scan and its six fixture modules. It keeps all seven assertions
+and checks the real logger/sanitizer declarations. This reduces repeated
+compiler construction without changing workers, memory limits or platform gates.
