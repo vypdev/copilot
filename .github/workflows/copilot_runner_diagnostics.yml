@@ -81,3 +81,13 @@ jobs:
           for tool in node npm pnpm git; do
             command -v "$tool" || true
           done
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          package-manager-cache: false
+      - name: Report read-only Windows sandbox service prerequisites
+        shell: bash
+        run: node scripts/diagnose-windows-sandbox-prerequisites.cjs

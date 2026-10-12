@@ -1726,7 +1726,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1740,7 +1740,8 @@
         ".github/workflows/copilot_issue_comment.yml",
         ".github/workflows/copilot_pull_request_comment.yml",
         ".github/workflows/copilot_pull_request_review_state.yml",
-        ".github/workflows/copilot_close_inactive_issues.yml"
+        ".github/workflows/copilot_close_inactive_issues.yml",
+        ".github/workflows/copilot_runner_diagnostics.yml"
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
@@ -1782,7 +1783,8 @@
         "scripts/validate-workflow-contract.cjs",
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/infrastructure/untrusted_command_environment.ts",
-        "scripts/diagnose-windows-powershell-startup.cjs"
+        "scripts/diagnose-windows-powershell-startup.cjs",
+        "scripts/diagnose-windows-sandbox-prerequisites.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
