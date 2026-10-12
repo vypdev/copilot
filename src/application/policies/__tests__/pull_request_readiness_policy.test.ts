@@ -1,5 +1,5 @@
 import { readinessEvidence, readinessPolicy, READINESS_HEAD, READINESS_BASE } from '../../usecases/__tests__/fixtures/pr_readiness_fixture';
-import { projectPullRequestReadiness } from '../pull_request_readiness_policy';
+import { projectPullRequestReadiness, unavailablePullRequestReadiness } from '../pull_request_readiness_policy';
 import { DEFAULT_PULL_REQUEST_APPROVAL_POLICY } from '../../../domain/pull_request_approval_policy';
 import type { ApprovalEvidence } from '../../../domain/pull_request_approval';
 import { serializePullRequestApprovalPolicy } from '../../../domain/pull_request_approval_policy';
@@ -60,6 +60,15 @@ describe('projectPullRequestReadiness', () => {
         expect(projectPullRequestReadiness(rawPolicy,e,{...e,rawPolicy,...invalid})).toMatchObject({
             readiness:'unavailable',mode:'unavailable',code:'identity-unavailable',headSha:'',baseSha:'',
             evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
+    });
+    it.each(['guarded','recommend'] as const)('keeps incomplete changed-file evidence unavailable in %s mode', mode => {
+        const rawPolicy=readinessPolicy(mode),e=readinessEvidence({filesComplete:false});
+        expect(projectPullRequestReadiness(rawPolicy,e,{...e,rawPolicy})).toMatchObject({
+            readiness:'unavailable',code:'evidence-unavailable',action:'retry',humanReviewRequired:false,
+            evidence:{ci:'satisfied',coverage:'satisfied',bugbot:'satisfied',reviews:'satisfied'}});
+    });
+    it('does not infer a human-review requirement from unavailable identity', () => {
+        expect(unavailablePullRequestReadiness()).toMatchObject({readiness:'unavailable',humanReviewRequired:false,action:'retry'});
     });
     it('fences a changed policy identity', () => {
         expect(projectPullRequestReadiness(policy('guarded'), evidence, { ...final, rawPolicy: policy('recommend') }))

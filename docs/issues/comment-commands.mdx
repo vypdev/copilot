@@ -357,3 +357,8 @@ are not treated as a known head movement, and no earlier satisfied gate survives
 The final repository and PR identifiers remain required even when approval
 assessment is off. An invalid final target is unavailable; a valid target with
 a verified off policy still reports disabled when optional evidence is missing.
+
+An incomplete changed-file read makes readiness unavailable and offers retry,
+while independent verified checks retain their own states. Unavailable status
+does not claim that human review is required; it gives the recovery action for
+the missing evidence.

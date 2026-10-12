@@ -46194,7 +46194,7 @@ const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const objectId = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
 function unavailablePullRequestReadiness(code = 'evidence-unavailable', action = 'retry') {
     return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
-        humanReviewRequired: true, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
+        humanReviewRequired: false, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
 }
 /** A verified disabled policy is independent of whether optional native facts were readable. */
 function disabledPullRequestReadiness() {
@@ -46251,12 +46251,12 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
     const decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, evidence);
     let readiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
         : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' || decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
-    if (Object.values(groups).includes('unavailable'))
+    if (!evidence.filesComplete || Object.values(groups).includes('unavailable'))
         readiness = 'unavailable';
     const action = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
         : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
     return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
-        code: decision.code, humanReviewRequired: decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
+        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness !== 'unavailable' && decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
 }
 
 
@@ -46287,8 +46287,9 @@ function appendPullRequestReadiness(baseLines, snapshot, catalog) {
         const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
         if (url)
             lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
-        if (readiness.humanReviewRequired)
+        if (readiness.humanReviewRequired && states.includes(readiness.readiness) && readiness.readiness !== 'unavailable' && mode !== 'unavailable') {
             lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
+        }
         const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
         const action = readiness.action && actions.includes(readiness.action) ? readiness.action : 'retry';
         if (action !== 'none')

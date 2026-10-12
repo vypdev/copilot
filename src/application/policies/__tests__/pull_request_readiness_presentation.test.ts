@@ -26,6 +26,11 @@ describe('localized, bounded readiness status',()=>{
         const text=formatCopilotStatus(snapshot(),'es-ES');expect(text).toContain('**Cobertura:** cumplida');expect(text).toContain('Revisiones de GitHub');
         expect(text).toContain('Siguiente acción:');expect(text).not.toContain('Next action');expect(text).not.toContain('Native reviews');
     });
+    it.each(['en-US','es-ES'])('does not display an asserted human-review requirement for unavailable evidence in %s',locale=>{
+        const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,readiness:'unavailable',action:'retry'}},locale);
+        expect(text).not.toContain('A human review is still required');expect(text).not.toContain('Aún se requiere revisión humana');
+        expect(text).toContain(locale==='es-ES'?'Siguiente acción:':'Next action:');
+    });
     it('falls back atomically for an unsupported locale',()=>{
         const text=formatCopilotStatus(snapshot(),'fr-FR');expect(text).toContain('Next action');expect(text).toContain('Native reviews');expect(text).not.toContain('Siguiente acción');
     });
@@ -46,11 +51,12 @@ describe('localized, bounded readiness status',()=>{
         const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,readiness:'@everyone' as never,evidence:{...s.pullRequestReadiness!.evidence!,ci:'satisfied-by-name' as never}}});
         expect(text).toContain('**Exact-head PR readiness:** unavailable');expect(text).toContain('**CI:** unavailable');
         expect(text).not.toContain('@everyone');expect(text).not.toContain('satisfied-by-name');
+        expect(text).not.toContain('A human review is still required');
     });
     it('renders an unrecognized policy mode as unavailable without inventing approval authority',()=>{
         const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,mode:'auto-approve' as never}});
         expect(text).toContain('(unavailable;');expect(text).not.toContain('auto-approve');
-        expect(text).toContain('A human review is still required');
+        expect(text).not.toContain('A human review is still required');
     });
     it('turns an unknown action into a safe localized retry',()=>{
         const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,action:'@everyone' as never}});

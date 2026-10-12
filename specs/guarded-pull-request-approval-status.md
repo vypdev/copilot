@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 51 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| Domain/configuration/pure planning | 54 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
 | State/application/idempotency/races | 46 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
-| UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
+| UI/UX/localization/sanitization | 20 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **148** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **153** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -357,7 +357,7 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - [ ] Status has no approval, repair, model, or lifecycle mutation capability.
 - [ ] Issue linkage behavior for zero, one, and multiple PRs is deterministic.
 - [ ] Replay updates one correlated reply and respects existing notification/lifecycle budgets.
-- [x] Numeric test budget of 148 distinct cases and coverage requirements pass.
+- [x] Numeric test budget of 153 distinct cases and coverage requirements pass.
 - [ ] English and Spanish catalogs are complete with atomic fallback and safe rendering.
 - [ ] User, setup, operator, and contributor documentation is complete and discoverable.
 - [ ] Existing status and #454 SDD-readiness behavior remain compatible.
@@ -459,3 +459,12 @@ Local final-target verification passed 584 suites and 7,955 tests with 35 config
 Native finding `4251587455` exposed invalid final target IDs in the verified off-policy path. Final repository and PR identity are required selection authority, rather than optional native checks or revision facts. They MUST be positive safe integers in every mode. Malformed final target identity returns unavailable before optional evidence is projected; valid target identity with verified off still disables assessment when optional facts are missing, malformed or superseded. Four additional off-mode cases reproduced this defect. The own inventory is 148 distinct cases (51 policy,46 application,19 provider,5 workflow,18 presentation,9 integration); the original floor and all gates remain unchanged.
 
 Local required-target/off-mode verification passed 584 suites and 7,959 tests with 35 configured platform skips (7,994 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Generated bundles are included; native current-head review remains required.
+
+
+### Incomplete file evidence and unavailable review guidance (2026-10-12)
+
+Native findings `4251678257` and `4251684725` exposed misleading status copy. An incomplete changed-file list is required evidence unavailable, rather than an unsupported/not-applicable PR; the projection retains independently verified groups and offers retry. Verified off remains disabled with a valid target, regardless of optional evidence. Unavailable snapshots do not assert a human-review requirement. Presentation also withholds that assertion for malformed state or mode, even if a forged snapshot flag is true.
+
+Five additional distinct cases cover incomplete-file evidence in guarded/recommend modes, unknown-identity review guidance and unavailable EN/ES output. All five failed before the fixes; the existing unknown-state rendering case also reproduced the misleading assertion, and the existing malformed-mode case was strengthened. The own inventory is 153 cases (54 policy,46 application,19 provider,5 workflow,20 presentation,9 integration). No approval authority, configuration, minimum budget or platform scope changes.
+
+Local incomplete-evidence/UI verification passed 584 suites and 7,964 tests with 35 configured platform skips (7,999 total). Focused policy and presentation contracts passed 74 tests. All global/module gates, types, lint, documentation, specifications and graph update passed; generated bundles are included. Native current-head review and platform acceptance remain required.

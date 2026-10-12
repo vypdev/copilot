@@ -23,7 +23,7 @@ export interface ReadinessRevision {
 const objectId = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
 export function unavailablePullRequestReadiness(code = 'evidence-unavailable', action: ReadinessAction = 'retry'): PullRequestReadinessSnapshot {
     return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
-        humanReviewRequired: true, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
+        humanReviewRequired: false, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
 }
 /** A verified disabled policy is independent of whether optional native facts were readable. */
 export function disabledPullRequestReadiness(): PullRequestReadinessSnapshot {
@@ -72,9 +72,9 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
     const decision = decidePullRequestApproval(policy, evidence);
     let readiness: PullRequestReadiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
         : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' || decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
-    if (Object.values(groups).includes('unavailable')) readiness = 'unavailable';
+    if (!evidence.filesComplete || Object.values(groups).includes('unavailable')) readiness = 'unavailable';
     const action: ReadinessAction = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
         : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
     return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
-        code: decision.code, humanReviewRequired: decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
+        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness !== 'unavailable' && decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
 }
