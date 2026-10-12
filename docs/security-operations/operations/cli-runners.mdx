@@ -23,6 +23,31 @@ At the process boundary, Copilot removes known credentials that do not belong to
 
 Every JSON-backed capability is parsed as exactly one object and validated locally against its schema. For schemas compatible with Codex strict Structured Outputs, Copilot additionally creates a private temporary schema file and injects `--output-schema`; caller-provided schema paths are rejected. The file is removed when the invocation settles.
 
+## Windows runners executed as a service
+
+**Codex no soportado en runners Windows ejecutados como servicio.** Run Codex
+jobs on macOS or Ubuntu. This limitation concerns unattended Windows services
+in session 0, not every Windows environment. The same account and managed
+configuration succeeded in an interactive session during the operator's
+2026-10-12 reproduction.
+
+The official CLI, including 0.162.1, could authenticate and answer the model
+while tool startup failed with `0xc0000142` and a command-runner pipe timeout
+under `--strict-config`, `--ignore-user-config`, and
+`windows.sandbox="elevated"`. Official setup did not resolve the service failure.
+A successful CLI exit or model response therefore does not certify repository
+reads, edits, or command execution. Tool acceptance requires an actual bounded
+read or write, its verifiable result, and trusted post-execution checks.
+
+This repository retains `[self-hosted, codex]` for the shared macOS/Ubuntu pool.
+Windows service registrations MUST omit `codex`; existing registrations MUST
+lose that label when recreated. Windows services remain available for other
+jobs. Remove explicit Windows Codex matrix entries instead of leaving jobs
+queued for an unavailable runner. General hosted Windows coverage and fake
+platform-safety fixtures remain; they do not execute or certify real Codex tools.
+Do not deploy a community CLI build, disable the sandbox, or convert these
+services into interactive sessions to work around this limitation.
+
 ## Configure the runtime and model separately
 
 ```yaml
@@ -50,7 +75,7 @@ node scripts/verify-agent-clis.cjs
 The verifier checks the selected launcher, interpreter, and package entry point before invoking help, version, or login status. It rejects files with unsafe ownership or write access, including Windows ACLs that grant modification to another principal. It reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
 
 The Setup Platform Smoke workflow runs fixture and package tests on hosted
-Ubuntu, macOS, and Windows for pull requests. Its persistent self-hosted
+Ubuntu, macOS, and Windows for pull requests. Its persistent self-hosted macOS/Ubuntu Codex
 matrix runs only when manually dispatched from the protected `master` branch;
 dispatching a PR branch, `develop`, or tag skips that matrix. A result from `master` or an
 older PR commit does not verify the current PR head on those service runners.

@@ -2650,3 +2650,15 @@ pass; the prior manual result does not substitute for it.
   `--yes` as web approval, and promising automatic PAT revocation.
 - Follow-up outside scope: future GitHub App authentication and optional
   durable resume require separate credential/data-safety specifications.
+
+### Codex fixture scope update (2026-10-12)
+
+The [agent-runtime service retirement](./agent-runtime-provider-and-model-routing.md)
+supersedes historical requests in this SDD for a live Windows-service Codex
+retry or a Windows entry in the self-hosted Codex matrix. The shared `codex`
+pool remains Mac/Ubuntu once Windows registrations omit that label. The manual
+Codex fixture matrix retains those two platforms; general hosted Ubuntu,
+Windows and macOS full coverage, fake platform-safety fixtures and all
+350 acceptance rows remain. No open row is reclassified as passed because of
+retirement. Model/CLI success is distinct from verified tool execution. The
+six new routing cases are owned and counted once by the agent-runtime SDD.

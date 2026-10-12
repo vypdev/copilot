@@ -5,6 +5,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import * as logging from '../../application/ports/logging_ports';
+
 type Reply = string | number | Error;
 
 function createGit(replies: Record<string, Reply[]> = {}) {
@@ -36,7 +38,7 @@ const MERGE = "-c user.name=Copilot -c user.email=copilot@users.noreply.github.c
 async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
   const stableIndex = "100644 sha 0\tsrc/a.ts\0";
   const context = createGit({
-    [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n"],
+    [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n", "M  src/a.ts\n"],
     "rev-parse HEAD": ["child\n", "child\n"],
     "rev-parse FETCH_HEAD": ["parent\n"],
     "merge-base --is-ancestor parent child": [new Error("not ancestor")],
@@ -51,6 +53,27 @@ async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
 }
 
 describe("BranchSyncWorkspaceAdapter", () => {
+  it.each(['generated bundle added', 'protected path disappeared', 'verification path added'] as const)(
+    'reports only closed phase and counts for %s', async scenario => {
+      const report = jest.spyOn(logging, 'logInfo').mockImplementation(() => undefined);
+      const original = 'M  src/a.ts\n';
+      const changed = scenario === 'protected path disappeared' ? ''
+        : original + (scenario === 'generated bundle added' ? '?? build/cli/index.js\n' : '?? fixture-private-path.ts\n');
+      const statuses = scenario === 'verification path added'
+        ? ['', original, original, original, changed] : ['', original, changed];
+      try {
+        const {adapter} = await prepareCleanAdapter({[STATUS]: statuses, 'rev-parse HEAD':['child','child','child'],
+          'rev-parse MERGE_HEAD':['parent','parent'], [UNRESOLVED]:['','','']});
+        if (scenario === 'verification path added') expect(await adapter.validatePreparedMerge([])).toEqual({valid:true});
+        expect(await adapter.validatePreparedMerge([])).toMatchObject({valid:false,code:'unexpected-paths'});
+        const phase = scenario === 'verification path added' ? 'verification' : 'resolution';
+        const removed = scenario === 'protected path disappeared' ? 1 : 0;
+        const bundle = scenario === 'generated bundle added' ? 1 : 0;
+        expect(report.mock.calls).toEqual([[`Branch synchronization workspace rejected (${phase}; added=${removed ? 0 : 1}; removed-conflicts=0; removed-protected=${removed}; generated-bundles=${bundle}).`]]);
+        expect(JSON.stringify(report.mock.calls)).not.toMatch(/fixture-private-path|src\/a|build\/cli/);
+      } finally {report.mockRestore();}
+    });
+
   it('prepares and aborts a real merge without runner identity or persistent author configuration', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'copilot-sync-identity-'));
     const remote = join(directory, 'remote.git');
@@ -190,7 +213,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
 
   it("prepares, validates, commits, and pushes a clean merge", async () => {
     const { git } = createGit({
-      [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n"],
+      [STATUS]: ["", "M  src/a.ts\n", "M  src/a.ts\n", "M  src/a.ts\n"],
       "rev-parse HEAD": ["child\n", "child\n", "merge\n"],
       "rev-parse FETCH_HEAD": ["parent\n", "parent\n", "child\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],
@@ -225,7 +248,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
       "100644 stable 0\tsrc/b.ts",
     ].join("\0") + "\0";
     const { git } = createGit({
-      [STATUS]: ["", "UU src/a.ts\nM  src/b.ts\n", "M  src/a.ts\nM  src/b.ts\n"],
+      [STATUS]: ["", "UU src/a.ts\nM  src/b.ts\n", "M  src/a.ts\nM  src/b.ts\n", "M  src/a.ts\nM  src/b.ts\n"],
       "rev-parse HEAD": ["child\n", "child\n"],
       "rev-parse FETCH_HEAD": ["parent\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],

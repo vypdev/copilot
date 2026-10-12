@@ -14,7 +14,7 @@ import {
     restoreLanguageAdaptationOutput,
     type TranslationPublication,
 } from '../../../policies/comment_translation_policy';
-import { canonicalizeLocaleTag } from '../../../../domain/locale';
+import { canonicalizeLocaleTag, localeLanguagesMatch } from '../../../../domain/locale';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 
 export { TRANSLATED_COMMENT_MARKER } from '../../../policies/comment_translation_policy';
@@ -77,13 +77,17 @@ export class CommentLanguageTranslationWorkflow {
             if (responseTarget !== targetLocale) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned a mismatched target locale.')];
             }
-            if (status === 'matches' || status === 'ambiguous') {
+            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
+            const redundantTranslation = status === 'translated' && reasonCode === 'none' && sourceLocale !== undefined
+                && localeLanguagesMatch(sourceLocale, targetLocale)
+                && new Intl.Locale(sourceLocale).maximize().script === new Intl.Locale(targetLocale).maximize().script;
+            if (status === 'matches' || status === 'ambiguous' || redundantTranslation) {
                 return [adaptationResult(
                     context,
                     targetLocale,
-                    status,
+                    redundantTranslation ? 'matches' : status as 'matches' | 'ambiguous',
                     context.commentBody,
-                    this.optionalStringProperty(response, 'sourceLocale'),
+                    sourceLocale,
                     reasonCode,
                 )];
             }
@@ -91,7 +95,6 @@ export class CommentLanguageTranslationWorkflow {
                 return [failedAdaptation(context, targetLocale, `Language adaptation ended with ${status || 'an invalid status'}.`)];
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
-            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
             const restoredProse = restoreLanguageAdaptationOutput(input, adaptedText);
             const interpretedComment = rebuildAdaptedComment(input, adaptedText);
             if (restoredProse === undefined || interpretedComment === undefined) {

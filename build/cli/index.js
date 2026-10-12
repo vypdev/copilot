@@ -49437,7 +49437,9 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = void 0;
+exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = void 0;
+/** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'];
 /** Fixed local output rejection cause; never derived by interpolating provider bytes. */
 exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
     'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
@@ -63493,14 +63495,17 @@ class CommentLanguageTranslationWorkflow {
             if (responseTarget !== targetLocale) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned a mismatched target locale.')];
             }
-            if (status === 'matches' || status === 'ambiguous') {
-                return [adaptationResult(context, targetLocale, status, context.commentBody, this.optionalStringProperty(response, 'sourceLocale'), reasonCode)];
+            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
+            const redundantTranslation = status === 'translated' && reasonCode === 'none' && sourceLocale !== undefined
+                && (0, locale_1.localeLanguagesMatch)(sourceLocale, targetLocale)
+                && new Intl.Locale(sourceLocale).maximize().script === new Intl.Locale(targetLocale).maximize().script;
+            if (status === 'matches' || status === 'ambiguous' || redundantTranslation) {
+                return [adaptationResult(context, targetLocale, redundantTranslation ? 'matches' : status, context.commentBody, sourceLocale, reasonCode)];
             }
             if (status !== 'translated') {
                 return [failedAdaptation(context, targetLocale, `Language adaptation ended with ${status || 'an invalid status'}.`)];
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
-            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
             const restoredProse = (0, comment_translation_policy_1.restoreLanguageAdaptationOutput)(input, adaptedText);
             const interpretedComment = (0, comment_translation_policy_1.rebuildAdaptedComment)(input, adaptedText);
             if (restoredProse === undefined || interpretedComment === undefined) {
@@ -73861,11 +73866,13 @@ class AgentCliClient {
         });
         const runStartedAt = Date.now();
         try {
-            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal);
+            let toolDiagnostic;
+            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal, diagnostic => { toolDiagnostic = diagnostic; });
             observeSafely(this.observer, {
                 state: 'completed', phase: 'run', provider: plan.provider, capability: plan.capability,
                 durationMilliseconds: Date.now() - runStartedAt,
                 outputBytes: Buffer.byteLength(output, 'utf8'),
+                ...(toolDiagnostic ? { toolDiagnostic } : {}),
             });
             return output;
         }
@@ -73953,7 +73960,7 @@ const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_STDERR_BYTES = 8 * 1024;
-function runAgentCli(plan, prompt, signal) {
+function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
     return new Promise((resolve, reject) => {
         let runtimeDirectory;
         try {
@@ -73992,7 +73999,7 @@ function runAgentCli(plan, prompt, signal) {
         })();
         if (!child)
             return;
-        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
+        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); }, onToolDiagnostic);
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
         child.stdin.once('error', lifecycle.onStdinError);
@@ -74004,7 +74011,7 @@ function runAgentCli(plan, prompt, signal) {
         child.stdin.end(plan.promptMode === 'stdin' ? prompt : undefined);
     });
 }
-function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
+function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToolDiagnostic) {
     const stdoutChunks = [];
     let stderrBytes = 0;
     const stderrChunks = [];
@@ -74090,6 +74097,13 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             return;
         }
         try {
+            const toolDiagnostic = (0, agent_cli_exit_diagnostic_1.classifyAgentCliToolDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'));
+            if (toolDiagnostic) {
+                try {
+                    onToolDiagnostic?.(toolDiagnostic);
+                }
+                catch { /* Diagnostic observers cannot change execution semantics. */ }
+            }
             finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
         }
         catch (error) {
@@ -74258,9 +74272,18 @@ function signalProcessTree(child, signal) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliToolDiagnostic = classifyAgentCliToolDiagnostic;
 exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** A provider-reported tool hint, independent of the CLI's process exit status. */
+function classifyAgentCliToolDiagnostic(stderr) {
+    return /\b(?:Failed to create unified exec process|windows sandbox failed):\s*helper_unknown_error:\s*open sandbox setup mutex\b/iu.test(stderr)
+        ? 'reported-sandbox-setup-mutex' : undefined;
+}
 /** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
 function classifyAgentCliExitDiagnostic(stderr) {
+    const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
+    if (toolDiagnostic)
+        return toolDiagnostic;
     if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
         return 'reported-authentication';
     }
@@ -82034,7 +82057,7 @@ exports.admittedBranchSyncValidationCode = admittedBranchSyncValidationCode;
 exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
     'merge-state-mismatch', 'head-changed', 'merge-parent-changed',
     'unresolved-conflicts', 'unexpected-paths', 'unstaged-changes',
-    'protected-index-changed', 'sdd-catalog-invalid', 'staging-failed',
+    'protected-index-changed', 'sdd-catalog-invalid', 'communication-budget-invalid', 'staging-failed',
     'whitespace-or-conflict-markers', 'parent-head-changed', 'working-head-changed',
     'unclassified',
 ]);
@@ -86022,6 +86045,93 @@ exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
 
 /***/ }),
 
+/***/ 99786:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COMMUNICATION_BUDGET_PATH = void 0;
+exports.refreshBranchSyncCommunicationBudget = refreshBranchSyncCommunicationBudget;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const logging_ports_1 = __nccwpck_require__(6152);
+exports.COMMUNICATION_BUDGET_PATH = 'src/architecture/github_communication_test_budget.json';
+const MAX_BYTES = 512 * 1024;
+const SPEC_PATHS = ['specs/semantic-github-publication-and-notification.md', 'specs/repository-locale-and-localization.md'];
+// Execute only the Action's bundled validator; merged branch scripts are never loaded.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const validator = __nccwpck_require__(71110);
+/** Derives totals only within an already-authorized ledger conflict; never changes evidence or minimums. */
+function refreshBranchSyncCommunicationBudget(repositoryRoot) {
+    let phase = 'workspace-boundary';
+    try {
+        const root = (0, node_fs_1.realpathSync)(repositoryRoot);
+        for (const directory of ['src', 'src/architecture']) {
+            const stat = (0, node_fs_1.lstatSync)((0, node_path_1.join)(root, directory));
+            if (!stat.isDirectory() || stat.isSymbolicLink())
+                return reject(phase);
+        }
+        phase = 'ledger-file-boundary';
+        const path = (0, node_path_1.join)(root, exports.COMMUNICATION_BUDGET_PATH);
+        if (!boundedFile(root, path))
+            return reject(phase);
+        phase = 'metadata-json';
+        const source = (0, node_fs_1.readFileSync)(path, 'utf8');
+        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(source))
+            phase = 'metadata-conflict-markers';
+        const value = JSON.parse(source);
+        phase = 'metadata-shape';
+        if (!isLedger(value))
+            return reject(phase);
+        phase = 'evidence-path-boundary';
+        for (const file of [...SPEC_PATHS, ...value.budgets.flatMap(budget => budget.files.map(entry => entry.path))]) {
+            if (!boundedFile(root, (0, node_path_1.join)(root, file)))
+                return reject(phase);
+        }
+        const normalized = { ...value, budgets: value.budgets.map(budget => ({ ...budget,
+                allocatedCases: budget.files.reduce((sum, entry) => sum + entry.qualifyingCases, 0),
+            })) };
+        phase = 'ledger-contract';
+        if (validator.validateCommunicationTestBudget(root, normalized).length > 0)
+            return reject(phase);
+        phase = 'ledger-output';
+        const output = JSON.stringify(normalized, null, 2) + '\n';
+        if (Buffer.byteLength(output, 'utf8') > MAX_BYTES)
+            return reject(phase);
+        if (value.budgets.some((budget, index) => budget.allocatedCases !== normalized.budgets[index].allocatedCases)) {
+            (0, node_fs_1.writeFileSync)(path, output, 'utf8');
+        }
+        return true;
+    }
+    catch {
+        return reject(phase);
+    }
+}
+function isLedger(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const budgets = value.budgets;
+    return Array.isArray(budgets) && budgets.length === 2 && budgets.every(budget => budget && Number.isSafeInteger(budget.allocatedCases) && budget.allocatedCases >= 0
+        && Array.isArray(budget.files) && budget.files.length > 0 && budget.files.length <= 256
+        && budget.files.every((entry) => entry && typeof entry.path === 'string'
+            && /^src\/.+\.test\.ts$/u.test(entry.path) && !entry.path.split('/').includes('..')
+            && Number.isSafeInteger(entry.qualifyingCases) && entry.qualifyingCases > 0 && entry.qualifyingCases <= 10000));
+}
+function boundedFile(root, file) {
+    const stat = (0, node_fs_1.lstatSync)(file);
+    const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
+    return stat.isFile() && !stat.isSymbolicLink() && stat.size <= MAX_BYTES
+        && target !== '..' && !target.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(target);
+}
+function reject(phase) {
+    (0, logging_ports_1.logInfo)(`Branch synchronization communication budget rejected (${phase}).`);
+    return false;
+}
+
+
+/***/ }),
+
 /***/ 88632:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -86112,6 +86222,8 @@ function rejectCatalog(phase) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
+const branch_sync_communication_budget_1 = __nccwpck_require__(99786);
+const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_changes_1 = __nccwpck_require__(93370);
 const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
 // ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
@@ -86188,8 +86300,11 @@ class BranchSyncWorkspaceAdapter {
         if (unresolved.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unresolved.length > 0)) {
             return invalid("Unresolved merge conflicts remain.", "unresolved-conflicts");
         }
-        if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths))
+        const currentPaths = await this.listWorkspacePaths();
+        if (!sameSet(currentPaths, snapshot.workspacePaths)) {
+            reportWorkspacePathRejection(snapshot, currentPaths, this.resolutionValidated ? 'verification' : 'resolution');
             return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+        }
         const unstaged = await this.readPaths(["diff", "--name-only", "-z"]);
         if (unstaged.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unstaged.length > 0)) {
             return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
@@ -86200,6 +86315,9 @@ class BranchSyncWorkspaceAdapter {
                 return invalid(`The agent changed non-conflicted path ${path}.`, "protected-index-changed");
         }
         try {
+            if (!this.resolutionValidated && conflictPaths.includes(branch_sync_communication_budget_1.COMMUNICATION_BUDGET_PATH)
+                && !(0, branch_sync_communication_budget_1.refreshBranchSyncCommunicationBudget)(this.repositoryRoot))
+                return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
                 && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
                 return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
@@ -86224,6 +86342,19 @@ class BranchSyncWorkspaceAdapter {
         }
         catch {
             return invalid("The resolution contains whitespace errors or conflict markers.", "whitespace-or-conflict-markers");
+        }
+        if (!this.resolutionValidated) {
+            // Trusted staging can remove an original conflict from status when its
+            // resolution equals the child bytes (or the child's deletion). Freeze
+            // that resolved path set before checks; added paths and disappearance of
+            // non-conflicted parent changes remain invalid.
+            const resolvedPaths = await this.listWorkspacePaths();
+            if (resolvedPaths.some(path => !snapshot.workspacePaths.includes(path))
+                || snapshot.workspacePaths.some(path => !resolvedPaths.includes(path) && !snapshot.conflictPaths.includes(path))) {
+                reportWorkspacePathRejection(snapshot, resolvedPaths, 'trusted-staging');
+                return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+            }
+            this.snapshot = { ...snapshot, workspacePaths: resolvedPaths };
         }
         this.resolutionValidated = true;
         return { valid: true };
@@ -86260,7 +86391,19 @@ class BranchSyncWorkspaceAdapter {
         if (!this.mergeInProgress)
             return;
         try {
-            await this.git.execute("git", ["merge", "--abort"]);
+            try {
+                await this.git.execute("git", ["merge", "--abort"]);
+            }
+            catch (error) {
+                // Verification may change a tracked resolution after trusted staging,
+                // preventing Git's normal abort. Restore only our originally clean,
+                // still-identical prepared merge; never reset a moved HEAD or parent.
+                const snapshot = this.snapshot;
+                if (!snapshot || await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha
+                    || await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha)
+                    throw error;
+                await this.git.execute("git", ["reset", "--hard", snapshot.childSha]);
+            }
         }
         finally {
             this.snapshot = undefined;
@@ -86303,6 +86446,14 @@ class BranchSyncWorkspaceAdapter {
     }
 }
 exports.BranchSyncWorkspaceAdapter = BranchSyncWorkspaceAdapter;
+/** Counts and fixed phases only; never disclose private workspace path names. */
+function reportWorkspacePathRejection(snapshot, current, phase) {
+    const added = current.filter(path => !snapshot.workspacePaths.includes(path));
+    const removed = snapshot.workspacePaths.filter(path => !current.includes(path));
+    const conflicts = removed.filter(path => snapshot.conflictPaths.includes(path)).length;
+    const bundles = added.filter(path => GENERATED_BUNDLES.includes(path)).length;
+    (0, logging_ports_1.logInfo)(`Branch synchronization workspace rejected (${phase}; added=${added.length}; removed-conflicts=${conflicts}; removed-protected=${removed.length - conflicts}; generated-bundles=${bundles}).`);
+}
 function sameSet(left, right) {
     return left.length === right.length && left.every((value) => right.includes(value));
 }
@@ -89365,7 +89516,11 @@ class LoggerAgentExecutionObserverAdapter {
             return;
         }
         if (observation.state === 'completed') {
-            (0, logger_1.logInfo)('Agent execution completed.', false, { agentExecution: observation });
+            const toolDiagnostic = agent_execution_observation_ports_1.AGENT_EXECUTION_TOOL_DIAGNOSTICS.find(code => code === observation.toolDiagnostic);
+            const message = toolDiagnostic
+                ? `Agent CLI completed; provider reported a sandbox tool failure (${toolDiagnostic}). Inspect the runner sandbox setup.`
+                : 'Agent execution completed.';
+            (0, logger_1.logInfo)(message, false, { agentExecution: { ...observation, toolDiagnostic } });
             return;
         }
         if (observation.state === 'admitted') {
@@ -99761,6 +99916,164 @@ function suggestSimilar(word, candidates) {
 }
 
 exports.suggestSimilar = suggestSimilar;
+
+
+/***/ }),
+
+/***/ 71110:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/* module decorator */ module = __nccwpck_require__.nmd(module);
+
+const fs = __nccwpck_require__(87561);
+const path = __nccwpck_require__(49411);
+const { execFileSync } = __nccwpck_require__(17718);
+
+const DEFAULT_ROOT = path.resolve(__dirname, '..');
+const LEDGER_PATH = 'src/architecture/github_communication_test_budget.json';
+const EXPECTED_BUDGETS = Object.freeze({
+  'semantic-github-publication': Object.freeze({
+    requiredCases: 135,
+    spec: 'specs/semantic-github-publication-and-notification.md',
+  }),
+  'repository-locale-localization': Object.freeze({
+    requiredCases: 146,
+    spec: 'specs/repository-locale-and-localization.md',
+  }),
+});
+const TEST_DECLARATION = /^\s*(?:it|test)(?:\.each)?\s*\(/gmu;
+const ADDED_TEST_DECLARATION = /^\+\s*(?:it|test)(?:\.each)?\s*\(/gmu;
+
+function readLedger(root = DEFAULT_ROOT) {
+  return JSON.parse(fs.readFileSync(path.join(root, LEDGER_PATH), 'utf8'));
+}
+
+function validateCommunicationTestBudget(root, ledger) {
+  const errors = [];
+  if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger)) {
+    return ['communication test-budget ledger must be a JSON object.'];
+  }
+  if (ledger.version !== 1) errors.push('communication test-budget ledger version must be 1.');
+  if (ledger.baseline !== '0bb83b75^') errors.push('communication test-budget baseline must remain 0bb83b75^.');
+  if (!gitObjectExists(root, `${ledger.baseline}^{commit}`)) {
+    errors.push(`communication test-budget baseline is unavailable: ${String(ledger.baseline)}.`);
+  }
+  if (!Array.isArray(ledger.budgets)) return [...errors, 'communication test-budget ledger must declare budgets.'];
+  if (ledger.budgets.length !== Object.keys(EXPECTED_BUDGETS).length) {
+    errors.push(`communication test-budget ledger must contain exactly ${Object.keys(EXPECTED_BUDGETS).length} budgets.`);
+  }
+
+  const seenBudgets = new Set();
+  const seenFiles = new Set();
+  for (const budget of ledger.budgets) {
+    const expected = EXPECTED_BUDGETS[budget?.id];
+    if (!expected) {
+      errors.push(`unknown communication test budget: ${String(budget?.id)}.`);
+      continue;
+    }
+    if (seenBudgets.has(budget.id)) errors.push(`duplicate communication test budget: ${budget.id}.`);
+    seenBudgets.add(budget.id);
+    if (budget.spec !== expected.spec) errors.push(`${budget.id} must reference ${expected.spec}.`);
+    if (budget.requiredCases !== expected.requiredCases) {
+      errors.push(`${budget.id} must require exactly ${expected.requiredCases} cases.`);
+    }
+    const specPath = path.join(root, expected.spec);
+    if (!fs.existsSync(specPath)
+      || !fs.readFileSync(specPath, 'utf8').includes(`at least **${expected.requiredCases} distinct`)) {
+      errors.push(`${budget.id} specification does not declare its ${expected.requiredCases}-case budget.`);
+    }
+    if (!Array.isArray(budget.files) || budget.files.length === 0) {
+      errors.push(`${budget.id} must allocate cases to at least one test file.`);
+      continue;
+    }
+    let allocatedCases = 0;
+    for (const entry of budget.files) {
+      if (!isTestPath(entry?.path)) {
+        errors.push(`${budget.id} has an invalid test path: ${String(entry?.path)}.`);
+        continue;
+      }
+      if (seenFiles.has(entry.path)) {
+        errors.push(`${entry.path} is allocated to more than one communication budget.`);
+      }
+      seenFiles.add(entry.path);
+      if (!Number.isSafeInteger(entry.qualifyingCases) || entry.qualifyingCases <= 0) {
+        errors.push(`${budget.id} has an invalid qualifying-case count for ${entry.path}.`);
+        continue;
+      }
+      allocatedCases += entry.qualifyingCases;
+      const testPath = path.join(root, entry.path);
+      if (!fs.existsSync(testPath) || !fs.statSync(testPath).isFile()) {
+        errors.push(`${budget.id} test file does not exist: ${entry.path}.`);
+        continue;
+      }
+      const qualifyingDeclarations = countQualifyingDeclarations(root, ledger.baseline, entry.path);
+      if (qualifyingDeclarations < entry.qualifyingCases) {
+        errors.push(`${entry.path} has ${qualifyingDeclarations} qualifying test declarations since ${ledger.baseline}, below its allocation of ${entry.qualifyingCases}.`);
+      }
+    }
+    if (budget.allocatedCases !== allocatedCases) {
+      errors.push(`${budget.id} allocatedCases is ${String(budget.allocatedCases)} but its file allocation totals ${allocatedCases}.`);
+    }
+    if (allocatedCases < expected.requiredCases) {
+      errors.push(`${budget.id} allocates ${allocatedCases} cases, below its required ${expected.requiredCases}.`);
+    }
+  }
+  for (const budgetId of Object.keys(EXPECTED_BUDGETS)) {
+    if (!seenBudgets.has(budgetId)) errors.push(`missing communication test budget: ${budgetId}.`);
+  }
+  return errors;
+}
+
+function countQualifyingDeclarations(root, baseline, testPath) {
+  if (!gitObjectExists(root, `${baseline}:${testPath}`)) {
+    return (fs.readFileSync(path.join(root, testPath), 'utf8').match(TEST_DECLARATION) ?? []).length;
+  }
+  const diff = execFileSync(
+    'git',
+    ['diff', baseline, '--unified=0', '--', testPath],
+    { cwd: root, encoding: 'utf8' },
+  );
+  return (diff.match(ADDED_TEST_DECLARATION) ?? []).length;
+}
+
+function gitObjectExists(root, object) {
+  try {
+    execFileSync('git', ['cat-file', '-e', object], { cwd: root, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isTestPath(value) {
+  return typeof value === 'string'
+    && /^src\/.+(?:__tests__\/.+\.test\.ts|\.test\.ts)$/u.test(value)
+    && value === path.posix.normalize(value)
+    && !value.split('/').includes('..');
+}
+
+function main() {
+  const ledger = readLedger(DEFAULT_ROOT);
+  const errors = validateCommunicationTestBudget(DEFAULT_ROOT, ledger);
+  if (errors.length > 0) {
+    console.error(errors.map(error => `- ${error}`).join('\n'));
+    process.exitCode = 1;
+    return;
+  }
+  const summary = ledger.budgets
+    .map(budget => `${budget.id}=${budget.allocatedCases}/${budget.requiredCases}`)
+    .join(', ');
+  console.log(`GitHub communication test budgets: PASS (${summary}; no file is double-counted)`);
+}
+
+if (__nccwpck_require__.c[__nccwpck_require__.s] === module) main();
+
+module.exports = {
+  LEDGER_PATH,
+  countQualifyingDeclarations,
+  readLedger,
+  validateCommunicationTestBudget,
+};
 
 
 /***/ }),

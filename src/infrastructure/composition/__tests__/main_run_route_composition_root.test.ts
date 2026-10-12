@@ -115,14 +115,20 @@ describe("main run route composition root", () => {
     }));
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 14 }, () => expect.anything()),
-      mockContext,
-      expect.objectContaining({ readRepository: expect.any(Function), readApprovalPolicy: expect.any(Function),
-        pullRequests: expect.objectContaining({ getPullRequest: expect.any(Function), getPullRequestHeadSha: expect.any(Function) }) }),
-      expect.objectContaining({ read: expect.any(Function) }),
-    );
-    const query = jest.mocked(IssueCommentUseCase).mock.calls[0][16];
+    const call = jest.mocked(IssueCommentUseCase).mock.calls[0];
+    expect(call.slice(0, 15)).toEqual([
+      ...Array.from({ length: 14 }, () => expect.anything()), mockContext,
+    ]);
+    expect(call[15]).toMatchObject({
+      readRepository: expect.any(Function),
+      readApprovalPolicy: expect.any(Function),
+      pullRequests: expect.objectContaining({
+        getPullRequest: expect.any(Function),
+        getPullRequestHeadSha: expect.any(Function),
+      }),
+    });
+    const query = call[16];
+    expect(query).toMatchObject({ read: expect.any(Function) });
     expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
     expect(Object.isFrozen(query)).toBe(true);
   });
@@ -132,12 +138,18 @@ describe("main run route composition root", () => {
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 13 }, () => expect.anything()),
-      mockContext,
-      expect.objectContaining({ readRepository: expect.any(Function), readApprovalPolicy: expect.any(Function),
-        pullRequests: expect.objectContaining({ getPullRequest: expect.any(Function), getPullRequestHeadSha: expect.any(Function) }) }),
-    );
+    const call = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0];
+    expect(call.slice(0, 14)).toEqual([
+      ...Array.from({ length: 13 }, () => expect.anything()), mockContext,
+    ]);
+    expect(call[14]).toMatchObject({
+      readRepository: expect.any(Function),
+      readApprovalPolicy: expect.any(Function),
+      pullRequests: expect.objectContaining({
+        getPullRequest: expect.any(Function),
+        getPullRequestHeadSha: expect.any(Function),
+      }),
+    });
   });
 
   it("exposes one handler for every executable route", () => {

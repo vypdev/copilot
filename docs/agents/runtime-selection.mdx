@@ -16,7 +16,13 @@ Only runtimes selected by active roles are provisioned, authenticated, and execu
 
 `agent-executable` and the corresponding role overrides may select only the expected bare basename or an absolute path with that basename. An explicit Windows path must end in the provider's exact native `.exe` basename; `.cmd` and `.bat` wrappers cannot be selected for no-shell execution. The canonical target must be a regular executable owned by the runner user or root and not group/world writable on Unix. On Windows, the executable, Node interpreter, and npm package entrypoint are checked read-only for trusted ownership and ACLs without untrusted write or ACL-control grants. An unreadable or unsafe ACL blocks that executable; Copilot does not rewrite installed files. The runtime manifest records historical smoke identities and official installation sources. A default runtime can be staged privately from its provider’s official source when missing, outdated, or rejected by the executable trust check; the runner's existing installation is never replaced or executed after rejection. An explicitly selected executable fails closed if unsafe and is never updated by the Action.
 
-Windows agent execution remains an open gate. An earlier hosted fixture rejected an unsafe ambient Node ACL; missing native agent CLIs now use official standalone sources. Existing global and project-local npm shims require a separately trusted Node executable and trusted package bin. The read-only trust check also rejects a replaceable parent directory on any selected executable path; it recognizes the known `NT SERVICE\TrustedInstaller` owner on system directory ancestors such as `C:\`, while continuing to reject that ownership on an executable. The distributed workflows use the shared `self-hosted, codex` pool, which can schedule Windows, macOS, or Ubuntu. A passing isolated Windows runner fixture and human review are still required before claiming Windows support.
+**Codex no soportado en runners Windows ejecutados como servicio.** This
+repository keeps the shared `[self-hosted, codex]` pool for macOS and Ubuntu;
+Windows service registrations omit `codex`. The Codex fixture matrix targets
+only those two supported platforms. General Windows fixtures remain separate.
+The limitation concerns session-0 services, not all Windows sessions or other
+agent runtimes. See [Codex runtime support](/agents/codex-openai) for observed
+failure and the distinction between model replies and real tool execution.
 
 If agent preflight fails, the Action log identifies a fixed stage such as `resolution`, `invocation-trust`, or `version`. Private official installation failures report a closed stage, bounded exit code and, when recognizable, a fixed reason; they never print installer stderr, executable paths, prompts, arguments, or credentials. The standalone read-only CLI verifier checks trust once before its help, version, and optional login probes and retries only a transient Windows ACL query timeout once.
 
@@ -55,8 +61,8 @@ There is no runtime registry or provider fallback. The exhaustive dispatcher rec
 Codex invocations explicitly select the Windows `elevated` sandbox while ignoring
 operator configuration. This selects a sandbox backend; commands still receive
 only the capability's read-only or workspace-write scope, with approvals disabled
-and network access denied. The runner owner must provision that backend before
-unattended use. A missing backend remains a failure, and Copilot does not run a
+and network access denied. This retained policy does not make Windows service runners supported.
+A missing backend remains a failure, and Copilot does not run a
 sandbox setup command or select full access as recovery. Consult the
 [official Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
 for administrator provisioning and managed restrictions.
@@ -66,3 +72,13 @@ manifests, because the hash script depends on Management commands. They retain
 private profiles, disabled module discovery and their bounded startup deadline.
 A missing command in those fixtures is separate from a real Codex sandbox setup
 failure; neither a probe job nor a fixture proves successful agent editing.
+
+
+A Codex process can exit successfully after a shell tool failed. If bounded
+provider stderr reports the known sandbox setup mutex error, the run logs
+`reported-sandbox-setup-mutex` and directs you to inspect runner setup, even
+when the CLI exits 0. This is a provider-reported hint; a completed process
+does not certify that repository reads or edits ran. Historical reproductions used the same runner identity, executable and managed
+policy. Windows service Codex execution is now unsupported; route new Codex
+jobs to macOS or Ubuntu.
+Copilot does not expose raw stderr or change the sandbox backend in response.
