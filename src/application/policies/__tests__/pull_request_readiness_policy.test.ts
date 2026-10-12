@@ -45,6 +45,14 @@ describe('projectPullRequestReadiness', () => {
         const e=readinessEvidence(),rawPolicy=readinessPolicy('off');
         expect(projectPullRequestReadiness(rawPolicy,{...e,baseSha:'short'},{...e,rawPolicy})).toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',baseSha:''});
     });
+    it.each([
+        {repositoryId:0}, {repositoryId:Number.NaN}, {pullNumber:0}, {pullNumber:Number.MAX_SAFE_INTEGER+1},
+    ])('keeps malformed final target identity unavailable %#', invalid => {
+        const e=readinessEvidence(),rawPolicy=readinessPolicy();
+        expect(projectPullRequestReadiness(rawPolicy,e,{...e,rawPolicy,...invalid})).toMatchObject({
+            readiness:'unavailable',code:'identity-unavailable',headSha:'',baseSha:'',
+            evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
+    });
     it('fences a changed policy identity', () => {
         expect(projectPullRequestReadiness(policy('guarded'), evidence, { ...final, rawPolicy: policy('recommend') }))
             .toMatchObject({ readiness: 'pending', code: 'superseded' });

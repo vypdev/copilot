@@ -44744,7 +44744,8 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
     if (policy.mode === 'off' && rawPolicy !== final.rawPolicy)
         return unavailablePullRequestReadiness('policy-superseded');
     if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
-        || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
+        || evidence.pullNumber <= 0 || !Number.isSafeInteger(final.repositoryId) || final.repositoryId <= 0
+        || !Number.isSafeInteger(final.pullNumber) || final.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
         || !objectId(final.headSha) || !objectId(final.baseSha))
         return policy.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('identity-unavailable');
     const sameTarget = evidence.repositoryId === final.repositoryId && evidence.pullNumber === final.pullNumber;

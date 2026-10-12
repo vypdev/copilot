@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 43 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| Domain/configuration/pure planning | 47 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
 | State/application/idempotency/races | 46 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **140** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **144** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -357,7 +357,7 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - [ ] Status has no approval, repair, model, or lifecycle mutation capability.
 - [ ] Issue linkage behavior for zero, one, and multiple PRs is deterministic.
 - [ ] Replay updates one correlated reply and respects existing notification/lifecycle budgets.
-- [x] Numeric test budget of 140 distinct cases and coverage requirements pass.
+- [x] Numeric test budget of 144 distinct cases and coverage requirements pass.
 - [ ] English and Spanish catalogs are complete with atomic fallback and safe rendering.
 - [ ] User, setup, operator, and contributor documentation is complete and discoverable.
 - [ ] Existing status and #454 SDD-readiness behavior remain compatible.
@@ -387,7 +387,6 @@ The shared GitHub Action input reader now lives in infrastructure, with pure JSO
 
 Local acceptance on the managed implementation passed 568 suites and 7,428 tests with 34 existing platform skips (7,462 total). The new pure readiness policy, native provider adapter and read-only composition each reached 100% lines/statements/branches/functions. The changed status application reached 97.43% lines, 95.04% statements, 97.84% branches and 100% functions, passing every existing coverage budget. These local figures do not certify live parent compatibility, GitHub replies, hosted CI, or native approval.
 
-
 ### Independent final-head fence from live dogfooding
 
 Bugbot finding `4242855091` exposed reuse of a previously read revision at the final head fence. The application now always performs the narrow independent current-head read after comments, revision and policy collection. A denied final read cannot certify readiness or counts. If the revision read and independent head read contradict one another, old finding counts remain unavailable. Two additional regression cases reproduce movement during the final policy read and denial of the independent head read, increasing this feature from 103 to 105 distinct cases. This correction does not change approval authority, provider limits or policy semantics.
@@ -400,20 +399,17 @@ On published head `597f3dd94f735986e606c7c36503c155ba5205bb`, the Action resolve
 
 Eleven additional contracts reproduce those cases and deny canonical/final-revision/final-linkage reads, increasing this extension to 116 distinct cases. Full local verification passed 571 suites and 7,527 tests with 35 existing platform skips (7,562 total). The pure readiness policy has 100% coverage; the changed application has 100% lines/functions, 99.06% statements and 98.93% branches. Existing coverage budgets, typecheck, lint, documentation, specifications/catalog, graph update and compilation passed. These figures do not certify fresh live review or post-promotion command acceptance.
 
-
 ### Disabled policy with unavailable optional facts
 
 Fresh native review on head `b067c36c2b5cb9c87f37ee59ce0e8c98068ddff9` resolved the three preceding findings and exposed `4243066051`: an optional evidence read could erase an independently verified disabled approval policy. Status now preserves `off` / not applicable while attempting to read native facts. Failed, foreign, or superseded facts remain unavailable and cannot carry a commit or satisfied gates into the reply. The final policy is still read independently: denied policy access or policy movement invalidates the disabled snapshot. No approval or observer action is introduced.
 
 Six additional application contracts cover denied optional reads, denied or changed final policy, changed native head, foreign evidence and a denied complete final revision. The extension now has 122 distinct cases. Full local verification passed 571 suites and 7,533 tests with 35 configured skips (7,568 total). The pure policy has 100% coverage; the changed application has 100% lines/functions, 99.1% statements and 99.08% branches, with unchanged repository coverage budgets. Fresh review and live command acceptance remain required after publication and promotion.
 
-
 ### Native parent-integration fixture recovery (2026-10-12)
 
 PR sync `38253642889` on the current default Action source preserved the previously lost missing-readiness-adapter fallback, but its conflict resolution removed `listIssueComments` from the route-scoped read fixture. Both existing composition tests then failed while binding the shared SDD evidence reader; the Action retained the remote branch and withheld the merge push. This is a failed test-fixture integration, not proof of a runtime read failure.
 
 The feature fixture now explicitly supplies that read method while retaining its readiness query mock. No shared foundation source is copied, no parent merge is performed locally, and no production adapter is made optional to hide the error. The existing 122-case feature budget and global thresholds are unchanged. A fresh Action-managed parent synchronization and current-head PR review remain required.
-
 
 ### Keep feature-owned readiness contracts out of shared merge bodies (2026-10-12)
 
@@ -427,7 +423,6 @@ Two additional presentation contracts ensure unknown provider evidence states an
 
 An additional application regression preserves an independently projected server origin when optional readiness ports are absent. Readiness remains unavailable; it cannot erase the existing origin used by another verified status projection. The own feature inventory is 125 distinct cases. Shared SDD projection still requires Action parent integration and its independent acceptance cases.
 
-
 ### Independent check-mode coverage projection (2026-10-12)
 
 Native review finding `4250603568` showed that the coverage group reused the aggregate CI decision. A failed unrelated CI check could therefore hide independently successful coverage or label missing, stale or running coverage as blocked. Check-mode coverage MUST evaluate only its configured trusted check using the same canonical check decision, current head/tested-merge selection, App/workflow identity and latest-attempt ambiguity guards. Producer attestation and verified merge parentage remain prerequisites for both groups; overall approval still requires every configured CI check.
@@ -435,7 +430,6 @@ Native review finding `4250603568` showed that the coverage group reused the agg
 Eight additional cases cover successful, failed, missing, running, wrong-App, wrong-workflow, stale-head and ambiguous coverage while another CI check fails. Four reproduce the old defect. The own feature inventory is now 133 distinct cases; the existing 40-case acceptance floor and all coverage gates remain required. Native head review and post-promotion command acceptance remain pending.
 
 Local verification of this correction passed 583 suites and 7,922 tests with 35 configured platform skips (7,957 total). The readiness policy retained 100% lines/statements/branches/functions. Typecheck, lint, documentation, specifications and all existing coverage budgets passed. These results do not replace fresh native review or live command acceptance.
-
 
 ### Preserve verified disabled policy across optional evidence races (2026-10-12)
 
@@ -445,7 +439,6 @@ Six new regressions failed before correction: head/base pure projection, malform
 
 Local verification of this correction passed 584 suites and 7,950 tests with 35 configured platform skips (7,985 total). All existing global/module coverage gates, types, lint, documentation, specifications/catalog and graph update passed. Native final-head review remains required.
 
-
 ### Accurate human-approval and known-movement terminal states (2026-10-12)
 
 Native findings `4251107234` and `4251107251` exposed two presentation classifications. A canonical decision `human-approved` MUST report satisfied readiness with no observer/human action, after the unchanged preceding CI/coverage/Bugbot gates. A valid independent final head read that differs from the selected head, with unchanged finally verified policy, MUST produce pending/superseded with a wait action and no stale identity or gate claims. Denied/malformed head reads or a changed/unreadable final policy remain unavailable; finally verified off remains disabled. Existing final native association guards still override an invalid target.
@@ -453,3 +446,9 @@ Native findings `4251107234` and `4251107251` exposed two presentation classific
 Two existing contracts were strengthened to reproduce these defects, and one new application case covers known movement while another native gate is unavailable. The own inventory is 140 cases (43 policy,46 application,19 provider,5 workflow,18 presentation,9 integration). The composition factory finding `4251009234` is a false positive: factories return deferred constructor callbacks; captured mock functions are first read after module initialization. All five composition tests run successfully; native dismissal is being audited separately.
 
 Local terminal-state verification passed 584 suites and 7,951 tests with 35 configured platform skips (7,986 total), every global/module gate, types, lint, documentation, specifications/catalog and graph update. Bundles were generated before staging. Fresh native review remains required.
+
+### Validate final target identifiers before comparing revisions (2026-10-12)
+
+Native duplicate findings `4251357708`/`4251357838` identified the same missing pure-policy guard. The final repository and PR identifiers MUST be positive safe integers before a valid current target can be compared with the collected evidence. Invalid final identifiers remain unavailable, rather than presenting unknown identity as a known superseded snapshot. Finally verified off still makes no assessment or native gate claim. Four cases reproduce zero/non-finite repository IDs and zero/unsafe PR numbers; the own inventory is 144 cases (47 policy,46 application,19 provider,5 workflow,18 presentation,9 integration). Duplicate semantic publication is being investigated independently; this correction does not widen target authority.
+
+Local final-target verification passed 584 suites and 7,955 tests with 35 configured platform skips (7,990 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Generated bundles are included. Both native findings still require a fresh review on the published head.

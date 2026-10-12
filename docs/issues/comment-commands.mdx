@@ -113,7 +113,6 @@ You can combine plain and quoted IDs. Use JSON escapes for a literal double
 quote or backslash; malformed, empty or multiline quoted IDs are rejected.
 The command still accepts at most 20 IDs and 2,000 characters.
 
-
 `/copilot status` takes no arguments. It reports lifecycle, waiting state, branch,
 labels, and independently verified Bugbot counts. Cached counts never replace
 missing or stale evidence. Read-only status and description queries preserve
@@ -337,20 +336,20 @@ When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
 
-
 Check-mode PR readiness reports the configured coverage check independently of
 other CI checks. Coverage can be satisfied while another CI check is blocked,
 or pending when its current revision is missing or still running. Overall
 readiness continues to require every configured check and its trusted producer.
-
 
 A finally verified off approval policy remains disabled if optional PR revision
 evidence changes during collection. Stale gate claims are discarded. If the
 policy itself changes or its final read is denied, the report cannot reuse the
 earlier disabled assessment; retry status after the current policy is readable.
 
-
 A verified current human approval can satisfy readiness with no further action.
 When a finally readable head has changed and the policy is still verified,
 status reports pending and asks you to wait and retry. Denied identity or policy
 reads remain unavailable; neither case retains stale satisfied gate claims.
+
+Malformed final repository or PR identifiers make readiness unavailable. They
+are not treated as a known head movement, and no earlier satisfied gate survives.
