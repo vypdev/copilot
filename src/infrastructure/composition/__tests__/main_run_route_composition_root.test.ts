@@ -19,7 +19,7 @@ import {
 
 const mockIssue = {};
 const mockPullRequest = {};
-const mockContext = { kind: 'context' };
+const mockContext = { kind: 'context', listIssueComments: jest.fn() };
 const mockStatusReadPorts = { kind: 'status-read-ports' };
 jest.mock('../pull_request_status_composition_root', () => ({ createPullRequestStatusReadPorts: jest.fn(() => mockStatusReadPorts) }));
 const mockResolution = { kind: "resolution" };

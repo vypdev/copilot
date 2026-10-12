@@ -406,3 +406,10 @@ Eleven additional contracts reproduce those cases and deny canonical/final-revis
 Fresh native review on head `b067c36c2b5cb9c87f37ee59ce0e8c98068ddff9` resolved the three preceding findings and exposed `4243066051`: an optional evidence read could erase an independently verified disabled approval policy. Status now preserves `off` / not applicable while attempting to read native facts. Failed, foreign, or superseded facts remain unavailable and cannot carry a commit or satisfied gates into the reply. The final policy is still read independently: denied policy access or policy movement invalidates the disabled snapshot. No approval or observer action is introduced.
 
 Six additional application contracts cover denied optional reads, denied or changed final policy, changed native head, foreign evidence and a denied complete final revision. The extension now has 122 distinct cases. Full local verification passed 571 suites and 7,533 tests with 35 configured skips (7,568 total). The pure policy has 100% coverage; the changed application has 100% lines/functions, 99.1% statements and 99.08% branches, with unchanged repository coverage budgets. Fresh review and live command acceptance remain required after publication and promotion.
+
+
+### Native parent-integration fixture recovery (2026-10-12)
+
+PR sync `38253642889` on the current default Action source preserved the previously lost missing-readiness-adapter fallback, but its conflict resolution removed `listIssueComments` from the route-scoped read fixture. Both existing composition tests then failed while binding the shared SDD evidence reader; the Action retained the remote branch and withheld the merge push. This is a failed test-fixture integration, not proof of a runtime read failure.
+
+The feature fixture now explicitly supplies that read method while retaining its readiness query mock. No shared foundation source is copied, no parent merge is performed locally, and no production adapter is made optional to hide the error. The existing 122-case feature budget and global thresholds are unchanged. A fresh Action-managed parent synchronization and current-head PR review remain required.
