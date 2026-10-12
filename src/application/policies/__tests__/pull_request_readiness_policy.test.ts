@@ -80,6 +80,26 @@ describe('independent canonical readiness evidence', () => {
     it('requires verified test-merge parentage', () => {
         expect(project(readinessEvidence({ mergeCommitVerified: false, testedMergeSha: undefined }))).toMatchObject({ readiness: 'pending', evidence: { ci: 'pending' } });
     });
+    it.each(['success', 'failure', 'missing', 'running', 'wrong-app', 'wrong-workflow', 'old-head', 'ambiguous'] as const)(
+        'projects the configured coverage check independently of another failed CI check: %s', scenario => {
+            const e = readinessEvidence();
+            const coverage = { ...e.checks[0], name: 'Coverage', workflowName: 'Coverage' };
+            const checks: ApprovalEvidence['checks'][number][] = [{ ...e.checks[0], conclusion: 'failure' }];
+            if (scenario !== 'missing') checks.push({ ...coverage,
+                conclusion: scenario === 'failure' ? 'failure' : scenario === 'running' ? null : 'success',
+                status: scenario === 'running' ? 'in_progress' : 'completed',
+                sourceAppId: scenario === 'wrong-app' ? 99 : coverage.sourceAppId,
+                workflowName: scenario === 'wrong-workflow' ? 'Other' : coverage.workflowName,
+                headSha: scenario === 'old-head' ? 'd'.repeat(40) : coverage.headSha });
+            if (scenario === 'ambiguous') checks.push(coverage);
+            const raw = readinessPolicy('guarded', { testChecks: [
+                { name: 'CI Check', sourceAppId: 15368, workflowName: 'CI Check' },
+                { name: 'Coverage', sourceAppId: 15368, workflowName: 'Coverage' },
+            ], coverage: { mode: 'check', checkName: 'Coverage' } });
+            const expected = scenario === 'success' ? 'satisfied'
+                : ['missing', 'running', 'old-head'].includes(scenario) ? 'pending' : 'blocked';
+            expect(project({ ...e, checks }, raw)).toMatchObject({ readiness: 'blocked', evidence: { ci: 'blocked', coverage: expected } });
+        });
     it('marks missing numeric coverage unavailable while retaining successful CI', () => {
         expect(project(readinessEvidence(), readinessPolicy('guarded', { coverage: numeric }))).toMatchObject({ readiness: 'unavailable', evidence: { ci: 'satisfied', coverage: 'unavailable' } });
     });

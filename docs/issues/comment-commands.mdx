@@ -336,3 +336,9 @@ same issue identity; an untrusted or mismatched URL is shown without navigation.
 When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
+
+
+Check-mode PR readiness reports the configured coverage check independently of
+other CI checks. Coverage can be satisfied while another CI check is blocked,
+or pending when its current revision is missing or still running. Overall
+readiness continues to require every configured check and its trusted producer.

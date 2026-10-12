@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 32 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| Domain/configuration/pure planning | 40 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
 | State/application/idempotency/races | 42 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **125** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **133** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -357,7 +357,7 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - [ ] Status has no approval, repair, model, or lifecycle mutation capability.
 - [ ] Issue linkage behavior for zero, one, and multiple PRs is deterministic.
 - [ ] Replay updates one correlated reply and respects existing notification/lifecycle budgets.
-- [x] Numeric test budget of 103 distinct cases and coverage requirements pass.
+- [x] Numeric test budget of 133 distinct cases and coverage requirements pass.
 - [ ] English and Spanish catalogs are complete with atomic fallback and safe rendering.
 - [ ] User, setup, operator, and contributor documentation is complete and discoverable.
 - [ ] Existing status and #454 SDD-readiness behavior remain compatible.
@@ -426,3 +426,12 @@ All existing 122 feature cases remain required, without recounting shared SDD br
 Two additional presentation contracts ensure unknown provider evidence states and unknown policy modes render as unavailable without reflecting prose or inventing approval authority. The feature inventory is now 124 distinct cases; the 40-case minimum and all original acceptance cases remain unchanged.
 
 An additional application regression preserves an independently projected server origin when optional readiness ports are absent. Readiness remains unavailable; it cannot erase the existing origin used by another verified status projection. The own feature inventory is 125 distinct cases. Shared SDD projection still requires Action parent integration and its independent acceptance cases.
+
+
+### Independent check-mode coverage projection (2026-10-12)
+
+Native review finding `4250603568` showed that the coverage group reused the aggregate CI decision. A failed unrelated CI check could therefore hide independently successful coverage or label missing, stale or running coverage as blocked. Check-mode coverage MUST evaluate only its configured trusted check using the same canonical check decision, current head/tested-merge selection, App/workflow identity and latest-attempt ambiguity guards. Producer attestation and verified merge parentage remain prerequisites for both groups; overall approval still requires every configured CI check.
+
+Eight additional cases cover successful, failed, missing, running, wrong-App, wrong-workflow, stale-head and ambiguous coverage while another CI check fails. Four reproduce the old defect. The own feature inventory is now 133 distinct cases; the existing 40-case acceptance floor and all coverage gates remain required. Native head review and post-promotion command acceptance remain pending.
+
+Local verification of this correction passed 583 suites and 7,922 tests with 35 configured platform skips (7,957 total). The readiness policy retained 100% lines/statements/branches/functions. Typecheck, lint, documentation, specifications and all existing coverage budgets passed. These results do not replace fresh native review or live command acceptance.

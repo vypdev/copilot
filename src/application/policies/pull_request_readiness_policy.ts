@@ -51,9 +51,13 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
         return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
             humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
     }
-    const ci: PullRequestReadiness = !policy.producerAttested ? 'blocked' : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha)
-        ? 'pending' : state(decideApprovalChecks(policy, evidence));
-    const coverage: PullRequestReadiness = policy.coverage.mode === 'check' ? ci
+    const checkBoundary: PullRequestReadiness | undefined = !policy.producerAttested ? 'blocked'
+        : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha) ? 'pending' : undefined;
+    const ci: PullRequestReadiness = checkBoundary ?? state(decideApprovalChecks(policy, evidence));
+    const coverage: PullRequestReadiness = policy.coverage.mode === 'check'
+        ? checkBoundary ?? state(decideApprovalChecks({ ...policy,
+            testChecks: policy.testChecks.filter(check => check.name === policy.coverage.checkName),
+        }, { ...evidence, requiredChecks: [policy.coverage.checkName] }))
         : !policy.coverage.reporterAttested ? 'blocked' : !evidence.numericCoverage && !isDocumentationOnlyDiff(evidence.changedPaths)
             ? 'unavailable' : state(decideApprovalCoverage(policy, evidence));
     const bugbot = evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun ? 'blocked' : state(decideApprovalBugbot(policy, evidence));
