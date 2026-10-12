@@ -622,6 +622,9 @@ function copyStatusSnapshot(snapshot: CopilotStatusSnapshot): CopilotStatusSnaps
     return Object.freeze({
         ...snapshot,
         issueLabels: Object.freeze([...snapshot.issueLabels]),
+        ...(snapshot.sddReadiness ? { sddReadiness: Object.freeze({ ...snapshot.sddReadiness,
+            ...(snapshot.sddReadiness.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...snapshot.sddReadiness.pendingQuestionIds]) } : {}),
+        }) } : {}),
         pullRequestLabels: Object.freeze([...snapshot.pullRequestLabels]),
         ...(snapshot.findingStates ? { findingStates: Object.freeze({ ...snapshot.findingStates }) } : {}),
     });

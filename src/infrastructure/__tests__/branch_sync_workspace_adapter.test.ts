@@ -295,7 +295,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
     ],
     [
       "whitespace validation",
-      { "diff --check": [new Error("whitespace error")] },
+      { "diff --check -- . :(exclude)build/cli/index.js :(exclude)build/api/index.js :(exclude)build/github_action/index.js": [new Error("whitespace error")] },
       "The resolution contains whitespace errors or conflict markers.",
     ],
   ])("rejects unsafe post-merge %s", async (_case, replies, reason) => {

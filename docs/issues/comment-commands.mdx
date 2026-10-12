@@ -61,6 +61,12 @@ whitespace-separated, and commands are limited to 2,000 characters and 20
 arguments. Missing or malformed required arguments produce a validation reply;
 they never mean “all” or authorize a broad change.
 
+`help`, `status`, `dismiss`, `remember` and rejected commands do not run a
+model or change the temporary agent activity label. `sync-branch --dry-run`
+and `--no-agent` also avoid model activity. Ordinary sync may use the conflict
+fixer, and `findings` runs a fresh review. These distinctions preserve each
+command's existing authorization and repository effects.
+
 ### Where command results persist
 
 Read-only commands publish a correlated GitHub reply and do not change repository
@@ -147,6 +153,35 @@ invalid configuration through the usual maintainer flow, then retry
 `/copilot doctor`. The command does not read secret values, test write access,
 provision setup, change labels or approvals, or infer grants from workflow text.
 
+
+For issue types covered by `pre-branch-sdd`, status also appends an SDD
+readiness section. It reports when an SDD is not required and marks required
+SDD evidence unavailable until the reader verifies the current owned card,
+immutable catalog and remote publication. It shows pending question IDs and
+the owning specification, then links the verified current publication once
+ready. Old answer rounds and stale issue or branch evidence cannot establish
+readiness. A `published` marker or existing branch alone never means the SDD is
+ready. Missing or unverified evidence blocks a readiness claim; status remains
+read-only and preserves its existing fields. SDD readiness confirms the published
+specification and its branch evidence. It does not certify that implementation
+is finished, that CI or review passed, or that the PR can be merged.
+
+Status uses the same installed issue-workflow profile as SDD preparation. An
+unchanged profile does not require republishing an otherwise current SDD; a
+changed profile still invalidates its current readiness claim.
+
+A newer bot-owned comment that lost its SDD identification prevents an older
+card from certifying readiness. Canonical replies, progress cards and branch
+notifications for the same issue remain separate surfaces. An unidentified or
+corrupted bot comment can therefore make SDD evidence invalid; inspect and
+reconcile that conversation before relying on an older publication.
+
+After the first verified publication, a new clarification round reports
+**Revision pending**. Its first-publication link is explicitly historical; it
+does not certify the pending revision. The section keeps unanswered question
+identifiers visible, or asks to resume publication once answers are complete.
+Once the revision is verified, status shows the current publication and the
+immutable first publication separately when their commits differ. A change to the issue body keeps a separately verified first publication explicitly historical until the revision is published. Failed final identity checks remove that link. Status reads each maintainer's current permission once per request, with at most 16 distinct accounts; failed or exhausted permission reads make SDD evidence unavailable. Later requests recheck permissions.
 
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to
@@ -311,3 +346,7 @@ the required event. Disabled jobs or steps cannot make it pass. Runtime-dependen
 or unsupported conditions are reported as unavailable because a repository
 snapshot cannot establish their result. Inspect those conditions and the actual
 workflow run; a structural pass still does not prove runner availability.
+
+SDD status keeps an unknown requirement visible when the issue has no admitted
+workflow kind. Evidence links use the configured GitHub server origin and the
+same issue identity; an untrusted or mismatched URL is shown without navigation.

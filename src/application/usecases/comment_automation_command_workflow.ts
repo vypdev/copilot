@@ -28,7 +28,7 @@ export async function runExplicitCommentCommand(
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
     if (command.name === 'doctor') return [await readCopilotDoctor(param, options.taskId, options.doctorReadPorts)];
-    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts)];
+    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);

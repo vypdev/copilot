@@ -134,6 +134,12 @@ conflict paths, merge identity, protected index entries and remaining markers,
 then stages only those resolved conflicts through trusted Git code. It rejects
 later changes introduced by verification rather than staging them again.
 
+The three checked-in `ncc` bundles (`build/cli/index.js`, `build/api/index.js`,
+`build/github_action/index.js`) retain their generator's whitespace. Source and
+all other paths retain strict whitespace checks. Conflict markers are rejected in
+all files, including those bundles, before staging and in the staged result.
+This changes no content, allowed edit paths or verification requirements.
+
 If `specs/CATALOG.md` is conflicted, Copilot treats it as a generated index:
 after the catalog metadata is resolved, the Action validates that metadata and
 regenerates the index with its bundled catalog renderer before verification.
@@ -160,6 +166,13 @@ include a closed diagnostic code such as `sdd-catalog-invalid`,
 `unstaged-changes` or `unexpected-paths`. Inspect that code before retrying;
 Copilot preserves the remote branches and does not publish the rejected merge.
 Private paths and provider output are excluded from the public diagnosis.
+
+For `sdd-catalog-invalid`, the operator log also records the closed catalog
+validation phase before abort restores the worktree. This distinguishes
+remaining metadata conflict markers or invalid JSON from evidence-path or
+catalog-contract failures. It includes no metadata values, paths, parser errors
+or validator output. Correct the failing conflict resolution and retry the
+same command; the Action retains all validation and remote-head checks.
 
 Successful and no-change reports use the issue or pull-request surface locale,
 are correlated to the requesting comment, and are reconciled at most once on
@@ -191,3 +204,11 @@ with the existing bounded worker recycling. Forcing the whole suite into one
 process with `--runInBand` can exhaust the heap before synchronization publishes.
 A failed verification retains the managed remote head; inspect the failure and
 retry `/copilot sync-branch` after correcting the verification configuration.
+
+Commands accept leading whitespace, line breaks and repeated whitespace between
+`/copilot` and the command name. This repository prepares its verification
+toolchain for those requests and addressed bot mentions before the Action runs.
+Preparation is only a conservative scheduling hint; the Action's parser, actor
+permissions, original conflict set and dry-run/no-agent rules remain authoritative.
+The fixer must check existing offline tests for affected modules and typecheck
+when tools are available; mandatory Action verification still runs independently.

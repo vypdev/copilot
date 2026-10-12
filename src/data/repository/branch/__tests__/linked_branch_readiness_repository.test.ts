@@ -4,9 +4,9 @@ const sha = 'a'.repeat(40);
 
 describe('LinkedBranchReadinessRepository', () => {
   it('selects the exact issue-linked ref and its commit SHA', async () => {
-    const graphql = jest.fn().mockResolvedValue({ repository: { issue: { linkedBranches: { nodes: [
+    const graphql = jest.fn().mockResolvedValue({ repository: { ref: { target: { oid: sha } }, issue: { linkedBranches: { nodes: [
       { ref: { name: 'refs/heads/feature/420-other', target: { oid: 'b'.repeat(40) } } },
-      { ref: { name: 'refs/heads/feature/42-change', target: { oid: sha } } },
+      { ref: { name: 'refs/heads/feature/42-change', repository: { nameWithOwner: 'acme/repo' }, target: { oid: sha } } },
     ] } } } });
     const repository = new LinkedBranchReadinessRepository({ getClient: () => ({ graphql }) } as never);
     await expect(repository.getLinkedBranch('acme', 'repo', 42, 'feature/42-change', 'token'))
@@ -14,6 +14,22 @@ describe('LinkedBranchReadinessRepository', () => {
     expect(graphql).toHaveBeenCalledWith(expect.stringContaining('linkedBranches(first: 100)'), {
       owner: 'acme', repository: 'repo', issueNumber: 42, ref: 'refs/heads/feature/42-change',
     });
+  });
+
+  it.each([
+    ['stale native SHA', 'b'.repeat(40), 'acme/repo'],
+    ['deleted native branch', undefined, 'acme/repo'],
+    ['foreign native repository', sha, 'other/repo'],
+    ['missing native repository', sha, undefined],
+  ])('rejects %s even with an otherwise valid PR fallback', async (_reason, remoteSha, nameWithOwner) => {
+    const graphql = jest.fn().mockResolvedValue({ repository: {
+      ref: { target: { oid: remoteSha } }, issue: {
+        linkedBranches: { nodes: [{ ref: { name: 'feature/42-change', repository: { nameWithOwner }, target: { oid: sha } } }] },
+        closedByPullRequestsReferences: { nodes: [{ state: 'OPEN', headRefName: 'feature/42-change', headRefOid: remoteSha, headRepository: { nameWithOwner: 'acme/repo' } }] },
+      },
+    } });
+    const repository = new LinkedBranchReadinessRepository({ getClient: () => ({ graphql }) } as never);
+    await expect(repository.getLinkedBranch('acme', 'repo', 42, 'feature/42-change', 'token')).resolves.toBeUndefined();
   });
 
   it.each(['', '../feature/42-change', '/feature/42-change'])('rejects unsafe expected ref %s', async branch => {

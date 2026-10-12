@@ -8,6 +8,7 @@ import {
 } from '../setup_token_permission_policy';
 import type { SetupRemoteConfiguration } from '../../../domain/setup';
 import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
+import { buildSetupPatCreationUrl } from '../setup_pat_creation_url_policy';
 
 const organization: SetupRemoteConfiguration = {
     ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
@@ -15,6 +16,39 @@ const organization: SetupRemoteConfiguration = {
     repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: [],
     organizationAccess: 'available', organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
 };
+
+describe('approval configuration to guided bot PAT link', () => {
+    const cases = [
+        ['recommend', 'repository'], ['guarded', 'repository'],
+        ['recommend', 'organization-override'], ['guarded', 'organization-override'],
+        ['recommend', 'preserved-organization'], ['guarded', 'preserved-organization'],
+        ['recommend', 'repository-shadow'], ['off', 'organization-override'],
+    ] as const;
+    it.each(cases)('prefills only the required Variables read scopes for %s with %s storage', (mode, storage) => {
+        const configuration = disabledRuntimeConfiguration();
+        configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode };
+        const remote = { ...organization };
+        if (storage === 'organization-override') {
+            configuration.storage.variables.overrides.PR_APPROVAL_POLICY = 'organization';
+        } else if (storage === 'preserved-organization') {
+            remote.organizationVariables = [{ name: 'PR_APPROVAL_POLICY', value: '{}' }];
+        } else if (storage === 'repository-shadow') {
+            configuration.storage.variables.defaultScope = 'organization';
+            remote.repositoryVariables = [{ name: 'PR_APPROVAL_POLICY', value: '{}' }];
+            remote.organizationVariables = [{ name: 'PR_APPROVAL_POLICY', value: '{}' }];
+        }
+        const url = new URL(buildSetupPatCreationUrl({
+            role: 'workflow', owner: 'vypdev', repository: 'copilot', expiresIn: 90,
+            requirements: buildWorkflowPatPermissionRequirements(configuration, remote),
+        }));
+        expect(url.searchParams.getAll('actions_variables')).toEqual(mode === 'off' ? [] : ['read']);
+        const needsOrganization = mode !== 'off' && (storage === 'organization-override' || storage === 'preserved-organization');
+        expect(url.searchParams.getAll('organization_actions_variables')).toEqual(needsOrganization ? ['read'] : []);
+        expect(url.searchParams.get('secrets')).toBeNull();
+        expect(url.searchParams.get('organization_secrets')).toBeNull();
+        expect(url.searchParams.get('name')).toBe('Copilot bot copilot');
+    });
+});
 
 function disabledRuntimeConfiguration() {
     const configuration = createDefaultSetupConfiguration();

@@ -83,6 +83,24 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'status', '--porcelain')).toBe('');
   });
 
+  it('reads the owning catalog at an immutable commit without checking out or changing current files', async () => {
+    const original = git(repo, 'rev-parse', 'HEAD');
+    fs.writeFileSync(path.join(repo, 'specs/catalog.json'), '{"version":2,"capabilities":[]}\n');
+    git(repo, 'add', 'specs/catalog.json'); git(repo, 'commit', '-m', 'later catalog');
+    const current = git(repo, 'rev-parse', 'HEAD');
+    const snapshot = await new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit(original);
+    expect(snapshot.baseSha).toBe(original);
+    expect(snapshot.capabilities.map(capability => capability.id)).toEqual(['payments']);
+    expect(git(repo, 'rev-parse', 'HEAD')).toBe(current);
+    expect(fs.readFileSync(path.join(repo, 'specs/catalog.json'), 'utf8')).toContain('"version":2');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('rejects a non-SHA publication identifier before reading Git objects', async () => {
+    await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshotAtCommit('develop:specs/catalog.json')).rejects.toThrow('invalid commit SHA');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
   it('reads only safe SDD paths from the selected base commit', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');

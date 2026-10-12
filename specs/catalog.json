@@ -1207,10 +1207,11 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
-        "specs/pre-branch-sdd-gate.md"
+        "specs/pre-branch-sdd-gate.md",
+        "specs/pre-branch-sdd-status-readiness.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1243,11 +1244,26 @@
         "src/infrastructure/specification_catalog_validator.cjs",
         "src/actions/input_boolean_policy.ts",
         "src/domain/issue_workflow_profile.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/application/policies/status_command_policy.ts",
+        "src/application/policies/publication_message_catalog.ts",
         "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.ts",
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/domain/agent_response_length_failure.ts",
-        "src/data/repository/agent_json_schema_validator.ts"
+        "src/data/repository/agent_json_schema_validator.ts",
+        "src/application/ports/sdd_evidence_read_ports.ts",
+        "src/application/policies/sdd_issue_identity_policy.ts",
+        "src/application/policies/sdd_query_card_policy.ts",
+        "src/application/policies/sdd_status_policy.ts",
+        "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
+        "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/comment_automation_command_workflow.ts",
+        "src/application/usecases/comment_automation_contracts.ts",
+        "src/application/usecases/issue_comment_use_case.ts",
+        "src/application/policies/semantic_result_publication_policy.ts",
+        "src/infrastructure/composition/sdd_evidence_composition_root.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1265,9 +1281,18 @@
         "src/architecture/__tests__/github_publication_boundaries.test.ts",
         "src/actions/__tests__/input_boolean_policy.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
+        "src/application/policies/__tests__/status_command_policy.test.ts",
         "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
-        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
+        "src/application/policies/__tests__/sdd_issue_identity_policy.test.ts",
+        "src/application/policies/__tests__/sdd_query_card_policy.test.ts",
+        "src/application/policies/__tests__/sdd_status_policy.test.ts",
+        "src/application/usecases/sdd/__tests__/sdd_evidence_query_use_case.test.ts",
+        "src/data/repository/branch/__tests__/linked_branch_readiness_repository.test.ts",
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
+        "src/infrastructure/composition/__tests__/sdd_evidence_composition_root.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1575,7 +1600,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],
@@ -1622,7 +1647,8 @@
         "src/application/errors/__tests__/application_error.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
         "src/infrastructure/__tests__/git_commit_adapter.test.ts",
-        "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts"
+        "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
+        "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -1637,7 +1663,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1720,7 +1746,8 @@
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/detection.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/pull-requests/examples.mdx"
+        "docs/pull-requests/examples.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {
@@ -1729,7 +1756,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1743,7 +1770,8 @@
         ".github/workflows/copilot_issue_comment.yml",
         ".github/workflows/copilot_pull_request_comment.yml",
         ".github/workflows/copilot_pull_request_review_state.yml",
-        ".github/workflows/copilot_close_inactive_issues.yml"
+        ".github/workflows/copilot_close_inactive_issues.yml",
+        ".github/workflows/copilot_runner_diagnostics.yml"
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
@@ -1785,7 +1813,8 @@
         "scripts/validate-workflow-contract.cjs",
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/infrastructure/untrusted_command_environment.ts",
-        "scripts/diagnose-windows-powershell-startup.cjs"
+        "scripts/diagnose-windows-powershell-startup.cjs",
+        "scripts/diagnose-windows-sandbox-prerequisites.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -2124,6 +2153,7 @@
         "src/domain/__tests__/pull_request_approval.test.ts",
         "src/domain/__tests__/setup_approval_workflow.test.ts",
         "src/actions/__tests__/pull_request_approval_action.test.ts",
+        "src/actions/__tests__/pull_request_approval_logging.test.ts",
         "src/data/repository/pull_request/__tests__/approval_coverage_artifact.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_review_comment_command_repository.test.ts",

@@ -1,5 +1,7 @@
 import type { DoctorConfiguration } from '../ports/github_runtime_doctor_ports';
 import type { IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
+import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
+import type { SddEvidenceQueryContext } from '../ports/sdd_evidence_read_ports';
 import type { BugbotReviewConfiguration } from '../../domain/bugbot/review_configuration';
 import {
     buildCopilotStatusSnapshot,
@@ -46,6 +48,7 @@ export interface CommentAutomationContext {
     readonly language: CommentLanguageRequest;
     readonly think: ThinkContext;
     readonly status: CopilotStatusSnapshot;
+    readonly sdd?: SddEvidenceQueryContext;
     readonly userRequest: UserRequestContext;
     readonly branchSync: BranchSyncContext;
     readonly bugbot: {
@@ -124,6 +127,16 @@ export function projectCommentAutomationContext(
         }),
         think: projectThinkContext(source),
         status: buildCopilotStatusSnapshot(source),
+        ...(source.issue?.number > 0 && !(source.pullRequest?.number > 0) ? { sdd: Object.freeze({
+            issueNumber: source.issue.number,
+            admittedKind: ISSUE_WORKFLOW_KINDS.find(kind => kind === source.issueWorkflowKind),
+            profileDigest: source.issueWorkflowProfileDigest,
+            issueAuthor: source.issue.creator ?? '',
+            trustedBotLogin: source.tokenUser?.trim() ?? '',
+            issueManagedBranches: source.issue.issueManagedBranches,
+            preBranchSdd: source.preBranchSdd,
+            baseBranch: source.branches?.development,
+        }) } : {}),
         userRequest: projectUserRequestContext(source),
         branchSync: projectBranchSyncContext(source),
         bugbot: Object.freeze({

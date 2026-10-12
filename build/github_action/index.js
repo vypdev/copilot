@@ -38259,8 +38259,11 @@ const github_action_input_1 = __nccwpck_require__(8824);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const github_action_locale_inputs_1 = __nccwpck_require__(58893);
 const pull_request_approval_presentation_policy_1 = __nccwpck_require__(79017);
+const logging_ports_1 = __nccwpck_require__(6152);
+const logger_adapter_1 = __nccwpck_require__(72762);
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 async function runPullRequestApprovalAction(token) {
+    (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {
@@ -39399,6 +39402,9 @@ function replaceAgentActivityLabel(currentLabels, activityLabel, active) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
 const agent_1 = __nccwpck_require__(89040);
+const copilot_command_1 = __nccwpck_require__(11771);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'dismiss', 'remember']);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))
@@ -39409,10 +39415,11 @@ function shouldTrackAgentActivity(execution, route) {
                 && isAgentReady(execution, 'planner');
         case 'issue-comment':
         case 'pull-request-review-comment':
-            return hasComment(execution)
+            return hasAgentCapableComment(execution)
                 && (isAgentReady(execution, 'planner')
                     || isAgentReady(execution, 'findings')
-                    || isAgentReady(execution, 'fixer'));
+                    || isAgentReady(execution, 'fixer')
+                    || isAgentReady(execution, 'reviewer'));
         case 'pull-request':
             if (execution.pullRequest.action === 'ready_for_review')
                 return isAgentReady(execution, 'reviewer');
@@ -39440,8 +39447,22 @@ function isAgentBackedSingleAction(execution) {
 function isAgentReady(execution, task) {
     return (0, agent_1.isAgentConfigurationReady)(execution.ai.getAgentConfiguration(task));
 }
-function hasComment(execution) {
-    return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
+function hasAgentCapableComment(execution) {
+    const body = execution.issue.commentBody || execution.pullRequest.commentBody || '';
+    if (!body.trim())
+        return false;
+    const parsed = (0, copilot_command_1.parseCopilotCommand)(body);
+    if (parsed.kind === 'invalid')
+        return false;
+    if (parsed.kind === 'command') {
+        if (DETERMINISTIC_COMMENT_COMMANDS.has(parsed.command.name))
+            return false;
+        if (parsed.command.name === 'sync-branch') {
+            const sync = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(parsed.command.arguments);
+            return sync.valid && !sync.options.dryRun && sync.options.useAgent;
+        }
+    }
+    return true;
 }
 function hasTarget(execution) {
     if (['pull_request', 'pull_request_review', 'pull_request_review_comment', 'check_suite', 'workflow_run'].includes(execution.eventName)) {
@@ -45631,6 +45652,27 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.findings',
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
+    'interaction.status.sddHeading',
+    'interaction.status.sddRequirement',
+    'interaction.status.sddState',
+    'interaction.status.sddRequired',
+    'interaction.status.sddNotRequired',
+    'interaction.status.sddUnavailable',
+    'interaction.status.sddRequirementUnknown',
+    'interaction.status.sddUnverified',
+    'interaction.status.sddAwaitingAnswers',
+    'interaction.status.sddPublicationPending',
+    'interaction.status.sddRevisionPending',
+    'interaction.status.sddReady',
+    'interaction.status.sddOwner',
+    'interaction.status.sddQuestions',
+    'interaction.status.sddCommit',
+    'interaction.status.sddFirstCommit',
+    'interaction.status.sddNextInspect',
+    'interaction.status.sddNextAnswers',
+    'interaction.status.sddNextPublication',
+    'interaction.status.sddNextReady',
+    'interaction.status.sddCard',
     'cli.answer',
     'cli.outcome',
     'cli.status',
@@ -45777,6 +45819,27 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Bugbot findings',
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
+    'interaction.status.sddHeading': 'SDD readiness',
+    'interaction.status.sddRequirement': 'Specification',
+    'interaction.status.sddState': 'Status',
+    'interaction.status.sddRequired': 'Required',
+    'interaction.status.sddNotRequired': 'Not required',
+    'interaction.status.sddUnavailable': 'Specification evidence unavailable; readiness is unverified.',
+    'interaction.status.sddRequirementUnknown': 'Requirement unavailable',
+    'interaction.status.sddUnverified': 'Publication evidence is invalid, absent or stale; readiness is unverified.',
+    'interaction.status.sddAwaitingAnswers': 'Answers required',
+    'interaction.status.sddPublicationPending': 'Publication pending',
+    'interaction.status.sddRevisionPending': 'Revision pending; current readiness is unverified.',
+    'interaction.status.sddReady': 'Published and verified',
+    'interaction.status.sddOwner': 'Specification',
+    'interaction.status.sddQuestions': 'Pending questions',
+    'interaction.status.sddCommit': 'Verified publication',
+    'interaction.status.sddFirstCommit': 'First verified publication (history)',
+    'interaction.status.sddNextInspect': 'Inspect the SDD card and retry after correcting its evidence.',
+    'interaction.status.sddNextAnswers': 'Answer these questions in the issue using their question identifiers.',
+    'interaction.status.sddNextPublication': 'Resume SDD preparation to publish the approved specification.',
+    'interaction.status.sddNextReady': 'Continue implementation on the linked branch.',
+    'interaction.status.sddCard': 'Open SDD card',
     'cli.answer': 'Answer',
     'cli.outcome': 'Outcome',
     'cli.status': 'Status',
@@ -45924,6 +45987,27 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Hallazgos de Bugbot',
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
+    'interaction.status.sddHeading': 'Preparación del SDD',
+    'interaction.status.sddRequirement': 'Especificación',
+    'interaction.status.sddState': 'Estado',
+    'interaction.status.sddRequired': 'Obligatoria',
+    'interaction.status.sddNotRequired': 'No obligatoria',
+    'interaction.status.sddUnavailable': 'Evidencia de la especificación no disponible; preparación sin verificar.',
+    'interaction.status.sddRequirementUnknown': 'Requisito no disponible',
+    'interaction.status.sddUnverified': 'La publicación es inválida, está ausente o desactualizada; preparación sin verificar.',
+    'interaction.status.sddAwaitingAnswers': 'Respuestas necesarias',
+    'interaction.status.sddPublicationPending': 'Publicación pendiente',
+    'interaction.status.sddRevisionPending': 'Revisión pendiente; preparación actual sin verificar.',
+    'interaction.status.sddReady': 'Publicado y verificado',
+    'interaction.status.sddOwner': 'Especificación',
+    'interaction.status.sddQuestions': 'Preguntas pendientes',
+    'interaction.status.sddCommit': 'Publicación verificada',
+    'interaction.status.sddFirstCommit': 'Primera publicación verificada (histórica)',
+    'interaction.status.sddNextInspect': 'Revisa la tarjeta del SDD y reintenta tras corregir su evidencia.',
+    'interaction.status.sddNextAnswers': 'Responde estas preguntas en la issue usando sus identificadores.',
+    'interaction.status.sddNextPublication': 'Retoma la preparación del SDD para publicar la especificación aprobada.',
+    'interaction.status.sddNextReady': 'Continúa la implementación en la rama vinculada.',
+    'interaction.status.sddCard': 'Abrir tarjeta del SDD',
     'cli.answer': 'Respuesta',
     'cli.outcome': 'Resultado',
     'cli.status': 'Estado',
@@ -46220,7 +46304,9 @@ function renderApprovalAssessment(input) {
             : `[${spanish ? 'Ver checks' : 'See checks'}](${url}/checks)`,
         '<details>',
         `<summary>${spanish ? 'Evidencia técnica' : 'Technical evidence'}</summary>`,
-        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: \`${escapeMarkdown(decision.code)}\`.`,
+        '',
+        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: ${escapeMarkdown(decision.code)}.`,
+        '',
         '</details>',
     ];
     return lines.join('\n').slice(0, 1800);
@@ -46823,6 +46909,199 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 /***/ }),
 
+/***/ 99167:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildSddIssueDigest = buildSddIssueDigest;
+const node_crypto_1 = __nccwpck_require__(6005);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const recommendation_policy_1 = __nccwpck_require__(39410);
+/** Producer and read-only queries use the same identity and immutable first base. */
+function buildSddIssueDigest(context, baseSha) {
+    return (0, node_crypto_1.createHash)('sha256').update(JSON.stringify([
+        context.issueNumber, (0, pre_branch_sdd_1.normalizeSddIssueTitle)(context.issueTitle), (0, recommendation_policy_1.getVisibleIssueDescription)(context.issueBody),
+        context.admittedKind, context.profileDigest ?? '', baseSha,
+    ])).digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 56285:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectOwnedSddCard = selectOwnedSddCard;
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+/** The latest owned card is authoritative even when invalid; an older card cannot restore readiness. */
+function selectOwnedSddCard(comments, issueNumber, trustedBotLogin) {
+    const login = trustedBotLogin.trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9-]{0,38}(?:\[bot\])?$/u.test(login))
+        return { state: 'unavailable' };
+    const owned = comments.filter(comment => comment.user?.login?.toLowerCase() === login);
+    const versions = new Map();
+    for (const comment of owned) {
+        const bodies = versions.get(comment.id) ?? new Set();
+        bodies.add(comment.body);
+        versions.set(comment.id, bodies);
+    }
+    // Unknown owned comments are potential damaged SDD cards. Unsafe IDs and
+    // ambiguous duplicate bodies cannot be filtered as another product surface.
+    const candidates = owned.filter(comment => !Number.isSafeInteger(comment.id) || comment.id < 1
+        || versions.get(comment.id).size !== 1 || !isOtherOwnedPublication(comment.body, issueNumber));
+    if (!candidates.length)
+        return { state: 'absent' };
+    if (candidates.some(comment => !Number.isSafeInteger(comment.id) || comment.id < 1))
+        return { state: 'invalid' };
+    const latestId = Math.max(...candidates.map(comment => comment.id));
+    const latest = candidates.filter(comment => comment.id === latestId);
+    const bodies = new Set(latest.map(comment => comment.body));
+    if (bodies.size !== 1)
+        return { state: 'invalid' };
+    const body = latest[0].body;
+    if (typeof body !== 'string')
+        return { state: 'invalid' };
+    if ([...body.matchAll(/<!--\s*copilot:sdd-gate:v1/gu)].length !== 1)
+        return { state: 'invalid' };
+    const record = (0, pre_branch_sdd_1.readSddGateRecord)(body, issueNumber);
+    if (record?.answers?.some(answer => !Number.isSafeInteger(answer.commentId) || answer.commentId < 1))
+        return { state: 'invalid' };
+    return record ? Object.freeze({ state: 'valid', id: latestId, body, record }) : { state: 'invalid' };
+}
+/** Only a single canonical header for another exact-target product surface is excluded. */
+function isOtherOwnedPublication(body, issueNumber) {
+    if (typeof body !== 'string' || body.includes(pre_branch_sdd_1.SDD_GATE_MARKER)
+        || /^## (?:SDD work status|Estado del SDD)\s*$/mu.test(body))
+        return false;
+    const header = body.split('\n', 1)[0];
+    if (!/^<!-- copilot:(?:publication|reply|transition) /.test(header)
+        || [...body.matchAll(/<!-- copilot:(?:publication|reply|transition) /gu)].length !== 1)
+        return false;
+    const publication = (0, publication_identity_policy_1.parsePublicationMarker)(header);
+    const transition = (0, publication_identity_policy_1.parsePublicationTransitionMarker)(header);
+    const identity = publication?.identity ?? transition?.identity;
+    if (identity)
+        return identity.target.kind === 'issue' && identity.target.number === issueNumber;
+    return (0, publication_identity_policy_1.parsePublicationReplyMarker)(header)?.target === `issue:${issueNumber}`;
+}
+
+
+/***/ }),
+
+/***/ 6853:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.initialSddStatus = initialSddStatus;
+exports.projectSddStatus = projectSddStatus;
+exports.formatSddStatus = formatSddStatus;
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+/** Uses the admitted workflow/start policy; output labels cannot establish eligibility. */
+function initialSddStatus(context, labels) {
+    if (!context.admittedKind || typeof context.issueManagedBranches !== 'boolean' || typeof context.preBranchSdd !== 'boolean') {
+        return Object.freeze({ state: 'unavailable', required: null });
+    }
+    try {
+        const required = (0, issue_start_policy_1.decideIssueStart)({ kind: context.admittedKind, labels, issueManagedBranches: context.issueManagedBranches, preBranchSdd: context.preBranchSdd }).sddRequired;
+        return Object.freeze({ state: required ? 'unavailable' : 'not-required', required });
+    }
+    catch {
+        return Object.freeze({ state: 'unavailable', required: null });
+    }
+}
+function projectSddStatus(evidence, initial) {
+    const path = evidence.path ?? (evidence.state === 'stale' ? evidence.verified?.path : undefined);
+    const firstCommitSha = evidence.verified?.path === path && /^[a-f0-9]{40}$/u.test(evidence.verified?.firstSha ?? '')
+        ? evidence.verified.firstSha : undefined;
+    const revisionPending = (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending' || evidence.state === 'stale') && Boolean(firstCommitSha);
+    const state = evidence.state === 'not-required' ? 'not-required'
+        : evidence.state === 'absent' || evidence.state === 'unavailable' ? 'unavailable'
+            : evidence.state === 'stale' ? (revisionPending ? 'revision-pending' : 'unverified') : evidence.state === 'invalid' ? 'unverified'
+                : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
+                    : revisionPending ? 'revision-pending' : evidence.state;
+    return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
+        ...(path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path } : {}),
+        ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
+        ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
+        ...((state === 'revision-pending' || state === 'ready') && firstCommitSha ? { firstCommitSha } : {}),
+        ...(evidence.cardId ? { cardId: evidence.cardId } : {}),
+    });
+}
+/** Receives only the closed projection, never question prose, record reasons or provider errors. */
+function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
+    const path = readiness.path && (0, pre_branch_sdd_1.isSafeSddPath)(readiness.path) ? readiness.path : undefined;
+    const commitSha = readiness.commitSha && /^[a-f0-9]{40}$/u.test(readiness.commitSha) ? readiness.commitSha : undefined;
+    const firstCommitSha = readiness.firstCommitSha && /^[a-f0-9]{40}$/u.test(readiness.firstCommitSha) ? readiness.firstCommitSha : undefined;
+    const pending = readiness.pendingQuestionIds?.filter(id => /^Q[1-8]$/u.test(id));
+    const state = (readiness.state === 'ready' && (!path || !commitSha))
+        || (readiness.state === 'revision-pending' && (!path || !firstCommitSha)) ? 'unverified' : readiness.state;
+    const message = {
+        'not-required': 'interaction.status.sddNotRequired', unavailable: 'interaction.status.sddUnavailable',
+        unverified: 'interaction.status.sddUnverified', 'awaiting-answers': 'interaction.status.sddAwaitingAnswers',
+        'publication-pending': 'interaction.status.sddPublicationPending', 'revision-pending': 'interaction.status.sddRevisionPending', ready: 'interaction.status.sddReady',
+    };
+    const next = {
+        'not-required': undefined, unavailable: 'interaction.status.sddNextInspect', unverified: 'interaction.status.sddNextInspect',
+        'awaiting-answers': 'interaction.status.sddNextAnswers', 'publication-pending': 'interaction.status.sddNextPublication',
+        'revision-pending': pending?.length ? 'interaction.status.sddNextAnswers' : 'interaction.status.sddNextPublication', ready: 'interaction.status.sddNextReady',
+    };
+    const label = (id, value) => `- **${catalog.render(id)}:** ${value}`;
+    const lines = ['', `## ${catalog.render('interaction.status.sddHeading')}`,
+        label('interaction.status.sddRequirement', catalog.render(readiness.required === null ? 'interaction.status.sddRequirementUnknown'
+            : readiness.required ? 'interaction.status.sddRequired' : 'interaction.status.sddNotRequired')),
+        label('interaction.status.sddState', catalog.render(message[state])),
+    ];
+    const base = safeIssueUrl(issueUrl, issueNumber, identity);
+    if (path && !['unavailable', 'unverified'].includes(state))
+        lines.push(label('interaction.status.sddOwner', `\`${path}\``));
+    if ((state === 'awaiting-answers' || state === 'revision-pending') && pending?.length)
+        lines.push(label('interaction.status.sddQuestions', [...new Set(pending)].slice(0, 8).join(', ')));
+    if (state === 'ready' && commitSha && path) {
+        const evidence = base ? `[\`${commitSha}\`](${base.repository}/blob/${commitSha}/${path})` : `\`${commitSha}\``;
+        lines.push(label('interaction.status.sddCommit', evidence));
+    }
+    if ((state === 'revision-pending' || (state === 'ready' && firstCommitSha !== commitSha)) && firstCommitSha && path) {
+        const evidence = base ? `[\`${firstCommitSha}\`](${base.repository}/blob/${firstCommitSha}/${path})` : `\`${firstCommitSha}\``;
+        lines.push(label('interaction.status.sddFirstCommit', evidence));
+    }
+    if (next[state])
+        lines.push('', catalog.render(next[state]));
+    if (base && Number.isSafeInteger(readiness.cardId) && readiness.cardId > 0)
+        lines.push(`[${catalog.render('interaction.status.sddCard')}](${base.issue}#issuecomment-${readiness.cardId})`);
+    return lines;
+}
+function safeIssueUrl(value, issueNumber, identity) {
+    if (!identity || !value || value.length > 2048 || !Number.isSafeInteger(issueNumber) || issueNumber < 1)
+        return undefined;
+    try {
+        const url = new URL(value);
+        const server = new URL(identity.serverOrigin ?? 'https://github.com');
+        if (server.protocol !== 'https:' || server.username || server.password || server.search || server.hash
+            || server.pathname !== '/' || url.origin !== server.origin)
+            return undefined;
+        if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash
+            || !/^\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/issues\/[1-9][0-9]*$/u.test(url.pathname)
+            || url.pathname.toLowerCase() !== `/${identity.owner}/${identity.repository}/issues/${issueNumber}`.toLowerCase())
+            return undefined;
+        return { repository: `${url.origin}${url.pathname.slice(0, url.pathname.lastIndexOf('/issues/'))}`, issue: url.href };
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
 /***/ 81985:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -47305,6 +47584,9 @@ function copyStatusSnapshot(snapshot) {
     return Object.freeze({
         ...snapshot,
         issueLabels: Object.freeze([...snapshot.issueLabels]),
+        ...(snapshot.sddReadiness ? { sddReadiness: Object.freeze({ ...snapshot.sddReadiness,
+                ...(snapshot.sddReadiness.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...snapshot.sddReadiness.pendingQuestionIds]) } : {}),
+            }) } : {}),
         pullRequestLabels: Object.freeze([...snapshot.pullRequestLabels]),
         ...(snapshot.findingStates ? { findingStates: Object.freeze({ ...snapshot.findingStates }) } : {}),
     });
@@ -48642,6 +48924,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const sdd_status_policy_1 = __nccwpck_require__(6853);
 const result_1 = __nccwpck_require__(73817);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
@@ -48701,6 +48985,12 @@ function buildCopilotStatusSnapshot(execution) {
             }) } : {}),
         ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        ...(execution.issue?.url ? { issueUrl: execution.issue.url } : {}),
+        ...(!isPullRequestTarget && !execution.isPush && (execution.issue?.number > 0 || execution.isIssue) ? { sddReadiness: (0, sdd_status_policy_1.initialSddStatus)({
+                admittedKind: issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.find(kind => kind === execution.issueWorkflowKind),
+                issueManagedBranches: execution.issue.issueManagedBranches,
+                preBranchSdd: execution.preBranchSdd,
+            }, issueLabels) } : {}),
     });
 }
 function buildCopilotStatusResult(snapshot, taskId) {
@@ -48735,6 +49025,8 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
     else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
+    if (snapshot.sddReadiness)
+        lines.push(...(0, sdd_status_policy_1.formatSddStatus)(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
     return lines.join('\n');
 }
 
@@ -48909,6 +49201,34 @@ function toPullRequestReviewOperationError(error, operation, context) {
     return error instanceof PullRequestReviewOperationError
         ? error
         : new PullRequestReviewOperationError(operation, context);
+}
+
+
+/***/ }),
+
+/***/ 94752:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bindSddEvidenceReadPorts = bindSddEvidenceReadPorts;
+/** Retains only read operations, even when composition receives a broader adapter. */
+function bindSddEvidenceReadPorts(ports) {
+    return Object.freeze({
+        comments: Object.freeze({ listIssueComments: ports.comments.listIssueComments.bind(ports.comments) }),
+        descriptions: Object.freeze({ getDescription: ports.descriptions.getDescription.bind(ports.descriptions) }),
+        titles: Object.freeze({ getTitle: ports.titles.getTitle.bind(ports.titles) }),
+        labels: Object.freeze({ getLabels: ports.labels.getLabels.bind(ports.labels) }),
+        actors: Object.freeze({ isActorAllowedToModifyFiles: ports.actors.isActorAllowedToModifyFiles.bind(ports.actors) }),
+        branches: Object.freeze({ getLinkedBranch: ports.branches.getLinkedBranch.bind(ports.branches) }),
+        workspace: Object.freeze({
+            loadSnapshot: ports.workspace.loadSnapshot.bind(ports.workspace),
+            loadSnapshotAtCommit: ports.workspace.loadSnapshotAtCommit.bind(ports.workspace),
+            verifyPublication: ports.workspace.verifyPublication.bind(ports.workspace),
+            isAncestor: ports.workspace.isAncestor.bind(ports.workspace),
+        }),
+    });
 }
 
 
@@ -52572,7 +52892,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     if (command.name === 'doctor')
         return [await (0, read_copilot_doctor_workflow_1.readCopilotDoctor)(param, options.taskId, options.doctorReadPorts)];
     if (command.name === 'status')
-        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts)];
+        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember')
@@ -52786,6 +53106,7 @@ function logUnauthorizedActionSkip(decision) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectCommentAutomationContext = projectCommentAutomationContext;
 exports.withCommentLanguageAdaptation = withCommentLanguageAdaptation;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const status_command_policy_1 = __nccwpck_require__(3449);
 const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 const think_workflow_1 = __nccwpck_require__(36450);
@@ -52829,6 +53150,16 @@ function projectCommentAutomationContext(source, language, userComment) {
         }),
         think: (0, think_workflow_1.projectThinkContext)(source),
         status: (0, status_command_policy_1.buildCopilotStatusSnapshot)(source),
+        ...(source.issue?.number > 0 && !(source.pullRequest?.number > 0) ? { sdd: Object.freeze({
+                issueNumber: source.issue.number,
+                admittedKind: issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.find(kind => kind === source.issueWorkflowKind),
+                profileDigest: source.issueWorkflowProfileDigest,
+                issueAuthor: source.issue.creator ?? '',
+                trustedBotLogin: source.tokenUser?.trim() ?? '',
+                issueManagedBranches: source.issue.issueManagedBranches,
+                preBranchSdd: source.preBranchSdd,
+                baseBranch: source.branches?.development,
+            }) } : {}),
         userRequest: (0, push_single_action_contexts_1.projectUserRequestContext)(source),
         branchSync: (0, push_single_action_contexts_1.projectBranchSyncContext)(source),
         bugbot: Object.freeze({
@@ -53672,7 +54003,7 @@ const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const copilot_command_1 = __nccwpck_require__(11771);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, doctorReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, doctorReadPorts, sddQueryPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -53689,6 +54020,7 @@ class IssueCommentUseCase {
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
         this.doctorReadPorts = doctorReadPorts;
+        this.sddQueryPort = sddQueryPort;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -53728,7 +54060,8 @@ class IssueCommentUseCase {
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
-            doctorReadPorts: this.doctorReadPorts,
+         doctorReadPorts: this.doctorReadPorts,
+            sddQueryPort: this.sddQueryPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -55157,6 +55490,7 @@ function doctorResult(taskId, report, serverOrigin, revision, owner, repository)
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readCopilotStatus = readCopilotStatus;
+const sdd_status_policy_1 = __nccwpck_require__(6853);
 const status_command_policy_1 = __nccwpck_require__(3449);
 const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
 const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
@@ -55165,12 +55499,17 @@ const context_1 = __nccwpck_require__(14712);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
 const application_error_1 = __nccwpck_require__(75999);
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
-async function readCopilotStatus(param, taskId, ports) {
-    if (!param.status.pullRequestNumber || !ports)
-        return (0, status_command_policy_1.buildCopilotStatusResult)(param.status, taskId);
+async function readCopilotStatus(param, taskId, ports, sddQuery) {
+    let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
+    if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
+        const evidence = await sddQuery.read(param.sdd);
+        status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
+    }
+    if (!status.pullRequestNumber || !ports)
+        return (0, status_command_policy_1.buildCopilotStatusResult)(status, taskId);
     const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
     const selection = request.target.pullRequestSelection;
-    if (selection.kind !== 'event' || selection.number !== param.status.pullRequestNumber)
+    if (selection.kind !== 'event' || selection.number !== status.pullRequestNumber)
         throw unavailableStatus();
     const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.getPullRequest(selection.number)], 'event');
     if (canonical.kind !== 'canonical')
@@ -55277,7 +55616,7 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddGateUseCase = void 0;
-const node_crypto_1 = __nccwpck_require__(6005);
+const sdd_issue_identity_policy_1 = __nccwpck_require__(99167);
 const result_1 = __nccwpck_require__(73817);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
@@ -55554,10 +55893,7 @@ function latestOwnedCard(comments, issueNumber, botLogin) {
     })[0];
 }
 function issueDigest(context, baseSha) {
-    return (0, node_crypto_1.createHash)('sha256').update(JSON.stringify([
-        context.issueNumber, (0, pre_branch_sdd_1.normalizeSddIssueTitle)(context.issueTitle), (0, recommendation_policy_1.getVisibleIssueDescription)(context.issueBody), context.admittedKind,
-        context.profileDigest ?? '', baseSha,
-    ])).digest('hex');
+    return (0, sdd_issue_identity_policy_1.buildSddIssueDigest)(context, baseSha);
 }
 function asRecord(value) {
     const parsed = typeof value === 'string' ? JSON.parse(value) : value;
@@ -55604,6 +55940,211 @@ function canonicalIssueUrl(context) {
     }
     return '(unavailable; do not invent a repository or issue URL)';
 }
+
+
+/***/ }),
+
+/***/ 39893:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddEvidenceQueryUseCase = void 0;
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
+const sdd_issue_identity_policy_1 = __nccwpck_require__(99167);
+const sdd_query_card_policy_1 = __nccwpck_require__(56285);
+const MAX_AUTHORIZATION_LOOKUPS = 16;
+/** Reads gate authority and immutable publication evidence without any mutation or model capability. */
+class SddEvidenceQueryUseCase {
+    constructor(ports) { this.ports = (0, sdd_evidence_read_ports_1.bindSddEvidenceReadPorts)(ports); }
+    async read(context) {
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1
+                || typeof context.issueManagedBranches !== 'boolean' || typeof context.preBranchSdd !== 'boolean'
+                || !context.admittedKind)
+                return { state: 'unavailable' };
+            (0, issue_start_policy_1.decideIssueStart)({ kind: context.admittedKind, labels: [], issueManagedBranches: context.issueManagedBranches, preBranchSdd: context.preBranchSdd });
+            if (context.admittedKind === 'help' || !context.preBranchSdd)
+                return { state: 'not-required' };
+            const facts = await this.readFacts(context.issueNumber);
+            if (!this.required(context, facts.labels))
+                return { state: 'not-required' };
+            const selection = (0, sdd_query_card_policy_1.selectOwnedSddCard)(facts.comments, context.issueNumber, context.trustedBotLogin);
+            if (selection.state !== 'valid')
+                return { state: selection.state };
+            const { record, id: cardId } = selection;
+            const digest = this.digest(context, facts, record.baseSha);
+            const stale = digest !== record.issueDigest;
+            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
+            if (!['invalid', 'unavailable'].includes(result.state)
+                && !await this.fence(context, facts, selection.body, cardId, record, result.verified))
+                return { state: 'stale' };
+            return Object.freeze(result);
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async inspectRecord(context, facts, record, cardId, stale, authorizations) {
+        const path = record.plan.path;
+        let verified;
+        if (record.commitSha) {
+            if (!record.branchName)
+                return { state: 'invalid' };
+            const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+            if (linked?.name !== record.branchName || !fullSha(linked.headSha))
+                return { state: 'invalid' };
+            if (!await this.ports.workspace.verifyPublication(record.branchName, record.baseSha, record.commitSha, path)
+                || !await this.ports.workspace.isAncestor(record.commitSha, linked.headSha))
+                return { state: 'invalid' };
+            if (!ownedAt(await this.ports.workspace.loadSnapshotAtCommit(record.commitSha), record.commitSha, record))
+                return { state: 'invalid' };
+            verified = Object.freeze({ path, capabilityId: record.plan.capabilityId, branchName: record.branchName,
+                branchHeadSha: linked.headSha, firstSha: record.commitSha });
+            if (record.phase === 'published') {
+                const currentSha = record.revisionSha ?? record.commitSha;
+                if (record.revisionSha && (!record.revisionBaseSha
+                    || !await this.ports.workspace.isAncestor(record.commitSha, record.revisionBaseSha)
+                    || !await this.ports.workspace.verifyPublication(record.branchName, record.revisionBaseSha, record.revisionSha, path)
+                    || !await this.ports.workspace.isAncestor(record.revisionSha, linked.headSha)
+                    || !ownedAt(await this.ports.workspace.loadSnapshotAtCommit(record.revisionSha), record.revisionSha, record)))
+                    return { state: 'invalid' };
+                verified = Object.freeze({ ...verified, currentSha });
+            }
+        }
+        else {
+            if (record.phase === 'published')
+                return { state: 'invalid' };
+            const source = record.branchName ?? context.baseBranch;
+            if (!source)
+                return { state: 'unavailable' };
+            if (record.branchName) {
+                const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+                if (linked?.name !== record.branchName || linked.headSha !== record.baseSha)
+                    return { state: 'invalid' };
+            }
+            const snapshot = await this.ports.workspace.loadSnapshot(source);
+            if (snapshot.baseSha !== record.baseSha)
+                return { state: 'stale' };
+            try {
+                (0, pre_branch_sdd_1.parseSddPlan)(record.plan, new Map(snapshot.capabilities.map(capability => [capability.id, capability.specs])));
+            }
+            catch {
+                return { state: 'invalid' };
+            }
+        }
+        if (stale)
+            return { state: 'stale', ...(verified ? { verified } : {}) };
+        if (record.phase === 'published')
+            return { state: 'published', path, cardId, verified };
+        const pendingQuestionIds = await this.pendingQuestions(context, facts.comments, record, cardId, authorizations);
+        return { state: pendingQuestionIds.length ? 'awaiting-answers' : 'publication-pending', path, cardId,
+            pendingQuestionIds: Object.freeze(pendingQuestionIds), ...(verified ? { verified } : {}) };
+    }
+    async pendingQuestions(context, comments, record, cardId, authorizations) {
+        const pending = [];
+        const cutoff = Math.max(cardId, ...(record.answers ?? []).map(answer => answer.commentId));
+        for (const question of record.plan.questions) {
+            const retained = (record.answers ?? []).filter(answer => {
+                const provenance = answer;
+                return Number.isSafeInteger(answer.commentId) && provenance.round === record.round
+                    && answer.questionId === question.id && provenance.questionText === question.text;
+            });
+            let answered = false;
+            for (const answer of retained)
+                if (await this.authorized(context, question.owner, answer.author, authorizations)) {
+                    answered = true;
+                    break;
+                }
+            if (!answered) {
+                for (const comment of [...comments].sort((a, b) => b.id - a.id)) {
+                    if (!Number.isSafeInteger(comment.id) || comment.id <= cutoff || !comment.user?.login
+                        || comment.user.login.toLowerCase() === context.trustedBotLogin.toLowerCase()
+                        || !comment.body || !(0, pre_branch_sdd_1.parseSddAnswer)(comment.body, question.id))
+                        continue;
+                    if (await this.authorized(context, question.owner, comment.user.login, authorizations)) {
+                        answered = true;
+                        break;
+                    }
+                }
+            }
+            if (!answered)
+                pending.push(question.id);
+        }
+        return pending;
+    }
+    async authorized(context, owner, author, authorizations) {
+        if (owner === 'issue-author')
+            return Boolean(context.issueAuthor && author.toLowerCase() === context.issueAuthor.toLowerCase());
+        const key = author.toLowerCase();
+        let authorization = authorizations.get(key);
+        if (!authorization) {
+            if (authorizations.size >= MAX_AUTHORIZATION_LOOKUPS)
+                throw new Error('SDD authorization inventory exceeds its bound.');
+            authorization = this.ports.actors.isActorAllowedToModifyFiles(author);
+            authorizations.set(key, authorization);
+        }
+        return authorization;
+    }
+    async fence(context, original, cardBody, cardId, record, verified) {
+        const fresh = await this.readFacts(context.issueNumber);
+        const card = (0, sdd_query_card_policy_1.selectOwnedSddCard)(fresh.comments, context.issueNumber, context.trustedBotLogin);
+        if (card.state !== 'valid' || card.id !== cardId || card.body !== cardBody
+            || this.digest(context, fresh, record.baseSha) !== this.digest(context, original, record.baseSha)
+            || canonicalLabels(fresh.labels) !== canonicalLabels(original.labels)
+            || !this.required(context, fresh.labels))
+            return false;
+        // Answer arrivals or edits must not let a stale question projection become current.
+        if (record.phase === 'awaiting-answer'
+            && JSON.stringify(fresh.comments) !== JSON.stringify(original.comments))
+            return false;
+        if (record.branchName) {
+            const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+            if (linked?.name !== record.branchName || linked.headSha !== (verified?.branchHeadSha ?? record.baseSha))
+                return false;
+            if (verified && (!await this.ports.workspace.verifyPublication(record.branchName, record.baseSha, record.commitSha, record.plan.path)
+                || (record.phase === 'published' && record.revisionSha
+                    && !await this.ports.workspace.verifyPublication(record.branchName, record.revisionBaseSha, record.revisionSha, record.plan.path))))
+                return false;
+        }
+        else if (!context.baseBranch || (await this.ports.workspace.loadSnapshot(context.baseBranch)).baseSha !== record.baseSha)
+            return false;
+        return true;
+    }
+    required(context, labels) {
+        return (0, issue_start_policy_1.decideIssueStart)({ kind: context.admittedKind, labels,
+            issueManagedBranches: context.issueManagedBranches, preBranchSdd: context.preBranchSdd }).sddRequired;
+    }
+    digest(context, facts, baseSha) {
+        return (0, sdd_issue_identity_policy_1.buildSddIssueDigest)({ issueNumber: context.issueNumber, issueTitle: facts.title, issueBody: facts.body,
+            admittedKind: context.admittedKind, profileDigest: context.profileDigest }, baseSha);
+    }
+    async readFacts(issueNumber) {
+        const [title, body, labels, comments] = await Promise.all([
+            this.ports.titles.getTitle(issueNumber), this.ports.descriptions.getDescription(issueNumber),
+            this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+        ]);
+        if (title === undefined || body === undefined || comments.coverage.source !== 'issue-comments'
+            || comments.coverage.status !== 'complete' || comments.coverage.limitReached || comments.coverage.providerLimitReached
+            || comments.coverage.omittedItems !== 0 || comments.coverage.truncatedItems !== 0)
+            throw new Error('Incomplete SDD authority.');
+        return { title, body, labels, comments: comments.value };
+    }
+}
+exports.SddEvidenceQueryUseCase = SddEvidenceQueryUseCase;
+function ownedAt(snapshot, sha, record) {
+    if (!Array.isArray(snapshot.capabilities) || snapshot.capabilities.some(capability => !capability || typeof capability.id !== 'string'
+        || !Array.isArray(capability.specs) || capability.specs.some((path) => typeof path !== 'string'))
+        || new Set(snapshot.capabilities.map(capability => capability.id)).size !== snapshot.capabilities.length)
+        return false;
+    const owners = snapshot.capabilities.filter(capability => capability.specs.includes(record.plan.path));
+    return snapshot.baseSha === sha && owners.length === 1 && owners[0].id === record.plan.capabilityId;
+}
+function fullSha(value) { return typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value); }
+function canonicalLabels(labels) { return JSON.stringify([...new Set(labels.map(label => label.trim().toLowerCase()))].sort()); }
 
 
 /***/ }),
@@ -64297,7 +64838,10 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
         const diffEvidence = JSON.stringify(changes);
         if (diff.coverage.status !== 'complete'
             || changes.some(change => (change.additions > 0 || change.deletions > 0) && !change.patch)) {
-            throw new application_error_1.ApplicationError('workflow.stale', 'Complete PR diff evidence is unavailable. Existing body retained.');
+            const retained = 'Complete PR diff evidence is unavailable. Existing body retained. Retry when the required patches are available.';
+            if (request.trigger === 'automatic')
+                return skipped(taskId, retained);
+            throw new application_error_1.ApplicationError('workflow.stale', retained);
         }
         if (changes.length === 0)
             return skipped(taskId, 'The PR has no changed files to describe. Existing body retained.');
@@ -68010,7 +68554,7 @@ class LinkedBranchReadinessRepository {
           ref(qualifiedName: $ref) { target { ... on Commit { oid } } }
           issue(number: $issueNumber) {
             linkedBranches(first: 100) {
-              nodes { ref { name target { ... on Commit { oid } } } }
+              nodes { ref { name repository { nameWithOwner } target { ... on Commit { oid } } } }
             }
             closedByPullRequestsReferences(first: 100) {
               nodes { state headRefName headRefOid headRepository { nameWithOwner } }
@@ -68024,12 +68568,14 @@ class LinkedBranchReadinessRepository {
             return name === expected || name === `refs/heads/${expected}` || name === `/${expected}`;
         });
         const directlyLinkedSha = fullSha(match?.ref?.target?.oid);
-        if (directlyLinkedSha)
-            return Object.freeze({ name: expected, headSha: directlyLinkedSha });
+        const remoteSha = fullSha(response.repository?.ref?.target?.oid);
+        if (match)
+            return directlyLinkedSha && directlyLinkedSha === remoteSha
+                && match.ref?.repository?.nameWithOwner?.toLowerCase() === `${owner}/${repository}`.toLowerCase()
+                ? Object.freeze({ name: expected, headSha: directlyLinkedSha }) : undefined;
         // GitHub removes linkedBranches when its branch becomes a linked PR.
         // Native issue association plus the exact same-repository live ref retains
         // that proof; a PR body or a stale/deleted head alone is insufficient.
-        const remoteSha = fullSha(response.repository?.ref?.target?.oid);
         const linkedPullRequest = response.repository?.issue?.closedByPullRequestsReferences?.nodes?.find(pr => pr?.state === 'OPEN' && pr.headRefName === expected
             && pr.headRepository?.nameWithOwner?.toLowerCase() === `${owner}/${repository}`.toLowerCase()
             && fullSha(pr.headRefOid) === remoteSha);
@@ -72620,6 +73166,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
 exports.readEffectiveApprovalPolicy = readEffectiveApprovalPolicy;
+const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const approval_coverage_artifact_1 = __nccwpck_require__(96710);
@@ -72644,7 +73191,7 @@ class PullRequestApprovalRepository {
         }
     }
     async readPolicy(target) {
-        return (await this.readEffectivePolicy(target))?.value;
+     return (await this.readEffectivePolicy(target))?.value;
     }
     async readEffectivePolicy(target) {
         return readEffectiveApprovalPolicy(this.octokit, target);
@@ -72654,6 +73201,7 @@ class PullRequestApprovalRepository {
             owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
         });
         const headSha = pull.head.sha;
+        const baseSha = await this.readCurrentBaseSha(target, pull.base.ref);
         const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(await this.readPolicy(target));
         let testedMergeSha;
         if (pull.mergeable === true && /^[a-f0-9]{40}$/iu.test(pull.merge_commit_sha ?? '')) {
@@ -72661,7 +73209,7 @@ class PullRequestApprovalRepository {
                 const merge = await this.octokit.rest.git.getCommit({
                     owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha,
                 });
-                if (merge.data.parents[0]?.sha === pull.base.sha && merge.data.parents[1]?.sha === headSha
+                if (merge.data.parents[0]?.sha === baseSha && merge.data.parents[1]?.sha === headSha
                     && merge.data.parents.length === 2)
                     testedMergeSha = pull.merge_commit_sha;
             }
@@ -72728,13 +73276,13 @@ class PullRequestApprovalRepository {
             submittedAt: review.submitted_at ?? '',
         }));
         const numericCoverage = policy.coverage.mode === 'numeric'
-            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, pull.base.sha, testedMergeSha, workflowRuns)
+            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns)
             : undefined;
         return {
             repositoryId: pull.base.repo?.id ?? 0,
             pullNumber: pull.number,
             headSha,
-            baseSha: pull.base.sha,
+            baseSha,
             ...(testedMergeSha ? { testedMergeSha } : {}),
             mergeCommitVerified: testedMergeSha !== undefined,
             baseRef: pull.base.ref,
@@ -72820,7 +73368,8 @@ class PullRequestApprovalRepository {
         const current = await this.octokit.rest.pulls.get({
             owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
         });
-        if (current.data.head.sha !== headSha || current.data.base.sha !== evidence.baseSha) {
+        if (current.data.head.sha !== headSha || current.data.base.ref !== evidence.baseRef
+            || await this.readCurrentBaseSha(target, evidence.baseRef) !== evidence.baseSha) {
             throw new Error('PR head or base changed before assessment publication.');
         }
         const user = await this.octokit.rest.users.getAuthenticated();
@@ -72869,10 +73418,27 @@ class PullRequestApprovalRepository {
             }
         }
     }
+    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
+    async readCurrentBaseSha(target, baseRef) {
+        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
+            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
+            throw new Error('The PR base ref is invalid.');
+        const { data } = await this.octokit.rest.git.getRef({
+            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
+        });
+        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
+            || !/^[a-f0-9]{40}$/u.test(data.object.sha))
+            throw new Error('The PR base ref cannot be verified.');
+        return data.object.sha;
+    }
     async effectiveRules(owner, repo, branch) {
         try {
             const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
-            const rules = Array.isArray(rulesResponse.data) ? rulesResponse.data : [];
+            if (!Array.isArray(rulesResponse.data) || rulesResponse.data.some((rule) => !record(rule)
+                || typeof record(rule)?.type !== 'string' || record(rule)?.type === '')) {
+                throw new Error('GitHub returned an invalid effective rules inventory.');
+            }
+            const rules = rulesResponse.data;
             let classic;
             try {
                 const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
@@ -72941,6 +73507,13 @@ function parseBugbotCard(body, headSha, pullNumber) {
         verificationRequired: counts[3], unknown: counts[4],
     };
 }
+/** Fixed metadata only: never interpolate error text, response bodies or credentials. */
+function reportPolicyReadFailure(scope, error) {
+    const status = statusOf(error);
+    const code = [400, 401, 403, 409, 422, 429, 500, 502, 503, 504].includes(status)
+        ? `http-${status}` : 'http-unavailable';
+    (0, logging_ports_1.logInfo)(`Approval policy read failed (${scope}, ${code}).`);
+}
 function statusOf(error) {
     return record(error)?.status;
 }
@@ -72960,8 +73533,10 @@ async function readEffectiveApprovalPolicy(octokit, target) {
         return admit('repository', response.data.value);
     }
     catch (error) {
-        if (statusOf(error) !== 404)
+        if (statusOf(error) !== 404) {
+            reportPolicyReadFailure('repository-variable', error);
             throw error;
+        }
     }
     try {
         const response = await octokit.rest.actions.getOrgVariable({ org: target.owner, name: 'PR_APPROVAL_POLICY' });
@@ -72970,6 +73545,7 @@ async function readEffectiveApprovalPolicy(octokit, target) {
     catch (error) {
         if (statusOf(error) === 404)
             return undefined;
+        reportPolicyReadFailure('organization-variable', error);
         throw error;
     }
 }
@@ -79456,6 +80032,7 @@ exports.SDD_CATALOG_INDEX_PATH = exports.SDD_CATALOG_PATH = void 0;
 exports.refreshBranchSyncSddCatalog = refreshBranchSyncSddCatalog;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const logging_ports_1 = __nccwpck_require__(6152);
 exports.SDD_CATALOG_PATH = 'specs/catalog.json';
 exports.SDD_CATALOG_INDEX_PATH = 'specs/CATALOG.md';
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -79464,49 +80041,65 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const validator = __nccwpck_require__(29617);
 /** Refreshes one already-authorized generated file; it neither stages nor executes repository code. */
 function refreshBranchSyncSddCatalog(repositoryRoot) {
+    let phase = 'workspace-boundary';
     try {
         const root = (0, node_fs_1.realpathSync)(repositoryRoot);
         const specs = (0, node_path_1.join)(root, 'specs');
         if (!(0, node_fs_1.lstatSync)(specs).isDirectory() || (0, node_fs_1.lstatSync)(specs).isSymbolicLink())
-            return false;
+            return rejectCatalog(phase);
+        phase = 'catalog-file-boundary';
         const metadataPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_PATH);
         const indexPath = (0, node_path_1.join)(root, exports.SDD_CATALOG_INDEX_PATH);
         for (const path of [metadataPath, indexPath]) {
             const stat = (0, node_fs_1.lstatSync)(path);
             if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_BYTES)
-                return false;
+                return rejectCatalog(phase);
         }
-        const catalog = JSON.parse((0, node_fs_1.readFileSync)(metadataPath, 'utf8'));
+        phase = 'metadata-json';
+        const metadata = (0, node_fs_1.readFileSync)(metadataPath, 'utf8');
+        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(metadata))
+            phase = 'metadata-conflict-markers';
+        const catalog = JSON.parse(metadata);
         // Reject links before the shared validator follows any evidence paths.
         const capabilities = catalog?.capabilities;
+        phase = 'metadata-shape';
         if (!Array.isArray(capabilities))
-            return false;
+            return rejectCatalog(phase);
         for (const capability of capabilities) {
             for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                phase = 'evidence-shape';
                 if (!Array.isArray(capability?.[field]))
-                    return false;
+                    return rejectCatalog(phase);
                 for (const entry of capability[field]) {
+                    phase = 'evidence-shape';
                     if (typeof entry !== 'string')
-                        return false;
+                        return rejectCatalog(phase);
+                    phase = 'evidence-path-boundary';
                     const file = (0, node_path_1.join)(root, entry);
                     const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
                     if ((0, node_path_1.isAbsolute)(entry) || !(0, node_fs_1.lstatSync)(file).isFile() || target === '..' || target.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(target))
-                        return false;
+                        return rejectCatalog(phase);
                 }
             }
         }
+        phase = 'catalog-contract';
         if (validator.validateCatalog(root, catalog).length)
-            return false;
+            return rejectCatalog(phase);
+        phase = 'index-output';
         const expected = validator.renderCatalog(catalog);
         if (Buffer.byteLength(expected, 'utf8') > MAX_BYTES)
-            return false;
+            return rejectCatalog(phase);
         if (validator.normalizeCheckoutLineEndings((0, node_fs_1.readFileSync)(indexPath, 'utf8')) !== expected)
             (0, node_fs_1.writeFileSync)(indexPath, expected, 'utf8');
         return true;
     }
     catch {
-        return false;
+        return rejectCatalog(phase);
     }
+}
+function rejectCatalog(phase) {
+    (0, logging_ports_1.logInfo)(`Branch synchronization SDD catalog rejected (${phase}).`);
+    return false;
 }
 
 
@@ -79521,6 +80114,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
 const workspace_changes_1 = __nccwpck_require__(93370);
 const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
+// ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
+// on these exact artifacts; source and every other path retain strict checks.
+const GENERATED_BUNDLES = ['build/cli/index.js', 'build/api/index.js', 'build/github_action/index.js'];
 /** Owns Git's merge state while keeping credentials confined to fetch/push subprocesses. */
 class BranchSyncWorkspaceAdapter {
     constructor(git, repositoryRoot = process.cwd()) {
@@ -79607,7 +80203,7 @@ class BranchSyncWorkspaceAdapter {
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
                 && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
                 return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
-            await this.git.execute("git", ["diff", "--check"]);
+            await this.checkResolvedDiff(false);
             // The agent edits files without Git write authority. Only this trusted
             // adapter stages the verified original conflict set, once before checks.
             if (unresolved.length > 0) {
@@ -79624,13 +80220,20 @@ class BranchSyncWorkspaceAdapter {
             if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0) {
                 return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
             }
-            await this.git.execute("git", ["diff", "--cached", "--check"]);
+            await this.checkResolvedDiff(true);
         }
         catch {
             return invalid("The resolution contains whitespace errors or conflict markers.", "whitespace-or-conflict-markers");
         }
         this.resolutionValidated = true;
         return { valid: true };
+    }
+    async checkResolvedDiff(cached) {
+        const diff = ['diff', ...(cached ? ['--cached'] : []), '--check', '--'];
+        await this.git.execute('git', [...diff, '.', ...GENERATED_BUNDLES.map(path => `:(exclude)${path}`)]);
+        // Git detects conflict markers independently of its whitespace settings.
+        await this.git.execute('git', ['-c', 'core.whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab',
+            ...diff, ...GENERATED_BUNDLES]);
     }
     async assertRemoteHeadsUnchanged(parentBranch, parentSha, workingBranch, childSha, token) {
         await this.git.fetch(parentBranch, token);
@@ -80349,6 +80952,23 @@ function createIssueLabelRepository() {
 
 /***/ }),
 
+/***/ 95228:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueMetadataCompositionRoot = createIssueMetadataCompositionRoot;
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const issue_metadata_repository_1 = __nccwpck_require__(11333);
+function createIssueMetadataCompositionRoot() {
+    return new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
+}
+
+
+/***/ }),
+
 /***/ 21239:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -80620,6 +81240,7 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
+const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const commit_use_case_1 = __nccwpck_require__(28001);
@@ -80737,7 +81358,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -81182,6 +81803,47 @@ function bindSetupSecrets(port, binding) {
 }
 function bindSetupRemoteConfiguration(port, binding) {
     return Object.freeze({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
+}
+
+
+/***/ }),
+
+/***/ 51671:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSddEvidenceReadPorts = createSddEvidenceReadPorts;
+exports.createSddEvidenceQueryPort = createSddEvidenceQueryPort;
+const sdd_evidence_query_use_case_1 = __nccwpck_require__(39893);
+const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
+const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
+const pre_branch_sdd_workspace_adapter_1 = __nccwpck_require__(35849);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const issue_metadata_composition_root_1 = __nccwpck_require__(95228);
+const issue_content_composition_root_1 = __nccwpck_require__(62255);
+const issue_labels_composition_root_1 = __nccwpck_require__(34780);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+/** No provisioning, mutation, agent or approval capability crosses this binding. */
+function createSddEvidenceReadPorts(binding, comments) {
+    const titles = (0, issue_metadata_composition_root_1.createIssueMetadataCompositionRoot)();
+    const branches = new linked_branch_readiness_repository_1.LinkedBranchReadinessRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
+    return (0, sdd_evidence_read_ports_1.bindSddEvidenceReadPorts)({
+        comments,
+        descriptions: (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding),
+        titles: { getTitle: issueNumber => titles.getTitle(binding.owner, binding.repository, issueNumber, binding.token) },
+        labels: (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
+        actors: (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding),
+        branches: { getLinkedBranch: (issueNumber, name) => branches.getLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token) },
+        workspace: new pre_branch_sdd_workspace_adapter_1.PreBranchSddWorkspaceAdapter(process.cwd(), binding.token),
+    });
+}
+function createSddEvidenceQueryPort(binding, comments) {
+    const query = new sdd_evidence_query_use_case_1.SddEvidenceQueryUseCase(createSddEvidenceReadPorts(binding, comments));
+    return Object.freeze({ read: query.read.bind(query), serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com' });
 }
 
 
@@ -82287,6 +82949,10 @@ class PreBranchSddWorkspaceAdapter {
         assertSha(baseSha);
         return this.readSnapshotAtSha(baseSha);
     }
+    async loadSnapshotAtCommit(commitSha) {
+        assertSha(commitSha);
+        return this.readSnapshotAtSha(commitSha);
+    }
     async readSnapshotAtSha(baseSha) {
         const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
         const catalog = JSON.parse(raw);
@@ -83165,7 +83831,7 @@ Working branch: {{workingBranch}}
 Files with merge conflicts:
 {{conflictPaths}}
 
-Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. Run focused checks when useful, then give a concise summary of the decisions you made.`;
+Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. Before returning, run existing offline tests for the affected source modules and the repository typecheck when their toolchains are available. Preserve behavior for missing optional adapters and for both issue and pull-request entrypoints. A compilation or test failure means the resolution is incomplete: correct only the listed conflicted files. Do not claim checks passed when tools are unavailable. Then give a concise summary of the decisions and checks you made.`;
 function getBranchSyncConflictsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, params);
 }

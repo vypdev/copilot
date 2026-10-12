@@ -19,7 +19,7 @@ import {
 
 const mockIssue = {};
 const mockPullRequest = {};
-const mockContext = { kind: 'context' };
+const mockContext = { kind: 'context', listIssueComments: jest.fn() };
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
@@ -120,7 +120,11 @@ describe("main run route composition root", () => {
       mockContext,
       expect.objectContaining({ readRepository: expect.any(Function), readApprovalPolicy: expect.any(Function),
         pullRequests: expect.objectContaining({ getPullRequest: expect.any(Function), getPullRequestHeadSha: expect.any(Function) }) }),
+      expect.objectContaining({ read: expect.any(Function) }),
     );
+    const query = jest.mocked(IssueCommentUseCase).mock.calls[0][16];
+    expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(query)).toBe(true);
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {

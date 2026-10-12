@@ -1,3 +1,5 @@
+import type { SddEvidenceQueryPort } from '../ports/sdd_evidence_read_ports';
+import { projectSddStatus } from '../policies/sdd_status_policy';
 import type { CommentAutomationContext } from './comment_automation_context';
 import type { BoundBugbotContextReadPorts } from '../ports/bugbot_context_ports';
 import { buildCopilotStatusResult } from '../policies/status_command_policy';
@@ -12,11 +14,16 @@ export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
     'getPullRequest' | 'listIssueComments' | 'getPullRequestHeadSha'>;
 
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
-export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts) {
-    if (!param.status.pullRequestNumber || !ports) return buildCopilotStatusResult(param.status, taskId);
+export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts, sddQuery?: SddEvidenceQueryPort) {
+    let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
+    if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
+        const evidence = await sddQuery.read(param.sdd);
+        status = Object.freeze({ ...status, sddReadiness: projectSddStatus(evidence, status.sddReadiness) });
+    }
+    if (!status.pullRequestNumber || !ports) return buildCopilotStatusResult(status, taskId);
     const request = projectBugbotContextRequest(param.bugbot.review);
     const selection = request.target.pullRequestSelection;
-    if (selection.kind !== 'event' || selection.number !== param.status.pullRequestNumber) throw unavailableStatus();
+    if (selection.kind !== 'event' || selection.number !== status.pullRequestNumber) throw unavailableStatus();
     const canonical = selectCanonicalBugbotPullRequest(request.target, [await ports.getPullRequest(selection.number)], 'event');
     if (canonical.kind !== 'canonical') throw unavailableStatus();
     const pull = canonical.pullRequest;
