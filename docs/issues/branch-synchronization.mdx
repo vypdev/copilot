@@ -204,3 +204,11 @@ with the existing bounded worker recycling. Forcing the whole suite into one
 process with `--runInBand` can exhaust the heap before synchronization publishes.
 A failed verification retains the managed remote head; inspect the failure and
 retry `/copilot sync-branch` after correcting the verification configuration.
+
+Commands accept leading whitespace, line breaks and repeated whitespace between
+`/copilot` and the command name. This repository prepares its verification
+toolchain for those requests and addressed bot mentions before the Action runs.
+Preparation is only a conservative scheduling hint; the Action's parser, actor
+permissions, original conflict set and dry-run/no-agent rules remain authoritative.
+The fixer must check existing offline tests for affected modules and typecheck
+when tools are available; mandatory Action verification still runs independently.

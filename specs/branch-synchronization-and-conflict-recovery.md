@@ -452,3 +452,28 @@ staged result. No content is normalized or rewritten by this check. Protected
 non-conflicted index entries, original conflict paths, HEAD/MERGE_HEAD, subsequent
 verification immutability and remote-head fences remain unchanged. The 180-case
 budget includes these ten additional cases; native recovery is pending.
+
+### Command preparation and integration checks (2026-10-12)
+
+Native38243835206 accepted a command with leading whitespace, prepared a clean
+merge, then failed its first verification because the workflow had skipped Node,
+pnpm and dependencies. Its literal prefix test disagreed with the whitespace-
+accepting domain parser. The same canonical command in38244493155 prepared
+tools, passed572suites7747tests20Windowsplatformskips and five verification
+commands, and published0f016278. Its later provider read failure during
+configuration persistence retained the completed push and durable reply;
+reconciliation38251354862 reportedalready-aligned and completedSUCCESS without
+a second merge/push. This distinguishes operation completion from run completion.
+
+The installed preparation expressions MUST cover parser whitespace and bot
+mentions when verification is configured. They MAY conservatively prepare an
+otherwise read-only request; this is a toolchain scheduling hint and MUST NOT
+authorize commands, edits, branch work or models. Existing fork/actor admission,
+runner selectors, dry-run/no-agent semantics, timeout and test budgets remain
+unchanged. Existing154structural workflow cases and fresh native whitespace
+acceptance validate this reversible workflow correction; no mirrored prose tests
+are added. The conflict prompt also requires available offline affected-module
+tests and typecheck, including missing optional adapters and both entrypoints.
+Independent mandatory verification remains the publication gate. This addresses
+readiness integration38243961378, where7852cases passed but the optional-adapter
+fallback was lost by the merge resolution. Native recovery remains pending.
