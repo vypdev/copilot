@@ -114,7 +114,6 @@ You can combine plain and quoted IDs. Use JSON escapes for a literal double
 quote or backslash; malformed, empty or multiline quoted IDs are rejected.
 The command still accepts at most 20 IDs and 2,000 characters.
 
-
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
 resolved. In a PR conversation, it reads one trusted complete Bugbot status
@@ -155,7 +154,6 @@ Inspect the displayed primary action and the workflow run, correct any proven
 invalid configuration through the usual maintainer flow, then retry
 `/copilot doctor`. The command does not read secret values, test write access,
 provision setup, change labels or approvals, or infer grants from workflow text.
-
 
 For issue types covered by `pre-branch-sdd`, status also appends an SDD
 readiness section. It reports when an SDD is not required and marks required
@@ -354,8 +352,12 @@ SDD status keeps an unknown requirement visible when the issue has no admitted
 workflow kind. Evidence links use the configured GitHub server origin and the
 same issue identity; an untrusted or mismatched URL is shown without navigation.
 
-
 Doctor treats a valid native issue with no description as an empty body, so
 independent checks can still complete. Unknown evidence groups are rejected;
 installed workflow activity filters must contain a non-empty array of text
 values. A malformed filter is blocked rather than reported as a valid trigger.
+
+Doctor's bounded workflow interpreter leaves mixed-type comparisons unavailable
+rather than applying JavaScript equality to GitHub expressions. Inspect the
+actual condition when that prerequisite is unavailable; the report does not
+execute the expression or infer that the job is disabled.

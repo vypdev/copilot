@@ -391,7 +391,6 @@ The managed correction now proves absence independently: a lazily shared read re
 
 The managed absence correction passed 572 full suites and 7,544 tests, with 35 existing platform skips (7,579 total). All existing budgets passed; the changed provider reached 100% lines/statements/functions and 95.53% branches. This evidence validates the manual correction, not a successful Windows agent write. The second read-only diagnosis with explicit `login=false` also reported rejection before process startup, so login handling is not established as the cause and no runtime permission was relaxed.
 
-
 ### Workflow eligibility correction from live Bugbot review
 
 Review `4242759214` correctly found that any Action step in any job could make
@@ -410,13 +409,11 @@ and a new independent review remain required before promotion.
 
 The workflow eligibility repair passed 573 full suites and 7,576 tests, with 35 existing platform skips (7,611 total). Its condition policy reached 100% lines/functions, 98.33% statements and 92.64% branches. Specification/catalog, documentation, lint, graph update and bundle compilation passed; hosted verification and review remain separate live gates.
 
-
 ### Native synchronization and independent review
 
 The Action resolved both the ambiguous-absence finding `4242617946` and the workflow-eligibility finding `4242759214` in subsequent independent review. Run `38167519200` on `windows-intel-runner-2` completed 573 suites and 7,596 tests, with 20 platform skips (7,616 total), validated the integrated branch and published synchronized head `00fef5bdcc31c010e4755e696512ed973df6c2f7`. The correlated receipt is PR comment `6113381932` for request `6112743331`. The contributor checkout confirms the common parent `c47f612f3fceac6ae54908f62bdad9977da06a4d` is an ancestor and validates the published bundles.
 
 This is successful native Windows verification and an Action-owned remote synchronization. It does not establish successful Codex sandbox commands on the Windows service account, nor live `/copilot doctor` acceptance before promotion. Hosted CI and a fresh review of the synchronized head remain separate gates.
-
 
 ### Native current-parent integration and activity isolation (2026-10-12)
 
@@ -428,7 +425,6 @@ The integrated shared activity policy treated the newly recognized `doctor` comm
 
 Native parent synchronization `38277723562` on Ubuntu resolved the conflict and passed 7,955 tests, but Jest reported “worker ran out of memory and crashed” while loading `raw_error_logging_boundaries.test.ts`. Its repository scan and six taint/sanitizer fixtures each rebuilt the full TypeScript project. The architecture test now constructs one real compiler/checker graph containing the unchanged project and all six isolated fixture modules. Every original assertion still resolves real production logger and sanitizer symbols; no mock, skip, worker/heap adjustment, coverage or platform reduction is introduced. The 169-case doctor inventory is unchanged because this is shared test infrastructure rather than a new capability. A fresh native integration must certify the correction.
 
-
 ### Native prerequisite and absence-proof findings (2026-10-12)
 
 Native review found three concrete defects: `4249698862` dropped unavailable linked refs before claiming absence or uniqueness; `4249700033` accepted non-string dependency values through regular-expression coercion; `4249700043` accepted an empty capability catalog despite the canonical validator requiring a non-empty array. The provider MUST keep any null association, missing/null ref or mixed unavailable/valid page unavailable, without a fallback live-ref read. Only an actually empty complete page proves absence. Effective dependency branches MUST be strings before syntax validation. The prerequisite check MUST reject an empty catalog.
@@ -437,7 +433,6 @@ Ten additional distinct cases cover four incomplete native pages, five coerced n
 
 Local verification of these findings passed 581 suites and 7,914 tests with 35 configured platform skips (7,949 total), every unchanged global/module coverage budget and 308/350 setup acceptance with 42 explicitly open. Types, lint, documentation, specification/catalog validation and graph update passed.
 
-
 ### Native nullable bodies and malformed report/workflow boundaries (2026-10-12)
 
 Native findings `4251088780`, `4251088791` and `4251088796` exposed three additional boundaries. A valid native null issue body MUST normalize to an empty body while preserving independently verified issue fields; missing or malformed body values remain rejected. Aggregation MUST reject an unknown check group rather than drop blocked evidence, with a fixed error that excludes the supplied group. A present workflow activity filter MUST be a non-empty array of non-empty strings; scalar, null, object or mixed non-string forms are blocked. These checks neither execute workflow content nor certify write permission.
@@ -445,3 +440,11 @@ Native findings `4251088780`, `4251088791` and `4251088796` exposed three additi
 Six new cases reproduced all three findings: one native null body, one unknown blocked group among otherwise not-applicable groups and four malformed activity-filter shapes. The own feature inventory is 185 distinct cases, with the original 52-case floor and all read/provenance/coverage boundaries retained. Native review, parent recovery and post-promotion live acceptance remain required.
 
 Local verification of the second native findings passed 581 suites and 7,920 tests with 35 configured platform skips (7,955 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Bundles were rebuilt before staging.
+
+### Conservative mixed-type workflow expressions (2026-10-12)
+
+Native finding `4251251731` identified strict mixed-type equality that contradicted GitHub's documented numeric coercion. This bounded interpreter deliberately does not model mixed-type coercion; it MUST return unknown for such comparisons, rather than certify the job as disabled or active. Same-type supported literals and existing three-valued boolean combinations remain unchanged. A workflow whose only eligible candidate depends on such a comparison is unavailable. See [GitHub expression operators](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#operators).
+
+Four additional cases reproduced the old classification: mixed equality in both operand orders, mixed inequality, and the complete workflow eligibility projection. The own feature inventory increases from 185 to 189 distinct cases; the original 52-case floor, 1,000-character/32-depth bounds, no-eval rule and all coverage gates remain unchanged. Native review and parent/live acceptance remain required.
+
+Local mixed-type verification passed 581 suites and 7,924 tests with 35 configured platform skips (7,959 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Generated bundles are included. Native review and parent/live acceptance remain required.

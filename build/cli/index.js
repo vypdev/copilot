@@ -41596,7 +41596,7 @@ function doctorWorkflowCondition(value, event) {
         if (tokens[cursor] === '==' || tokens[cursor] === '!=') {
             const operator = tokens[cursor++];
             const right = atom();
-            if (left === undefined || right === undefined)
+            if (left === undefined || right === undefined || typeof left !== typeof right)
                 return undefined;
             const equal = typeof left === 'string' && typeof right === 'string' ? left.toLowerCase() === right.toLowerCase() : left === right;
             return operator === '==' ? equal : !equal;

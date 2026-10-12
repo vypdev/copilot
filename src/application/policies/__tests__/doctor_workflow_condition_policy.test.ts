@@ -19,6 +19,13 @@ describe('bounded workflow eligibility evidence', () => {
         ["vars.BOT == ''", undefined], ['success()', undefined], ['(', undefined], [null, undefined],
         ['x'.repeat(1001), undefined], ['('.repeat(33) + 'true' + ')'.repeat(33), undefined],
     ] as const)('keeps condition %s evidence closed', (value, expected) => expect(doctorWorkflowCondition(value, 'issues')).toBe(expected));
+    it.each(["'0' == false", "false == '0'", "'1' != true"])(
+        'withholds a decision for unsupported mixed-type coercion %s', expression => {
+            expect(doctorWorkflowCondition(expression,'issues')).toBeUndefined();
+        });
+    it('keeps a workflow with mixed-type eligibility unavailable instead of proven blocked or active', () => {
+        expect(contract('  action: {if: "\'0\' == false", steps: [{uses: "./"}]}')).toBe('unavailable');
+    });
     it('blocks a disabled Action job even when an unrelated job runs', () => expect(contract('  disabled: {if: false, steps: [{uses: "./"}]}\n  active: {steps: [{run: "echo fixture"}]}')).toBe('blocked'));
     it('blocks an Action job restricted to a different event', () => expect(contract('  action: {if: "github.event_name == \'push\'", steps: [{uses: "./"}]}')).toBe('blocked'));
     it('blocks a disabled Action step in an eligible job', () => expect(contract('  action: {steps: [{if: false, uses: "./"}]}')).toBe('blocked'));
