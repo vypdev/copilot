@@ -6,6 +6,14 @@ async function status(f: ReturnType<typeof readinessFixture>) {
     return (result.payload as { status: CopilotStatusSnapshot }).status;
 }
 describe('readiness workflow identity and independent evidence', () => {
+    it('retains an independently projected server origin when readiness ports are unavailable', async () => {
+        const f=readinessIssueFixture();
+        const context={...f.context,status:{...f.context.status,serverOrigin:'https://github.example.test'}};
+        const result=await readCopilotStatus(context,'Issue');
+        expect((result.payload as {status:CopilotStatusSnapshot}).status).toMatchObject({serverOrigin:'https://github.example.test',
+            pullRequestReadiness:{readiness:'unavailable',code:'evidence-adapter-unavailable'}});
+        expect(f.ports.getPullRequest).not.toHaveBeenCalled();
+    });
     it('collects canonical evidence once and uses a narrow final revision read', async () => {
         const f=readinessFixture(); expect((await status(f)).pullRequestReadiness).toMatchObject({ readiness: 'satisfied', pullNumber: 11 });
         expect(f.ports.approval.loadEvidence).toHaveBeenCalledTimes(1); expect(f.ports.approval.readRevision).toHaveBeenCalledTimes(1);

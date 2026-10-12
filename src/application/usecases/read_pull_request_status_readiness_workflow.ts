@@ -23,7 +23,7 @@ const sha = (value: unknown): value is string => typeof value === 'string' && /^
 export async function readPullRequestStatusReadiness(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts) {
     const original = param.status;
     if (original.target !== 'issue' && original.target !== 'pull-request') return buildCopilotStatusResult(original, taskId);
-    let snapshot: CopilotStatusSnapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin };
+    let snapshot: CopilotStatusSnapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin ?? original.serverOrigin };
     const finish = (readiness: PullRequestReadinessSnapshot) => buildCopilotStatusResult({ ...snapshot, pullRequestReadiness: readiness }, taskId);
     const fail = (code: string, action: 'retry' | 'select-pr' = 'retry') => finish(unavailablePullRequestReadiness(code, action));
     if (!ports) return fail('evidence-adapter-unavailable');

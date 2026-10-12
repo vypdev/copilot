@@ -54732,7 +54732,7 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
     const original = param.status;
     if (original.target !== 'issue' && original.target !== 'pull-request')
         return (0, status_command_policy_1.buildCopilotStatusResult)(original, taskId);
-    let snapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin };
+    let snapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin ?? original.serverOrigin };
     const finish = (readiness) => (0, status_command_policy_1.buildCopilotStatusResult)({ ...snapshot, pullRequestReadiness: readiness }, taskId);
     const fail = (code, action = 'retry') => finish((0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)(code, action));
     if (!ports)

@@ -284,12 +284,12 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Domain/configuration/pure planning | 32 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
-| State/application/idempotency/races | 41 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
+| State/application/idempotency/races | 42 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **124** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **125** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -424,3 +424,5 @@ The feature-owned collector is now `read_pull_request_status_readiness_workflow.
 All existing 122 feature cases remain required, without recounting shared SDD bridge tests. Coverage gates retain the shared entrypoint's 95/90 floor and additionally enforce it for the new collector; the pure presentation helper has a 100% gate. No bound is raised and no failed check is removed. Fresh Action parent integration, review and live status acceptance remain pending.
 
 Two additional presentation contracts ensure unknown provider evidence states and unknown policy modes render as unavailable without reflecting prose or inventing approval authority. The feature inventory is now 124 distinct cases; the 40-case minimum and all original acceptance cases remain unchanged.
+
+An additional application regression preserves an independently projected server origin when optional readiness ports are absent. Readiness remains unavailable; it cannot erase the existing origin used by another verified status projection. The own feature inventory is 125 distinct cases. Shared SDD projection still requires Action parent integration and its independent acceptance cases.
