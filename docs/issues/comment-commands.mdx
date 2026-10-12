@@ -125,6 +125,31 @@ separate from an issue with the same number. Status and description queries
 preserve existing lifecycle and waiting labels when they make no lifecycle
 decision.
 
+For issue types covered by `pre-branch-sdd`, status also appends an SDD
+readiness section. It reports when an SDD is not required and marks required
+SDD evidence unavailable until the reader verifies the current owned card,
+immutable catalog and remote publication. It shows pending question IDs and
+the owning specification, then links the verified current publication once
+ready. Old answer rounds and stale issue or branch evidence cannot establish
+readiness. A `published` marker or existing branch alone never means the SDD is
+ready. Missing or unverified evidence blocks a readiness claim; status remains
+read-only and preserves its existing fields. SDD readiness confirms the published
+specification and its branch evidence. It does not certify that implementation
+is finished, that CI or review passed, or that the PR can be merged.
+
+A newer bot-owned comment that lost its SDD identification prevents an older
+card from certifying readiness. Canonical replies, progress cards and branch
+notifications for the same issue remain separate surfaces. An unidentified or
+corrupted bot comment can therefore make SDD evidence invalid; inspect and
+reconcile that conversation before relying on an older publication.
+
+After the first verified publication, a new clarification round reports
+**Revision pending**. Its first-publication link is explicitly historical; it
+does not certify the pending revision. The section keeps unanswered question
+identifiers visible, or asks to resume publication once answers are complete.
+Once the revision is verified, status shows the current publication and the
+immutable first publication separately when their commits differ. A change to the issue body keeps a separately verified first publication explicitly historical until the revision is published. Failed final identity checks remove that link. Status reads each maintainer's current permission once per request, with at most 16 distinct accounts; failed or exhausted permission reads make SDD evidence unavailable. Later requests recheck permissions.
+
 Read-only commands answer the current comment, using the issue or PR as
 background. Add the file, symbol, failure or requested work after the command to
 make the subject explicit. For example, `/copilot explain src/domain/copilot_command.ts`
@@ -276,3 +301,7 @@ The shared reply publisher adds the same current hidden identity used by other
 correlated replies; the welcome text embeds no separate marker.
 
 See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.
+
+SDD status keeps an unknown requirement visible when the issue has no admitted
+workflow kind. Evidence links use the configured GitHub server origin and the
+same issue identity; an untrusted or mismatched URL is shown without navigation.

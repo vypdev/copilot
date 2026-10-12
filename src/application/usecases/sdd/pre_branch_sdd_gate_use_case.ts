@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { buildSddIssueDigest } from '../../policies/sdd_issue_identity_policy';
 import type { AgentConfiguration } from '../../ports/agent_configuration_ports';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { BoundIssueCommentUpsertPort, IssueCommentPublicationTarget } from '../../ports/issue_lifecycle_ports';
@@ -320,10 +320,7 @@ function latestOwnedCard(comments: readonly IssueCommentPublicationTarget[], iss
 }
 
 function issueDigest(context: PreBranchSddContext, baseSha: string): string {
-  return createHash('sha256').update(JSON.stringify([
-    context.issueNumber, normalizeSddIssueTitle(context.issueTitle), getVisibleIssueDescription(context.issueBody), context.admittedKind,
-    context.profileDigest ?? '', baseSha,
-  ])).digest('hex');
+  return buildSddIssueDigest(context, baseSha);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
