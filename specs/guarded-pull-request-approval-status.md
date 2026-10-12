@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 54 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
-| State/application/idempotency/races | 46 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
+| Domain/configuration/pure planning | 62 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| State/application/idempotency/races | 49 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
-| UI/UX/localization/sanitization | 20 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
+| UI/UX/localization/sanitization | 24 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **153** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **168** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -468,3 +468,33 @@ Native findings `4251678257` and `4251684725` exposed misleading status copy. An
 Five additional distinct cases cover incomplete-file evidence in guarded/recommend modes, unknown-identity review guidance and unavailable EN/ES output. All five failed before the fixes; the existing unknown-state rendering case also reproduced the misleading assertion, and the existing malformed-mode case was strengthened. The own inventory is 153 cases (54 policy,46 application,19 provider,5 workflow,20 presentation,9 integration). No approval authority, configuration, minimum budget or platform scope changes.
 
 Local incomplete-evidence/UI verification passed 584 suites and 7,964 tests with 35 configured platform skips (7,999 total). Focused policy and presentation contracts passed 74 tests. All global/module gates, types, lint, documentation, specifications and graph update passed; generated bundles are included. Native current-head review and platform acceptance remain required.
+
+### Finally verified off policy and actionable human review (2026-10-12)
+
+Native findings `4251789237` and `4251789884` reproduced two incorrect status
+classifications. A finally read, valid off policy MUST disable assessment even
+when the initial policy/evidence read failed, the policy was removed (verified
+default-off), or prior evidence was collected under an active policy. Required
+positive safe-integer final target IDs still precede projection. A changed
+policy discards every old group; unchanged off may retain independently
+verified groups. Denied final reads and malformed policy cannot certify off,
+and native foreign-target/linkage guards remain authoritative.
+
+A human-review requirement MUST be asserted only for satisfied recommend
+readiness without an existing canonical human approval. Pending, blocked,
+unavailable, disabled and guarded snapshots offer their wait/resolve/retry/none/
+observer action without inventing that requirement. Pure and application
+superseded snapshots also clear the flag. Presentation independently refuses
+a stale true flag outside satisfied recommend. There is no approval mutation,
+new input, provider fallback or change to comment identity/bounds.
+
+Eleven new regressions failed before correction: active-to-off in two modes,
+removed final policy, changed off policy, pending/blocked in two modes, and
+three application paths with readable/denied evidence or denied initial policy.
+Four additional presentation cases reject stale flags in pending recommend,
+blocked recommend, disabled off and satisfied guarded. The own feature
+inventory is **168 distinct cases** (62 policy,49 application,19 provider,
+5 workflow,24 presentation,9 integration). The original 40-case floor and
+all coverage/freshness/identity guards remain unchanged. Native parent
+integration, fresh review and live command acceptance still require evidence
+on the final published head.

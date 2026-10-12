@@ -31,6 +31,13 @@ describe('localized, bounded readiness status',()=>{
         expect(text).not.toContain('A human review is still required');expect(text).not.toContain('Aún se requiere revisión humana');
         expect(text).toContain(locale==='es-ES'?'Siguiente acción:':'Next action:');
     });
+    it.each([
+        ['pending','recommend','wait'],['blocked','recommend','resolve'],
+        ['not-applicable','off','none'],['satisfied','guarded','observer'],
+    ] as const)('withholds a stale human-review claim in %s/%s', (readiness,mode,action)=>{
+        const s=snapshot();const text=formatCopilotStatus({...s,pullRequestReadiness:{...s.pullRequestReadiness!,readiness,mode,action,humanReviewRequired:true}});
+        expect(text).not.toContain('A human review is still required');
+    });
     it('falls back atomically for an unsupported locale',()=>{
         const text=formatCopilotStatus(snapshot(),'fr-FR');expect(text).toContain('Next action');expect(text).toContain('Native reviews');expect(text).not.toContain('Siguiente acción');
     });

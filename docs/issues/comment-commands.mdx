@@ -343,8 +343,9 @@ readiness continues to require every configured check and its trusted producer.
 
 A finally verified off approval policy remains disabled if optional PR revision
 evidence changes during collection. Stale gate claims are discarded. If the
-policy itself changes or its final read is denied, the report cannot reuse the
-earlier disabled assessment; retry status after the current policy is readable.
+final readable policy changes to off, including verified removal/default-off,
+the report disables assessment and discards old gate claims. A denied or
+malformed final policy cannot certify off; inspect the reported recovery action.
 
 A verified current human approval can satisfy readiness with no further action.
 When a finally readable head has changed and the policy is still verified,
@@ -360,5 +361,6 @@ a verified off policy still reports disabled when optional evidence is missing.
 
 An incomplete changed-file read makes readiness unavailable and offers retry,
 while independent verified checks retain their own states. Unavailable status
-does not claim that human review is required; it gives the recovery action for
-the missing evidence.
+gives the recovery action for the missing evidence. Pending or blocked readiness
+offers wait or resolve. The report asserts a human-review requirement only when
+recommend readiness is satisfied without a verified current human approval.

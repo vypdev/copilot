@@ -40,12 +40,16 @@ function state(decision: ApprovalDecision | undefined): PullRequestReadiness {
 /** Uses the existing decision and the same canonical evidence gates, without an observer or a mutation. */
 export function projectPullRequestReadiness(rawPolicy: string | undefined, evidence: ApprovalEvidence,
     final: ReadinessRevision & { readonly rawPolicy: string | undefined }): PullRequestReadinessSnapshot {
-    let policy;
-    try { policy = parsePullRequestApprovalPolicy(rawPolicy); }
-    catch { return Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' }); }
-    if (policy.mode === 'off' && rawPolicy !== final.rawPolicy) return unavailablePullRequestReadiness('policy-superseded');
     if (!Number.isSafeInteger(final.repositoryId) || final.repositoryId <= 0 || !Number.isSafeInteger(final.pullNumber)
         || final.pullNumber <= 0) return unavailablePullRequestReadiness('identity-unavailable');
+    let policy;
+    try {
+        const finalPolicy = parsePullRequestApprovalPolicy(final.rawPolicy);
+        if (finalPolicy.mode === 'off' && rawPolicy !== final.rawPolicy) return disabledPullRequestReadiness();
+        policy = parsePullRequestApprovalPolicy(rawPolicy);
+    }
+    catch { return Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' }); }
+    if (policy.mode === 'off' && rawPolicy !== final.rawPolicy) return unavailablePullRequestReadiness('policy-superseded');
     if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
         || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
         || !objectId(final.headSha) || !objectId(final.baseSha)) return policy.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('identity-unavailable');
@@ -53,7 +57,7 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
     if (!sameTarget || evidence.headSha !== final.headSha || evidence.baseSha !== final.baseSha || rawPolicy !== final.rawPolicy) {
         if (policy.mode === 'off') return disabledPullRequestReadiness();
         return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
-            humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+            humanReviewRequired: false, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
     }
     const checkBoundary: PullRequestReadiness | undefined = !policy.producerAttested ? 'blocked'
         : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha) ? 'pending' : undefined;
@@ -76,5 +80,5 @@ export function projectPullRequestReadiness(rawPolicy: string | undefined, evide
     const action: ReadinessAction = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
         : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
     return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
-        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness !== 'unavailable' && decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
+        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness === 'satisfied' && policy.mode === 'recommend' && decision.code !== 'human-approved', evidence: groups, action });
 }

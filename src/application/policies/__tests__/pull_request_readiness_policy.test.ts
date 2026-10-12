@@ -70,6 +70,31 @@ describe('projectPullRequestReadiness', () => {
     it('does not infer a human-review requirement from unavailable identity', () => {
         expect(unavailablePullRequestReadiness()).toMatchObject({readiness:'unavailable',humanReviewRequired:false,action:'retry'});
     });
+    it.each(['guarded','recommend'] as const)('applies a finally verified off policy after collecting %s evidence', mode => {
+        const e=readinessEvidence();
+        expect(projectPullRequestReadiness(readinessPolicy(mode),e,{...e,rawPolicy:readinessPolicy('off')}))
+            .toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',action:'none',humanReviewRequired:false,headSha:'',baseSha:'',
+                evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
+    });
+    it('applies verified default-off when the final policy was removed', () => {
+        const e=readinessEvidence();expect(projectPullRequestReadiness(readinessPolicy(),e,{...e,rawPolicy:undefined}))
+            .toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',action:'none'});
+    });
+    it('keeps a changed finally verified off policy disabled without retaining old groups', () => {
+        const e=readinessEvidence(),rawPolicy=readinessPolicy('off');
+        const finalPolicy=JSON.stringify({...JSON.parse(rawPolicy),requireLinkedIssue:false});
+        expect(projectPullRequestReadiness(rawPolicy,e,{...e,rawPolicy:finalPolicy}))
+            .toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',headSha:'',baseSha:''});
+    });
+    it.each([
+        ['guarded','failure','blocked'],['guarded',null,'pending'],
+        ['recommend','failure','blocked'],['recommend',null,'pending'],
+    ] as const)('withholds human-review guidance before %s evidence with %s is complete', (mode,conclusion,state) => {
+        const e=readinessEvidence();const changed={...e,checks:[{...e.checks[0],status:conclusion?'completed':'in_progress',conclusion}]};
+        const rawPolicy=readinessPolicy(mode);
+        expect(projectPullRequestReadiness(rawPolicy,changed,{...e,rawPolicy}))
+            .toMatchObject({readiness:state,humanReviewRequired:false,action:state==='pending'?'wait':'resolve'});
+    });
     it('fences a changed policy identity', () => {
         expect(projectPullRequestReadiness(policy('guarded'), evidence, { ...final, rawPolicy: policy('recommend') }))
             .toMatchObject({ readiness: 'pending', code: 'superseded' });

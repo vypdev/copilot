@@ -24,7 +24,7 @@ export function appendPullRequestReadiness(baseLines: readonly string[], snapsho
         }
         const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
         if (url) lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
-        if (readiness.humanReviewRequired && states.includes(readiness.readiness) && readiness.readiness !== 'unavailable' && mode !== 'unavailable') {
+        if (readiness.humanReviewRequired && readiness.readiness === 'satisfied' && mode === 'recommend') {
             lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
         }
         const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];

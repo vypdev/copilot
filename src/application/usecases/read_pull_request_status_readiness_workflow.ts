@@ -89,11 +89,15 @@ export async function readPullRequestStatusReadiness(param: CommentAutomationCon
     } catch { /* Retain all independently verified facts. */ }
     let finalPolicy: string | undefined;
     let policyVerified = false;
-    if (ports.approval && (evidence || readiness.mode === 'off')) {
+    if (ports.approval) {
         try {
             finalPolicy = await ports.approval.readPolicy(target);
-            policyVerified = true;
-            if (!evidence && rawPolicy !== finalPolicy) readiness = unavailablePullRequestReadiness('policy-superseded');
+            try {
+                const policy = parsePullRequestApprovalPolicy(finalPolicy);
+                policyVerified = true;
+                if (policy.mode === 'off') readiness = disabledPullRequestReadiness();
+                else if (!evidence && rawPolicy !== finalPolicy) readiness = unavailablePullRequestReadiness('policy-superseded');
+            } catch { readiness = Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' }); }
         } catch { readiness = unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }
     let finalHead: string | undefined;
@@ -108,7 +112,7 @@ export async function readPullRequestStatusReadiness(param: CommentAutomationCon
             observedRevisionHead = revision.headSha;
             readiness = projectPullRequestReadiness(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
             if (pull.headSha !== evidence.headSha) readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
-                action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+                action: 'wait', humanReviewRequired: false, evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         } catch { readiness = readiness.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('final-evidence-unavailable'); }
     }
     if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts) snapshot = { ...snapshot, findingStateEvidence: undefined,
@@ -117,7 +121,7 @@ export async function readPullRequestStatusReadiness(param: CommentAutomationCon
     if (finalHead !== pull.headSha) {
         if (readiness.mode === 'off') readiness = disabledPullRequestReadiness();
         else if (sha(finalHead) && policyVerified && rawPolicy === finalPolicy) readiness = Object.freeze({ ...readiness,
-            readiness:'pending',code:'superseded',action:'wait',headSha:'',baseSha:'',humanReviewRequired:true,
+            readiness:'pending',code:'superseded',action:'wait',headSha:'',baseSha:'',humanReviewRequired:false,
             evidence:Object.freeze({ci:'pending',coverage:'pending',bugbot:'pending',reviews:'pending'}) });
         else readiness = unavailablePullRequestReadiness('final-identity-unavailable');
     }

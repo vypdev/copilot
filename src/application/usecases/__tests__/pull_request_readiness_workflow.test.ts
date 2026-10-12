@@ -74,6 +74,14 @@ describe('readiness workflow identity and independent evidence', () => {
             action: 'none', evidence: { ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' } });
         expect(f.ports.approval.readPolicy).toHaveBeenCalledTimes(2);
     });
+    it.each(['readable evidence','denied evidence','denied first policy'] as const)('uses a finally verified off policy after %s', async reason => {
+        const f=readinessFixture();
+        if(reason==='denied first policy') f.ports.approval.readPolicy.mockRejectedValueOnce({status:403}).mockResolvedValueOnce(readinessPolicy('off'));
+        else f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy()).mockResolvedValueOnce(readinessPolicy('off'));
+        if(reason==='denied evidence') f.ports.approval.loadEvidence.mockRejectedValue({status:403});
+        expect((await status(f)).pullRequestReadiness).toMatchObject({readiness:'not-applicable',mode:'off',code:'disabled',action:'none',humanReviewRequired:false});
+        expect(f.ports.approval.readPolicy).toHaveBeenCalledTimes(2);
+    });
     it('cannot keep off mode after its final policy read is denied', async () => {
         const f = readinessFixture(); f.ports.approval.readPolicy.mockResolvedValueOnce(readinessPolicy('off')).mockRejectedValueOnce({ status: 403 });
         f.ports.approval.loadEvidence.mockRejectedValue({ status: 403 });

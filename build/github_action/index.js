@@ -46210,8 +46210,14 @@ function state(decision) {
 }
 /** Uses the existing decision and the same canonical evidence gates, without an observer or a mutation. */
 function projectPullRequestReadiness(rawPolicy, evidence, final) {
+    if (!Number.isSafeInteger(final.repositoryId) || final.repositoryId <= 0 || !Number.isSafeInteger(final.pullNumber)
+        || final.pullNumber <= 0)
+        return unavailablePullRequestReadiness('identity-unavailable');
     let policy;
     try {
+        const finalPolicy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(final.rawPolicy);
+        if (finalPolicy.mode === 'off' && rawPolicy !== final.rawPolicy)
+            return disabledPullRequestReadiness();
         policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
     }
     catch {
@@ -46219,9 +46225,6 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
     }
     if (policy.mode === 'off' && rawPolicy !== final.rawPolicy)
         return unavailablePullRequestReadiness('policy-superseded');
-    if (!Number.isSafeInteger(final.repositoryId) || final.repositoryId <= 0 || !Number.isSafeInteger(final.pullNumber)
-        || final.pullNumber <= 0)
-        return unavailablePullRequestReadiness('identity-unavailable');
     if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
         || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
         || !objectId(final.headSha) || !objectId(final.baseSha))
@@ -46231,7 +46234,7 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
         if (policy.mode === 'off')
             return disabledPullRequestReadiness();
         return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
-            humanReviewRequired: true, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+            humanReviewRequired: false, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
     }
     const checkBoundary = !policy.producerAttested ? 'blocked'
         : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha) ? 'pending' : undefined;
@@ -46256,7 +46259,7 @@ function projectPullRequestReadiness(rawPolicy, evidence, final) {
     const action = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
         : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
     return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
-        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness !== 'unavailable' && decision.code !== 'human-approved' && (policy.mode !== 'guarded' || (decision.status !== 'already-approved' && decision.status !== 'eligible')), evidence: groups, action });
+        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness === 'satisfied' && policy.mode === 'recommend' && decision.code !== 'human-approved', evidence: groups, action });
 }
 
 
@@ -46287,7 +46290,7 @@ function appendPullRequestReadiness(baseLines, snapshot, catalog) {
         const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
         if (url)
             lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
-        if (readiness.humanReviewRequired && states.includes(readiness.readiness) && readiness.readiness !== 'unavailable' && mode !== 'unavailable') {
+        if (readiness.humanReviewRequired && readiness.readiness === 'satisfied' && mode === 'recommend') {
             lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
         }
         const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
@@ -55202,12 +55205,20 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
     catch { /* Retain all independently verified facts. */ }
     let finalPolicy;
     let policyVerified = false;
-    if (ports.approval && (evidence || readiness.mode === 'off')) {
+    if (ports.approval) {
         try {
             finalPolicy = await ports.approval.readPolicy(target);
-            policyVerified = true;
-            if (!evidence && rawPolicy !== finalPolicy)
-                readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('policy-superseded');
+            try {
+                const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(finalPolicy);
+                policyVerified = true;
+                if (policy.mode === 'off')
+                    readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+                else if (!evidence && rawPolicy !== finalPolicy)
+                    readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('policy-superseded');
+            }
+            catch {
+                readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
+            }
         }
         catch {
             readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
@@ -55229,7 +55240,7 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
             readiness = (0, pull_request_readiness_policy_1.projectPullRequestReadiness)(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
             if (pull.headSha !== evidence.headSha)
                 readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
-                    action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+                    action: 'wait', humanReviewRequired: false, evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         }
         catch {
             readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
@@ -55244,7 +55255,7 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
             readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
         else if (sha(finalHead) && policyVerified && rawPolicy === finalPolicy)
             readiness = Object.freeze({ ...readiness,
-                readiness: 'pending', code: 'superseded', action: 'wait', headSha: '', baseSha: '', humanReviewRequired: true,
+                readiness: 'pending', code: 'superseded', action: 'wait', headSha: '', baseSha: '', humanReviewRequired: false,
                 evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
         else
             readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
