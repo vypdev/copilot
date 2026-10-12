@@ -149,6 +149,18 @@ already changes both catalog files. It never adds an unrelated file to the merge
 or loads a generator from the merged branch. Invalid metadata, missing evidence,
 external links, or a later verification change still abort the synchronization.
 
+When the communication test-budget ledger is an original merge conflict,
+Copilot derives its totals from the retained test-file allocations and validates
+the complete ledger before staging. It preserves the minimum budgets and checks
+that every allocation has real test evidence. Invalid input produces
+`communication-budget-invalid`; inspect the closed validation phase in the run,
+correct the resolution and retry. A later verification change is rejected and
+cannot trigger another normalization.
+
+If verification prevents a normal Git abort, Copilot restores the captured
+child only while both prepared merge identities remain unchanged. A moved
+HEAD or parent is retained and requires inspection of the run.
+
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 
 ## Result report

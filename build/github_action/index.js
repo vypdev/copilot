@@ -74830,7 +74830,7 @@ exports.admittedBranchSyncValidationCode = admittedBranchSyncValidationCode;
 exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
     'merge-state-mismatch', 'head-changed', 'merge-parent-changed',
     'unresolved-conflicts', 'unexpected-paths', 'unstaged-changes',
-    'protected-index-changed', 'sdd-catalog-invalid', 'staging-failed',
+    'protected-index-changed', 'sdd-catalog-invalid', 'communication-budget-invalid', 'staging-failed',
     'whitespace-or-conflict-markers', 'parent-head-changed', 'working-head-changed',
     'unclassified',
 ]);
@@ -79223,6 +79223,93 @@ exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
 
 /***/ }),
 
+/***/ 99786:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COMMUNICATION_BUDGET_PATH = void 0;
+exports.refreshBranchSyncCommunicationBudget = refreshBranchSyncCommunicationBudget;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const logging_ports_1 = __nccwpck_require__(6152);
+exports.COMMUNICATION_BUDGET_PATH = 'src/architecture/github_communication_test_budget.json';
+const MAX_BYTES = 512 * 1024;
+const SPEC_PATHS = ['specs/semantic-github-publication-and-notification.md', 'specs/repository-locale-and-localization.md'];
+// Execute only the Action's bundled validator; merged branch scripts are never loaded.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const validator = __nccwpck_require__(71110);
+/** Derives totals only within an already-authorized ledger conflict; never changes evidence or minimums. */
+function refreshBranchSyncCommunicationBudget(repositoryRoot) {
+    let phase = 'workspace-boundary';
+    try {
+        const root = (0, node_fs_1.realpathSync)(repositoryRoot);
+        for (const directory of ['src', 'src/architecture']) {
+            const stat = (0, node_fs_1.lstatSync)((0, node_path_1.join)(root, directory));
+            if (!stat.isDirectory() || stat.isSymbolicLink())
+                return reject(phase);
+        }
+        phase = 'ledger-file-boundary';
+        const path = (0, node_path_1.join)(root, exports.COMMUNICATION_BUDGET_PATH);
+        if (!boundedFile(root, path))
+            return reject(phase);
+        phase = 'metadata-json';
+        const source = (0, node_fs_1.readFileSync)(path, 'utf8');
+        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(source))
+            phase = 'metadata-conflict-markers';
+        const value = JSON.parse(source);
+        phase = 'metadata-shape';
+        if (!isLedger(value))
+            return reject(phase);
+        phase = 'evidence-path-boundary';
+        for (const file of [...SPEC_PATHS, ...value.budgets.flatMap(budget => budget.files.map(entry => entry.path))]) {
+            if (!boundedFile(root, (0, node_path_1.join)(root, file)))
+                return reject(phase);
+        }
+        const normalized = { ...value, budgets: value.budgets.map(budget => ({ ...budget,
+                allocatedCases: budget.files.reduce((sum, entry) => sum + entry.qualifyingCases, 0),
+            })) };
+        phase = 'ledger-contract';
+        if (validator.validateCommunicationTestBudget(root, normalized).length > 0)
+            return reject(phase);
+        phase = 'ledger-output';
+        const output = JSON.stringify(normalized, null, 2) + '\n';
+        if (Buffer.byteLength(output, 'utf8') > MAX_BYTES)
+            return reject(phase);
+        if (value.budgets.some((budget, index) => budget.allocatedCases !== normalized.budgets[index].allocatedCases)) {
+            (0, node_fs_1.writeFileSync)(path, output, 'utf8');
+        }
+        return true;
+    }
+    catch {
+        return reject(phase);
+    }
+}
+function isLedger(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const budgets = value.budgets;
+    return Array.isArray(budgets) && budgets.length === 2 && budgets.every(budget => budget && Number.isSafeInteger(budget.allocatedCases) && budget.allocatedCases >= 0
+        && Array.isArray(budget.files) && budget.files.length > 0 && budget.files.length <= 256
+        && budget.files.every((entry) => entry && typeof entry.path === 'string'
+            && /^src\/.+\.test\.ts$/u.test(entry.path) && !entry.path.split('/').includes('..')
+            && Number.isSafeInteger(entry.qualifyingCases) && entry.qualifyingCases > 0 && entry.qualifyingCases <= 10000));
+}
+function boundedFile(root, file) {
+    const stat = (0, node_fs_1.lstatSync)(file);
+    const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
+    return stat.isFile() && !stat.isSymbolicLink() && stat.size <= MAX_BYTES
+        && target !== '..' && !target.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(target);
+}
+function reject(phase) {
+    (0, logging_ports_1.logInfo)(`Branch synchronization communication budget rejected (${phase}).`);
+    return false;
+}
+
+
+/***/ }),
+
 /***/ 88632:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -79313,6 +79400,7 @@ function rejectCatalog(phase) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
+const branch_sync_communication_budget_1 = __nccwpck_require__(99786);
 const workspace_changes_1 = __nccwpck_require__(93370);
 const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
 // ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
@@ -79401,6 +79489,9 @@ class BranchSyncWorkspaceAdapter {
                 return invalid(`The agent changed non-conflicted path ${path}.`, "protected-index-changed");
         }
         try {
+            if (!this.resolutionValidated && conflictPaths.includes(branch_sync_communication_budget_1.COMMUNICATION_BUDGET_PATH)
+                && !(0, branch_sync_communication_budget_1.refreshBranchSyncCommunicationBudget)(this.repositoryRoot))
+                return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
                 && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
                 return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
@@ -79473,7 +79564,19 @@ class BranchSyncWorkspaceAdapter {
         if (!this.mergeInProgress)
             return;
         try {
-            await this.git.execute("git", ["merge", "--abort"]);
+            try {
+                await this.git.execute("git", ["merge", "--abort"]);
+            }
+            catch (error) {
+                // Verification may change a tracked resolution after trusted staging,
+                // preventing Git's normal abort. Restore only our originally clean,
+                // still-identical prepared merge; never reset a moved HEAD or parent.
+                const snapshot = this.snapshot;
+                if (!snapshot || await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha
+                    || await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha)
+                    throw error;
+                await this.git.execute("git", ["reset", "--hard", snapshot.childSha]);
+            }
         }
         finally {
             this.snapshot = undefined;
@@ -85206,6 +85309,164 @@ module.exports = require("tls");
 
 "use strict";
 module.exports = require("util");
+
+/***/ }),
+
+/***/ 71110:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/* module decorator */ module = __nccwpck_require__.nmd(module);
+
+const fs = __nccwpck_require__(87561);
+const path = __nccwpck_require__(49411);
+const { execFileSync } = __nccwpck_require__(17718);
+
+const DEFAULT_ROOT = path.resolve(__dirname, '..');
+const LEDGER_PATH = 'src/architecture/github_communication_test_budget.json';
+const EXPECTED_BUDGETS = Object.freeze({
+  'semantic-github-publication': Object.freeze({
+    requiredCases: 135,
+    spec: 'specs/semantic-github-publication-and-notification.md',
+  }),
+  'repository-locale-localization': Object.freeze({
+    requiredCases: 146,
+    spec: 'specs/repository-locale-and-localization.md',
+  }),
+});
+const TEST_DECLARATION = /^\s*(?:it|test)(?:\.each)?\s*\(/gmu;
+const ADDED_TEST_DECLARATION = /^\+\s*(?:it|test)(?:\.each)?\s*\(/gmu;
+
+function readLedger(root = DEFAULT_ROOT) {
+  return JSON.parse(fs.readFileSync(path.join(root, LEDGER_PATH), 'utf8'));
+}
+
+function validateCommunicationTestBudget(root, ledger) {
+  const errors = [];
+  if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger)) {
+    return ['communication test-budget ledger must be a JSON object.'];
+  }
+  if (ledger.version !== 1) errors.push('communication test-budget ledger version must be 1.');
+  if (ledger.baseline !== '0bb83b75^') errors.push('communication test-budget baseline must remain 0bb83b75^.');
+  if (!gitObjectExists(root, `${ledger.baseline}^{commit}`)) {
+    errors.push(`communication test-budget baseline is unavailable: ${String(ledger.baseline)}.`);
+  }
+  if (!Array.isArray(ledger.budgets)) return [...errors, 'communication test-budget ledger must declare budgets.'];
+  if (ledger.budgets.length !== Object.keys(EXPECTED_BUDGETS).length) {
+    errors.push(`communication test-budget ledger must contain exactly ${Object.keys(EXPECTED_BUDGETS).length} budgets.`);
+  }
+
+  const seenBudgets = new Set();
+  const seenFiles = new Set();
+  for (const budget of ledger.budgets) {
+    const expected = EXPECTED_BUDGETS[budget?.id];
+    if (!expected) {
+      errors.push(`unknown communication test budget: ${String(budget?.id)}.`);
+      continue;
+    }
+    if (seenBudgets.has(budget.id)) errors.push(`duplicate communication test budget: ${budget.id}.`);
+    seenBudgets.add(budget.id);
+    if (budget.spec !== expected.spec) errors.push(`${budget.id} must reference ${expected.spec}.`);
+    if (budget.requiredCases !== expected.requiredCases) {
+      errors.push(`${budget.id} must require exactly ${expected.requiredCases} cases.`);
+    }
+    const specPath = path.join(root, expected.spec);
+    if (!fs.existsSync(specPath)
+      || !fs.readFileSync(specPath, 'utf8').includes(`at least **${expected.requiredCases} distinct`)) {
+      errors.push(`${budget.id} specification does not declare its ${expected.requiredCases}-case budget.`);
+    }
+    if (!Array.isArray(budget.files) || budget.files.length === 0) {
+      errors.push(`${budget.id} must allocate cases to at least one test file.`);
+      continue;
+    }
+    let allocatedCases = 0;
+    for (const entry of budget.files) {
+      if (!isTestPath(entry?.path)) {
+        errors.push(`${budget.id} has an invalid test path: ${String(entry?.path)}.`);
+        continue;
+      }
+      if (seenFiles.has(entry.path)) {
+        errors.push(`${entry.path} is allocated to more than one communication budget.`);
+      }
+      seenFiles.add(entry.path);
+      if (!Number.isSafeInteger(entry.qualifyingCases) || entry.qualifyingCases <= 0) {
+        errors.push(`${budget.id} has an invalid qualifying-case count for ${entry.path}.`);
+        continue;
+      }
+      allocatedCases += entry.qualifyingCases;
+      const testPath = path.join(root, entry.path);
+      if (!fs.existsSync(testPath) || !fs.statSync(testPath).isFile()) {
+        errors.push(`${budget.id} test file does not exist: ${entry.path}.`);
+        continue;
+      }
+      const qualifyingDeclarations = countQualifyingDeclarations(root, ledger.baseline, entry.path);
+      if (qualifyingDeclarations < entry.qualifyingCases) {
+        errors.push(`${entry.path} has ${qualifyingDeclarations} qualifying test declarations since ${ledger.baseline}, below its allocation of ${entry.qualifyingCases}.`);
+      }
+    }
+    if (budget.allocatedCases !== allocatedCases) {
+      errors.push(`${budget.id} allocatedCases is ${String(budget.allocatedCases)} but its file allocation totals ${allocatedCases}.`);
+    }
+    if (allocatedCases < expected.requiredCases) {
+      errors.push(`${budget.id} allocates ${allocatedCases} cases, below its required ${expected.requiredCases}.`);
+    }
+  }
+  for (const budgetId of Object.keys(EXPECTED_BUDGETS)) {
+    if (!seenBudgets.has(budgetId)) errors.push(`missing communication test budget: ${budgetId}.`);
+  }
+  return errors;
+}
+
+function countQualifyingDeclarations(root, baseline, testPath) {
+  if (!gitObjectExists(root, `${baseline}:${testPath}`)) {
+    return (fs.readFileSync(path.join(root, testPath), 'utf8').match(TEST_DECLARATION) ?? []).length;
+  }
+  const diff = execFileSync(
+    'git',
+    ['diff', baseline, '--unified=0', '--', testPath],
+    { cwd: root, encoding: 'utf8' },
+  );
+  return (diff.match(ADDED_TEST_DECLARATION) ?? []).length;
+}
+
+function gitObjectExists(root, object) {
+  try {
+    execFileSync('git', ['cat-file', '-e', object], { cwd: root, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isTestPath(value) {
+  return typeof value === 'string'
+    && /^src\/.+(?:__tests__\/.+\.test\.ts|\.test\.ts)$/u.test(value)
+    && value === path.posix.normalize(value)
+    && !value.split('/').includes('..');
+}
+
+function main() {
+  const ledger = readLedger(DEFAULT_ROOT);
+  const errors = validateCommunicationTestBudget(DEFAULT_ROOT, ledger);
+  if (errors.length > 0) {
+    console.error(errors.map(error => `- ${error}`).join('\n'));
+    process.exitCode = 1;
+    return;
+  }
+  const summary = ledger.budgets
+    .map(budget => `${budget.id}=${budget.allocatedCases}/${budget.requiredCases}`)
+    .join(', ');
+  console.log(`GitHub communication test budgets: PASS (${summary}; no file is double-counted)`);
+}
+
+if (__nccwpck_require__.c[__nccwpck_require__.s] === module) main();
+
+module.exports = {
+  LEDGER_PATH,
+  countQualifyingDeclarations,
+  readLedger,
+  validateCommunicationTestBudget,
+};
+
 
 /***/ }),
 

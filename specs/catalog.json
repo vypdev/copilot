@@ -1604,7 +1604,8 @@
         "src/infrastructure/git_commit_adapter.ts",
         "src/infrastructure/branch_sync_sdd_catalog.ts",
         "src/domain/branch_sync_validation.ts",
-        "src/application/policies/lifecycle_state_policy.ts"
+        "src/application/policies/lifecycle_state_policy.ts",
+        "src/infrastructure/branch_sync_communication_budget.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1623,7 +1624,8 @@
         "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
         "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts",
         "src/application/policies/__tests__/branch_sync_lifecycle_recovery.test.ts",
-        "src/infrastructure/__tests__/branch_sync_resolved_workspace.test.ts"
+        "src/infrastructure/__tests__/branch_sync_resolved_workspace.test.ts",
+        "src/infrastructure/__tests__/branch_sync_communication_budget.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

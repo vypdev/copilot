@@ -1,3 +1,4 @@
+import { COMMUNICATION_BUDGET_PATH, refreshBranchSyncCommunicationBudget } from './branch_sync_communication_budget';
 import type {
   BranchMergePreparation,
   BranchSyncResolutionValidation,
@@ -99,6 +100,8 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
       if (indexEntries.get(path) !== entry) return invalid(`The agent changed non-conflicted path ${path}.`, "protected-index-changed");
     }
     try {
+      if (!this.resolutionValidated && conflictPaths.includes(COMMUNICATION_BUDGET_PATH)
+        && !refreshBranchSyncCommunicationBudget(this.repositoryRoot)) return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
       if (!this.resolutionValidated && conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
         && !refreshBranchSyncSddCatalog(this.repositoryRoot)) return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
       await this.checkResolvedDiff(false);
@@ -176,7 +179,17 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
   async abort(): Promise<void> {
     if (!this.mergeInProgress) return;
     try {
-      await this.git.execute("git", ["merge", "--abort"]);
+      try {
+        await this.git.execute("git", ["merge", "--abort"]);
+      } catch (error) {
+        // Verification may change a tracked resolution after trusted staging,
+        // preventing Git's normal abort. Restore only our originally clean,
+        // still-identical prepared merge; never reset a moved HEAD or parent.
+        const snapshot = this.snapshot;
+        if (!snapshot || await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha
+          || await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha) throw error;
+        await this.git.execute("git", ["reset", "--hard", snapshot.childSha]);
+      }
     } finally {
       this.snapshot = undefined;
       this.mergeInProgress = false;

@@ -415,6 +415,13 @@
           ],
           "mode": "aggregate",
           "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/infrastructure/branch_sync_communication_budget.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
         }
       ],
       "successMessage": "branch synchronization presentation coverage: PASS (catalog/policy 100%; observer/publication path 95% lines/statements, 90% branches/functions)"
