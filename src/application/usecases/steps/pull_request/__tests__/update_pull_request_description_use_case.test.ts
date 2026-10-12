@@ -96,12 +96,14 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     mockGetDiff.mockResolvedValue({ snapshot: { changes: [] }, coverage: { status } });
     const results = await useCase.invoke(request());
     expect(results[0].success).toBe(false);
+    expect(results[0].executed).toBe(false);
+    expect(results[0].errors?.length ?? 0).toBe(0);
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
   it.each([
-    { name: 'missing patch', changes: [{ filename: 'src/a.ts', additions: 1, deletions: 0, patch: '' }], errors: 1, executed: true },
+    { name: 'missing patch', changes: [{ filename: 'src/a.ts', additions: 1, deletions: 0, patch: '' }], errors: 0, executed: false },
     { name: 'character budget', changes: [{ filename: 'src/a.ts', additions: 1, deletions: 0, patch: 'a'.repeat(120_001) }], errors: 0, executed: false },
     { name: 'file budget', changes: Array.from({ length: 101 }, () => ({ filename: 'image.png', additions: 0, deletions: 0, patch: '' })), errors: 0, executed: false },
   ])('retains the body without an agent or write for automatic $name', async ({ changes, errors, executed }) => {
@@ -110,6 +112,16 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0].success).toBe(false);
     expect(results[0].executed).toBe(executed);
     expect(results[0].errors?.length ?? 0).toBe(errors);
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each(['partial', 'unavailable', 'missing-patch'])('rejects explicit generation with %s evidence and preserves the human body', async status => {
+    mockGetDiff.mockResolvedValue({ snapshot: { changes: [{ filename: 'src/a.ts', additions: 1, deletions: 0, patch: '' }] },
+      coverage: { status: status === 'missing-patch' ? 'complete' : status } });
+    const results = await useCase.invoke(request({}, 'authorized-command'));
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].errors).toEqual([expect.objectContaining({ code: 'workflow.stale' })]);
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });

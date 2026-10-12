@@ -805,6 +805,28 @@ provider evidence remains separate from fixture success. See
 
 ## 15. Documentation and discoverability
 
+### Dogfooding verification of the bot Variables link (2026-10-11)
+
+Native observer run `38176191371` failed closed with the repository Variables
+read category `http-403`. After the maintainer enabled the bot PAT's Variables
+read access, run `38176995014` completed the recommend-mode observer. This is
+evidence of that native assessment path, not proof of every PAT grant or a
+native approval.
+
+The initial guided bot link already derives these read grants from selected
+assessment mode and effective policy storage. Eight additional composed
+regressions in `setup_token_permission_policy.test.ts` verify the actual URL:
+recommend/guarded repository storage (two), explicit organization policy
+override (two), preserved organization policy (two), repository shadow
+precedence (one), and assessment off (one). They exercise the real permission
+policy and URL builder together; no token or live request is involved. These
+eight cases are a separate increment to the retained audit slices, with no
+recounting of existing policy-only or URL-only tests. No runtime permission,
+schema, configuration knob, write probe or readiness guard changes.
+
+Authentication documentation explains both read scopes, the separate operator
+write role, and the existing-PAT correction when assessment is enabled later.
+
 | Audience | Artifact | Content and verification |
 |---|---|---|
 | Setup owner | `docs/authentication.mdx` | Two roles, statuses, matrix, approval, prerequisites and cleanup |

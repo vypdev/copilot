@@ -315,17 +315,28 @@ without a push. Dogfooding run 38140515377 motivated this contract because the
 resolution was rejected before verification, but the published failure hid which
 workspace control rejected it.
 
+When the trusted catalog refresh rejects a resolution, the operator log MUST
+identify its closed validation phase: workspace/file boundary, metadata JSON
+or remaining conflict markers, metadata/evidence shape, evidence path boundary,
+catalog contract, or index output. It MUST NOT include repository paths,
+metadata values, validator messages, exception text, or raw provider output.
+This diagnosis does not relax validation, rewrite metadata, or permit a push.
+Native dogfooding runs `38173557022` and `38176196334` returned
+`sdd-catalog-invalid` without identifying the failing catalog phase; the abort
+then restored the worktree, so inspecting retained Git status could not recover
+that information. The phase is captured by trusted validation before abort.
+
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 49 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fourteen closed/forged diagnostic cases with localized replies and no push |
-| Adapters/workflow contracts | 30 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks |
+| State/idempotency/races | 50 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| Use cases/workspace | 65 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fourteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
+| Adapters/workflow contracts | 35 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
 | Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **165** | no double counting |
+| **Total** | **212** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -390,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The 118-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 206-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -423,3 +434,61 @@ setup acceptance validator also run. No tests, skips, thresholds, or runtime
 permissions were weakened. Comment 6110538037 starts the Action-owned retry;
 its final native verification and remote publication remain acceptance evidence
 to collect, not an assumed successful result.
+
+### Generated-bundle conflict recovery (2026-10-12)
+
+Native readiness sync `38240164032` on macOS resolved nine conflicts, then stopped
+before verification because ordinary ncc/vendor whitespace in the two generated
+bundles failed `git diff --check`. No source conflict markers remained in that log;
+no synchronization commit was pushed. Ten new real-Git cases reproduce three
+false rejections and retain seven independent source, marker, index and
+verification-mutation boundaries.
+
+Whitespace validation MUST remain strict on source and every unregistered
+path. Exactly `build/cli/index.js`, `build/api/index.js` and
+`build/github_action/index.js` MAY retain generator whitespace; Git conflict-marker
+validation MUST still run on all three, both before trusted staging and on the
+staged result. No content is normalized or rewritten by this check. Protected
+non-conflicted index entries, original conflict paths, HEAD/MERGE_HEAD, subsequent
+verification immutability and remote-head fences remain unchanged. The 180-case
+budget includes these ten additional cases; native recovery is pending.
+
+### Command preparation and integration checks (2026-10-12)
+
+Native38243835206 accepted a command with leading whitespace, prepared a clean
+merge, then failed its first verification because the workflow had skipped Node,
+pnpm and dependencies. Its literal prefix test disagreed with the whitespace-
+accepting domain parser. The same canonical command in38244493155 prepared
+tools, passed572suites7747tests20Windowsplatformskips and five verification
+commands, and published0f016278. Its later provider read failure during
+configuration persistence retained the completed push and durable reply;
+reconciliation38251354862 reportedalready-aligned and completedSUCCESS without
+a second merge/push. This distinguishes operation completion from run completion.
+
+The installed preparation expressions MUST cover parser whitespace and bot
+mentions when verification is configured. They MAY conservatively prepare an
+otherwise read-only request; this is a toolchain scheduling hint and MUST NOT
+authorize commands, edits, branch work or models. Existing fork/actor admission,
+runner selectors, dry-run/no-agent semantics, timeout and test budgets remain
+unchanged. Existing154structural workflow cases and fresh native whitespace
+acceptance validate this reversible workflow correction; no mirrored prose tests
+are added. The conflict prompt also requires available offline affected-module
+tests and typecheck, including missing optional adapters and both entrypoints.
+Independent mandatory verification remains the publication gate. This addresses
+readiness integration38243961378, where7852cases passed but the optional-adapter
+fallback was lost by the merge resolution. Native recovery remains pending.
+
+
+### Recover issue work state after completed synchronization (2026-10-12)
+
+Native run `38253646042` completed all five checks and published merge `86db9b1962915111f02613b4f49ec50a6a3f1cf6` on Windows, but issue #464 retained `state:blocked` and `state:awaiting-maintainer` while develop remained unchanged. Lifecycle policy recognized completed implementation and branch readiness, but not the completed synchronization result.
+
+For an issue-comment request on a branch-bearing issue, a current successful `SyncBranchUseCase` result now recovers `working` only with canonical parent/child object IDs, bounded distinct branch names and a nonnegative integer check count. A merged result must have executed and retain a canonical pushed commit. Already-aligned evidence can recover work without repeating the merge or push. Any other current executed failure takes precedence. Dry-runs, unavailable/malformed/foreign results, branchless help, unrelated events and PR readiness remain unchanged. This is a coarse work-state transition, not certification of current SDD or approval readiness.
+
+Twenty-four risk cases reproduce three missing transitions before the change; two additional nonexecuted-failure/count contracts complete 26 distinct regressions. They increase only the state allocation from 24 to 50 and the total from 180 to 206. No shared communication, SDD gate or feature case is recounted. Live recovery remains pending publication and replay on the aligned issue.
+
+### Freeze the resolved workspace after trusted staging (2026-10-12)
+
+Native diff synchronization `38270632343` passed all configured verification commands but was rejected by the final `unexpected-paths` guard. Six real-Git regressions reproduce original conflicts resolved to the child's unchanged bytes or deletion: trusted staging removes those paths from porcelain status, so the prepared unmerged path set is not the correct verification baseline.
+
+After the first trusted staging and all existing checks, the adapter MUST freeze the resolved workspace paths. Only disappearance of original conflicted paths is admitted at this transition; new paths and disappearance of non-conflicted parent changes remain rejected. Every later validation retains exact equality with this resolved baseline. This also rejects staged or unstaged verification mutations that reintroduce an unchanged resolved path. HEAD, MERGE_HEAD, original conflict authority, protected index entries, whitespace, catalog, verification and remote-head guards remain required. The inventory is now 212 distinct cases, including six new real-Git resolution and mutation cases. Native retry remains required to certify the observed incident.

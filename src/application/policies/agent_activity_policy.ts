@@ -1,5 +1,9 @@
 import type { AgentConfiguration, AgentTask } from '../../domain/agent';
 import { isAgentConfigurationReady } from '../../domain/agent';
+import { parseCopilotCommand, type CopilotCommandName } from '../../domain/copilot_command';
+import { parseBranchSyncCommandArguments } from '../../domain/branch_sync_command';
+
+const DETERMINISTIC_COMMENT_COMMANDS: ReadonlySet<CopilotCommandName> = new Set(['help', 'status', 'dismiss', 'remember']);
 
 export type AgentActivityRoute =
     | 'single-action'
@@ -51,10 +55,11 @@ export function shouldTrackAgentActivity(
                 && isAgentReady(execution, 'planner');
         case 'issue-comment':
         case 'pull-request-review-comment':
-            return hasComment(execution)
+            return hasAgentCapableComment(execution)
                 && (isAgentReady(execution, 'planner')
                     || isAgentReady(execution, 'findings')
-                    || isAgentReady(execution, 'fixer'));
+                    || isAgentReady(execution, 'fixer')
+                    || isAgentReady(execution, 'reviewer'));
         case 'pull-request':
             if (execution.pullRequest.action === 'ready_for_review') return isAgentReady(execution, 'reviewer');
             return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
@@ -84,8 +89,19 @@ function isAgentReady(execution: AgentActivityExecutionContext, task: AgentTask)
     return isAgentConfigurationReady(execution.ai.getAgentConfiguration(task));
 }
 
-function hasComment(execution: AgentActivityExecutionContext): boolean {
-    return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
+function hasAgentCapableComment(execution: AgentActivityExecutionContext): boolean {
+    const body = execution.issue.commentBody || execution.pullRequest.commentBody || '';
+    if (!body.trim()) return false;
+    const parsed = parseCopilotCommand(body);
+    if (parsed.kind === 'invalid') return false;
+    if (parsed.kind === 'command') {
+        if (DETERMINISTIC_COMMENT_COMMANDS.has(parsed.command.name)) return false;
+        if (parsed.command.name === 'sync-branch') {
+            const sync = parseBranchSyncCommandArguments(parsed.command.arguments);
+            return sync.valid && !sync.options.dryRun && sync.options.useAgent;
+        }
+    }
+    return true;
 }
 
 function hasTarget(execution: AgentActivityExecutionContext): boolean {

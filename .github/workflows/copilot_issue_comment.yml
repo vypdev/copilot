@@ -16,7 +16,8 @@ jobs:
     env:
       # Recycle Jest workers on Windows service runners during full verification.
       COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
-      COPILOT_PREPARE_VERIFICATION: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((startsWith(github.event.comment.body, '/copilot sync-branch') && !contains(github.event.comment.body, '--dry-run')) || startsWith(github.event.comment.body, '/copilot implement ') || startsWith(github.event.comment.body, '/copilot fix') || startsWith(github.event.comment.body, '/copilot remember ')) }}
+      # Preparation covers parser whitespace and mentions; authorization stays in the Action.
+      COPILOT_PREPARE_VERIFICATION: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((contains(github.event.comment.body, '/copilot') && ((contains(github.event.comment.body, 'sync-branch') && !contains(github.event.comment.body, '--dry-run')) || contains(github.event.comment.body, 'implement') || contains(github.event.comment.body, 'fix') || contains(github.event.comment.body, 'remember'))) || (vars.COPILOT_BOT_LOGIN != '' && contains(github.event.comment.body, format('@{0}', vars.COPILOT_BOT_LOGIN)) && !contains(github.event.comment.body, '--dry-run'))) }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5

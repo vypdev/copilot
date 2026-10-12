@@ -7,9 +7,12 @@ import { getGithubActionInput } from './github_action_input';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { renderApprovalRunSummary } from '../application/policies/pull_request_approval_presentation_policy';
+import { configureApplicationLogger } from '../application/ports/logging_ports';
+import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
 
 /** Dedicated trusted-default-branch route. It never calls the agent or checks out PR code. */
 export async function runPullRequestApprovalAction(token: string): Promise<void> {
+    configureApplicationLogger(createLoggerAdapter());
     const repository = github.context.payload.repository;
     const repositoryId = repository?.id;
     if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId <= 0) {

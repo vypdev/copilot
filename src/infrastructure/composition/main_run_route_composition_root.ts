@@ -1,5 +1,6 @@
 import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
+import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
 import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
 import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
 import { CommitUseCase } from "../../application/usecases/commit_use_case";
@@ -240,6 +241,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
     createPullRequestStatusReadPorts(binding, bugbot.scm.context),
+    createSddEvidenceQueryPort(binding, bugbot.scm.context),
   );
 }
 

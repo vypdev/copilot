@@ -91,3 +91,9 @@ Hooks are **installed when you run `pnpm install`** (postinstall). To reinstall:
 ## Questions?
 
 Open an issue on [GitHub](https://github.com/vypdev/copilot) or check the [Support](https://docs.page/vypdev/copilot/support) page in the documentation.
+
+
+For a linked Git worktree, run `node scripts/install-git-hooks.cjs` after dependency
+installation when refreshing hooks. The installer supports `.git` files and
+preserves your configured global hook chain. Commit verification runs build,
+tests and lint; a worktree does not relax these checks.

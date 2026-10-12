@@ -94,4 +94,4 @@ When a complete PR diff exceeds the fixed description context limits, automatic
 generation skips the optional update and keeps your current body. An explicit
 request reports that the evidence budget is exceeded; reduce the change scope
 before requesting generation again. Empty diffs also keep the body. Incomplete
-patch evidence still stops generation. No partial diff is summarized as complete.
+patch evidence skips an automatic optional update without failing the independent PR review. An explicit generation request still rejects partial, unavailable or missing-patch evidence. No partial diff is summarized as complete.
