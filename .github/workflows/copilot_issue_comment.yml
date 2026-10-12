@@ -14,8 +14,6 @@ jobs:
       checks: write
       contents: read
     env:
-      # Recycle Jest workers on Windows service runners during full verification.
-      COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1'
       # Preparation covers parser whitespace and mentions; authorization stays in the Action.
       COPILOT_PREPARE_VERIFICATION: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((contains(github.event.comment.body, '/copilot') && ((contains(github.event.comment.body, 'sync-branch') && !contains(github.event.comment.body, '--dry-run')) || contains(github.event.comment.body, 'implement') || contains(github.event.comment.body, 'fix') || contains(github.event.comment.body, 'remember'))) || (vars.COPILOT_BOT_LOGIN != '' && contains(github.event.comment.body, format('@{0}', vars.COPILOT_BOT_LOGIN)) && !contains(github.event.comment.body, '--dry-run'))) }}
     steps:
@@ -24,11 +22,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-
-      - name: Diagnose Windows checkout before tool preparation
-        if: runner.os == 'Windows' && vars.DEBUG == 'true'
-        shell: bash
-        run: git status --porcelain --untracked-files=all
 
       - name: Prepare repository pnpm
         if: env.COPILOT_PREPARE_VERIFICATION == 'true'
@@ -44,20 +37,10 @@ jobs:
         with:
           node-version: '24.x'
 
-      - name: Diagnose Windows checkout after tool preparation
-        if: runner.os == 'Windows' && vars.DEBUG == 'true'
-        shell: bash
-        run: git status --porcelain --untracked-files=all
-
       - name: Install repository verification dependencies
         if: env.COPILOT_PREPARE_VERIFICATION == 'true'
         shell: bash
         run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Diagnose Windows checkout before the Action
-        if: runner.os == 'Windows' && vars.DEBUG == 'true'
-        shell: bash
-        run: git status --porcelain --untracked-files=all
 
       - uses: ./
         with:

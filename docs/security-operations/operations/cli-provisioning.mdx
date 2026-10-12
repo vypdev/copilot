@@ -31,6 +31,15 @@ If an official installation finishes but its executable fails validation, the Ac
 
 Older setups may retain an `AGENT_PROVISIONING` repository Variable. The current Action ignores it; it can be removed during normal configuration cleanup. The setup assistant no longer offers that choice.
 
+## Supported Codex runner scope
+
+**Codex no soportado en runners Windows ejecutados como servicio.** Schedule
+Codex integration on macOS or Ubuntu. Windows installation/ACL fixtures use
+local doubles and preserve platform-safety contracts; they do not certify a
+real Codex sandbox in session 0. A successful install, login, model response,
+or CLI exit does not establish tool execution. See
+[Codex runtime support](/agents/codex-openai).
+
 ## Credential scope
 
 Map the selected provider credential only on the Copilot Action step. The Action never copies local OAuth files to a hosted runner. A controlled self-hosted Codex session can be used where its owner authorizes it; otherwise supply the relevant Secret. Do not put tokens in action inputs, command arguments, prompts, repository files, or logs.
@@ -39,4 +48,4 @@ Map the selected provider credential only on the Copilot Action step. The Action
 
 From the repository root, `node scripts/verify-agent-clis.cjs` checks executable availability, help, version, and sanitized credential state. A help or version check does not send a model request. On Windows it validates native binaries or safely resolves an existing npm shim without invoking `cmd.exe`.
 
-Windows agent support remains open until isolated hosted and self-hosted fixture jobs pass and the runner owner reviews ACLs, private artifact cleanup, cancellation, and the intended model/account. Do not use a credential-bearing test dispatch without authorization. See [Agent CLI runners](/security-operations/operations/cli-runners) and [Runtime selection](/agents/runtime-selection).
+General Windows runtime fixtures retain ACL, private-artifact cleanup and cancellation checks. Codex integration on Windows services is unsupported; passing those fixtures does not change that support decision. Do not use a credential-bearing test dispatch without authorization. See [Agent CLI runners](/security-operations/operations/cli-runners) and [Runtime selection](/agents/runtime-selection).

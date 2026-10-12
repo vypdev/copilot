@@ -1840,7 +1840,9 @@
         "docs/security-operations/operations/provisioning.mdx",
         "docs/security-operations/operations/version-pinning.mdx",
         "docs/security-operations/security/self-hosted-runners.mdx",
-        "docs/security-operations/operations/upgrade-rollback.mdx"
+        "docs/security-operations/operations/upgrade-rollback.mdx",
+        "docs/security-operations/operations/smoke-tests.mdx",
+        "docs/development/testing.mdx"
       ]
     },
     {

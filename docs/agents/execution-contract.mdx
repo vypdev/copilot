@@ -59,6 +59,15 @@ The reviewed runtime baseline is Codex `codex-cli 0.156.1`, OpenCode `1.18.3`, a
 
 When a run rejects process output, its log includes a fixed local cause: `output-limit`, `empty-output`, `malformed-json-event`, `invalid-json-event`, `missing-text-events`, or `unclassified`. These codes distinguish the existing rejection paths without exposing the response or prompt. Inspect the code before retrying or changing a provider integration; a historical log that only says `run/output` cannot establish the cause.
 
+## Codex service-runner support
+
+**Codex no soportado en runners Windows ejecutados como servicio.** Codex jobs
+use the macOS/Ubuntu pool; Windows service registrations omit `codex`. Retained
+Windows policies and fake ACL/process fixtures do not certify real Codex
+integration. An authenticated model reply or CLI exit 0 can accompany failed
+tools. Tool acceptance requires a verified repository read/edit or command and
+trusted postflight. See [Codex runtime support](/agents/codex-openai).
+
 ## Windows startup evidence
 
 Maintainers of this repository can dispatch the `Setup Platform Smoke` workflow
@@ -73,8 +82,9 @@ manifest before JSON serialization, with automatic module loading disabled.
 This avoids discovery scans when the module analysis cache is disabled. The
 probe still uses its fixed minimal environment, complete file/ancestor batch,
 DACL policy and original timeout. No profile, credential, ambient module path
-or writable repository cache is inherited. Hosted and service-runner fixtures
-remain required to establish that a published repair works on each platform.
+or writable repository cache is inherited. General hosted Windows platform fixtures remain required for those native
+process and ACL contracts. Codex integration fixtures run only on macOS and
+Ubuntu; they do not certify a Windows service sandbox.
 
 Progress assessments receive a complete comparison pinned to the repository's
 base and source commits. Generated `build/` outputs and the exact generated

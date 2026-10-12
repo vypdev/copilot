@@ -510,3 +510,13 @@ Local verification passed all 578 suites and 7,813 tests, with 35 configured pla
 ### Closed workspace-shape diagnosis (2026-10-12)
 
 Native history retry `38287091398` on macOS stopped with `unexpected-paths` before metadata normalization. The abort preserved both remote branches, but no retained evidence distinguished additions from disappearing prepared paths. On this rejection, trusted infrastructure MUST report only a fixed phase (resolution, trusted staging or verification) and numeric counts of added paths, removed conflicted/protected paths and added canonical generated bundles. Private names, paths, raw Git/provider output and metadata values remain excluded. Validation authority and abort behavior remain unchanged. Three distinct phase/count/privacy cases extend the inventory from 234 to 237. The log supports a targeted recovery; it does not establish which cause occurred in the earlier run.
+
+### Codex service platform scope (2026-10-12)
+
+The Windows heap incident above remains historical verification evidence.
+Agent-capable synchronization now uses the shared Mac/Ubuntu `codex` pool;
+Windows service registrations omit `codex`. No new Windows-service Codex
+sync/fixer retry is an acceptance requirement. General Windows fixtures and
+coverage budgets remain. Failed verification preserves the managed remote
+head, and model/CLI success is not proof of real tools. See the authoritative
+[service retirement and six-case routing budget](./agent-runtime-provider-and-model-routing.md).
