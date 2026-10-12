@@ -53,6 +53,14 @@ describe('projectPullRequestReadiness', () => {
             readiness:'unavailable',code:'identity-unavailable',headSha:'',baseSha:'',
             evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
     });
+    it.each([
+        {repositoryId:0}, {repositoryId:Number.NaN}, {pullNumber:0}, {pullNumber:Number.MAX_SAFE_INTEGER+1},
+    ])('requires valid final target identity even when assessment is off %#', invalid => {
+        const e=readinessEvidence(),rawPolicy=readinessPolicy('off');
+        expect(projectPullRequestReadiness(rawPolicy,e,{...e,rawPolicy,...invalid})).toMatchObject({
+            readiness:'unavailable',mode:'unavailable',code:'identity-unavailable',headSha:'',baseSha:'',
+            evidence:{ci:'unavailable',coverage:'unavailable',bugbot:'unavailable',reviews:'unavailable'}});
+    });
     it('fences a changed policy identity', () => {
         expect(projectPullRequestReadiness(policy('guarded'), evidence, { ...final, rawPolicy: policy('recommend') }))
             .toMatchObject({ readiness: 'pending', code: 'superseded' });

@@ -283,13 +283,13 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 
 | Area | Implemented distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain/configuration/pure planning | 47 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
+| Domain/configuration/pure planning | 51 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
 | State/application/idempotency/races | 46 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
 | Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 18 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **144** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **148** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -357,7 +357,7 @@ Update English and Spanish catalogs, documentation, and catalog evidence in the 
 - [ ] Status has no approval, repair, model, or lifecycle mutation capability.
 - [ ] Issue linkage behavior for zero, one, and multiple PRs is deterministic.
 - [ ] Replay updates one correlated reply and respects existing notification/lifecycle budgets.
-- [x] Numeric test budget of 144 distinct cases and coverage requirements pass.
+- [x] Numeric test budget of 148 distinct cases and coverage requirements pass.
 - [ ] English and Spanish catalogs are complete with atomic fallback and safe rendering.
 - [ ] User, setup, operator, and contributor documentation is complete and discoverable.
 - [ ] Existing status and #454 SDD-readiness behavior remain compatible.
@@ -452,3 +452,10 @@ Local terminal-state verification passed 584 suites and 7,951 tests with 35 conf
 Native duplicate findings `4251357708`/`4251357838` identified the same missing pure-policy guard. The final repository and PR identifiers MUST be positive safe integers before a valid current target can be compared with the collected evidence. Invalid final identifiers remain unavailable, rather than presenting unknown identity as a known superseded snapshot. Finally verified off still makes no assessment or native gate claim. Four cases reproduce zero/non-finite repository IDs and zero/unsafe PR numbers; the own inventory is 144 cases (47 policy,46 application,19 provider,5 workflow,18 presentation,9 integration). Duplicate semantic publication is being investigated independently; this correction does not widen target authority.
 
 Local final-target verification passed 584 suites and 7,955 tests with 35 configured platform skips (7,990 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Generated bundles are included. Both native findings still require a fresh review on the published head.
+
+
+### Required target identity is independent of off-mode optional evidence (2026-10-12)
+
+Native finding `4251587455` exposed invalid final target IDs in the verified off-policy path. Final repository and PR identity are required selection authority, rather than optional native checks or revision facts. They MUST be positive safe integers in every mode. Malformed final target identity returns unavailable before optional evidence is projected; valid target identity with verified off still disables assessment when optional facts are missing, malformed or superseded. Four additional off-mode cases reproduced this defect. The own inventory is 148 distinct cases (51 policy,46 application,19 provider,5 workflow,18 presentation,9 integration); the original floor and all gates remain unchanged.
+
+Local required-target/off-mode verification passed 584 suites and 7,959 tests with 35 configured platform skips (7,994 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Generated bundles are included; native current-head review remains required.

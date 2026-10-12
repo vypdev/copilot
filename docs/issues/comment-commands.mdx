@@ -353,3 +353,7 @@ reads remain unavailable; neither case retains stale satisfied gate claims.
 
 Malformed final repository or PR identifiers make readiness unavailable. They
 are not treated as a known head movement, and no earlier satisfied gate survives.
+
+The final repository and PR identifiers remain required even when approval
+assessment is off. An invalid final target is unavailable; a valid target with
+a verified off policy still reports disabled when optional evidence is missing.
