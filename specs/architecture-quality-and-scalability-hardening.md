@@ -879,3 +879,5 @@ package validation when bundles change, and `graphify update .` after code chang
   remains a security contract, not product legacy support.
 - Decision: quality is satisfied by observable invariants and evidence. Static
   scores guide review but are never optimized independently of cohesion and risk.
+
+Native doctor parent integration 38277723562 exhausted a Jest worker in the raw-error logging architecture suite. Its unchanged seven assertions now share one real TypeScript program with all production roots and six isolated fixture modules, instead of rebuilding the project per fixture. Real logger/sanitizer symbol resolution and the complete source scan remain mandatory. No new acceptance case is claimed and no threshold, platform or check is reduced.
