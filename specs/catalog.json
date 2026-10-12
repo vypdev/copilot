@@ -559,7 +559,7 @@
       "status": "implemented",
       "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/architecture-quality-and-scalability-hardening.md",
         "specs/issue-and-pull-request-context-hardening.md"
