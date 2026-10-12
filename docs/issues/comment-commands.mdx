@@ -327,10 +327,11 @@ card when verified. Missing, invalid or unavailable evidence is explicit. The
 command reads current issue, record and branch facts again before claiming a
 current comparison. It does not run an agent, change activity labels or edit files.
 
-On a PR, exactly one native same-repository closing issue is required, and its
-current linked branch must match the PR head. Multiple native links report
-ambiguity; the command never guesses from issue numbers in text. Use the intended
-issue conversation to resolve ambiguity. A replay of the same source comment
+On a PR, exactly one SDD-eligible issue among the native same-repository closing
+links is required, and its current linked branch must match the PR head. Copilot
+checks at most 100 native candidates and reports ambiguity for multiple eligible
+issues; the command never guesses from issue numbers in text. Use the intended
+issue conversation to resolve ambiguity. The same eligibility selection is rechecked before returning counts. A replay of the same source comment
 refreshes its existing owned reply; a new comment gets a separate reply.
 
 Comparison limits are fixed: 70,000 characters, 280,000 UTF-8 bytes and 2,000

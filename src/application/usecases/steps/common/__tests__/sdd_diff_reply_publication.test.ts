@@ -119,3 +119,15 @@ describe('SDD diff correlated read refresh', () => {
     expect(body).toContain('key="copilot-sdd-diff"');
   });
 });
+
+
+describe('unexecuted SDD query remains inert', () => {
+  it('does not publish a successful Result whose default executed flag is false', async () => {
+    const value = new Result({ id: 'Comment.SddDiff', success: true,
+      payload: { publication: { kind: 'sdd-diff', markdown: 'Verified-looking body', locale: 'en-US' } } });
+    const comments = repository();
+    await runPublishResume({ owner: 'acme', repository: 'repo', botLogin: 'vypbot', locale: 'en-US',
+      target: { kind: 'issue', number: 7 }, requestCorrelationId: 'comment:41', results: [value] }, 'Publish', comments);
+    expect(comments.listIssueComments).not.toHaveBeenCalled(); expect(comments.addComment).not.toHaveBeenCalled();
+  });
+});

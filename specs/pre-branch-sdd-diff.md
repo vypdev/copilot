@@ -106,7 +106,7 @@ Text equivalent: comment -> exact target and evidence verification -> bounded co
 
 1. Parse `/copilot sdd-diff` with no arguments using the existing deterministic parser. Invalid arguments follow existing help behavior and do not invoke a model.
 2. On an issue, apply existing admission/profile policy: feature issues and admitted branch-bearing contract-change issues for which the SDD gate applies are eligible. Unsupported, exempt and help targets return not-applicable without writes other than the correlated query reply.
-3. On a PR, query the exact event PR's native GitHub `closingIssuesReferences` relationship through a narrow read-only projection. Validate same-repository canonical PR identity and pagination completeness. Require exactly one native closing issue before reading its admission/profile. Zero native links or an ineligible sole issue is not-applicable; multiple native links are conservatively ambiguous, even if a subset might be eligible. Disagreeing authoritative identity is unavailable. Incomplete/unreadable authority is unavailable. Never infer from equal numbers, body text, branch scans, or a newest candidate.
+3. On a PR, query the exact event PR's native GitHub `closingIssuesReferences` relationship through a narrow read-only projection. Validate same-repository canonical PR identity and pagination completeness. Read admission and the existing SDD/start policy for each of at most 100 native closing issues. Select exactly one SDD-eligible issue; zero eligible issues is not-applicable and multiple eligible issues are ambiguous. An unreadable candidate is unavailable rather than assumed ineligible. Recheck selection after document reads and retain the final native association fence. Incomplete/unreadable authority is unavailable. Never infer from equal numbers, body text, branch scans, or a newest candidate.
 4. Read the latest configured-bot-owned valid schema-v1 gate record for the exact issue. Confirm current catalog ownership and its allowlisted SDD path. Preserve `commitSha`/`baseSha` as first publication; use `revisionSha`/`revisionBaseSha` as current publication when present. Do not weaken schema or create another store.
 5. Verify exact branch linkage and live branch name/head using existing readiness proof. Verify publication and ancestry at immutable SHAs. A missing, deleted, mismatched or unverifiable branch/publication cannot support a current comparison.
 6. Compute the same digest as the gate from current normalized title, visible human body, admitted kind, profile and original recorded base. Digest mismatch takes precedence and reports stale. A digest-matching awaiting-answer record with verified first publication reports pending-revision. Neither permits current counts. A current comparison requires matching digest and verified current publication.
@@ -276,21 +276,21 @@ Errors use `impact -> cause -> action -> retained state`; a failed read must not
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **217 distinct extension cases**, with a 24-case risk floor exceeded by the concrete inventory below. Existing shared gate/status/publication cases remain unchanged and are not counted again.
+Minimum: **229 distinct extension cases**, with a 24-case risk floor exceeded by the concrete inventory below. Existing shared gate/status/publication cases remain unchanged and are not counted again.
 
 | Area | Distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Pure bounded diff | 18 | Exact line/section changes, fenced headings, hostile input, all fixed resource ceilings |
 | Presentation/localization/navigation | 60 | Ten states in both catalogs, atomic fallback, immutable commit/blob/compare links, clarification cards, escaping and bounds |
-| Application/authority/fences | 52 | Admission, missing/invalid/pending/stale authority, immutable reads, issue/card/head/PR-link races, exact author and no writes |
+| Application/authority/fences | 63 | Admission, missing/invalid/pending/stale authority, immutable reads, issue/card/head/PR-link races, exact author and no writes |
 | Native PR-link adapter | 45 | Bound repository ID/name and head repository, exact PR/head/ref, author identity, complete pagination, malformed/foreign/duplicate rows and denial |
 | Read-only composition | 5 | Frozen repository binding, trusted server origin, native event repository ID and receiver-bound document read without writers |
 | Parser/routes/agent activity | 15 | Whitespace/case, no arguments, EN/ES/fallback, absent query, no agent activation or activity |
-| Correlated publication/replay | 17 | Same-source refresh, unchanged replay, distinct source, ownership/correlation/key isolation, duplicate healing, static catalogs and final sanitization |
+| Correlated publication/replay | 18 | Same-source refresh, unchanged replay, distinct source, ownership/correlation/key isolation, duplicate healing, static catalogs and final sanitization |
 | Actual Execution projection | 5 | Native repository ID/issue author/profile digest, immutable input, missing/zero/unsafe identity and native PR target |
-| **Total** | **217** | Every case counted once |
+| **Total** | **229** | Every case counted once |
 
-The two new shared `SddEvidenceQueryUseCase` opaque-authority regressions are allocated only to the owning status companion (198 + 2 = 200); they are excluded from this 217-case budget. The gate's separate 149-case budget and both communication ledgers remain unchanged.
+The two new shared `SddEvidenceQueryUseCase` opaque-authority regressions are allocated only to the owning status companion (198 + 2 = 200); they are excluded from this 229-case budget. The gate's separate 149-case budget and both communication ledgers remain unchanged.
 
 Repository-wide thresholds remain 90% lines/statements, 88% functions and 82% branches. `scripts/coverage-budgets.json` additionally enforces 100% in every new pure module, and at least 95% lines/statements and 90% branches/functions in each new application, native adapter and composition module. All six new runtime modules currently achieve 100% in the focused scope. Deterministic fakes and actual Execution constructors provide local proof; live GitHub runs independently establish bot permissions, event wiring and human UX.
 
@@ -303,7 +303,7 @@ Required distinct risk coverage includes eligibility/identity (4), record/owners
 | User | `docs/issues/comment-commands.mdx` | Exact command, eligible targets, examples, states and links | Command catalog and link checks |
 | Issue owner | `docs/issues/pre-branch-sdds.mdx` | First/current revision distinction, stale/pending recovery, structural-only caveat | Examples checked against fixtures |
 | Operator | Same SDD guide | Invalid/unavailable evidence, retry and permission boundaries | State decision table review |
-| Contributor | Capability SDD and catalog evidence | Ports, trust boundaries, 217-case budget, workflow checks | `pnpm run validate:specifications`; catalog generation/check as repository requires |
+| Contributor | Capability SDD and catalog evidence | Ports, trust boundaries, 229-case budget, workflow checks | `pnpm run validate:specifications`; catalog generation/check as repository requires |
 
 Docs must explain PR exact-link rules, limits, no-write behavior and that line/title differences do not establish semantic requirement changes. Update the capability catalogue evidence and owning SDD or this approved bounded companion before branch creation. Keep documentation examples synchronized with fixtures.
 
@@ -316,7 +316,7 @@ Docs must explain PR exact-link rules, limits, no-write behavior and that line/t
 5. Given any current digest mismatch, including an awaiting-answer record, when queried, then stale takes precedence over pending; no current counts appear and the question-card link is provided.
 6. Given a foreign, forged, malformed or unknown-version record, when queried, then no current comparison is claimed and no untrusted values are rendered as authority.
 7. Given wrong owner/path, absent publication, deleted or mismatched branch, failed ancestry/publication proof, when queried, then the result is invalid, missing or unavailable as supported by verified facts, never current-ready.
-8. Given a PR with exact native same-repository closing-issue authority to zero eligible issues, when queried, then it reports not-applicable; with two native closing issues or disagreeing identity it reports ambiguous/unavailable.
+8. Given a PR with exact native same-repository closing-issue authority to zero eligible issues, when queried, then it reports not-applicable; with two SDD-eligible issues or disagreeing identity it reports ambiguous/unavailable.
 9. Given incomplete PR pagination or unreadable authority, when queried, then it reports unavailable and does not fall back to body numbers or equal PR/issue numbers.
 10. Given a document over any character, byte or line limit, or computation over 2,000,000 steps, when compared, then it reports bounded/unavailable without truncation or guessed counts.
 11. Given more than eight changed section titles or unsafe headings, when rendered, then only up to eight escaped, bounded titles appear and the omitted count is explicit; mentions/control/Markdown injection is inert.
@@ -349,7 +349,7 @@ Docs must explain PR exact-link rules, limits, no-write behavior and that line/t
 5. Add adapter mappings and structural PR identity/pagination tests.
 6. Add localized states and correlated reply integration with golden and semantic fixtures.
 7. Update both issue docs, capability catalogue evidence and this companion/owning SDD before branch creation.
-8. Complete 217-case minimum, all existing gate budgets, #454 UX review, architecture/workflow checks and specification validation.
+8. Complete 229-case minimum, all existing gate budgets, #454 UX review, architecture/workflow checks and specification validation.
 
 ## 19. Definition of Done
 
@@ -437,7 +437,14 @@ Only the `copilot-sdd-diff` reply family refreshes its existing exact bot-owned 
 Live command activation, #454 first/revised UX, PR native-link acceptance, replay and locale checks remain pending promotion. Local coverage is not proof of those outcomes.
 
 
-Stale presentation does not invent a cause: a card or head race is not described as an issue edit. The next action retries the current read first and directs the owner to clarifications conditionally when the issue itself changed. Existing state/fence cases cover this wording without adding mirrored prose tests or inflating the 217-case budget.
+Stale presentation does not invent a cause: a card or head race is not described as an issue edit. The next action retries the current read first and directs the owner to clarifications conditionally when the issue itself changed. Existing state/fence cases cover this wording without adding mirrored prose tests or inflating the 229-case budget.
 
 
 Final local integration on Action merge `86db9b1962915111f02613b4f49ec50a6a3f1cf6` passes the official full validation: 579 suites, 7,952 passing tests and 35 unchanged platform skips. Overall coverage is 97.25% lines, 96.23% statements, 92.70% branches and 97.10% functions; every new comparison module remains at 100%. Type, lint, workflow, documentation/specification validation, generated catalog and graph update pass. Live whitespace/case/newline synchronization run `38253646042` also passed on Windows with all five configured checks before publishing that parent merge. This proves operational synchronization and combined local source; it does not yet activate the new command on master.
+
+
+### Independent review: native eligibility and inert results (2026-10-12)
+
+PR #469 review finding `4249066303` correctly identified that the provisional all-links ambiguity rule was stricter than the requested exactly-one-eligible behavior. The query now reads bounded native candidate admission and the existing issue-start/SDD requirement policy, selects one eligible candidate, and rechecks that selection before returning counts. It rejects unreadable candidates and the fixed 100-candidate ceiling, and retains the native head/ref/repository/author fence. Eleven distinct cases cover eligible + help/exempt links, selected author, zero/multiple eligible candidates, unreadability, lost/new/swapped eligibility, missing author and the ceiling.
+
+Finding `4249066310` was a false positive: the shared selector already returns before this branch when `result.executed` is false. One regression using Result's default false value proves no comment read or write; the maintainer recorded that evidence and invoked `/copilot dismiss` instead of adding a redundant guard. The current feature inventory is 217 + 11 + 1 = 229. Shared status/authority cases remain outside that total.

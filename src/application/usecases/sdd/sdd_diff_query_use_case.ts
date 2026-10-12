@@ -1,3 +1,4 @@
+import { decideIssueStart } from '../../../domain/issue_start_policy';
 import { classifyIssueWorkflow } from '../../../domain/issue_workflow_profile';
 import { compareSddStructure } from '../../../domain/pre_branch_sdd_diff';
 import type { SddEvidenceQueryContext, SddEvidenceSnapshot } from '../../ports/sdd_evidence_read_ports';
@@ -28,10 +29,12 @@ export class SddDiffQueryUseCase {
         const association = await this.ports.links.readClosingIssues(request.target.number);
         if (association.state !== 'verified' || association.pullNumber !== request.target.number) return { state: 'unavailable' };
         if (association.issueNumbers.length === 0) return { state: 'not-applicable' };
-        if (association.issueNumbers.length !== 1) return { state: 'ambiguous' };
+        if (association.issueNumbers.length > 100) return { state: 'unavailable' };
+        const choice = await this.selectEligible(request, association);
+        if (choice.state !== 'selected') return { state: choice.state };
         links = association;
-        issueNumber = association.issueNumbers[0];
-        issueAuthor = association.issueAuthors[issueNumber];
+        issueNumber = choice.context.issueNumber;
+        issueAuthor = choice.context.issueAuthor;
       }
       if (!issueAuthor?.trim()) return { state: 'unavailable' };
       const context = await this.context(request, issueNumber, issueAuthor);
@@ -57,7 +60,13 @@ export class SddDiffQueryUseCase {
           : { state: 'compared', publication, changes };
       }
       // Re-admit the exact issue, then re-read the shared fenced authority.
-      const freshContext = await this.context(request, issueNumber, issueAuthor);
+      let freshContext: SddEvidenceQueryContext | undefined;
+      if (links) {
+        const choice = await this.selectEligible(request, links);
+        if (choice.state !== 'selected') return { state: choice.state };
+        if (choice.context.issueNumber !== issueNumber) return historicalStale(original, issueNumber);
+        freshContext = choice.context;
+      } else freshContext = await this.context(request, issueNumber, issueAuthor);
       if (!freshContext || freshContext.admittedKind !== context.admittedKind) return { state: 'stale' };
       const fresh = await this.ports.evidence.read(freshContext);
       if (!original.authorityDigest || fresh.authorityDigest !== original.authorityDigest
@@ -73,13 +82,29 @@ export class SddDiffQueryUseCase {
     } catch { return { state: 'unavailable' }; }
   }
 
+  /** At most the adapter's fixed 100 native candidates; no body/number inference. */
+  private async selectEligible(request: SddDiffRequest, links: Extract<SddDiffPullRequestLinks, { state: 'verified' }>): Promise<
+    { readonly state: 'selected'; readonly context: SddEvidenceQueryContext } | { readonly state: 'ambiguous' | 'not-applicable' }> {
+    let selected: SddEvidenceQueryContext | undefined;
+    for (const number of links.issueNumbers) {
+      const author = links.issueAuthors[number];
+      if (!author?.trim()) throw new Error('Native issue author is unavailable.');
+      const context = await this.context(request, number, author);
+      if (!context) continue;
+      if (selected) return { state: 'ambiguous' };
+      selected = context;
+    }
+    return selected ? { state: 'selected', context: selected } : { state: 'not-applicable' };
+  }
+
   private async context(request: SddDiffRequest, issueNumber: number, issueAuthor: string): Promise<SddEvidenceQueryContext | undefined> {
     const [labels, body] = await Promise.all([
       this.ports.labels.getLabels(issueNumber), this.ports.descriptions.getDescription(issueNumber),
     ]);
     if (body === undefined) throw new Error('Issue admission is unavailable.');
     const admission = classifyIssueWorkflow(labels, request.profile, request.labelConfiguration, body);
-    return admission.status === 'eligible' ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
+    return admission.status === 'eligible' && decideIssueStart({ kind: admission.kind, labels,
+      issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
       profileDigest: request.profileDigest, trustedBotLogin: request.trustedBotLogin,
       issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch }) : undefined;
   }

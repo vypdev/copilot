@@ -19,8 +19,8 @@ function fixture() {
   const ports = {
     evidence: { read: jest.fn(async (): Promise<SddEvidenceSnapshot> => published()) },
     links: { readClosingIssues: jest.fn(async (): Promise<SddDiffPullRequestLinks> => links()) },
-    labels: { getLabels: jest.fn(async (): Promise<readonly string[]> => ['feature']) },
-    descriptions: { getDescription: jest.fn(async (): Promise<string | undefined> => body) },
+    labels: { getLabels: jest.fn(async (_issueNumber: number): Promise<readonly string[]> => ['feature', 'in-progress']) },
+    descriptions: { getDescription: jest.fn(async (_issueNumber: number): Promise<string | undefined> => body) },
     documents: { readSdd: jest.fn(async (sha: string): Promise<string | undefined> => sha === first ? '# Scope\nBefore\n' : '# Scope\nAfter\n') },
   } satisfies SddDiffReadPorts;
   return { request, ports, links, query: new SddDiffQueryUseCase(ports) };
@@ -56,9 +56,10 @@ describe('fenced structural SDD comparison query', () => {
   it.each(['zero', 'multiple', 'denied', 'wrong PR'] as const)('withholds the %s native closing-issue association without guessed issue reads', async scenario => {
     const f = fixture(); const value = f.links();
     f.ports.links.readClosingIssues.mockResolvedValue(scenario === 'denied' ? { state: 'unavailable' } : { ...value,
-      ...(value.state === 'verified' ? { issueNumbers: scenario === 'zero' ? [] : scenario === 'multiple' ? [42, 43] : [42], pullNumber: scenario === 'wrong PR' ? 98 : 99 } : {}) });
+      ...(value.state === 'verified' ? { issueNumbers: scenario === 'zero' ? [] : scenario === 'multiple' ? [42, 43] : [42], issueAuthors: { 42: 'native-author', 43: 'native-author' }, pullNumber: scenario === 'wrong PR' ? 98 : 99 } : {}) });
     await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: scenario === 'zero' ? 'not-applicable' : scenario === 'multiple' ? 'ambiguous' : 'unavailable' });
-    expect(f.ports.labels.getLabels).not.toHaveBeenCalled();
+    if (scenario === 'multiple') expect(f.ports.labels.getLabels).toHaveBeenCalledTimes(2);
+    else expect(f.ports.labels.getLabels).not.toHaveBeenCalled();
   });
   it.each(['unmanaged', 'conflicting', 'disabled', 'invalid form'])('withholds %s issue admission before gate/document reads', async scenario => {
     const f = fixture(); let request = f.request;
@@ -117,7 +118,7 @@ describe('fenced structural SDD comparison query', () => {
       verified: { ...initial.verified!, branchHeadSha: scenario === 'branch' ? 'f'.repeat(40) : head,
         currentSha: scenario === 'revision' ? 'f'.repeat(40) : revision,
         capabilityId: scenario === 'capability' ? 'other' : initial.verified!.capabilityId } };
-    if (scenario === 'labels/form') f.ports.labels.getLabels.mockResolvedValueOnce(['feature']).mockResolvedValueOnce([]);
+    if (scenario === 'labels/form') f.ports.labels.getLabels.mockResolvedValueOnce(['feature', 'in-progress']).mockResolvedValueOnce([]);
     f.ports.evidence.read.mockResolvedValueOnce(initial).mockResolvedValueOnce(fresh);
     const result = await f.query.read(f.request); expect(result.state).toBe('stale'); expect(result).not.toHaveProperty('changes');
   });
@@ -148,5 +149,91 @@ describe('fenced structural SDD comparison query', () => {
     const f = fixture(); const writer = jest.fn(); const model = jest.fn(); const broad = { ...f.ports, writer, model };
     await new SddDiffQueryUseCase(broad).read(f.request);
     expect(writer).not.toHaveBeenCalled(); expect(model).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('select one SDD-eligible native closing issue', () => {
+  function multiple() {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.links.readClosingIssues.mockResolvedValue({ ...links, issueNumbers: [42, 43], issueAuthors: { 42: 'author-42', 43: 'author-43' } });
+    return f;
+  }
+  function oneEligible(f: ReturnType<typeof fixture>, eligible = 42) {
+    f.ports.labels.getLabels.mockImplementation(async number => number === eligible ? ['feature', 'in-progress'] : ['help', 'in-progress']);
+    f.ports.descriptions.getDescription.mockImplementation(async number => number === eligible ? body : '### Describe your problem or question\nHelp');
+  }
+  it('compares the sole eligible feature while ignoring a natively linked help issue', async () => {
+    const f = multiple(); oneEligible(f);
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toMatchObject({ state: 'compared' });
+    expect(f.ports.evidence.read).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 42, issueAuthor: 'author-42' }));
+  });
+  it('uses the selected native author when the eligible issue is not the first candidate', async () => {
+    const f = multiple(); oneEligible(f, 43);
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toMatchObject({ state: 'compared' });
+    expect(f.ports.evidence.read).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 43, issueAuthor: 'author-43' }));
+  });
+  it('returns not-applicable when none of multiple native issues requires an SDD', async () => {
+    const f = multiple(); f.ports.labels.getLabels.mockResolvedValue(['help', 'in-progress']);
+    f.ports.descriptions.getDescription.mockResolvedValue('### Describe your problem or question\nHelp');
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'not-applicable' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+  it('withholds comparison when two native candidates are SDD-eligible', async () => {
+    const f = multiple();
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'ambiguous' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+  it('does not assume an unreadable candidate is ineligible', async () => {
+    const f = multiple(); oneEligible(f); f.ports.descriptions.getDescription.mockImplementation(async number => number === 42 ? body : undefined);
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'unavailable' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+  it('withholds counts when an ineligible candidate becomes eligible during document reads', async () => {
+    const f = multiple(); oneEligible(f);
+    f.ports.documents.readSdd.mockImplementation(async () => {
+      f.ports.labels.getLabels.mockResolvedValue(['feature', 'in-progress']); f.ports.descriptions.getDescription.mockResolvedValue(body); return '# Scope\nText';
+    });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'ambiguous' });
+  });
+  it('withholds counts when the selected issue loses eligibility during document reads', async () => {
+    const f = multiple(); oneEligible(f);
+    f.ports.documents.readSdd.mockImplementation(async () => {
+      f.ports.labels.getLabels.mockResolvedValue(['help', 'in-progress']);
+      f.ports.descriptions.getDescription.mockResolvedValue('### Describe your problem or question\nHelp'); return '# Scope\nText';
+    });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'not-applicable' });
+  });
+  it('excludes a started branch-bearing issue whose admission does not require an SDD', async () => {
+    const f = multiple(); oneEligible(f);
+    f.ports.labels.getLabels.mockImplementation(async number => number === 42 ? ['feature', 'in-progress'] : ['documentation', 'in-progress']);
+    f.ports.descriptions.getDescription.mockImplementation(async number => number === 42 ? body : '### Describe the documentation update\nDocs\n### Why is this update needed?\nNeed');
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toMatchObject({ state: 'compared' });
+  });
+  it('rejects a native inventory beyond the fixed 100-candidate ceiling before metadata reads', async () => {
+    const f = multiple(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.links.readClosingIssues.mockResolvedValue({ ...links, issueNumbers: Array.from({ length: 101 }, (_, i) => i + 1) });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'unavailable' });
+    expect(f.ports.labels.getLabels).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('native eligibility selection final identity', () => {
+  it('withholds a candidate whose native author is missing', async () => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.links.readClosingIssues.mockResolvedValue({ ...links, issueAuthors: {} });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'unavailable' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+  it('withholds counts when the sole eligible native issue changes between collection and reply', async () => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    let chosen = 42;
+    f.ports.links.readClosingIssues.mockResolvedValue({ ...links, issueNumbers: [42, 43], issueAuthors: { 42: 'author-42', 43: 'author-43' } });
+    f.ports.labels.getLabels.mockImplementation(async number => number === chosen ? ['feature', 'in-progress'] : ['help', 'in-progress']);
+    f.ports.descriptions.getDescription.mockImplementation(async number => number === chosen ? body : '### Describe your problem or question\nHelp');
+    f.ports.documents.readSdd.mockImplementation(async () => { chosen = 43; return '# Scope\nText'; });
+    const result = await f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } });
+    expect(result).toMatchObject({ state: 'stale' }); expect(result).not.toHaveProperty('changes');
   });
 });

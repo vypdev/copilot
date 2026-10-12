@@ -43605,7 +43605,7 @@ const EN = Object.freeze({
     'sddDiff.pending-revision': 'The requested SDD revision is pending. Current change counts are unavailable.',
     'sddDiff.invalid': 'The owning SDD evidence could not be verified.',
     'sddDiff.unavailable': 'The comparison could not be verified. No current change counts are available.',
-    'sddDiff.ambiguous': 'More than one issue is linked to this PR.',
+    'sddDiff.ambiguous': 'More than one SDD-eligible issue is linked to this PR.',
     'sddDiff.bounded': 'The verified documents exceed a fixed comparison limit; exact counts are unavailable.',
     'sddDiff.compared': 'Compared verified published revisions.', 'sddDiff.none': 'No action is required.',
     'sddDiff.publish': 'Publish the SDD through the existing issue workflow, then retry this command.',
@@ -43631,7 +43631,7 @@ const ES = Object.freeze({
     'sddDiff.pending-revision': 'La revisión solicitada del SDD está pendiente. No hay recuentos de cambios actuales.',
     'sddDiff.invalid': 'No se pudo verificar la evidencia del SDD propietario.',
     'sddDiff.unavailable': 'No se pudo verificar la comparación. No hay recuentos de cambios actuales.',
-    'sddDiff.ambiguous': 'Esta PR enlaza más de una issue.',
+    'sddDiff.ambiguous': 'Esta PR enlaza más de una issue apta para comparar SDD.',
     'sddDiff.bounded': 'Los documentos verificados superan un límite fijo de comparación; no hay recuentos exactos.',
     'sddDiff.compared': 'Se compararon las revisiones publicadas y verificadas.', 'sddDiff.none': 'No se requiere ninguna acción.',
     'sddDiff.publish': 'Publica el SDD mediante el flujo existente de la issue y vuelve a ejecutar el comando.',
@@ -55599,6 +55599,7 @@ function canonicalIssueUrl(context) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SddDiffQueryUseCase = void 0;
+const issue_start_policy_1 = __nccwpck_require__(90332);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const pre_branch_sdd_diff_1 = __nccwpck_require__(28558);
 /** Structural comparison over shared verified evidence, with no writer/model capability. */
@@ -55626,11 +55627,14 @@ class SddDiffQueryUseCase {
                     return { state: 'unavailable' };
                 if (association.issueNumbers.length === 0)
                     return { state: 'not-applicable' };
-                if (association.issueNumbers.length !== 1)
-                    return { state: 'ambiguous' };
+                if (association.issueNumbers.length > 100)
+                    return { state: 'unavailable' };
+                const choice = await this.selectEligible(request, association);
+                if (choice.state !== 'selected')
+                    return { state: choice.state };
                 links = association;
-                issueNumber = association.issueNumbers[0];
-                issueAuthor = association.issueAuthors[issueNumber];
+                issueNumber = choice.context.issueNumber;
+                issueAuthor = choice.context.issueAuthor;
             }
             if (!issueAuthor?.trim())
                 return { state: 'unavailable' };
@@ -55661,7 +55665,17 @@ class SddDiffQueryUseCase {
                     : { state: 'compared', publication, changes };
             }
             // Re-admit the exact issue, then re-read the shared fenced authority.
-            const freshContext = await this.context(request, issueNumber, issueAuthor);
+            let freshContext;
+            if (links) {
+                const choice = await this.selectEligible(request, links);
+                if (choice.state !== 'selected')
+                    return { state: choice.state };
+                if (choice.context.issueNumber !== issueNumber)
+                    return historicalStale(original, issueNumber);
+                freshContext = choice.context;
+            }
+            else
+                freshContext = await this.context(request, issueNumber, issueAuthor);
             if (!freshContext || freshContext.admittedKind !== context.admittedKind)
                 return { state: 'stale' };
             const fresh = await this.ports.evidence.read(freshContext);
@@ -55682,6 +55696,22 @@ class SddDiffQueryUseCase {
             return { state: 'unavailable' };
         }
     }
+    /** At most the adapter's fixed 100 native candidates; no body/number inference. */
+    async selectEligible(request, links) {
+        let selected;
+        for (const number of links.issueNumbers) {
+            const author = links.issueAuthors[number];
+            if (!author?.trim())
+                throw new Error('Native issue author is unavailable.');
+            const context = await this.context(request, number, author);
+            if (!context)
+                continue;
+            if (selected)
+                return { state: 'ambiguous' };
+            selected = context;
+        }
+        return selected ? { state: 'selected', context: selected } : { state: 'not-applicable' };
+    }
     async context(request, issueNumber, issueAuthor) {
         const [labels, body] = await Promise.all([
             this.ports.labels.getLabels(issueNumber), this.ports.descriptions.getDescription(issueNumber),
@@ -55689,7 +55719,8 @@ class SddDiffQueryUseCase {
         if (body === undefined)
             throw new Error('Issue admission is unavailable.');
         const admission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(labels, request.profile, request.labelConfiguration, body);
-        return admission.status === 'eligible' ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
+        return admission.status === 'eligible' && (0, issue_start_policy_1.decideIssueStart)({ kind: admission.kind, labels,
+            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
             profileDigest: request.profileDigest, trustedBotLogin: request.trustedBotLogin,
             issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch }) : undefined;
     }
