@@ -38,6 +38,12 @@ export type AgentExecutionExitDiagnostic =
     | 'reported-transport-or-rate-limit'
     | 'unclassified';
 
+/** Fixed local output rejection cause; never derived by interpolating provider bytes. */
+export const AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
+    'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
+] as const;
+export type AgentExecutionOutputDiagnostic = typeof AGENT_EXECUTION_OUTPUT_DIAGNOSTICS[number];
+
 interface AgentExecutionIdentityObservation {
     readonly provider: AgentProvider;
     readonly capability: AgentCapability;
@@ -75,6 +81,7 @@ export type AgentExecutionObservation =
         readonly retryable: boolean;
         readonly exitCode?: number;
         readonly exitDiagnostic?: AgentExecutionExitDiagnostic;
+        readonly outputDiagnostic?: AgentExecutionOutputDiagnostic;
     });
 
 /** Receives bounded execution facts only; prompts, output, argv, paths, and environment are excluded by type. */

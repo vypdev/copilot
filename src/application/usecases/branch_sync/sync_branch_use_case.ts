@@ -1,4 +1,5 @@
 import { Result } from "../../../data/model/result";
+import { admittedBranchSyncValidationCode } from '../../../domain/branch_sync_validation';
 import type { BranchSyncCommandOptions } from "../../../domain/branch_sync_command";
 import { getBranchSyncConflictsPrompt } from "../../../prompts/branch_sync_conflicts";
 import type { FixerQueryPort } from "../../ports/agent_fixer_ports";
@@ -80,7 +81,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
 
     const verification = await this.verifyPreparedMerge(context, preparation);
-    if (verification.failure) return [await this.abortFailure(verification.failure)];
+    if (verification.failure) return [await this.abortFailure(verification.failure, verification.recovery)];
 
     const author = await this.authenticatedUser.getUserDetails();
     const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(
@@ -90,7 +91,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       preparation.childSha,
     );
     if (!remoteValidation.valid) {
-      return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.")];
+      return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.", validationRecovery(remoteValidation.code))];
     }
 
     const commitSha = await this.workspace.commitAndPush(
@@ -130,13 +131,16 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
     return validation.valid
       ? { agentUsed: true }
-      : { agentUsed: false, failure: { reason: validation.reason ?? "The agent resolution did not pass workspace safety validation." } };
+      : { agentUsed: false, failure: {
+        reason: validation.reason ?? "The agent resolution did not pass workspace safety validation.",
+        recovery: validationRecovery(validation.code),
+      } };
   }
 
   private async verifyPreparedMerge(
     context: BranchSyncContext,
     preparation: BranchMergePreparation,
-  ): Promise<{ readonly commandCount: number; readonly failure?: string }> {
+  ): Promise<{ readonly commandCount: number; readonly failure?: string; readonly recovery?: ApplicationErrorRecovery }> {
     const commands = limitVerifyCommands([...context.verifyCommands]);
     if (commands.length === MAX_VERIFY_COMMANDS) logInfo(`Branch sync verification is capped at ${MAX_VERIFY_COMMANDS} commands.`);
     const verification = await runVerifyCommands(
@@ -153,7 +157,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     const validation = await this.workspace.validatePreparedMerge(conflictPaths);
     return validation.valid
       ? { commandCount: commands.length }
-      : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly." };
+      : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly.", recovery: validationRecovery(validation.code) };
   }
 
   private completed(
@@ -176,6 +180,9 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
 
   private async abortFailure(reason: string, recovery?: ApplicationErrorRecovery): Promise<Result> {
     await this.safeAbort();
+    if (recovery?.id === 'branch-sync-resolution-invalid') {
+      logInfo(`Branch synchronization validation rejected: ${recovery.variables.validationCode}.`);
+    }
     return failedBranchSyncResult(reason, undefined, recovery);
   }
 
@@ -186,4 +193,8 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       logError("Unable to abort the in-progress branch merge cleanly.");
     }
   }
+}
+
+function validationRecovery(code: unknown): ApplicationErrorRecovery {
+  return { id: 'branch-sync-resolution-invalid', variables: { validationCode: admittedBranchSyncValidationCode(code), command: '/copilot sync-branch' } };
 }

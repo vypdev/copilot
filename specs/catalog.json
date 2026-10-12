@@ -127,7 +127,9 @@
         "src/infrastructure/github/ports/github_issue_provider_ports.ts",
         "src/application/usecases/comment_automation_command_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
-        "src/application/policies/inactivity_result_counts_projection_policy.ts"
+        "src/application/policies/inactivity_result_counts_projection_policy.ts",
+        "src/application/ports/progress_diff_query_ports.ts",
+        "src/data/repository/progress_diff_repository.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -202,7 +204,8 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
         "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
-        "src/application/usecases/__tests__/comment_automation_use_case.test.ts"
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
+        "src/data/repository/__tests__/progress_diff_repository.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -238,7 +241,8 @@
         "docs/security-operations/security/prompt-injection.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/development/architecture.mdx",
-        "docs/development/testing.mdx"
+        "docs/development/testing.mdx",
+        "docs/issues/branch-management.mdx"
       ]
     },
     {
@@ -1174,11 +1178,12 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
-        "specs/pre-branch-sdd-diff.md"
+        "specs/pre-branch-sdd-diff.md",
+        "specs/pre-branch-sdd-status-readiness.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -1211,11 +1216,26 @@
         "src/infrastructure/specification_catalog_validator.cjs",
         "src/actions/input_boolean_policy.ts",
         "src/domain/issue_workflow_profile.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/application/policies/status_command_policy.ts",
+        "src/application/policies/publication_message_catalog.ts",
         "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.ts",
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/domain/agent_response_length_failure.ts",
-        "src/data/repository/agent_json_schema_validator.ts"
+        "src/data/repository/agent_json_schema_validator.ts",
+        "src/application/ports/sdd_evidence_read_ports.ts",
+        "src/application/policies/sdd_issue_identity_policy.ts",
+        "src/application/policies/sdd_query_card_policy.ts",
+        "src/application/policies/sdd_status_policy.ts",
+        "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
+        "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/comment_automation_command_workflow.ts",
+        "src/application/usecases/comment_automation_contracts.ts",
+        "src/application/usecases/issue_comment_use_case.ts",
+        "src/application/policies/semantic_result_publication_policy.ts",
+        "src/infrastructure/composition/sdd_evidence_composition_root.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1233,9 +1253,18 @@
         "src/architecture/__tests__/github_publication_boundaries.test.ts",
         "src/actions/__tests__/input_boolean_policy.test.ts",
         "src/domain/__tests__/issue_workflow_profile.test.ts",
+        "src/application/policies/__tests__/status_command_policy.test.ts",
         "src/application/usecases/sdd/pre_branch_sdd_draft_workflow.test.ts",
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
-        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
+        "src/application/policies/__tests__/sdd_issue_identity_policy.test.ts",
+        "src/application/policies/__tests__/sdd_query_card_policy.test.ts",
+        "src/application/policies/__tests__/sdd_status_policy.test.ts",
+        "src/application/usecases/sdd/__tests__/sdd_evidence_query_use_case.test.ts",
+        "src/data/repository/branch/__tests__/linked_branch_readiness_repository.test.ts",
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
+        "src/infrastructure/composition/__tests__/sdd_evidence_composition_root.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1482,7 +1511,8 @@
         "src/application/policies/publication_message_catalog.ts",
         "src/application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_workflow.ts",
         "src/application/usecases/comment_automation_use_case.ts",
-        "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts"
+        "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts",
+        "src/application/usecases/steps/commit/git_branch_checkout.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1519,7 +1549,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/dismiss_bugbot_findings_use_case.test.ts",
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/detect_bugbot_fix_intent_use_case.test.ts",
-        "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts"
+        "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts",
+        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -1571,7 +1602,8 @@
         "src/data/model/application_error.ts",
         "src/application/policies/application_error_message_catalog.ts",
         "src/infrastructure/git_commit_adapter.ts",
-        "src/infrastructure/branch_sync_sdd_catalog.ts"
+        "src/infrastructure/branch_sync_sdd_catalog.ts",
+        "src/domain/branch_sync_validation.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1602,7 +1634,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-12",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1685,7 +1717,8 @@
         "docs/bugbot/configuration.mdx",
         "docs/bugbot/detection.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/pull-requests/examples.mdx"
+        "docs/pull-requests/examples.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {
@@ -1722,6 +1755,7 @@
         "src/application/policies/agent_configuration_validation_policy.ts",
         "src/application/policies/setup_configuration_plan.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
+        "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
         "src/application/policies/agent_execution/strict_output_schema_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/progress_response.ts",
@@ -1748,7 +1782,8 @@
         "scripts/smoke-test-npm-package.cjs",
         "scripts/validate-workflow-contract.cjs",
         "src/application/policies/agent_execution_failure_policy.ts",
-        "src/infrastructure/untrusted_command_environment.ts"
+        "src/infrastructure/untrusted_command_environment.ts",
+        "scripts/diagnose-windows-powershell-startup.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1775,7 +1810,8 @@
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
-        "src/infrastructure/__tests__/untrusted_command_environment.test.ts"
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",
@@ -2086,6 +2122,7 @@
         "src/domain/__tests__/pull_request_approval.test.ts",
         "src/domain/__tests__/setup_approval_workflow.test.ts",
         "src/actions/__tests__/pull_request_approval_action.test.ts",
+        "src/actions/__tests__/pull_request_approval_logging.test.ts",
         "src/data/repository/pull_request/__tests__/approval_coverage_artifact.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_review_comment_command_repository.test.ts",

@@ -716,6 +716,83 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 - Rejected: drafting before blocking clarification, arbitrary document paths,
   branch creation before validated SDD content, and label-only readiness.
 
+## Proposed status readiness extension
+
+The read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its authoritative current extension minimum is 198 distinct cases, including the original 30 rendering/localization cases as a subset. This is separate from the owning gate's current 149-case budget above. The managed implementation reads the latest owned gate record, verifies immutable catalog ownership and remote publication, and fences current issue/card/branch evidence. PR #465 was promoted on 2026-10-12; live command acceptance then identified a runtime profile projection defect. The companion records its correction and the remaining live acceptance gates; promotion alone does not certify them.
+
+### 1. Executive summary
+
+Append the proposed change below to the existing owning SDD, `specs/pre-branch-sdd-gate.md`, without modifying or restating its existing contract. This addition defines a read-only `/copilot status` view that reports pre-branch SDD readiness from the latest valid Action-bot-owned `copilot:sdd-gate:v1` record for the issue. It preserves all existing status fields and lifecycle behavior. Missing evidence is unavailable; inconsistent evidence is invalid or unverified; neither can appear ready. The command performs no writes and creates no branches, commits, labels, SDDs, or timeline cards. Help issues remain branchless.
+
+The readiness view distinguishes first publication pending from revision pending. A revision-pending view retains the immutable first verified commit as historical evidence, identifies the latest revision as pending, and blocks implementation readiness until the current contract is verified. When verified, `revisionSha` is shown as the latest current evidence while `commitSha` remains visible as the first verified commit.
+
+```text
+/copilot status -> preserve existing snapshot -> validate durable SDD gate evidence
+                 -> classify readiness -> append localized, read-only SDD section
+```
+
+### 4. Goals
+
+1. Report whether an SDD is required, the safe owning SDD path, current clarification question IDs, and verified commit evidence when available.
+2. Distinguish not required, awaiting answers, first publication pending, specification ready, revision pending, unavailable, and invalid or unverified evidence.
+3. Preserve the existing status snapshot, field order, lifecycle, labels, branch details, and finding counts.
+4. Use the existing strict gate evidence and classification rules, with no schema migration, flag, or new eligibility rule.
+5. Keep the command read-only and the output localized through complete existing English and Spanish catalogs.
+
+### 8. Clean Architecture
+
+The existing gate remains the authority for eligibility, durable evidence, publication, and revision lifecycle. The status extension is a read-only projection of that authority.
+
+| Boundary | Owns | Must not own/import |
+|---|---|---|
+| Domain/status policy | Evidence classification and readiness view model | GitHub SDK, rendering, writes |
+| Application use case | Read snapshot and validated gate record through typed ports; combine status | Provider DTOs or mutation orchestration |
+| Semantic read ports | Issue identity, status snapshot, latest bot-owned gate record, commit/path proof | GitHub-specific shapes or product policy |
+| Adapters | Existing strict parser and read-only provider/Git lookups | Readiness decisions or writes |
+| Presentation | Append compact readiness section; localized labels and safe links | Evidence validation or mutations |
+
+The classifier MUST validate the latest valid Action-bot-owned `copilot:sdd-gate:v1` record for this issue. Preserve the record version and fields: `issueNumber`, `phase`, `issueDigest`, `plan.path`, `plan.capabilityId`, `plan.questions`, `answers`, `branchName`, `baseSha`, `commitSha`, `revisionBaseSha`, and `revisionSha`. Reuse existing checks for issue identity and digest, bot ownership, allowed phase and plan values, authorized answers, safe specs Markdown paths, full Git object IDs, exact linked branch, and commit ancestry/path proof. Missing, foreign, stale, malformed, or inconsistent evidence cannot establish readiness.
+
+Eligibility is derived from existing issue classification and pre-branch gate policy: features and explicit contract-change work require the gate; supported exempt/help issue kinds show that a specification is not required. Help remains branchless. No status rendering path may mutate GitHub or repository state.
+
+### 14. Testing strategy and numeric budget
+
+The companion's section 14 is the single authoritative distribution for the
+current **195 distinct status-extension cases**. The initial 30-case proposal
+(28 baseline and two revision cases) is a historical subset, not an alternative
+acceptance threshold. The owning gate retains its separate current 149-case
+budget. Neither suite recounts the other's existing cases.
+
+Retain repository-wide thresholds and existing gate coverage requirements.
+Pure classification targets at least 95% branch coverage; changed status paths
+retain 95% lines/statements and 90% branches/functions. Deterministic provider
+and Git fixtures avoid live services and real waits. Semantic presentation
+assertions and separate desktop/mobile/screen-reader evidence remain required.
+
+### 15. Documentation plan
+
+| Audience | Artifact/page | Required content | Validation/navigation |
+|---|---|---|---|
+| Issue user | Existing `/copilot status` command guide | Readiness states, question IDs, next action, read-only behavior | Command documentation and link checks |
+| Maintainer/operator | Existing status and SDD gate guidance | First publication versus revision pending; historical and latest SHA meanings; invalid/unavailable evidence | Contract fixtures and recovery wording |
+| Contributor | Existing specification and status implementation guidance | Typed read ports, strict parser reuse, classifier and renderer boundaries | Architecture and catalog validation |
+
+Update the command documentation with the appended readiness section and its states. Keep examples synchronized with localization fixtures. Do not introduce configuration or a new locale setting. The existing complete catalogs and repository/issues locale resolution apply, with complete English fallback when custom locale support is absent.
+
+### 16. Acceptance scenarios
+
+1. Given a supported exempt/help issue, when `/copilot status` runs, then it reports “Specification not required,” preserves existing status fields, and creates no branch or timeline card.
+2. Given a required issue in clarification, when status runs, then it reports “Awaiting specification answers” and only the unanswered current question IDs, up to the existing maximum of eight.
+3. Given a required issue before its first verified SDD SHA, when status runs, then it reports first publication pending and does not imply readiness.
+4. Given a verified current SDD contract, when status runs, then it reports specification ready and the verified owning path and commit evidence.
+5. Given a valid first publication whose issue digest has changed and no verified latest revision, when status runs, then it retains `commitSha` explicitly as the historical first verified SDD commit, reports specification revision pending, blocks implementation readiness, and gives the next action to answer current questions or retry publication.
+6. Given malformed or incomplete latest-revision evidence, when status runs, then it never falls back to a ready first publication; it reports invalid or unverified (or unavailable for a read failure), retains every existing status field, and exposes no unsupported commit claim.
+7. Given missing evidence or a provider read failure, when status runs, then readiness is unavailable and no SDD is represented as ready.
+8. Given foreign, stale, wrong-issue, unsafe-path, unauthorized-answer, invalid-hash, wrong-branch, or failed ancestry/path evidence, when status runs, then it reports invalid or unverified and does not expose the record as authoritative.
+9. Given a verified revision, when status runs, then it shows `revisionSha` as the latest current evidence and continues to identify `commitSha` as the immutable historical first verified commit.
+10. Given any readiness state, when status runs, then repository, target identity, event, branch, lifecycle, waiting-for, PR description policy, issue labels, PR labels, and finding-state counts remain in their existing order and unchanged; only the compact readiness section is appended.
+11. Given English or Spanish locale resolution, when any readiness state renders, then every message is available in the complete catalog, including “Specification revision pending” / “Revisión de la especificación pendiente” and “First verified SDD commit” / “Primer commit del SDD verificado”; unsupported custom locale uses complete English fallback.
+12. Given repeated status requests or any evidence state, when the command completes, then it performs no writes, creates no duplicate timeline cards, and does not alter lifecycle, labels, branches, commits, or SDD content.
 When GitHub opens a PR for an issue-linked branch, it removes the direct branch connection and retains the native issue-to-PR connection. Readiness MUST preserve this evidence only for an open PR associated with the exact issue, from the same repository, whose exact head name and full commit SHA match the current remote ref. The bounded query reads at most 100 direct linked branches and 100 native associated PRs; no repository-wide search, branch-name inference, PR-body parsing or configurable expansion is permitted. A closed PR, fork, stale head or missing remote ref never proves readiness. Live evidence: issue #453 and PR #460 on 2026-10-10. Primary source: [GitHub branch-to-issue behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-a-branch-for-an-issue).
 
 Automated SDD extension reads the existing owner from the selected immutable Git commit after checking the scratch file boundary. Checkout line-ending conversion cannot change the retained contract or introduce mixed line endings. A real Git fixture with core.autocrlf=true exercises validation, publication, and first-commit verification.
@@ -824,3 +901,15 @@ The three-round bound counts question sets. After all questions of round three
 are answered, a question-free analysis can prepare the draft in round three.
 A proposed fourth question set still blocks before drafting or publication;
 pending publication retries continue to preserve their existing round.
+
+### Read-only readiness queries
+
+The status reader specified in [pre-branch SDD status readiness](./pre-branch-sdd-status-readiness.md) uses the same admitted-kind/start policy
+and issue digest, but receives physically read-only ports. It selects the
+highest owned card before validation and never falls back after corruption.
+Readiness requires immutable catalog ownership, verified first/revision
+publication and a same-repository native link matching the live ref SHA. A
+positive stale or foreign native link cannot be replaced by PR fallback.
+Repeated title/body/card/label/head reads fence the result before publication.
+The companion owns the additional query, presentation and native-ref test
+budget; existing gate tests remain counted here only once.

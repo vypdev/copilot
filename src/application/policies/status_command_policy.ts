@@ -1,3 +1,5 @@
+import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
+import { initialSddStatus, formatSddStatus, type SddStatusReadiness } from './sdd_status_policy';
 import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
@@ -17,7 +19,11 @@ export interface CopilotStatusExecutionContext {
     readonly isPush: boolean;
     readonly isPullRequest: boolean;
     readonly inputs?: { readonly action?: string };
-    readonly issue: { readonly number: number };
+    readonly issue: { readonly number: number; readonly issueManagedBranches?: boolean; readonly creator?: string; readonly url?: string };
+    readonly issueWorkflowKind?: string;
+    readonly issueWorkflowProfileDigest?: string;
+    readonly branches?: { readonly development?: string };
+    readonly preBranchSdd?: boolean;
     readonly pullRequest: {
         readonly number: number;
         readonly isPullRequestReviewComment: boolean;
@@ -56,6 +62,9 @@ export interface CopilotStatusSnapshot {
     };
     readonly findingStateEvidence?: 'invalid';
     readonly pullRequestDescriptionMode: string;
+    readonly sddReadiness?: SddStatusReadiness;
+    readonly issueUrl?: string;
+    readonly serverOrigin?: string;
 }
 
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
@@ -114,6 +123,12 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         }) } : {}),
         ...(findingStateProjection.status === 'invalid' ? { findingStateEvidence: 'invalid' as const } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        ...(execution.issue?.url ? { issueUrl: execution.issue.url } : {}),
+        ...(!isPullRequestTarget && !execution.isPush && (execution.issue?.number > 0 || execution.isIssue) ? { sddReadiness: initialSddStatus({
+            admittedKind: ISSUE_WORKFLOW_KINDS.find(kind => kind === execution.issueWorkflowKind),
+            issueManagedBranches: execution.issue.issueManagedBranches,
+            preBranchSdd: execution.preBranchSdd,
+        }, issueLabels) } : {}),
     });
 }
 
@@ -153,5 +168,6 @@ export function formatCopilotStatus(
     } else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
+    if (snapshot.sddReadiness) lines.push(...formatSddStatus(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
     return lines.join('\n');
 }

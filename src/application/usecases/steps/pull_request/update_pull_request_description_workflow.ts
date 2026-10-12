@@ -87,10 +87,17 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         const diff = await dependencies.pullRequestDescriptionCommandPort.getDiff(context.pullRequest.number);
         const changes = diff.snapshot.changes;
         const diffEvidence = JSON.stringify(changes);
-        if (diff.coverage.status !== 'complete' || changes.length === 0 || changes.length > 100
-            || diffEvidence.length > 120_000
+        if (diff.coverage.status !== 'complete'
             || changes.some(change => (change.additions > 0 || change.deletions > 0) && !change.patch)) {
-            throw new ApplicationError('provider.contract-invalid', 'The PR diff is incomplete or exceeds the description evidence budget. Existing body retained.');
+            const retained = 'Complete PR diff evidence is unavailable. Existing body retained. Retry when the required patches are available.';
+            if (request.trigger === 'automatic') return skipped(taskId, retained);
+            throw new ApplicationError('workflow.stale', retained);
+        }
+        if (changes.length === 0) return skipped(taskId, 'The PR has no changed files to describe. Existing body retained.');
+        if (changes.length > 100 || diffEvidence.length > 120_000) {
+            const retained = 'The complete PR diff exceeds the description evidence budget. Existing body retained. Reduce the change scope before requesting a generated description.';
+            if (request.trigger === 'automatic') return skipped(taskId, retained);
+            throw new ApplicationError('workflow.stale', retained);
         }
         const prompt = getUpdatePullRequestDescriptionPrompt({
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,

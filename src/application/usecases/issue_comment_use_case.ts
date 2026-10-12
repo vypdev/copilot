@@ -11,6 +11,7 @@ import type { RememberBugbotRuleParam } from './steps/commit/bugbot/remember_bug
 import type { SyncBranchRequest } from './branch_sync/sync_branch_use_case';
 import type { BugbotGitMutationPort } from '../ports/bugbot_git_ports';
 import type { RememberBranchQueryPorts } from './comment_automation_contracts';
+import type { SddEvidenceQueryPort } from '../ports/sdd_evidence_read_ports';
 import type { CopilotStatusReadPorts } from './read_copilot_status_workflow';
 import type {
   BugbotFixIntentContext,
@@ -45,6 +46,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly sddQueryPort?: SddEvidenceQueryPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -88,6 +90,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        sddQueryPort: this.sddQueryPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

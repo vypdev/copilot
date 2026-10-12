@@ -6,6 +6,7 @@ import type { GitCommitPort } from '../../application/ports/git_ports';
 import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 import { refreshBranchSyncSddCatalog, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from '../branch_sync_sdd_catalog';
 import { BranchSyncWorkspaceAdapter } from '../branch_sync_workspace_adapter';
+import * as logging from '../../application/ports/logging_ports';
 
 const { renderCatalog } = require('../specification_catalog_validator.cjs') as { renderCatalog(catalog: unknown): string };
 
@@ -27,6 +28,34 @@ describe('branch synchronization generated SDD catalog', () => {
     let root: string;
     beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-sync-catalog-')); });
     afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+    it.each(['metadata-conflict-markers', 'metadata-json', 'metadata-shape', 'evidence-path-boundary', 'catalog-contract'] as const)(
+        'reports only the closed %s phase, preserving the index and hiding untrusted values', phase => {
+            const catalog = fixture(root);
+            const secret = 'private-provider-value-do-not-publish';
+            const metadataPath = join(root, SDD_CATALOG_PATH);
+            const before = readFileSync(join(root, SDD_CATALOG_INDEX_PATH));
+            const report = jest.spyOn(logging, 'logInfo').mockImplementation(() => undefined);
+            try {
+                if (phase === 'metadata-conflict-markers') {
+                    writeFileSync(metadataPath, `<<<<<<< HEAD\n${secret}\n=======\nparent\n>>>>>>> parent\n`);
+                } else if (phase === 'metadata-json') {
+                    writeFileSync(metadataPath, `{ invalid ${secret}`);
+                } else if (phase === 'metadata-shape') {
+                    writeFileSync(metadataPath, JSON.stringify({ capabilities: secret }));
+                } else {
+                    if (phase === 'evidence-path-boundary') catalog.capabilities[0].code = [`src/${secret}.ts`];
+                    else { catalog.version = 2; catalog.capabilities[0].title = secret; }
+                    writeFileSync(metadataPath, JSON.stringify(catalog));
+                }
+                expect(refreshBranchSyncSddCatalog(root)).toBe(false);
+                expect(readFileSync(join(root, SDD_CATALOG_INDEX_PATH))).toEqual(before);
+                expect(report.mock.calls).toEqual([[`Branch synchronization SDD catalog rejected (${phase}).`]]);
+                expect(JSON.stringify(report.mock.calls)).not.toContain(secret);
+                expect(JSON.stringify(report.mock.calls)).not.toContain(root);
+            } finally { report.mockRestore(); }
+        },
+    );
 
     it('replaces stale counts and conflict markers using validated metadata without changing that metadata', () => {
         const catalog = fixture(root);
@@ -151,7 +180,7 @@ describe('branch synchronization generated SDD catalog', () => {
         writeFileSync(join(workspace, SDD_CATALOG_PATH), scenario === 'invalid resolution' ? '{ unresolved' : JSON.stringify(resolved, null, 2) + '\n');
         const validation = await adapter.validatePreparedMerge(conflicts);
         if (scenario === 'invalid resolution') {
-            expect(validation).toEqual({ valid: false, reason: 'The resolved SDD catalog is invalid.' });
+            expect(validation).toEqual({ valid: false, code: 'sdd-catalog-invalid', reason: 'The resolved SDD catalog is invalid.' });
             expect(git.stagePaths).not.toHaveBeenCalled();
         } else {
             expect(validation).toEqual({ valid: true });
@@ -162,7 +191,7 @@ describe('branch synchronization generated SDD catalog', () => {
             expect(readFileSync(join(workspace, 'docs/child.mdx'), 'utf8')).toBe('child\n');
             if (scenario === 'verification mutation') {
                 writeFileSync(join(workspace, SDD_CATALOG_INDEX_PATH), 'changed by verification\n');
-                await expect(adapter.validatePreparedMerge(conflicts)).resolves.toEqual({ valid: false, reason: 'The prepared merge contains unstaged changes.' });
+                await expect(adapter.validatePreparedMerge(conflicts)).resolves.toEqual({ valid: false, code: 'unstaged-changes', reason: 'The prepared merge contains unstaged changes.' });
                 expect(git.stagePaths).toHaveBeenCalledTimes(1);
                 gitAt(workspace, ['checkout', '--', SDD_CATALOG_INDEX_PATH]);
             } else await expect(adapter.validatePreparedMerge(conflicts)).resolves.toEqual({ valid: true });

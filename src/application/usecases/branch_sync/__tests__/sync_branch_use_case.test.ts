@@ -4,6 +4,7 @@ import { SyncBranchUseCase } from "../sync_branch_use_case";
 import { projectBranchSyncContext } from '../../push_single_action_contexts';
 import { renderApplicationErrorMarkdown } from '../../../policies/application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
+import { BRANCH_SYNC_VALIDATION_CODES } from '../../../../domain/branch_sync_validation';
 
 const target = {
   issueNumber: 42,
@@ -56,6 +57,31 @@ function setup(preparation: BranchMergePreparation) {
 const options = { dryRun: false, useAgent: true };
 
 describe("SyncBranchUseCase", () => {
+  it.each(BRANCH_SYNC_VALIDATION_CODES)('publishes only the closed workspace validation code %s in both locales', async code => {
+    const context = setup({ kind: 'conflicted', parentSha: 'parent', childSha: 'child', conflictPaths: ['specs/CATALOG.md'] });
+    context.workspace.validatePreparedMerge.mockResolvedValue({ valid: false, code, reason: 'private/path TOKEN=secret provider-output' });
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].recovery).toEqual({ id: 'branch-sync-resolution-invalid', variables: { validationCode: code, command: '/copilot sync-branch' } });
+    for (const locale of ['en-US', 'es-ES']) {
+      const markdown = renderApplicationErrorMarkdown(result.errors[0], resolveStaticApplicationErrorCatalog(locale).message);
+      expect(markdown).toContain(code);
+      expect(markdown).toContain('/copilot sync-branch');
+      expect(markdown).not.toMatch(/secret|private\/path|provider-output/u);
+    }
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.git.execute).not.toHaveBeenCalled();
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown diagnostic instead of publishing a provider-controlled code', async () => {
+    const context = setup({ kind: 'conflicted', parentSha: 'parent', childSha: 'child', conflictPaths: ['src/a.ts'] });
+    context.workspace.validatePreparedMerge.mockResolvedValue({ valid: false, code: 'TOKEN=secret', reason: 'private' });
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].recovery).toEqual({ id: 'branch-sync-resolution-invalid', variables: { validationCode: 'unclassified', command: '/copilot sync-branch' } });
+    expect(renderApplicationErrorMarkdown(result.errors[0])).not.toContain('secret');
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['agent disabled', false, true, 'branch-sync-agent-disabled', '--no-agent'],
     ['fixer unavailable', true, false, 'branch-sync-fixer-unavailable', 'no fixer agent'],

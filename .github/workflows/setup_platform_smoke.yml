@@ -9,6 +9,10 @@ on:
         description: Export hosted Windows coverage to Codecov
         type: boolean
         default: false
+      windows_startup_probe:
+        description: Compare isolated Windows PowerShell startup with the runner baseline
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,6 +22,21 @@ defaults:
     shell: bash
 
 jobs:
+  windows-startup-probe:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.windows_startup_probe == true }}
+    name: Windows PowerShell startup evidence
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+      - name: Compare bounded startup probes without exposing process data
+        run: node scripts/diagnose-windows-powershell-startup.cjs
+
   setup-platform-smoke:
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}
     name: Setup package and local session (${{ matrix.os }})
@@ -100,7 +119,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   setup-self-hosted-codex-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
     # Includes build, isolated fixtures and the full coverage suite. Windows
@@ -137,7 +156,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
-          cache: pnpm
+          # Persistent runners already retain their local pnpm store. Avoid a
+          # dependency-cache archive after the required validation has passed.
+          package-manager-cache: false
       - name: Verify Windows job Node npm CLI
         if: runner.os == 'Windows'
         run: node scripts/verify-windows-job-npm.cjs

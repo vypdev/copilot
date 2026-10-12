@@ -9,6 +9,12 @@ import { runAtApplicationErrorBoundary, runWithApplicationErrorCorrelation } fro
 const CORRELATION_ID = '6f173f89-96a3-4fc8-b90e-4f8f48e0e319';
 
 describe('ApplicationError', () => {
+    it('rejects a forged branch synchronization diagnostic descriptor', () => {
+        expect(() => new ApplicationError('workflow.failed', 'private', {
+            recovery: { id: 'branch-sync-resolution-invalid', variables: { validationCode: 'TOKEN=secret', command: '/copilot sync-branch' } } as never,
+        })).toThrow('synchronization validation code is invalid');
+    });
+
     it('exposes the closed semantic contract for every error code', () => {
         const codes = Object.keys(APPLICATION_ERROR_METADATA) as ApplicationErrorCode[];
 

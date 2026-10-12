@@ -791,6 +791,21 @@ describe('mainRun', () => {
     expect(execution.labels.currentIssueLabels).toEqual(['state:ready']);
   });
 
+  it.each(['help', 'status'])('dispatches deterministic %s without an agent activity mutation', async command => {
+    const execution = mockExecution({
+      eventName: 'issue_comment', isIssue: true,
+      issue: { isIssueComment: true, isIssue: false, commentBody: `/copilot ${command}` },
+      ai: {
+        getAgentConfiguration: jest.fn(() => ({ model: 'model' })),
+        getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
+      },
+    });
+    await runMainWithActivity(execution);
+    expect(mockIssueCommentInvoke).toHaveBeenCalledWith(execution);
+    expect(mockAgentActivityStart).not.toHaveBeenCalled();
+    expect(mockAgentActivityFinish).not.toHaveBeenCalled();
+  });
+
   it('returns a semantic failure when the action route is not handled', async () => {
     const execution = mockExecution({
       isIssue: false,

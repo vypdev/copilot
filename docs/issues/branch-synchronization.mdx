@@ -155,6 +155,19 @@ Every command finishes with a comment in the conversation. The report distinguis
 - merged after fixer-agent conflict resolution; or
 - safely aborted, with a publishable reason and no provider-secret details.
 
+When workspace validation rejects a resolution, the reply and workflow log
+include a closed diagnostic code such as `sdd-catalog-invalid`,
+`unstaged-changes` or `unexpected-paths`. Inspect that code before retrying;
+Copilot preserves the remote branches and does not publish the rejected merge.
+Private paths and provider output are excluded from the public diagnosis.
+
+For `sdd-catalog-invalid`, the operator log also records the closed catalog
+validation phase before abort restores the worktree. This distinguishes
+remaining metadata conflict markers or invalid JSON from evidence-path or
+catalog-contract failures. It includes no metadata values, paths, parser errors
+or validator output. Correct the failing conflict resolution and retry the
+same command; the Action retains all validation and remote-head checks.
+
 Successful and no-change reports use the issue or pull-request surface locale,
 are correlated to the requesting comment, and are reconciled at most once on
 event replay. For example, an already aligned branch receives one sentence:
@@ -179,3 +192,9 @@ lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and
 bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
+
+For this repository's Windows service runners, verification uses `test:coverage`
+with the existing bounded worker recycling. Forcing the whole suite into one
+process with `--runInBand` can exhaust the heap before synchronization publishes.
+A failed verification retains the managed remote head; inspect the failure and
+retry `/copilot sync-branch` after correcting the verification configuration.

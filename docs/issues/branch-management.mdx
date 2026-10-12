@@ -37,3 +37,9 @@ If branch creation succeeds but a later step fails, rerun the issue workflow on 
 - [Pre-branch SDDs](/issues/pre-branch-sdds)
 
 Automatic title formatting keeps the boundaries between hyphenated words. A title containing `issue-to-pr` may display `issue to pr`, while its branch slug remains `issue-to-pr`.
+
+## Progress evidence
+
+Progress assessments use an immutable GitHub comparison of the development base and the managed branch head. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
+
+If source evidence is missing or exceeds the bounded comparison budget, the Action retains the current progress and reports that it could not assess the revision. It also retains state if either head changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
