@@ -63784,7 +63784,7 @@ const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
 const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
-/** Publishes trusted correlated replies; only deterministic SDD diff refreshes its existing reply. */
+/** Publishes trusted correlated replies and refreshes verified read-only projections. */
 async function reconcileReply(context, comments, requestRead) {
     if (!context.botLogin.trim())
         return unchangedOutcome();
@@ -63798,8 +63798,7 @@ async function reconcileReply(context, comments, requestRead) {
     const canRefresh = Boolean(witness && refreshable[context.intent.messageKey] === context.intent.projection.kind);
     const sourceMatches = async () => {
         if (!witness)
-            return context.intent.messageKey !== 'copilot-sdd-diff'
-                && (!requestRead || !context.intent.correlationId.startsWith('comment:'));
+            return !context.intent.correlationId.startsWith('comment:');
         const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
         return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
             && witness.target.kind === target.kind && witness.target.number === target.number

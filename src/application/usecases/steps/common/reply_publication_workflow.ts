@@ -27,7 +27,7 @@ export interface ReplyPublicationOutcome {
     readonly compactedCommentIds: readonly number[];
 }
 
-/** Publishes trusted correlated replies; only deterministic SDD diff refreshes its existing reply. */
+/** Publishes trusted correlated replies and refreshes verified read-only projections. */
 export async function reconcileReply(
     context: ReplyPublicationContext,
     comments: BoundIssueCommentPublicationPort,
@@ -43,8 +43,7 @@ export async function reconcileReply(
     };
     const canRefresh = Boolean(witness && refreshable[context.intent.messageKey] === context.intent.projection.kind);
     const sourceMatches = async () => {
-        if (!witness) return context.intent.messageKey !== 'copilot-sdd-diff'
-            && (!requestRead || !context.intent.correlationId.startsWith('comment:'));
+        if (!witness) return !context.intent.correlationId.startsWith('comment:');
         const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
         return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
             && witness.target.kind === target.kind && witness.target.number === target.number

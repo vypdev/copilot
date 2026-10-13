@@ -1708,3 +1708,22 @@ the unchanged 28,000-unit ceiling. Two additional cases cover withholding the
 unsafe boundary and all safe near-limit replays; one failed before correction.
 The current inventory is 89 runtime cases (39 pure, 33 retirement, 2 coordination,
 11 publication and 4 analysis) and 45 conservative declarations.
+
+
+### Missing-reader integration regression (2026-10-13)
+
+The Action-owned SDD comparison integration `20e817bd` retained the comparison
+source guard but restored a legacy fallback for other comment-correlated
+replies when both witness and reader were absent. Three distinct regressions
+failed before correction: ordinary issue-comment reply, review-comment reply,
+and immutable mutation receipt. Every `comment:` correlation now requires its
+private native request witness before any comment read or publication effect,
+independently of whether a reader was bound. Verified read-only refreshes and
+non-comment immutable publication retain their existing contracts.
+
+These **three cases** belong only to semantic publication, bringing that
+request-witness extension from 56 to **59** cases; the original cross-capability
+allocation becomes **76** (59 + 11 execution + 6 autofix). They are excluded
+from the SDD comparison's separate 254-case inventory. No permission,
+configuration, coverage threshold or platform changes. Documentation of the
+source-freshness boundary remains in the comment-command guide.
