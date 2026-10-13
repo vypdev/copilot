@@ -1,3 +1,4 @@
+import { replyRequestBodyDigest } from '../../../../../domain/reply_request_digest';
 import { Result } from '../../../../../data/model/result';
 import type { TransitionPublicationIntent } from '../../../../../domain/github_publication';
 import type {
@@ -100,7 +101,7 @@ describe('semantic publication concurrency', () => {
     const context = {
       owner: 'acme', repository: 'widgets', botLogin: 'vypbot', intent: statusIntent(),
     };
-    const source = () => ({ getBranchHeadSha: jest.fn(async () => SOURCE_HEAD) });
+    const source = () => ({ isIssueOpen: jest.fn(async () => true), getBranchHeadSha: jest.fn(async () => SOURCE_HEAD) });
 
     const outcomes = await Promise.all([
       reconcileStatusCard(context, comments, source()),
@@ -118,11 +119,13 @@ describe('semantic publication concurrency', () => {
     const comments = simultaneousCreatePort();
     const context = {
       owner: 'acme', repository: 'widgets', botLogin: 'vypbot', intent: replyIntent(),
+      requestSource: { surface: 'issue-comment' as const, commentId: 41, author: 'developer',
+        target: replyIntent().target, bodyDigest: replyRequestBodyDigest('/copilot help') },
     };
 
     const outcomes = await Promise.all([
-      reconcileReply(context, comments),
-      reconcileReply(context, comments),
+      reconcileReply(context, comments, { matches: async () => true }),
+      reconcileReply(context, comments, { matches: async () => true }),
     ]);
 
     expect(outcomes).toEqual([

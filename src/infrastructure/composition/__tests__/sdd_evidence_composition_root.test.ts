@@ -4,6 +4,8 @@ import { createSddEvidenceQueryPort } from '../sdd_evidence_composition_root';
 
 const mockTitle = jest.fn(async () => 'Feature');
 const mockDescription = jest.fn(async () => 'Human requirements');
+const mockNativeRead = jest.fn(async () => ({ number: 42, state: 'open' as const, reason: 'unknown' as const, labels: ['feature', 'in-progress'] }));
+const mockNativeFactory = jest.fn((_binding: unknown) => ({ readIssue: mockNativeRead, readPullRequest: mockWrite, addComment: mockWrite }));
 const mockLabels = jest.fn(async () => ['feature', 'in-progress']);
 const mockPermission = jest.fn(async () => true);
 const mockWrite = jest.fn(() => { throw new Error('query must not mutate'); });
@@ -19,6 +21,7 @@ const mockSnapshot = jest.fn(async (sha: string) => ({ baseSha: sha, template: '
 const mockVerify = jest.fn(async () => true);
 const mockAncestor = jest.fn(async () => true);
 
+jest.mock('../issue_completion_composition_root', () => ({ createNativeStatusReadPort: (binding: unknown) => mockNativeFactory(binding) }));
 jest.mock('../issue_metadata_composition_root', () => ({ createIssueMetadataCompositionRoot: () => ({ getTitle: mockTitle, setTitle: mockWrite }) }));
 jest.mock('../issue_content_composition_root', () => ({ createIssueContentCompositionRoot: () => ({ getDescription: mockDescription, updateDescription: mockWrite }) }));
 jest.mock('../issue_labels_composition_root', () => ({ createIssueLabelRepository: () => ({ getLabels: mockLabels, setLabels: mockWrite }) }));
@@ -52,7 +55,9 @@ describe('composed read-only SDD query', () => {
         expect(await query.read(context)).toMatchObject({ state: 'publication-pending', pendingQuestionIds: [], verified: { firstSha: mockFirst, branchHeadSha: mockHead } });
         expect(mockTitle).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
         expect(mockDescription).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
-        expect(mockLabels).toHaveBeenCalledWith('acme', 'demo', 42, 'fixture-token');
+        expect(mockNativeFactory).toHaveBeenCalledWith(binding);
+        expect(mockNativeRead).toHaveBeenCalledWith(42);
+        expect(mockLabels).not.toHaveBeenCalled();
         expect(mockPermission).toHaveBeenCalledWith('acme', 'demo', 'maintainer', 'fixture-token');
         expect(mockGetClient).toHaveBeenCalledWith('fixture-token');
         expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), { owner: 'acme', repository: 'demo', issueNumber: 42, ref: 'refs/heads/feature/42' });

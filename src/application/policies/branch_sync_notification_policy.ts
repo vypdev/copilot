@@ -220,3 +220,17 @@ function safeLinkLabel(value: string): string {
     .slice(0, 40)
     .trim() || 'Open notification';
 }
+
+/** Preserve the exact owned card identity without claiming Git alignment. */
+export function buildRetiredBranchSyncComment(
+  identity: Readonly<PublicationIdentity>,
+  messages: BranchSyncMessageCatalog,
+): string {
+  return `${buildPublicationMarker({ identity, sourceVersion: 'closed:issue', digest: createSemanticDigest({ state: 'closed', identity }) })}
+
+## ${messages.message('branchSync.closed.heading')}
+
+${messages.message('branchSync.closed.status')}
+
+${messages.message('branchSync.closed.history')}`;
+}

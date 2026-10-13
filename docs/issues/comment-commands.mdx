@@ -45,6 +45,7 @@ Commands are recognized at the beginning of a comment, case-insensitively. The c
 | `/copilot findings` | Reconcile and publish current findings. | No |
 | `/copilot recheck` | Re-run the review against the current branch. | No |
 | `/copilot status` | Show the current Copilot status. | No |
+| `/copilot doctor` | Check runtime prerequisites using bounded read-only evidence. | No |
 | `/copilot description` | Refresh the PR description when that action is configured. | No |
 | `/copilot fix <finding-id> [finding-id ...]` | Fix one or more existing Bugbot findings. | Yes, if authorized |
 | `/copilot dismiss <finding-id> [finding-id ...]` | Dismiss one or more findings. | No file changes |
@@ -60,7 +61,7 @@ whitespace-separated, and commands are limited to 2,000 characters and 20
 arguments. Missing or malformed required arguments produce a validation reply;
 they never mean “all” or authorize a broad change.
 
-`help`, `status`, `dismiss`, `remember` and rejected commands do not run a
+`help`, `status`, `doctor`, `dismiss`, `remember` and rejected commands do not run a
 model or change the temporary agent activity label. `sync-branch --dry-run`
 and `--no-agent` also avoid model activity. Ordinary sync may use the conflict
 fixer, and `findings` runs a fresh review. These distinctions preserve each
@@ -148,6 +149,57 @@ Native reviews: satisfied
 A human review is still required.
 Next action: Have a maintainer review this exact revision.
 ```
+`/copilot status` reports lifecycle, waiting state, branch, labels, and the
+canonical Bugbot counts: open, reopened, verification-required, unknown, and
+resolved. In a PR conversation, it reads one trusted complete Bugbot status
+card for the current commit and checks that the head is still unchanged. If
+that evidence is missing, malformed, incomplete or stale, run `/copilot recheck`
+and retry status. It never substitutes cached counts or zero. Setup reads that
+exact PR to resolve its linked issue and working branch. An unlinked PR remains
+separate from an issue with the same number. Status and description queries
+preserve existing lifecycle and waiting labels when they make no lifecycle
+decision.
+
+`/copilot doctor` reads seven bounded groups: effective workflow and dependency
+settings, eligible issue/SDD prerequisites, the issue's native linked branch,
+installed workflow structure, the trusted approval policy, declared approval
+prerequisites, and the exact current PR identity. It has no arguments and
+never invokes a model or repairs the repository. Participants can request this
+metadata report even when model automation is restricted to organization members.
+
+Its structural workflow check requires issue `labeled`, issue-comment `created`,
+and pull-request `opened` entry activities when an explicit `types` filter is
+present. A valid but irrelevant filter such as issue-comment `deleted` is
+blocked. Unknown dynamic job conditions remain unavailable; this does not prove
+a workflow is disabled, and retrying alone cannot certify those conditions.
+
+The reply distinguishes **pass**, **warning**, **blocked**, **unavailable**, and
+**not applicable**. A successfully read invalid policy is blocked; a denied or
+failed read is unavailable. Completed independent checks remain visible. Only
+verified absence of both repository and organization policy values selects the
+existing off default. Active approval settings are declared prerequisites,
+which need independent producer verification and do not certify write access.
+
+Workflow files and specification prerequisites are read at one verified immutable
+default-branch revision, linked in the report. A moved default head makes that
+sample unavailable. Native linked branches require complete same-repository
+association and a matching live ref. A null or missing linked ref remains
+unavailable; only a complete empty page proves that no branch is linked.
+Specification prerequisites require canonical catalog metadata and evidence
+arrays, supported status/date values, unique ownership and regular referenced
+files in the same complete immutable tree (at most 10,000 entries). Doctor keeps
+six bounded content reads; full as-built document contents and uncatalogued
+specification discovery remain CI checks. Denied or incomplete tree evidence is
+unavailable. Effective dependency, default and linked branches must be valid
+bounded literal Git branch names, including every path component. A PR request checks only its exact event
+PR and fences its current head; optional issue context is not inferred from
+an equal conversation number. Reports use the repository locale in English or
+Spanish with atomic fallback and one correlated reply per source comment.
+
+Inspect the displayed primary action and the workflow run, correct any proven
+invalid configuration through the usual maintainer flow, then retry
+`/copilot doctor`. The command does not read secret values, test write access,
+provision setup, change labels or approvals, or infer grants from workflow text.
 
 For issue types covered by `pre-branch-sdd`, status also appends an SDD
 readiness section. It reports when an SDD is not required and marks required
@@ -330,10 +382,60 @@ correlated replies; the welcome text embeds no separate marker.
 
 See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.
 
+The runtime doctor distinguishes proven missing files from inaccessible evidence.
+A contents API 404 needs an independent complete tree at the same verified
+commit before it can be reported as missing. Denied or incomplete tree reads
+remain unavailable. The proof adds at most two shared read requests and never
+changes repository files or permissions.
+
+The doctor workflow group checks that Copilot is in an eligible job and step for
+the required event. Disabled jobs or steps cannot make it pass. Runtime-dependent
+or unsupported conditions are reported as unavailable because a repository
+snapshot cannot establish their result. Inspect those conditions and the actual
+workflow run; a structural pass still does not prove runner availability.
+### Recent operation history
+
+`/copilot history` shows at most ten supported requests in this issue or PR's
+**general conversation**, newest request first. It accepts no arguments or model
+selection. It does not include review threads or reviews and does not call an
+agent. Each row links to the request and, when validated, its trusted receipt.
+Supported operations are `sync-branch`, `remember`, `dismiss`, `implement`, and
+`fix`; the query does not perform any of them.
+
+Outcomes require matching structured receipts from the configured bot. Earlier
+replies, missing receipts and conflicting evidence remain unavailable. Applied
+means the particular operation completed; a pushed fix still needs a fresh
+review. It does not mean the issue is complete or the PR is ready to merge.
+A Commit link requires independently verified evidence for the exact remote SHA;
+current producers omit it when that proof is absent.
+
+For example, a complete English reply can show `sync-branch | Already current`
+and links named `Request` and `Receipt`. The same evidence in Spanish uses
+`sync-branch | Ya estaba al día` with `Solicitud` and `Recibo`. A complete empty
+reply explicitly says no supported requests were found in the inspected stream.
+Partial coverage warns that the latest ten operations cannot be guaranteed.
+Unavailable coverage means the read or identity could not be verified, and does
+not prove an empty history or a failed operation. Retry `/copilot history` after
+checking the workflow's comment-read access. No new setting, permission or data
+migration is required; older conversations are not backfilled.
+
+A retried webhook for the same history request reuses its correlated response.
+Post a new `/copilot history` comment to take a new snapshot. The command preserves
+lifecycle labels and branches and never executes command text found in comments.
+
 SDD status keeps an unknown requirement visible when the issue has no admitted
 workflow kind. Evidence links use the configured GitHub server origin and the
 same issue identity; an untrusted or mismatched URL is shown without navigation.
 
+Doctor treats a valid native issue with no description as an empty body, so
+independent checks can still complete. Unknown evidence groups are rejected;
+installed workflow activity filters must contain a non-empty array of text
+values. A malformed filter is blocked rather than reported as a valid trigger.
+
+Doctor's bounded workflow interpreter leaves mixed-type comparisons unavailable
+rather than applying JavaScript equality to GitHub expressions. Inspect the
+actual condition when that prerequisite is unavailable; the report does not
+execute the expression or infer that the job is disabled.
 When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
@@ -368,3 +470,116 @@ offers wait or resolve. The report asserts a human-review requirement only when
 recommend readiness is satisfied without a verified current human approval.
 
 PR readiness also verifies that the PR remains open at its final native revision read. Closing it while evidence is collected withholds a satisfied result even if the head and base revisions have not changed.
+Doctor verifies that every inspected configuration/workflow path is a regular file in the same immutable Git tree. Contents returned through a symlink do not establish valid installed prerequisites.
+
+
+Doctor checks whether an Action job has usable structural scheduling evidence.
+A static empty matrix blocks that job. Dynamic matrices and include/exclude
+transformations are reported as unavailable because doctor does not simulate
+the workflow. Ordinary nonmatrix and supported static jobs remain eligible;
+this check does not certify a runner or real tool execution.
+History requests are deterministic on issue comments and PR review comments.
+Their activity-admission policy neither inspects agent role availability nor activates the temporary agent
+activity label; unavailable model configuration does not turn a history read
+into model work. Normal read-evidence and correlated publication guards apply.
+
+
+`/copilot history` is available in the main issue or pull request conversation.
+A request in a review thread tells you to post it there; retrying the same thread
+cannot expand the history scope. That response reads no history and activates no
+agent. A failed read in the supported conversation instead directs you to the
+workflow and a retry.
+
+Read-only command replies and failures reuse their existing response when a
+new result is verified for the same current request. GitHub's native comment,
+parent and author must match the captured request; a changed or unreadable
+request withholds stale edits. Successful mutation receipts remain effect
+records. Read-only queries do not rewrite hidden issue/PR configuration.
+
+If the agent ran but workspace verification rejected its changes, the error
+identifies that stage and asks you to inspect rejected paths before retrying.
+Normal commit/push steps are skipped; an earlier syntax error is not retained
+as the description of the newer verified failure. Keep repository-local test
+scratch such as `.tmp/` ignored or use the normal external temporary directory.
+
+## Native completion and historical SDDs
+
+`status` reads the current native issue or PR after queueing. A completed native
+issue is shown as completed even if old active labels remain; a closed issue
+without a completed reason is shown as closed. A PR is shown as merged only
+when its current native `merged` flag is true. Reopening supersedes a queued
+closed event. These reads do not mutate labels or call an agent.
+
+After a linked PR merges, Copilot verifies the exact native PR and issue, closes
+only when needed, and reconciles completion labels with selective writes. It
+removes obsolete configured active/waiting/activity labels and canonical old
+percentages, preserves kind/priority/size/branched/SDD and unrelated labels, and
+adds `100%` only for verified completed closure. Already-correct replay performs
+no write. Deliberately reopened work is never reclosed by an older delivery.
+
+If a read or label write fails, the run reports retained native closure separately
+from unverified metadata. Inspect the linked run and retry the verified merged-PR
+operation after resolving the cause; do not manually invent completion evidence.
+Known state or reason movement stops further metadata writes. GitHub updates are
+not atomic, so concurrent changes may require another verified retry.
+
+For closed issues, a previously published SDD remains read-only historical
+evidence after `in-progress` is removed. Immutable publication, ownership, branch
+and final-state proofs still apply. Historical ready or pending artifacts do not
+ask for implementation or answers to old questions. Without a verified first
+publication, closing unstarted work does not create a fictitious required SDD.
+
+Closing an issue does not verify its SDD. Unavailable or unverified evidence keeps its inspection guidance; only the verified query result can establish historical publication.
+
+Status rejects an issue snapshot if its labels change between the initial and final native reads, so SDD eligibility and the displayed metadata describe the same verified sample. Label ordering alone does not invalidate a sample.
+
+When issue status also collects linked PR findings, it repeats the native issue fence after those asynchronous reads before returning the combined result.
+
+
+Replies to comment commands require a valid captured request and a fresh native
+source check. If the event lacks that request evidence, the Action withholds
+creation, updates and duplicate cleanup instead of assuming freshness. Initial
+help answers from non-comment events retain their ordinary immutable reply.
+
+
+`/copilot history` in a pull request's main conversation reads and publishes for
+that exact PR, even when its linked issue has a different number. The query uses
+the PR locale and does not infer an issue from the PR number. Review threads
+continue to direct you to the main conversation; arguments are not accepted.
+
+Doctor treats a unique enabled help issue as branchless: incomplete help-form
+headings do not create a branch or SDD requirement. Disabled workflow kinds and
+conflicting kind labels still show their admission block. For simple literal
+workflow matrices, Doctor checks the product against GitHub's 256-job matrix
+limit; it does not expand or execute jobs. Dynamic axes and include/exclude
+transformations remain unavailable rather than receiving a guessed Pass.
+
+Doctor keeps an explicitly absent approval policy separate from a present empty
+value: verified absence retains the off default, while a present empty or
+whitespace value is invalid. A malformed provider value is unavailable. SDD
+catalog prerequisites require every tracked product specification, including
+nested Markdown files, to have a catalog owner; the three top-level standard
+documents are excluded. Independent successful checks remain visible when a
+policy or specification check is blocked.
+
+A workflow Action job cannot receive Pass when a directly required job is
+statically skipped. Other `needs` requirements remain unavailable when runtime
+success, dependency chains, cycles or unsupported override conditions cannot
+be established by the bounded structural inspection. Another independent
+eligible Action job can still satisfy the workflow contract. Doctor does not
+execute jobs or predict their runtime success.
+
+An explicit missing-file result is blocked; an omitted or malformed provider
+entry is unavailable evidence. Doctor never treats an incomplete sample as proof
+that a file or permission is missing. Successful independent checks remain
+visible, and the report points to the run and read-access guidance for retry.
+
+Progress archive acceptance reserves capacity for each supported closure reason
+in both English and Spanish. If the retained assessment cannot fit those views
+within the publication limit, the Action leaves the existing card unchanged.
+
+Doctor distinguishes its source links: **Inspected issue** opens the issue context,
+**Inspected pull request** opens the exact PR, and **Inspected repository revision**
+opens the immutable repository tree that was inspected. Spanish uses the matching
+entity captions. These links do not authorize a repair or certify CI, producer
+health or write permissions.

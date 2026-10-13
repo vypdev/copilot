@@ -1,4 +1,7 @@
 import { appendPullRequestReadiness } from './pull_request_readiness_status_policy';
+import { DEFAULT_COPILOT_LIFECYCLE_LABELS, lifecycleStateFromLabels } from '../../domain/copilot_lifecycle';
+import type { NativeIssueCompletionFacts } from '../../domain/issue_completion';
+import type { NativePullRequestCompletionFacts } from '../ports/issue_completion_ports';
 import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
 import { initialSddStatus, formatSddStatus, type SddStatusReadiness } from './sdd_status_policy';
 import { Result } from '../../data/model/result';
@@ -21,7 +24,7 @@ export interface CopilotStatusExecutionContext {
     readonly isPush: boolean;
     readonly isPullRequest: boolean;
     readonly inputs?: { readonly action?: string };
-    readonly issue: { readonly number: number; readonly issueManagedBranches?: boolean; readonly creator?: string; readonly url?: string };
+    readonly issue: { readonly number: number; readonly issueManagedBranches?: boolean; readonly creator?: string; readonly url?: string; readonly nativeState?: 'open' | 'closed'; readonly nativeStateReason?: string };
     readonly issueWorkflowKind?: string;
     readonly issueWorkflowProfileDigest?: string;
     readonly branches?: { readonly development?: string };
@@ -29,6 +32,8 @@ export interface CopilotStatusExecutionContext {
     readonly pullRequest: {
         readonly number: number;
         readonly isPullRequestReviewComment: boolean;
+        readonly nativeState?: 'open' | 'closed';
+        readonly isMerged?: boolean;
     };
     readonly commit: { readonly branch: string };
     readonly labels: {
@@ -68,6 +73,7 @@ export interface CopilotStatusSnapshot {
     readonly pullRequestDescriptionMode: string;
     readonly sddReadiness?: SddStatusReadiness;
     readonly issueUrl?: string;
+    readonly lifecycleLabels?: Readonly<CopilotLifecycleLabels>;
 }
 
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
@@ -98,6 +104,15 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         ?? parsePositiveSafeInteger(execution.issue?.number);
     const issueNumber = candidateIssue === execution.pullRequest?.number ? undefined : candidateIssue;
 
+    const nativeLifecycle = !execution.isPush && isPullRequestTarget
+        && parsePositiveSafeInteger(execution.pullRequest?.number) && execution.pullRequest.nativeState === 'closed'
+        ? execution.pullRequest.isMerged === true ? 'merged' : 'closed'
+        : !execution.isPush && !isPullRequestTarget && issueNumber
+            && issueNumber === parsePositiveSafeInteger(execution.issue?.number) && execution.issue.nativeState === 'closed'
+            ? execution.issue.nativeStateReason === 'completed' ? 'completed' : 'closed' : undefined;
+    const currentLifecycle = nativeLifecycle ?? lifecycle;
+    const currentWaitingFor = nativeLifecycle ? undefined : waitingFor;
+
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -113,8 +128,9 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         ...(issueNumber ? { issueNumber } : {}),
         ...(execution.pullRequest?.number > 0 ? { pullRequestNumber: execution.pullRequest.number } : {}),
         ...(branch ? { branch } : {}),
-        ...(lifecycle ? { lifecycle } : {}),
-        ...(waitingFor ? { waitingFor } : {}),
+        ...(currentLifecycle ? { lifecycle: currentLifecycle } : {}),
+        ...(currentWaitingFor ? { waitingFor: currentWaitingFor } : {}),
+        lifecycleLabels: Object.freeze({ ...(execution.labels?.lifecycle ?? DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
         issueLabels: Object.freeze(issueLabels),
         pullRequestLabels: Object.freeze(pullRequestLabels),
         ...(findingStates ? { findingStates: Object.freeze({
@@ -173,4 +189,24 @@ export function formatCopilotStatus(
     }
     if (snapshot.sddReadiness) lines.push(...formatSddStatus(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
     return appendPullRequestReadiness(lines, snapshot, catalog);
+}
+
+/** A fresh native read supersedes event-derived terminal state without obtaining mutation authority. */
+export function projectCurrentNativeStatus(status: CopilotStatusSnapshot, facts: NativeIssueCompletionFacts | NativePullRequestCompletionFacts): CopilotStatusSnapshot {
+    const issue = status.target === 'issue';
+    const targetNumber = issue ? status.issueNumber : status.target === 'pull-request' ? status.pullRequestNumber : undefined;
+    if (!parsePositiveSafeInteger(targetNumber) || facts.number !== targetNumber || !['open', 'closed'].includes(facts.state)
+        || (issue ? !('labels' in facts) || !('reason' in facts) : !('merged' in facts) || typeof facts.merged !== 'boolean')) return status;
+    const labels = status.lifecycleLabels ?? DEFAULT_COPILOT_LIFECYCLE_LABELS;
+    const currentLabels = issue && 'labels' in facts ? facts.labels : status.pullRequestLabels;
+    const state = lifecycleStateFromLabels(currentLabels, labels);
+    const active = state === 'working' ? 'in-progress' : state;
+    const waiting = currentLabels.includes(labels.awaitingMaintainer) ? 'maintainer'
+        : currentLabels.includes(labels.awaitingIssueAuthor) ? 'issue-author' : undefined;
+    const terminal = facts.state === 'closed'
+        ? issue ? 'reason' in facts && facts.reason === 'completed' ? 'completed' : 'closed'
+            : 'merged' in facts && facts.merged === true ? 'merged' : 'closed'
+        : undefined;
+    return Object.freeze({ ...status, ...(issue ? { issueLabels: Object.freeze([...currentLabels]) } : {}),
+        lifecycle: terminal ?? active, waitingFor: terminal ? undefined : waiting });
 }

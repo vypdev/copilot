@@ -1,4 +1,4 @@
-import { buildCopilotStatusResult, buildCopilotStatusSnapshot, formatCopilotStatus } from '../status_command_policy';
+import { buildCopilotStatusResult, buildCopilotStatusSnapshot, formatCopilotStatus, projectCurrentNativeStatus } from '../status_command_policy';
 
 function execution(overrides: Record<string, unknown> = {}) {
     return {
@@ -64,6 +64,52 @@ describe('status command policy', () => {
             currentConfiguration: { workingBranch: 'docs/17-stale', results: [] },
         }) as never);
         expect(snapshot.branch).toBe('docs/17-actual');
+    });
+
+    it.each([
+        ['completed', 'completed'], ['not_planned', 'closed'], [undefined, 'closed'],
+    ])('prioritizes native closed issue state with reason %s over active labels', (reason, phase) => {
+        const base = execution();
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            eventName: 'issue_comment', isPullRequest: false, issueNumber: 17,
+            issue: { number: 17, nativeState: 'closed', nativeStateReason: reason },
+            pullRequest: { number: -1, isPullRequestReviewComment: false },
+            labels: { ...base.labels, currentIssueLabels: ['state:working', 'state:awaiting-maintainer', '55%', 'branched', 'SDD'] },
+        }) as never);
+        expect(snapshot.lifecycle).toBe(phase);
+        expect(snapshot.waitingFor).toBeUndefined();
+        expect(snapshot.issueLabels).toContain('branched');
+        expect(snapshot.issueLabels).toContain('SDD');
+    });
+
+    it('does not reuse native completion when an issue is reopened', () => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            eventName: 'issue_comment', isPullRequest: false, issueNumber: 17,
+            issue: { number: 17, nativeState: 'open', nativeStateReason: 'reopened' },
+            pullRequest: { number: -1, isPullRequestReviewComment: false },
+        }) as never);
+        expect(snapshot.lifecycle).toBe('in-progress');
+    });
+
+    it.each([['merged', true, 'merged'], ['closed without merging', false, 'closed']])(
+        'prioritizes the native PR %s fact over active review labels', (_case, merged, phase) => {
+            const base = execution();
+            const snapshot = buildCopilotStatusSnapshot(execution({
+                pullRequest: { number: 21, isPullRequestReviewComment: false, nativeState: 'closed', isMerged: merged },
+                labels: { ...base.labels, currentPullRequestLabels: ['state:reviewing', 'state:awaiting-maintainer'] },
+            }) as never);
+            expect(snapshot.lifecycle).toBe(phase);
+            expect(snapshot.waitingFor).toBeUndefined();
+        },
+    );
+
+    it.each([17, -1])('does not apply a native closed fact from an unverified issue identity %s', nativeNumber => {
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            eventName: 'issue_comment', isPullRequest: false, issueNumber: 19,
+            issue: { number: nativeNumber, nativeState: 'closed', nativeStateReason: 'completed' },
+            pullRequest: { number: -1, isPullRequestReviewComment: false },
+        }) as never);
+        expect(snapshot.lifecycle).toBe('in-progress');
     });
 
     it('builds a read-only snapshot from setup facts', () => {
@@ -288,5 +334,57 @@ describe('unknown issue admission status', () => {
     it.each(['pull-request', 'push'])('does not infer issue SDD eligibility for a %s target', target => {
         const snapshot = buildCopilotStatusSnapshot(execution({ isPush: target === 'push', isPullRequest: target === 'pull-request', pullRequest: { number: target === 'push' ? -1 : 21 }, issueWorkflowKind: 'feature' }) as never);
         expect(snapshot.sddReadiness).toBeUndefined();
+    });
+});
+
+describe('current native lifecycle projection', () => {
+    const issue = () => buildCopilotStatusSnapshot(execution({ isPullRequest: false, issueNumber: 17,
+        issue: { number: 17 }, pullRequest: { number: -1, isPullRequestReviewComment: false } }) as never);
+    const facts = { number: 17, state: 'closed' as const, reason: 'completed' as const, labels: ['SDD', '55%', 'state:awaiting-maintainer'] };
+    it('keeps historical labels and branch while native completion clears obsolete waiting guidance', () => {
+        const initial = { ...issue(), waitingFor: 'maintainer' };
+        const result = projectCurrentNativeStatus(initial, facts);
+        expect(result).toMatchObject({ lifecycle: 'completed', waitingFor: undefined, branch: initial.branch, issueLabels: facts.labels });
+        expect(Object.isFrozen(result)).toBe(true); expect(Object.isFrozen(result.issueLabels)).toBe(true);
+    });
+    it('replaces a cached terminal issue state with current reopened work and waiting facts', () => {
+        const result = projectCurrentNativeStatus({ ...issue(), lifecycle: 'completed' }, { ...facts, state: 'open', reason: 'reopened', labels: ['state:working', 'state:awaiting-issue-author'] });
+        expect(result).toMatchObject({ lifecycle: 'in-progress', waitingFor: 'issue-author' });
+    });
+    it('projects a native duplicate as closed without completed or waiting guidance', () => {
+        expect(projectCurrentNativeStatus({ ...issue(), waitingFor: 'maintainer' }, { ...facts, reason: 'duplicate' }))
+            .toMatchObject({ lifecycle: 'closed', waitingFor: undefined });
+    });
+    it('keeps an unknown closure reason closed without asserting completed', () => {
+        expect(projectCurrentNativeStatus(issue(), { ...facts, reason: 'unknown' })).toMatchObject({ lifecycle: 'closed' });
+    });
+    it.each([true, false])('projects a closed PR with strictly merged=%s', merged => {
+        const initial = buildCopilotStatusSnapshot(execution() as never);
+        expect(projectCurrentNativeStatus(initial, { number: 21, state: 'closed', merged }).lifecycle).toBe(merged ? 'merged' : 'closed');
+    });
+    it('ignores foreign identity and malformed native state', () => {
+        const initial = issue();
+        expect(projectCurrentNativeStatus(initial, { ...facts, number: 18 })).toBe(initial);
+        expect(projectCurrentNativeStatus(initial, { ...facts, state: 'CLOSED' as never })).toBe(initial);
+    });
+    it('never infers native closure without a safe target number', () => {
+        const initial = { ...issue(), issueNumber: 0 };
+        expect(projectCurrentNativeStatus(initial, facts)).toBe(initial);
+    });
+    it('does not let issue closure change a push target', () => {
+        const initial = { ...issue(), target: 'push' as const };
+        expect(projectCurrentNativeStatus(initial, facts)).toBe(initial);
+    });
+    it('uses configured active and waiting labels for a current open issue', () => {
+        const initial = issue(); const labels = { ...initial.lifecycleLabels!, blocked: 'custom-block', awaitingMaintainer: 'custom-wait' };
+        expect(projectCurrentNativeStatus({ ...initial, lifecycleLabels: labels }, { ...facts, state: 'open', labels: ['custom-block', 'custom-wait'] }))
+            .toMatchObject({ lifecycle: 'blocked', waitingFor: 'maintainer' });
+    });
+    it('does not accept facts belonging to the other native subject kind', () => {
+        const initial = issue();
+        expect(projectCurrentNativeStatus(initial, { number: 17, state: 'closed', merged: true })).toBe(initial);
+        const pull = buildCopilotStatusSnapshot(execution() as never);
+        expect(projectCurrentNativeStatus(pull, { ...facts, number: 21 })).toBe(pull);
+        expect(projectCurrentNativeStatus(pull, { number: 21, state: 'closed', merged: 'true' as never })).toBe(pull);
     });
 });

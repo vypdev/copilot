@@ -10,6 +10,7 @@ export function useWebSetupRenderer() {
     const pending = new Map<number, { resolve: (html: string) => void; reject: (error: Error) => void }>();
     const rejectPending = (error: Error) => { for (const request of pending.values()) request.reject(error); pending.clear(); };
 
+    // Cold compiler startup has its own bounded budget; render assertions retain their default timeout.
     beforeAll(() => new Promise<void>((ready, failed) => {
         child = fork(resolve(__dirname, '../scripts/render-web-setup-component.cjs'), ['--ipc'], {
             execArgv: [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
@@ -33,7 +34,7 @@ export function useWebSetupRenderer() {
             if (message.type === 'rendered' && typeof message.html === 'string') request.resolve(message.html);
             else request.reject(new Error(typeof message.message === 'string' ? message.message : 'Invalid component render response.'));
         });
-    }));
+    }), 20_000);
 
     afterAll(() => new Promise<void>(done => {
         closing = true;

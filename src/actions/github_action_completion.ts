@@ -1,3 +1,4 @@
+import { createReplyRequestReadPort } from '../infrastructure/composition/reply_request_composition_root';
 import * as core from '@actions/core';
 import type { Execution } from '../data/model/execution';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
@@ -52,11 +53,16 @@ export async function finishGithubAction(
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
+        const publicationContext = projectPublishResultContext(execution);
+        const requestRead = publicationContext.requestSource ? createReplyRequestReadPort({
+            owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
+        }) : undefined;
         const publicationOutcome = await new PublishResultUseCase(
             issueNotificationPort,
             catalogResolver,
             publicationSourceQuery,
-        ).invoke(projectPublishResultContext(execution));
+            requestRead,
+        ).invoke(publicationContext);
         if (publicationOutcome) results.push(publicationOutcome);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         logInfo('Generic result publication skipped: this single action owns its user-facing presentation.');

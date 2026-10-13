@@ -196,6 +196,11 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'workspace-changes-rejected': Object.freeze({
+    impact: 'The changes were rejected during workspace verification.',
+    action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
+    retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+  }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
     action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -259,6 +264,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'workspace-changes-rejected': Object.freeze({
+    impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
+    action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
+    retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+  }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
     action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',

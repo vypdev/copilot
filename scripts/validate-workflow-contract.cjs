@@ -82,6 +82,7 @@ const BOT_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request_review_state.yml',
   'copilot_pull_request_comment.yml',
 ]);
+const CLOSED_ISSUE_BOT_GATE_EXPRESSION = "${{ (github.event.action == 'closed' && github.event.issue.state == 'closed') || vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
 const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
 const FORK_SAFE_BOT_GATE_EXPRESSION = "${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}";
 const BOT_PR_ANALYSIS_GATE_EXPRESSION = "${{ github.event.pull_request.head.repo.full_name == github.repository && (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN || ((github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize') && github.event.pull_request.user.login == github.actor)) }}";
@@ -1185,7 +1186,11 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
-  const expectedBotGate = manifest.file === 'copilot_pull_request.yml' && relativeFile.startsWith('setup/')
+  if (manifest.file === 'copilot_issue.yml' && !workflow.on?.issues?.types?.includes('closed')) {
+    throw new Error(`${relativeFile} must subscribe to native closed issue events.`);
+  }
+  const expectedBotGate = manifest.file === 'copilot_issue.yml' ? CLOSED_ISSUE_BOT_GATE_EXPRESSION
+    : manifest.file === 'copilot_pull_request.yml' && relativeFile.startsWith('setup/')
     ? BOT_PR_ANALYSIS_GATE_EXPRESSION
     : FORK_GATED_WORKFLOW_FILES.has(manifest.file)
       ? FORK_SAFE_BOT_GATE_EXPRESSION

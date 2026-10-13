@@ -7,6 +7,8 @@ export const COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'doctor',
+    'history',
     'description',
     'explain',
     'diagnose',
@@ -84,8 +86,14 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
         && name !== 'remember') {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
+    if (name === 'doctor' && argumentsList.length > 0) {
+        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
+    }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+    }
+    if (name === 'history' && argumentsList.length) {
+        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
     }
     return {
         kind: 'command',

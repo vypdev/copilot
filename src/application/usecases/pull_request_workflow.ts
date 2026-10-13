@@ -86,7 +86,9 @@ export async function runPullRequestWorkflow(
     }
 
     if (context.closed && context.merged) {
-      return ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+      const results = await ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+      if (ports.workflowSteps.retireBranchSync) results.push(...await ports.workflowSteps.retireBranchSync.invoke(ports.sharedContexts.steps.retireBranchSync));
+      return results;
     }
   } catch (cause) {
     const semanticError = new ApplicationError('workflow.failed', "Unable to process the pull request.", { cause });

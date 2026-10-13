@@ -1,3 +1,4 @@
+import type { RetireBranchSyncContext } from './actions/retire_branch_sync_use_case';
 import type { Result } from '../../data/model/result';
 import type { ParamUseCase } from './base/param_usecase';
 import type { UpdateTitleContext } from './steps/common/update_title_workflow';
@@ -21,5 +22,6 @@ export interface PullRequestWorkflowSteps {
   linkPullRequestIssue: ParamUseCase<LinkPullRequestIssueContext, Result[]>;
   syncSizeAndProgressLabels: ParamUseCase<SyncPullRequestLabelsContext, Result[]>;
   checkPriorityPullRequestSize: ParamUseCase<PrioritySizeContext, Result[]>;
+  retireBranchSync?: ParamUseCase<RetireBranchSyncContext, Result[]>;
   closeIssueAfterMerging: ParamUseCase<CloseIssueAfterMergeContext, Result[]>;
 }
