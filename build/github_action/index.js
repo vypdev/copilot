@@ -53964,16 +53964,28 @@ async function runAutofixAction(param, options, intentPayload) {
                 payload: { dryRun: true },
             })];
     }
+    let branchOverride;
+    try {
+        branchOverride = await (0, comment_mutation_target_workflow_1.resolveCommentMutationBranch)(param, options);
+        if (!branchOverride || (intentPayload.branchOverride && intentPayload.branchOverride !== branchOverride)) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'Autofix requires the exact current conversation branch.');
+        }
+    }
+    catch (error) {
+        return [new result_1.Result({ id: `${options.taskId}.Autofix`, success: false, executed: false,
+                errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The autofix branch could not be verified.')] })];
+    }
+    const verifiedIntent = { ...intentPayload, branchOverride };
     (0, logging_ports_1.logInfo)("Running bugbot autofix.");
     const autofixResults = await options.autofixUseCase.invoke({
         operation: param.bugbot.autofix,
         targetFindingIds: intentPayload.targetFindingIds,
         userComment: param.userComment,
         context: intentPayload.context,
-        branchOverride: intentPayload.branchOverride,
+        branchOverride,
     });
     let completedOutcome;
-    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort, outcome => { completedOutcome = outcome; });
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, verifiedIntent, autofixResults, options.bugbotGitMutationPort, outcome => { completedOutcome = outcome; });
     if (resolutionErrors.length > 0) {
         autofixResults.push(new result_1.Result({
             id: `${options.taskId}.AutofixPostflight`,

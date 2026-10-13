@@ -48,8 +48,8 @@ For a natural-language comment, mention the configured bot user (for example,
 and `/copilot fix all` commands do not require a mention.
 
 **Important:** An issue-only comment does not infer a branch by scanning open
-pull requests. Request autofix from the intended PR review thread, or use an
-explicit branch-scoped CLI/workflow run. Without an authoritative PR/branch
+pull requests. Request autofix from the intended PR conversation or review
+thread, or use an explicit branch-scoped CLI/workflow run. Without an authoritative PR/branch
 target, autofix stops before workspace mutation. See [Troubleshooting](/security-operations/operations/troubleshooting).
 
 ### From a pull request review thread
@@ -58,7 +58,13 @@ Reply to the **review comment** that contains the finding. The action sends your
 reply plus the **parent comment** (the finding text) to the configured agent so
 it can match the finding and run the fix.
 
-The action runs on the PR’s **head branch**, which is supplied by the review-comment event and revalidated before any workspace mutation. A general comment in the PR conversation is an `issue_comment`, so it can request a review or answer but is not a write target. No “resolve branch from issue” fallback exists.
+The action runs on the PR’s **head branch**. A review-thread event supplies its
+identity; an ordinary comment such as `/copilot fix all` in the PR conversation
+uses one exact-number read to verify the current open PR and its same-repository
+head. The Action resolves that branch before the fixer and passes the same
+verified branch to commit/push. A mismatching branch hint, closed or forked PR,
+unavailable native evidence or missing issue link stops before edits. No default
+branch or arbitrary Git HEAD fallback exists.
 
 For a read-only fresh review, comment `/copilot review`, `/copilot findings`,
 or `/copilot recheck`. These commands invoke the reviewer/detection route and
@@ -129,7 +135,8 @@ This prevents a successful edit or test command from being mistaken for proof th
 
 ## Troubleshooting
 
-- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. The request must come from the intended PR review thread or another execution with an explicit branch target; issue-only comments never guess a branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
+- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. The request must come from the intended PR conversation or review thread, or another execution with an explicit branch target; issue-only comments never guess a branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
+- **Agent completed but nothing was published:** Model/CLI success and safe edits do not prove a commit or push. Inspect the correlated failure and linked run. After correcting branch evidence or upgrading an affected installation, retry the authorized command from the current PR; do not manually publish edits retained by a failed run.
 - **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If the configured agent didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
 
 ---

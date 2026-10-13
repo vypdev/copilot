@@ -1664,7 +1664,8 @@
         "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts",
         "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
+        "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
