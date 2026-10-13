@@ -279,3 +279,8 @@ unchanged and reports incomplete cleanup; earlier successful edits are retained.
 The observer checks that an issue is still open before requesting locale copy.
 If it closes while that copy is being resolved, the observer retires its existing
 card and skips the branch comparison and new advice.
+
+When generated bundles conflict, the fixer must regenerate the admitted bundles
+before returning its resolution. The Action stages that result and verifies it
+again. A rebuild that changes the staged resolution during verification stops
+the synchronization with `unstaged-changes`; no synchronization commit is pushed.

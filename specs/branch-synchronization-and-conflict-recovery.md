@@ -685,3 +685,17 @@ across admitted open dependencies. Five distinct order/race/call-budget cases co
 the correction), closure during localization, denied/foreign final native reads
 and one shared catalog across two admitted dependencies. The owning inventory
 is now 297 (237 + 60), plus four separately owned configuration-persistence cases.
+
+### Generated resolution must precede trusted staging (2026-10-13)
+
+Native Doctor synchronization `38380102768` passed 602 suites, 8,434 tests and
+all six verification commands but correctly rejected `unstaged-changes` after
+the build regenerated previously staged conflict bundles. The fixer prompt now
+requires the existing offline build to regenerate admitted canonical bundles
+before returning its resolution. It MUST preserve the original conflict-path
+boundary and report any build touching a non-listed path; it cannot stage files.
+Trusted staging and all verification immutability checks remain unchanged.
+Arbitrary bundle changes during verification MUST still fail. Existing real-Git
+verification-mutation cases retain their assertions and budget; this prompt
+correction adds no counted case. Acceptance requires a fresh native parent sync
+to pass the existing six commands and publish its verified head.
