@@ -1,6 +1,7 @@
+import { replyRequestBodyDigest } from '../../../../../domain/reply_request_digest';
 import { Result } from '../../../../../data/model/result';
 import { selectSemanticReplyIntents } from '../../../../policies/semantic_result_publication_policy';
-import { reconcileReply } from '../reply_publication_workflow';
+import { reconcileReply as reconcileBoundReply, type ReplyPublicationContext } from '../reply_publication_workflow';
 
 function intent() {
   return selectSemanticReplyIntents({
@@ -151,3 +152,11 @@ describe('reply publication workflow', () => {
     expect(repository.updateComment).toHaveBeenCalledTimes(1);
   });
 });
+
+function reconcileReply(value: ReplyPublicationContext, comments: ReturnType<typeof ports>) {
+  const requestSource = value.intent.correlationId.startsWith('comment:') ? {
+    surface: 'issue-comment' as const, commentId: 41, author: 'developer',
+    target: value.intent.target, bodyDigest: replyRequestBodyDigest('/copilot help'),
+  } : undefined;
+  return reconcileBoundReply({ ...value, requestSource }, comments, { matches: async () => true });
+}

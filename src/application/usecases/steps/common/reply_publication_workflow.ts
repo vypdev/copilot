@@ -43,7 +43,7 @@ export async function reconcileReply(
     };
     const canRefresh = Boolean(witness && refreshable[context.intent.messageKey] === context.intent.projection.kind);
     const sourceMatches = async () => {
-        if (!witness) return true;
+        if (!witness) return !context.intent.correlationId.startsWith('comment:');
         const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
         return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
             && witness.target.kind === target.kind && witness.target.number === target.number
