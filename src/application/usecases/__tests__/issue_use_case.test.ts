@@ -154,6 +154,16 @@ describe("IssueUseCase", () => {
     mockListIssueComments.mockResolvedValue([]);
   });
 
+  it.each(['labeled', 'unlabeled'])('preserves completed branch and SDD artifacts on a closed issue %s callback', async action => {
+    const readiness = jest.fn().mockResolvedValue([]);
+    const param = minimalExecution({ eventName: 'issues', inputs: { action, issue: { number: 8, state: 'closed' } },
+      issueStartDecision: { started: action === 'labeled', branchRequired: action === 'labeled', sddRequired: false, helpRequired: false } });
+    const result = await createUseCase(undefined, undefined, readiness).invoke(param);
+    expect(result).toMatchObject([{ success: true, executed: false }]);
+    expect(readiness).not.toHaveBeenCalled(); expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled(); expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+  });
+
   it("closes and returns early when permissions fail", async () => {
     mockCheckPermissionsInvoke.mockResolvedValue([
       new Result({ id: "perm", success: false, executed: true, steps: [] }),

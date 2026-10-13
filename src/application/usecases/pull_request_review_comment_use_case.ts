@@ -2,6 +2,7 @@ import { invalidCommentCommandResult } from './comment_automation_command_workfl
 import { parseCopilotCommand } from '../../domain/copilot_command';
 import { readCopilotHistory } from './read_copilot_history_workflow';
 import type { CopilotHistoryReadPort } from '../ports/copilot_history_ports';
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -51,6 +52,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
     private readonly historyReadPort?: CopilotHistoryReadPort,
+    private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -91,6 +93,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        nativeStatusReadPort: this.nativeStatusReadPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

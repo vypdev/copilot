@@ -2695,3 +2695,5 @@ with 35 unchanged skips, every unchanged coverage gate and 308/350 setup
 acceptance (42 explicitly open). The full Jest run took 64.992 seconds. Types,
 lint, documentation/workflow/specification validation, bundle synchronization
 and the AST graph update pass. Native CI remains independent evidence.
+
+Native branch synchronization run `38350277408` on Ubuntu 4 timed out in the renderer's cold-start `beforeAll` at the default 5-second Jest hook deadline. The one-compiler-per-suite fixture now bounds only cold startup at 20 seconds; all 147 semantic component cases, each render's assertion timeout, worker count, platforms and coverage thresholds remain unchanged. This corrects a bootstrap budget rather than accepting mocked/cached HTML or skipping native verification. A fresh native synchronization remains required. No OS OOM cause is inferred.

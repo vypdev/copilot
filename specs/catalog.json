@@ -138,7 +138,12 @@
         "src/infrastructure/composition/copilot_history_port_factory.ts",
         "src/application/ports/progress_diff_query_ports.ts",
         "src/data/repository/progress_diff_repository.ts",
-        "src/application/policies/agent_activity_policy.ts"
+        "src/application/policies/agent_activity_policy.ts",
+        "src/domain/reply_request_digest.ts",
+        "src/application/ports/reply_request_read_ports.ts",
+        "src/data/repository/reply_request_repository.ts",
+        "src/infrastructure/composition/reply_request_composition_root.ts",
+        "src/infrastructure/github/ports/github_reply_request_client.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -222,7 +227,10 @@
         "src/application/usecases/__tests__/copilot_history_workflow.test.ts",
         "src/infrastructure/composition/__tests__/copilot_history_port_factory.test.ts",
         "src/data/repository/__tests__/progress_diff_repository.test.ts",
-        "src/application/policies/__tests__/agent_activity_policy.test.ts"
+        "src/application/policies/__tests__/agent_activity_policy.test.ts",
+        "src/data/repository/__tests__/reply_request_repository.test.ts",
+        "src/application/usecases/steps/common/__tests__/reply_request_publication.test.ts",
+        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -468,7 +476,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -526,7 +534,8 @@
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/infrastructure/composition/lifecycle_state_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
-        "src/infrastructure/composition/main_run_route_composition_root.ts"
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/application/policies/configuration_persistence_policy.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -558,7 +567,8 @@
         "src/application/usecases/__tests__/single_action_workflow.test.ts",
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
-        "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
+        "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts",
+        "src/application/policies/__tests__/configuration_persistence_policy.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -1302,7 +1312,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -1331,7 +1341,17 @@
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/usecases/actions/lifecycle_synchronization_context.ts",
         "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
-        "src/application/policies/implementation_result_policy.ts"
+        "src/application/policies/implementation_result_policy.ts",
+        "src/domain/issue_completion.ts",
+        "src/application/ports/issue_completion_ports.ts",
+        "src/application/usecases/steps/issue/close_issue_after_merging_use_case.ts",
+        "src/data/repository/issue/issue_completion_repository.ts",
+        "src/infrastructure/composition/issue_completion_composition_root.ts",
+        "src/infrastructure/github/ports/github_issue_completion_client.ts",
+        "src/application/policies/status_command_policy.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "scripts/coverage-budgets.json"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1346,14 +1366,21 @@
         "src/domain/__tests__/copilot_lifecycle.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
         "src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts",
-        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts"
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
+        "src/domain/__tests__/issue_completion.test.ts",
+        "src/application/usecases/steps/issue/__tests__/close_issue_after_merging_use_case.test.ts",
+        "src/data/repository/issue/__tests__/issue_completion_repository.test.ts",
+        "src/infrastructure/composition/__tests__/issue_completion_composition_root.test.ts",
+        "src/application/policies/__tests__/status_command_policy.test.ts",
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/assignees-and-projects.mdx",
         "docs/issues/notifications-and-auto-close.mdx",
-        "docs/issues/index.mdx"
+        "docs/issues/index.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {
@@ -1462,7 +1489,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -1529,7 +1556,9 @@
         "src/application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_workflow.ts",
         "src/application/usecases/comment_automation_use_case.ts",
         "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts",
-        "src/application/usecases/steps/commit/git_branch_checkout.ts"
+        "src/application/usecases/steps/commit/git_branch_checkout.ts",
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1567,7 +1596,9 @@
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/detect_bugbot_fix_intent_use_case.test.ts",
         "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts",
-        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts"
+        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

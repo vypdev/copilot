@@ -1,3 +1,4 @@
+import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
 import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
@@ -244,6 +245,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     bugbot.scm.context,
     createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
+    createNativeStatusReadPort(binding),
   );
 }
 
@@ -302,6 +304,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     rememberBranchPorts(binding, bugbot.scm.context),
     bugbot.scm.context,
     createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
+    createNativeStatusReadPort(binding),
   );
 }
 

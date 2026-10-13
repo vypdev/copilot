@@ -45,6 +45,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'workspace-changes-rejected',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
@@ -62,6 +63,7 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
+    readonly 'workspace-changes-rejected': Readonly<Record<string, never>>;
 }
 
 export type ApplicationErrorRecovery = {
@@ -303,6 +305,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'workspace-changes-rejected': Object.freeze([]),
 });
 
 function normalizeApplicationErrorRecovery(
