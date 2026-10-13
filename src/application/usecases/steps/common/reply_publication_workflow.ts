@@ -41,9 +41,9 @@ export async function reconcileReply(
         'application-error': 'application-error', 'copilot-status': 'status-command', 'copilot-help': 'help',
         'copilot-doctor': 'doctor-command', 'copilot-history': 'history-command', 'copilot-sdd-diff': 'sdd-diff',
     };
-    const guarded = witness && refreshable[context.intent.messageKey] === context.intent.projection.kind;
+    const canRefresh = Boolean(witness && refreshable[context.intent.messageKey] === context.intent.projection.kind);
     const sourceMatches = async () => {
-        if (!guarded) return true;
+        if (!witness) return true;
         const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
         return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
             && witness.target.kind === target.kind && witness.target.number === target.number
@@ -66,7 +66,7 @@ export async function reconcileReply(
 
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     if (!await sourceMatches()) return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });
-    if (guarded) {
+    if (canRefresh) {
         const rendered = renderSemanticReply(context.intent, context.catalog);
         if (canonical.body !== rendered) {
             if (!await sourceMatches()) return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });

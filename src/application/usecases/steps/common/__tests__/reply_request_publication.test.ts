@@ -77,13 +77,21 @@ describe('current request error and query refresh', () => {
         await expect(reconcileReply({ ...f.context, intent: help('es-ES') }, f.port, f.read)).resolves.toMatchObject({ effect: 'updated' });
         expect(f.port.addComment).not.toHaveBeenCalled();
     });
-    it('retains mutation receipts instead of rewriting a previous successful effect', async () => {
+    it('verifies the source before retaining a mutation receipt without rewriting it', async () => {
         const f = fixture(); const receipt = selectSemanticReplyIntents({ locale: 'en-US', target: f.context.intent.target, correlationId: 'comment:41',
             results: [new Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: true,
                 payload: { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count: 1 } } })] })[0];
         expect(receipt).toBeDefined(); f.comments[0].body = renderSemanticReply(receipt);
         await reconcileReply({ ...f.context, intent: receipt }, f.port, f.read);
-        expect(f.read.matches).not.toHaveBeenCalled(); expect(f.port.updateComment).not.toHaveBeenCalled();
+        expect(f.read.matches).toHaveBeenCalled(); expect(f.port.updateComment).not.toHaveBeenCalled();
+    });
+    it('withholds a new mutation receipt when its source no longer matches', async () => {
+        const f = fixture(); f.comments.length = 0; f.read.matches.mockResolvedValue(false);
+        const receipt = selectSemanticReplyIntents({ locale: 'en-US', target: f.context.intent.target, correlationId: 'comment:41',
+            results: [new Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: true,
+                payload: { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count: 1 } } })] })[0];
+        await reconcileReply({ ...f.context, intent: receipt }, f.port, f.read);
+        expect(f.read.matches).toHaveBeenCalled(); expect(f.port.addComment).not.toHaveBeenCalled();
     });
 });
 
