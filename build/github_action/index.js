@@ -71067,9 +71067,9 @@ class RuntimeDoctorRepository {
             if (!SHA.test(revision) || ref.data.object.type !== 'commit')
                 return { state: 'unavailable' };
             const trackedPaths = this.readTrackedPaths(revision);
-            const proveAbsent = (path) => trackedPaths.then(paths => !paths.has(path));
+            const pathType = (path) => trackedPaths.then(paths => paths.get(path));
             const [values, inventory] = await Promise.all([
-                Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision, proveAbsent)])), trackedPaths,
+                Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision, pathType)])), trackedPaths,
             ]);
             const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             if (final.data.object.type !== 'commit' || final.data.object.sha !== revision)
@@ -71082,7 +71082,7 @@ class RuntimeDoctorRepository {
             return { state: 'unavailable' };
         }
     }
-    async readFile(path, revision, proveAbsent) {
+    async readFile(path, revision, pathType) {
         try {
             const response = await this.client.rest.repos.getContent({ owner: this.owner, repo: this.repository, path, ref: revision });
             const data = response.data;
@@ -71090,6 +71090,8 @@ class RuntimeDoctorRepository {
                 || data.encoding !== 'base64' || typeof data.content !== 'string' || data.content.length > 300000
                 || !/^[A-Za-z0-9+/=\r\n]*$/u.test(data.content))
                 throw new Error('Malformed bounded file response.');
+            if (await pathType(path) !== 'file')
+                throw new Error('The pinned path is not a regular repository file.');
             const bytes = Buffer.from(data.content, 'base64');
             const text = bytes.toString('utf8');
             if (bytes.toString('base64') !== data.content.replace(/[\r\n]/gu, '')
@@ -71098,7 +71100,7 @@ class RuntimeDoctorRepository {
             return Object.freeze({ state: 'present', text });
         }
         catch (error) {
-            if (status(error) === 404 && await proveAbsent(path))
+            if (status(error) === 404 && (await pathType(path)) === undefined)
                 return Object.freeze({ state: 'missing' });
             throw error;
         }

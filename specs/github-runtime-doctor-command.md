@@ -502,3 +502,5 @@ regressions + 14 canonical-structure/real-catalog contracts + four inventory/ref
 adapter cases. No shared cases are counted again. Full gates, native review and
 live acceptance remain pending; a structural pass still cannot certify model or
 tool execution, runner availability, or write permissions.
+
+Native finding `4254657957` exposed that the Contents API can return a symlink target as a file, as documented by [GitHub](https://docs.github.com/en/rest/repos/contents#get-repository-content). Every successful content read MUST also prove a regular blob at the same path in the already pinned immutable tree (`100644` or `100755`). A symlink/directory response cannot establish required configuration or workflow presence. Three distinct provider regressions cover symlink mode, non-regular tree mode and accepted executable regular blobs; the dedicated inventory becomes 224 + 3 = **227**. All six content paths, the shared tree read, decoded-file/tree ceilings, credential scope and current-head fence remain unchanged.

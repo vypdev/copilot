@@ -19,6 +19,18 @@ beforeEach(() => {
     mockClient.rest.issues.get.mockResolvedValue({ data: { number: 7, title: 'Safe', body: '', labels: [{ name: 'feature' }] } });
 });
 describe('bounded SDK doctor reads', () => {
+    it.each([{mode:'120000',type:'blob'}, {mode:'040000',type:'tree'}])('rejects Contents file responses for immutable non-regular mode $mode', async entry => {
+        const tree = trackedTree(); tree.data.tree[0] = { ...tree.data.tree[0], ...entry };
+        mockClient.rest.git.getTree.mockResolvedValue(tree);
+        expect(await new RuntimeDoctorRepository('o','r','t').readRepository(42)).toEqual({ state:'unavailable' });
+    });
+    it('accepts a verified executable regular blob without following a symlink', async () => {
+        const tree = trackedTree(); tree.data.tree[0].mode = '100755'; mockClient.rest.git.getTree.mockResolvedValue(tree);
+        expect(await new RuntimeDoctorRepository('o','r','t').readRepository(42)).toMatchObject({ state:'available',
+            files:{[DOCTOR_REPOSITORY_PATHS[0]]:{state:'present'}} });
+        expect(mockClient.rest.git.getTree).toHaveBeenCalledTimes(1);
+    });
+
     it('reads exactly the fixed paths at one verified default revision and fences the default head', async () => {
         const result = await new RuntimeDoctorRepository('o', 'r', 'SECRET').readRepository(42);
         expect(result.state).toBe('available'); expect(mockClient.rest.repos.getContent.mock.calls.map(([request]) => request.path)).toEqual(DOCTOR_REPOSITORY_PATHS);
@@ -173,10 +185,11 @@ describe('bounded SDK doctor reads', () => {
 
 describe('immutable regular-file prerequisites and branch names', () => {
     it('reads the complete file inventory even when all six content reads succeed', async () => {
-        const tree = trackedTree(['specs/safe.md', 'specs/directory', 'specs/link.md']);
-        tree.data.tree[1].type = 'tree'; tree.data.tree[1].mode = '040000'; tree.data.tree[2].mode = '120000';
+        const tree = trackedTree(), extra = trackedTree(['specs/safe.md', 'specs/directory', 'specs/link.md']).data.tree;
+        extra[1].type = 'tree'; extra[1].mode = '040000'; extra[2].mode = '120000'; tree.data.tree.push(...extra);
         mockClient.rest.git.getTree.mockResolvedValue(tree);
-        expect(await new RuntimeDoctorRepository('o', 'r', 't').readRepository(42)).toMatchObject({ state: 'available', trackedFiles: ['specs/safe.md'] });
+        const result = await new RuntimeDoctorRepository('o', 'r', 't').readRepository(42);
+        expect(result).toMatchObject({ state: 'available', trackedFiles: [...DOCTOR_REPOSITORY_PATHS, 'specs/safe.md'] });
         expect(mockClient.rest.git.getTree).toHaveBeenCalledTimes(1);
     });
     it('keeps a denied catalog file-inventory proof unavailable despite successful content reads', async () => {
