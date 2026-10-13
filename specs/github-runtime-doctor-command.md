@@ -689,3 +689,33 @@ passed. The three whole-map cases additionally cover defensive shape branches an
 coverage, normal hooks and all native platform gates remain mandatory.
 Documentation distinguishes missing from incomplete evidence. Current-head
 review and post-promotion commands/replay/browser acceptance remain required.
+
+### Descriptive entity source links (dogfooding #484, 2026-10-13)
+
+Live replies [issue #461](https://github.com/vypdev/copilot/issues/461#issuecomment-6145766292)
+and [PR #483](https://github.com/vypdev/copilot/pull/483#issuecomment-6145771529)
+from promoted master `c7cfec82` incorrectly called issue/PR destinations
+**Inspected repository revision**. Only the validated immutable `/tree/SHA`
+footer is a repository revision. The entity links MUST use **Inspected issue**
+or **Inspected pull request**; Spanish uses **Issue inspeccionada** and
+**PR inspeccionado**, with the existing complete English fallback.
+
+Keep all existing HTTPS-origin/repository/revision validation, exact issue/PR
+numbers, destinations, source witness, semantic reply key/correlation, group
+states and no-model/no-write capabilities. No new input, permission, entity,
+provider request, role or safety boundary is introduced. Existing one-reply
+reconciliation/replay and byte limits remain intact. The two new catalog keys
+follow the existing complete-catalog contract and cannot accept arbitrary URLs
+or commands. Native not-applicable context links remain entity links and do not
+claim a repository revision.
+
+Eight distinct presentation cases add four entity/locale combinations, complete
+fallback, absent/unsafe provenance and unchanged correlated rendering. Six
+failed before the fix; the two provenance controls already passed. The dedicated
+inventory becomes 300 + 8 = **308** without recounting parent semantic/locale
+cases. Global/module coverage remains mandatory. User command docs explain the
+three link kinds and unchanged navigation; catalog evidence already owns the
+renderer, catalog and suite. Current-head full/native review/platform checks,
+source-correlated refresh, EN/ES browser inspection and original locale
+restoration are required for native acceptance. Existing historical receipts
+are not rewritten as proof of a new operation.
