@@ -10,7 +10,8 @@
       "lastVerified": "2026-10-13",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
-        "specs/repository-locale-and-localization.md"
+        "specs/repository-locale-and-localization.md",
+        "specs/copilot-history.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -128,8 +129,16 @@
         "src/application/usecases/comment_automation_command_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
         "src/application/policies/inactivity_result_counts_projection_policy.ts",
+        "src/domain/copilot_operation.ts",
+        "src/application/policies/copilot_history_policy.ts",
+        "src/application/policies/copilot_history_projection_policy.ts",
+        "src/application/policies/copilot_history_presentation_policy.ts",
+        "src/application/ports/copilot_history_ports.ts",
+        "src/application/usecases/read_copilot_history_workflow.ts",
+        "src/infrastructure/composition/copilot_history_port_factory.ts",
         "src/application/ports/progress_diff_query_ports.ts",
         "src/data/repository/progress_diff_repository.ts",
+        "src/application/policies/agent_activity_policy.ts",
         "src/domain/reply_request_digest.ts",
         "src/application/ports/reply_request_read_ports.ts",
         "src/data/repository/reply_request_repository.ts",
@@ -210,7 +219,15 @@
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
         "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
         "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
+        "src/domain/__tests__/copilot_operation.test.ts",
+        "src/application/policies/__tests__/copilot_history_policy.test.ts",
+        "src/application/policies/__tests__/copilot_history_presentation_policy.test.ts",
+        "src/application/policies/__tests__/copilot_operation_publication.test.ts",
+        "src/application/usecases/__tests__/copilot_history_route.test.ts",
+        "src/application/usecases/__tests__/copilot_history_workflow.test.ts",
+        "src/infrastructure/composition/__tests__/copilot_history_port_factory.test.ts",
         "src/data/repository/__tests__/progress_diff_repository.test.ts",
+        "src/application/policies/__tests__/agent_activity_policy.test.ts",
         "src/data/repository/__tests__/reply_request_repository.test.ts",
         "src/application/usecases/steps/common/__tests__/reply_request_publication.test.ts",
         "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
