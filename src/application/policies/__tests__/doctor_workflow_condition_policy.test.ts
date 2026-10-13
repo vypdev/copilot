@@ -34,3 +34,14 @@ describe('bounded workflow eligibility evidence', () => {
     it('accepts an eligible Action job independently of a disabled candidate', () => expect(contract('  disabled: {if: false, steps: [{uses: "./"}]}\n  active: {if: "github.event_name == \'issues\'", steps: [{uses: "./"}]}')).toBe('pass'));
     it('blocks an event filter that cannot admit any activity', () => expect(contract('  active: {steps: [{uses: "./"}]}', '{issues: {types: []}}')).toBe('blocked'));
 });
+
+
+describe('matrix eligibility in the complete workflow contract', () => {
+    it.each([
+        ['{os: []}', 'blocked'],
+        ['"${{ fromJSON(needs.prepare.outputs.matrix) }}"', 'unavailable'],
+        ['{os: [ubuntu-latest], exclude: [{os: ubuntu-latest}]}', 'unavailable'],
+    ])('withholds a passing contract for matrix %s', (matrix, expected) => {
+        expect(contract(`  action: {strategy: {matrix: ${matrix}}, steps: [{uses: "./"}]}`)).toBe(expected);
+    });
+});

@@ -1,3 +1,4 @@
+import { doctorWorkflowMatrix } from './doctor_workflow_matrix_policy';
 import { isDoctorBranchReference } from '../../domain/github_runtime_doctor';
 import { doctorWorkflowCondition } from './doctor_workflow_condition_policy';
 import { load, JSON_SCHEMA } from 'js-yaml';
@@ -83,13 +84,15 @@ export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'b
                 const job = object(rawJob);
                 const enabled = doctorWorkflowCondition(job.if, event);
                 if (enabled === false || !Array.isArray(job.steps)) continue;
+                const matrixEnabled = doctorWorkflowMatrix(job.strategy);
+                if (matrixEnabled === false) continue;
                 for (const rawStep of job.steps) {
                     const step = object(rawStep);
                     if (!(step.uses === './' || typeof step.uses === 'string'
                         && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses))) continue;
                     const stepEnabled = doctorWorkflowCondition(step.if, event);
                     if (stepEnabled === false) continue;
-                    if (enabled === true && stepEnabled === true) eligible = true;
+                    if (enabled === true && stepEnabled === true && matrixEnabled === true) eligible = true;
                     else possible = true;
                 }
             }

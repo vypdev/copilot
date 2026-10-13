@@ -41633,6 +41633,39 @@ function doctorWorkflowCondition(value, event) {
 
 /***/ }),
 
+/***/ 87989:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.doctorWorkflowMatrix = doctorWorkflowMatrix;
+/** Conservative structural evidence only; never evaluates expressions or expands matrices. */
+function doctorWorkflowMatrix(strategy) {
+    if (strategy === undefined)
+        return true;
+    if (!record(strategy))
+        return undefined;
+    if (!Object.prototype.hasOwnProperty.call(strategy, 'matrix'))
+        return true;
+    const matrix = strategy.matrix;
+    if (!record(matrix))
+        return undefined;
+    const axes = Object.entries(matrix);
+    if (!axes.length || axes.some(([key]) => key === 'include' || key === 'exclude'))
+        return undefined;
+    if (axes.some(([, values]) => Array.isArray(values) && values.length === 0))
+        return false;
+    return axes.every(([, values]) => Array.isArray(values) && values.every(value => typeof value === 'string' ? !value.includes('${{')
+        : typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value))) ? true : undefined;
+}
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+
+/***/ }),
+
 /***/ 20542:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -41757,6 +41790,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validDoctorConfiguration = validDoctorConfiguration;
 exports.doctorRepositoryPrerequisites = doctorRepositoryPrerequisites;
 exports.doctorWorkflowContracts = doctorWorkflowContracts;
+const doctor_workflow_matrix_policy_1 = __nccwpck_require__(87989);
 const github_runtime_doctor_1 = __nccwpck_require__(20413);
 const doctor_workflow_condition_policy_1 = __nccwpck_require__(61833);
 const js_yaml_1 = __nccwpck_require__(783);
@@ -41861,6 +41895,9 @@ function doctorWorkflowContracts(read) {
                 const enabled = (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(job.if, event);
                 if (enabled === false || !Array.isArray(job.steps))
                     continue;
+                const matrixEnabled = (0, doctor_workflow_matrix_policy_1.doctorWorkflowMatrix)(job.strategy);
+                if (matrixEnabled === false)
+                    continue;
                 for (const rawStep of job.steps) {
                     const step = object(rawStep);
                     if (!(step.uses === './' || typeof step.uses === 'string'
@@ -41869,7 +41906,7 @@ function doctorWorkflowContracts(read) {
                     const stepEnabled = (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(step.if, event);
                     if (stepEnabled === false)
                         continue;
-                    if (enabled === true && stepEnabled === true)
+                    if (enabled === true && stepEnabled === true && matrixEnabled === true)
                         eligible = true;
                     else
                         possible = true;

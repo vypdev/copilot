@@ -504,3 +504,32 @@ live acceptance remain pending; a structural pass still cannot certify model or
 tool execution, runner availability, or write permissions.
 
 Native finding `4254657957` exposed that the Contents API can return a symlink target as a file, as documented by [GitHub](https://docs.github.com/en/rest/repos/contents#get-repository-content). Every successful content read MUST also prove a regular blob at the same path in the already pinned immutable tree (`100644` or `100755`). A symlink/directory response cannot establish required configuration or workflow presence. Three distinct provider regressions cover symlink mode, non-regular tree mode and accepted executable regular blobs; the dedicated inventory becomes 224 + 3 = **227**. All six content paths, the shared tree read, decoded-file/tree ceilings, credential scope and current-head fence remain unchanged.
+
+
+### Conservative matrix eligibility (2026-10-13)
+
+Native review `38355935682` identified an Action job with a statically empty
+matrix being reported as runnable. The workflow contract MUST reject an empty
+static axis without include/exclude transformations as blocked. Simple nonempty
+static literal axes can establish structural eligibility; dynamic matrices or
+axes, expression-valued entries, unsupported values and include/exclude
+transformations MUST remain unavailable rather than claiming a job will run.
+Another independently eligible Action job may still establish the workflow
+contract. This is read-only evidence, not a runtime execution simulator; workflow
+conditions and all existing callback requirements continue to apply.
+
+See GitHub's primary [matrix documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/run-job-variations)
+for combinations, dynamic input and include/exclude behavior. The pure policy
+never evaluates expressions, expands combinations, reads provider state or
+changes workflow configuration. There are no new settings or permissions.
+
+Nineteen distinct regressions extend the inventory from 227 to **246**: sixteen
+pure shape/literal/empty/dynamic/transformation cases and three complete workflow
+projections that failed before the correction. The new pure policy requires
+100% lines, statements, branches and functions; global/module gates remain.
+User documentation explains that unsupported scheduling evidence yields
+Unavailable, and the catalog includes the pure policy and its tests. Acceptance
+requires a static empty matrix to withhold Pass, dynamic/transformed matrices to
+withhold certification, and ordinary nonmatrix/static eligible jobs to retain
+their existing structural result. Native review and integrated live commands
+remain required before completion.

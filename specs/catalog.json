@@ -771,7 +771,8 @@
         "src/application/usecases/read_copilot_doctor_workflow.ts",
         "src/data/repository/github/runtime_doctor_repository.ts",
         "src/infrastructure/composition/github_runtime_doctor_composition_root.ts",
-        "src/application/policies/agent_activity_policy.ts"
+        "src/application/policies/agent_activity_policy.ts",
+        "src/application/policies/doctor_workflow_matrix_policy.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -848,7 +849,8 @@
         "src/application/usecases/__tests__/runtime_doctor_security_integration.test.ts",
         "src/data/repository/github/__tests__/runtime_doctor_repository.test.ts",
         "src/infrastructure/composition/__tests__/github_runtime_doctor_composition_root.test.ts",
-        "src/application/policies/__tests__/runtime_doctor_agent_activity.test.ts"
+        "src/application/policies/__tests__/runtime_doctor_agent_activity.test.ts",
+        "src/application/policies/__tests__/doctor_workflow_matrix_policy.test.ts"
       ],
       "documentation": [
         "README.md",
