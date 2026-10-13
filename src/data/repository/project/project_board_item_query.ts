@@ -99,5 +99,49 @@ async function findProjectItemId(
     const item = page.nodes.find((candidate) => candidate.content?.id === contentId);
     if (item) return item.id;
   }
+  return findContentSideProjectItemId(client, project, contentId);
+}
+
+/** Recover a missing board-list entry from the exact content's own memberships. */
+async function findContentSideProjectItemId(
+  client: GithubGraphqlTransportClient,
+  project: ProjectDetail,
+  contentId: string,
+): Promise<string | undefined> {
+  for await (const page of paginateCursor(
+    async after => {
+      const result = await client.graphql<{
+        node?: { id?: string; __typename?: string; projectItems?: CursorPage<{ id?: string; project?: { id?: string }; content?: { id?: string } }> } | null;
+      }>(`query($contentId: ID!, $after: String) {
+        node(id: $contentId) {
+          id __typename
+          ... on Issue { projectItems(first: 100, after: $after, includeArchived: true) {
+            pageInfo { hasNextPage endCursor }
+            nodes { id project { id } content { ... on Issue { id } ... on PullRequest { id } } }
+          } }
+          ... on PullRequest { projectItems(first: 100, after: $after, includeArchived: true) {
+            pageInfo { hasNextPage endCursor }
+            nodes { id project { id } content { ... on Issue { id } ... on PullRequest { id } } }
+          } }
+        }
+      }`, { contentId, after });
+      const node = result.node;
+      const membership = node?.projectItems;
+      if (node?.id !== contentId || !['Issue', 'PullRequest'].includes(node.__typename ?? '')
+        || !membership || !Array.isArray(membership.nodes)
+        || typeof membership.pageInfo?.hasNextPage !== 'boolean'
+        || !(membership.pageInfo.endCursor === null || typeof membership.pageInfo.endCursor === 'string')) {
+        throw new Error('The content-side Project membership evidence is unavailable or malformed.');
+      }
+      return membership;
+    },
+    { description: 'content-side project membership', maxPages: 2 },
+  )) {
+    const item = page.nodes.find(candidate => candidate.project?.id === project.id && candidate.content?.id === contentId);
+    if (item) {
+      if (typeof item.id !== 'string' || !item.id.trim()) throw new Error('The content-side Project item identity is malformed.');
+      return item.id;
+    }
+  }
   return undefined;
 }
