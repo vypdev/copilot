@@ -343,3 +343,8 @@ same issue identity; an untrusted or mismatched URL is shown without navigation.
 When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
+
+History requests are deterministic on issue comments and PR review comments.
+Their activity-admission policy neither inspects agent role availability nor activates the temporary agent
+activity label; unavailable model configuration does not turn a history read
+into model work. Normal read-evidence and correlated publication guards apply.

@@ -36940,7 +36940,7 @@ exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
 const agent_1 = __nccwpck_require__(89040);
 const copilot_command_1 = __nccwpck_require__(11771);
 const branch_sync_command_1 = __nccwpck_require__(51114);
-const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'dismiss', 'remember']);
+const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'history', 'dismiss', 'remember']);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))

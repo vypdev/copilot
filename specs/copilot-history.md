@@ -324,7 +324,7 @@ Update command catalog/discoverability and `specs/catalog.json` evidence; regene
 - [ ] Existing owner contract remains intact and this appendix is incorporated without replacing it.
 - [ ] All acceptance scenarios and traceability rows have evidence.
 - [ ] Architecture boundaries and schema/workflow checks are executable and pass.
-- [x] The original 34-case floor is exceeded by 162 distinct cases; new pure policy branch coverage exceeds 90% and all existing coverage budgets pass.
+- [x] The original 34-case floor is exceeded by 164 distinct cases; new pure policy branch coverage exceeds 90% and all existing coverage budgets pass.
 - [ ] Only five supported command names, exact target, general-conversation stream, fixed ten-row limit, and no-argument/no-model behavior are implemented.
 - [ ] Complete, partial, unavailable, and complete-empty behavior plus every outcome are reviewed in English and Spanish.
 - [ ] Replay, conflict, legacy evidence, safe links, and no-mutation behavior pass.
@@ -372,3 +372,18 @@ The seven new suites contribute 68 conservative test declarations to the existin
 Six additional provider-boundary cases reject non-integer, absent or wrongly typed completeness counters and flags. Final distinct allocation: domain marker 29, selection 33, application/provider 23, physical adapter 5, UI/publisher projection 40, trusted publication 18, real entrypoints 10, and new producer completion cases 4: 162 total.
 
 Final local acceptance passed 569 suites and 7,489 tests, with 34 existing platform skips (7,523 total). All new history modules reached 100% lines/functions and at least 93.61% branches; statement coverage is 100% except the operation marker module at 96.96%. These figures do not certify live publication, replay or human narrow-surface review.
+
+### Deterministic activity on both comment surfaces (2026-10-13)
+
+The generic activity coordinator previously treated a valid `history` command
+as potential model work and consulted configured agent roles. `history` MUST
+return false from activity admission before inspecting those roles, on issue
+comments and PR review comments alike. No model execution or temporary activity
+label is justified by this read-only command.
+
+Two distinct regressions reproduced both surfaces, including mixed-case and
+whitespace command parsing. The correction retains all 162 prior contracts and
+adds these two once, for **164** distinct feature cases. The shared activity
+suite passes 32 cases; its other 30 cases are retained shared coverage, not
+added to this history allocation. Required full gates and live acceptance remain
+pending until this exact head is published and reviewed.

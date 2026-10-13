@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -137,7 +137,8 @@
         "src/application/usecases/read_copilot_history_workflow.ts",
         "src/infrastructure/composition/copilot_history_port_factory.ts",
         "src/application/ports/progress_diff_query_ports.ts",
-        "src/data/repository/progress_diff_repository.ts"
+        "src/data/repository/progress_diff_repository.ts",
+        "src/application/policies/agent_activity_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -220,7 +221,8 @@
         "src/application/usecases/__tests__/copilot_history_route.test.ts",
         "src/application/usecases/__tests__/copilot_history_workflow.test.ts",
         "src/infrastructure/composition/__tests__/copilot_history_port_factory.test.ts",
-        "src/data/repository/__tests__/progress_diff_repository.test.ts"
+        "src/data/repository/__tests__/progress_diff_repository.test.ts",
+        "src/application/policies/__tests__/agent_activity_policy.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
