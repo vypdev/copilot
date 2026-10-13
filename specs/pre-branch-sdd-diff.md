@@ -290,7 +290,7 @@ Minimum: **250 distinct extension cases**, with a 24-case risk floor exceeded by
 | Actual Execution projection | 5 | Native repository ID/issue author/profile digest, immutable input, missing/zero/unsafe identity and native PR target |
 | **Total** | **250** | Every case counted once |
 
-The two new shared `SddEvidenceQueryUseCase` opaque-authority regressions are allocated only to the owning status companion (182 + 2 = 184); they are excluded from this 240-case budget. The gate's separate 149-case budget and both communication ledgers remain unchanged.
+The two new shared `SddEvidenceQueryUseCase` opaque-authority regressions are allocated only to the owning status companion (182 + 2 = 184); they are excluded from this 250-case budget. The gate's separate 149-case budget and both communication ledgers remain unchanged.
 
 Repository-wide thresholds remain 90% lines/statements, 88% functions and 82% branches. `scripts/coverage-budgets.json` additionally enforces 100% in every new pure module, and at least 95% lines/statements and 90% branches/functions in each new application, native adapter and composition module. All six new runtime modules currently achieve 100% in the focused scope. Deterministic fakes and actual Execution constructors provide local proof; live GitHub runs independently establish bot permissions, event wiring and human UX.
 
