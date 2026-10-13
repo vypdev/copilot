@@ -568,10 +568,11 @@ the first/current commit links and bounded section counts. If the issue reopens,
 the ref moves, or proof becomes unavailable, current comparison is withheld.
 Deleted branches remain unverified; this query never recreates them.
 
-Additional floor: **15 distinct cases**: eight adapter cases (exact merged
+Additional floor: **17 distinct cases**: eight adapter cases (exact merged
 history, active rejection, six invalid associations/refs), six query cases
 (closed success, open exclusion, denied active read, denied history, missing
-history capability, moved final head), and one physical binding case. The four
+history capability, moved final head), one physical binding case, and two
+explicit server-origin cases (present/absent) independent of runner environment. The four
 changed runtime modules retain at least 95% lines/statements and 90%
 branches/functions. Existing SDD ownership, publication, read-only and native
 fence budgets remain. Documentation in `docs/issues/comment-commands.mdx`

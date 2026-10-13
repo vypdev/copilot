@@ -33,6 +33,18 @@ jest.mock('../../pre_branch_sdd_workspace_adapter', () => ({ PreBranchSddWorkspa
 })) }));
 
 describe('composed read-only SDD query', () => {
+    it.each([undefined, 'https://github.acme.test'])('binds explicit or fallback server origin independently of runner environment: %s', serverOrigin => {
+        const previous = process.env.GITHUB_SERVER_URL;
+        try {
+            if (serverOrigin === undefined) delete process.env.GITHUB_SERVER_URL;
+            else process.env.GITHUB_SERVER_URL = serverOrigin;
+            const query = createSddEvidenceQueryPort({ owner: 'acme', repository: 'demo', token: 'fixture-token' }, { listIssueComments: jest.fn() });
+            expect(query.serverOrigin).toBe(serverOrigin ?? 'https://github.com');
+        } finally {
+            if (previous === undefined) delete process.env.GITHUB_SERVER_URL;
+            else process.env.GITHUB_SERVER_URL = previous;
+        }
+    });
     it('binds historical branch reads while physically discarding writer capabilities', async () => {
         const ports = createSddEvidenceReadPorts({ owner: 'acme', repository: 'demo', token: 'fixture-token' }, { listIssueComments: jest.fn() });
         expect(Object.keys(ports.branches).sort()).toEqual(['getHistoricalLinkedBranch', 'getLinkedBranch']);
