@@ -122,15 +122,13 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
-    # Codex integration fixtures run only on macOS and Ubuntu. General Windows
-    # fixtures and full coverage remain in the hosted three-platform matrix.
+    # Temporary Ubuntu-only self-hosted routing while Apple runners are unstable.
+    # Hosted fixtures and full coverage retain all three platforms.
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macOS
-            labels: [self-hosted, codex, macOS]
           - platform: Ubuntu
             labels: [self-hosted, codex, Linux]
     steps:

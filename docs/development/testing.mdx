@@ -185,3 +185,16 @@ including sequential English, Spanish, French and Portuguese assertions. HTML
 is not cached or replaced by snapshots. The helper closes the renderer after
 the suite and propagates startup, process and render failures. Keep these real
 semantic assertions when changing component content or controls.
+
+
+## Temporary self-hosted runner selection
+
+This repository currently selects `[self-hosted, codex, Linux]` for Copilot
+operations while the four Apple runners are unstable. Its manually dispatched
+self-hosted Codex smoke matrix also selects Ubuntu only. Mac support remains
+available; restore the shared pool and macOS smoke row when those runners are
+stable. Consumer setup templates retain their existing runner configuration.
+
+Hosted Ubuntu, Windows and macOS fixture jobs retain their full coverage and
+acceptance checks. The workflow validator accepts the original supported pool
+and its narrower Linux selection, and rejects Windows service Codex routing.
