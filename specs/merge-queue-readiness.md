@@ -113,6 +113,42 @@ longer exhibit these behaviors.
   the runner hit a memory limit. Each advisory subprocess MUST also have a
   2 GiB virtual-memory ceiling so a runaway scan fails within its own boundary.
   A workflow fixture MUST assert both limits and unconditional artifact upload.
+
+### Event-scoped advisory history correction (2026-10-14)
+
+Dogfooding [#496](https://github.com/vypdev/copilot/issues/496) reproduced a
+RepoWise 0.45.0 `MemoryError` while batch-reading all historical blobs in
+[run 38472995406](https://github.com/vypdev/copilot/actions/runs/38472995406).
+The 2 GiB boundary and incomplete status worked as intended, but ordinary
+change checks attempted an unnecessarily unbounded historical audit.
+
+The fixed input set is the native PR base SHA, merge-group base SHA, or push
+`before` SHA, through the checkout HEAD. The workflow MUST pass these as data
+through environment variables, validate a 40-character lowercase hexadecimal
+SHA, verify a local commit object and ancestry, then invoke the pinned
+scanner with `--since BASE --to HEAD`. Missing, malformed or unrelated bases
+MUST produce an incomplete advisory result without a full-history fallback.
+Only explicit manual dispatch retains full reachable-history scanning. No
+new input, credential, platform, gate or runtime dependency is introduced.
+
+Flow: native event -> verify base and ancestry -> record immutable range ->
+bounded history scanner -> preserve health reports and advisory status.
+Representative Job Summary: `security scope: BASE..HEAD`, `security: complete`
+means only that range was scanned. `security: incomplete (event base
+unavailable or not an ancestor)` requires inspecting the checkout/event and
+rerunning; a timeout retains the existing incomplete message. Full-history
+manual scans remain limited and cannot be represented as completed when
+they fail. Current-tree signals still come from the required index.
+
+Regression floor: **4 additional contract cases**, independently rejecting
+replacement of the native base, removal of the ancestry fence, removal of
+scanner range bounds, and broadening of the manual-only full-history gate.
+Retain all existing health, subprocess-budget, isolation and artifact cases.
+Native acceptance requires a final-head check with both immutable bounds in
+the artifact and a completed security advisory for this change. Docs in
+`docs/development/testing.mdx` distinguish change-range evidence from a full
+historical audit. Run workflow/specification/documentation validators and
+the workflow regression suite; no coverage threshold is reduced.
   A fresh exact-head run must prove the producer reaches artifact upload and
   reports any incomplete advisory scan honestly; it is still an open gate.
 - Copilot's own required PR context is produced for merge groups by the

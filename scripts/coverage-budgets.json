@@ -737,6 +737,7 @@
           "files": [
             "src/application/usecases/steps/commit/check_changes_issue_size_workflow.ts",
             "src/application/usecases/steps/commit/update_change_size_labels.ts",
+            "src/application/usecases/steps/pull_request/sync_size_and_progress_labels_from_issue_to_pr_use_case.ts",
             "src/data/repository/project/project_board_item_query.ts",
             "src/infrastructure/composition/change_size_project_membership_composition_root.ts"
           ],

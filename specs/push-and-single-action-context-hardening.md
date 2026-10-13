@@ -501,7 +501,8 @@ never pending. Existing successful mutations remain retained.
 push -> compute size -> reconcile issue label/Project size -> read related PRs
  -> reconcile PR labels -> verify each PR/Project membership
  -> linked: update size | verified absent: retain pending linkage
- -> PR lifecycle links item -> rerun push: reconcile even if labels match
+ -> PR lifecycle links item -> read fresh issue labels -> reconcile linked PR Size
+ -> optional rerun push: reconcile even if labels match
 ```
 
 Text equivalent: native membership is a prerequisite for PR Project size.
@@ -552,3 +553,26 @@ coverage, build/bundles, lint/types, documentation/specification/workflow checks
 Graphify update and hosted platform validation remain required. Rollback
 restores the observed race and needs manual PR sizing repair; no data migration
 or external Project workflow change is required.
+
+Post-link completion (2026-10-14): native Bugbot
+[finding 4264512348](https://github.com/vypdev/copilot/pull/498#discussion_r4264512348)
+correctly identified that a pending push result alone was insufficient when
+no later commit occurs. `SyncSizeAndProgressLabelsFromIssueToPrUseCase` MUST
+finish PR Project Size after the ordered Project-linking step, using fresh
+issue labels, an immutable configured label-to-Size mapping, copied Project
+references, read-only membership evidence and a physically Size-only write
+facade. XXL and XL map to Project XL; arbitrary configured label names remain
+supported. It MUST verify each membership before writing, fail on denied/
+absent membership or failed/false writes, and avoid rewriting correct PR
+labels. Progress-only and no-Project cases retain their existing behavior;
+multiple configured issue sizes are ambiguous and MUST fail before mutation.
+No pending queue or additional push is required for post-link completion.
+
+Additional floor: **18 distinct cases**, comprising six custom category
+mappings, quiet-label replay, progress-only sync, four provider/link/write
+failures, ambiguous size, two missing capability cases, multiple Projects,
+and two immutable/absent mapping projection cases. The existing PR workflow
+test additionally enforces linking before synchronization without double
+counting. Add the post-link module to the same 95% lines/statements and 90%
+branches/functions budget. Native acceptance MUST verify a PR-opened or
+reopened lifecycle run and its Project Size without a later commit.

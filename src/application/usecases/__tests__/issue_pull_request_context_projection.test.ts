@@ -167,6 +167,24 @@ describe('P2-E issue and pull-request context projections', () => {
     expect(projectPullRequestDescriptionContext(source).pullRequest.number).toBe(42);
   });
 
+  it('freezes explicit configured Project Size mappings and copied Project references', () => {
+    const source = pullRequestSource();
+    Object.assign(source.labels, { sizeXxl: 'largest', sizeXl: 'huge', sizeL: 'large', sizeM: 'medium', sizeS: 'small', sizeXs: 'tiny' });
+    const context = projectPullRequestWorkflowStepContexts(source).syncLabels;
+    Object.assign(source.labels, { sizeXxl: 'changed' });
+    expect(context.projectSizeByLabel).toEqual({ largest: 'XL', huge: 'XL', large: 'L', medium: 'M', small: 'S', tiny: 'XS' });
+    expect(Object.isFrozen(context.projectSizeByLabel)).toBe(true);
+    expect(Object.isFrozen(context.projects)).toBe(true);
+    expect(context.projects).toHaveLength(1);
+    expectDataOnly(context);
+  });
+
+  it('does not infer Project Size mappings from empty or missing configured category names', () => {
+    const source = pullRequestSource();
+    Object.assign(source.labels, { sizeXxl: '', sizeXl: undefined });
+    expect(projectPullRequestWorkflowStepContexts(source).syncLabels.projectSizeByLabel).toEqual({});
+  });
+
   it('freezes branch outcomes and copies both results and patches', () => {
     const input = [new Result({ id: 'branch', success: true })];
     const patch = { parentBranch: 'develop' };

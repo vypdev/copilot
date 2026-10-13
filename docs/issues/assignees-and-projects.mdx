@@ -143,9 +143,13 @@ Push sizing and PR-opened handling can overlap. The push updates the issue and
 related PR size labels, but waits for verified Project membership before writing
 the PR's Project size. If the PR has not been linked yet, its Project size stays
 pending; the issue and labels keep their completed updates. The PR lifecycle
-links the item and applies its initial size from the current issue labels.
+links the item and applies its initial size from fresh issue labels after
+verifying each Project membership, even when no later commit occurs. Custom
+size label names retain their configured mapping; XXL and XL use Project XL.
+Progress-only labels leave Project Size untouched.
 
-After linkage, rerun the push workflow to reconcile remaining Project size even
+After a failed or partial linkage run, rerun that workflow or the push workflow
+to reconcile remaining Project size even
 when the issue's size label already matches. Correct labels are retained without
 rewriting them. Missing membership and unreadable evidence are different states:
 a denied or malformed Project read still fails and requires checking access or

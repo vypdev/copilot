@@ -12,9 +12,9 @@ debt or convert unknown historic intent into a design decision.
 |---|---|---|---|---|
 | `github-communication-experience` | Implemented | English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces | [Semantic GitHub communication and repository localization](./semantic-github-publication-and-notification.md) + 2 companion | 255 paths · 2026-10-13 |
 | `release-orchestration` | Implemented | Release and hotfix promotion, publication, reconciliation, and durable recovery | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 52 paths · 2026-09-16 |
-| `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-09-15 |
+| `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-10-14 |
 | `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 59 paths · 2026-10-11 |
-| `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 97 paths · 2026-10-13 |
+| `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 97 paths · 2026-10-14 |
 | `architecture-quality-hardening` | Implemented | Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order | [Architecture quality and scalability hardening](./architecture-quality-and-scalability-hardening.md) + 1 companion | 72 paths · 2026-10-13 |
 | `setup-and-doctor` | Implemented | Plan, validate, provision, and audit a repository installation without exposing credentials | [Setup, configuration, credentials, and doctor](./setup-configuration-credentials-and-doctor.md) + 3 companion | 196 paths · 2026-10-13 |
 | `local-web-setup-assistant` | Proposed | Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification | [Local web setup assistant](./local-web-setup-assistant.md) + 1 companion | 202 paths · 2026-10-13 |
@@ -59,7 +59,7 @@ debt or convert unknown historic intent into a design decision.
 ### `merge-queue-readiness` — Merge queue readiness and effective target rules
 
 - Owner: Copilot maintainers
-- Last verified: 2026-09-15
+- Last verified: 2026-10-14
 - Specifications: [`specs/merge-queue-readiness.md`](./merge-queue-readiness.md)
 - Workflows: [`.github/workflows/ci_check.yml`](../.github/workflows/ci_check.yml) · [`.github/workflows/repowise.yml`](../.github/workflows/repowise.yml) · [`.github/workflows/copilot_pull_request_merge_queue.yml`](../.github/workflows/copilot_pull_request_merge_queue.yml) · [`setup/workflows/copilot_pull_request_merge_queue.yml`](../setup/workflows/copilot_pull_request_merge_queue.yml) · [`.github/workflows/copilot_deployment_orchestration.yml`](../.github/workflows/copilot_deployment_orchestration.yml)
 - Entrypoints: [`src/application/usecases/setup/merge_queue_readiness_use_case.ts`](../src/application/usecases/setup/merge_queue_readiness_use_case.ts)
@@ -81,7 +81,7 @@ debt or convert unknown historic intent into a design decision.
 ### `execution-lifecycle` — Execution admission, queueing, routing, and result publication
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-13
+- Last verified: 2026-10-14
 - Specifications: [`specs/execution-admission-queue-and-publication.md`](./execution-admission-queue-and-publication.md) · [`specs/execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md) · [`specs/execution-boundary-closure-audit.md`](./execution-boundary-closure-audit.md) · [`specs/push-and-single-action-context-hardening.md`](./push-and-single-action-context-hardening.md)
 - Workflows: [`.github/workflows/copilot_issue.yml`](../.github/workflows/copilot_issue.yml) · [`.github/workflows/copilot_issue_comment.yml`](../.github/workflows/copilot_issue_comment.yml) · [`.github/workflows/copilot_pull_request.yml`](../.github/workflows/copilot_pull_request.yml) · [`.github/workflows/copilot_pull_request_comment.yml`](../.github/workflows/copilot_pull_request_comment.yml) · [`.github/workflows/copilot_commit.yml`](../.github/workflows/copilot_commit.yml)
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts) · [`src/actions/common_action.ts`](../src/actions/common_action.ts)

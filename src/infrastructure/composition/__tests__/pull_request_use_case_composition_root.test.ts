@@ -10,7 +10,7 @@ const mockPullRequestLifecycleClient = {
 const secondPullRequestLifecycleClient = {
   kind: "second-pull-request-lifecycle-client",
 };
-const mockGraphqlClient = { kind: "graphql-client" };
+const mockGraphqlClient = { kind: "graphql-client", getClient: jest.fn(() => ({})) };
 
 const mockIssueLifecycle = { kind: "issue-lifecycle" };
 const mockIssueContent = { kind: "issue-content" };
@@ -161,7 +161,8 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
 
     expect(mockCreatePullRequestLifecycleClient).toHaveBeenCalledTimes(1);
     expect(mockPullRequestLifecycleRepository).toHaveBeenCalledTimes(1);
-    expect(mockCreateGraphqlTransportClient).toHaveBeenCalledTimes(1);
+    expect(mockCreateGraphqlTransportClient).toHaveBeenCalledTimes(2);
+    expect(mockGraphqlClient.getClient).toHaveBeenCalledWith(binding.token);
     expect(mockCreateOrganizationMembersCompositionRoot).toHaveBeenCalledTimes(
       1,
     );
@@ -195,6 +196,11 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
       linkPullRequestIssue: expect.objectContaining({ invoke: expect.any(Function) }),
       closeIssueAfterMerging: expect.objectContaining({ invoke: expect.any(Function) }),
     }));
+    const sync = (argumentsPassed[1] as { syncSizeAndProgressLabels: { projectSizes: object; membership: object } }).syncSizeAndProgressLabels;
+    expect(Object.keys(sync.projectSizes)).toEqual(['setTaskSize']);
+    expect(Object.isFrozen(sync.projectSizes)).toBe(true);
+    expect(Object.keys(sync.membership)).toEqual(['isContentLinked']);
+    expect(Object.isFrozen(sync.membership)).toBe(true);
     expect(root).toBe(mockComposedUseCase);
   });
 });

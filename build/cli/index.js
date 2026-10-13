@@ -57897,6 +57897,12 @@ function projectPullRequestWorkflowStepContexts(source) {
             issueNumber: source.issueNumber,
             pullRequestNumber: source.pullRequest.number,
             sizeLabels: Object.freeze([...source.labels.sizeLabels]),
+            projects,
+            projectSizeByLabel: Object.freeze(Object.fromEntries([
+                [source.labels.sizeXxl, 'XL'], [source.labels.sizeXl, 'XL'],
+                [source.labels.sizeL, 'L'], [source.labels.sizeM, 'M'],
+                [source.labels.sizeS, 'S'], [source.labels.sizeXs, 'XS'],
+            ].filter(([label]) => typeof label === 'string' && label.length > 0))),
         }),
         priority: Object.freeze({
             contentNumber: source.pullRequest.number,
@@ -69702,14 +69708,17 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const sync_size_and_progress_labels_policy_1 = __nccwpck_require__(65676);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const application_error_2 = __nccwpck_require__(75999);
 /**
  * Copies size and progress labels from the linked issue to the PR.
  * Used when a PR is opened so it gets the same size/progress as the issue (corner case:
  * no push has run yet, so CommitUseCase has not updated the PR).
  */
 class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
-    constructor(issueLabelsPort) {
+    constructor(issueLabelsPort, projectSizes, membership) {
         this.issueLabelsPort = issueLabelsPort;
+        this.projectSizes = projectSizes;
+        this.membership = membership;
         this.taskId = 'SyncSizeAndProgressLabelsFromIssueToPrUseCase';
     }
     async invoke(param) {
@@ -69728,6 +69737,9 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
                 return result;
             }
             const issueLabels = await this.issueLabelsPort.getLabels(linkedIssueNumber);
+            const sizes = issueLabels.filter(label => Object.prototype.hasOwnProperty.call(param.projectSizeByLabel, label));
+            if (sizes.length > 1)
+                throw new application_error_2.ApplicationError('validation.invalid-input', 'The linked issue has ambiguous configured size labels.');
             const sizeAndProgressFromIssue = (0, sync_size_and_progress_labels_policy_1.selectSizeAndProgressLabels)(issueLabels, param.sizeLabels);
             if (sizeAndProgressFromIssue.length === 0) {
                 (0, logging_ports_1.logDebugInfo)(`Issue #${linkedIssueNumber} has no size or progress labels. Nothing to sync.`);
@@ -69742,7 +69754,21 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
             const prNumber = param.pullRequestNumber;
             const prLabels = await this.issueLabelsPort.getLabels(prNumber);
             const nextPrLabels = (0, sync_size_and_progress_labels_policy_1.mergeSizeAndProgressLabels)(prLabels, sizeAndProgressFromIssue, param.sizeLabels);
-            await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
+            if (prLabels.length !== nextPrLabels.length || prLabels.some(label => !nextPrLabels.includes(label))) {
+                await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
+            }
+            if (sizes.length === 1 && param.projects.length > 0) {
+                if (!this.projectSizes || !this.membership)
+                    throw new application_error_2.ApplicationError('provider.unavailable', 'PR Project size reconciliation authority is unavailable.');
+                for (const project of param.projects) {
+                    if (!await this.membership.isContentLinked(project, prNumber)) {
+                        throw new application_error_2.ApplicationError('provider.unavailable', 'The PR Project link remains unverified after lifecycle linking.');
+                    }
+                    if (!await this.projectSizes.setTaskSize(project, prNumber, param.projectSizeByLabel[sizes[0]])) {
+                        throw new application_error_2.ApplicationError('provider.unavailable', 'The PR Project Size field could not be reconciled.');
+                    }
+                }
+            }
             (0, logging_ports_1.logDebugInfo)(`Synced size/progress labels from issue #${linkedIssueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
             result.push(new result_1.Result({
                 id: this.taskId,
@@ -92231,6 +92257,7 @@ function composePullRequestUseCase(...dependencies) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
 const reply_request_composition_root_1 = __nccwpck_require__(99065);
+const change_size_project_membership_composition_root_1 = __nccwpck_require__(99375);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const retire_progress_use_case_1 = __nccwpck_require__(17025);
@@ -92290,7 +92317,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         assignReviewersToIssue: new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(boundIssueAssignee, (0, lifecycle_capability_port_binding_1.bindPullRequestReviewer)(pullRequestReviewer, binding), boundOrganizationSelection),
         linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectContent),
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
-        syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
+        syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding), Object.freeze({ setTaskSize: boundProjectBoard.setTaskSize }), (0, change_size_project_membership_composition_root_1.createChangeSizeProjectMembershipQueryPort)(binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
         retireBranchSync: new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)), new retire_progress_use_case_1.RetireProgressUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding))),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),

@@ -108,6 +108,13 @@ The required `RepoWise code health` workflow publishes its index and health
 reports. Its dead-code and history-security scans have separate time and memory limits;
 the Job Summary and artifact status identify an incomplete advisory scan
 instead of claiming that it passed.
+For PRs, pushes and merge groups, history-security scans cover the native event
+base through the checked-out HEAD, including commits that introduced and then
+removed a finding. The base must be a valid commit and an ancestor of HEAD;
+missing or unrelated evidence produces an incomplete advisory result. The
+artifact records both immutable bounds. Manual dispatch scans the complete
+reachable history within the same limits; a successful event-range scan is
+not evidence of a complete historical audit.
 Repository-owned PRs, pushes and merge groups run RepoWise and `CI Check` on
 self-hosted Ubuntu `codex` runners. Fork PRs use GitHub-hosted Ubuntu for
 these checks. The automatic setup fixture matrix remains hosted on three

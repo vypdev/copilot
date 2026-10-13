@@ -1188,6 +1188,21 @@ describe('workflow contract validator', () => {
     expect(upload.if).toBe('${{ always() }}');
   });
 
+  it.each(['event-base', 'ancestry', 'range', 'manual-only'] as const)(
+    'rejects loss of the RepoWise history scope boundary: %s', (boundary) => {
+      const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      const job = workflow.jobs['code-health'];
+      const reports = job.steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
+      if (boundary === 'event-base') job.env.REPOWISE_BASE_SHA = '${{ github.sha }}';
+      else if (boundary === 'ancestry') reports.run = reports.run.replace('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD', 'true');
+      else if (boundary === 'range') reports.run = reports.run.replace('--since "$REPOWISE_BASE_SHA" --to HEAD', '');
+      else reports.run = reports.run.replace('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]', 'true');
+      expect(() => validateWorkflow(file, workflow)).toThrow('event-scoped security history');
+    },
+  );
+
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
     expect(() => assertMajorActionReferences(file, {

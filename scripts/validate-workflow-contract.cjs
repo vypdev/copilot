@@ -245,6 +245,17 @@ function assertRepoWiseTemporaryCleanup(relativeFile, job) {
     || job.steps.indexOf(cleanup) <= job.steps.indexOf(upload)) {
     throw new Error(`${relativeFile} must select complete Python, isolate RepoWise files, and remove them after artifact upload.`);
   }
+  const reports = (job.steps ?? []).find(step => step?.name === 'Generate RepoWise reports');
+  if (job.env?.REPOWISE_BASE_SHA !== "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}"
+    || job.env?.REPOWISE_EVENT_NAME !== '${{ github.event_name }}'
+    || !reports?.run?.includes('[[ "$REPOWISE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]')
+    || !reports.run.includes('git cat-file -e "$REPOWISE_BASE_SHA^{commit}"')
+    || !reports.run.includes('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD')
+    || !reports.run.includes('--since "$REPOWISE_BASE_SHA" --to HEAD')
+    || !reports.run.includes('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]')
+    || !reports.run.includes('security: incomplete (event base unavailable or not an ancestor)')) {
+    throw new Error(`${relativeFile} must verify and report event-scoped security history; only manual dispatch may scan full history.`);
+  }
 }
 
 function assertPlatformCoverageAndValidators(relativeFile, job) {
