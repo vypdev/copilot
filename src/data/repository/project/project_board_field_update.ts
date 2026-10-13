@@ -122,7 +122,19 @@ export async function setProjectBoardSingleSelectField(
         logDebugInfo(`Field '${fieldName}' is already set to '${fieldValue}'. No update needed.`);
         return false;
     }
-    return updateProjectBoardSingleSelectField(client, project, contentId, target);
+    const updated = await updateProjectBoardSingleSelectField(client, project, contentId, target);
+    if (fieldName !== 'Status') return updated;
+    if (!updated) {
+        throw new Error(`Project item ${contentId} was not returned after updating field '${fieldName}'.`);
+    }
+    const updatedItem = await findProjectItem(client, project, contentId, fieldName);
+    const updatedValue = updatedItem.fieldValues?.nodes.find(
+        (value) => value.field?.name === fieldName,
+    );
+    if (updatedValue?.optionId !== target.optionId) {
+        throw new Error(`Project field '${fieldName}' was not verified as '${fieldValue}' after update.`);
+    }
+    return true;
 }
 
 /** Updates a ProjectV2 item returned by the link mutation without waiting for list propagation. */

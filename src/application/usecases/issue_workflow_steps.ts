@@ -10,6 +10,7 @@ import type {
   BranchPreparationOutcome,
   DeployAddedContext,
   IssueNumberContext,
+  MoveIssueToInProgressContext,
   PrioritySizeContext,
   RemoveIssueBranchesContext,
   RemoveObsoleteIssueBranchesContext,
@@ -24,6 +25,7 @@ export interface IssueWorkflowSteps {
   updateTitle: ParamUseCase<UpdateTitleContext, Result[]>;
   updateIssueType: ParamUseCase<UpdateIssueTypeContext, Result[]>;
   linkIssueProject: ParamUseCase<ProjectContentLinkContext, Result[]>;
+  resumeIssueProject?: ParamUseCase<MoveIssueToInProgressContext, Result[]>;
   checkPriorityIssueSize: ParamUseCase<PrioritySizeContext, Result[]>;
   prepareBranches: ParamUseCase<BranchPreparationContext, BranchPreparationOutcome>;
   reconcileBranchReadiness?: ParamUseCase<BranchReadinessContext, Result[]>;

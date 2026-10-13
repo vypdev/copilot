@@ -126,6 +126,7 @@ function projectIssueWorkflowRouteContext(param: Execution): IssueWorkflowRouteC
   const recommendSteps = projectRecommendStepsContext(param);
   return Object.freeze({
     started,
+    reopened: param.eventName === 'issues' && param.inputs?.action === 'reopened',
     sddRequired: param.issueStartDecision.sddRequired,
     issueNumber: param.issue.number,
     branchName: param.currentConfiguration.workingBranch,

@@ -80,6 +80,20 @@ the normal lifecycle transition selects the configured in-progress Status.
 If initialization fails, retrying reads the same item and can fill its unset
 Status without adding another item.
 
+Reopening a started branch-bearing issue also restores its configured active
+Status before priority or size enrichment, including when its branch and SDD
+already exist. This explicit resumption avoids leaving active work in Done,
+where GitHub's native Project autoclose rule can close it again. Copilot checks
+that the issue remains open/reopened with `in-progress` before and after each
+Project update. If state changes or access fails, later enrichment stops and
+successful earlier updates remain. Inspect the run and retry the reopened-issue
+run after correcting access or the configured active column. Replays retain an
+already active Status. An accepted Status write is followed by a field reread;
+an unconfirmed or mismatching result stops enrichment rather than counting as a
+successful no-op. Shared Project workflows are unchanged; use an active
+option such as In Progress or Working that does not itself close issues.
+
+
 If a subsequent priority or size update cannot find a newly linked item in the
 board listing, Copilot checks the exact issue or PR's own Project memberships
 before reporting a failure. This recovery reads at most 200 memberships. If a

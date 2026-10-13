@@ -17,6 +17,8 @@ import { CheckPriorityIssueSizeUseCase } from "../../application/usecases/steps/
 import { CloseNotAllowedIssueUseCase } from "../../application/usecases/steps/issue/close_not_allowed_issue_use_case";
 import { DeployAddedUseCase } from "../../application/usecases/steps/issue/label_deploy_added_use_case";
 import { LinkIssueProjectUseCase } from "../../application/usecases/steps/issue/link_issue_project_use_case";
+import { ResumeIssueProjectUseCase } from '../../application/usecases/steps/issue/resume_issue_project_use_case';
+import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import { MoveIssueToInProgressUseCase } from "../../application/usecases/steps/issue/move_issue_to_in_progress";
 import { PrepareBranchesUseCase } from "../../application/usecases/steps/issue/prepare_branches_use_case";
 import { RemoveIssueBranchesUseCase } from "../../application/usecases/steps/issue/remove_issue_branches_use_case";
@@ -124,6 +126,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
     updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     updateIssueType: new UpdateIssueTypeUseCase(bindIssueTypeAssignment(issueTypeAssignment, binding)),
     linkIssueProject: new LinkIssueProjectUseCase(projectContent),
+    resumeIssueProject: new ResumeIssueProjectUseCase(createNativeStatusReadPort(binding), boundProjectBoard),
     checkPriorityIssueSize: new CheckPriorityIssueSizeUseCase(boundProjectBoard),
     prepareBranches: new PrepareBranchesUseCase(
       boundBranchLifecycle,

@@ -1413,7 +1413,9 @@
         "src/application/policies/status_command_policy.ts",
         "src/application/usecases/read_copilot_status_workflow.ts",
         "src/infrastructure/composition/main_run_route_composition_root.ts",
-        "scripts/coverage-budgets.json"
+        "scripts/coverage-budgets.json",
+        "src/application/usecases/steps/issue/resume_issue_project_use_case.ts",
+        "src/data/repository/project/project_board_field_update.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1434,7 +1436,9 @@
         "src/data/repository/issue/__tests__/issue_completion_repository.test.ts",
         "src/infrastructure/composition/__tests__/issue_completion_composition_root.test.ts",
         "src/application/policies/__tests__/status_command_policy.test.ts",
-        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
+        "src/application/usecases/steps/issue/__tests__/resume_issue_project_use_case.test.ts",
+        "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

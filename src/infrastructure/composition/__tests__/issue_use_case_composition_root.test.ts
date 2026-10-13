@@ -111,6 +111,7 @@ describe("issue use case composition root", () => {
       publish: expect.any(Function),
     }));
     expect(workflowSteps).toEqual(expect.objectContaining({
+      resumeIssueProject: expect.objectContaining({ invoke: expect.any(Function) }),
       checkPermissions: expect.objectContaining({ invoke: expect.any(Function) }),
       prepareBranches: expect.objectContaining({ invoke: expect.any(Function) }),
       reconcileBranchReadiness: expect.objectContaining({ invoke: expect.any(Function) }),
