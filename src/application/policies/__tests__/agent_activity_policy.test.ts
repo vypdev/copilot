@@ -58,6 +58,15 @@ describe('agent activity policy', () => {
         }), 'issue-comment')).toBe(true);
     });
 
+    it.each([
+        { route: 'issue-comment' as const, eventName: 'issue_comment', issue: { number: 7, commentBody: '\t/CoPiLoT history\n' }, pullRequest: { number: 0, action: '', commentBody: '' } },
+        { route: 'pull-request-review-comment' as const, eventName: 'pull_request_review_comment', issue: { number: -1, commentBody: '' }, pullRequest: { number: 12, action: 'created', commentBody: '/copilot history' } },
+    ])('does not inspect agent configuration or track deterministic history on $route', row => {
+        const subject = execution({ eventName: row.eventName, issueNumber: row.issue.number, issue: row.issue, pullRequest: row.pullRequest });
+        expect(shouldTrackAgentActivity(subject, row.route)).toBe(false);
+        expect(subject.ai.getAgentConfiguration).not.toHaveBeenCalled();
+    });
+
     it('tracks ready-for-review activity only for an available reviewer', () => {
         const ready = execution({
             eventName: 'pull_request',

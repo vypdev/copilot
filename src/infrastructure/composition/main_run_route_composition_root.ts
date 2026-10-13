@@ -186,6 +186,8 @@ function createDeploymentOrchestrationUseCase(
   });
 }
 
+import { createCopilotHistoryReadPort } from './copilot_history_port_factory';
+
 export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBinding): IssueCommentUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
   const findings = createFindingsQueryPort();
@@ -241,6 +243,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
     bugbot.scm.context,
+    createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
     createNativeStatusReadPort(binding),
   );
@@ -300,6 +303,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     branchSync,
     rememberBranchPorts(binding, bugbot.scm.context),
     bugbot.scm.context,
+    createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createNativeStatusReadPort(binding),
   );
 }

@@ -36,7 +36,10 @@ describe('commitUserRequestIfSuccessful', () => {
             id: 'DoUserRequestCommitAndPush',
             success: true,
             executed: true,
+            payload: { commitOutcome: 'changes-pushed' },
         });
+        expect(Object.isFrozen(results[0].payload)).toBe(true);
+        expect(results[0].payload).not.toHaveProperty('commitSha');
     });
 
     it('returns a terminal failure when commit or push fails', async () => {
@@ -59,5 +62,13 @@ describe('commitUserRequestIfSuccessful', () => {
             executed: true,
         });
         expect(results[0].errors[0].message).not.toContain('secret-value');
+        expect(results[0].payload).toBeUndefined();
     });
+});
+
+it('records no changes only after the trusted commit workflow returns that outcome', async () => {
+    mockRunUserRequestCommitAndPush.mockResolvedValue({ success: true, committed: false });
+    const [result] = await commitUserRequestIfSuccessful({} as never, 'feature/1', [new Result({ success: true, executed: true })], {} as never);
+    expect(result).toMatchObject({ success: true, executed: false, payload: { commitOutcome: 'no-changes' } });
+    expect(Object.isFrozen(result.payload)).toBe(true);
 });
