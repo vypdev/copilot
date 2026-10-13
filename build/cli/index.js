@@ -80453,9 +80453,27 @@ async function findProjectItem(client, project, itemId, fieldName) {
         if (item)
             return item;
     }
-    const message = `Project item ${itemId} was not found while updating field '${fieldName}'.`;
-    (0, logger_1.logError)(message);
-    throw new Error(message);
+    const result = await client.graphql(`query($itemId: ID!, $fieldName: String!) {
+        node(id: $itemId) {
+            id __typename
+            ... on ProjectV2Item {
+                project { id }
+                fieldValueByName(name: $fieldName) {
+                    ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                }
+            }
+        }
+    }`, { itemId, fieldName });
+    const item = result.node;
+    if (item?.id !== itemId || item.__typename !== 'ProjectV2Item' || item.project?.id !== project.id
+        || !Object.prototype.hasOwnProperty.call(item, 'fieldValueByName')) {
+        throw new Error(`Project item ${itemId} has no verified field evidence in project ${project.id}.`);
+    }
+    const value = item.fieldValueByName;
+    if (value !== null && (typeof value?.optionId !== 'string' || !value.optionId.trim())) {
+        throw new Error('The direct Project item single-select value is malformed.');
+    }
+    return { id: itemId, fieldValues: { nodes: value === null ? [] : [{ field: { name: fieldName }, optionId: value.optionId }] } };
 }
 
 
@@ -80534,6 +80552,41 @@ async function findProjectItemId(client, project, contentId) {
         const item = page.nodes.find((candidate) => candidate.content?.id === contentId);
         if (item)
             return item.id;
+    }
+    return findContentSideProjectItemId(client, project, contentId);
+}
+/** Recover a missing board-list entry from the exact content's own memberships. */
+async function findContentSideProjectItemId(client, project, contentId) {
+    for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
+        const result = await client.graphql(`query($contentId: ID!, $after: String) {
+        node(id: $contentId) {
+          id __typename
+          ... on Issue { projectItems(first: 100, after: $after, includeArchived: true) {
+            pageInfo { hasNextPage endCursor }
+            nodes { id project { id } content { ... on Issue { id } ... on PullRequest { id } } }
+          } }
+          ... on PullRequest { projectItems(first: 100, after: $after, includeArchived: true) {
+            pageInfo { hasNextPage endCursor }
+            nodes { id project { id } content { ... on Issue { id } ... on PullRequest { id } } }
+          } }
+        }
+      }`, { contentId, after });
+        const node = result.node;
+        const membership = node?.projectItems;
+        if (node?.id !== contentId || !['Issue', 'PullRequest'].includes(node.__typename ?? '')
+            || !membership || !Array.isArray(membership.nodes)
+            || typeof membership.pageInfo?.hasNextPage !== 'boolean'
+            || !(membership.pageInfo.endCursor === null || typeof membership.pageInfo.endCursor === 'string')) {
+            throw new Error('The content-side Project membership evidence is unavailable or malformed.');
+        }
+        return membership;
+    }, { description: 'content-side project membership', maxPages: 2 })) {
+        const item = page.nodes.find(candidate => candidate.project?.id === project.id && candidate.content?.id === contentId);
+        if (item) {
+            if (typeof item.id !== 'string' || !item.id.trim())
+                throw new Error('The content-side Project item identity is malformed.');
+            return item.id;
+        }
     }
     return undefined;
 }

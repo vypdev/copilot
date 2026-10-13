@@ -1750,7 +1750,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1796,7 +1796,9 @@
         "src/application/usecases/actions/synchronize_agent_activity_use_case.ts",
         "src/application/policies/lifecycle_waiting_state_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
-        "src/actions/github_action_completion.ts"
+        "src/actions/github_action_completion.ts",
+        "src/data/repository/project/project_board_item_query.ts",
+        "src/data/repository/project/project_board_field_update.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -1822,7 +1824,8 @@
         "src/application/usecases/actions/__tests__/synchronize_agent_activity_use_case.test.ts",
         "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
         "src/application/policies/__tests__/copilot_evidence_policy.test.ts",
-        "src/actions/__tests__/github_action_completion.test.ts"
+        "src/actions/__tests__/github_action_completion.test.ts",
+        "src/data/repository/project/__tests__/project_board_visibility_recovery.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",

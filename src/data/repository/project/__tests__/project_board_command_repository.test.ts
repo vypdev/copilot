@@ -90,6 +90,7 @@ function createHarness(options: HarnessOptions = {}) {
 
   const graphql = jest.fn(
     async (document: string, variables?: Record<string, unknown>) => {
+      if (document.includes('fieldValueByName(name: $fieldName)')) return { node: null };
       if (document.includes("fieldValueByName")) {
         return { node: Object.prototype.hasOwnProperty.call(options, "statusItem") ? options.statusItem : {
           project: { id: "PVT_project" }, fieldValueByName: null,
@@ -429,7 +430,7 @@ describe("ProjectBoardCommandRepository", () => {
         "token",
       ),
     ).rejects.toThrow(
-      "Project item PVTI_item was not found while updating field 'Status'.",
+      "Project item PVTI_item has no verified field evidence in project PVT_project.",
     );
     expect(
       harness.graphql.mock.calls.some(([document]) =>
@@ -538,7 +539,7 @@ describe("ProjectBoardCommandRepository", () => {
         "token",
       ),
     ).rejects.toThrow(
-      "Project item PVTI_item was not found while updating field 'Status'.",
+      "Project item PVTI_item has no verified field evidence in project PVT_project.",
     );
   });
 
