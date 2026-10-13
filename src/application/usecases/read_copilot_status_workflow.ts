@@ -1,8 +1,11 @@
+import type { NativeIssueCompletionFacts } from '../../domain/issue_completion';
+import type { NativePullRequestCompletionFacts } from '../ports/issue_completion_ports';
 import type { SddEvidenceQueryPort } from '../ports/sdd_evidence_read_ports';
 import { projectSddStatus } from '../policies/sdd_status_policy';
 import type { CommentAutomationContext } from './comment_automation_context';
 import type { BoundBugbotContextReadPorts } from '../ports/bugbot_context_ports';
-import { buildCopilotStatusResult } from '../policies/status_command_policy';
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
+import { buildCopilotStatusResult, projectCurrentNativeStatus } from '../policies/status_command_policy';
 import { BUGBOT_STATUS_COUNTS_PREFIX, readBugbotStatusCounts } from '../policies/bugbot_status_count_marker_policy';
 import { isTrustedBugbotAuthor } from '../policies/bugbot_review_ownership_policy';
 import { isBugbotStatusComment } from '../policies/bugbot_review_presentation_policy';
@@ -14,11 +17,34 @@ export type CopilotStatusReadPorts = Pick<BoundBugbotContextReadPorts,
     'getPullRequest' | 'listIssueComments' | 'getPullRequestHeadSha'>;
 
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
-export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts, sddQuery?: SddEvidenceQueryPort) {
+export async function readCopilotStatus(param: CommentAutomationContext, taskId: string, ports?: CopilotStatusReadPorts, sddQuery?: SddEvidenceQueryPort, nativeStatus?: BoundNativeStatusReadPort) {
+    let initialIssue: NativeIssueCompletionFacts | undefined;
+    let initialPull: NativePullRequestCompletionFacts | undefined;
     let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
+    if (nativeStatus && status.target === 'issue' && status.issueNumber) {
+        const facts = await nativeStatus.readIssue(status.issueNumber);
+        if (facts.number !== status.issueNumber) throw unavailableStatus();
+        initialIssue = facts;
+        status = projectCurrentNativeStatus(status, facts);
+    } else if (nativeStatus && status.target === 'pull-request' && status.pullRequestNumber) {
+        const facts = await nativeStatus.readPullRequest(status.pullRequestNumber);
+        if (facts.number !== status.pullRequestNumber) throw unavailableStatus();
+        initialPull = facts;
+        status = projectCurrentNativeStatus(status, facts);
+        if (facts.state === 'closed') {
+            await fenceNativePull(nativeStatus, facts);
+            return buildCopilotStatusResult({ ...status, findingStates: undefined, findingStateEvidence: undefined }, taskId);
+        }
+    }
     if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
         const evidence = await sddQuery.read(param.sdd);
-        status = Object.freeze({ ...status, sddReadiness: projectSddStatus(evidence, status.sddReadiness) });
+        status = Object.freeze({ ...status, sddReadiness: Object.freeze({ ...projectSddStatus(evidence, status.sddReadiness),
+            ...(['closed', 'completed'].includes(status.lifecycle ?? '') ? { historical: true } : {}) }) });
+    }
+    if (nativeStatus && initialIssue) {
+        const final = await nativeStatus.readIssue(initialIssue.number);
+        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason) throw unavailableStatus();
+        status = projectCurrentNativeStatus(status, final);
     }
     if (!status.pullRequestNumber || !ports) return buildCopilotStatusResult(status, taskId);
     const request = projectBugbotContextRequest(param.bugbot.review);
@@ -34,7 +60,8 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     if (candidates.length !== 1) throw unavailableStatus();
     const counts = readBugbotStatusCounts(candidates[0].body ?? '', pull.number, pull.headSha);
     if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha) throw unavailableStatus();
-    return buildCopilotStatusResult({ ...param.status,
+    if (nativeStatus && initialPull) await fenceNativePull(nativeStatus, initialPull);
+    return buildCopilotStatusResult({ ...status,
         findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened,
             verificationRequired: counts['verification-required'], unknown: counts.unknown,
@@ -44,4 +71,9 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
 
 function unavailableStatus(): ApplicationError {
     return new ApplicationError('workflow.stale', 'Current Bugbot status evidence is unavailable, incomplete or stale. Run /copilot recheck and retry status.');
+}
+
+async function fenceNativePull(port: BoundNativeStatusReadPort, original: NativePullRequestCompletionFacts): Promise<void> {
+    const fresh = await port.readPullRequest(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.merged !== original.merged) throw unavailableStatus();
 }

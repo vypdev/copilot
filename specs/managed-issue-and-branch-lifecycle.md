@@ -357,3 +357,154 @@ The label adapter re-reads current labels before replacement and retains all
 unrelated labels. This is operation recovery, not proof of feature acceptance or
 permission to merge. Eight policy cases and one label integration case cover
 this extension; the comment capability owns its separate receipt/rendering cases.
+
+
+## Merge-completion reconciliation extension — issue #472 (2026-10-13)
+
+Status: implementation in progress. The eight local native-status regressions
+pass; adapters, reconciliation, historical SDD integration and live acceptance
+remain incomplete. This section defines the target contract, not an implemented
+baseline.
+
+### Evidence and user journey
+
+Native merge #471 closed #470 as completed and its Project became Done, while
+55%, in-progress and state:working remained. Closed #454 similarly retained
+90% and active labels. Status currently prefers labels and can describe finished
+work as active. A model response/CLI success is independent of repository-tool
+or implementation success; the first native implement attempt for #472
+produced no safe paths and correctly failed without a push.
+
+```text
+verified linked merged PR -> read exact native issue -> close only if needed
+ -> verify native closure -> plan managed label delta -> guarded per-label writes
+ -> reread native state and metadata -> complete / retained partial facts
+```
+
+Native state owns whether work is closed/completed. Labels supplement that fact.
+The operation MUST make no model call or new timeline comment and MUST NOT
+create a terminal state:* label. The existing PR closing workflow is the entry
+point; bot-authored closed webhooks MUST NOT be enabled for enrichment.
+
+### State and metadata contract
+
+| Verified native fact | Status | Completion metadata |
+|---|---|---|
+| Issue closed, reason completed | completed | Remove configured active/waiting/activity and fixed start labels; replace canonical old 0..100% progress with 100% |
+| Issue closed, not planned or unknown reason | closed | Clear obsolete managed active/progress labels; do not assert 100% |
+| PR closed and strictly merged | merged | Read-only status clears stale waiting guidance |
+| PR closed, merge not established | closed | Do not infer merged from issue reason or labels |
+| Open/reopened | Current active facts | Never reuse old completion evidence or reclose solely to repair labels |
+| Missing, malformed or foreign identity | Unavailable / safe label fallback | No completion mutation or claim |
+
+Kind/size/priority, branched, SDD, contract-change and unrelated labels MUST be
+preserved. Use selective label removal/addition rather than replacing an
+inventory: concurrent unrelated additions must not be lost. A complete bounded
+native inventory is required (fixed maximum 1,000 labels). Only configured
+managed label names and exact canonical 0..100% labels may be removed. Reject
+conflicting managed/protected label configuration rather than erase historical
+facts. No new public configuration is introduced.
+
+Already-closed delivery MUST reconcile stale metadata and then become a no-op
+when complete. A boolean close return alone is insufficient evidence. Each
+metadata write MUST be preceded by a fresh bound native-state check; the final
+reread must verify closure and the intended delta. State/reason changes,
+reopening, provider failures or newly stale managed labels produce a truthful
+partial result. GitHub mutations are not atomic; no imaginary conditional write,
+rollback of another actor's labels or automatic reclosure is permitted.
+
+### Architecture and authority
+
+The pure planner owns terminal projection, protected/managed label selection
+and canonical progress. The use case owns closure/read/write/final-fence ordering
+and separate retained effects. Semantic ports expose normalized immutable native
+facts and only exact issue state/label operations. Adapters validate the bound
+repository and positive issue identity, reject PR subjects and malformed or
+incomplete native data, and map failures without raw provider content.
+Composition supplies physically frozen capabilities; a narrow TypeScript type
+must not hide a runtime addComment or general replacement capability. Status
+gets a physically read-only projection and reads current native facts after
+queueing, rather than trusting an older event's closed state. The existing
+Execution import, credential/context, dependency, coverage and workflow guards
+remain mandatory.
+
+Historical SDD evidence MUST survive removal of in-progress. The read-only SDD
+query needs a verified closed/history path, without inserting a synthetic start
+label or reopening work. Existing immutable first/current, catalog, profile,
+author, branch and final identity proofs remain authoritative. A closed
+unstarted issue without publication must not acquire a fictitious required SDD.
+A retained ready/pending artifact must not instruct the user to implement or
+answer old questions merely because the issue is closed.
+
+### GitHub UI and recovery
+
+Normal completion: native state completed, progress 100%, historical labels
+retained, no active/waiting/activity labels, status completed. No human action.
+Replay: the same facts remain; no state/label write or new comment.
+Partial example: “The issue is closed. Completion metadata could not be fully
+verified. Inspect the linked run and retry the verified merged-PR operation.
+The native closure and unrelated labels were preserved.” If closure itself is
+unverified, say so instead of claiming partial completion. Missing/foreign
+proof offers inspection/retry and preserves prior facts. Status remains one
+correlated read-only reply with English/Spanish content, trusted links and no
+new notifications. No release/deployment or branch lifecycle change is added.
+
+### Numeric budget, documentation and acceptance
+
+Minimum **80 distinct new completion cases**, derived from the above risks:
+
+| Area | Minimum | Coverage |
+|---|---:|---|
+| Pure completion/configuration planning | 14 | reasons, canonical progress, protected names, invalid configuration and no inferred state |
+| Closure application/replay/partial/races | 20 | already closed, actual close, denied reads/writes, state/reason fences and idempotency |
+| Native adapters | 13 | exact scope/issue identity, PR exclusion, malformed facts, bounded labels and provider errors |
+| Native lifecycle projection | 18 | eight existing reproductions plus push/foreign/missing/malformed and strict PR facts |
+| Current status reads | 10 | queue/event freshness, reopening, independent evidence and retained SDD projection |
+| Physical composition/integration | 5 | frozen read/write boundaries, no conversation authority, actual Execution and native-close flow |
+| **Total** | **80** | Existing cases retained, no duplicate declarations or double counting |
+
+Eight additional historical-SDD contracts belong only to the owning SDD-readiness
+companion and are excluded from this 80-case minimum. They cover completed
+publication without start labels, no publication, contract-change, exempt help,
+reopening, final native-state movement and English/Spanish suppression of obsolete actions. Its inventory must be updated from
+actual distinct cases when implemented. New pure policy has 100% coverage;
+changed application/adapters keep at least 95% lines/statements and 90%
+branches/functions, with all global thresholds unchanged.
+
+Update the command/lifecycle and operator recovery guides, this owning SDD,
+SDD-readiness companion, catalog evidence and generated catalog together.
+Acceptance requires a real managed bugfix: admission/branch/commit/PR/native
+merge -> verified closed/completed + 100% + preserved unrelated/artifact labels
+-> fresh status and no-op replay. Also exercise not-planned/unknown reason,
+reopening and partial errors without fake completion, model calls or timeline
+noise. All code, tests, coverage, types, lint, workflow/specification/docs,
+generated bundles, normal hooks and live current-head checks remain required.
+No complete or live acceptance claim is made by the current partial projection.
+
+### Local implementation checkpoint (2026-10-13; live acceptance pending)
+
+The native adapter, frozen per-issue target and read-only status facade are now
+wired in the local managed branch. REST response URL, repository URL, positive
+subject identity, PR exclusion, native state/reason and the bounded full label
+inventory are verified. Requests reject HTTP redirects using the installed
+Octokit request option, so a transferred repository cannot silently redirect
+completion writes. Primary transport implementation:
+https://github.com/octokit/request.js/blob/main/src/fetch-wrapper.ts.
+
+The use case verifies the current native closed/strictly-merged PR before issue
+closure. Every metadata write rereads native state/reason, and the final read
+verifies the intended delta. A current reopened reason blocks reclosure on an old
+delivery; known reopening during the operation also removes any current closed
+claim. No timeline write, replacement label inventory, model, branch operation
+or release authority enters this capability. Real `Execution` projection captures
+frozen lifecycle and protected names rather than passing a mutable Labels object.
+
+Local coverage verification passes 581 suites and 7,921 cases (35 existing
+skips), including 96 distinct new completion cases: 21 pure-planning, 23 closure,
+18 adapter, 18 projection, 11 current-read and five physical-binding cases.
+The eight additional historical-SDD cases are allocated only to the status
+companion, giving 104 new cases in the complete suite. Every existing coverage
+budget passes, including the new pure planner at 100% and each guarded runtime
+module at 95% lines/statements and 90% branches/functions. Generated artifacts,
+normal hooks, current-head review and real closure/replay acceptance remain
+pending. This checkpoint does not declare the correction complete.

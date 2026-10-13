@@ -1,9 +1,9 @@
+import { bindIssueCompletion, createIssueCompletionRepository } from './issue_completion_composition_root';
 import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
 import {
   createIssueAssignmentClient,
   createIssueContentClient,
   createIssueLabelsClient,
-  createIssueLifecycleClient,
   createIssueMetadataClient,
   createIssueTitleClient,
 } from "./github_issue_client_factory";
@@ -21,10 +21,8 @@ import { LinkPullRequestProjectUseCase } from "../../application/usecases/steps/
 import { SyncSizeAndProgressLabelsFromIssueToPrUseCase } from "../../application/usecases/steps/pull_request/sync_size_and_progress_labels_from_issue_to_pr_use_case";
 import { createFindingsQueryPort, createLanguageQueryPort } from "./agent_capability_composition_root";
 import { IssueAssignmentRepository } from "../../data/repository/issue/issue_assignment_repository";
-import { IssueClosureRepository } from "../../data/repository/issue/issue_closure_repository";
 import { IssueContentRepository } from "../../data/repository/issue/issue_content_repository";
 import { IssueLabelRepository } from "../../data/repository/issue/issue_label_repository";
-import { IssueLifecycleRepository } from "../../data/repository/issue/issue_lifecycle_repository";
 import { IssueMetadataRepository } from "../../data/repository/issue/issue_metadata_repository";
 import { IssueTitleRepository } from "../../data/repository/issue/issue_title_repository";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
@@ -47,7 +45,6 @@ import {
 import {
   bindActorAuthorization,
   bindIssueAssignee,
-  bindIssueClosure,
   bindIssueLabels,
   bindOrganizationMemberSelection,
   bindProjectBoardCommands,
@@ -57,9 +54,6 @@ import {
 } from './lifecycle_capability_port_binding';
 
 export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBinding): PullRequestUseCase {
-  const issueLifecycle = new IssueLifecycleRepository(
-    createIssueLifecycleClient(),
-  );
   const issueContent = new IssueContentRepository(createIssueContentClient());
   const pullRequestLifecycle = new PullRequestLifecycleRepository(
     createPullRequestLifecycleClient(),
@@ -79,7 +73,6 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
     projectBoard.link,
     binding,
   );
-  const issueClosure = new IssueClosureRepository(issueLifecycle, issueContent);
   const issueAssignee = new IssueAssignmentRepository(createIssueAssignmentClient());
   const pullRequestLabels = new IssueLabelRepository(createIssueLabelsClient());
   const pullRequestReviewer = createPullRequestReviewerCompositionRoot();
@@ -111,7 +104,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
     checkPriorityPullRequestSize: new CheckPriorityPullRequestSizeUseCase(
       boundProjectBoard,
     ),
-    closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(bindIssueClosure(issueClosure, binding)),
+    closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(bindIssueCompletion(createIssueCompletionRepository(binding))),
   };
 
   return composePullRequestUseCase(

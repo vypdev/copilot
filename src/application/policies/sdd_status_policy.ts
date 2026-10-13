@@ -5,6 +5,7 @@ import type { SddEvidenceSnapshot } from '../ports/sdd_evidence_read_ports';
 import type { PublicationMessageCatalog, PublicationMessageId } from './publication_message_catalog';
 
 export interface SddStatusReadiness {
+    readonly historical?: boolean;
     readonly state: 'not-required' | 'unavailable' | 'unverified' | 'awaiting-answers' | 'publication-pending' | 'revision-pending' | 'ready';
     readonly required: boolean | null;
     readonly path?: string;
@@ -35,7 +36,7 @@ export function projectSddStatus(evidence: SddEvidenceSnapshot, initial?: SddSta
         : evidence.state === 'stale' ? (revisionPending ? 'revision-pending' : 'unverified') : evidence.state === 'invalid' ? 'unverified'
         : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
         : revisionPending ? 'revision-pending' : evidence.state;
-    return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
+    return Object.freeze({ state, ...(evidence.historical ? { historical: true } : {}), required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
         ...(path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path } : {}),
         ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
         ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
@@ -70,7 +71,7 @@ export function formatSddStatus(readiness: SddStatusReadiness, catalog: Publicat
     ];
     const base = safeIssueUrl(issueUrl, issueNumber, identity);
     if (path && !['unavailable', 'unverified'].includes(state)) lines.push(label('interaction.status.sddOwner', `\`${path}\``));
-    if ((state === 'awaiting-answers' || state === 'revision-pending') && pending?.length) lines.push(label('interaction.status.sddQuestions', [...new Set(pending)].slice(0, 8).join(', ')));
+    if (!readiness.historical && (state === 'awaiting-answers' || state === 'revision-pending') && pending?.length) lines.push(label('interaction.status.sddQuestions', [...new Set(pending)].slice(0, 8).join(', ')));
     if (state === 'ready' && commitSha && path) {
         const evidence = base ? `[\`${commitSha}\`](${base.repository}/blob/${commitSha}/${path})` : `\`${commitSha}\``;
         lines.push(label('interaction.status.sddCommit', evidence));
@@ -79,7 +80,8 @@ export function formatSddStatus(readiness: SddStatusReadiness, catalog: Publicat
         const evidence = base ? `[\`${firstCommitSha}\`](${base.repository}/blob/${firstCommitSha}/${path})` : `\`${firstCommitSha}\``;
         lines.push(label('interaction.status.sddFirstCommit', evidence));
     }
-    if (next[state]) lines.push('', catalog.render(next[state]!));
+    if (readiness.historical && state !== 'not-required') lines.push('', catalog.render('interaction.status.sddNextHistorical'));
+    else if (next[state]) lines.push('', catalog.render(next[state]!));
     if (base && Number.isSafeInteger(readiness.cardId) && readiness.cardId! > 0) lines.push(`[${catalog.render('interaction.status.sddCard')}](${base.issue}#issuecomment-${readiness.cardId})`);
     return lines;
 }

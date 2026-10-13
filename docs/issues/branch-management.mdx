@@ -43,3 +43,18 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 Progress assessments use an immutable GitHub comparison of the development base and the managed branch head. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
 If source evidence is missing or exceeds the bounded comparison budget, the Action retains the current progress and reports that it could not assess the revision. It also retains state if either head changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
+
+## Completion after a PR merge
+
+Native issue closure owns completion. Copilot clears obsolete managed active,
+waiting, temporary activity and old percentage labels with selective operations.
+It retains issue kind, priority, size, branch/SDD history and unrelated labels.
+Only a native completed reason permits `100%`; not-planned or unknown closure
+removes old progress without asserting completion. No extra timeline comment or
+terminal `state:*` label is created.
+
+A repeated merged-PR delivery reconciles already-closed metadata and becomes a
+no-op once verified. If the issue was intentionally reopened, the old delivery
+stops without reclosing it. Partial errors preserve completed native effects and
+report metadata as unverified. Read the run and retry after resolving the cause.
+`/copilot status` reads current native state independently of these label writes.

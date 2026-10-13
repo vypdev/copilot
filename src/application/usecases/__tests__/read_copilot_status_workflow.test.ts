@@ -90,3 +90,69 @@ describe('read canonical Copilot status', () => {
         },
     );
 });
+
+describe('status after current native reads', () => {
+    function nativeFixture() {
+        const f = fixture();
+        const current = { number: 7, state: 'closed' as const, reason: 'completed' as const, labels: ['SDD', '55%'] };
+        const native = { readIssue: jest.fn().mockResolvedValue(current), readPullRequest: jest.fn().mockResolvedValue({ number: 11, state: 'closed', merged: true }) };
+        const issueContext = { ...f.context, status: { ...f.context.status, target: 'issue' as const, issueNumber: 7,
+            pullRequestNumber: undefined, lifecycle: 'in-progress', waitingFor: 'maintainer' } };
+        return { ...f, current, native, issueContext };
+    }
+    it('reads current completed state even when the queued event described an open issue', async () => {
+        const f = nativeFixture(); const result = await readCopilotStatus(f.issueContext, 'Status', f.ports, undefined, f.native);
+        expect(result.payload).toMatchObject({ status: { lifecycle: 'completed', waitingFor: undefined, issueLabels: ['SDD', '55%'] } });
+        expect(f.native.readIssue).toHaveBeenCalledWith(7); expect(f.native.readPullRequest).not.toHaveBeenCalled();
+    });
+    it('replaces old closed context after a current reopening', async () => {
+        const f = nativeFixture(); f.native.readIssue.mockResolvedValue({ ...f.current, state: 'open', reason: 'reopened', labels: ['state:working'] });
+        const result = await readCopilotStatus({ ...f.issueContext, status: { ...f.issueContext.status, lifecycle: 'completed' } }, 'Status', undefined, undefined, f.native);
+        expect(result.payload).toMatchObject({ status: { lifecycle: 'in-progress' } });
+    });
+    it('rejects a foreign native issue without reading independent evidence', async () => {
+        const f = nativeFixture(); f.native.readIssue.mockResolvedValue({ ...f.current, number: 8 });
+        await expect(readCopilotStatus(f.issueContext, 'Status', f.ports, undefined, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });
+        expect(f.ports.getPullRequest).not.toHaveBeenCalled();
+    });
+    it('does not convert a denied native read into apparent terminal success', async () => {
+        const f = nativeFixture(); f.native.readIssue.mockRejectedValue(new Error('native read denied'));
+        await expect(readCopilotStatus(f.issueContext, 'Status', undefined, undefined, f.native)).rejects.toThrow('native read denied');
+    });
+    it('retains verified historical SDD projection alongside native completion', async () => {
+        const f = nativeFixture(); const sha = 'b'.repeat(40);
+        const context = { ...f.issueContext, sdd: { issueNumber: 7 } as never,
+            status: { ...f.issueContext.status, sddReadiness: { state: 'not-required' as const, required: false } } };
+        const sdd = { serverOrigin: 'https://github.com', read: jest.fn().mockResolvedValue({ state: 'published', path: 'specs/history.md',
+            verified: { path: 'specs/history.md', firstSha: sha, currentSha: sha }, historical: true }) };
+        expect((await readCopilotStatus(context, 'Status', undefined, sdd, f.native)).payload)
+            .toMatchObject({ status: { lifecycle: 'completed', sddReadiness: { state: 'ready', historical: true, commitSha: sha } } });
+    });
+    it.each([true, false])('reports a currently closed PR with merged=%s independently of an obsolete open-head card', async merged => {
+        const f = nativeFixture(); f.native.readPullRequest.mockResolvedValue({ number: 11, state: 'closed', merged });
+        const result = await readCopilotStatus(f.context, 'Status', f.ports, undefined, f.native);
+        expect(result.payload).toMatchObject({ status: { lifecycle: merged ? 'merged' : 'closed', findingStates: undefined } });
+        expect(f.ports.listIssueComments).not.toHaveBeenCalled(); expect(f.native.readIssue).not.toHaveBeenCalled();
+    });
+    it('keeps the current open PR projection when adding independently verified finding counts', async () => {
+        const f = nativeFixture(); f.native.readPullRequest.mockResolvedValue({ number: 11, state: 'open', merged: false });
+        const cached = { ...f.context, status: { ...f.context.status, lifecycle: 'merged', pullRequestLabels: ['state:reviewing'] } };
+        expect((await readCopilotStatus(cached, 'Status', f.ports, undefined, f.native)).payload)
+            .toMatchObject({ status: { lifecycle: 'reviewing', findingStates: { resolved: 2 } } });
+    });
+    it('keeps native subject reads out of push status', async () => {
+        const f = nativeFixture(); const context = { ...f.issueContext, status: { ...f.issueContext.status, target: 'push' as const } };
+        await readCopilotStatus(context, 'Status', undefined, undefined, f.native);
+        expect(f.native.readIssue).not.toHaveBeenCalled(); expect(f.native.readPullRequest).not.toHaveBeenCalled();
+    });
+    it('rejects changed closure reason at the final native fence', async () => {
+        const f = nativeFixture(); f.native.readIssue.mockResolvedValueOnce(f.current).mockResolvedValue({ ...f.current, reason: 'not_planned' });
+        await expect(readCopilotStatus(f.issueContext, 'Status', undefined, undefined, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });
+    });
+    it('rejects a PR closed during count collection even when its head SHA did not move', async () => {
+        const f = nativeFixture(); f.native.readPullRequest.mockResolvedValueOnce({ number: 11, state: 'open', merged: false })
+            .mockResolvedValue({ number: 11, state: 'closed', merged: true });
+        await expect(readCopilotStatus(f.context, 'Status', f.ports, undefined, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });
+    });
+
+});

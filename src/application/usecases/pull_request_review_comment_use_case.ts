@@ -1,3 +1,4 @@
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -46,6 +47,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -77,6 +79,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        nativeStatusReadPort: this.nativeStatusReadPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,
