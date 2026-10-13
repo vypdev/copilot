@@ -654,7 +654,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",

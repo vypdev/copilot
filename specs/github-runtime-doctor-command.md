@@ -351,7 +351,7 @@ foreign or moved refs. Exact PR identity uses the existing canonical read policy
 and a final head fence. Group states and actions are closed; raw source text,
 provider errors and credentials never enter the report.
 
-The fixed 52-case floor is retained. Current evidence covers **167 distinct
+The fixed 52-case floor is retained. Original implementation evidence covered **167 distinct
 feature cases** without double counting existing observer tests: 57 domain and
 configuration cases (the original ten domain cases plus fifteen new prerequisite
 cases); 23 application cases; 46 provider cases (39 metadata adapters plus seven
@@ -448,3 +448,22 @@ Native finding `4251251731` identified strict mixed-type equality that contradic
 Four additional cases reproduced the old classification: mixed equality in both operand orders, mixed inequality, and the complete workflow eligibility projection. The own feature inventory increases from 185 to 189 distinct cases; the original 52-case floor, 1,000-character/32-depth bounds, no-eval rule and all coverage gates remain unchanged. Native review and parent/live acceptance remain required.
 
 Local mixed-type verification passed 581 suites and 7,924 tests with 35 configured platform skips (7,959 total). All global/module gates, types, lint, documentation, specifications and graph update passed. Generated bundles are included. Native review and parent/live acceptance remain required.
+
+### Required entry activities (2026-10-13)
+
+Native finding `4251622516` showed that a syntactically valid `types: [deleted]`
+for `issue_comment` could pass even though a newly posted doctor request cannot
+start that workflow. The parser MUST require `labeled` for issue start, `created`
+for new issue-comment commands, and `opened` for PR enrichment when the corresponding
+explicit activity filter is present. Omitted filters retain GitHub's all-activity
+behavior. Unknown dynamic conditions remain unknown; this does not execute YAML,
+expand permissions, or certify runtime/runner health.
+
+Three distinct workflow regression cases failed before the fix and cover these
+three entry points, including acceptance of their required activities. The own
+inventory is **192 distinct feature contracts** (189 retained plus these three);
+the original 52-case floor and all coverage guards remain in force.
+`docs/issues/comment-commands.mdx` describes the operational check and the
+conservative dynamic-condition limitation. Primary event semantics:
+https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows.
+Native current-head review and live promotion remain pending.

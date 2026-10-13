@@ -132,6 +132,12 @@ prerequisites, and the exact current PR identity. It has no arguments and
 never invokes a model or repairs the repository. Participants can request this
 metadata report even when model automation is restricted to organization members.
 
+Its structural workflow check requires issue `labeled`, issue-comment `created`,
+and pull-request `opened` entry activities when an explicit `types` filter is
+present. A valid but irrelevant filter such as issue-comment `deleted` is
+blocked. Unknown dynamic job conditions remain unavailable; this does not prove
+a workflow is disabled, and retrying alone cannot certify those conditions.
+
 The reply distinguishes **pass**, **warning**, **blocked**, **unavailable**, and
 **not applicable**. A successfully read invalid policy is blocked; a denied or
 failed read is unavailable. Completed independent checks remain visible. Only

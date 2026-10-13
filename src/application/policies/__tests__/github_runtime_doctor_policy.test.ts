@@ -38,7 +38,7 @@ describe('installed workflow structural contracts', () => {
     it('accepts documented event arrays', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml',
         'on: [issues]\njobs: {a: {steps: [{uses: "vypdev/copilot@v3"}]}}'))).toBe('pass'));
     it('accepts event maps parsed with the JSON YAML schema', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml',
-        'on: {issues: {types: [opened]}}\njobs: {a: {steps: [{uses: "./"}]}}'))).toBe('pass'));
+        'on: {issues: {types: [labeled]}}\njobs: {a: {steps: [{uses: "./"}]}}'))).toBe('pass'));
     it.each(['opened','null','{unexpected: opened}','[opened, 5]'])('blocks malformed workflow activity types %s', types => {
         expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml',
             `on: {issues: {types: ${types}}}\njobs: {a: {steps: [{uses: "./"}]}}`))).toBe('blocked');
@@ -53,4 +53,16 @@ describe('installed workflow structural contracts', () => {
         'on: !!js/function "function(){ throw new Error(SECRET) }"'))).toBe('blocked'));
     it('rejects a malformed workflow document', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml', 'on: ['))).toBe('blocked'));
     it('rejects a non-record repository document', () => expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml', '- issues'))).toBe('blocked'));
+});
+
+describe('required workflow entry activities', () => {
+    it.each([
+        ['.github/workflows/copilot_issue.yml', 'issues', 'labeled', 'closed'],
+        ['.github/workflows/copilot_issue_comment.yml', 'issue_comment', 'created', 'deleted'],
+        ['.github/workflows/copilot_pull_request.yml', 'pull_request', 'opened', 'closed'],
+    ] as const)('does not certify %s when its valid activity filter cannot admit the documented entry', (path, event, required, irrelevant) => {
+        const text = (activity: string) => `on: {${event}: {types: [${activity}]}}\njobs: {a: {steps: [{uses: "./"}]}}`;
+        expect(doctorWorkflowContracts(changed(path, text(irrelevant)))).toBe('blocked');
+        expect(doctorWorkflowContracts(changed(path, text(required)))).toBe('pass');
+    });
 });

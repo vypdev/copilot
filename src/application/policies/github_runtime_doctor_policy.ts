@@ -42,13 +42,13 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
 export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'blocked' | 'unavailable' {
     if (read.state !== 'available') return 'unavailable';
     const expected = [
-        ['.github/workflows/copilot_issue.yml', 'issues'],
-        ['.github/workflows/copilot_issue_comment.yml', 'issue_comment'],
-        ['.github/workflows/copilot_pull_request.yml', 'pull_request'],
+        ['.github/workflows/copilot_issue.yml', 'issues', 'labeled'],
+        ['.github/workflows/copilot_issue_comment.yml', 'issue_comment', 'created'],
+        ['.github/workflows/copilot_pull_request.yml', 'pull_request', 'opened'],
     ] as const;
     let unknown = false;
     try {
-        for (const [path, event] of expected) {
+        for (const [path, event, activity] of expected) {
             const file = read.files[path];
             if (file?.state !== 'present') return 'blocked';
             const document = object(load(file.text, { schema: JSON_SCHEMA }));
@@ -59,7 +59,8 @@ export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'b
             const filter = object(object(events)[event]);
             if (Object.prototype.hasOwnProperty.call(filter, 'types')
                 && (!Array.isArray(filter.types) || filter.types.length === 0
-                    || filter.types.some(type => typeof type !== 'string' || type.length === 0))) return 'blocked';
+                    || filter.types.some(type => typeof type !== 'string' || type.length === 0)
+                    || !filter.types.includes(activity))) return 'blocked';
             let eligible = false;
             let possible = false;
             for (const rawJob of Object.values(object(document.jobs))) {
