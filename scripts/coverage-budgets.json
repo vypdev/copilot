@@ -539,6 +539,27 @@
           ],
           "mode": "each",
           "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/application/usecases/read_pull_request_status_readiness_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/application/policies/pull_request_readiness_status_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/pull_request/current_base_revision_query.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
         }
       ],
       "successMessage": "canonical PR status coverage: PASS (marker policy 100%; read workflow 95% lines/statements, 90% branches/functions)"

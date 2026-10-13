@@ -1,3 +1,4 @@
+import { readCurrentBaseRevision } from './current_base_revision_query';
 import { logInfo } from '../../../application/ports/logging_ports';
 import * as github from '@actions/github';
 import type { TrustedApprovalPolicyRead } from '../../../domain/github_runtime_doctor';
@@ -282,16 +283,8 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         }
     }
 
-    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
     private async readCurrentBaseSha(target: ApprovalObservationTarget, baseRef: string): Promise<string> {
-        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1_024
-            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef)) throw new Error('The PR base ref is invalid.');
-        const { data } = await this.octokit.rest.git.getRef({
-            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
-        });
-        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
-            || !/^[a-f0-9]{40}$/u.test(data.object.sha)) throw new Error('The PR base ref cannot be verified.');
-        return data.object.sha;
+        return readCurrentBaseRevision(this.octokit.rest.git, target, baseRef);
     }
 
     private async effectiveRules(owner: string, repo: string, branch: string): Promise<{

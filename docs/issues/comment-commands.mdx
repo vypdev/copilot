@@ -114,6 +114,41 @@ You can combine plain and quoted IDs. Use JSON escapes for a literal double
 quote or backslash; malformed, empty or multiline quoted IDs are rejected.
 The command still accepts at most 20 IDs and 2,000 characters.
 
+`/copilot status` takes no arguments. It reports lifecycle, waiting state, branch,
+labels, and independently verified Bugbot counts. Cached counts never replace
+missing or stale evidence. Read-only status and description queries preserve
+existing lifecycle and waiting labels.
+
+In a PR conversation, status reads that exact PR and evaluates its current head
+and base using the approval policy's existing evidence rules. The final base
+reading follows the current repository branch reference. A parent push is
+visible even while GitHub retains an earlier base SHA in the PR snapshot. It shows CI,
+numeric coverage, Bugbot, and native review states independently. Missing a
+Bugbot counts card does not discard verified CI or approval evidence. In an
+issue conversation it uses native GitHub links to open PRs: zero links means not
+applicable, one selects that PR, and multiple links ask you to run status in the
+selected PR. It never guesses from an issue number or branch name.
+
+The reply identifies the verified commit and configured policy mode, links to
+the verified PR, and offers one next action. Known running checks are pending;
+proven failures are blocked; denied or incomplete evidence is unavailable.
+A verified `off` policy remains disabled when optional native facts are unavailable. Unknown or superseded facts have no verified commit or satisfied gates. Final policy access and identity must still be verified. Policy read failures never mean `off`. A change to the head, base, policy, or
+issue linkage during collection invalidates earlier readiness. Retry status
+for the new revision. Recommendation mode still requires human review; guarded
+mode points to the existing approval observer. Status itself never submits an
+approval, invokes an agent, repairs files, or merges a PR.
+
+For example, `/copilot status` in an eligible PR can show:
+
+```text
+PR readiness: satisfied · Mode: recommend · Commit: a1b2c3d4
+CI: satisfied
+Coverage: satisfied
+Bugbot: satisfied
+Native reviews: satisfied
+A human review is still required.
+Next action: Have a maintainer review this exact revision.
+```
 `/copilot status` reports lifecycle, waiting state, branch, labels, and the
 canonical Bugbot counts: open, reopened, verification-required, unknown, and
 resolved. In a PR conversation, it reads one trusted complete Bugbot status
@@ -405,6 +440,36 @@ When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
 
+Check-mode PR readiness reports the configured coverage check independently of
+other CI checks. Coverage can be satisfied while another CI check is blocked,
+or pending when its current revision is missing or still running. Overall
+readiness continues to require every configured check and its trusted producer.
+
+A finally verified off approval policy remains disabled if optional PR revision
+evidence changes during collection. Stale gate claims are discarded. If the
+final readable policy changes to off, including verified removal/default-off,
+the report disables assessment and discards old gate claims. A denied or
+malformed final policy cannot certify off; inspect the reported recovery action.
+
+A verified current human approval can satisfy readiness with no further action.
+When a finally readable head has changed and the policy is still verified,
+status reports pending and asks you to wait and retry. Denied identity or policy
+reads remain unavailable; neither case retains stale satisfied gate claims.
+
+Malformed final repository or PR identifiers make readiness unavailable. They
+are not treated as a known head movement, and no earlier satisfied gate survives.
+
+The final repository and PR identifiers remain required even when approval
+assessment is off. An invalid final target is unavailable; a valid target with
+a verified off policy still reports disabled when optional evidence is missing.
+
+An incomplete changed-file read makes readiness unavailable and offers retry,
+while independent verified checks retain their own states. Unavailable status
+gives the recovery action for the missing evidence. Pending or blocked readiness
+offers wait or resolve. The report asserts a human-review requirement only when
+recommend readiness is satisfied without a verified current human approval.
+
+PR readiness also verifies that the PR remains open at its final native revision read. Closing it while evidence is collected withholds a satisfied result even if the head and base revisions have not changed.
 Doctor verifies that every inspected configuration/workflow path is a regular file in the same immutable Git tree. Contents returned through a symlink do not establish valid installed prerequisites.
 
 

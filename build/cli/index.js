@@ -2,6 +2,1214 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 94361:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issueCommand = issueCommand;
+exports.issue = issue;
+const os = __importStar(__nccwpck_require__(22037));
+const utils_1 = __nccwpck_require__(15206);
+/**
+ * Issues a command to the GitHub Actions runner
+ *
+ * @param command - The command name to issue
+ * @param properties - Additional properties for the command (key-value pairs)
+ * @param message - The message to include with the command
+ * @remarks
+ * This function outputs a specially formatted string to stdout that the Actions
+ * runner interprets as a command. These commands can control workflow behavior,
+ * set outputs, create annotations, mask values, and more.
+ *
+ * Command Format:
+ *   ::name key=value,key=value::message
+ *
+ * @example
+ * ```typescript
+ * // Issue a warning annotation
+ * issueCommand('warning', {}, 'This is a warning message');
+ * // Output: ::warning::This is a warning message
+ *
+ * // Set an environment variable
+ * issueCommand('set-env', { name: 'MY_VAR' }, 'some value');
+ * // Output: ::set-env name=MY_VAR::some value
+ *
+ * // Add a secret mask
+ * issueCommand('add-mask', {}, 'secretValue123');
+ * // Output: ::add-mask::secretValue123
+ * ```
+ *
+ * @internal
+ * This is an internal utility function that powers the public API functions
+ * such as setSecret, warning, error, and exportVariable.
+ */
+function issueCommand(command, properties, message) {
+    const cmd = new Command(command, properties, message);
+    process.stdout.write(cmd.toString() + os.EOL);
+}
+function issue(name, message = '') {
+    issueCommand(name, {}, message);
+}
+const CMD_STRING = '::';
+class Command {
+    constructor(command, properties, message) {
+        if (!command) {
+            command = 'missing.command';
+        }
+        this.command = command;
+        this.properties = properties;
+        this.message = message;
+    }
+    toString() {
+        let cmdStr = CMD_STRING + this.command;
+        if (this.properties && Object.keys(this.properties).length > 0) {
+            cmdStr += ' ';
+            let first = true;
+            for (const key in this.properties) {
+                if (this.properties.hasOwnProperty(key)) {
+                    const val = this.properties[key];
+                    if (val) {
+                        if (first) {
+                            first = false;
+                        }
+                        else {
+                            cmdStr += ',';
+                        }
+                        cmdStr += `${key}=${escapeProperty(val)}`;
+                    }
+                }
+            }
+        }
+        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
+        return cmdStr;
+    }
+}
+function escapeData(s) {
+    return (0, utils_1.toCommandValue)(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A');
+}
+function escapeProperty(s) {
+    return (0, utils_1.toCommandValue)(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A')
+        .replace(/:/g, '%3A')
+        .replace(/,/g, '%2C');
+}
+//# sourceMappingURL=command.js.map
+
+/***/ }),
+
+/***/ 75855:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.platform = exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = exports.markdownSummary = exports.summary = exports.ExitCode = void 0;
+exports.exportVariable = exportVariable;
+exports.setSecret = setSecret;
+exports.addPath = addPath;
+exports.getInput = getInput;
+exports.getMultilineInput = getMultilineInput;
+exports.getBooleanInput = getBooleanInput;
+exports.setOutput = setOutput;
+exports.setCommandEcho = setCommandEcho;
+exports.setFailed = setFailed;
+exports.isDebug = isDebug;
+exports.debug = debug;
+exports.error = error;
+exports.warning = warning;
+exports.notice = notice;
+exports.info = info;
+exports.startGroup = startGroup;
+exports.endGroup = endGroup;
+exports.group = group;
+exports.saveState = saveState;
+exports.getState = getState;
+exports.getIDToken = getIDToken;
+const command_1 = __nccwpck_require__(94361);
+const file_command_1 = __nccwpck_require__(31618);
+const utils_1 = __nccwpck_require__(15206);
+const os = __importStar(__nccwpck_require__(22037));
+const path = __importStar(__nccwpck_require__(71017));
+const oidc_utils_1 = __nccwpck_require__(88247);
+/**
+ * The code to exit an action
+ */
+var ExitCode;
+(function (ExitCode) {
+    /**
+     * A code indicating that the action was successful
+     */
+    ExitCode[ExitCode["Success"] = 0] = "Success";
+    /**
+     * A code indicating that the action was a failure
+     */
+    ExitCode[ExitCode["Failure"] = 1] = "Failure";
+})(ExitCode || (exports.ExitCode = ExitCode = {}));
+//-----------------------------------------------------------------------
+// Variables
+//-----------------------------------------------------------------------
+/**
+ * Sets env variable for this action and future actions in the job
+ * @param name the name of the variable to set
+ * @param val the value of the variable. Non-string values will be converted to a string via JSON.stringify
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function exportVariable(name, val) {
+    const convertedVal = (0, utils_1.toCommandValue)(val);
+    process.env[name] = convertedVal;
+    const filePath = process.env['GITHUB_ENV'] || '';
+    if (filePath) {
+        return (0, file_command_1.issueFileCommand)('ENV', (0, file_command_1.prepareKeyValueMessage)(name, val));
+    }
+    (0, command_1.issueCommand)('set-env', { name }, convertedVal);
+}
+/**
+ * Registers a secret which will get masked from logs
+ *
+ * @param secret - Value of the secret to be masked
+ * @remarks
+ * This function instructs the Actions runner to mask the specified value in any
+ * logs produced during the workflow run. Once registered, the secret value will
+ * be replaced with asterisks (***) whenever it appears in console output, logs,
+ * or error messages.
+ *
+ * This is useful for protecting sensitive information such as:
+ * - API keys
+ * - Access tokens
+ * - Authentication credentials
+ * - URL parameters containing signatures (SAS tokens)
+ *
+ * Note that masking only affects future logs; any previous appearances of the
+ * secret in logs before calling this function will remain unmasked.
+ *
+ * @example
+ * ```typescript
+ * // Register an API token as a secret
+ * const apiToken = "abc123xyz456";
+ * setSecret(apiToken);
+ *
+ * // Now any logs containing this value will show *** instead
+ * console.log(`Using token: ${apiToken}`); // Outputs: "Using token: ***"
+ * ```
+ */
+function setSecret(secret) {
+    (0, command_1.issueCommand)('add-mask', {}, secret);
+}
+/**
+ * Prepends inputPath to the PATH (for this action and future actions)
+ * @param inputPath
+ */
+function addPath(inputPath) {
+    const filePath = process.env['GITHUB_PATH'] || '';
+    if (filePath) {
+        (0, file_command_1.issueFileCommand)('PATH', inputPath);
+    }
+    else {
+        (0, command_1.issueCommand)('add-path', {}, inputPath);
+    }
+    process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
+}
+/**
+ * Gets the value of an input.
+ * Unless trimWhitespace is set to false in InputOptions, the value is also trimmed.
+ * Returns an empty string if the value is not defined.
+ *
+ * @param     name     name of the input to get
+ * @param     options  optional. See InputOptions.
+ * @returns   string
+ */
+function getInput(name, options) {
+    const val = process.env[`INPUT_${name.replace(/ /g, '_').toUpperCase()}`] || '';
+    if (options && options.required && !val) {
+        throw new Error(`Input required and not supplied: ${name}`);
+    }
+    if (options && options.trimWhitespace === false) {
+        return val;
+    }
+    return val.trim();
+}
+/**
+ * Gets the values of an multiline input.  Each value is also trimmed.
+ *
+ * @param     name     name of the input to get
+ * @param     options  optional. See InputOptions.
+ * @returns   string[]
+ *
+ */
+function getMultilineInput(name, options) {
+    const inputs = getInput(name, options)
+        .split('\n')
+        .filter(x => x !== '');
+    if (options && options.trimWhitespace === false) {
+        return inputs;
+    }
+    return inputs.map(input => input.trim());
+}
+/**
+ * Gets the input value of the boolean type in the YAML 1.2 "core schema" specification.
+ * Support boolean input list: `true | True | TRUE | false | False | FALSE` .
+ * The return value is also in boolean type.
+ * ref: https://yaml.org/spec/1.2/spec.html#id2804923
+ *
+ * @param     name     name of the input to get
+ * @param     options  optional. See InputOptions.
+ * @returns   boolean
+ */
+function getBooleanInput(name, options) {
+    const trueValue = ['true', 'True', 'TRUE'];
+    const falseValue = ['false', 'False', 'FALSE'];
+    const val = getInput(name, options);
+    if (trueValue.includes(val))
+        return true;
+    if (falseValue.includes(val))
+        return false;
+    throw new TypeError(`Input does not meet YAML 1.2 "Core Schema" specification: ${name}\n` +
+        `Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
+}
+/**
+ * Sets the value of an output.
+ *
+ * @param     name     name of the output to set
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setOutput(name, value) {
+    const filePath = process.env['GITHUB_OUTPUT'] || '';
+    if (filePath) {
+        return (0, file_command_1.issueFileCommand)('OUTPUT', (0, file_command_1.prepareKeyValueMessage)(name, value));
+    }
+    process.stdout.write(os.EOL);
+    (0, command_1.issueCommand)('set-output', { name }, (0, utils_1.toCommandValue)(value));
+}
+/**
+ * Enables or disables the echoing of commands into stdout for the rest of the step.
+ * Echoing is disabled by default if ACTIONS_STEP_DEBUG is not set.
+ *
+ */
+function setCommandEcho(enabled) {
+    (0, command_1.issue)('echo', enabled ? 'on' : 'off');
+}
+//-----------------------------------------------------------------------
+// Results
+//-----------------------------------------------------------------------
+/**
+ * Sets the action status to failed.
+ * When the action exits it will be with an exit code of 1
+ * @param message add error issue message
+ */
+function setFailed(message) {
+    process.exitCode = ExitCode.Failure;
+    error(message);
+}
+//-----------------------------------------------------------------------
+// Logging Commands
+//-----------------------------------------------------------------------
+/**
+ * Gets whether Actions Step Debug is on or not
+ */
+function isDebug() {
+    return process.env['RUNNER_DEBUG'] === '1';
+}
+/**
+ * Writes debug message to user log
+ * @param message debug message
+ */
+function debug(message) {
+    (0, command_1.issueCommand)('debug', {}, message);
+}
+/**
+ * Adds an error issue
+ * @param message error issue message. Errors will be converted to string via toString()
+ * @param properties optional properties to add to the annotation.
+ */
+function error(message, properties = {}) {
+    (0, command_1.issueCommand)('error', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
+}
+/**
+ * Adds a warning issue
+ * @param message warning issue message. Errors will be converted to string via toString()
+ * @param properties optional properties to add to the annotation.
+ */
+function warning(message, properties = {}) {
+    (0, command_1.issueCommand)('warning', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
+}
+/**
+ * Adds a notice issue
+ * @param message notice issue message. Errors will be converted to string via toString()
+ * @param properties optional properties to add to the annotation.
+ */
+function notice(message, properties = {}) {
+    (0, command_1.issueCommand)('notice', (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
+}
+/**
+ * Writes info to log with console.log.
+ * @param message info message
+ */
+function info(message) {
+    process.stdout.write(message + os.EOL);
+}
+/**
+ * Begin an output group.
+ *
+ * Output until the next `groupEnd` will be foldable in this group
+ *
+ * @param name The name of the output group
+ */
+function startGroup(name) {
+    (0, command_1.issue)('group', name);
+}
+/**
+ * End an output group.
+ */
+function endGroup() {
+    (0, command_1.issue)('endgroup');
+}
+/**
+ * Wrap an asynchronous function call in a group.
+ *
+ * Returns the same type as the function itself.
+ *
+ * @param name The name of the group
+ * @param fn The function to wrap in the group
+ */
+function group(name, fn) {
+    return __awaiter(this, void 0, void 0, function* () {
+        startGroup(name);
+        let result;
+        try {
+            result = yield fn();
+        }
+        finally {
+            endGroup();
+        }
+        return result;
+    });
+}
+//-----------------------------------------------------------------------
+// Wrapper action state
+//-----------------------------------------------------------------------
+/**
+ * Saves state for current action, the state can only be retrieved by this action's post job execution.
+ *
+ * @param     name     name of the state to store
+ * @param     value    value to store. Non-string values will be converted to a string via JSON.stringify
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function saveState(name, value) {
+    const filePath = process.env['GITHUB_STATE'] || '';
+    if (filePath) {
+        return (0, file_command_1.issueFileCommand)('STATE', (0, file_command_1.prepareKeyValueMessage)(name, value));
+    }
+    (0, command_1.issueCommand)('save-state', { name }, (0, utils_1.toCommandValue)(value));
+}
+/**
+ * Gets the value of an state set by this action's main execution.
+ *
+ * @param     name     name of the state to get
+ * @returns   string
+ */
+function getState(name) {
+    return process.env[`STATE_${name}`] || '';
+}
+function getIDToken(aud) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield oidc_utils_1.OidcClient.getIDToken(aud);
+    });
+}
+/**
+ * Summary exports
+ */
+var summary_1 = __nccwpck_require__(91785);
+Object.defineProperty(exports, "summary", ({ enumerable: true, get: function () { return summary_1.summary; } }));
+/**
+ * @deprecated use core.summary
+ */
+var summary_2 = __nccwpck_require__(91785);
+Object.defineProperty(exports, "markdownSummary", ({ enumerable: true, get: function () { return summary_2.markdownSummary; } }));
+/**
+ * Path exports
+ */
+var path_utils_1 = __nccwpck_require__(14520);
+Object.defineProperty(exports, "toPosixPath", ({ enumerable: true, get: function () { return path_utils_1.toPosixPath; } }));
+Object.defineProperty(exports, "toWin32Path", ({ enumerable: true, get: function () { return path_utils_1.toWin32Path; } }));
+Object.defineProperty(exports, "toPlatformPath", ({ enumerable: true, get: function () { return path_utils_1.toPlatformPath; } }));
+/**
+ * Platform utilities exports
+ */
+exports.platform = __importStar(__nccwpck_require__(34525));
+//# sourceMappingURL=core.js.map
+
+/***/ }),
+
+/***/ 31618:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// For internal use, subject to change.
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issueFileCommand = issueFileCommand;
+exports.prepareKeyValueMessage = prepareKeyValueMessage;
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const crypto = __importStar(__nccwpck_require__(6113));
+const fs = __importStar(__nccwpck_require__(57147));
+const os = __importStar(__nccwpck_require__(22037));
+const utils_1 = __nccwpck_require__(15206);
+function issueFileCommand(command, message) {
+    const filePath = process.env[`GITHUB_${command}`];
+    if (!filePath) {
+        throw new Error(`Unable to find environment variable for file command ${command}`);
+    }
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`Missing file at path: ${filePath}`);
+    }
+    fs.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
+        encoding: 'utf8'
+    });
+}
+function prepareKeyValueMessage(key, value) {
+    const delimiter = `ghadelimiter_${crypto.randomUUID()}`;
+    const convertedValue = (0, utils_1.toCommandValue)(value);
+    // These should realistically never happen, but just in case someone finds a
+    // way to exploit uuid generation let's not allow keys or values that contain
+    // the delimiter.
+    if (key.includes(delimiter)) {
+        throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
+    }
+    if (convertedValue.includes(delimiter)) {
+        throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
+    }
+    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
+}
+//# sourceMappingURL=file-command.js.map
+
+/***/ }),
+
+/***/ 88247:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OidcClient = void 0;
+const http_client_1 = __nccwpck_require__(75784);
+const auth_1 = __nccwpck_require__(57281);
+const core_1 = __nccwpck_require__(75855);
+class OidcClient {
+    static createHttpClient(allowRetry = true, maxRetry = 10) {
+        const requestOptions = {
+            allowRetries: allowRetry,
+            maxRetries: maxRetry
+        };
+        return new http_client_1.HttpClient('actions/oidc-client', [new auth_1.BearerCredentialHandler(OidcClient.getRequestToken())], requestOptions);
+    }
+    static getRequestToken() {
+        const token = process.env['ACTIONS_ID_TOKEN_REQUEST_TOKEN'];
+        if (!token) {
+            throw new Error('Unable to get ACTIONS_ID_TOKEN_REQUEST_TOKEN env variable');
+        }
+        return token;
+    }
+    static getIDTokenUrl() {
+        const runtimeUrl = process.env['ACTIONS_ID_TOKEN_REQUEST_URL'];
+        if (!runtimeUrl) {
+            throw new Error('Unable to get ACTIONS_ID_TOKEN_REQUEST_URL env variable');
+        }
+        return runtimeUrl;
+    }
+    static getCall(id_token_url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            const httpclient = OidcClient.createHttpClient();
+            const res = yield httpclient
+                .getJson(id_token_url)
+                .catch(error => {
+                throw new Error(`Failed to get ID Token. \n
+        Error Code : ${error.statusCode}\n
+        Error Message: ${error.message}`);
+            });
+            const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
+            if (!id_token) {
+                throw new Error('Response json body do not have ID Token field');
+            }
+            return id_token;
+        });
+    }
+    static getIDToken(audience) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // New ID Token is requested from action service
+                let id_token_url = OidcClient.getIDTokenUrl();
+                if (audience) {
+                    const encodedAudience = encodeURIComponent(audience);
+                    id_token_url = `${id_token_url}&audience=${encodedAudience}`;
+                }
+                (0, core_1.debug)(`ID token url is ${id_token_url}`);
+                const id_token = yield OidcClient.getCall(id_token_url);
+                (0, core_1.setSecret)(id_token);
+                return id_token;
+            }
+            catch (error) {
+                throw new Error(`Error message: ${error.message}`);
+            }
+        });
+    }
+}
+exports.OidcClient = OidcClient;
+//# sourceMappingURL=oidc-utils.js.map
+
+/***/ }),
+
+/***/ 14520:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toPosixPath = toPosixPath;
+exports.toWin32Path = toWin32Path;
+exports.toPlatformPath = toPlatformPath;
+const path = __importStar(__nccwpck_require__(71017));
+/**
+ * toPosixPath converts the given path to the posix form. On Windows, \\ will be
+ * replaced with /.
+ *
+ * @param pth. Path to transform.
+ * @return string Posix path.
+ */
+function toPosixPath(pth) {
+    return pth.replace(/[\\]/g, '/');
+}
+/**
+ * toWin32Path converts the given path to the win32 form. On Linux, / will be
+ * replaced with \\.
+ *
+ * @param pth. Path to transform.
+ * @return string Win32 path.
+ */
+function toWin32Path(pth) {
+    return pth.replace(/[/]/g, '\\');
+}
+/**
+ * toPlatformPath converts the given path to a platform-specific path. It does
+ * this by replacing instances of / and \ with the platform-specific path
+ * separator.
+ *
+ * @param pth The path to platformize.
+ * @return string The platform-specific path.
+ */
+function toPlatformPath(pth) {
+    return pth.replace(/[/\\]/g, path.sep);
+}
+//# sourceMappingURL=path-utils.js.map
+
+/***/ }),
+
+/***/ 34525:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = void 0;
+exports.getDetails = getDetails;
+const os_1 = __importDefault(__nccwpck_require__(22037));
+const exec = __importStar(__nccwpck_require__(18538));
+const getWindowsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout: version } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Version"', undefined, {
+        silent: true
+    });
+    const { stdout: name } = yield exec.getExecOutput('powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem).Caption"', undefined, {
+        silent: true
+    });
+    return {
+        name: name.trim(),
+        version: version.trim()
+    };
+});
+const getMacOsInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    const { stdout } = yield exec.getExecOutput('sw_vers', undefined, {
+        silent: true
+    });
+    const version = (_b = (_a = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a === void 0 ? void 0 : _a[1]) !== null && _b !== void 0 ? _b : '';
+    const name = (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : '';
+    return {
+        name,
+        version
+    };
+});
+const getLinuxInfo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const { stdout } = yield exec.getExecOutput('lsb_release', ['-i', '-r', '-s'], {
+        silent: true
+    });
+    const [name, version] = stdout.trim().split('\n');
+    return {
+        name,
+        version
+    };
+});
+exports.platform = os_1.default.platform();
+exports.arch = os_1.default.arch();
+exports.isWindows = exports.platform === 'win32';
+exports.isMacOS = exports.platform === 'darwin';
+exports.isLinux = exports.platform === 'linux';
+function getDetails() {
+    return __awaiter(this, void 0, void 0, function* () {
+        return Object.assign(Object.assign({}, (yield (exports.isWindows
+            ? getWindowsInfo()
+            : exports.isMacOS
+                ? getMacOsInfo()
+                : getLinuxInfo()))), { platform: exports.platform,
+            arch: exports.arch,
+            isWindows: exports.isWindows,
+            isMacOS: exports.isMacOS,
+            isLinux: exports.isLinux });
+    });
+}
+//# sourceMappingURL=platform.js.map
+
+/***/ }),
+
+/***/ 91785:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
+const os_1 = __nccwpck_require__(22037);
+const fs_1 = __nccwpck_require__(57147);
+const { access, appendFile, writeFile } = fs_1.promises;
+exports.SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
+exports.SUMMARY_DOCS_URL = 'https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary';
+class Summary {
+    constructor() {
+        this._buffer = '';
+    }
+    /**
+     * Finds the summary file path from the environment, rejects if env var is not found or file does not exist
+     * Also checks r/w permissions.
+     *
+     * @returns step summary file path
+     */
+    filePath() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._filePath) {
+                return this._filePath;
+            }
+            const pathFromEnv = process.env[exports.SUMMARY_ENV_VAR];
+            if (!pathFromEnv) {
+                throw new Error(`Unable to find environment variable for $${exports.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
+            }
+            try {
+                yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+            }
+            catch (_a) {
+                throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
+            }
+            this._filePath = pathFromEnv;
+            return this._filePath;
+        });
+    }
+    /**
+     * Wraps content in an HTML tag, adding any HTML attributes
+     *
+     * @param {string} tag HTML tag to wrap
+     * @param {string | null} content content within the tag
+     * @param {[attribute: string]: string} attrs key-value list of HTML attributes to add
+     *
+     * @returns {string} content wrapped in HTML element
+     */
+    wrap(tag, content, attrs = {}) {
+        const htmlAttrs = Object.entries(attrs)
+            .map(([key, value]) => ` ${key}="${value}"`)
+            .join('');
+        if (!content) {
+            return `<${tag}${htmlAttrs}>`;
+        }
+        return `<${tag}${htmlAttrs}>${content}</${tag}>`;
+    }
+    /**
+     * Writes text in the buffer to the summary buffer file and empties buffer. Will append by default.
+     *
+     * @param {SummaryWriteOptions} [options] (optional) options for write operation
+     *
+     * @returns {Promise<Summary>} summary instance
+     */
+    write(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
+            const filePath = yield this.filePath();
+            const writeFunc = overwrite ? writeFile : appendFile;
+            yield writeFunc(filePath, this._buffer, { encoding: 'utf8' });
+            return this.emptyBuffer();
+        });
+    }
+    /**
+     * Clears the summary buffer and wipes the summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    clear() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.emptyBuffer().write({ overwrite: true });
+        });
+    }
+    /**
+     * Returns the current summary buffer as a string
+     *
+     * @returns {string} string of summary buffer
+     */
+    stringify() {
+        return this._buffer;
+    }
+    /**
+     * If the summary buffer is empty
+     *
+     * @returns {boolen} true if the buffer is empty
+     */
+    isEmptyBuffer() {
+        return this._buffer.length === 0;
+    }
+    /**
+     * Resets the summary buffer without writing to summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    emptyBuffer() {
+        this._buffer = '';
+        return this;
+    }
+    /**
+     * Adds raw text to the summary buffer
+     *
+     * @param {string} text content to add
+     * @param {boolean} [addEOL=false] (optional) append an EOL to the raw text (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addRaw(text, addEOL = false) {
+        this._buffer += text;
+        return addEOL ? this.addEOL() : this;
+    }
+    /**
+     * Adds the operating system-specific end-of-line marker to the buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addEOL() {
+        return this.addRaw(os_1.EOL);
+    }
+    /**
+     * Adds an HTML codeblock to the summary buffer
+     *
+     * @param {string} code content to render within fenced code block
+     * @param {string} lang (optional) language to syntax highlight code
+     *
+     * @returns {Summary} summary instance
+     */
+    addCodeBlock(code, lang) {
+        const attrs = Object.assign({}, (lang && { lang }));
+        const element = this.wrap('pre', this.wrap('code', code), attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML list to the summary buffer
+     *
+     * @param {string[]} items list of items to render
+     * @param {boolean} [ordered=false] (optional) if the rendered list should be ordered or not (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addList(items, ordered = false) {
+        const tag = ordered ? 'ol' : 'ul';
+        const listItems = items.map(item => this.wrap('li', item)).join('');
+        const element = this.wrap(tag, listItems);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML table to the summary buffer
+     *
+     * @param {SummaryTableCell[]} rows table rows
+     *
+     * @returns {Summary} summary instance
+     */
+    addTable(rows) {
+        const tableBody = rows
+            .map(row => {
+            const cells = row
+                .map(cell => {
+                if (typeof cell === 'string') {
+                    return this.wrap('td', cell);
+                }
+                const { header, data, colspan, rowspan } = cell;
+                const tag = header ? 'th' : 'td';
+                const attrs = Object.assign(Object.assign({}, (colspan && { colspan })), (rowspan && { rowspan }));
+                return this.wrap(tag, data, attrs);
+            })
+                .join('');
+            return this.wrap('tr', cells);
+        })
+            .join('');
+        const element = this.wrap('table', tableBody);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds a collapsable HTML details element to the summary buffer
+     *
+     * @param {string} label text for the closed state
+     * @param {string} content collapsable content
+     *
+     * @returns {Summary} summary instance
+     */
+    addDetails(label, content) {
+        const element = this.wrap('details', this.wrap('summary', label) + content);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML image tag to the summary buffer
+     *
+     * @param {string} src path to the image you to embed
+     * @param {string} alt text description of the image
+     * @param {SummaryImageOptions} options (optional) addition image attributes
+     *
+     * @returns {Summary} summary instance
+     */
+    addImage(src, alt, options) {
+        const { width, height } = options || {};
+        const attrs = Object.assign(Object.assign({}, (width && { width })), (height && { height }));
+        const element = this.wrap('img', null, Object.assign({ src, alt }, attrs));
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML section heading element
+     *
+     * @param {string} text heading text
+     * @param {number | string} [level=1] (optional) the heading level, default: 1
+     *
+     * @returns {Summary} summary instance
+     */
+    addHeading(text, level) {
+        const tag = `h${level}`;
+        const allowedTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+            ? tag
+            : 'h1';
+        const element = this.wrap(allowedTag, text);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML thematic break (<hr>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addSeparator() {
+        const element = this.wrap('hr', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML line break (<br>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addBreak() {
+        const element = this.wrap('br', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML blockquote to the summary buffer
+     *
+     * @param {string} text quote text
+     * @param {string} cite (optional) citation url
+     *
+     * @returns {Summary} summary instance
+     */
+    addQuote(text, cite) {
+        const attrs = Object.assign({}, (cite && { cite }));
+        const element = this.wrap('blockquote', text, attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML anchor tag to the summary buffer
+     *
+     * @param {string} text link text/content
+     * @param {string} href hyperlink
+     *
+     * @returns {Summary} summary instance
+     */
+    addLink(text, href) {
+        const element = this.wrap('a', text, { href });
+        return this.addRaw(element).addEOL();
+    }
+}
+const _summary = new Summary();
+/**
+ * @deprecated use `core.summary`
+ */
+exports.markdownSummary = _summary;
+exports.summary = _summary;
+//# sourceMappingURL=summary.js.map
+
+/***/ }),
+
+/***/ 15206:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toCommandValue = toCommandValue;
+exports.toCommandProperties = toCommandProperties;
+/**
+ * Sanitizes an input into a string so it can be passed into issueCommand safely
+ * @param input input to sanitize into a string
+ */
+function toCommandValue(input) {
+    if (input === null || input === undefined) {
+        return '';
+    }
+    else if (typeof input === 'string' || input instanceof String) {
+        return input;
+    }
+    return JSON.stringify(input);
+}
+/**
+ *
+ * @param annotationProperties
+ * @returns The command properties to send with the actual annotation command
+ * See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
+ */
+function toCommandProperties(annotationProperties) {
+    if (!Object.keys(annotationProperties).length) {
+        return {};
+    }
+    return {
+        title: annotationProperties.title,
+        file: annotationProperties.file,
+        line: annotationProperties.startLine,
+        endLine: annotationProperties.endLine,
+        col: annotationProperties.startColumn,
+        endColumn: annotationProperties.endColumn
+    };
+}
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
 /***/ 18538:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -1037,6 +2245,94 @@ function getOctokitOptions(token, options) {
     return opts;
 }
 //# sourceMappingURL=utils.js.map
+
+/***/ }),
+
+/***/ 57281:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PersonalAccessTokenCredentialHandler = exports.BearerCredentialHandler = exports.BasicCredentialHandler = void 0;
+class BasicCredentialHandler {
+    constructor(username, password) {
+        this.username = username;
+        this.password = password;
+    }
+    prepareRequest(options) {
+        if (!options.headers) {
+            throw Error('The request has no headers');
+        }
+        options.headers['Authorization'] = `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication() {
+        return false;
+    }
+    handleAuthentication() {
+        return __awaiter(this, void 0, void 0, function* () {
+            throw new Error('not implemented');
+        });
+    }
+}
+exports.BasicCredentialHandler = BasicCredentialHandler;
+class BearerCredentialHandler {
+    constructor(token) {
+        this.token = token;
+    }
+    // currently implements pre-authorization
+    // TODO: support preAuth = false where it hooks on 401
+    prepareRequest(options) {
+        if (!options.headers) {
+            throw Error('The request has no headers');
+        }
+        options.headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication() {
+        return false;
+    }
+    handleAuthentication() {
+        return __awaiter(this, void 0, void 0, function* () {
+            throw new Error('not implemented');
+        });
+    }
+}
+exports.BearerCredentialHandler = BearerCredentialHandler;
+class PersonalAccessTokenCredentialHandler {
+    constructor(token) {
+        this.token = token;
+    }
+    // currently implements pre-authorization
+    // TODO: support preAuth = false where it hooks on 401
+    prepareRequest(options) {
+        if (!options.headers) {
+            throw Error('The request has no headers');
+        }
+        options.headers['Authorization'] = `Basic ${Buffer.from(`PAT:${this.token}`).toString('base64')}`;
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication() {
+        return false;
+    }
+    handleAuthentication() {
+        return __awaiter(this, void 0, void 0, function* () {
+            throw new Error('not implemented');
+        });
+    }
+}
+exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
+//# sourceMappingURL=auth.js.map
 
 /***/ }),
 
@@ -35153,28 +36449,15 @@ module.exports = {
 /***/ }),
 
 /***/ 98143:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveJsonInput = resolveJsonInput;
-exports.resolveActionInput = resolveActionInput;
-/**
- * Resolves one action input without coupling the caller to a specific lifecycle.
- * Explicit runtime parameters always override YAML/environment defaults.
- */
-function resolveJsonInput(inputVarsJson, key) {
-    if (!inputVarsJson) {
-        return undefined;
-    }
-    const inputVars = JSON.parse(inputVarsJson);
-    const value = inputVars[`INPUT_${key.toUpperCase()}`];
-    return value === undefined ? undefined : String(value);
-}
-function resolveActionInput(additionalParams, actionInputs, key) {
-    return (additionalParams[key] ?? actionInputs[key]);
-}
+exports.resolveActionInput = exports.resolveJsonInput = void 0;
+var action_input_source_1 = __nccwpck_require__(25911);
+Object.defineProperty(exports, "resolveJsonInput", ({ enumerable: true, get: function () { return action_input_source_1.resolveJsonInput; } }));
+Object.defineProperty(exports, "resolveActionInput", ({ enumerable: true, get: function () { return action_input_source_1.resolveActionInput; } }));
 
 
 /***/ }),
@@ -35650,18 +36933,14 @@ function parseStrictInteger(value) {
 /***/ }),
 
 /***/ 68841:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDelimitedValues = parseDelimitedValues;
-function parseDelimitedValues(value) {
-    return String(value ?? '')
-        .split(',')
-        .map(item => item.trim())
-        .filter(item => item.length > 0);
-}
+exports.parseDelimitedValues = void 0;
+var input_values_policy_1 = __nccwpck_require__(83592);
+Object.defineProperty(exports, "parseDelimitedValues", ({ enumerable: true, get: function () { return input_values_policy_1.parseDelimitedValues; } }));
 
 
 /***/ }),
@@ -43190,6 +44469,28 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.findings',
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
+    'interaction.status.prReadiness',
+    'interaction.status.prReadiness.unavailable',
+    'interaction.status.prReadiness.pending',
+    'interaction.status.prReadiness.blocked',
+    'interaction.status.prReadiness.satisfied',
+    'interaction.status.prReadiness.not-applicable',
+    'interaction.status.prReadiness.ci',
+    'interaction.status.prReadiness.coverage',
+    'interaction.status.prReadiness.bugbot',
+    'interaction.status.prReadiness.reviews',
+    'interaction.status.prReadiness.revision',
+    'interaction.status.prReadiness.openPr',
+    'interaction.status.prReadiness.next',
+    'interaction.status.prReadiness.action.retry',
+    'interaction.status.prReadiness.action.wait',
+    'interaction.status.prReadiness.action.resolve',
+    'interaction.status.prReadiness.action.human-review',
+    'interaction.status.prReadiness.action.observer',
+    'interaction.status.prReadiness.action.select-pr',
+    'interaction.status.prReadiness.oversize',
+    'interaction.status.prReadiness.countsUnavailable',
+    'interaction.status.prReadiness.humanReview',
     'interaction.status.sddHeading',
     'interaction.status.sddRequirement',
     'interaction.status.sddState',
@@ -43383,6 +44684,28 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Bugbot findings',
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
+    'interaction.status.prReadiness': 'Exact-head PR readiness',
+    'interaction.status.prReadiness.unavailable': 'unavailable',
+    'interaction.status.prReadiness.pending': 'pending',
+    'interaction.status.prReadiness.blocked': 'blocked',
+    'interaction.status.prReadiness.satisfied': 'satisfied',
+    'interaction.status.prReadiness.not-applicable': 'not applicable',
+    'interaction.status.prReadiness.ci': 'CI',
+    'interaction.status.prReadiness.coverage': 'Coverage',
+    'interaction.status.prReadiness.bugbot': 'Bugbot',
+    'interaction.status.prReadiness.reviews': 'Native reviews',
+    'interaction.status.prReadiness.revision': 'Commit',
+    'interaction.status.prReadiness.openPr': 'View verified PR',
+    'interaction.status.prReadiness.next': 'Next action',
+    'interaction.status.prReadiness.action.retry': 'Inspect this run and retry status.',
+    'interaction.status.prReadiness.action.wait': 'Wait for the current revision, then retry status.',
+    'interaction.status.prReadiness.action.resolve': 'Resolve the verified prerequisites, then retry status.',
+    'interaction.status.prReadiness.action.human-review': 'Have a maintainer review this exact revision.',
+    'interaction.status.prReadiness.action.observer': 'Inspect the approval observer for this exact revision.',
+    'interaction.status.prReadiness.action.select-pr': 'Run /copilot status in the selected PR conversation.',
+    'interaction.status.prReadiness.countsUnavailable': 'Current finding counts could not be verified.',
+    'interaction.status.prReadiness.oversize': 'Status exceeds the reply budget; current readiness is unavailable.',
+    'interaction.status.prReadiness.humanReview': 'A human review is still required; status never submits a review.',
     'interaction.status.sddHeading': 'SDD readiness',
     'interaction.status.sddRequirement': 'Specification',
     'interaction.status.sddState': 'Status',
@@ -43577,6 +44900,28 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Hallazgos de Bugbot',
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
+    'interaction.status.prReadiness': 'Preparación del PR para este commit',
+    'interaction.status.prReadiness.unavailable': 'no disponible',
+    'interaction.status.prReadiness.pending': 'pendiente',
+    'interaction.status.prReadiness.blocked': 'bloqueada',
+    'interaction.status.prReadiness.satisfied': 'cumplida',
+    'interaction.status.prReadiness.not-applicable': 'no aplicable',
+    'interaction.status.prReadiness.ci': 'CI',
+    'interaction.status.prReadiness.coverage': 'Cobertura',
+    'interaction.status.prReadiness.bugbot': 'Bugbot',
+    'interaction.status.prReadiness.reviews': 'Revisiones de GitHub',
+    'interaction.status.prReadiness.revision': 'Commit',
+    'interaction.status.prReadiness.openPr': 'Ver el PR verificado',
+    'interaction.status.prReadiness.next': 'Siguiente acción',
+    'interaction.status.prReadiness.action.retry': 'Consulta esta ejecución y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.wait': 'Espera a la revisión actual y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.resolve': 'Resuelve los requisitos verificados y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.human-review': 'Pide a un mantenedor que revise este commit concreto.',
+    'interaction.status.prReadiness.action.observer': 'Consulta el observador de aprobación para este commit concreto.',
+    'interaction.status.prReadiness.action.select-pr': 'Ejecuta /copilot status en la conversación del PR elegido.',
+    'interaction.status.prReadiness.countsUnavailable': 'No se han podido verificar los contadores actuales de hallazgos.',
+    'interaction.status.prReadiness.oversize': 'El estado supera el límite de la respuesta; su preparación actual no está disponible.',
+    'interaction.status.prReadiness.humanReview': 'Aún se requiere revisión humana; el estado nunca envía una revisión.',
     'interaction.status.sddHeading': 'Preparación del SDD',
     'interaction.status.sddRequirement': 'Especificación',
     'interaction.status.sddState': 'Estado',
@@ -44162,6 +45507,145 @@ function hasDuplicates(values, locale) {
 }
 function renderList(values) {
     return values.map(value => `- ${value}`).join('\n');
+}
+
+
+/***/ }),
+
+/***/ 79794:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.unavailablePullRequestReadiness = unavailablePullRequestReadiness;
+exports.disabledPullRequestReadiness = disabledPullRequestReadiness;
+exports.projectPullRequestReadiness = projectPullRequestReadiness;
+const pull_request_approval_1 = __nccwpck_require__(8024);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const objectId = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+function unavailablePullRequestReadiness(code = 'evidence-unavailable', action = 'retry') {
+    return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
+        humanReviewRequired: false, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
+}
+/** A verified disabled policy is independent of whether optional native facts were readable. */
+function disabledPullRequestReadiness() {
+    return Object.freeze({ ...unavailablePullRequestReadiness(), readiness: 'not-applicable', mode: 'off', code: 'disabled',
+        humanReviewRequired: false, action: 'none' });
+}
+function state(decision) {
+    return !decision || decision.status === 'already-approved' ? 'satisfied'
+        : decision.status === 'pending' ? 'pending'
+            : decision.code === 'reviews-unavailable' || decision.code === 'bugbot-incomplete' ? 'unavailable'
+                : decision.status === 'blocked' ? 'blocked'
+                    : decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
+}
+/** Uses the existing decision and the same canonical evidence gates, without an observer or a mutation. */
+function projectPullRequestReadiness(rawPolicy, evidence, final) {
+    if (!Number.isSafeInteger(final.repositoryId) || final.repositoryId <= 0 || !Number.isSafeInteger(final.pullNumber)
+        || final.pullNumber <= 0)
+        return unavailablePullRequestReadiness('identity-unavailable');
+    let policy;
+    try {
+        const finalPolicy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(final.rawPolicy);
+        if (finalPolicy.mode === 'off' && rawPolicy !== final.rawPolicy)
+            return disabledPullRequestReadiness();
+        policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
+    }
+    catch {
+        return Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' });
+    }
+    if (policy.mode === 'off' && rawPolicy !== final.rawPolicy)
+        return unavailablePullRequestReadiness('policy-superseded');
+    if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
+        || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
+        || !objectId(final.headSha) || !objectId(final.baseSha))
+        return policy.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('identity-unavailable');
+    const sameTarget = evidence.repositoryId === final.repositoryId && evidence.pullNumber === final.pullNumber;
+    if (!sameTarget || evidence.headSha !== final.headSha || evidence.baseSha !== final.baseSha || rawPolicy !== final.rawPolicy) {
+        if (policy.mode === 'off')
+            return disabledPullRequestReadiness();
+        return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
+            humanReviewRequired: false, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+    }
+    const checkBoundary = !policy.producerAttested ? 'blocked'
+        : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha) ? 'pending' : undefined;
+    const ci = checkBoundary ?? state((0, pull_request_approval_1.decideApprovalChecks)(policy, evidence));
+    const coverage = policy.coverage.mode === 'check'
+        ? checkBoundary ?? state((0, pull_request_approval_1.decideApprovalChecks)({ ...policy,
+            testChecks: policy.testChecks.filter(check => check.name === policy.coverage.checkName),
+        }, { ...evidence, requiredChecks: [policy.coverage.checkName] }))
+        : !policy.coverage.reporterAttested ? 'blocked' : !evidence.numericCoverage && !(0, pull_request_approval_1.isDocumentationOnlyDiff)(evidence.changedPaths)
+            ? 'unavailable' : state((0, pull_request_approval_1.decideApprovalCoverage)(policy, evidence));
+    const bugbot = evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun ? 'blocked' : state((0, pull_request_approval_1.decideApprovalBugbot)(policy, evidence));
+    const reviews = state((0, pull_request_approval_1.decideApprovalReviews)(policy, evidence));
+    const groups = Object.freeze({ ci, coverage, bugbot, reviews });
+    if (policy.mode === 'off')
+        return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
+            baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none', evidence: groups });
+    const decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, evidence);
+    let readiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
+        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' || decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
+    if (!evidence.filesComplete || Object.values(groups).includes('unavailable'))
+        readiness = 'unavailable';
+    const action = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
+        : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
+    return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
+        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness === 'satisfied' && policy.mode === 'recommend' && decision.code !== 'human-approved', evidence: groups, action });
+}
+
+
+/***/ }),
+
+/***/ 99448:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.appendPullRequestReadiness = appendPullRequestReadiness;
+/** Append exact-head facts and bound the entire combined status, including independent SDD sections. */
+function appendPullRequestReadiness(baseLines, snapshot, catalog) {
+    const lines = [...baseLines];
+    if (snapshot.pullRequestReadiness) {
+        const readiness = snapshot.pullRequestReadiness;
+        const states = ['unavailable', 'pending', 'blocked', 'satisfied', 'not-applicable'];
+        const renderState = (state) => catalog.render(`interaction.status.prReadiness.${states.includes(state) ? state : 'unavailable'}`);
+        const mode = ['off', 'recommend', 'guarded', 'unavailable'].includes(readiness.mode) ? readiness.mode : 'unavailable';
+        const head = /^[a-f0-9]{40}$/u.test(readiness.headSha) ? readiness.headSha.slice(0, 8) : catalog.render('interaction.status.notSet');
+        const code = /^[a-z0-9-]{1,60}$/u.test(readiness.code) ? readiness.code : 'evidence-unavailable';
+        lines.push(`- **${catalog.render('interaction.status.prReadiness')}:** ${renderState(readiness.readiness)} (${mode}; ${catalog.render('interaction.status.prReadiness.revision')} ${head}; ${code})`);
+        if (readiness.evidence)
+            for (const group of ['ci', 'coverage', 'bugbot', 'reviews']) {
+                lines.push(`- **${catalog.render(`interaction.status.prReadiness.${group}`)}:** ${renderState(readiness.evidence[group])}`);
+            }
+        const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
+        if (url)
+            lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
+        if (readiness.humanReviewRequired && readiness.readiness === 'satisfied' && mode === 'recommend') {
+            lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
+        }
+        const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
+        const action = readiness.action && actions.includes(readiness.action) ? readiness.action : 'retry';
+        if (action !== 'none')
+            lines.push(`${catalog.render('interaction.status.prReadiness.next')}: ${catalog.render(`interaction.status.prReadiness.action.${action}`)}`);
+    }
+    const rendered = lines.join('\n');
+    return snapshot.pullRequestReadiness && rendered.length > 6000
+        ? `${catalog.render('interaction.status.prReadiness.oversize')}\n${catalog.render('interaction.status.prReadiness.action.retry')}` : rendered;
+}
+function verifiedReadinessLink(snapshot, number) {
+    if (!Number.isSafeInteger(number) || !number || number <= 0 || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.owner)
+        || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.repository) || [snapshot.owner, snapshot.repository].some(value => value === '.' || value === '..'))
+        return undefined;
+    try {
+        const url = new URL(snapshot.serverOrigin ?? '');
+        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
+            ? `${url.origin}/${snapshot.owner}/${snapshot.repository}/pull/${number}` : undefined;
+    }
+    catch {
+        return undefined;
+    }
 }
 
 
@@ -49810,6 +51294,7 @@ exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
 exports.projectCurrentNativeStatus = projectCurrentNativeStatus;
+const pull_request_readiness_status_policy_1 = __nccwpck_require__(99448);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const sdd_status_policy_1 = __nccwpck_require__(6853);
@@ -49916,14 +51401,14 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
         label('interaction.status.pullRequestLabels', snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : catalog.render('interaction.status.none')),
     ];
     if (snapshot.findingStateEvidence === 'invalid') {
-        lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
+        lines.push(label('interaction.status.findings', catalog.render(snapshot.pullRequestReadiness ? 'interaction.status.prReadiness.countsUnavailable' : 'interaction.status.findingsInvalid')));
     }
     else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
     if (snapshot.sddReadiness)
         lines.push(...(0, sdd_status_policy_1.formatSddStatus)(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
-    return lines.join('\n');
+    return (0, pull_request_readiness_status_policy_1.appendPullRequestReadiness)(lines, snapshot, catalog);
 }
 /** A fresh native read supersedes event-derived terminal state without obtaining mutation authority. */
 function projectCurrentNativeStatus(status, facts) {
@@ -56498,13 +57983,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readCopilotStatus = readCopilotStatus;
 const sdd_status_policy_1 = __nccwpck_require__(6853);
 const status_command_policy_1 = __nccwpck_require__(3449);
-const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
-const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
-const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
-const context_1 = __nccwpck_require__(14712);
-const bugbot_context_request_1 = __nccwpck_require__(98299);
+const read_pull_request_status_readiness_workflow_1 = __nccwpck_require__(18874);
 const application_error_1 = __nccwpck_require__(75999);
-/** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
+/** Shared read-only status path combines current native state with PR readiness evidence. */
 async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
     let initialIssue;
     let initialPull;
@@ -56534,39 +58015,24 @@ async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
     if (nativeStatus && initialIssue) {
         status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, await fenceNativeIssue(nativeStatus, initialIssue));
     }
-    if (!status.pullRequestNumber || !ports)
-        return (0, status_command_policy_1.buildCopilotStatusResult)(status, taskId);
-    const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
-    const selection = request.target.pullRequestSelection;
-    if (selection.kind !== 'event' || selection.number !== status.pullRequestNumber)
-        throw unavailableStatus();
-    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.getPullRequest(selection.number)], 'event');
-    if (canonical.kind !== 'canonical')
-        throw unavailableStatus();
-    const pull = canonical.pullRequest;
-    const comments = await ports.listIssueComments(pull.number);
-    if (comments.coverage.status !== 'complete')
-        throw unavailableStatus();
-    const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
-        && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
-    if (candidates.length !== 1)
-        throw unavailableStatus();
-    const counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', pull.number, pull.headSha);
-    if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha)
-        throw unavailableStatus();
+    // Setup can attach a canonical PR to an issue conversation. Evaluate that exact PR
+    // directly while retaining the issue's native lifecycle and SDD projection.
+    const readinessStatus = status.target === 'issue' && status.pullRequestNumber
+        ? { ...status, target: 'pull-request' }
+        : status;
+    const result = await (0, read_pull_request_status_readiness_workflow_1.readPullRequestStatusReadiness)({ ...param, status: readinessStatus }, taskId, ports);
+    const resultStatus = result.payload.status;
     if (nativeStatus && initialPull)
         await fenceNativePull(nativeStatus, initialPull);
     if (nativeStatus && initialIssue)
-        await fenceNativeIssue(nativeStatus, initialIssue);
-    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...status,
-        findingStateEvidence: undefined,
-        findingStates: { open: counts.open, reopened: counts.reopened,
-            verificationRequired: counts['verification-required'], unknown: counts.unknown,
-            resolved: counts.fixed + counts.obsolete + counts.dismissed },
-    }, taskId);
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, await fenceNativeIssue(nativeStatus, initialIssue));
+    if (nativeStatus && initialPull)
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, initialPull);
+    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...resultStatus, target: status.target, lifecycle: status.lifecycle, waitingFor: status.waitingFor,
+        issueLabels: status.issueLabels, pullRequestLabels: status.pullRequestLabels }, taskId);
 }
 function unavailableStatus() {
-    return new application_error_1.ApplicationError('workflow.stale', 'Current Bugbot status evidence is unavailable, incomplete or stale. Run /copilot recheck and retry status.');
+    return new application_error_1.ApplicationError('workflow.stale', 'Current native status evidence is unavailable, incomplete or stale. Retry status.');
 }
 async function fenceNativePull(port, original) {
     const fresh = await port.readPullRequest(original.number);
@@ -56579,6 +58045,200 @@ async function fenceNativeIssue(port, original) {
         || JSON.stringify([...fresh.labels].sort()) !== JSON.stringify([...original.labels].sort()))
         throw unavailableStatus();
     return fresh;
+}
+
+
+/***/ }),
+
+/***/ 18874:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readPullRequestStatusReadiness = readPullRequestStatusReadiness;
+const status_command_policy_1 = __nccwpck_require__(3449);
+const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
+const context_1 = __nccwpck_require__(14712);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const pull_request_readiness_policy_1 = __nccwpck_require__(79794);
+const positive = (value) => Number.isSafeInteger(value) && value > 0;
+const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+/** Independent reads retain verified facts. Unknown identity or freshness never becomes a clean snapshot. */
+async function readPullRequestStatusReadiness(param, taskId, ports) {
+    const original = param.status;
+    if (original.target !== 'issue' && original.target !== 'pull-request')
+        return (0, status_command_policy_1.buildCopilotStatusResult)(original, taskId);
+    let snapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin ?? original.serverOrigin };
+    const finish = (readiness) => (0, status_command_policy_1.buildCopilotStatusResult)({ ...snapshot, pullRequestReadiness: readiness }, taskId);
+    const fail = (code, action = 'retry') => finish((0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)(code, action));
+    if (!ports)
+        return fail('evidence-adapter-unavailable');
+    const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
+    const repositoryId = request.target.repository.id;
+    if (!positive(repositoryId) || request.target.repository.owner.toLowerCase() !== original.owner.toLowerCase()
+        || request.target.repository.name.toLowerCase() !== original.repository.toLowerCase())
+        return fail('identity-unavailable');
+    let number;
+    let fromIssue = false;
+    if (original.target === 'issue') {
+        if (!positive(original.issueNumber) || !ports.readLinkedPullRequests)
+            return fail('linkage-unavailable');
+        let links;
+        try {
+            links = await ports.readLinkedPullRequests(original.issueNumber);
+        }
+        catch {
+            return fail('linkage-unavailable');
+        }
+        if (links.state !== 'available' || links.repositoryId !== repositoryId || links.issueNumber !== original.issueNumber
+            || !Array.isArray(links.numbers) || links.numbers.some(value => !positive(value))
+            || new Set(links.numbers).size !== links.numbers.length)
+            return fail('linkage-unavailable');
+        if (links.numbers.length === 0) {
+            snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: undefined };
+            return finish({ readiness: 'not-applicable', mode: 'unavailable', headSha: '', baseSha: '',
+                code: 'unlinked-issue', humanReviewRequired: false, action: 'none' });
+        }
+        if (links.numbers.length !== 1)
+            return fail('ambiguous-linkage', 'select-pr');
+        number = links.numbers[0];
+        fromIssue = true;
+    }
+    else {
+        const selection = request.target.pullRequestSelection;
+        if (!positive(original.pullRequestNumber) || selection.kind !== 'event' || selection.number !== original.pullRequestNumber)
+            return fail('identity-unavailable');
+        number = original.pullRequestNumber;
+    }
+    let pull;
+    try {
+        const target = fromIssue ? { ...request.target, headRef: '', expectedHeadSha: undefined,
+            pullRequestSelection: { kind: 'event', number } } : request.target;
+        const selected = (0, context_1.selectCanonicalBugbotPullRequest)(target, [await ports.getPullRequest(number)], 'event');
+        if (selected.kind !== 'canonical')
+            return fail('identity-unavailable');
+        pull = selected.pullRequest;
+    }
+    catch {
+        return fail('identity-unavailable');
+    }
+    const target = { owner: original.owner, repository: original.repository, repositoryId, pullNumber: number };
+    let rawPolicy;
+    let evidence;
+    let readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('evidence-adapter-unavailable');
+    if (ports.approval) {
+        try {
+            rawPolicy = await ports.approval.readPolicy(target);
+            try {
+                if ((0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy).mode === 'off')
+                    readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+            }
+            catch {
+                readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
+            }
+            if (readiness.code !== 'invalid-policy') {
+                const read = await ports.approval.loadEvidence(target);
+                if (read.repositoryId !== repositoryId || read.pullNumber !== number || !sha(read.headSha) || !sha(read.baseSha)) {
+                    if (readiness.mode !== 'off')
+                        readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('target-mismatch');
+                }
+                else
+                    evidence = read;
+            }
+        }
+        catch {
+            if (readiness.mode !== 'off')
+                readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)();
+        }
+    }
+    // A missing, denied or incomplete Bugbot card cannot erase independent approval evidence.
+    let counts;
+    try {
+        const comments = await ports.listIssueComments(number);
+        if (comments.coverage.status === 'complete') {
+            const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
+                && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
+            if (candidates.length === 1)
+                counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', number, pull.headSha);
+        }
+    }
+    catch { /* Retain all independently verified facts. */ }
+    let finalPolicy;
+    let policyVerified = false;
+    if (ports.approval) {
+        try {
+            finalPolicy = await ports.approval.readPolicy(target);
+            try {
+                const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(finalPolicy);
+                policyVerified = true;
+                if (policy.mode === 'off')
+                    readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+                else if (!evidence && rawPolicy !== finalPolicy)
+                    readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('policy-superseded');
+            }
+            catch {
+                readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
+            }
+        }
+        catch {
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+        }
+    }
+    let finalHead;
+    try {
+        finalHead = await ports.getPullRequestHeadSha(number);
+    }
+    catch { /* A denied freshness read cannot certify counts or other gates. */ }
+    let observedRevisionHead;
+    if (evidence && ports.approval && policyVerified) {
+        try {
+            // Read both revision identities after policy and the independent head lookup.
+            const revision = await ports.approval.readRevision(target);
+            if (revision.repositoryId !== repositoryId || revision.pullNumber !== number)
+                return fail('target-mismatch');
+            observedRevisionHead = revision.headSha;
+            readiness = (0, pull_request_readiness_policy_1.projectPullRequestReadiness)(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
+            if (pull.headSha !== evidence.headSha)
+                readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
+                    action: 'wait', humanReviewRequired: false, evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+        }
+        catch {
+            readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+        }
+    }
+    if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts)
+        snapshot = { ...snapshot, findingStateEvidence: undefined,
+            findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
+                resolved: counts.fixed + counts.obsolete + counts.dismissed } };
+    if (finalHead !== pull.headSha) {
+        if (readiness.mode === 'off')
+            readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+        else if (sha(finalHead) && policyVerified && rawPolicy === finalPolicy)
+            readiness = Object.freeze({ ...readiness,
+                readiness: 'pending', code: 'superseded', action: 'wait', headSha: '', baseSha: '', humanReviewRequired: false,
+                evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+        else
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
+    }
+    if (fromIssue) {
+        try {
+            const final = await ports.readLinkedPullRequests(original.issueNumber);
+            if (final.state !== 'available' || final.repositoryId !== repositoryId || final.issueNumber !== original.issueNumber
+                || final.numbers.length !== 1 || final.numbers[0] !== number) {
+                snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: 'invalid' };
+                return fail('linkage-superseded');
+            }
+        }
+        catch {
+            snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: 'invalid' };
+            return fail('linkage-unavailable');
+        }
+    }
+    return finish(Object.freeze({ ...readiness, pullNumber: number }));
 }
 
 
@@ -80796,6 +82456,28 @@ exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
 
 /***/ }),
 
+/***/ 68742:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCurrentBaseRevision = readCurrentBaseRevision;
+/** PR base metadata can lag a parent push; read the exact native branch ref. */
+async function readCurrentBaseRevision(port, target, baseRef) {
+    if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
+        || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
+        throw new Error('The PR base ref is invalid.');
+    const { data } = await port.getRef({ owner: target.owner, repo: target.repository, ref: `heads/${baseRef}` });
+    if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
+        || !/^[a-f0-9]{40}$/u.test(data.object.sha))
+        throw new Error('The PR base ref cannot be verified.');
+    return data.object.sha;
+}
+
+
+/***/ }),
+
 /***/ 23001:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -80837,6 +82519,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
 exports.readEffectiveApprovalPolicy = readEffectiveApprovalPolicy;
+const current_base_revision_query_1 = __nccwpck_require__(68742);
 const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
@@ -81089,18 +82772,8 @@ class PullRequestApprovalRepository {
             }
         }
     }
-    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
     async readCurrentBaseSha(target, baseRef) {
-        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
-            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
-            throw new Error('The PR base ref is invalid.');
-        const { data } = await this.octokit.rest.git.getRef({
-            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
-        });
-        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
-            || !/^[a-f0-9]{40}$/u.test(data.object.sha))
-            throw new Error('The PR base ref cannot be verified.');
-        return data.object.sha;
+        return (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, target, baseRef);
     }
     async effectiveRules(owner, repo, branch) {
         try {
@@ -82243,6 +83916,103 @@ exports.PullRequestReviewerRepository = PullRequestReviewerRepository;
 
 /***/ }),
 
+/***/ 1328:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PullRequestStatusQueryRepository = void 0;
+const current_base_revision_query_1 = __nccwpck_require__(68742);
+const github = __importStar(__nccwpck_require__(78227));
+const integer = (value) => Number.isSafeInteger(value) && value > 0;
+const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+/** Bounded native linkage and fresh identity reads. No mutations or provider DTOs cross this boundary. */
+class PullRequestStatusQueryRepository {
+    constructor(owner, repository, token) {
+        this.owner = owner;
+        this.repository = repository;
+        this.octokit = github.getOctokit(token);
+    }
+    async readLinkedPullRequests(issueNumber) {
+        if (!integer(issueNumber))
+            return { state: 'unavailable' };
+        try {
+            const response = await this.octokit.graphql(`query ($owner: String!, $repository: String!, $issue: Int!) {
+                repository(owner: $owner, name: $repository) { databaseId nameWithOwner issue(number: $issue) { number
+                    closedByPullRequestsReferences(first: 100, includeClosedPrs: false) {
+                        totalCount pageInfo { hasNextPage } nodes { number state repository { databaseId } headRepository { databaseId } }
+                    } } } }`, { owner: this.owner, repository: this.repository, issue: issueNumber });
+            const repo = response.repository;
+            const issue = repo?.issue;
+            const links = issue?.closedByPullRequestsReferences;
+            if (!integer(repo?.databaseId) || repo?.nameWithOwner?.toLowerCase() !== `${this.owner}/${this.repository}`.toLowerCase()
+                || issue?.number !== issueNumber || !links || !Array.isArray(links.nodes) || links.nodes.length > 100
+                || links.pageInfo?.hasNextPage !== false || links.totalCount !== links.nodes.length)
+                return { state: 'unavailable' };
+            const numbers = [];
+            for (const pull of links.nodes) {
+                if (!pull || !integer(pull.number) || pull.state !== 'OPEN' || pull.repository?.databaseId !== repo.databaseId
+                    || pull.headRepository?.databaseId !== repo.databaseId || numbers.includes(pull.number))
+                    return { state: 'unavailable' };
+                numbers.push(pull.number);
+            }
+            return Object.freeze({ state: 'available', repositoryId: repo.databaseId, issueNumber, numbers: Object.freeze(numbers) });
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readRevision(target) {
+        if (target.owner.toLowerCase() !== this.owner.toLowerCase() || target.repository.toLowerCase() !== this.repository.toLowerCase()
+            || !integer(target.repositoryId) || !integer(target.pullNumber))
+            throw new Error('Status target unavailable.');
+        const { data: pull } = await this.octokit.rest.pulls.get({ owner: this.owner, repo: this.repository, pull_number: target.pullNumber });
+        if (pull.state !== 'open' || pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
+            || !sha(pull.head.sha) || !sha(pull.base.sha))
+            throw new Error('Status revision unavailable.');
+        const baseSha = await (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, { owner: this.owner, repository: this.repository }, pull.base.ref);
+        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha });
+    }
+}
+exports.PullRequestStatusQueryRepository = PullRequestStatusQueryRepository;
+
+
+/***/ }),
+
 /***/ 96578:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -83152,6 +84922,33 @@ exports.WORKFLOW_ACTIVE_STATUSES = [
 
 /***/ }),
 
+/***/ 25911:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveJsonInput = resolveJsonInput;
+exports.resolveActionInput = resolveActionInput;
+/**
+ * Resolves one action input without coupling the caller to a specific lifecycle.
+ * Explicit runtime parameters always override YAML/environment defaults.
+ */
+function resolveJsonInput(inputVarsJson, key) {
+    if (!inputVarsJson) {
+        return undefined;
+    }
+    const inputVars = JSON.parse(inputVarsJson);
+    const value = inputVars[`INPUT_${key.toUpperCase()}`];
+    return value === undefined ? undefined : String(value);
+}
+function resolveActionInput(additionalParams, actionInputs, key) {
+    return (additionalParams[key] ?? actionInputs[key]);
+}
+
+
+/***/ }),
+
 /***/ 89040:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -83931,6 +85728,9 @@ function parseCopilotCommand(raw) {
     const name = tokens.shift()?.toLowerCase();
     if (!name || !exports.COPILOT_COMMAND_NAMES.includes(name)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${exports.COPILOT_COMMAND_NAMES.join(', ')}.` };
+    }
+    if (name === 'status' && tokens.length > 0) {
+        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
     }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
@@ -84906,6 +86706,23 @@ function isRecord(value) {
 }
 function hasOnlyKeys(value, allowed) {
     return Object.keys(value).every(key => allowed.includes(key));
+}
+
+
+/***/ }),
+
+/***/ 83592:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseDelimitedValues = parseDelimitedValues;
+function parseDelimitedValues(value) {
+    return String(value ?? '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => item.length > 0);
 }
 
 
@@ -86126,6 +87943,179 @@ function sanitize(value) {
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+
+/***/ }),
+
+/***/ 8024:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.decidePullRequestApproval = decidePullRequestApproval;
+exports.isDocumentationOnlyDiff = isDocumentationOnlyDiff;
+exports.decideApprovalChecks = decideApprovalChecks;
+exports.decideApprovalBugbot = decideApprovalBugbot;
+exports.decideApprovalCoverage = decideApprovalCoverage;
+exports.decideApprovalReviews = decideApprovalReviews;
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+/** Pure, intentionally conservative decision. Every unknown provider fact blocks mutation. */
+function decidePullRequestApproval(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
+    if (policy.mode === 'off')
+        return stop('off', 'disabled', 'Automatic approval is disabled.');
+    if (!evidence.open || evidence.draft || !evidence.sameRepository || !evidence.filesComplete) {
+        return stop('recommend', 'unsupported-pr', 'Only open, non-draft, complete same-repository pull requests are eligible.');
+    }
+    if (!evidence.targetRole || !policy.targetRoles.includes(evidence.targetRole)
+        || !evidence.branchKind || !policy.branchKinds.includes(evidence.branchKind)
+        || (policy.requireLinkedIssue && !evidence.linkedIssue)) {
+        return stop('recommend', 'scope', 'This pull request is outside the configured approval scope.');
+    }
+    if (evidence.authorIsBot || evidence.authorId === evidence.botUserId || evidence.botUserId <= 0) {
+        return stop('recommend', 'bot-author', 'A human must review pull requests opened by the approval bot or another bot.');
+    }
+    const excluded = evidence.changedPaths.find(path => [...pull_request_approval_policy_1.FIXED_APPROVAL_EXCLUSIONS, ...policy.additionalExcludedPaths].some(glob => matchesGlob(path, glob)));
+    if (excluded)
+        return stop('recommend', 'protected-path', 'A protected workflow, policy, or trust-boundary file changed.');
+    if ((evidence.ignoredChangedPaths?.length ?? 0) > 0) {
+        return stop('blocked', 'bugbot-ignored-path', 'Bugbot excluded a changed file from its review; its clean result cannot authorize approval.');
+    }
+    if (!evidence.rulesReadable || !evidence.dismissesStaleReviews) {
+        return stop('blocked', 'unsafe-rules', 'Effective branch rules must be readable and dismiss stale approvals.');
+    }
+    if (!policy.producerAttested) {
+        return stop('blocked', 'producer-unattested', 'The exact CI producer and coverage-enforcing step have not been attested by the operator.');
+    }
+    if (policy.coverage.mode === 'numeric' && !policy.coverage.reporterAttested) {
+        return stop('blocked', 'reporter-unattested', 'The numeric coverage reporter is not confirmed as installed in trusted CI.');
+    }
+    if (!evidence.mergeCommitVerified || !evidence.testedMergeSha) {
+        return stop('pending', 'merge-ref-unavailable', 'Waiting for a verified test merge of the current base and head.');
+    }
+    if (evidence.requiredChecks.includes('Copilot / Approval')) {
+        return stop('blocked', 'approval-check-cycle', 'Copilot / Approval cannot be its own required prerequisite.');
+    }
+    if (evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun) {
+        return stop('blocked', 'bugbot-configuration', 'Bugbot must run with info severity and dry-run disabled.');
+    }
+    const ciDecision = decideApprovalChecks(policy, evidence);
+    if (ciDecision)
+        return ciDecision;
+    const bugbotDecision = decideApprovalBugbot(policy, evidence);
+    if (bugbotDecision)
+        return bugbotDecision;
+    const coverageDecision = decideApprovalCoverage(policy, evidence);
+    if (coverageDecision)
+        return coverageDecision;
+    const reviewDecision = decideApprovalReviews(policy, evidence);
+    if (reviewDecision)
+        return reviewDecision;
+    if (policy.mode === 'recommend')
+        return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
+    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
+}
+function isDocumentationOnlyDiff(paths) {
+    return paths.length > 0 && paths.every(path => /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
+        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
+}
+function matchesGlob(path, glob) {
+    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
+        .replace(/\*\*/gu, '\u0000')
+        .replace(/\*/gu, '[^/]*')
+        .replace(/\?/gu, '[^/]')
+        .split('\u0000').join('.*');
+    return new RegExp(`^${escaped}$`, 'u').test(path);
+}
+/** Canonical checks gate shared by approval and read-only status. */
+function decideApprovalChecks(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
+    const selected = [...policy.testChecks];
+    const required = new Set([...evidence.requiredChecks, ...selected.map(check => check.name)]);
+    for (const name of required) {
+        const producer = selected.find(check => check.name === name);
+        if (!producer) {
+            return stop('blocked', 'check-producer-unconfigured', `Required check ${name} has no trusted producer configured.`);
+        }
+        const mergeCandidates = evidence.checks.filter(check => check.name === name && check.headSha === evidence.testedMergeSha);
+        const candidates = mergeCandidates.length > 0 ? mergeCandidates
+            : evidence.checks.filter(check => check.name === name && check.headSha === evidence.headSha);
+        if (candidates.length === 0)
+            return stop('pending', 'check-missing', `Waiting for current-head check: ${name}.`);
+        const latest = [...candidates].sort((left, right) => right.runId - left.runId || right.attempt - left.attempt)[0];
+        if (latest.sourceAppId !== producer.sourceAppId || latest.workflowName !== producer.workflowName) {
+            return stop('blocked', 'check-source', `The source of check ${name} differs from the configured producer.`);
+        }
+        if (candidates.filter(check => check.runId === latest.runId && check.attempt === latest.attempt).length !== 1) {
+            return stop('blocked', 'check-ambiguous', `Check ${name} has ambiguous latest attempts.`);
+        }
+        if (latest.status !== 'completed')
+            return stop('pending', 'check-pending', `Waiting for check: ${name}.`);
+        if (latest.conclusion !== 'success')
+            return stop('blocked', 'check-failed', `Check ${name} did not succeed.`);
+    }
+    return undefined;
+}
+/** Canonical bugbot gate shared by approval and read-only status. */
+function decideApprovalBugbot(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
+    const bugbot = evidence.bugbot;
+    if (!bugbot || bugbot.headSha !== evidence.headSha)
+        return stop('pending', 'bugbot-missing', 'Waiting for a complete Bugbot review of this head.');
+    if (bugbot.outcome !== 'complete' || bugbot.coverage !== 'complete') {
+        return stop('blocked', 'bugbot-incomplete', 'Bugbot review evidence is partial, failed, or superseded.');
+    }
+    if (bugbot.open + bugbot.reopened + bugbot.verificationRequired + bugbot.unknown > 0
+        || (!policy.allowHumanDismissed && bugbot.dismissed > 0)) {
+        return stop('blocked', 'bugbot-findings', 'Bugbot has unresolved, unknown, or policy-blocked dismissed findings.');
+    }
+    return undefined;
+}
+/** Canonical coverage gate shared by approval and read-only status. */
+function decideApprovalCoverage(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
+    // A complete, explicitly classified documentation-only diff has no
+    // measurable executable lines. It still needs every declared CI and
+    // Bugbot gate above; a zero-line code diff is never exempt.
+    if (policy.coverage.mode === 'numeric' && !isDocumentationOnlyDiff(evidence.changedPaths)) {
+        const coverage = evidence.numericCoverage;
+        if (!coverage || coverage.headSha !== evidence.headSha || coverage.baseSha !== evidence.baseSha
+            || !Number.isSafeInteger(coverage.coveredChangedLines) || !Number.isSafeInteger(coverage.totalChangedLines)
+            || coverage.totalChangedLines <= 0 || coverage.coveredChangedLines < 0
+            || coverage.coveredChangedLines > coverage.totalChangedLines) {
+            return stop('blocked', 'coverage-evidence', 'Current-head numeric coverage evidence is missing or invalid.');
+        }
+        if (coverage.coveredChangedLines * 100 < coverage.totalChangedLines * policy.coverage.minDiffPercent) {
+            return stop('blocked', 'coverage-low', 'Diff coverage is below the configured threshold.');
+        }
+    }
+    return undefined;
+}
+/** Canonical reviews gate shared by approval and read-only status. */
+function decideApprovalReviews(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
+    if (!evidence.reviewHistoryComplete)
+        return stop('blocked', 'reviews-unavailable', 'Native review history is incomplete.');
+    const botReviewsForHead = evidence.reviews.filter(review => review.userId === evidence.botUserId && review.commitId === evidence.headSha);
+    if (botReviewsForHead.some(review => review.state === 'DISMISSED')) {
+        return stop('recommend', 'approval-dismissed', 'A maintainer dismissed the bot approval for this revision.');
+    }
+    if (botReviewsForHead.some(review => review.state === 'APPROVED')) {
+        return stop('already-approved', 'existing-approval', 'The bot already approved this exact revision.');
+    }
+    const latestByUser = new Map();
+    for (const review of [...evidence.reviews].sort((left, right) => left.submittedAt.localeCompare(right.submittedAt) || left.id - right.id)) {
+        latestByUser.set(review.userId, review);
+    }
+    if ([...latestByUser.values()].some(review => review.userId !== evidence.botUserId && review.state === 'CHANGES_REQUESTED')) {
+        return stop('blocked', 'changes-requested', 'A human reviewer requested changes.');
+    }
+    if (policy.skipWhenHumanApproved && [...latestByUser.values()].some(review => review.userId !== evidence.botUserId && review.state === 'APPROVED' && review.commitId === evidence.headSha)) {
+        return stop('recommend', 'human-approved', 'A human has already approved this revision.');
+    }
+    return undefined;
 }
 
 
@@ -88985,6 +90975,7 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const pull_request_status_composition_root_1 = __nccwpck_require__(49891);
 const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
 const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
@@ -89110,7 +91101,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -89126,7 +91117,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -89243,6 +91234,40 @@ const pull_request_reviewer_repository_1 = __nccwpck_require__(13779);
 const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 function createPullRequestReviewerCompositionRoot() {
     return new pull_request_reviewer_repository_1.PullRequestReviewerRepository((0, github_pull_request_client_factory_1.createPullRequestReviewerClient)());
+}
+
+
+/***/ }),
+
+/***/ 49891:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPullRequestStatusReadPorts = createPullRequestStatusReadPorts;
+const pull_request_status_query_repository_1 = __nccwpck_require__(1328);
+const pull_request_approval_repository_1 = __nccwpck_require__(23001);
+const github_action_input_1 = __nccwpck_require__(57581);
+const input_values_policy_1 = __nccwpck_require__(83592);
+/** Physically narrow facade: constructing a query cannot expose the observer's write operations. */
+function createPullRequestStatusReadPorts(binding, context) {
+    const query = new pull_request_status_query_repository_1.PullRequestStatusQueryRepository(binding.owner, binding.repository, binding.token);
+    const approval = new pull_request_approval_repository_1.PullRequestApprovalRepository(binding.token, {
+        mainBranch: (0, github_action_input_1.getGithubActionInput)('main-branch') || 'master', developmentBranch: (0, github_action_input_1.getGithubActionInput)('development-branch') || 'develop',
+        branchPrefixes: { feature: (0, github_action_input_1.getGithubActionInput)('feature-tree') || 'feature', bugfix: (0, github_action_input_1.getGithubActionInput)('bugfix-tree') || 'bugfix',
+            documentation: (0, github_action_input_1.getGithubActionInput)('docs-tree') || 'docs', chore: (0, github_action_input_1.getGithubActionInput)('chore-tree') || 'chore' },
+        bugbotSeverity: (0, github_action_input_1.getGithubActionInput)('bugbot-severity') || 'low', bugbotDryRun: (0, github_action_input_1.getGithubActionInput)('bugbot-dry-run') === 'true',
+        bugbotIgnorePatterns: (0, input_values_policy_1.parseDelimitedValues)((0, github_action_input_1.getGithubActionInput)('ai-ignore-files')),
+        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+    });
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        getPullRequest: (number) => context.getPullRequest(number), listIssueComments: (number) => context.listIssueComments(number),
+        getPullRequestHeadSha: (number) => context.getPullRequestHeadSha(number),
+        readLinkedPullRequests: (number) => query.readLinkedPullRequests(number),
+        approval: Object.freeze({ readPolicy: (target) => approval.readPolicy(target), loadEvidence: (target) => approval.loadEvidence(target),
+            readRevision: (target) => query.readRevision(target) }),
+    });
 }
 
 
@@ -90559,6 +92584,70 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = void 0;
 // GitHub Projects currently permits up to 50,000 items per project.
 exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
+
+
+/***/ }),
+
+/***/ 57581:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getGithubActionInput = getGithubActionInput;
+const core = __importStar(__nccwpck_require__(75855));
+const action_input_source_1 = __nccwpck_require__(25911);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
+function getGithubActionInput(key, options) {
+    let value;
+    try {
+        const inputVarsJson = process.env.INPUT_VARS_JSON;
+        value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
+    }
+    catch (error) {
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
+    }
+    value = (value ?? core.getInput(key, options)).trim();
+    if (options?.required && value.length === 0)
+        throw new Error(`Input required and not supplied: ${key}`);
+    if (key.toLowerCase() === 'token' && value)
+        core.setSecret(value);
+    return value;
+}
 
 
 /***/ }),

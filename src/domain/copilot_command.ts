@@ -72,6 +72,9 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (!name || !COPILOT_COMMAND_NAMES.includes(name as CopilotCommandName)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
+    if (name === 'status' && tokens.length > 0) {
+        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
+    }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;

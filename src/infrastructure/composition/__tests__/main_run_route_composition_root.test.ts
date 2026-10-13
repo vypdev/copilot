@@ -20,6 +20,8 @@ import {
 const mockIssue = {};
 const mockPullRequest = {};
 const mockContext = { kind: 'context', listIssueComments: jest.fn() };
+const mockStatusReadPorts = { kind: 'status-read-ports' };
+jest.mock('../pull_request_status_composition_root', () => ({ createPullRequestStatusReadPorts: jest.fn(() => mockStatusReadPorts) }));
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
@@ -117,7 +119,7 @@ describe("main run route composition root", () => {
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     const call = jest.mocked(IssueCommentUseCase).mock.calls[0];
     expect(call.slice(0, 15)).toEqual([
-      ...Array.from({ length: 14 }, () => expect.anything()), mockContext,
+      ...Array.from({ length: 14 }, () => expect.anything()), mockStatusReadPorts,
     ]);
     const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
     expect(doctor).toMatchObject({
@@ -145,7 +147,7 @@ describe("main run route composition root", () => {
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
     const call = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0];
     expect(call.slice(0, 14)).toEqual([
-      ...Array.from({ length: 13 }, () => expect.anything()), mockContext,
+      ...Array.from({ length: 13 }, () => expect.anything()), mockStatusReadPorts,
     ]);
     const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
     expect(doctor).toMatchObject({

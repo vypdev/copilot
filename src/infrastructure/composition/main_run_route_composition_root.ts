@@ -1,3 +1,4 @@
+import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
 import { createGithubRuntimeDoctorPorts } from './github_runtime_doctor_composition_root';
 import { createReplyRequestReadPort } from './reply_request_composition_root';
 import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
@@ -250,7 +251,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     branchSync,
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
-    bugbot.scm.context,
+    createPullRequestStatusReadPorts(binding, bugbot.scm.context),
     createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
     createNativeStatusReadPort(binding),
@@ -311,7 +312,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
     rememberBranchPorts(binding, bugbot.scm.context),
-    bugbot.scm.context,
+    createPullRequestStatusReadPorts(binding, bugbot.scm.context),
     createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createNativeStatusReadPort(binding),
     createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
