@@ -275,3 +275,7 @@ or restart its work. Retry the original close event when cleanup needs recovery.
 Cleanup reads the comment inventory once, then verifies each card directly by its
 comment ID before editing it. A failed or changed card read leaves that card
 unchanged and reports incomplete cleanup; earlier successful edits are retained.
+
+The observer checks that an issue is still open before requesting locale copy.
+If it closes while that copy is being resolved, the observer retires its existing
+card and skips the branch comparison and new advice.

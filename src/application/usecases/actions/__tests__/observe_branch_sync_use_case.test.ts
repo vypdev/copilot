@@ -310,6 +310,47 @@ describe('native terminal observation', () => {
     expect(f.notifications.updateComment).toHaveBeenCalledWith(42, 8, expect.stringContaining('Issue closed'));
     expect(result).toMatchObject({ success: true, payload: { state: 'closed' } });
   });
+  it('checks native closure before requesting an unsupported-locale catalog', async () => {
+    const resolve = jest.fn().mockRejectedValue(new Error('No model should be reached for closed work'));
+    const f = setup({ resolver: { resolve }, comments: [{ id: 8, body: staleBody(), user: { login: 'vypbot' } }] });
+    f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+    const [result] = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(resolve).not.toHaveBeenCalled(); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: true, payload: { state: 'closed' } });
+    expect(f.stored[0].body).toContain('Issue closed');
+  });
+  it('retires without comparison if closure happens while resolving the open-work locale', async () => {
+    const resolve = jest.fn().mockImplementation(async () => {
+      f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback' as const, messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages };
+    });
+    const f = setup({ resolver: { resolve }, comments: [{ id: 8, body: staleBody(), user: { login: 'vypbot' } }] });
+    const [result] = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(resolve).toHaveBeenCalledTimes(1); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: true, payload: { state: 'closed' } });
+  });
+  it.each(['foreign-target', 'denied'])('withholds comparison if the post-localization native read is %s', async kind => {
+    const resolve = jest.fn().mockImplementation(async () => {
+      if (kind === 'denied') f.nativeIssues.readIssue.mockRejectedValue(new Error('private fresh issue diagnostic'));
+      else f.nativeIssues.readIssue.mockResolvedValue({ number: 43, state: 'open', reason: 'unknown', labels: [] });
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback' as const, messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages };
+    });
+    const f = setup({ resolver: { resolve } });
+    const [result] = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(result.success).toBe(false); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(f.notifications.addComment).not.toHaveBeenCalled(); expect(JSON.stringify(result)).not.toContain('private fresh issue diagnostic');
+  });
+  it('shares one catalog request across multiple admitted open dependencies', async () => {
+    const resolve = jest.fn().mockResolvedValue({ requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback', messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages });
+    const f = setup({ resolver: { resolve } });
+    f.dependencies.listOpenDependencies.mockResolvedValue([dependency, { ...dependency, issueNumber: 43, workingBranch: 'feature/43' }]);
+    f.nativeIssues.readIssue.mockImplementation(async (number: number) => ({ number, state: 'open', reason: 'unknown', labels: [] }));
+    const results = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(results).toHaveLength(2); expect(results.every(result => result.success)).toBe(true);
+    expect(resolve).toHaveBeenCalledTimes(1); expect(f.comparisons.compare).toHaveBeenCalledTimes(2);
+    expect(f.notifications.addComment).toHaveBeenCalledTimes(2);
+  });
   it('does not create a warning when the issue closes during comparison', async () => {
     const f = setup();
     f.comparisons.compare.mockImplementation(async () => {

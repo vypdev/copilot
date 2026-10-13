@@ -673,3 +673,15 @@ paragraph as a promise for closure too. User documentation now makes the
 retirement boundary explicit. One distinct unsupported-locale application case
 verifies fallback, retained card identity and the narrow read budget; the owning
 inventory becomes 292 (237 + 55), with four execution cases still separate.
+
+
+Native review `38379114626` identified catalog resolution occurring before the
+fresh native closure read. The observer MUST admit a currently open dependency
+before requesting its locale catalog and MUST re-read native state after that
+await before comparing branches. Closed dependencies enter static retirement
+without invoking the catalog resolver. A dependency closing during localization
+is retired without comparison or a new alert. One catalog promise remains shared
+across admitted open dependencies. Five distinct order/race/call-budget cases cover initial closure (failed before
+the correction), closure during localization, denied/foreign final native reads
+and one shared catalog across two admitted dependencies. The owning inventory
+is now 297 (237 + 60), plus four separately owned configuration-persistence cases.

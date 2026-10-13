@@ -51315,10 +51315,11 @@ class ObserveBranchSyncUseCase {
                 (0, logging_ports_1.logInfo)(`No open branch dependencies are affected by ${pushedBranch}.`);
                 return [];
             }
-            const messages = await (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver);
+            let catalog;
+            const getMessages = () => catalog ?? (catalog = (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver));
             const results = [];
             for (const dependency of dependencies) {
-                results.push(await this.reconcileDependency(context, dependency, messages));
+                results.push(await this.reconcileDependency(context, dependency, getMessages));
             }
             return results;
         }
@@ -51351,7 +51352,7 @@ class ObserveBranchSyncUseCase {
             },
         });
     }
-    async reconcileDependency(context, dependency, messages) {
+    async reconcileDependency(context, dependency, getMessages) {
         try {
             if (!this.nativeIssues)
                 throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
@@ -51359,6 +51360,19 @@ class ObserveBranchSyncUseCase {
             if (initial.number !== dependency.issueNumber || !['open', 'closed'].includes(initial.state))
                 throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
             if (initial.state === 'closed') {
+                if (!this.retirement)
+                    throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+                const [result] = await this.retirement.invoke({
+                    issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+                });
+                return result;
+            }
+            const messages = await getMessages();
+            const beforeComparison = await this.nativeIssues.readIssue(dependency.issueNumber);
+            if (beforeComparison.number !== dependency.issueNumber || !['open', 'closed'].includes(beforeComparison.state)) {
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+            }
+            if (beforeComparison.state === 'closed') {
                 if (!this.retirement)
                     throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
                 const [result] = await this.retirement.invoke({
