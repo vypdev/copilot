@@ -1,3 +1,5 @@
+import type { DoctorConfiguration } from '../ports/github_runtime_doctor_ports';
+import type { IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
 import type { SddEvidenceQueryContext } from '../ports/sdd_evidence_read_ports';
 import type { BugbotReviewConfiguration } from '../../domain/bugbot/review_configuration';
@@ -38,6 +40,7 @@ import { extractMentionQuestion } from './steps/common/think_input_policy';
 import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export interface CommentAutomationContext {
+    readonly doctorConfiguration?: DoctorConfiguration;
     readonly actor: string;
     readonly trustedBotLogin: string;
     readonly userComment: string;
@@ -68,6 +71,13 @@ export type CommentAutomationContextSource =
     & {
         readonly actor: string;
         readonly tokenUser?: string;
+        readonly issueWorkflowProfile?: IssueWorkflowProfile;
+        readonly labels?: { readonly feature?: string; readonly enhancement?: string; readonly bugfix?: string; readonly bug?: string;
+            readonly documentation?: string; readonly docs?: string; readonly chore?: string; readonly maintenance?: string;
+            readonly help?: string; readonly question?: string; readonly release?: string; readonly hotfix?: string };
+        readonly preBranchSdd?: boolean;
+        readonly issue: ThinkContextSource['issue'] & { readonly issueManagedBranches?: boolean };
+
         readonly ai: BugbotReviewOperationSource['ai']
             & BugbotAutofixOperationSource['ai']
             & ThinkContextSource['ai']
@@ -85,6 +95,22 @@ export function projectCommentAutomationContext(
 ): CommentAutomationContext {
     const review = projectBugbotReviewOperationContext(source);
     return Object.freeze({
+        ...(source.issueWorkflowProfile && typeof source.preBranchSdd === 'boolean'
+            && typeof source.issue.issueManagedBranches === 'boolean' ? { doctorConfiguration: Object.freeze({
+                profile: Object.freeze({ schemaVersion: source.issueWorkflowProfile.schemaVersion,
+                    enabled: Object.freeze([...source.issueWorkflowProfile.enabled]) }),
+                labels: Object.freeze({
+                    feature: Object.freeze([source.labels?.feature, source.labels?.enhancement].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                    bugfix: Object.freeze([source.labels?.bugfix, source.labels?.bug].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                    documentation: Object.freeze([source.labels?.documentation, source.labels?.docs].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                    chore: Object.freeze([source.labels?.chore, source.labels?.maintenance].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                    help: Object.freeze([source.labels?.help, source.labels?.question].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                    release: Object.freeze([source.labels?.release].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                    hotfix: Object.freeze([source.labels?.hotfix].filter((value): value is string => typeof value === 'string' && value.length > 0)),
+                }),
+                preBranchSdd: source.preBranchSdd, issueManagedBranches: source.issue.issueManagedBranches,
+                dependencyBranch: source.currentConfiguration.parentBranch ?? source.branches.development ?? '',
+            }) } : {}),
         actor: source.actor,
         trustedBotLogin: source.tokenUser?.trim() ?? '',
         userComment,

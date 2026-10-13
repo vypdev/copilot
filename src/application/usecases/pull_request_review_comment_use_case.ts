@@ -1,3 +1,4 @@
+import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import { invalidCommentCommandResult } from './comment_automation_command_workflow';
 import { parseCopilotCommand } from '../../domain/copilot_command';
 import { readCopilotHistory } from './read_copilot_history_workflow';
@@ -53,6 +54,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly statusReadPorts?: CopilotStatusReadPorts,
     private readonly historyReadPort?: CopilotHistoryReadPort,
     private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
+    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -93,6 +95,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        doctorReadPorts: this.doctorReadPorts,
         nativeStatusReadPort: this.nativeStatusReadPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }

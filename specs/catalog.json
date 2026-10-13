@@ -129,6 +129,7 @@
         "src/application/usecases/comment_automation_command_workflow.ts",
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
         "src/application/policies/inactivity_result_counts_projection_policy.ts",
+        "src/domain/copilot_command.ts",
         "src/domain/copilot_operation.ts",
         "src/application/policies/copilot_history_policy.ts",
         "src/application/policies/copilot_history_projection_policy.ts",
@@ -680,19 +681,24 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
-        "specs/setup-pat-permission-guidance-and-verification.md"
+        "specs/setup-pat-permission-guidance-and-verification.md",
+        "specs/github-runtime-doctor-command.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
-        "setup/workflows/copilot_credential_health.yml"
+        "setup/workflows/copilot_credential_health.yml",
+        ".github/workflows/copilot_issue_comment.yml",
+        ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/cli/commands/setup.ts",
-        "src/cli/commands/doctor.ts"
+        "src/cli/commands/doctor.ts",
+        "src/application/usecases/issue_comment_use_case.ts",
+        "src/application/usecases/pull_request_review_comment_use_case.ts"
       ],
       "code": [
         "src/domain/setup.ts",
@@ -779,7 +785,21 @@
         "src/cli/setup_workflow_pat_storage_copy.ts",
         "src/cli/commands/setup_policy.ts",
         "src/application/usecases/execution/execution_issue_number_policy.ts",
-        "src/application/usecases/execution/setup_execution_workflow.ts"
+        "src/application/usecases/execution/setup_execution_workflow.ts",
+        "src/domain/github_runtime_doctor.ts",
+        "src/domain/copilot_command.ts",
+        "src/application/usecases/comment_automation_command_workflow.ts",
+        "src/application/policies/copilot_interaction_policy.ts",
+        "src/application/policies/publication_message_catalog.ts",
+        "src/application/ports/github_runtime_doctor_ports.ts",
+        "src/application/policies/github_runtime_doctor_policy.ts",
+        "src/application/policies/doctor_workflow_condition_policy.ts",
+        "src/application/policies/github_runtime_doctor_presentation_policy.ts",
+        "src/application/usecases/read_copilot_doctor_workflow.ts",
+        "src/data/repository/github/runtime_doctor_repository.ts",
+        "src/infrastructure/composition/github_runtime_doctor_composition_root.ts",
+        "src/application/policies/agent_activity_policy.ts",
+        "src/application/policies/doctor_workflow_matrix_policy.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -845,7 +865,19 @@
         "src/actions/__tests__/local_setup_apply_contract.test.ts",
         "src/cli/commands/__tests__/setup_policy.test.ts",
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
-        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts"
+        "src/application/usecases/execution/__tests__/setup_execution_workflow.test.ts",
+        "src/domain/__tests__/github_runtime_doctor.test.ts",
+        "src/domain/__tests__/copilot_command.test.ts",
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
+        "src/application/policies/__tests__/github_runtime_doctor_policy.test.ts",
+        "src/application/policies/__tests__/doctor_workflow_condition_policy.test.ts",
+        "src/application/policies/__tests__/github_runtime_doctor_presentation_policy.test.ts",
+        "src/application/usecases/__tests__/read_copilot_doctor_workflow.test.ts",
+        "src/application/usecases/__tests__/runtime_doctor_security_integration.test.ts",
+        "src/data/repository/github/__tests__/runtime_doctor_repository.test.ts",
+        "src/infrastructure/composition/__tests__/github_runtime_doctor_composition_root.test.ts",
+        "src/application/policies/__tests__/runtime_doctor_agent_activity.test.ts",
+        "src/application/policies/__tests__/doctor_workflow_matrix_policy.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -859,7 +891,8 @@
         "docs/security-operations/security/credentials.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/security-operations/operations/verification.mdx",
-        "docs/development/setup-pat-provider-audit-2026-10-06.md"
+        "docs/development/setup-pat-provider-audit-2026-10-06.md",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {

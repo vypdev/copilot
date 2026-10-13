@@ -558,6 +558,20 @@
       "successMessage": "Git hook verification environment coverage: PASS (100% lines/statements/branches/functions)"
     },
     {
+      "name": "Doctor matrix eligibility",
+      "missingEntryLabel": "doctor matrix eligibility",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/doctor_workflow_matrix_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "doctor matrix eligibility coverage: PASS (100% all metrics)"
+    },
+    {
       "name": "Reply request freshness",
       "missingEntryLabel": "reply request freshness",
       "rules": [
