@@ -70,3 +70,5 @@ Native duplicate closure is distinct from completed closure: obsolete progress
 and activity are removed without adding `100%`. Inconsistent state/reason pairs
 stop reconciliation before writes. A reopened issue is never re-closed by an old
 merged-PR delivery.
+
+Closed issue events skip open-work branch and SDD preparation. Adding or removing metadata labels after completion preserves the historical `branched` and `SDD` artifacts; reopening produces an open issue event and resumes its normal admission flow.

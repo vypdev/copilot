@@ -53720,6 +53720,10 @@ class IssueUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        if (param.inputs?.issue?.state === 'closed') {
+            return [new result_1.Result({ id: this.taskId, success: true, executed: false,
+                    steps: ['The native issue is closed; open-issue branch and SDD preparation were skipped.'] })];
+        }
         if (param.preBranchSdd && !param.issue.issueManagedBranches) {
             const message = 'pre-branch-sdd requires issue-managed-branches; correct the Action configuration before starting work.';
             return [new result_1.Result({
