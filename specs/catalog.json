@@ -1663,7 +1663,11 @@
         "src/infrastructure/composition/pull_request_use_case_composition_root.ts",
         "src/actions/common_action.ts",
         "src/actions/github_action.ts",
-        "scripts/validate-workflow-contract.cjs"
+        "scripts/validate-workflow-contract.cjs",
+        "src/application/ports/reply_request_read_ports.ts",
+        "src/domain/reply_request_digest.ts",
+        "src/infrastructure/composition/reply_request_composition_root.ts",
+        "src/data/repository/reply_request_repository.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1688,7 +1692,9 @@
         "src/application/usecases/__tests__/pull_request_use_case.test.ts",
         "src/actions/__tests__/common_action.test.ts",
         "src/actions/__tests__/github_action.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/data/repository/__tests__/reply_request_repository.test.ts",
+        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

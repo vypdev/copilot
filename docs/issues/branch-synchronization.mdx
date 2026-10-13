@@ -269,3 +269,7 @@ aligned or stale comparison.
 
 Later edits and label changes on an already-closed issue do not repeat retirement
 or restart its work. Retry the original close event when cleanup needs recovery.
+
+Cleanup reads the comment inventory once, then verifies each card directly by its
+comment ID before editing it. A failed or changed card read leaves that card
+unchanged and reports incomplete cleanup; earlier successful edits are retained.

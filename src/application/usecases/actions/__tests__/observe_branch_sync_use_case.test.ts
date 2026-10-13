@@ -1,3 +1,5 @@
+import { replyRequestBodyDigest } from '../../../../domain/reply_request_digest';
+import type { ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
 import { RetireBranchSyncUseCase } from '../retire_branch_sync_use_case';
 import type { Execution } from "../../../../data/model/execution";
 import {
@@ -75,7 +77,11 @@ function setup(input: {
     comparisons,
     notifications,
     stored,
-    useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver, nativeIssues, new RetireBranchSyncUseCase(nativeIssues, notifications)),
+    useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver, nativeIssues, new RetireBranchSyncUseCase(nativeIssues, notifications, { matches: async (witness: ReplyRequestSnapshot) => {
+      const card = stored.find(comment => comment.id === witness.commentId);
+      return witness.target.kind === 'issue' && witness.target.number === 42 && card?.user?.login === witness.author
+        && replyRequestBodyDigest(card?.body ?? '') === witness.bodyDigest;
+    } })),
   };
 }
 

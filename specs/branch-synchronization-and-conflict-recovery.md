@@ -649,3 +649,17 @@ the earlier artifact-label protection while avoiding unsolicited cleanup
 retries. Two distinct edit/label integration regressions failed before the
 correction and raise this capability to 288 cases (237 + 51); the four separate
 configuration-persistence cases remain owned by execution lifecycle.
+
+
+Native finding `4256913955` exposed repeated full-history enumeration before each
+card update. Retirement MUST enumerate the existing inventory once and use at
+most twenty targeted native comment reads before updates. The shared physically
+read-only native witness adapter verifies exact repository endpoint, comment ID,
+issue URL, bot author and private SHA-256 body identity without redirects or
+returning comment prose. The witness and target are frozen. Denied, unavailable,
+changed or malformed native facts preserve closure and prevent that update;
+previously completed updates remain reported. Existing native witness security
+cases retain their own ownership and are not counted twice. One twenty-card
+call-budget regression failed before the correction; two distinct targeted
+reader rejection cases extend branch synchronization to 291 (237 + 54). Four
+execution-persistence cases remain disjoint.

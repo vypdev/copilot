@@ -1,3 +1,5 @@
+import type { BoundReplyRequestReadPort } from '../../ports/reply_request_read_ports';
+import { replyRequestBodyDigest } from '../../../domain/reply_request_digest';
 import { Result } from '../../../data/model/result';
 import { githubUsersMatch } from '../../../domain/github_user_policy';
 import type { BoundIssueCompletionReadPort } from '../../ports/issue_completion_ports';
@@ -20,6 +22,7 @@ export class RetireBranchSyncUseCase implements ParamUseCase<RetireBranchSyncCon
   constructor(
     private readonly issues: BoundIssueCompletionReadPort,
     private readonly comments: BoundIssueCommentQueryPort & BoundIssueCommentUpdatePort,
+    private readonly cardFreshness: BoundReplyRequestReadPort,
   ) {}
 
   async invoke(context: RetireBranchSyncContext): Promise<Result[]> {
@@ -47,8 +50,10 @@ export class RetireBranchSyncUseCase implements ParamUseCase<RetireBranchSyncCon
         const marker = parsePublicationMarker(card.body)!;
         const body = buildRetiredBranchSyncComment(marker.identity, messages);
         if (card.body === body) continue;
-        const current = (await this.comments.listIssueComments(context.issueNumber)).find(comment => comment.id === card.id);
-        if (current?.body !== card.body || !current.user?.login || !githubUsersMatch(context.trustedBotLogin, current.user.login)) throw stale();
+        const witness = Object.freeze({ surface: 'issue-comment' as const, commentId: card.id,
+          author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue' as const, number: context.issueNumber }),
+          bodyDigest: replyRequestBodyDigest(card.body ?? '') });
+        if (!await this.cardFreshness.matches(witness)) throw stale();
         const fresh = await this.issues.readIssue(context.issueNumber);
         nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
         if (!nativeClosed || fresh.reason !== initial.reason) throw stale();

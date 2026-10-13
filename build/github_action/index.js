@@ -52072,6 +52072,7 @@ function failure(taskId, message, code) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetireBranchSyncUseCase = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
 const result_1 = __nccwpck_require__(73817);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -52080,9 +52081,10 @@ const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const application_error_1 = __nccwpck_require__(75999);
 /** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
 class RetireBranchSyncUseCase {
-    constructor(issues, comments) {
+    constructor(issues, comments, cardFreshness) {
         this.issues = issues;
         this.comments = comments;
+        this.cardFreshness = cardFreshness;
         this.taskId = 'RetireBranchSyncUseCase';
     }
     async invoke(context) {
@@ -52114,8 +52116,10 @@ class RetireBranchSyncUseCase {
                 const body = (0, branch_sync_notification_policy_1.buildRetiredBranchSyncComment)(marker.identity, messages);
                 if (card.body === body)
                     continue;
-                const current = (await this.comments.listIssueComments(context.issueNumber)).find(comment => comment.id === card.id);
-                if (current?.body !== card.body || !current.user?.login || !(0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, current.user.login))
+                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
+                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
+                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
+                if (!await this.cardFreshness.matches(witness))
                     throw stale();
                 const fresh = await this.issues.readIssue(context.issueNumber);
                 nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
@@ -81654,6 +81658,7 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
@@ -81849,7 +81854,7 @@ function rememberBranchPorts(binding, pullRequests) {
 /** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
 function createClosedIssueRetirementUseCase(binding) {
     const comments = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding)));
+    return new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding));
 }
 
 
@@ -81932,6 +81937,7 @@ function composePullRequestUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
@@ -81991,7 +81997,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
-        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding))),
+        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));

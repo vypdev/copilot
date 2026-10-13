@@ -52279,6 +52279,7 @@ function failure(taskId, message, code) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetireBranchSyncUseCase = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
 const result_1 = __nccwpck_require__(73817);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -52287,9 +52288,10 @@ const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const application_error_1 = __nccwpck_require__(75999);
 /** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
 class RetireBranchSyncUseCase {
-    constructor(issues, comments) {
+    constructor(issues, comments, cardFreshness) {
         this.issues = issues;
         this.comments = comments;
+        this.cardFreshness = cardFreshness;
         this.taskId = 'RetireBranchSyncUseCase';
     }
     async invoke(context) {
@@ -52321,8 +52323,10 @@ class RetireBranchSyncUseCase {
                 const body = (0, branch_sync_notification_policy_1.buildRetiredBranchSyncComment)(marker.identity, messages);
                 if (card.body === body)
                     continue;
-                const current = (await this.comments.listIssueComments(context.issueNumber)).find(comment => comment.id === card.id);
-                if (current?.body !== card.body || !current.user?.login || !(0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, current.user.login))
+                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
+                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
+                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
+                if (!await this.cardFreshness.matches(witness))
                     throw stale();
                 const fresh = await this.issues.readIssue(context.issueNumber);
                 nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
@@ -80971,6 +80975,58 @@ function releaseIdAsString(id) {
 
 /***/ }),
 
+/***/ 2879:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReplyRequestRepository = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const github_user_policy_1 = __nccwpck_require__(84403);
+/** Provider identity and diagnostics terminate here. Requests forbid redirects. */
+class ReplyRequestRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = Object.freeze({ ...binding });
+    }
+    async matches(snapshot) {
+        try {
+            const base = new URL(this.binding.apiBaseUrl);
+            if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash
+                || !Number.isSafeInteger(snapshot.commentId) || snapshot.commentId < 1
+                || !Number.isSafeInteger(snapshot.target.number) || snapshot.target.number < 1
+                || !['issue', 'pull-request'].includes(snapshot.target.kind)
+                || !['issue-comment', 'review-comment'].includes(snapshot.surface)
+                || snapshot.surface === 'review-comment' && snapshot.target.kind !== 'pull-request'
+                || !/^[a-f0-9]{64}$/u.test(snapshot.bodyDigest) || !snapshot.author)
+                return false;
+            const root = base.href.replace(/\/$/u, '') + '/repos/' + encodeURIComponent(this.binding.owner) + '/' + encodeURIComponent(this.binding.repository);
+            const parameters = { owner: this.binding.owner, repo: this.binding.repository, comment_id: snapshot.commentId,
+                request: { redirect: 'error' } };
+            const review = snapshot.surface === 'review-comment';
+            const response = review ? await this.client.rest.pulls.getReviewComment(parameters) : await this.client.rest.issues.getComment(parameters);
+            const data = record(response.data), user = record(data.user);
+            if (response.url !== root + (review ? '/pulls/comments/' : '/issues/comments/') + snapshot.commentId
+                || data.id !== snapshot.commentId || typeof data.body !== 'string' || data.body.length > 70000
+                || typeof user.login !== 'string' || !(0, github_user_policy_1.githubUsersMatch)(user.login, snapshot.author)
+                || data[review ? 'pull_request_url' : 'issue_url'] !== root + (review ? '/pulls/' : '/issues/') + snapshot.target.number)
+                return false;
+            return (0, reply_request_digest_1.replyRequestBodyDigest)(data.body) === snapshot.bodyDigest;
+        }
+        catch {
+            return false;
+        }
+    }
+}
+exports.ReplyRequestRepository = ReplyRequestRepository;
+function record(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
 /***/ 28493:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -84488,6 +84544,22 @@ function shouldAutomaticallyUpdatePullRequestDescription(mode) {
 
 /***/ }),
 
+/***/ 47971:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.replyRequestBodyDigest = replyRequestBodyDigest;
+const node_crypto_1 = __nccwpck_require__(6005);
+/** Private complete request witness; public reply-marker identities stay unchanged. */
+function replyRequestBodyDigest(body) {
+    return (0, node_crypto_1.createHash)('sha256').update(body, 'utf8').digest('hex');
+}
+
+
+/***/ }),
+
 /***/ 47122:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -87059,6 +87131,7 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
@@ -87254,7 +87327,7 @@ function rememberBranchPorts(binding, pullRequests) {
 /** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
 function createClosedIssueRetirementUseCase(binding) {
     const comments = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding)));
+    return new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding));
 }
 
 
@@ -87337,6 +87410,7 @@ function composePullRequestUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
@@ -87396,7 +87470,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
-        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding))),
+        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
@@ -87638,6 +87712,24 @@ function bindBranchSyncRetirementComments(comments) {
         listIssueComments: comments.listIssueComments.bind(comments),
         updateComment: comments.updateComment.bind(comments),
     });
+}
+
+
+/***/ }),
+
+/***/ 99065:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createReplyRequestReadPort = createReplyRequestReadPort;
+const reply_request_repository_1 = __nccwpck_require__(2879);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+function createReplyRequestReadPort(binding) {
+    const captured = Object.freeze({ ...binding, apiBaseUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com' });
+    const repository = new reply_request_repository_1.ReplyRequestRepository((0, octokit_client_resolver_1.getOctokitClient)(captured.token), captured);
+    return Object.freeze({ matches: (snapshot) => repository.matches(snapshot) });
 }
 
 

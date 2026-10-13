@@ -1,3 +1,4 @@
+import { createReplyRequestReadPort } from './reply_request_composition_root';
 import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
 import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
@@ -397,5 +398,5 @@ function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBr
 export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): RetireBranchSyncUseCase {
   const comments = createIssueContentCompositionRoot();
   return new RetireBranchSyncUseCase(createNativeStatusReadPort(binding),
-    bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding)));
+    bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding)), createReplyRequestReadPort(binding));
 }

@@ -1,3 +1,5 @@
+import { replyRequestBodyDigest } from '../../../../domain/reply_request_digest';
+import type { ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
 import { RetireBranchSyncUseCase } from '../retire_branch_sync_use_case';
 import { buildAlignedBranchSyncComment, buildStaleBranchSyncComment } from '../../../policies/branch_sync_notification_policy';
 import { resolveStaticBranchSyncCatalog } from '../../../policies/branch_sync_message_catalog';
@@ -16,7 +18,12 @@ function fixture(body = warning) {
       stored.find(c => c.id === id)!.body = updated;
     }),
   };
-  return { stored, issues, comments, useCase: new RetireBranchSyncUseCase(issues, comments) };
+  const freshness = { matches: jest.fn(async (witness: ReplyRequestSnapshot) => {
+    const current = stored.find(comment => comment.id === witness.commentId);
+    return witness.surface === 'issue-comment' && witness.target.kind === 'issue' && witness.target.number === 42
+      && current?.user.login === witness.author && replyRequestBodyDigest(current?.body ?? '') === witness.bodyDigest;
+  }) };
+  return { stored, issues, comments, freshness, useCase: new RetireBranchSyncUseCase(issues, comments, freshness) };
 }
 
 describe('terminal synchronization recommendation retirement', () => {
@@ -96,6 +103,27 @@ describe('terminal synchronization recommendation retirement', () => {
   it('fails closed for a foreign native issue identity', async () => {
     const f = fixture(); f.issues.readIssue.mockResolvedValue({ number: 43, state: 'closed', reason: 'completed', labels: [] });
     const [result] = await f.useCase.invoke(context); expect(result.success).toBe(false); expect(f.comments.listIssueComments).not.toHaveBeenCalled();
+  });
+  it('reads the inventory only once when retiring twenty owned cards', async () => {
+    const f = fixture(); for (let id = 9; id < 28; id++) f.stored.push({ id, body: warning, user: { login: 'bot' } });
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: true, payload: { retiredCards: 20 } });
+    expect(f.comments.listIssueComments).toHaveBeenCalledTimes(1);
+    expect(f.freshness.matches).toHaveBeenCalledTimes(20);
+    const witness = f.freshness.matches.mock.calls[0][0];
+    expect(witness).toMatchObject({ surface: 'issue-comment', commentId: 8, author: 'bot', target: { kind: 'issue', number: 42 },
+      bodyDigest: replyRequestBodyDigest(warning) });
+    expect(Object.isFrozen(witness)).toBe(true); expect(Object.isFrozen(witness.target)).toBe(true);
+    expect(witness).not.toHaveProperty('body');
+  });
+  it.each(['changed-or-unavailable', 'provider-error'])('preserves cards when targeted freshness is %s', async kind => {
+    const f = fixture();
+    if (kind === 'provider-error') f.freshness.matches.mockRejectedValue(new Error('private current-card failure'));
+    else f.freshness.matches.mockResolvedValue(false);
+    const [result] = await f.useCase.invoke(context);
+    expect(result.success).toBe(false); expect(f.comments.updateComment).not.toHaveBeenCalled();
+    expect(f.stored[0].body).toBe(warning); expect(JSON.stringify(result)).not.toContain('private current-card failure');
+    expect(f.comments.listIssueComments).toHaveBeenCalledTimes(1);
   });
   it('rejects more than twenty owned cards without partial updates', async () => {
     const f = fixture(); for (let id = 9; id < 29; id++) f.stored.push({ id, body: warning, user: { login: 'bot' } });
