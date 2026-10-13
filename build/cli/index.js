@@ -37981,6 +37981,11 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'workspace-changes-rejected': Object.freeze({
+        impact: 'The changes were rejected during workspace verification.',
+        action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
+        retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -38043,6 +38048,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'workspace-changes-rejected': Object.freeze({
+        impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
+        action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
+        retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
         action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
@@ -62596,14 +62606,14 @@ async function finalizeWorkspaceMutation(gitCommitPort, before, operation) {
     const workspacePathsAfter = await inspectWorkspace(gitCommitPort, `after ${operation}`);
     const unsafePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
     if (unsafePaths.length > 0) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`);
+        throw new application_error_1.ApplicationError('workflow.failed', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`, { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
     }
     const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)([...before], workspacePathsAfter);
     if (workspacePaths.length === 0) {
         throw new application_error_1.ApplicationError('agent.failed', `${operation} produced no safe workspace paths to commit.`);
     }
     if (workspacePaths.length > exports.MAX_AUTOMATED_CHANGED_PATHS) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`);
+        throw new application_error_1.ApplicationError('workflow.failed', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`, { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
     }
     return { workspacePaths };
 }
@@ -71211,6 +71221,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'workspace-changes-rejected',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -71402,6 +71413,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'workspace-changes-rejected': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)

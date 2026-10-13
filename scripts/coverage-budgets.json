@@ -556,6 +556,29 @@
         }
       ],
       "successMessage": "Git hook verification environment coverage: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Reply request freshness",
+      "missingEntryLabel": "reply request freshness",
+      "rules": [
+        {
+          "files": [
+            "src/domain/reply_request_digest.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/reply_request_repository.ts",
+            "src/infrastructure/composition/reply_request_composition_root.ts",
+            "src/application/usecases/steps/common/reply_publication_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "reply request freshness coverage: PASS (private digest 100%; native read, binding and guarded publication 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

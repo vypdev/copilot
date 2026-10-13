@@ -1,3 +1,4 @@
+import type { BoundReplyRequestReadPort } from '../../../ports/reply_request_read_ports';
 import type { Result } from '../../../../data/model/result';
 import type { BoundIssueCommentPublicationPort } from '../../../ports/issue_lifecycle_ports';
 import { logInfo } from '../../../ports/logging_ports';
@@ -14,10 +15,11 @@ export class PublishResultUseCase implements ParamUseCase<PublishResultContext, 
         private readonly comments: BoundIssueCommentPublicationPort,
         private readonly catalogResolver?: MessageCatalogResolutionPort,
         private readonly sourceQuery?: BoundPublicationSourceQueryPort,
+        private readonly requestRead?: BoundReplyRequestReadPort,
     ) {}
 
     async invoke(param: PublishResultContext): Promise<Result | undefined> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
-        return runPublishResume(param, this.taskId, this.comments, this.catalogResolver, this.sourceQuery);
+        return runPublishResume(param, this.taskId, this.comments, this.catalogResolver, this.sourceQuery, this.requestRead);
     }
 }

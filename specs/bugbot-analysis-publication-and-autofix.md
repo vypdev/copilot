@@ -490,3 +490,25 @@ reverse ancestry rejection. These are not counted in another capability.
 The autofix documentation and catalog evidence change with this contract.
 Live acceptance remains pending until a new Action execution demonstrates the
 verified fetched head and subsequent authenticated fixer behavior.
+
+
+### Generated scratch and truthful refusal: #474 (2026-10-13)
+
+Native fixer run `38331274938` executed official Codex and produced workspace
+changes but refused generated `.tmp/jest_dx` transform-cache basenames containing
+token/secret/credential. Repository-local `.tmp/` scratch is now ignored, so
+those generated files cannot enter normal Git status, staging or automated
+commits. This is repository housekeeping, not an exclusion from the sensitive
+path guard: workflows, credentials and other sensitive changed paths remain
+rejected, and tracked files are still visible to Git regardless of ignore rules.
+The 100-path limit, verification commands, platforms and coverage gates stay
+unchanged. Operators of consumer repositories should keep any repository-local
+test scratch ignored or use their normal external temporary directory.
+
+One new real Git integration case belongs only to this owner: generated Jest
+scratch stays outside the commit delta, while a normal source change is retained
+and a new `.pem` still causes refusal. Stage-specific error recovery is allocated
+only to execution lifecycle; fresh error-reply evidence only to semantic
+communication. Native acceptance requires a legitimate selected finding to
+produce verified changes and a normal commit/push after the housekeeping fix;
+a model answer, CLI exit zero or a refused cache-only run does not establish it.

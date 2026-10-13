@@ -313,3 +313,16 @@ same issue identity; an untrusted or mismatched URL is shown without navigation.
 When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
+
+
+Read-only command replies and failures reuse their existing response when a
+new result is verified for the same current request. GitHub's native comment,
+parent and author must match the captured request; a changed or unreadable
+request withholds stale edits. Successful mutation receipts remain effect
+records. Read-only queries do not rewrite hidden issue/PR configuration.
+
+If the agent ran but workspace verification rejected its changes, the error
+identifies that stage and asks you to inspect rejected paths before retrying.
+Normal commit/push steps are skipped; an earlier syntax error is not retained
+as the description of the newer verified failure. Keep repository-local test
+scratch such as `.tmp/` ignored or use the normal external temporary directory.

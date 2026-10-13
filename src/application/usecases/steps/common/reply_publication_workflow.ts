@@ -1,3 +1,4 @@
+import type { BoundReplyRequestReadPort, ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
 import { publicationTargetToken } from '../../../../domain/github_publication';
 import { githubUsersMatch } from '../../../../domain/github_user_policy';
 import type { BoundIssueCommentPublicationPort, IssueCommentPublicationTarget } from '../../../ports/issue_lifecycle_ports';
@@ -15,10 +16,11 @@ export interface ReplyPublicationContext {
     readonly botLogin: string;
     readonly intent: SemanticReplyIntent;
     readonly catalog?: PublicationMessageCatalog;
+    readonly requestSource?: ReplyRequestSnapshot;
 }
 
 export interface ReplyPublicationOutcome {
-    readonly effect: 'created' | 'unchanged';
+    readonly effect: 'created' | 'updated' | 'unchanged';
     readonly canonicalCommentId?: number;
     readonly duplicatesRemoved: number;
     readonly duplicatesCompacted: number;
@@ -29,12 +31,29 @@ export interface ReplyPublicationOutcome {
 export async function reconcileReply(
     context: ReplyPublicationContext,
     comments: BoundIssueCommentPublicationPort,
+    requestRead?: BoundReplyRequestReadPort,
 ): Promise<ReplyPublicationOutcome> {
     if (!context.botLogin.trim()) return unchangedOutcome();
     const target = context.intent.target;
+    const witness = context.requestSource ? Object.freeze({ ...context.requestSource,
+        target: Object.freeze({ ...context.requestSource.target }) }) : undefined;
+    const refreshable: Readonly<Record<string, string>> = {
+        'application-error': 'application-error', 'copilot-status': 'status-command', 'copilot-help': 'help',
+        'copilot-doctor': 'doctor-command', 'copilot-history': 'history-command', 'copilot-sdd-diff': 'sdd-diff',
+    };
+    const guarded = witness && refreshable[context.intent.messageKey] === context.intent.projection.kind;
+    const sourceMatches = async () => {
+        if (!guarded) return true;
+        const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
+        return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
+            && witness.target.kind === target.kind && witness.target.number === target.number
+            && await requestRead.matches(witness));
+    };
+    if (!await sourceMatches()) return unchangedOutcome();
     let owned = matchingReplies(await comments.listIssueComments(target.number), context);
     let effect: ReplyPublicationOutcome['effect'] = 'unchanged';
     if (owned.length === 0) {
+        if (!await sourceMatches()) return unchangedOutcome();
         await comments.addComment(target.number, renderSemanticReply(context.intent, context.catalog));
         effect = 'created';
         owned = matchingReplies(await comments.listIssueComments(target.number), context);
@@ -46,10 +65,20 @@ export async function reconcileReply(
     }
 
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    if (!await sourceMatches()) return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });
+    if (guarded) {
+        const rendered = renderSemanticReply(context.intent, context.catalog);
+        if (canonical.body !== rendered) {
+            if (!await sourceMatches()) return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });
+            await comments.updateComment(target.number, canonical.id, rendered);
+            effect = 'updated';
+        }
+    }
     let duplicatesRemoved = 0;
     let duplicatesCompacted = 0;
     const compactedCommentIds: number[] = [];
     for (const duplicate of duplicates) {
+        if (!await sourceMatches()) break;
         const cleanup = await cleanupDuplicateComment({
             issueNumber: target.number,
             duplicateCommentId: duplicate.id,

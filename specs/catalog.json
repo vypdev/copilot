@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md"
@@ -129,7 +129,12 @@
         "src/application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case.ts",
         "src/application/policies/inactivity_result_counts_projection_policy.ts",
         "src/application/ports/progress_diff_query_ports.ts",
-        "src/data/repository/progress_diff_repository.ts"
+        "src/data/repository/progress_diff_repository.ts",
+        "src/domain/reply_request_digest.ts",
+        "src/application/ports/reply_request_read_ports.ts",
+        "src/data/repository/reply_request_repository.ts",
+        "src/infrastructure/composition/reply_request_composition_root.ts",
+        "src/infrastructure/github/ports/github_reply_request_client.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -205,7 +210,10 @@
         "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
         "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
         "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
-        "src/data/repository/__tests__/progress_diff_repository.test.ts"
+        "src/data/repository/__tests__/progress_diff_repository.test.ts",
+        "src/data/repository/__tests__/reply_request_repository.test.ts",
+        "src/application/usecases/steps/common/__tests__/reply_request_publication.test.ts",
+        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -451,7 +459,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -509,7 +517,8 @@
         "src/infrastructure/composition/lifecycle_capability_port_binding.ts",
         "src/infrastructure/composition/lifecycle_state_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
-        "src/infrastructure/composition/main_run_route_composition_root.ts"
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/application/policies/configuration_persistence_policy.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -541,7 +550,8 @@
         "src/application/usecases/__tests__/single_action_workflow.test.ts",
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
-        "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
+        "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts",
+        "src/application/policies/__tests__/configuration_persistence_policy.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -1445,7 +1455,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -1550,7 +1560,8 @@
         "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/detect_bugbot_fix_intent_use_case.test.ts",
         "src/infrastructure/filesystem/__tests__/workspace_bugbot_rules_repository.test.ts",
-        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts"
+        "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
