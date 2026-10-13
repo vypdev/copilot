@@ -138,7 +138,7 @@ describe('Windows npm agent executable resolution', () => {
             expect(result.status).toBe(0);
             expect(JSON.parse(result.stdout)).toEqual([literal]);
         } finally {
-            rmSync(data.root, { recursive: true, force: true });
+            rmSync(data.root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     });
 
