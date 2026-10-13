@@ -58,3 +58,36 @@ describe('runtime doctor public presentation', () => {
         expect(issue).not.toEqual(pr);
     });
 });
+
+describe('entity and immutable-revision source captions', () => {
+    it.each(['en-US', 'es-ES'].flatMap(locale => ['issue', 'pull-request'].map(kind => [locale, kind])))('names %s / %s links for their actual destination', (locale, kind) => {
+        const value = projection();
+        const target = kind === 'issue' ? value.report.target : { kind: 'pull-request' as const, repositoryId: 42, pullNumber: 11 };
+        const report = aggregateGithubRuntimeDoctorReport({ target, checks: value.report.checks });
+        const body = formatGithubRuntimeDoctor({ ...value, report }, locale);
+        const caption = locale === 'es-ES' ? kind === 'issue' ? 'Issue inspeccionada' : 'PR inspeccionado' : kind === 'issue' ? 'Inspected issue' : 'Inspected pull request';
+        const url = kind === 'issue' ? 'https://github.com/o/r/issues/7' : 'https://github.com/o/r/pull/11';
+        expect(body).toContain(`[${caption}](${url})`);
+        const revisionCaption = locale === 'es-ES' ? 'Revisión inspeccionada del repositorio' : 'Inspected repository revision';
+        expect(body).toContain(`[${revisionCaption}](https://github.com/o/r/tree/${'a'.repeat(40)})`);
+        expect(body).not.toContain(`[${revisionCaption}](${url})`);
+    });
+    it('uses complete English entity captions under unsupported-locale fallback', () => {
+        const body = formatGithubRuntimeDoctor(projection(), 'fr-FR');
+        expect(body).toContain('[Inspected issue](https://github.com/o/r/issues/7)');
+        expect(body).toEqual(formatGithubRuntimeDoctor(projection(), 'en-US'));
+    });
+    it('withholds entity links when immutable source provenance is absent', () => {
+        expect(formatGithubRuntimeDoctor({ ...projection(), revision: undefined })).not.toContain('](');
+    });
+    it('withholds entity links when source provenance is unsafe', () => {
+        expect(formatGithubRuntimeDoctor({ ...projection(), serverOrigin: 'https://user:secret@github.com' })).not.toContain('](');
+    });
+    it('keeps the exact correlated request identity and deterministic rendering', () => {
+        const results = [new Result({ id: 'IssueCommentUseCase.Doctor', success: true, executed: true, payload: { doctor: projection() } })];
+        const context = { results, locale: 'es-ES', target: { kind: 'issue' as const, number: 7 }, correlationId: 'comment:42' };
+        const [first] = selectSemanticReplyIntents(context); const [replay] = selectSemanticReplyIntents(context);
+        expect(first).toEqual(replay); expect(renderSemanticReply(first)).toEqual(renderSemanticReply(replay));
+        expect(renderSemanticReply(first)).toContain('[Issue inspeccionada](https://github.com/o/r/issues/7)');
+    });
+});
