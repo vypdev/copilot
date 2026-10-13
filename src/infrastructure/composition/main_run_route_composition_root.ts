@@ -1,5 +1,7 @@
 import { createReplyRequestReadPort } from './reply_request_composition_root';
 import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
+import { RetireProgressUseCase } from '../../application/usecases/actions/retire_progress_use_case';
+import { RetireClosedIssueCardsUseCase } from '../../application/usecases/actions/retire_closed_issue_cards_use_case';
 import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
@@ -395,8 +397,11 @@ function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBr
 }
 
 /** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
-export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): RetireBranchSyncUseCase {
+export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): RetireClosedIssueCardsUseCase {
   const comments = createIssueContentCompositionRoot();
-  return new RetireBranchSyncUseCase(createNativeStatusReadPort(binding),
-    bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding)), createReplyRequestReadPort(binding));
+  const native = createNativeStatusReadPort(binding);
+  const cards = bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding));
+  const freshness = createReplyRequestReadPort(binding);
+  return new RetireClosedIssueCardsUseCase(new RetireBranchSyncUseCase(native, cards, freshness),
+    new RetireProgressUseCase(native, cards, freshness));
 }

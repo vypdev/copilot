@@ -103,7 +103,10 @@ async function sourceIsCurrent(
             'Commit-derived status publication requires an authoritative source query.',
         );
     }
-    return await sourceQuery.getBranchHeadSha(guard.branch) === guard.sha;
+    if (await sourceQuery.getBranchHeadSha(guard.branch) !== guard.sha) return false;
+    if (intent.projection.kind !== 'progress') return true;
+    if (!sourceQuery.isIssueOpen) throw new ApplicationError('configuration.unsupported', 'Progress publication requires a native issue state query.');
+    return await sourceQuery.isIssueOpen(intent.identity.target.number) === true;
 }
 
 function staleSourceOutcome(

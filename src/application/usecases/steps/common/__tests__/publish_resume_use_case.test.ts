@@ -79,7 +79,7 @@ function inMemoryComments(initial: IssueCommentPublicationTarget[] = []) {
 
 function publicationSource(...heads: string[]) {
   const remaining = [...heads];
-  return { getBranchHeadSha: jest.fn(async () => remaining.shift() ?? SOURCE_HEAD) };
+  return { isIssueOpen: jest.fn(async () => true), getBranchHeadSha: jest.fn(async () => remaining.shift() ?? SOURCE_HEAD) };
 }
 
 describe('PublishResultUseCase strict semantic publication boundary', () => {

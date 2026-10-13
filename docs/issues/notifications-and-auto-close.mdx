@@ -50,6 +50,32 @@ Push processing is part of the **Commit** workflow, not the Issue workflow.
 Ensure `copilot_commit.yml` is installed and has its token and configured agent
 inputs. See [How to use](/how-to-use) and [Bugbot](/bugbot).
 
+## Progress after issue closure
+
+When an issue closes, Copilot updates its existing owned progress card in place.
+The card shows **Issue closed — historical progress**, the native closure reason
+(completed, not planned, duplicate, or unavailable), and the last estimate as
+quoted history. Closing a 96% issue does not invent a new 100% assessment or prove
+that tests, coverage or branch synchronization passed.
+
+No new close-success comment is created. Equivalent replays leave the card
+unchanged. If work continues, reopen the issue; a fresh assessment of the current
+branch can update that same card. A reopened issue alone does not make the old
+estimate current again. Native open-state checks also prevent an older analysis
+from replacing a closed card while its Git head stays unchanged.
+
+Retirement uses bundled English or Spanish according to the issue locale, with
+complete English fallback for other locales and no model call. It introduces no
+new input or permission. It updates at most 20 exact bot-owned cards from one
+inventory and retains bounded, safe historical content. Foreign, malformed,
+unknown-source and oversized cards remain untouched.
+
+If native state or ownership cannot be verified, the affected card is left
+unchanged and the Job Summary reports the failure. Earlier successful updates
+remain retained. Retry the actual closed-issue workflow run or the merged-PR
+operation to reconcile remaining owned cards; do not change labels or claim a
+new estimate to conceal incomplete cleanup.
+
 ## Cross-capability notification budget
 
 Copilot treats GitHub comments as product UI and potential notifications, not as
