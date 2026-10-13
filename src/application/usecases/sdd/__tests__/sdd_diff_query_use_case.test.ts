@@ -237,3 +237,49 @@ describe('native eligibility selection final identity', () => {
     expect(result).toMatchObject({ state: 'stale' }); expect(result).not.toHaveProperty('changes');
   });
 });
+
+
+describe('association fence for every PR projection', () => {
+  it.each(['absent', 'awaiting-answers', 'publication-pending', 'stale', 'not-required'] as const)('withholds old issue links after a %s result and association movement', async state => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.evidence.read.mockResolvedValue(state === 'absent' || state === 'not-required' ? { state } : { ...published(), state });
+    f.ports.links.readClosingIssues.mockResolvedValueOnce(links).mockResolvedValueOnce({ ...links, issueNumbers: [43], issueAuthors: { 43: 'other-author' } });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'stale' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+  it('withholds a pending result when the final native association read is denied', async () => {
+    const f = fixture(); f.ports.evidence.read.mockResolvedValue({ ...published(), state: 'publication-pending' });
+    f.ports.links.readClosingIssues.mockResolvedValueOnce(f.links()).mockResolvedValueOnce({ state: 'unavailable' });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'unavailable' });
+  });
+  it('rejects a foreign final PR identity before presenting a pending card', async () => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.evidence.read.mockResolvedValue({ ...published(), state: 'awaiting-answers' });
+    f.ports.links.readClosingIssues.mockResolvedValueOnce(links).mockResolvedValueOnce({ ...links, pullNumber: 98 });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'unavailable' });
+  });
+  it('fences a changed association even when the final authority itself becomes pending', async () => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.evidence.read.mockResolvedValueOnce(published()).mockResolvedValueOnce({ ...published(), state: 'publication-pending', authorityDigest: 'e'.repeat(64) });
+    f.ports.links.readClosingIssues.mockResolvedValueOnce(links).mockResolvedValueOnce({ ...links, issueNumbers: [] });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'stale' });
+  });
+  it('does not certify an empty association after it gains a closing issue', async () => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.links.readClosingIssues.mockResolvedValueOnce({ ...links, issueNumbers: [] }).mockResolvedValueOnce(links);
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'stale' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+  it('fences an ineligible selection before declaring the current PR exempt', async () => {
+    const f = fixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.labels.getLabels.mockResolvedValue(['help', 'in-progress']);
+    f.ports.descriptions.getDescription.mockResolvedValue('### Describe your problem or question\nHelp');
+    f.ports.links.readClosingIssues.mockResolvedValueOnce(links).mockResolvedValueOnce({ ...links, headSha: first });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'stale' });
+  });
+  it('retains verified pending history when the exact native association remains stable', async () => {
+    const f = fixture(); f.ports.evidence.read.mockResolvedValue({ ...published(), state: 'awaiting-answers' });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toMatchObject({ state: 'pending-revision', card: { issueNumber: 42, commentId: 7 } });
+    expect(f.ports.links.readClosingIssues).toHaveBeenCalledTimes(2);
+  });
+});

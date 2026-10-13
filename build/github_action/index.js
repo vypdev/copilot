@@ -55665,83 +55665,90 @@ class SddDiffQueryUseCase {
             if (!positive(request.target.number) || !positive(request.repositoryId)
                 || !['issue', 'pull-request'].includes(request.target.kind))
                 return { state: 'unavailable' };
-            let issueNumber = request.target.number;
-            let issueAuthor = request.issueAuthor;
             let links;
             if (request.target.kind === 'pull-request') {
                 const association = await this.ports.links.readClosingIssues(request.target.number);
-                if (association.state !== 'verified' || association.pullNumber !== request.target.number)
+                if (association.state !== 'verified' || association.pullNumber !== request.target.number
+                    || association.issueNumbers.length > 100)
                     return { state: 'unavailable' };
-                if (association.issueNumbers.length === 0)
-                    return { state: 'not-applicable' };
-                if (association.issueNumbers.length > 100)
-                    return { state: 'unavailable' };
-                const choice = await this.selectEligible(request, association);
-                if (choice.state !== 'selected')
-                    return { state: choice.state };
                 links = association;
-                issueNumber = choice.context.issueNumber;
-                issueAuthor = choice.context.issueAuthor;
             }
-            if (!issueAuthor?.trim())
-                return { state: 'unavailable' };
-            const context = await this.context(request, issueNumber, issueAuthor);
-            if (!context)
-                return { state: 'not-applicable' };
-            const original = await this.ports.evidence.read(context);
-            const projection = projectEvidence(original, issueNumber);
-            if (original.state !== 'published' || !original.verified?.currentSha)
-                return projection;
-            if (!/^[a-f0-9]{64}$/u.test(original.authorityDigest ?? ''))
-                return { state: 'unavailable' };
-            if (links && (links.headSha !== original.verified.branchHeadSha || links.headBranch !== original.verified.branchName)) {
-                return historicalStale(original, issueNumber);
-            }
-            const publication = publicationOf(original);
-            let result = { state: 'initial-only', publication };
-            if (original.verified.currentSha !== original.verified.firstSha) {
-                const [before, after] = await Promise.all([
-                    this.ports.documents.readSdd(original.verified.firstSha, original.verified.path),
-                    this.ports.documents.readSdd(original.verified.currentSha, original.verified.path),
-                ]);
-                if (before === undefined || after === undefined)
-                    return { state: 'unavailable' };
-                const changes = (0, pre_branch_sdd_diff_1.compareSddStructure)(before, after);
-                result = changes.state === 'bounded'
-                    ? { state: 'bounded', publication, reason: changes.reason }
-                    : { state: 'compared', publication, changes };
-            }
-            // Re-admit the exact issue, then re-read the shared fenced authority.
-            let freshContext;
-            if (links) {
-                const choice = await this.selectEligible(request, links);
-                if (choice.state !== 'selected')
-                    return { state: choice.state };
-                if (choice.context.issueNumber !== issueNumber)
-                    return historicalStale(original, issueNumber);
-                freshContext = choice.context;
-            }
-            else
-                freshContext = await this.context(request, issueNumber, issueAuthor);
-            if (!freshContext || freshContext.admittedKind !== context.admittedKind)
-                return { state: 'stale' };
-            const fresh = await this.ports.evidence.read(freshContext);
-            if (!original.authorityDigest || fresh.authorityDigest !== original.authorityDigest
-                || proofOf(fresh) !== proofOf(original)) {
-                return fresh.state === 'published' ? historicalStale(fresh, issueNumber) : projectEvidence(fresh, issueNumber);
-            }
+            const result = await this.readSnapshot(request, links);
+            // Every projection, including pending, absent and exempt, belongs to the
+            // association observed at admission. A moved association retains no old links.
             if (links) {
                 const freshLinks = await this.ports.links.readClosingIssues(request.target.number);
-                if (freshLinks.state !== 'verified')
+                if (freshLinks.state !== 'verified' || freshLinks.pullNumber !== request.target.number)
                     return { state: 'unavailable' };
                 if (associationProof(freshLinks) !== associationProof(links))
-                    return historicalStale(fresh, issueNumber);
+                    return { state: 'stale' };
             }
             return Object.freeze(result);
         }
         catch {
             return { state: 'unavailable' };
         }
+    }
+    async readSnapshot(request, links) {
+        let issueNumber = request.target.number;
+        let issueAuthor = request.issueAuthor;
+        if (links) {
+            if (links.issueNumbers.length === 0)
+                return { state: 'not-applicable' };
+            const choice = await this.selectEligible(request, links);
+            if (choice.state !== 'selected')
+                return { state: choice.state };
+            issueNumber = choice.context.issueNumber;
+            issueAuthor = choice.context.issueAuthor;
+        }
+        if (!issueAuthor?.trim())
+            return { state: 'unavailable' };
+        const context = await this.context(request, issueNumber, issueAuthor);
+        if (!context)
+            return { state: 'not-applicable' };
+        const original = await this.ports.evidence.read(context);
+        const projection = projectEvidence(original, issueNumber);
+        if (original.state !== 'published' || !original.verified?.currentSha)
+            return projection;
+        if (!/^[a-f0-9]{64}$/u.test(original.authorityDigest ?? ''))
+            return { state: 'unavailable' };
+        if (links && (links.headSha !== original.verified.branchHeadSha || links.headBranch !== original.verified.branchName)) {
+            return historicalStale(original, issueNumber);
+        }
+        const publication = publicationOf(original);
+        let result = { state: 'initial-only', publication };
+        if (original.verified.currentSha !== original.verified.firstSha) {
+            const [before, after] = await Promise.all([
+                this.ports.documents.readSdd(original.verified.firstSha, original.verified.path),
+                this.ports.documents.readSdd(original.verified.currentSha, original.verified.path),
+            ]);
+            if (before === undefined || after === undefined)
+                return { state: 'unavailable' };
+            const changes = (0, pre_branch_sdd_diff_1.compareSddStructure)(before, after);
+            result = changes.state === 'bounded'
+                ? { state: 'bounded', publication, reason: changes.reason }
+                : { state: 'compared', publication, changes };
+        }
+        // Re-admit the exact issue, then re-read the shared fenced authority.
+        let freshContext;
+        if (links) {
+            const choice = await this.selectEligible(request, links);
+            if (choice.state !== 'selected')
+                return { state: choice.state };
+            if (choice.context.issueNumber !== issueNumber)
+                return historicalStale(original, issueNumber);
+            freshContext = choice.context;
+        }
+        else
+            freshContext = await this.context(request, issueNumber, issueAuthor);
+        if (!freshContext || freshContext.admittedKind !== context.admittedKind)
+            return { state: 'stale' };
+        const fresh = await this.ports.evidence.read(freshContext);
+        if (!original.authorityDigest || fresh.authorityDigest !== original.authorityDigest
+            || proofOf(fresh) !== proofOf(original)) {
+            return fresh.state === 'published' ? historicalStale(fresh, issueNumber) : projectEvidence(fresh, issueNumber);
+        }
+        return result;
     }
     /** At most the adapter's fixed 100 native candidates; no body/number inference. */
     async selectEligible(request, links) {

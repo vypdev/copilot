@@ -22,17 +22,33 @@ export class SddDiffQueryUseCase {
     try {
       if (!positive(request.target.number) || !positive(request.repositoryId)
         || !['issue', 'pull-request'].includes(request.target.kind)) return { state: 'unavailable' };
-      let issueNumber = request.target.number;
-      let issueAuthor = request.issueAuthor;
       let links: Extract<SddDiffPullRequestLinks, { state: 'verified' }> | undefined;
       if (request.target.kind === 'pull-request') {
         const association = await this.ports.links.readClosingIssues(request.target.number);
-        if (association.state !== 'verified' || association.pullNumber !== request.target.number) return { state: 'unavailable' };
-        if (association.issueNumbers.length === 0) return { state: 'not-applicable' };
-        if (association.issueNumbers.length > 100) return { state: 'unavailable' };
-        const choice = await this.selectEligible(request, association);
-        if (choice.state !== 'selected') return { state: choice.state };
+        if (association.state !== 'verified' || association.pullNumber !== request.target.number
+          || association.issueNumbers.length > 100) return { state: 'unavailable' };
         links = association;
+      }
+      const result = await this.readSnapshot(request, links);
+      // Every projection, including pending, absent and exempt, belongs to the
+      // association observed at admission. A moved association retains no old links.
+      if (links) {
+        const freshLinks = await this.ports.links.readClosingIssues(request.target.number);
+        if (freshLinks.state !== 'verified' || freshLinks.pullNumber !== request.target.number) return { state: 'unavailable' };
+        if (associationProof(freshLinks) !== associationProof(links)) return { state: 'stale' };
+      }
+      return Object.freeze(result);
+    } catch { return { state: 'unavailable' }; }
+  }
+
+  private async readSnapshot(request: SddDiffRequest,
+    links: Extract<SddDiffPullRequestLinks, { state: 'verified' }> | undefined): Promise<SddDiffSnapshot> {
+      let issueNumber = request.target.number;
+      let issueAuthor = request.issueAuthor;
+      if (links) {
+        if (links.issueNumbers.length === 0) return { state: 'not-applicable' };
+        const choice = await this.selectEligible(request, links);
+        if (choice.state !== 'selected') return { state: choice.state };
         issueNumber = choice.context.issueNumber;
         issueAuthor = choice.context.issueAuthor;
       }
@@ -73,13 +89,7 @@ export class SddDiffQueryUseCase {
         || proofOf(fresh) !== proofOf(original)) {
         return fresh.state === 'published' ? historicalStale(fresh, issueNumber) : projectEvidence(fresh, issueNumber);
       }
-      if (links) {
-        const freshLinks = await this.ports.links.readClosingIssues(request.target.number);
-        if (freshLinks.state !== 'verified') return { state: 'unavailable' };
-        if (associationProof(freshLinks) !== associationProof(links)) return historicalStale(fresh, issueNumber);
-      }
-      return Object.freeze(result);
-    } catch { return { state: 'unavailable' }; }
+      return result;
   }
 
   /** At most the adapter's fixed 100 native candidates; no body/number inference. */

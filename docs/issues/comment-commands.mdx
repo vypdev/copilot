@@ -342,3 +342,9 @@ Paths, refs, URLs and configurable limits are not accepted as command arguments.
 When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
+
+
+On a PR, `/copilot sdd-diff` verifies the native closing-issue association again
+before returning every result, including pending or missing publication. If the
+association changes, retry the command: the stale reply withholds links belonging
+to the previous issue. An unreadable final association remains unavailable.
