@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last verified: 2026-10-11
+- Last verified: 2026-10-13
 - Owners: Copilot maintainers
 - Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
 - Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
@@ -331,12 +331,12 @@ that information. The phase is captured by trusted validation before abort.
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 50 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 74 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
+| State/idempotency/races | 56 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
 | Adapters/workflow contracts | 51 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
-| UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
-| Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **237** | no double counting |
+| UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
+| Integration/security/cutover | 22 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **272** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 206-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 272-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -520,3 +520,65 @@ sync/fixer retry is an acceptance requirement. General Windows fixtures and
 coverage budgets remain. Failed verification preserves the managed remote
 head, and model/CLI success is not proof of real tools. See the authoritative
 [service retirement and six-case routing budget](./agent-runtime-provider-and-model-routing.md).
+
+
+### Retire synchronization advice after native closure (2026-10-13, issue #478)
+
+Native PR #473 merged and closed issue #472 with verified `100%` and Project
+Done, while its existing card `6132289120` still requested synchronization.
+The parent-push observer had read the issue while it was open; no closure step
+retired the card. Native closure and Git alignment are independent facts.
+
+```text
+parent push -> discover dependency -> fresh native issue -> open: compare + fenced writes
+                                                   -> closed: retire owned existing cards
+merged PR -> native closure + selective metadata -> fresh closure -> retire owned cards
+reopen/change/denied read -> retain current comments, report verification unavailable
+```
+
+The observer MUST verify the exact native issue before comparing and immediately
+before every card, transition and duplicate mutation. A closed issue MUST NOT
+receive new synchronization advice. The merged-PR route MUST run independent
+retirement after completion reconciliation, including retained native closure
+with a metadata failure. Retirement only reads native issue state and comments
+and updates existing bot-owned shared-envelope branch-sync cards for that exact
+issue and dependency key. It MUST NOT create/delete comments, mutate labels,
+change branches, run a model or claim alignment/completion from closure alone.
+Unknown/malformed envelopes, foreign users/targets, and immutable transition
+notifications remain untouched. At most twenty matching status cards are
+admitted per run; a larger set fails before writes. This fixed boundary has no
+configuration or permission expansion.
+
+Before each update the original card body and author MUST still match and a
+fresh native sample MUST remain closed with the same reason. Reopening, changed
+ownership/body/reason, denied reads and invalid identity stop publication.
+Earlier completed updates survive a later failure and the result reports their
+count; replay performs no unchanged writes. GitHub does not provide a joint
+issue/comment conditional transaction: the fresh read bounds the race but cannot
+make those separate provider operations atomic. A later closure reconciliation
+repairs the card. Reopened work becomes eligible for fresh normal observation.
+
+Representative English card: **Issue closed: synchronization recommendation
+retired. No branch synchronization is required for this closed issue. The
+previous recommendation is historical. Issue closure does not certify that the
+branches are synchronized.** Spanish uses the complete equivalent catalog.
+The original comment ID/link and marker identity remain; obsolete command and
+comparison guidance disappear. Previous short transition alerts remain
+historical and their status link now points to the retired card.
+
+Thirty-five distinct new cases extend the prior 237 to 272: six observer
+closure/denial/race cases, twenty-four retirement ownership/replay/provider/
+partial-effect/limit cases, two complete English/Spanish presentations, and
+three merged/unmerged workflow sequencing cases. The new retirement use case
+requires 95% lines/statements and 90% branches/functions; global and existing
+module thresholds remain. Publication-writer architecture evidence explicitly
+records the one retirement updater and fresh-open mutation wrappers.
+
+Acceptance: merging an open managed PR closes its linked issue, retains native
+completion metadata, and changes an existing status card to historical closure
+without another alert or Git operation. Replaying that closed PR performs no
+unchanged update. A concurrent reopen/changed card/provider denial leaves the
+current card untouched and preserves earlier effects. User documentation in
+`docs/issues/branch-synchronization.mdx` describes history, retry and reopening.
+Native browser evidence must verify the existing link and retired copy after
+promotion; local tests alone do not certify the provider lifecycle.

@@ -40984,6 +40984,9 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.heading',
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
+    'branchSync.closed.heading',
+    'branchSync.closed.status',
+    'branchSync.closed.history',
     'branchSync.transition.required',
     'branchSync.transition.requiredCompact',
     'branchSync.transition.openStatus',
@@ -41005,6 +41008,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Branch synchronized',
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+    'branchSync.closed.heading': 'Issue closed: synchronization recommendation retired',
+    'branchSync.closed.status': 'No branch synchronization is required for this closed issue.',
+    'branchSync.closed.history': 'The previous recommendation is historical. Issue closure does not certify that the branches are synchronized.',
     'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
     'branchSync.transition.requiredCompact': 'Branch synchronization needs attention.',
     'branchSync.transition.openStatus': 'Open the current status',
@@ -41028,6 +41034,9 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Rama sincronizada',
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+    'branchSync.closed.heading': 'Issue cerrada: recomendación de sincronización retirada',
+    'branchSync.closed.status': 'Esta issue cerrada no requiere sincronizar su rama.',
+    'branchSync.closed.history': 'La recomendación anterior es histórica. El cierre de la issue no certifica que las ramas estén sincronizadas.',
     'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
     'branchSync.transition.requiredCompact': 'La sincronización de la rama necesita atención.',
     'branchSync.transition.openStatus': 'Abrir el estado actual',
@@ -41076,6 +41085,7 @@ exports.buildBranchSyncStatusCommentUrl = buildBranchSyncStatusCommentUrl;
 exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
+exports.buildRetiredBranchSyncComment = buildRetiredBranchSyncComment;
 const github_user_policy_1 = __nccwpck_require__(84403);
 const git_object_id_1 = __nccwpck_require__(88623);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -41215,6 +41225,16 @@ function safeLinkLabel(value) {
         .replace(/[\r\n()[\]<>]/gu, '')
         .slice(0, 40)
         .trim() || 'Open notification';
+}
+/** Preserve the exact owned card identity without claiming Git alignment. */
+function buildRetiredBranchSyncComment(identity, messages) {
+    return `${(0, publication_identity_policy_1.buildPublicationMarker)({ identity, sourceVersion: 'closed:issue', digest: (0, publication_identity_policy_1.createSemanticDigest)({ state: 'closed', identity }) })}
+
+## ${messages.message('branchSync.closed.heading')}
+
+${messages.message('branchSync.closed.status')}
+
+${messages.message('branchSync.closed.history')}`;
 }
 
 
@@ -50956,17 +50976,20 @@ const application_error_1 = __nccwpck_require__(75999);
 const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const transition_notification_workflow_1 = __nccwpck_require__(1725);
 const publication_outcome_policy_1 = __nccwpck_require__(79719);
+const application_error_2 = __nccwpck_require__(75999);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
  * and maintains one stateful notification per issue; no agent is reachable.
  */
 class ObserveBranchSyncUseCase {
-    constructor(dependencies, comparisons, notifications, catalogResolver) {
+    constructor(dependencies, comparisons, notifications, catalogResolver, nativeIssues, retirement) {
         this.dependencies = dependencies;
         this.comparisons = comparisons;
         this.notifications = notifications;
         this.catalogResolver = catalogResolver;
+        this.nativeIssues = nativeIssues;
+        this.retirement = retirement;
         this.taskId = TASK_ID;
     }
     async invoke(context) {
@@ -50991,10 +51014,48 @@ class ObserveBranchSyncUseCase {
             return [failure("Unable to inspect branch synchronization safely.", cause)];
         }
     }
+    openNotifications(issueNumber) {
+        const assertOpen = async (number) => {
+            if (number !== issueNumber || !this.nativeIssues)
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+            const current = await this.nativeIssues.readIssue(number);
+            if (current.number !== number || current.state !== 'open')
+                throw new application_error_2.ApplicationError('workflow.stale', 'The issue is no longer open.');
+        };
+        return Object.freeze({
+            listIssueComments: (number) => this.notifications.listIssueComments(number),
+            addComment: async (number, body) => {
+                await assertOpen(number);
+                await this.notifications.addComment(number, body);
+            },
+            updateComment: async (number, id, body) => {
+                await assertOpen(number);
+                await this.notifications.updateComment(number, id, body);
+            },
+            removeComment: async (number, id) => {
+                await assertOpen(number);
+                return this.notifications.removeComment(number, id);
+            },
+        });
+    }
     async reconcileDependency(context, dependency, messages) {
         try {
+            if (!this.nativeIssues)
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+            const initial = await this.nativeIssues.readIssue(dependency.issueNumber);
+            if (initial.number !== dependency.issueNumber || !['open', 'closed'].includes(initial.state))
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+            if (initial.state === 'closed') {
+                if (!this.retirement)
+                    throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+                const [result] = await this.retirement.invoke({
+                    issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+                });
+                return result;
+            }
+            const notifications = this.openNotifications(dependency.issueNumber);
             const comparison = await this.comparisons.compare(dependency.parentBranch, dependency.workingBranch);
-            const comments = await this.notifications.listIssueComments(dependency.issueNumber);
+            const comments = await notifications.listIssueComments(dependency.issueNumber);
             const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, context.trustedBotLogin, dependency);
             if (comparison.behindBy > 0) {
                 const comment = (0, branch_sync_notification_policy_1.buildStaleBranchSyncComment)({
@@ -51005,12 +51066,12 @@ class ObserveBranchSyncUseCase {
                     messages,
                 });
                 if (!latest) {
-                    await this.notifications.addComment(dependency.issueNumber, comment);
+                    await notifications.addComment(dependency.issueNumber, comment);
                     return success(dependency, comparison.behindBy, "stale");
                 }
                 const transitionedFromAligned = !(0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body);
                 if (latest.body !== comment) {
-                    await this.notifications.updateComment(dependency.issueNumber, latest.id, comment);
+                    await notifications.updateComment(dependency.issueNumber, latest.id, comment);
                 }
                 if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
                     return success(dependency, comparison.behindBy, "stale");
@@ -51024,7 +51085,7 @@ class ObserveBranchSyncUseCase {
                         intent,
                         message: (0, branch_sync_notification_policy_1.buildBranchSyncTransitionNotification)(dependency, messages, (0, branch_sync_notification_policy_1.buildBranchSyncStatusCommentUrl)(context.repository.owner, context.repository.name, dependency.issueNumber, latest.id)),
                         duplicatePointer: canonicalUrl => (0, branch_sync_notification_policy_1.buildBranchSyncDuplicatePointer)(messages, canonicalUrl),
-                    }, this.notifications);
+                    }, notifications);
                     const cleanup = (0, publication_outcome_policy_1.buildDuplicateCompactionPublicationPayload)(transition.compactedCommentIds);
                     return success(dependency, comparison.behindBy, "stale", {
                         ...(0, publication_outcome_policy_1.buildTransitionPublicationPayload)(intent, transition.effect),
@@ -51036,7 +51097,7 @@ class ObserveBranchSyncUseCase {
                 }
             }
             if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
-                await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
+                await notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
             }
             return success(dependency, 0, "aligned");
         }
@@ -51686,6 +51747,88 @@ function failure(taskId, message, code) {
         executed: true,
         errors: [new application_error_1.ApplicationError(code, message)],
     });
+}
+
+
+/***/ }),
+
+/***/ 74111:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireBranchSyncUseCase = void 0;
+const result_1 = __nccwpck_require__(73817);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
+const application_error_1 = __nccwpck_require__(75999);
+/** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
+class RetireBranchSyncUseCase {
+    constructor(issues, comments) {
+        this.issues = issues;
+        this.comments = comments;
+        this.taskId = 'RetireBranchSyncUseCase';
+    }
+    async invoke(context) {
+        let retired = 0;
+        let nativeClosed = false;
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
+                return [this.result(retired, nativeClosed)];
+            }
+            const initial = await this.issues.readIssue(context.issueNumber);
+            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state))
+                throw stale();
+            if (initial.state !== 'closed')
+                return [this.result(retired, nativeClosed)];
+            nativeClosed = true;
+            const messages = (0, branch_sync_message_catalog_1.resolveStaticBranchSyncCatalog)(context.locale);
+            const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+                return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
+                    && marker.identity.target.number === context.issueNumber && /^dependency:[a-f0-9]{16}$/u.test(marker.identity.key)
+                    && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue')
+                    && Number.isSafeInteger(comment.id) && comment.id > 0
+                    && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
+            });
+            if (cards.length > 20)
+                throw stale();
+            for (const card of cards) {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(card.body);
+                const body = (0, branch_sync_notification_policy_1.buildRetiredBranchSyncComment)(marker.identity, messages);
+                if (card.body === body)
+                    continue;
+                const current = (await this.comments.listIssueComments(context.issueNumber)).find(comment => comment.id === card.id);
+                if (current?.body !== card.body || !current.user?.login || !(0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, current.user.login))
+                    throw stale();
+                const fresh = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
+                if (!nativeClosed || fresh.reason !== initial.reason)
+                    throw stale();
+                await this.comments.updateComment(context.issueNumber, card.id, body);
+                retired++;
+            }
+            return [this.result(retired, nativeClosed)];
+        }
+        catch (cause) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
+                    steps: [nativeClosed ? 'Issue closure is retained; synchronization recommendation retirement could not be fully verified. Retry the merged-PR operation.' : 'Native issue closure could not be verified; synchronization recommendations were left unchanged.'],
+                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire synchronization recommendations safely.')],
+                    payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
+        }
+    }
+    result(retired, nativeClosed) {
+        return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
+            steps: [retired ? 'The closed issue’s synchronization recommendations were retired.' : 'No synchronization recommendation required retirement.'],
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+    }
+}
+exports.RetireBranchSyncUseCase = RetireBranchSyncUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned synchronization card changed or is unavailable.');
 }
 
 
@@ -54641,7 +54784,10 @@ async function runPullRequestWorkflow(context, taskId, ports) {
             return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
         }
         if (context.closed && context.merged) {
-            return ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+            const results = await ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+            if (ports.workflowSteps.retireBranchSync)
+                results.push(...await ports.workflowSteps.retireBranchSync.invoke(ports.sharedContexts.steps.retireBranchSync));
+            return results;
         }
     }
     catch (cause) {
@@ -54723,6 +54869,7 @@ function projectPullRequestWorkflowStepContexts(source) {
             projects,
         }),
         description: projectPullRequestDescriptionContext(source),
+        retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.pullRequest, trustedBotLogin: source.tokenUser }),
         closeIssue: Object.freeze({
             completionLabels: Object.freeze({
                 lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
@@ -80884,6 +81031,7 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
@@ -80971,7 +81119,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgres
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding))), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -81155,6 +81303,8 @@ function composePullRequestUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
@@ -81212,6 +81362,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
+        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));

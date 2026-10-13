@@ -1,4 +1,6 @@
-import { bindIssueCompletion, createIssueCompletionRepository } from './issue_completion_composition_root';
+import { bindIssueCommentPublication } from './push_single_action_capability_port_binding';
+import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
+import { bindIssueCompletion, createIssueCompletionRepository, createNativeStatusReadPort } from './issue_completion_composition_root';
 import { PullRequestChangesRepository } from '../../data/repository/pull_request/pull_request_changes_repository';
 import {
   createIssueAssignmentClient,
@@ -104,6 +106,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
     checkPriorityPullRequestSize: new CheckPriorityPullRequestSizeUseCase(
       boundProjectBoard,
     ),
+    retireBranchSync: new RetireBranchSyncUseCase(createNativeStatusReadPort(binding), bindIssueCommentPublication(issueContent, binding)),
     closeIssueAfterMerging: new CloseIssueAfterMergingUseCase(bindIssueCompletion(createIssueCompletionRepository(binding))),
   };
 

@@ -1,3 +1,4 @@
+import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
 import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
@@ -157,6 +158,8 @@ export function createSingleActionUseCaseCompositionRoot(
       bindBranchComparison(new BranchCompareRepository(createBranchComparisonClient()), binding),
       bindIssueCommentPublication(issueDescriptionQueryPort, binding),
       catalogResolver,
+      createNativeStatusReadPort(binding),
+      new RetireBranchSyncUseCase(createNativeStatusReadPort(binding), bindIssueCommentPublication(issueDescriptionQueryPort, binding)),
     ),
     deploymentOrchestration,
   );

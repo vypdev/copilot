@@ -1589,7 +1589,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],
@@ -1622,7 +1622,12 @@
         "src/infrastructure/branch_sync_sdd_catalog.ts",
         "src/domain/branch_sync_validation.ts",
         "src/application/policies/lifecycle_state_policy.ts",
-        "src/infrastructure/branch_sync_communication_budget.ts"
+        "src/infrastructure/branch_sync_communication_budget.ts",
+        "src/application/usecases/actions/retire_branch_sync_use_case.ts",
+        "src/application/ports/issue_completion_ports.ts",
+        "src/application/usecases/pull_request_workflow.ts",
+        "src/application/usecases/pull_request_workflow_context.ts",
+        "src/infrastructure/composition/pull_request_use_case_composition_root.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1642,7 +1647,9 @@
         "src/infrastructure/__tests__/branch_sync_generated_bundle_validation.test.ts",
         "src/application/policies/__tests__/branch_sync_lifecycle_recovery.test.ts",
         "src/infrastructure/__tests__/branch_sync_resolved_workspace.test.ts",
-        "src/infrastructure/__tests__/branch_sync_communication_budget.test.ts"
+        "src/infrastructure/__tests__/branch_sync_communication_budget.test.ts",
+        "src/application/usecases/actions/__tests__/retire_branch_sync_use_case.test.ts",
+        "src/application/usecases/__tests__/pull_request_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

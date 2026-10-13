@@ -407,3 +407,25 @@ describe("PullRequestUseCase", () => {
     );
   });
 });
+
+
+describe('merged PR synchronization recommendation retirement', () => {
+  beforeEach(() => { jest.clearAllMocks(); mockCloseIssueInvoke.mockResolvedValue([]); });
+  it.each([true, false])('runs native retirement after closure reconciliation, including retained partial failure (%s)', async success => {
+    mockCloseIssueInvoke.mockResolvedValue([new Result({ id: 'close', success, executed: true })]);
+    const retire = { taskId: 'retire', invoke: jest.fn(async () => {
+      expect(mockCloseIssueInvoke).toHaveBeenCalledTimes(1);
+      return [new Result({ id: 'retire', success: true, executed: true })];
+    }) };
+    const useCase = new PullRequestUseCase({ taskId: 'description', invoke: mockUpdateDescriptionInvoke }, { ...workflowSteps, retireBranchSync: retire });
+    const results = await useCase.invoke(minimalExecution({ issueNumber: 42, pullRequest: { isOpened: false, isClosed: true, isMerged: true, action: 'closed' } }));
+    expect(retire.invoke).toHaveBeenCalledWith({ issueNumber: 42, locale: 'en-US', trustedBotLogin: 'bot' });
+    expect(results.map(r => r.id)).toEqual(['close', 'retire']); expect(results[0].success).toBe(success);
+  });
+  it('does not retire recommendations for an unmerged closed PR', async () => {
+    const retire = { taskId: 'retire', invoke: jest.fn().mockResolvedValue([]) };
+    const useCase = new PullRequestUseCase({ taskId: 'description', invoke: mockUpdateDescriptionInvoke }, { ...workflowSteps, retireBranchSync: retire });
+    await useCase.invoke(minimalExecution({ issueNumber: 42, pullRequest: { isOpened: false, isClosed: true, isMerged: false, action: 'closed' } }));
+    expect(retire.invoke).not.toHaveBeenCalled();
+  });
+});

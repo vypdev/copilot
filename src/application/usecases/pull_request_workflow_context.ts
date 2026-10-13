@@ -52,6 +52,7 @@ export interface PullRequestWorkflowStepContexts {
   readonly priority: PrioritySizeContext;
   readonly description: PullRequestDescriptionContext;
   readonly closeIssue: CloseIssueAfterMergeContext;
+  readonly retireBranchSync: import('./actions/retire_branch_sync_use_case').RetireBranchSyncContext;
 }
 
 interface ProjectSource {
@@ -65,6 +66,7 @@ interface ProjectSource {
 }
 
 export interface PullRequestWorkflowContextSource {
+  readonly tokenUser?: string;
   readonly isIssue: boolean;
   readonly isPullRequest: boolean;
   readonly eventName: string;
@@ -137,6 +139,7 @@ export function projectPullRequestWorkflowStepContexts(
       projects,
     }),
     description: projectPullRequestDescriptionContext(source),
+    retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.pullRequest, trustedBotLogin: source.tokenUser }),
     closeIssue: Object.freeze({
       completionLabels: Object.freeze({
         lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? DEFAULT_COPILOT_LIFECYCLE_LABELS) }),

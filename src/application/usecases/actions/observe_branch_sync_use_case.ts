@@ -20,6 +20,7 @@ import type { BranchObservationContext } from '../push_single_action_contexts';
 import { logError, logInfo } from "../../ports/logging_ports";
 import type { ParamUseCase } from "../base/param_usecase";
 import { toApplicationError } from "../../errors/application_error";
+import type { BoundIssueCompletionReadPort } from '../../ports/issue_completion_ports';
 import type { MessageCatalogResolutionPort } from '../../ports/message_catalog_ports';
 import {
   resolveBranchSyncCatalog,
@@ -30,6 +31,9 @@ import {
   buildDuplicateCompactionPublicationPayload,
   buildTransitionPublicationPayload,
 } from '../../policies/publication_outcome_policy';
+
+import type { RetireBranchSyncContext } from './retire_branch_sync_use_case';
+import { ApplicationError } from '../../errors/application_error';
 
 const TASK_ID = "ObserveBranchSyncUseCase";
 
@@ -45,6 +49,8 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
     private readonly comparisons: BoundBranchSyncComparisonPort,
     private readonly notifications: BoundIssueCommentPublicationPort,
     private readonly catalogResolver?: MessageCatalogResolutionPort,
+    private readonly nativeIssues?: BoundIssueCompletionReadPort,
+    private readonly retirement?: ParamUseCase<RetireBranchSyncContext, Result[]>,
   ) {}
 
   async invoke(context: BranchObservationContext): Promise<Result[]> {
@@ -77,17 +83,51 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
     }
   }
 
+  private openNotifications(issueNumber: number): BoundIssueCommentPublicationPort {
+    const assertOpen = async (number: number) => {
+      if (number !== issueNumber || !this.nativeIssues) throw new ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+      const current = await this.nativeIssues.readIssue(number);
+      if (current.number !== number || current.state !== 'open') throw new ApplicationError('workflow.stale', 'The issue is no longer open.');
+    };
+    return Object.freeze({
+      listIssueComments: (number: number) => this.notifications.listIssueComments(number),
+      addComment: async (number: number, body: string) => {
+        await assertOpen(number);
+        await this.notifications.addComment(number, body);
+      },
+      updateComment: async (number: number, id: number, body: string) => {
+        await assertOpen(number);
+        await this.notifications.updateComment(number, id, body);
+      },
+      removeComment: async (number: number, id: number) => {
+        await assertOpen(number);
+        return this.notifications.removeComment(number, id);
+      },
+    });
+  }
+
   private async reconcileDependency(
     context: BranchObservationContext,
     dependency: BranchDependency,
     messages: BranchSyncMessageCatalog,
   ): Promise<Result> {
     try {
+      if (!this.nativeIssues) throw new ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+      const initial = await this.nativeIssues.readIssue(dependency.issueNumber);
+      if (initial.number !== dependency.issueNumber || !['open', 'closed'].includes(initial.state)) throw new ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+      if (initial.state === 'closed') {
+        if (!this.retirement) throw new ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+        const [result] = await this.retirement.invoke({
+          issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+        });
+        return result;
+      }
+      const notifications = this.openNotifications(dependency.issueNumber);
       const comparison = await this.comparisons.compare(
         dependency.parentBranch,
         dependency.workingBranch,
       );
-      const comments = await this.notifications.listIssueComments(
+      const comments = await notifications.listIssueComments(
         dependency.issueNumber,
       );
       const latest = findLatestBranchSyncComment(comments, context.trustedBotLogin, dependency);
@@ -101,7 +141,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
           messages,
         });
         if (!latest) {
-          await this.notifications.addComment(
+          await notifications.addComment(
             dependency.issueNumber,
             comment,
           );
@@ -110,7 +150,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
 
         const transitionedFromAligned = !isStaleBranchSyncComment(latest.body);
         if (latest.body !== comment) {
-          await this.notifications.updateComment(
+          await notifications.updateComment(
             dependency.issueNumber,
             latest.id,
             comment,
@@ -138,7 +178,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
               ),
             ),
             duplicatePointer: canonicalUrl => buildBranchSyncDuplicatePointer(messages, canonicalUrl),
-          }, this.notifications);
+          }, notifications);
           const cleanup = buildDuplicateCompactionPublicationPayload(transition.compactedCommentIds);
           return success(dependency, comparison.behindBy, "stale", {
             ...buildTransitionPublicationPayload(intent, transition.effect),
@@ -154,7 +194,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
       }
 
       if (latest && isStaleBranchSyncComment(latest.body)) {
-        await this.notifications.updateComment(
+        await notifications.updateComment(
           dependency.issueNumber,
           latest.id,
           buildAlignedBranchSyncComment(dependency, messages),

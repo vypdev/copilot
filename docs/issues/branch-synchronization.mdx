@@ -242,3 +242,19 @@ For `unexpected-paths`, the run also shows a fixed validation phase and counts
 of added paths, removed conflict/protected paths and added canonical bundles.
 Use that distinction to inspect the resolution or verification step before
 retrying. Copilot omits private filenames and preserves the same merge guards.
+
+
+## When the issue closes
+
+After a managed PR merges, the Action retires existing synchronization cards
+for its closed issue. The same card and link now explain that the recommendation
+is historical and no synchronization is required for that closed work. Closing
+an issue does not prove that its branches are synchronized. Earlier timeline
+alerts remain historical; follow their status link to read the current card.
+
+The observer also checks native issue state before publishing advice. A reopened
+issue can receive a fresh comparison and recommendation. If retirement cannot
+verify the issue or its existing card, the run reports the incomplete cleanup
+and retains native closure and any updates already completed. Retry the verified
+merged-PR operation after resolving the provider error. Retirement does not
+create branches, run a fixer, change labels or publish another notification.
