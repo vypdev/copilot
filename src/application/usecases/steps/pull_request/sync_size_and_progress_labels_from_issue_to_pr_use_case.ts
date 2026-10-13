@@ -72,9 +72,8 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                     if (!await this.membership.isContentLinked(project, prNumber)) {
                         throw new ApplicationError('provider.unavailable', 'The PR Project link remains unverified after lifecycle linking.');
                     }
-                    if (!await this.projectSizes.setTaskSize(project, prNumber, param.projectSizeByLabel[sizes[0]])) {
-                        throw new ApplicationError('provider.unavailable', 'The PR Project Size field could not be reconciled.');
-                    }
+                    // The adapter returns false for an already-correct field; failures throw.
+                    await this.projectSizes.setTaskSize(project, prNumber, param.projectSizeByLabel[sizes[0]]);
                 }
             }
             logDebugInfo(`Synced size/progress labels from issue #${linkedIssueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);

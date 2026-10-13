@@ -66767,9 +66767,8 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
                     if (!await this.membership.isContentLinked(project, prNumber)) {
                         throw new application_error_2.ApplicationError('provider.unavailable', 'The PR Project link remains unverified after lifecycle linking.');
                     }
-                    if (!await this.projectSizes.setTaskSize(project, prNumber, param.projectSizeByLabel[sizes[0]])) {
-                        throw new application_error_2.ApplicationError('provider.unavailable', 'The PR Project Size field could not be reconciled.');
-                    }
+                    // The adapter returns false for an already-correct field; failures throw.
+                    await this.projectSizes.setTaskSize(project, prNumber, param.projectSizeByLabel[sizes[0]]);
                 }
             }
             (0, logging_ports_1.logDebugInfo)(`Synced size/progress labels from issue #${linkedIssueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
@@ -74962,11 +74961,11 @@ async function setProjectBoardSingleSelectField(contentQueryPort, graphqlClient,
         return false;
     }
     const updated = await updateProjectBoardSingleSelectField(client, project, contentId, target);
-    if (fieldName !== 'Status')
-        return updated;
     if (!updated) {
         throw new Error(`Project item ${contentId} was not returned after updating field '${fieldName}'.`);
     }
+    if (fieldName !== 'Status')
+        return true;
     const updatedItem = await findProjectItem(client, project, contentId, fieldName);
     const updatedValue = updatedItem.fieldValues?.nodes.find((value) => value.field?.name === fieldName);
     if (updatedValue?.optionId !== target.optionId) {
@@ -75012,7 +75011,7 @@ async function updateProjectBoardSingleSelectField(client, project, projectItemI
         fieldId: target.fieldId,
         optionId: target.optionId,
     });
-    return Boolean(mutationResult.updateProjectV2ItemFieldValue?.projectV2Item);
+    return mutationResult.updateProjectV2ItemFieldValue?.projectV2Item?.id === projectItemId;
 }
 async function findFieldOption(client, project, fieldName, fieldValue) {
     for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {

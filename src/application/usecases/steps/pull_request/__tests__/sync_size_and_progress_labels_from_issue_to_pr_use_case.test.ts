@@ -173,11 +173,17 @@ describe('SyncSizeAndProgressLabelsFromIssueToPrUseCase', () => {
     expect(h.setTaskSize).not.toHaveBeenCalled();
   });
 
-  it.each(['denied', 'absent', 'write-false', 'write-throw'])('retains failure evidence after labels are synced: %s', async (failure) => {
+  it('accepts an already-correct Project Size without reporting a provider failure', async () => {
+    const h = postLink(['size: M']);
+    h.setTaskSize.mockResolvedValue(false);
+    expect((await h.useCase.invoke(h.param))[0].success).toBe(true);
+    expect(h.setTaskSize).toHaveBeenCalledWith(project, 100, 'M');
+  });
+
+  it.each(['denied', 'absent', 'write-throw'])('retains failure evidence after labels are synced: %s', async (failure) => {
     const h = postLink(['size: M']);
     if (failure === 'denied') h.isContentLinked.mockRejectedValue(new Error('denied'));
     else if (failure === 'absent') h.isContentLinked.mockResolvedValue(false);
-    else if (failure === 'write-false') h.setTaskSize.mockResolvedValue(false);
     else h.setTaskSize.mockRejectedValue(new Error('write failed'));
     expect((await h.useCase.invoke(h.param))[0].success).toBe(false);
     expect(mockSetLabels).toHaveBeenCalledWith(100, ['size: M']);

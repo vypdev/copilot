@@ -563,16 +563,26 @@ issue labels, an immutable configured label-to-Size mapping, copied Project
 references, read-only membership evidence and a physically Size-only write
 facade. XXL and XL map to Project XL; arbitrary configured label names remain
 supported. It MUST verify each membership before writing, fail on denied/
-absent membership or failed/false writes, and avoid rewriting correct PR
+absent membership or failed writes, and avoid rewriting correct PR
 labels. Progress-only and no-Project cases retain their existing behavior;
 multiple configured issue sizes are ambiguous and MUST fail before mutation.
 No pending queue or additional push is required for post-link completion.
 
 Additional floor: **18 distinct cases**, comprising six custom category
-mappings, quiet-label replay, progress-only sync, four provider/link/write
-failures, ambiguous size, two missing capability cases, multiple Projects,
+mappings, quiet-label replay, progress-only sync, three provider/link/write
+failures, already-correct field replay, ambiguous size, two missing capability cases, multiple Projects,
 and two immutable/absent mapping projection cases. The existing PR workflow
 test additionally enforces linking before synchronization without double
 counting. Add the post-link module to the same 95% lines/statements and 90%
 branches/functions budget. Native acceptance MUST verify a PR-opened or
 reopened lifecycle run and its Project Size without a later commit.
+
+Native replay correction: [run 38476181596](https://github.com/vypdev/copilot/actions/runs/38476181596)
+proved that `setTaskSize=false` means an already-correct field, not a provider
+failure. The post-link workflow MUST accept this verified no-change result.
+The underlying single-select adapter MUST throw if a write returns no exact
+item receipt; it must not conflate that outcome with no change. Add **3 provider
+cases** (absent receipt, foreign receipt, verified no-change without mutation)
+and retain the existing mutation-failure cases. The changed field adapter joins
+the same module coverage budget. Replay acceptance requires a successful native
+reopened run with an already-correct Size; the prior failed run stays historical.

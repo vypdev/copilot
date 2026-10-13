@@ -109,7 +109,7 @@ function createHarness(options: HarnessOptions = {}) {
         return options.mutationItemId === undefined
           ? {
               updateProjectV2ItemFieldValue: {
-                projectV2Item: { id: "PVTI_item" },
+                projectV2Item: { id: String(variables?.itemId) },
               },
             }
           : options.mutationItemId
@@ -573,6 +573,18 @@ describe("ProjectBoardCommandRepository", () => {
     await expect(
       harness.repository.moveIssueToColumn(project, "owner", "repo", 42, "In progress", "token"),
     ).rejects.toThrow("Project field 'Status' was not verified as 'In progress' after update.");
+  });
+
+  it.each(['', 'PVTI_foreign'])('rejects an absent or foreign Size mutation receipt: %s', async mutationItemId => {
+    const harness = createHarness({ mutationItemId, fieldPages: [terminalPage([sizeField])], itemPages: [terminalPage([projectItem('Size')])] });
+    await expect(harness.repository.setTaskSize(project, 'owner', 'repo', 42, 'M', 'token'))
+      .rejects.toThrow("Project item PVTI_item was not returned after updating field 'Size'.");
+  });
+
+  it('returns false only for a verified already-correct Size and makes no mutation', async () => {
+    const harness = createHarness({ fieldPages: [terminalPage([sizeField])], itemPages: [terminalPage([projectItem('Size', 'option_medium')])] });
+    await expect(harness.repository.setTaskSize(project, 'owner', 'repo', 42, 'M', 'token')).resolves.toBe(false);
+    expect(harness.graphql.mock.calls.some(([document]) => document.includes('mutation('))).toBe(false);
   });
 
   it.each([
