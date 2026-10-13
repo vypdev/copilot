@@ -82,19 +82,22 @@ export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'b
                     || !filter.types.includes(activity))) return 'blocked';
             let eligible = false;
             let possible = false;
-            for (const rawJob of Object.values(object(document.jobs))) {
+            const jobs = object(document.jobs);
+            for (const rawJob of Object.values(jobs)) {
                 const job = object(rawJob);
                 const enabled = doctorWorkflowCondition(job.if, event);
                 if (enabled === false || !Array.isArray(job.steps)) continue;
                 const matrixEnabled = doctorWorkflowMatrix(job.strategy);
                 if (matrixEnabled === false) continue;
+                const dependenciesEnabled = doctorWorkflowDependencies(job, jobs, event, enabled);
+                if (dependenciesEnabled === false) continue;
                 for (const rawStep of job.steps) {
                     const step = object(rawStep);
                     if (!(step.uses === './' || typeof step.uses === 'string'
                         && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses))) continue;
                     const stepEnabled = doctorWorkflowCondition(step.if, event);
                     if (stepEnabled === false) continue;
-                    if (enabled === true && stepEnabled === true && matrixEnabled === true) eligible = true;
+                    if (enabled === true && stepEnabled === true && matrixEnabled === true && dependenciesEnabled === true) eligible = true;
                     else possible = true;
                 }
             }
@@ -125,4 +128,16 @@ function validCatalogPath(field: string, value: unknown): value is string {
         documentation: /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/u,
     };
     return boundaries[field].test(value);
+}
+
+/** Only a directly skipped prerequisite is proved; runtime success and override expressions stay unknown. */
+function doctorWorkflowDependencies(job: Record<string, unknown>, jobs: Record<string, unknown>, event: string, enabled: boolean | undefined): boolean | undefined {
+    if (!Object.prototype.hasOwnProperty.call(job, 'needs')) return true;
+    if (enabled !== true) return undefined;
+    const needs = typeof job.needs === 'string' ? [job.needs] : Array.isArray(job.needs) ? job.needs : undefined;
+    if (!needs || needs.length === 0 || needs.length > 20 || needs.some(name => typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_-]{0,99}$/u.test(name))) return undefined;
+    for (const name of needs) {
+        if (Object.prototype.hasOwnProperty.call(jobs, name) && doctorWorkflowCondition(object(jobs[name]).if, event) === false) return false;
+    }
+    return undefined;
 }

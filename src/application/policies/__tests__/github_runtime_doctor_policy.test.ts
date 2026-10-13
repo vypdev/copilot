@@ -141,3 +141,29 @@ describe('complete tracked specification ownership', () => {
     });
     it('already blocks single-at effective dependency configuration', () => expect(validDoctorConfiguration({ ...config, dependencyBranch: '@' })).toBe(false));
 });
+
+describe('conservative workflow prerequisite eligibility', () => {
+    it.each([
+        ['none', undefined, {}, undefined, 'pass'],
+        ['disabled-scalar', 'disabled', { disabled: { if: false } }, undefined, 'blocked'],
+        ['disabled-array', ['ready', 'disabled'], { ready: { if: true }, disabled: { if: false } }, undefined, 'blocked'],
+        ['runtime-success', 'ready', { ready: { if: true } }, undefined, 'unavailable'],
+        ['missing', 'missing', {}, undefined, 'unavailable'],
+        ['unknown-condition', 'unknown', { unknown: { if: 'vars.ENABLED' } }, undefined, 'unavailable'],
+        ['explicit-override', 'disabled', { disabled: { if: false } }, 'always()', 'unavailable'],
+        ['transitive', 'middle', { middle: { needs: 'disabled' }, disabled: { if: false } }, undefined, 'unavailable'],
+        ['self-reference', 'action', {}, undefined, 'unavailable'],
+        ['empty', [], {}, undefined, 'unavailable'],
+        ['malformed', [true], {}, undefined, 'unavailable'],
+        ['unsupported-shape', null, {}, undefined, 'unavailable'],
+        ['unsupported-name', ['bad dependency'], {}, undefined, 'unavailable'],
+        ['over-budget', Array.from({ length: 21 }, (_, i) => `job${i}`), {}, undefined, 'unavailable'],
+        ['independent-action', 'missing', {}, undefined, 'pass'],
+    ] as const)('reports %s dependency evidence without guessing runtime success', (scenario, needs, dependencies, condition, expected) => {
+        const snapshot = doctorRepositoryFixture();
+        const jobs = { ...dependencies, action: { ...(needs === undefined ? {} : { needs }), ...(condition === undefined ? {} : { if: condition }), steps: [{ uses: './' }] },
+            ...(scenario === 'independent-action' ? { independent: { steps: [{ uses: './' }] } } : {}) };
+        const yaml = JSON.stringify({ on: 'issues', jobs });
+        expect(doctorWorkflowContracts({ ...snapshot, files: { ...snapshot.files, '.github/workflows/copilot_issue.yml': { state: 'present', text: yaml } } })).toBe(expected);
+    });
+});

@@ -496,3 +496,10 @@ catalog prerequisites require every tracked product specification, including
 nested Markdown files, to have a catalog owner; the three top-level standard
 documents are excluded. Independent successful checks remain visible when a
 policy or specification check is blocked.
+
+A workflow Action job cannot receive Pass when a directly required job is
+statically skipped. Other `needs` requirements remain unavailable when runtime
+success, dependency chains, cycles or unsupported override conditions cannot
+be established by the bounded structural inspection. Another independent
+eligible Action job can still satisfy the workflow contract. Doctor does not
+execute jobs or predict their runtime success.

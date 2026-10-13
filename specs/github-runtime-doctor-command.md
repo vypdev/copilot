@@ -637,3 +637,33 @@ standard-document exclusion passed already. The dedicated inventory becomes
 Native review and live command/replay acceptance remain required before merge
 and promotion. Documentation explains present-invalid versus verified-absent
 and complete recursive catalog ownership; no input or permission is added.
+
+### Conservative dependent-job eligibility (2026-10-13)
+
+Native finding `4258185759` on `07689fbe` exposed a sole Action job depending on
+an `if: false` prerequisite while still receiving Pass. GitHub's documented
+[`jobs.<job_id>.needs`](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idneeds)
+requires prerequisite success and normally skips downstream work when a
+prerequisite is skipped; explicit status overrides can change that behaviour.
+
+A candidate with a supported own condition and a directly proven skipped
+prerequisite MUST NOT establish workflow eligibility. Direct scalar and array
+needs are inspected within the already parsed workflow; at most 20 literal job
+IDs of at most 100 ASCII characters are considered. No dependency expansion,
+runtime-success inference, expression evaluation or additional provider read is
+introduced. Other dependency evidence, including runtime-success requirements,
+missing/unsupported IDs, empty/malformed/oversized lists, cycles and transitive
+chains, stays Unavailable. An unsupported own condition such as `always()`
+remains Unavailable and is not mistaken for a proven skipped downstream job.
+An independent eligible Action job may still establish the workflow contract.
+These are fixed diagnostic bounds, not platform/concurrency/runner changes.
+
+Fifteen distinct complete-workflow cases cover no needs, skipped scalar/array,
+runtime prerequisite, missing/unknown dependency, explicit override, transitive
+chain, self-reference, empty/malformed/over-budget lists and independent Action
+fallback. Ten of the initial thirteen cases failed before correction; three controls already passed. Two further shape/name cases close defensive branch coverage without being claimed as failed-before evidence. The
+Doctor inventory becomes 269 + 15 = **284**. All coverage budgets remain in
+force; existing catalog evidence already owns this policy and suite. User docs
+explain dependency limitations and the Unknown-versus-Blocked distinction.
+Current-head native review and post-promotion command/replay acceptance remain
+mandatory before completion.
