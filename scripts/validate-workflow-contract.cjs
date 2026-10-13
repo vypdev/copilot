@@ -348,10 +348,10 @@ function assertRunner(file, workflow) {
       }
       if (jobId === 'setup-platform-smoke') {
         const platforms = job.strategy?.matrix?.os;
-        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}"
+        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}"
           || job['runs-on'] !== '${{ matrix.os }}'
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
-          throw new Error(`${relativeFile} must use the PR or explicit Windows coverage Ubuntu, Windows and macOS setup fixture matrix.`);
+          throw new Error(`${relativeFile} must use the PR or ordinary manual Ubuntu, Windows and macOS setup fixture matrix, independently of coverage export.`);
         }
         assertPlatformCoverageAndValidators(relativeFile, job);
         const hostedCoverage = (job.steps ?? []).find(step => step?.name === 'Full platform coverage and acceptance budgets');
@@ -377,8 +377,7 @@ function assertRunner(file, workflow) {
         ];
         if (job['runs-on'] !== '${{ matrix.labels }}'
           || job.name !== 'Setup package and local session (self-hosted ${{ matrix.platform }} codex)'
-          || ![expectedMatrix, [expectedMatrix[1]]].some(matrix =>
-            JSON.stringify(job.strategy?.matrix?.include) === JSON.stringify(matrix))
+          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(expectedMatrix)
           || job.strategy?.['fail-fast'] !== false) {
           throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners; Windows services are unsupported.`);
         }

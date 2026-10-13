@@ -190,11 +190,32 @@ semantic assertions when changing component content or controls.
 ## Temporary self-hosted runner selection
 
 This repository currently selects `[self-hosted, codex, Linux]` for Copilot
-operations while the four Apple runners are unstable. Its manually dispatched
-self-hosted Codex smoke matrix also selects Ubuntu only. Mac support remains
-available; restore the shared pool and macOS smoke row when those runners are
-stable. Consumer setup templates retain their existing runner configuration.
+operations while the four Apple runners are unstable. Mac support remains
+available. The manually dispatched smoke matrix retains explicit macOS and
+Ubuntu rows; if a required runner is unavailable, its job stays queued and the
+operator restores that runner. Consumer setup templates retain their existing
+runner configuration.
 
 Hosted Ubuntu, Windows and macOS fixture jobs retain their full coverage and
 acceptance checks. The workflow validator accepts the original supported pool
-and its narrower Linux selection, and rejects Windows service Codex routing.
+and its narrower Linux selection for operational jobs, and rejects Windows
+service Codex routing. The smoke matrix requires both macOS and Ubuntu.
+
+## Manual platform verification
+
+Run **Setup Platform Smoke** on `master` with the default inputs to validate the
+full hosted Ubuntu, Windows and macOS matrix and the self-hosted macOS/Ubuntu
+matrix. Every platform keeps package checks, full coverage, acceptance budgets
+and contract validators. An unavailable self-hosted runner leaves only its own
+job queued; retain the platform and ask the operator to bring it back online.
+
+`upload_windows_coverage` defaults to `false`. Coverage export is a separate
+explicit opt-in, never a prerequisite for hosted fixture validation. Set
+`windows_startup_probe=true` with coverage export disabled for the isolated
+five-minute hosted PowerShell diagnostic; both full fixture matrices are then
+skipped. Selecting the probe together with coverage export runs the diagnostic
+and hosted fixtures/export, while self-hosted fixtures remain skipped.
+
+Inspect the run's individual platform jobs before claiming full success. A
+queued, canceled or failed job is missing evidence, even if other jobs passed.
+Fixtures do not prove authenticated agent tool execution.

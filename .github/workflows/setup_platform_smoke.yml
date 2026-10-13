@@ -38,7 +38,7 @@ jobs:
         run: node scripts/diagnose-windows-powershell-startup.cjs
 
   setup-platform-smoke:
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}
     name: Setup package and local session (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -122,13 +122,13 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
-    # Temporary Ubuntu-only self-hosted routing while Apple runners are unstable.
-    # Hosted fixtures and full coverage retain all three platforms.
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
+          - platform: macOS
+            labels: [self-hosted, codex, macOS]
           - platform: Ubuntu
             labels: [self-hosted, codex, Linux]
     steps:
