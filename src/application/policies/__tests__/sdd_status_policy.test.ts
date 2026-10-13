@@ -175,3 +175,17 @@ describe('SDD status projection and safe navigation', () => {
         expect(body).toContain(sha);
     });
 });
+
+describe('closed SDD guidance', () => {
+    it.each(['en-US', 'es-ES'])('retains evidence but suppresses implementation and old-question actions in %s', locale => {
+        const catalog = resolveStaticPublicationCatalog(locale).catalog;
+        for (const state of ['published', 'awaiting-answers'] as const) {
+            const status = projectSddStatus({ state, historical: true, path: verified.path, verified, pendingQuestionIds: ['Q1'], cardId: 7 });
+            const body = formatSddStatus(status, catalog, issueUrl, 42, identity).join('\n');
+            expect(body).toContain(locale === 'es-ES' ? 'evidencia histórica de una issue cerrada' : 'historical evidence for a closed issue');
+            expect(body).toContain(sha); expect(body).not.toContain('Q1');
+            expect(body).not.toContain(locale === 'es-ES' ? 'Continúa la implementación' : 'Continue implementation');
+            expect(body).not.toContain(locale === 'es-ES' ? 'Responde' : 'Answer these questions');
+        }
+    });
+});

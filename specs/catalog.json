@@ -1295,7 +1295,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-13",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -1324,7 +1324,17 @@
         "src/application/policies/lifecycle_state_policy.ts",
         "src/application/usecases/actions/lifecycle_synchronization_context.ts",
         "src/application/usecases/actions/synchronize_lifecycle_state_use_case.ts",
-        "src/application/policies/implementation_result_policy.ts"
+        "src/application/policies/implementation_result_policy.ts",
+        "src/domain/issue_completion.ts",
+        "src/application/ports/issue_completion_ports.ts",
+        "src/application/usecases/steps/issue/close_issue_after_merging_use_case.ts",
+        "src/data/repository/issue/issue_completion_repository.ts",
+        "src/infrastructure/composition/issue_completion_composition_root.ts",
+        "src/infrastructure/github/ports/github_issue_completion_client.ts",
+        "src/application/policies/status_command_policy.ts",
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "scripts/coverage-budgets.json"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1339,14 +1349,21 @@
         "src/domain/__tests__/copilot_lifecycle.test.ts",
         "src/application/policies/__tests__/lifecycle_state_policy.test.ts",
         "src/application/usecases/actions/__tests__/lifecycle_synchronization_context.test.ts",
-        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts"
+        "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
+        "src/domain/__tests__/issue_completion.test.ts",
+        "src/application/usecases/steps/issue/__tests__/close_issue_after_merging_use_case.test.ts",
+        "src/data/repository/issue/__tests__/issue_completion_repository.test.ts",
+        "src/infrastructure/composition/__tests__/issue_completion_composition_root.test.ts",
+        "src/application/policies/__tests__/status_command_policy.test.ts",
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/assignees-and-projects.mdx",
         "docs/issues/notifications-and-auto-close.mdx",
-        "docs/issues/index.mdx"
+        "docs/issues/index.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {
