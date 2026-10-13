@@ -11,6 +11,7 @@ export interface EventCommentPayload {
 }
 
 export interface EventIssuePayload {
+    state?: 'open' | 'closed';
     title?: string;
     number?: number;
     html_url?: string;

@@ -1,3 +1,4 @@
+import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import { SddEvidenceQueryUseCase } from '../../application/usecases/sdd/sdd_evidence_query_use_case';
 import { bindSddEvidenceReadPorts, type SddEvidenceReadPorts, type SddEvidenceQueryPort } from '../../application/ports/sdd_evidence_read_ports';
 import type { BoundBugbotContextReadPorts } from '../../application/ports/bugbot_context_ports';
@@ -18,6 +19,7 @@ export function createSddEvidenceReadPorts(binding: BugbotScmBinding, comments: 
     const branches = new LinkedBranchReadinessRepository(createGraphqlTransportClient());
     return bindSddEvidenceReadPorts({
         comments,
+        nativeState: createNativeStatusReadPort(binding),
         descriptions: bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
         titles: { getTitle: issueNumber => titles.getTitle(binding.owner, binding.repository, issueNumber, binding.token) },
         labels: bindIssueLabels(createIssueLabelRepository(), binding),

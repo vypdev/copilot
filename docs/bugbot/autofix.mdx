@@ -105,6 +105,7 @@ After the configured agent applies the fixes in its workspace, the action runs *
 bugbot-fix-verify-commands: "pnpm run build, pnpm test, pnpm run lint"
 ```
 
+- After successful verification, a scoped automated commit rereads the workspace and applies the same sensitive-file and 100-path guards. Its final safe inventory includes new generated build outputs and excludes unrelated paths that were already unapproved before verification; unavailable inspection stops publication.
 - If **all** commands succeed, the action runs `git add`, **commit**, and **push** with a message like `fix(#123): bugbot autofix - resolve finding-1, finding-2`.
 - If **any** command fails, the action **does not commit**. No push happens, and the findings are not marked as resolved.
 - Each command is spawned without a shell, with a temporary `HOME` and an allowlisted environment that excludes GitHub tokens, agent/provider credentials, cloud secrets, and local agent auth-store paths.

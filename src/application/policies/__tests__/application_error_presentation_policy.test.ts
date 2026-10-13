@@ -45,6 +45,11 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
     },
     {
+        recovery: { id: 'workspace-changes-rejected', variables: {} },
+        english: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+        spanish: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+    },
+    {
         recovery: { id: 'pull-request-link-restored', variables: {} },
         english: 'The original pull-request base and description were restored.',
         spanish: 'Se restauraron la rama base y la descripción originales de la pull request.',
@@ -184,4 +189,14 @@ describe('application error presentation policy', () => {
             '> **Impact:** The provider was temporarily unavailable.',
         );
     });
+});
+
+
+it.each([['en-US', 'workspace verification', 'configured agent was not started'], ['es-ES', 'verificación del espacio de trabajo', 'agente configurado no se inició']])('reports the actual postflight stage in %s without an unstarted-agent claim', (locale, stage, wrongStage) => {
+    const { ApplicationError } = require('../../errors/application_error');
+    const { renderApplicationErrorMarkdown } = require('../application_error_presentation_policy');
+    const { resolveStaticApplicationErrorCatalog } = require('../application_error_message_catalog');
+    const error = new ApplicationError('workflow.failed', 'PRIVATE-PATH', { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
+    const body = renderApplicationErrorMarkdown(error, resolveStaticApplicationErrorCatalog(locale).message);
+    expect(body).toContain(stage); expect(body).not.toContain(wrongStage); expect(body).not.toContain('PRIVATE-PATH');
 });

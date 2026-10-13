@@ -1,3 +1,4 @@
+import type { BoundIssueCompletionReadPort } from './issue_completion_ports';
 import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 import type { BoundActorAuthorizationPort } from './actor_authorization_ports';
 import type { BoundBugbotContextReadPorts } from './bugbot_context_ports';
@@ -19,6 +20,7 @@ export interface SddEvidenceQueryContext {
 }
 
 export interface SddEvidenceReadPorts {
+    readonly nativeState?: BoundIssueCompletionReadPort;
     readonly comments: Pick<BoundBugbotContextReadPorts, 'listIssueComments'>;
     readonly descriptions: BoundIssueDescriptionQueryPort;
     readonly titles: Pick<BoundIssueTitlePort, 'getTitle'>;
@@ -33,6 +35,7 @@ export interface SddEvidenceReadPorts {
 /** Retains only read operations, even when composition receives a broader adapter. */
 export function bindSddEvidenceReadPorts(ports: SddEvidenceReadPorts): SddEvidenceReadPorts {
     return Object.freeze({
+        ...(ports.nativeState ? { nativeState: Object.freeze({ readIssue: ports.nativeState.readIssue.bind(ports.nativeState) }) } : {}),
         comments: Object.freeze({ listIssueComments: ports.comments.listIssueComments.bind(ports.comments) }),
         descriptions: Object.freeze({ getDescription: ports.descriptions.getDescription.bind(ports.descriptions) }),
         titles: Object.freeze({ getTitle: ports.titles.getTitle.bind(ports.titles) }),
@@ -60,6 +63,7 @@ export interface VerifiedSddEvidence {
 export interface SddEvidenceSnapshot {
     /** Opaque hash of the exact fenced card and live issue authority, never their contents. */
     readonly authorityDigest?: string;
+    readonly historical?: boolean;
     readonly state: 'not-required' | 'absent' | 'unavailable' | 'invalid' | 'stale' | 'awaiting-answers' | 'publication-pending' | 'published';
     readonly path?: string;
     readonly pendingQuestionIds?: readonly string[];

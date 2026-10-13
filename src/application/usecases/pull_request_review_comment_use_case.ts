@@ -1,4 +1,5 @@
 import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -48,6 +49,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
     private readonly sddDiffQueryPort?: SddDiffQueryPort,
+    private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -80,6 +82,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
         sddDiffQueryPort: this.sddDiffQueryPort,
+        nativeStatusReadPort: this.nativeStatusReadPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

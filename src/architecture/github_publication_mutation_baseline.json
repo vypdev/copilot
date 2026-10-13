@@ -55,7 +55,7 @@
     {
       "file": "src/application/usecases/steps/common/reply_publication_workflow.ts",
       "addComment": 1,
-      "reason": "Publishes one correlated explicit reply, refreshes only the exact owned SDD diff reading, and selects bot-owned duplicates for cleanup.",
+      "reason": "Publishes one correlated reply; refreshes exact bot-owned errors and read-only queries, including SDD diff, after native request fences, and cleans exact duplicates.",
       "updateComment": 1
     },
     {

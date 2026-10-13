@@ -1,3 +1,5 @@
+import { replyRequestBodyDigest } from '../../../../domain/reply_request_digest';
+import type { BoundReplyRequestReadPort, ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
 import { Result } from '../../../../data/model/result';
 import type { BoundIssueCommentPublicationPort } from '../../../ports/issue_lifecycle_ports';
 import { logError, logInfo } from '../../../ports/logging_ports';
@@ -24,6 +26,7 @@ export interface PublishResultContext {
     readonly target?: PublicationTarget;
     readonly requestCorrelationId: string;
     readonly results: readonly Result[];
+    readonly requestSource?: ReplyRequestSnapshot;
     readonly languageConfiguration?: Readonly<AgentConfiguration>;
 }
 
@@ -38,8 +41,8 @@ export interface PublishResultContextSource {
     readonly pullRequest?: { readonly number?: number };
     readonly inputs?: {
         readonly action?: string;
-        readonly comment?: { readonly id?: number };
-        readonly pull_request_review_comment?: { readonly id?: number };
+        readonly comment?: { readonly id?: number; readonly body?: string | null; readonly user?: { readonly login?: string | null } | null };
+        readonly pull_request_review_comment?: { readonly id?: number; readonly body?: string | null; readonly user?: { readonly login?: string | null } | null };
     };
     readonly locale: { readonly issue: string; readonly pullRequest: string };
     readonly currentConfiguration: { readonly results: readonly Result[] };
@@ -48,6 +51,7 @@ export interface PublishResultContextSource {
 
 export function projectPublishResultContext(source: PublishResultContextSource): PublishResultContext {
     const target = publicationTarget(source);
+    const requestSource = requestSnapshot(source, target);
     return Object.freeze({
         owner: source.owner,
         repository: source.repo,
@@ -55,6 +59,7 @@ export function projectPublishResultContext(source: PublishResultContextSource):
         locale: source.isPullRequest ? source.locale.pullRequest : source.locale.issue,
         ...(target ? { target } : {}),
         requestCorrelationId: requestCorrelationId(source, target),
+        ...(requestSource ? { requestSource } : {}),
         results: Object.freeze(source.currentConfiguration.results.map(copyResult)),
         ...(source.ai ? { languageConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) } : {}),
     });
@@ -71,6 +76,7 @@ export async function runPublishResume(
     comments: BoundIssueCommentPublicationPort,
     catalogResolver?: MessageCatalogResolutionPort,
     sourceQuery?: BoundPublicationSourceQueryPort,
+    requestRead?: BoundReplyRequestReadPort,
 ): Promise<Result | undefined> {
     try {
         const semanticContext = {
@@ -102,7 +108,8 @@ export async function runPublishResume(
                 botLogin: param.botLogin,
                 intent,
                 catalog,
-            }, comments);
+                ...(param.requestSource ? { requestSource: param.requestSource } : {}),
+            }, comments, requestRead);
             logInfo(
                 `Semantic ${intent.messageKey} reply ${outcome.effect}; `
                 + `duplicates removed=${outcome.duplicatesRemoved}; compacted=${outcome.duplicatesCompacted}.`,
@@ -161,7 +168,8 @@ function publicationTarget(source: PublishResultContextSource): PublicationTarge
 }
 
 function requestCorrelationId(source: PublishResultContextSource, target: PublicationTarget | undefined): string {
-    const reviewCommentId = source.inputs?.pull_request_review_comment?.id;
+    const reviewCommentId = source.inputs?.pull_request_review_comment?.id
+        ?? (source.eventName === 'pull_request_review_comment' ? source.inputs?.comment?.id : undefined);
     if (positiveInteger(reviewCommentId)) {
         return `comment:pull_request_review_comment:${reviewCommentId}`;
     }
@@ -201,4 +209,15 @@ function copyPayload(payload: unknown): unknown {
         ));
     }
     return payload;
+}
+
+
+function requestSnapshot(source: PublishResultContextSource, target: PublicationTarget | undefined): ReplyRequestSnapshot | undefined {
+    const review = source.eventName === 'pull_request_review_comment';
+    if (!target || !['issue_comment', 'pull_request_review_comment'].includes(source.eventName ?? '')) return undefined;
+    const comment = review ? source.inputs?.pull_request_review_comment ?? source.inputs?.comment : source.inputs?.comment;
+    if (!positiveInteger(comment?.id) || typeof comment.body !== 'string' || comment.body.length > 70_000
+        || typeof comment.user?.login !== 'string' || !comment.user.login.trim()) return undefined;
+    return Object.freeze({ surface: review ? 'review-comment' : 'issue-comment', commentId: comment.id,
+        author: comment.user.login, bodyDigest: replyRequestBodyDigest(comment.body), target: Object.freeze({ ...target }) });
 }

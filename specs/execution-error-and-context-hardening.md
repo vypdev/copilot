@@ -764,3 +764,30 @@ failure contract instead of redefining it.
 - Decision: raw causes are private and disposable, not telemetry.
 - Decision: credentials are adapter-bound dependencies, not context facts.
 - Decision: the exact final allowlist replaces a percentage or best-effort goal.
+
+
+### Stage-accurate postflight and read-only completion: #474 (2026-10-13)
+
+Run `38331274938` admitted/completed Codex, then rejected changed workspace paths.
+`agent.policy-rejected` described a pre-execution plan refusal and incorrectly
+stated that the agent had not started. Post-execution sensitive-path/count
+refusal MUST instead use existing `workflow.failed`, retryable false, with the
+closed zero-variable recovery `workspace-changes-rejected`. Its English and
+Spanish UI identifies workspace verification, asks the operator to inspect and
+correct rejected paths, and states that normal commit/push steps were skipped.
+It neither publishes private paths nor infers model/tool success from CLI exit.
+Pre-execution plan/dirty-workspace refusal retains its established category.
+
+A deterministic read-only comment query MUST NOT rewrite the hidden issue/PR
+configuration. Normal issue/PR events and state-changing commands retain normal
+persistence; recommendation single actions retain their specific exception.
+Only recognized, argument-valid read-only commands use this boundary; transports
+remain explicit and ordinary prose/invalid or state-changing commands cannot be
+misclassified by substring matches. No persistence option or new user setting
+is introduced.
+
+**Eleven new cases** belong only to this owner: eight transport/command persistence
+contracts, two EN/ES stage contracts and one bilingual retained-state recovery
+contract. Source read/publication cases
+belong only to semantic communication, and the real Git cache case only to
+autofix. Full coverage and native replay remain pending.

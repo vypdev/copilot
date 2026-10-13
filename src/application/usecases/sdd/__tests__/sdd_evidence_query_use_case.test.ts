@@ -316,3 +316,41 @@ describe('complete owned SDD-card identity loss across query fences', () => {
         if (stage === 'initial read') expect(f.ports.workspace.verifyPublication).not.toHaveBeenCalled();
     });
 });
+
+describe('historical SDD for native closed work', () => {
+    function closedFixture() {
+        const f = fixture(); const facts = { number: 42, state: 'closed' as const, reason: 'completed' as const, labels: ['feature', 'SDD'] };
+        const nativeState = { readIssue: jest.fn().mockResolvedValue(facts) };
+        return { ...f, facts, nativeState, query: new SddEvidenceQueryUseCase({ ...f.ports, nativeState }) };
+    }
+    it('retains immutable published evidence after completion removes in-progress', async () => {
+        const f = closedFixture(); expect(await f.query.read(f.context)).toMatchObject({ state: 'published', historical: true, verified: { firstSha: first, currentSha: first } });
+        expect(f.ports.labels.getLabels).not.toHaveBeenCalled();
+        expect(f.nativeState.readIssue).toHaveBeenCalledTimes(2);
+    });
+    it('does not invent a required historical SDD for closed unstarted work without publication', async () => {
+        const f = closedFixture(); f.comments.mockResolvedValue({ value: [], coverage: { source: 'issue-comments', status: 'complete',
+            pagesFetched: 1, itemsFetched: 0, itemsRetained: 0, omittedItems: 0, truncatedItems: 0, limitReached: false } });
+        expect(await f.query.read(f.context)).toEqual({ state: 'not-required' });
+        expect(f.ports.workspace.verifyPublication).not.toHaveBeenCalled();
+    });
+    it('retains a verified contract-change artifact for a closed non-feature', async () => {
+        const f = closedFixture(); const context = { ...f.context, admittedKind: 'bugfix' as const };
+        Object.assign(f.record, { branchName: 'bugfix/42', issueDigest: buildSddIssueDigest({ issueNumber: 42, issueTitle: 'Feature', issueBody: 'Human requirements', admittedKind: 'bugfix', profileDigest: 'profile' }, base) });
+        f.ports.branches.getLinkedBranch.mockResolvedValue({ name: 'bugfix/42', headSha: head });
+        f.nativeState.readIssue.mockResolvedValue({ ...f.facts, labels: ['bugfix', 'contract-change', 'SDD'] });
+        expect(await f.query.read(context)).toMatchObject({ state: 'published', historical: true });
+    });
+    it('keeps help exempt even when a closed issue happens to retain a publication marker', async () => {
+        const f = closedFixture(); expect(await f.query.read({ ...f.context, admittedKind: 'help' })).toEqual({ state: 'not-required' });
+        expect(f.nativeState.readIssue).not.toHaveBeenCalled();
+    });
+    it('does not reuse closed-history eligibility after a current reopening', async () => {
+        const f = closedFixture(); f.nativeState.readIssue.mockResolvedValue({ ...f.facts, state: 'open', reason: 'reopened' });
+        expect(await f.query.read(f.context)).toEqual({ state: 'not-required' });
+    });
+    it('rejects historical evidence if native closure changes during the final read', async () => {
+        const f = closedFixture(); f.nativeState.readIssue.mockResolvedValueOnce(f.facts).mockResolvedValue({ ...f.facts, state: 'open', reason: 'reopened' });
+        expect(await f.query.read(f.context)).toEqual({ state: 'stale' });
+    });
+});

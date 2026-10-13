@@ -1,3 +1,4 @@
+import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from '../../../domain/copilot_lifecycle';
 import { PullRequestUseCase } from "../pull_request_use_case";
 import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
@@ -374,7 +375,8 @@ describe("PullRequestUseCase", () => {
     });
     const results = await useCase.invoke(param);
 
-    expect(mockCloseIssueInvoke).toHaveBeenCalledWith({ issueNumber: -1, pullRequestNumber: 7 });
+    expect(mockCloseIssueInvoke).toHaveBeenCalledWith({ issueNumber: -1, pullRequestNumber: 7,
+      completionLabels: { lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS, protectedLabels: ['branched', 'SDD', 'contract-change'] } });
     expect(results.some((r) => r.id === "close")).toBe(true);
   });
 
