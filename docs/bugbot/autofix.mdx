@@ -48,8 +48,8 @@ For a natural-language comment, mention the configured bot user (for example,
 and `/copilot fix all` commands do not require a mention.
 
 **Important:** An issue-only comment does not infer a branch by scanning open
-pull requests. Request autofix from the intended PR review thread, or use an
-explicit branch-scoped CLI/workflow run. Without an authoritative PR/branch
+pull requests. Request autofix from the intended PR conversation or review
+thread, or use an explicit branch-scoped CLI/workflow run. Without an authoritative PR/branch
 target, autofix stops before workspace mutation. See [Troubleshooting](/security-operations/operations/troubleshooting).
 
 ### From a pull request review thread
@@ -135,7 +135,7 @@ This prevents a successful edit or test command from being mistaken for proof th
 
 ## Troubleshooting
 
-- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. The request must come from the intended PR review thread or another execution with an explicit branch target; issue-only comments never guess a branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
+- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. The request must come from the intended PR conversation or review thread, or another execution with an explicit branch target; issue-only comments never guess a branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
 - **Agent completed but nothing was published:** Model/CLI success and safe edits do not prove a commit or push. Inspect the correlated failure and linked run. After correcting branch evidence or upgrading an affected installation, retry the authorized command from the current PR; do not manually publish edits retained by a failed run.
 - **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If the configured agent didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
 
