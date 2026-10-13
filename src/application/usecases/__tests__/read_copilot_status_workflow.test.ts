@@ -128,6 +128,20 @@ describe('status after current native reads', () => {
         expect((await readCopilotStatus(context, 'Status', undefined, sdd, f.native)).payload)
             .toMatchObject({ status: { lifecycle: 'completed', sddReadiness: { state: 'ready', historical: true, commitSha: sha } } });
     });
+    it.each([
+        [{ state: 'unavailable' }, 'unavailable'],
+        [{ state: 'absent' }, 'unavailable'],
+        [{ state: 'invalid' }, 'unverified'],
+        [{ state: 'published', path: 'specs/history.md' }, 'unverified'],
+    ])('does not invent historical proof for terminal issue evidence %j', async (evidence, state) => {
+        const f = nativeFixture();
+        const context = { ...f.issueContext, sdd: { issueNumber: 7 } as never,
+            status: { ...f.issueContext.status, sddReadiness: { state: 'unavailable' as const, required: true } } };
+        const sdd = { read: jest.fn().mockResolvedValue(evidence) };
+        const result = await readCopilotStatus(context, 'Status', undefined, sdd, f.native);
+        expect(result.payload).toMatchObject({ status: { lifecycle: 'completed', sddReadiness: { state } } });
+        expect((result.payload as { status: { sddReadiness: { historical?: boolean } } }).status.sddReadiness.historical).toBeUndefined();
+    });
     it.each([true, false])('reports a currently closed PR with merged=%s independently of an obsolete open-head card', async merged => {
         const f = nativeFixture(); f.native.readPullRequest.mockResolvedValue({ number: 11, state: 'closed', merged });
         const result = await readCopilotStatus(f.context, 'Status', f.ports, undefined, f.native);

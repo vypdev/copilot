@@ -55028,8 +55028,7 @@ async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
     }
     if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
         const evidence = await sddQuery.read(param.sdd);
-        status = Object.freeze({ ...status, sddReadiness: Object.freeze({ ...(0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness),
-                ...(['closed', 'completed'].includes(status.lifecycle ?? '') ? { historical: true } : {}) }) });
+        status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
     }
     if (nativeStatus && initialIssue) {
         const final = await nativeStatus.readIssue(initialIssue.number);
