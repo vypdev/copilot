@@ -61,8 +61,8 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     if (historyCommand.kind === 'invalid') return [invalidCommentCommandResult(this.taskId, historyCommand.reason)];
     if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
       return [await readCopilotHistory({ owner: param.owner, repository: param.repo,
-        target: { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
-        botLogin: param.tokenUser ?? '', locale: param.locale.issue,
+        target: param.isPullRequest ? { kind: 'pr', number: param.pullRequest.number } : { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+        botLogin: param.tokenUser ?? '', locale: param.isPullRequest ? param.locale.pullRequest : param.locale.issue,
         generalConversation: param.eventName === 'issue_comment',
       }, this.historyReadPort)];
     }

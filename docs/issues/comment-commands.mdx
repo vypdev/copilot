@@ -406,3 +406,9 @@ Replies to comment commands require a valid captured request and a fresh native
 source check. If the event lacks that request evidence, the Action withholds
 creation, updates and duplicate cleanup instead of assuming freshness. Initial
 help answers from non-comment events retain their ordinary immutable reply.
+
+
+`/copilot history` in a pull request's main conversation reads and publishes for
+that exact PR, even when its linked issue has a different number. The query uses
+the PR locale and does not infer an issue from the PR number. Review threads
+continue to direct you to the main conversation; arguments are not accepted.
