@@ -88,7 +88,9 @@ that the issue remains open/reopened with `in-progress` before and after each
 Project update. If state changes or access fails, later enrichment stops and
 successful earlier updates remain. Inspect the run and retry the reopened-issue
 run after correcting access or the configured active column. Replays retain an
-already active Status. Shared Project workflows are unchanged; use an active
+already active Status. An accepted Status write is followed by a field reread;
+an unconfirmed or mismatching result stops enrichment rather than counting as a
+successful no-op. Shared Project workflows are unchanged; use an active
 option such as In Progress or Working that does not itself close issues.
 
 

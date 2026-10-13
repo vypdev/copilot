@@ -720,7 +720,8 @@
       "rules": [
         {
           "files": [
-            "src/application/usecases/steps/issue/resume_issue_project_use_case.ts"
+            "src/application/usecases/steps/issue/resume_issue_project_use_case.ts",
+            "src/data/repository/project/project_board_field_update.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"

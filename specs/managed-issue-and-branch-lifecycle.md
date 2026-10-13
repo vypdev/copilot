@@ -630,13 +630,13 @@ and requires manual active-column repair for reopened work.
 
 ### Numeric verification budget and executable acceptance
 
-Allocate **28 distinct additional cases**, separate from the baseline and native
+Allocate **29 distinct additional cases**, separate from the baseline and native
 completion/status extensions: **18 guarded step cases** (success, no-op replay,
 no Project, four stale native facts, read/write failures, before/after/between
 Project races, retained partial effects, configured column, multiple Projects,
 and two unsafe identities), plus **10 route cases** (existing branch and
 published SDD, failed/missing/empty step, and five admission/security exclusions).
-Strengthen the existing composition case without counting it again. Deterministic
+One additional provider case rejects an accepted Status mutation whose resulting field does not match the requested active option. Strengthen the existing composition and missing-mutation cases without counting them again. Deterministic
 fakes replace network/sleeps. Changed guarded runtime coverage MUST remain at
 least 95% lines/statements and 90% branches/functions; global 90% lines/statements,
 88% functions and 82% branches remain unchanged. No new pure policy is needed.
@@ -659,7 +659,21 @@ new resume-success comment. Close the explicitly authorized temporary issue
 after comparison and resumption proof. Existing external Project workflow
 settings MUST remain unchanged.
 
-Definition of Done: all 28 cases and coverage gates pass; catalogs and generated
+Definition of Done: all 29 cases and coverage gates pass; catalogs and generated
 specification index, user/operator documentation and bundles agree; native
 current-head CI/review and live resumption/replay evidence are recorded. This
 section does not declare live acceptance complete before that evidence exists.
+
+
+Native finding `4262466652` exposed an ambiguous adapter boolean: `false` meant
+both already-active Status and an unconfirmed mutation. Ordinary-comment retry
+`38450464672` on Ubuntu published `7cc5485b` after verification and independently
+marked that finding fixed with complete coverage, zero active and zero unknown
+findings. The Status adapter MUST reserve `false` for a verified unchanged field,
+reject a missing mutation result, and reread the exact item's Status after an
+accepted write. A mismatch or unavailable reread stops enrichment while retaining
+provider effects. Size/priority and link initialization semantics are unchanged.
+This one new post-write mismatch case belongs only to this extension's 29-case
+allocation, and its existing missing-mutation case now asserts refusal. The
+changed Status adapter joins the same 95%/90% runtime gate. Live #454 Project
+resumption/replay acceptance remains pending until promotion.
