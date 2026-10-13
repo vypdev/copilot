@@ -1,3 +1,4 @@
+import { createNativeStatusReadPort } from '../infrastructure/composition/issue_completion_composition_root';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { ConfigurationHandler } from '../manager/description/configuration_handler';
@@ -207,6 +208,7 @@ export async function runGitHubAction(): Promise<void> {
         bindPublicationSourceQuery(
             new GithubPublicationSourceRepository(createBranchClient()),
             repositoryBinding,
+            createNativeStatusReadPort(repositoryBinding),
         ),
     );
 }

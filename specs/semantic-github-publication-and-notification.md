@@ -1508,3 +1508,197 @@ concurrent-create fixtures now supply actual event witnesses and bound read-only
 verification; no test case, gate or namespace was removed. The current allocation
 is 56 semantic-publication cases and 73 across the three capabilities
 (56 + 11 + 6); earlier totals above describe their historical snapshots.
+
+## 21. Dogfooding correction: native closure retires progress (2026-10-13)
+
+### Evidence and intended contract
+
+Issue [#478](https://github.com/vypdev/copilot/issues/478) closed natively after
+PR #479 merged and showed `100%`/Done, while its owned progress card
+[#6139943350](https://github.com/vypdev/copilot/issues/478#issuecomment-6139943350)
+still said **96% — in progress**. This observed defect is tracked in
+[#482](https://github.com/vypdev/copilot/issues/482). Native closure and an
+estimated implementation percentage are separate facts; neither proves CI,
+coverage, branch alignment, or a new assessment.
+
+An exact `issues:closed` callback and the linked merged-PR completion path MUST
+retire existing owned schema-1 `progress` / `issue:N` / `work` cards in place.
+No new card, transition notification, or generic close-success reply is created.
+A native completed, not-planned, duplicate, or unknown-reason closure MUST show
+that exact fact separately from the retained last assessment. The card ID,
+identity and link remain stable. Reopening permits a fresh, head-verified normal
+assessment to replace the historical card; it MUST NOT fabricate an assessment
+or reactivate old text merely because the issue reopened.
+
+```mermaid
+flowchart LR
+    A[Current progress estimate] --> B[Verified native closure]
+    B --> C[Same card: closed with historical estimate]
+    C --> D[Quiet equivalent replay]
+    C --> E[Reopen and new assessment]
+    E --> A
+```
+
+Text equivalent: current estimate -> verified native closure -> same historical
+card; replay is quiet; only reopening plus a new verified assessment can restore
+active progress. A denied or raced read leaves the prior card unchanged.
+
+### Architecture, trust and bounded configuration
+
+`retired_progress_presentation_policy` recognizes an exact current progress
+marker/head (40- or 64-character Git object ID) or its own terminal archive.
+It renders deterministic English/Spanish copy and inert quoted historical text.
+Mentions, slash commands, workflow controls, HTML and secret-like content remain
+neutralized. Other valid locales use complete English fallback; retirement
+never starts a localization/model request. This static cleanup is distinct from
+ordinary open-work catalog resolution.
+
+`RetireProgressUseCase` receives only native issue reads, comment inventory and
+update methods, and the existing targeted immutable request/body witness port.
+It MUST verify native identity/closed state initially, exact bot ownership and
+body freshness, then the same native closure reason immediately before each
+update. Foreign, malformed, unknown-source, wrong-target and notification
+comments remain untouched. The coordination use case preserves separate
+synchronization/progress results, including retained partial failure; it grants
+no additional mutation capabilities. Existing closed-route admission remains
+before runtime/model, lifecycle, activity and hidden configuration work. Later
+closed edit/label callbacks remain quiet. Existing merged-PR completion order
+remains native closure reconciliation followed by card retirement.
+
+Progress analysis MUST verify native open state before model work and after
+analysis/branch verification before label changes. Progress publication MUST
+recheck native open state before every create, update, duplicate deletion or
+compaction, in addition to its existing branch-head checks. Missing native read
+capability fails closed. A stale assessment cannot overwrite a historical card
+merely because its Git head remains unchanged. The read-only capability binds
+exact issue identity and exposes no close, label or configuration write method.
+
+No public input, setup permission or repository variable is introduced. Existing
+`reopen-issue-on-push` retains its documented meaning. Fixed safety limits are one
+comment inventory per progress retirement, at most 20 owned cards, at most one
+targeted body/author read and one native closure recheck per changed card,
+12,000 UTF-16 units for an active assessment body and 28,000 for a retired body.
+Oversized or malformed bodies are inert; limits cannot be weakened through
+configuration. No dependency/SDK direction is added: source inventory and
+architecture checks enforce the sole new update call and narrow ports.
+
+### User interface and failure/recovery
+
+```markdown
+## Issue closed — historical progress
+
+**Current status:** closed as completed.
+
+The last estimate is retained below as history. Closure does not certify a new
+percentage, tests, or branch alignment.
+
+**Action required:** none for this closed issue. If work continues, reopen the
+issue; a fresh assessment can update this same card.
+
+### Last assessment before closure (historical)
+
+> ## Progress: 96% — in progress
+>
+> Current status: implementation.
+```
+
+Spanish shows **Issue cerrada — progreso histórico** and the corresponding
+native reason. Not-planned and duplicate states explicitly retain the old
+estimate without saying the implementation completed. Unknown reason says
+**closed; reason unavailable**. No action is required while closed; reopening
+and a new assessment are the sole useful next steps. Plain headings and quoted
+text support narrow screens and both GitHub themes without wide tables or
+colour-dependent meaning.
+
+If issue/card reads are denied, identity/body changes, or the issue reopens,
+retirement MUST leave the affected card unchanged and report an error in the
+Job Summary without exposing raw provider details. Successfully retired earlier
+cards remain retired when a later card fails; the result carries verified native
+closure and the count of retained updates. Retrying the actual closed callback
+or merged-PR operation reconciles remaining cards; equivalent replay performs
+no updates. Automatic retries do not recreate work or alter native labels,
+branches, metadata, configuration or receipts. Existing old progress cards are
+reconciled on real closure/replay rather than mass-rewritten on upgrade. A
+rollback preserves comments; reopening with a valid new assessment still uses
+the existing canonical identity.
+
+### Numeric test and documentation budget
+
+The correction allocates **45 conservative new Jest declarations** (parameterized
+rows count once in the communication ledger), independently of the prior 247
+semantic allocations. All five new files belong solely to this semantic budget;
+they are not counted in the localization or branch-synchronization ledgers.
+
+| Area | Minimum declarations | Required behavior |
+|---|---:|---|
+| Pure presentation and safe archive | 13 | four reasons, EN/ES/fallback, SHA-256, replay, reason changes, content controls, malformed/oversized bodies |
+| Guarded retirement | 22 | exact identity/author/body, native races, bounded inventory, targeted witnesses, partial effects, provider denial, quiet replay |
+| Coordination | 1 | success and retained partial result order |
+| Publication integration | 6 | closed/denied/missing native query, per-mutation races, same-card reopening, frozen exact-issue facade |
+| Analysis integration | 3 | closed/denied before model, closure during analysis, missing native capability |
+| **Total** | **45** | Conservative declarations; runtime rows are reported separately |
+
+Global 90% lines/statements, 88% functions and 82% branches remain mandatory.
+New presentation has 100% lines/statements/functions/branches; retirement and
+coordination require 95% lines/statements and 90% branches/functions. Existing
+progress/freshness module budgets remain enforced. Fakes use no network or real
+waits. Normal full Jest/build/lint hooks and workflow, type, documentation,
+specification, catalog and canonical bundle checks remain mandatory; general
+Windows Node checks remain included.
+
+`docs/issues/notifications-and-auto-close.mdx` MUST explain historical estimates,
+reopening, static locale fallback, failure/replay and the lack of new inputs.
+The catalog lists the new policy, use cases and five test files. Native UX
+acceptance MUST inspect a merged closure and a manual not-planned closure,
+confirm same comment identity and retained estimate, quiet replay, and reopening
+followed by an actual fresh assessment. Capture a narrow-screen GitHub view in
+addition to automated semantic content assertions.
+
+| Requirement | Executable evidence | Documentation |
+|---|---|---|
+| Accurate native closure and preserved estimate | presentation and retirement suites | status messages and auto-close |
+| Author/body/identity and per-update closure fences | retirement suite | failure and recovery |
+| No stale model/label/card effects | native analysis and publication integration suites | push and progress behaviour |
+| Native close and merged-PR wiring | existing route/PR tests plus coordination suite | auto-close and reopening |
+| Quiet replay and same-card fresh reopening | retirement and publication integration suites, native dogfooding | historical estimates |
+| Bounds, locale fallback, safe quoted history | pure policy suite and coverage budget | closed-card locale/limits |
+
+Completion requires every row above, the 45-declaration ledger, module/global
+coverage, generated catalog and bundle validation, documentation, current-head
+native checks/review, and the native closure/replay/reopening UX evidence. No
+readiness decision is delegated to an old percentage or a successful model-only
+response.
+
+Automated correction evidence: the five new suites contain **83 runtime cases**
+(34 pure presentation, 32 guarded retirement, 2 coordination, 11 publication
+integration and 4 analysis integration), represented conservatively by the 40
+declarations above. The full integrated run passed 598 suites / 8,333 tests with
+35 pre-existing skips; new presentation coverage reached 100% in all four
+metrics and every unchanged global/module budget passed. Native acceptance
+remains a separate gate and is not implied by these automated results.
+
+Native finding `4258834299` on the Action-integrated `fb30b066` exposed HTML
+escaping and blockquote-prefix expansion exceeding the 28,000-unit retirement
+ceiling even when the active input was within 12,000. The final rendered body
+MUST also be within 28,000 UTF-16 units before publication; otherwise the card
+remains inert and unchanged rather than receiving an archive its own replay
+cannot read. A retained large safe archive MUST remain replayable, including a
+verified closure-reason and locale change. No limit is raised and no last
+estimate is invented or silently truncated.
+Four distinct cases add escaped-HTML and newline expansion rejection, retained
+large replay and guarded no-update behaviour. Three failed before correction;
+the large-safe replay control already passed. The runtime inventory is now
+**87 cases** (37 pure, 33 guarded retirement, 2 coordination, 11 publication
+integration, 4 analysis integration), conservatively allocated as 43 declarations.
+The prior 83-case evidence above remains historical; current full/native checks
+and closure/replay/reopening acceptance remain mandatory. All pure/global/module
+budgets and provider-read limits stay unchanged.
+
+Native finding `4259131469` additionally reproduced an accepted English archive
+at the output boundary that could not be rerendered in Spanish. Acceptance now
+checks all eight fixed English/Spanish closure-reason renderings before updating
+any card, so later supported locale/reason changes retain the same archive within
+the unchanged 28,000-unit ceiling. Two additional cases cover withholding the
+unsafe boundary and all safe near-limit replays; one failed before correction.
+The current inventory is 89 runtime cases (39 pure, 33 retirement, 2 coordination,
+11 publication and 4 analysis) and 45 conservative declarations.

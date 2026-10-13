@@ -645,6 +645,28 @@
         }
       ],
       "successMessage": "post-verification workspace capture coverage: PASS (each changed module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Closed issue progress retirement",
+      "missingEntryLabel": "closed issue progress retirement",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/retired_progress_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/retire_progress_use_case.ts",
+            "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "closed issue progress retirement coverage: PASS (presentation 100%; guarded retirement and coordination 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

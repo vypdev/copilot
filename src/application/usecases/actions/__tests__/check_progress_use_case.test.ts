@@ -75,7 +75,7 @@ describe('CheckProgressUseCase', () => {
       { getListOfBranches: mockGetListOfBranches },
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
       { query: localizedProgress },
-      { getBranchHeadSha: mockGetBranchHeadSha },
+      { isIssueOpen: jest.fn(async () => true), getBranchHeadSha: mockGetBranchHeadSha },
       { getDiff: mockGetDiff },
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));

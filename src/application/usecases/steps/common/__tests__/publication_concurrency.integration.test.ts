@@ -101,7 +101,7 @@ describe('semantic publication concurrency', () => {
     const context = {
       owner: 'acme', repository: 'widgets', botLogin: 'vypbot', intent: statusIntent(),
     };
-    const source = () => ({ getBranchHeadSha: jest.fn(async () => SOURCE_HEAD) });
+    const source = () => ({ isIssueOpen: jest.fn(async () => true), getBranchHeadSha: jest.fn(async () => SOURCE_HEAD) });
 
     const outcomes = await Promise.all([
       reconcileStatusCard(context, comments, source()),
