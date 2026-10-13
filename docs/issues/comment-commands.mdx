@@ -314,6 +314,18 @@ When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
 
+Read-only command replies and failures reuse their existing response when a
+new result is verified for the same current request. GitHub's native comment,
+parent and author must match the captured request; a changed or unreadable
+request withholds stale edits. Successful mutation receipts remain effect
+records. Read-only queries do not rewrite hidden issue/PR configuration.
+
+If the agent ran but workspace verification rejected its changes, the error
+identifies that stage and asks you to inspect rejected paths before retrying.
+Normal commit/push steps are skipped; an earlier syntax error is not retained
+as the description of the newer verified failure. Keep repository-local test
+scratch such as `.tmp/` ignored or use the normal external temporary directory.
+
 ## Native completion and historical SDDs
 
 `status` reads the current native issue or PR after queueing. A completed native
@@ -346,3 +358,9 @@ Closing an issue does not verify its SDD. Unavailable or unverified evidence kee
 Status rejects an issue snapshot if its labels change between the initial and final native reads, so SDD eligibility and the displayed metadata describe the same verified sample. Label ordering alone does not invalidate a sample.
 
 When issue status also collects linked PR findings, it repeats the native issue fence after those asynchronous reads before returning the combined result.
+
+
+Replies to comment commands require a valid captured request and a fresh native
+source check. If the event lacks that request evidence, the Action withholds
+creation, updates and duplicate cleanup instead of assuming freshness. Initial
+help answers from non-comment events retain their ordinary immutable reply.

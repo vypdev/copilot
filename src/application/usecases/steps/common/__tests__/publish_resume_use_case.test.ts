@@ -91,7 +91,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
   ])('keeps unstructured result evidence out of GitHub conversations', async (result) => {
     const comments = inMemoryComments();
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([result])));
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(projectPublishResultContext(source([result])));
 
     expect(comments.listIssueComments).not.toHaveBeenCalled();
     expect(comments.addComment).not.toHaveBeenCalled();
@@ -101,7 +101,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
   it('creates one concise implementation-plan card without retired chrome', async () => {
     const comments = inMemoryComments();
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([recommendation()])));
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(projectPublishResultContext(source([recommendation()])));
 
     expect(comments.addComment).toHaveBeenCalledTimes(1);
     expect(comments.values).toHaveLength(1);
@@ -121,11 +121,11 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
       payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
     });
     const value = projectPublishResultContext(source([result], {
-      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99, body: '/copilot help', user: { login: 'developer' } } },
     }));
 
-    await new PublishResultUseCase(comments).invoke(value);
-    await new PublishResultUseCase(comments).invoke(value);
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(value);
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(value);
 
     expect(comments.addComment).toHaveBeenCalledTimes(1);
     expect(comments.values[0].body).toContain('correlation="comment:99"');
@@ -141,12 +141,12 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
       errors: [new ApplicationError('validation.invalid-input', 'Unsafe parser detail.')],
     });
     const explicit = projectPublishResultContext(source([failure], {
-      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 101 } },
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 101, body: '/copilot help', user: { login: 'developer' } } },
     }));
 
-    await new PublishResultUseCase(explicitComments).invoke(explicit);
-    await new PublishResultUseCase(explicitComments).invoke(explicit);
-    await new PublishResultUseCase(backgroundComments).invoke(projectPublishResultContext(source([failure])));
+    await new PublishResultUseCase(explicitComments, undefined, undefined, { matches: async () => true }).invoke(explicit);
+    await new PublishResultUseCase(explicitComments, undefined, undefined, { matches: async () => true }).invoke(explicit);
+    await new PublishResultUseCase(backgroundComments, undefined, undefined, { matches: async () => true }).invoke(projectPublishResultContext(source([failure])));
 
     expect(explicitComments.addComment).toHaveBeenCalledTimes(1);
     expect(explicitComments.values[0].body).toContain('key="application-error"');
@@ -164,8 +164,8 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
       errors: [new ApplicationError('locale.translation-failed', 'Provider detail.')],
     });
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([failure], {
-      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 102 } },
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(projectPublishResultContext(source([failure], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 102, body: '/copilot help', user: { login: 'developer' } } },
       locale: { issue: 'es-ES', pullRequest: 'es-ES' },
     })));
 
@@ -185,8 +185,8 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
       payload: { publication: { kind: 'help', botLogin: 'vypbot' } },
     });
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source([result], {
-      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(projectPublishResultContext(source([result], {
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99, body: '/copilot help', user: { login: 'developer' } } },
     })));
 
     expect(comments.addComment).toHaveBeenCalledTimes(1);
@@ -197,10 +197,10 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
 
   it('namespaces equal numeric comment ids by GitHub transport', () => {
     const issueComment = projectPublishResultContext(source([], {
-      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99 } },
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 99, body: '/copilot help', user: { login: 'developer' } } },
     }));
     const reviewComment = projectPublishResultContext(source([], {
-      eventName: 'pull_request_review_comment', inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
+      eventName: 'pull_request_review_comment', inputs: { action: 'created', pull_request_review_comment: { id: 99, body: '/copilot help', user: { login: 'developer' } } },
     }));
 
     expect(issueComment.requestCorrelationId).toBe('comment:99');
@@ -211,7 +211,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
   it('uses each review-comment id instead of collapsing replies into the event fallback', () => {
     const first = projectPublishResultContext(source([], {
       eventName: 'pull_request_review_comment',
-      inputs: { action: 'created', pull_request_review_comment: { id: 99 } },
+      inputs: { action: 'created', pull_request_review_comment: { id: 99, body: '/copilot help', user: { login: 'developer' } } },
     }));
     const second = projectPublishResultContext(source([], {
       eventName: 'pull_request_review_comment',
@@ -226,7 +226,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
   it('keeps the exact issue-comment correlation stable regardless of event metadata', () => {
     const context = projectPublishResultContext(source([], {
       eventName: 'unsafe transport\n<!-- marker -->',
-      inputs: { action: 'created', comment: { id: 99 } },
+      inputs: { action: 'created', comment: { id: 99, body: '/copilot help', user: { login: 'developer' } } },
     }));
 
     expect(context.requestCorrelationId).toBe('comment:99');
@@ -234,7 +234,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
 
   it('does not mutate an unchanged plan card on replay', async () => {
     const comments = inMemoryComments();
-    const useCase = new PublishResultUseCase(comments);
+    const useCase = new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true });
     const context = projectPublishResultContext(source([recommendation()]));
 
     await useCase.invoke(context);
@@ -249,7 +249,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
 
   it('updates the same plan card after a material recommendation change', async () => {
     const comments = inMemoryComments();
-    const useCase = new PublishResultUseCase(comments);
+    const useCase = new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true });
 
     await useCase.invoke(projectPublishResultContext(source([recommendation()])));
     await useCase.invoke(projectPublishResultContext(source([
@@ -263,7 +263,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
 
   it('returns bounded operator evidence when duplicate deletion is forbidden', async () => {
     const comments = inMemoryComments();
-    const useCase = new PublishResultUseCase(comments);
+    const useCase = new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true });
     const value = projectPublishResultContext(source([recommendation()]));
     await useCase.invoke(value);
     comments.values.push({ id: 2, body: comments.values[0].body, user: { login: 'vypbot' } });
@@ -333,7 +333,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
       ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'model' }) },
     }));
 
-    await new PublishResultUseCase(comments, { resolve } as unknown as MessageCatalogResolutionPort).invoke(context);
+    await new PublishResultUseCase(comments, { resolve } as unknown as MessageCatalogResolutionPort, undefined, { matches: async () => true }).invoke(context);
 
     expect(resolve).toHaveBeenCalledTimes(1);
     expect(comments.values[0].body).toContain('## Plan de mise en œuvre');
@@ -357,12 +357,12 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
       )),
     }));
     const context = projectPublishResultContext(source([result], {
-      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 105 } },
+      eventName: 'issue_comment', inputs: { action: 'created', comment: { id: 105, body: '/copilot help', user: { login: 'developer' } } },
       locale: { issue: 'fr-FR', pullRequest: 'fr-FR' },
       ai: { getAgentConfiguration: () => ({ provider: 'codex', model: 'model' }) },
     }));
 
-    await new PublishResultUseCase(comments, { resolve } as unknown as MessageCatalogResolutionPort).invoke(context);
+    await new PublishResultUseCase(comments, { resolve } as unknown as MessageCatalogResolutionPort, undefined, { matches: async () => true }).invoke(context);
 
     expect(comments.values[0].body).toContain('## FR Copilot commands');
     expect(comments.values[0].body).toContain('`/copilot implement <request>`');
@@ -373,7 +373,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
   it('omits semantic publication when the trusted bot identity is unavailable', async () => {
     const comments = inMemoryComments();
 
-    await new PublishResultUseCase(comments).invoke(projectPublishResultContext(source(
+    await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(projectPublishResultContext(source(
       [recommendation()], { tokenUser: '  ' },
     )));
 
@@ -388,7 +388,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
     const context = projectPublishResultContext(source([original]));
     original.steps[0] = 'mutated after projection';
 
-    const failure = await new PublishResultUseCase(comments).invoke(context);
+    const failure = await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke(context);
 
     expect(context.results[0].steps).toEqual(['unstructured plan wrapper that must never be published']);
     expect(failure).toMatchObject({ success: false, executed: true });
@@ -415,7 +415,7 @@ describe('PublishResultUseCase strict semantic publication boundary', () => {
   it('fails closed when progress publication has no authoritative source query', async () => {
     const comments = inMemoryComments();
 
-    const failure = await new PublishResultUseCase(comments)
+    const failure = await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true })
       .invoke(projectPublishResultContext(source([progress()])));
 
     expect(failure).toMatchObject({ success: false, executed: true });

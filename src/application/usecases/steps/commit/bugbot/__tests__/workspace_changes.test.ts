@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { finalizeWorkspaceMutation } from '../../workspace_mutation_guard';
@@ -29,7 +29,7 @@ describe("workspace change policy", () => {
             writeFileSync(join(root, 'Microsoft', 'Windows', 'PowerShell', 'ModuleAnalysisCache'), 'fixture');
             writeFileSync(join(root, 'config', 'service.pem'), 'fixture');
             expect(await listWorkspacePaths(port)).toEqual(['Microsoft/Windows/PowerShell/ModuleAnalysisCache', 'config/service.pem']);
-            await expect(finalizeWorkspaceMutation(port, [], 'Fixture')).rejects.toMatchObject({ code: 'agent.policy-rejected' });
+            await expect(finalizeWorkspaceMutation(port, [], 'Fixture')).rejects.toMatchObject({ code: 'workflow.failed', retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
         } finally { rmSync(root, { recursive: true, force: true }); }
     });
     it('enforces the automated file limit when more than 100 files are inside one new directory', async () => {
@@ -39,6 +39,22 @@ describe("workspace change policy", () => {
             for (let index = 0; index < 101; index++) writeFileSync(join(root, 'generated', `file-${index}.ts`), 'export {};');
             expect(await listWorkspacePaths(port)).toHaveLength(101);
             await expect(finalizeWorkspaceMutation(port, [], 'Fixture')).rejects.toThrow('101 paths; maximum is 100');
+        } finally { rmSync(root, { recursive: true, force: true }); }
+    });
+
+    it('keeps ignored Jest scratch outside commits while retaining real sensitive-path rejection', async () => {
+        const { root, port } = repository();
+        try {
+            writeFileSync(join(root, '.gitignore'), readFileSync(join(process.cwd(), '.gitignore')));
+            execFileSync('git', ['add', '.gitignore'], { cwd: root });
+            mkdirSync(join(root, '.tmp', 'jest_dx'), { recursive: true });
+            writeFileSync(join(root, '.tmp', 'jest_dx', 'setup_token_permission.map'), 'fixture-cache');
+            mkdirSync(join(root, 'src')); writeFileSync(join(root, 'src', 'fix.ts'), 'export {};');
+            expect(await listWorkspacePaths(port)).toEqual(['.gitignore', 'src/fix.ts']);
+            await expect(finalizeWorkspaceMutation(port, ['.gitignore'], 'Fixture')).resolves.toEqual({ workspacePaths: ['src/fix.ts'] });
+            mkdirSync(join(root, 'config')); writeFileSync(join(root, 'config', 'service.pem'), 'fixture-private-key');
+            await expect(finalizeWorkspaceMutation(port, ['.gitignore'], 'Fixture')).rejects.toMatchObject({ code: 'workflow.failed',
+                recovery: { id: 'workspace-changes-rejected', variables: {} } });
         } finally { rmSync(root, { recursive: true, force: true }); }
     });
 

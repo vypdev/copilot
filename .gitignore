@@ -144,3 +144,6 @@ opencode.json
 .idea
 
 .env
+
+# Repository-local scratch output, including sandboxed Jest transform caches
+.tmp/

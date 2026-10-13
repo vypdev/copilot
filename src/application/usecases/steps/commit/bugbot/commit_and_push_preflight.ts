@@ -1,9 +1,11 @@
+import { finalizeWorkspaceMutation } from '../workspace_mutation_guard';
+import { toApplicationError } from '../../../../errors/application_error';
 import type { BugbotGitMutationPort } from "../../../../../application/ports/bugbot_git_ports";
 import { logInfo } from "../../../../ports/logging_ports";
 import { checkoutBranch } from '../git_branch_checkout';
 import { MAX_VERIFY_COMMANDS, limitVerifyCommands } from "./verify_command_policy";
 import { runVerifyCommands } from "./verify_command_runner";
-import { hasWorkspaceChanges } from "./workspace_changes";
+import { hasWorkspaceChanges, listWorkspacePaths } from "./workspace_changes";
 import type { BugbotCommitContext } from './bugbot_review_operation_context';
 
 export interface CommitAndPushPreflightOptions {
@@ -13,7 +15,7 @@ export interface CommitAndPushPreflightOptions {
 }
 
 export type CommitAndPushPreflightResult =
-  | { status: "ready" }
+  | { status: "ready"; workspacePaths?: string[] }
   | { status: "success" }
   | { status: "failure"; error: string };
 
@@ -29,6 +31,14 @@ export async function runCommitAndPushPreflight(
     return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
   }
 
+  let excludedBeforeVerification: string[] = [];
+  if (options.workspacePaths) {
+    try {
+      excludedBeforeVerification = (await listWorkspacePaths(gitCommitPort)).filter(path => !options.workspacePaths!.includes(path));
+    } catch (error) {
+      return { status: "failure", error: toApplicationError(error, 'provider.unavailable', 'Pre-verification workspace could not be verified.').message };
+    }
+  }
   const verification = await runVerification(context, gitCommitPort);
   if (verification) return { status: "failure", error: verification };
   if (!(await hasWorkspaceChanges(gitCommitPort))) {
@@ -36,6 +46,14 @@ export async function runCommitAndPushPreflight(
   }
   if (options.workspacePaths && options.workspacePaths.length === 0) {
     return { status: "failure", error: "No safe workspace paths to commit." };
+  }
+  if (options.workspacePaths) {
+    try {
+      const final = await finalizeWorkspaceMutation(gitCommitPort, excludedBeforeVerification, 'Automated commit verification');
+      return { status: "ready", workspacePaths: final.workspacePaths };
+    } catch (error) {
+      return { status: "failure", error: toApplicationError(error, 'workflow.failed', 'Post-verification workspace could not be verified.').message };
+    }
   }
   return { status: "ready" };
 }

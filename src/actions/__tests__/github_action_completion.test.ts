@@ -214,7 +214,7 @@ describe('finishGithubAction', () => {
             sourceQuery,
         );
 
-        expect(PublishResultUseCase).toHaveBeenCalledWith(expect.anything(), undefined, sourceQuery);
+        expect(PublishResultUseCase).toHaveBeenCalledWith(expect.anything(), undefined, sourceQuery, undefined);
         expect(mockSummaryPublish).toHaveBeenCalledWith(expect.stringContaining(
             '| Source freshness | Stale result suppressed; branch HEAD changed during the run |',
         ));
