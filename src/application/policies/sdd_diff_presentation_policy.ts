@@ -30,7 +30,13 @@ export function renderSddDiff(snapshot: SddDiffSnapshot, scope: SddDiffScope, ca
     const publication = snapshot.publication;
     if (!isSafeSddPath(publication.path) || !sha(publication.firstSha)) return fallback;
     const historical = snapshot.state === 'stale' || snapshot.state === 'pending-revision';
-    if (historical) lines.push('', link('sddDiff.historical', publication.firstSha, publication.path));
+    if (historical) {
+      lines.push('', link('sddDiff.historical', publication.firstSha, publication.path));
+      if (publication.currentSha !== undefined) {
+        if (!sha(publication.currentSha)) return fallback;
+        if (publication.currentSha !== publication.firstSha) lines.push(link('sddDiff.historicalCurrent', publication.currentSha, publication.path));
+      }
+    }
     else {
       lines.push('', link('sddDiff.first', publication.firstSha, publication.path));
       if (snapshot.state !== 'initial-only') {
@@ -62,7 +68,7 @@ export function renderSddDiff(snapshot: SddDiffSnapshot, scope: SddDiffScope, ca
   }
   const body = lines.join('\n');
   return body.length <= 5600 ? body : fallback;
-  function link(label: 'sddDiff.first' | 'sddDiff.current' | 'sddDiff.historical', commit: string, path: string): string {
+  function link(label: 'sddDiff.first' | 'sddDiff.current' | 'sddDiff.historical' | 'sddDiff.historicalCurrent', commit: string, path: string): string {
     return `[${render(label)} · ${commit.slice(0, 9)}](${root}/blob/${commit}/${path}) · [${render('sddDiff.commit')}](${root}/commit/${commit})`;
   }
 }

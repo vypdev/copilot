@@ -348,3 +348,5 @@ On a PR, `/copilot sdd-diff` verifies the native closing-issue association again
 before returning every result, including pending or missing publication. If the
 association changes, retry the command: the stale reply withholds links belonging
 to the previous issue. An unreadable final association remains unavailable.
+
+An exempt or ambiguous PR comparison rechecks linked issue eligibility before returning. Stale and pending replies preserve both verified publications as explicitly historical when their commits differ; they keep current comparison links and change counts unavailable.

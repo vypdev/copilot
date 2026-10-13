@@ -48,7 +48,10 @@ export class SddDiffQueryUseCase {
       if (links) {
         if (links.issueNumbers.length === 0) return { state: 'not-applicable' };
         const choice = await this.selectEligible(request, links);
-        if (choice.state !== 'selected') return { state: choice.state };
+        if (choice.state !== 'selected') {
+          const freshChoice = await this.selectEligible(request, links);
+          return { state: freshChoice.state === choice.state ? choice.state : 'stale' };
+        }
         issueNumber = choice.context.issueNumber;
         issueAuthor = choice.context.issueAuthor;
       }

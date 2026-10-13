@@ -6,7 +6,7 @@ export const SDD_DIFF_MESSAGE_IDS = Object.freeze([
   'sddDiff.initial-only', 'sddDiff.stale', 'sddDiff.pending-revision', 'sddDiff.invalid', 'sddDiff.unavailable',
   'sddDiff.ambiguous', 'sddDiff.bounded', 'sddDiff.compared', 'sddDiff.none', 'sddDiff.publish', 'sddDiff.refresh',
   'sddDiff.answer', 'sddDiff.retry', 'sddDiff.choose', 'sddDiff.reduce', 'sddDiff.first', 'sddDiff.current',
-  'sddDiff.historical', 'sddDiff.card', 'sddDiff.commit', 'sddDiff.compare', 'sddDiff.lines', 'sddDiff.sections', 'sddDiff.omitted', 'sddDiff.structural',
+  'sddDiff.historical', 'sddDiff.historicalCurrent', 'sddDiff.card', 'sddDiff.commit', 'sddDiff.compare', 'sddDiff.lines', 'sddDiff.sections', 'sddDiff.omitted', 'sddDiff.structural',
   'sddDiff.charactersLimit', 'sddDiff.bytesLimit', 'sddDiff.linesLimit', 'sddDiff.workLimit',
 ] as const);
 export type SddDiffMessageId = typeof SDD_DIFF_MESSAGE_IDS[number];
@@ -29,7 +29,7 @@ const EN: Readonly<Record<SddDiffMessageId, CatalogMessage>> = Object.freeze({
   'sddDiff.retry': 'Inspect the existing SDD evidence and read access, then retry this command.',
   'sddDiff.choose': 'Run this command in the intended issue conversation.',
   'sddDiff.reduce': 'Keep the SDD within the documented fixed limits, then retry this command.',
-  'sddDiff.first': 'First publication', 'sddDiff.current': 'Current publication', 'sddDiff.historical': 'Historical first publication',
+  'sddDiff.first': 'First publication', 'sddDiff.current': 'Current publication', 'sddDiff.historical': 'Historical first publication', 'sddDiff.historicalCurrent': 'Historical published revision',
   'sddDiff.card': 'SDD clarification card', 'sddDiff.commit': 'Publication commit', 'sddDiff.compare': 'Compare publication commits',
   'sddDiff.lines': 'Added lines: {added}; removed lines: {removed}.', 'sddDiff.sections': 'Changed section titles',
   'sddDiff.omitted': 'Additional changed titles omitted: {count}.',
@@ -55,7 +55,7 @@ const ES: Readonly<Record<SddDiffMessageId, CatalogMessage>> = Object.freeze({
   'sddDiff.retry': 'Revisa la evidencia existente del SDD y los permisos de lectura y vuelve a ejecutar el comando.',
   'sddDiff.choose': 'Ejecuta el comando en la conversación de la issue deseada.',
   'sddDiff.reduce': 'Mantén el SDD dentro de los límites fijos documentados y vuelve a ejecutar el comando.',
-  'sddDiff.first': 'Primera publicación', 'sddDiff.current': 'Publicación actual', 'sddDiff.historical': 'Primera publicación histórica',
+  'sddDiff.first': 'Primera publicación', 'sddDiff.current': 'Publicación actual', 'sddDiff.historical': 'Primera publicación histórica', 'sddDiff.historicalCurrent': 'Revisión publicada histórica',
   'sddDiff.card': 'Tarjeta de aclaraciones del SDD', 'sddDiff.commit': 'Commit de publicación', 'sddDiff.compare': 'Comparar commits de publicación',
   'sddDiff.lines': 'Líneas añadidas: {added}; líneas eliminadas: {removed}.', 'sddDiff.sections': 'Títulos de secciones modificadas',
   'sddDiff.omitted': 'Títulos modificados adicionales omitidos: {count}.',

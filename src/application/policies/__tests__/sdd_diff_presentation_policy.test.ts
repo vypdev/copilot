@@ -12,7 +12,26 @@ const snapshots: readonly SddDiffSnapshot[] = [
 ];
 const render = (value: SddDiffSnapshot, locale = 'en-US') => renderSddDiff(value, scope, resolveSddDiffCatalog(locale));
 describe('bounded bilingual structural SDD reply', () => {
-  it.each(snapshots.flatMap(snapshot => ['en-US', 'es-ES'].map(locale => ({ snapshot, locale }))))('renders $snapshot.state in $locale without inventing counts or current links', ({ snapshot, locale }) => {
+  it.each(['en-US','es-ES'].flatMap(locale => (['stale','pending-revision'] as const).map(state => ({ locale, state }))))('retains the verified published revision as historical in $state / $locale', ({ locale, state }) => {
+    const body = render({ state, publication }, locale); const catalog = resolveSddDiffCatalog(locale);
+    expect(body).toContain(locale === 'es-ES' ? 'Revisión publicada histórica' : 'Historical published revision');
+    expect(body).toContain(`/blob/${current}/specs/owning-sdd.md`); expect(body).toContain(`/commit/${current}`);
+    expect(body).not.toContain('/compare/'); expect(body).not.toContain(catalog.message('sddDiff.current'));
+  });
+  it('retains only first history when no verified revision exists', () => {
+    const body = render({ state: 'stale', publication: { path: publication.path, firstSha: first } });
+    expect(body).toContain(`/blob/${first}/`); expect(body).not.toContain('Historical published revision');
+  });
+  it('does not duplicate the same historical publication', () => {
+    const body = render({ state: 'stale', publication: { ...publication, currentSha: first } });
+    expect(body.split(`/blob/${first}/`).length - 1).toBe(1); expect(body).not.toContain('Historical published revision');
+  });
+  it('rejects malformed historical revision proof without partial links', () => {
+    const body = render({ state: 'pending-revision', publication: { ...publication, currentSha: 'abc' } });
+    expect(body).toContain('could not be verified'); expect(body).not.toContain('/blob/');
+  });
+
+  it.each(snapshots.flatMap(snapshot => ['en-US', 'es-ES'].map(locale => ({ snapshot, locale }))))('renders $snapshot.state in $locale without inventing counts or comparison links', ({ snapshot, locale }) => {
     const catalog = resolveSddDiffCatalog(locale), body = render(snapshot, locale);
     expect(body).toContain(catalog.message(`sddDiff.${snapshot.state}`));
     expect(body).toContain(catalog.message('sddDiff.action'));
@@ -22,7 +41,8 @@ describe('bounded bilingual structural SDD reply', () => {
     if (snapshot.state === 'stale' || snapshot.state === 'pending-revision') {
       expect(body).toContain(catalog.message('sddDiff.historical'));
       expect(body).toContain(`/blob/${first}/specs/owning-sdd.md`);
-      expect(body).not.toContain(current);
+      expect(body).toContain(current);
+      expect(body).toContain(catalog.message('sddDiff.historicalCurrent'));
     }
     if (snapshot.state === 'compared' || snapshot.state === 'bounded') expect(body).toContain(`/blob/${current}/specs/owning-sdd.md`);
     if (snapshot.state === 'bounded') expect(body).toContain(catalog.message('sddDiff.linesLimit'));
@@ -104,10 +124,10 @@ describe('verified publication and clarification navigation', () => {
     expect(body).toContain(`/commit/${current})`);
     expect(body).toContain(`[Compare publication commits](https://github.example.test/org/repo/compare/${first}...${current})`);
   });
-  it.each(['stale', 'pending-revision'] as const)('links the owning clarification card for %s without current navigation', state => {
+  it.each(['stale', 'pending-revision'] as const)('links the owning clarification card for %s without current comparison', state => {
     const body = render({ state, publication, card: { issueNumber: 454, commentId: 6101 } }, 'es-ES');
     expect(body).toContain('[Tarjeta de aclaraciones del SDD](https://github.example.test/org/repo/issues/454#issuecomment-6101)');
-    expect(body).not.toContain(`/commit/${current}`);
+    expect(body).toContain(`/commit/${current}`);
     expect(body).not.toContain('/compare/');
   });
   it.each([{ issueNumber: 0, commentId: 10 }, { issueNumber: 454, commentId: -1 },

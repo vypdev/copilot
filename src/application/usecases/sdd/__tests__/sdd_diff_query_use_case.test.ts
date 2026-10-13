@@ -27,6 +27,25 @@ function fixture() {
 }
 
 describe('fenced structural SDD comparison query', () => {
+  it('withholds a previously exempt PR when its linked issue becomes eligible', async () => {
+    const f = fixture(); f.ports.labels.getLabels.mockResolvedValueOnce([]).mockResolvedValue(['feature', 'in-progress']);
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'stale' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+  it('withholds a previously ambiguous PR when only one candidate remains eligible', async () => {
+    const f = fixture(); const links = f.links();
+    f.ports.links.readClosingIssues.mockResolvedValue({ ...links, issueNumbers: [42, 43], issueAuthors: { 42: 'a', 43: 'b' } } as SddDiffPullRequestLinks);
+    f.ports.labels.getLabels.mockResolvedValueOnce(['feature','in-progress']).mockResolvedValueOnce(['feature','in-progress'])
+      .mockResolvedValueOnce(['feature','in-progress']).mockResolvedValueOnce([]);
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'stale' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+  it('does not certify previous PR exemption after a denied candidate re-admission', async () => {
+    const f = fixture(); f.ports.labels.getLabels.mockResolvedValueOnce([]).mockRejectedValueOnce({ status: 403 });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'unavailable' });
+    expect(f.ports.evidence.read).not.toHaveBeenCalled();
+  });
+
   it('compares exactly two verified immutable documents with no raw content in its result', async () => {
     const f = fixture(); const result = await f.query.read(f.request);
     expect(result).toMatchObject({ state: 'compared', changes: { addedLines: 1, removedLines: 1, sections: ['Scope'] } });
@@ -58,7 +77,7 @@ describe('fenced structural SDD comparison query', () => {
     f.ports.links.readClosingIssues.mockResolvedValue(scenario === 'denied' ? { state: 'unavailable' } : { ...value,
       ...(value.state === 'verified' ? { issueNumbers: scenario === 'zero' ? [] : scenario === 'multiple' ? [42, 43] : [42], issueAuthors: { 42: 'native-author', 43: 'native-author' }, pullNumber: scenario === 'wrong PR' ? 98 : 99 } : {}) });
     await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: scenario === 'zero' ? 'not-applicable' : scenario === 'multiple' ? 'ambiguous' : 'unavailable' });
-    if (scenario === 'multiple') expect(f.ports.labels.getLabels).toHaveBeenCalledTimes(2);
+    if (scenario === 'multiple') expect(f.ports.labels.getLabels).toHaveBeenCalledTimes(4);
     else expect(f.ports.labels.getLabels).not.toHaveBeenCalled();
   });
   it.each(['unmanaged', 'conflicting', 'disabled', 'invalid form'])('withholds %s issue admission before gate/document reads', async scenario => {

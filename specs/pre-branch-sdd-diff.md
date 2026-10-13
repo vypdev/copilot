@@ -276,19 +276,19 @@ Errors use `impact -> cause -> action -> retained state`; a failed read must not
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **240 distinct extension cases**, with a 24-case risk floor exceeded by the concrete inventory below. Existing shared gate/status/publication cases remain unchanged and are not counted again.
+Minimum: **250 distinct extension cases**, with a 24-case risk floor exceeded by the concrete inventory below. Existing shared gate/status/publication cases remain unchanged and are not counted again.
 
 | Area | Distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Pure bounded diff | 18 | Exact line/section changes, fenced headings, hostile input, all fixed resource ceilings |
-| Presentation/localization/navigation | 60 | Ten states in both catalogs, atomic fallback, immutable commit/blob/compare links, clarification cards, escaping and bounds |
-| Application/authority/fences | 74 | Admission, missing/invalid/pending/stale authority, immutable reads, issue/card/head/PR-link races, exact author and no writes |
+| Presentation/localization/navigation | 67 | Ten states in both catalogs, atomic fallback, immutable commit/blob/compare links, clarification cards, escaping and bounds |
+| Application/authority/fences | 77 | Admission, missing/invalid/pending/stale authority, immutable reads, issue/card/head/PR-link races, exact author and no writes |
 | Native PR-link adapter | 45 | Bound repository ID/name and head repository, exact PR/head/ref, author identity, complete pagination, malformed/foreign/duplicate rows and denial |
 | Read-only composition | 5 | Frozen repository binding, trusted server origin, native event repository ID and receiver-bound document read without writers |
 | Parser/routes/agent activity | 15 | Whitespace/case, no arguments, EN/ES/fallback, absent query, no agent activation or activity |
 | Correlated publication/replay | 18 | Same-source refresh, unchanged replay, distinct source, ownership/correlation/key isolation, duplicate healing, static catalogs and final sanitization |
 | Actual Execution projection | 5 | Native repository ID/issue author/profile digest, immutable input, missing/zero/unsafe identity and native PR target |
-| **Total** | **240** | Every case counted once |
+| **Total** | **250** | Every case counted once |
 
 The two new shared `SddEvidenceQueryUseCase` opaque-authority regressions are allocated only to the owning status companion (182 + 2 = 184); they are excluded from this 240-case budget. The gate's separate 149-case budget and both communication ledgers remain unchanged.
 
@@ -303,7 +303,7 @@ Required distinct risk coverage includes eligibility/identity (4), record/owners
 | User | `docs/issues/comment-commands.mdx` | Exact command, eligible targets, examples, states and links | Command catalog and link checks |
 | Issue owner | `docs/issues/pre-branch-sdds.mdx` | First/current revision distinction, stale/pending recovery, structural-only caveat | Examples checked against fixtures |
 | Operator | Same SDD guide | Invalid/unavailable evidence, retry and permission boundaries | State decision table review |
-| Contributor | Capability SDD and catalog evidence | Ports, trust boundaries, 240-case budget, workflow checks | `pnpm run validate:specifications`; catalog generation/check as repository requires |
+| Contributor | Capability SDD and catalog evidence | Ports, trust boundaries, 250-case budget, workflow checks | `pnpm run validate:specifications`; catalog generation/check as repository requires |
 
 Docs must explain PR exact-link rules, limits, no-write behavior and that line/title differences do not establish semantic requirement changes. Update the capability catalogue evidence and owning SDD or this approved bounded companion before branch creation. Keep documentation examples synchronized with fixtures.
 
@@ -349,7 +349,7 @@ Docs must explain PR exact-link rules, limits, no-write behavior and that line/t
 5. Add adapter mappings and structural PR identity/pagination tests.
 6. Add localized states and correlated reply integration with golden and semantic fixtures.
 7. Update both issue docs, capability catalogue evidence and this companion/owning SDD before branch creation.
-8. Complete 240-case minimum, all existing gate budgets, #454 UX review, architecture/workflow checks and specification validation.
+8. Complete 250-case minimum, all existing gate budgets, #454 UX review, architecture/workflow checks and specification validation.
 
 ## 19. Definition of Done
 
@@ -467,3 +467,9 @@ A moved association returns stale without retaining old publication/card links o
 counts; unavailable or foreign final PR identity returns unavailable. Stable
 pending history remains visible. This adds eleven cases exactly once (229 + 11 =
 240); the shared companion remains 184. Full gates and live replay remain pending.
+
+### Final candidate eligibility and historical revision links (2026-10-13)
+
+Native findings `4254268292` and `4254268297` exposed two gaps. A PR with no selected eligible issue MUST re-admit its candidates before returning exemption or ambiguity; changed outcomes become stale and denied reads become unavailable. Stable native PR associations alone cannot certify candidate eligibility. Stale or pending replies MUST retain each verified distinct publication as explicitly historical, including the published revision; they MUST withhold current comparison/counts and reject malformed revision proof atomically.
+
+Ten additional distinct cases cover three candidate outcomes (exempt becomes eligible, ambiguous becomes selected, denied final re-admission) and seven historical presentation outcomes (both states in both locales, no revision, duplicate immutable SHA, malformed revision). The dedicated inventory becomes 240 + 10 = **250**; shared companion cases remain allocated only to their owner. English/Spanish labels distinguish historical first publication and historical published revision. Documentation and all existing bounds/coverage thresholds remain in force.
