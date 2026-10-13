@@ -33,3 +33,18 @@ describe('closed typed history publication', () => {
     ])('rejects malformed or target-disagreeing publication %#', input => expect(readHistoryProjection(input, bound)).toBeUndefined());
     it('preserves a valid unavailable view without inferred rows', () => expect(readHistoryProjection({ ...view, state: 'unavailable', rows: [] }, bound)?.state).toBe('unavailable'));
 });
+
+
+describe('actionable review-thread exclusion', () => {
+    it.each([['en-US', 'Post /copilot history in the main conversation'], ['es-ES', 'Publica /copilot history en la conversación principal']])('directs %s users to the supported surface instead of retrying the same thread', (locale, action) => {
+        const result = render({ state: 'unsupported-surface', rows: [] }, locale);
+        expect(result).toContain(action); expect(result).not.toContain('inspect the workflow'); expect(result).not.toContain('revisa la ejecución');
+    });
+    it('admits an exact unsupported-surface projection without inferred history rows', () => {
+        expect(readHistoryProjection({ ...view, state: 'unsupported-surface', rows: [] }, { kind: 'pull-request', number: 42 }))
+            .toMatchObject({ state: 'unsupported-surface', rows: [] });
+    });
+    it('rejects operation rows claimed by an unsupported-surface result', () => {
+        expect(readHistoryProjection({ ...view, state: 'unsupported-surface' }, { kind: 'pull-request', number: 42 })).toBeUndefined();
+    });
+});

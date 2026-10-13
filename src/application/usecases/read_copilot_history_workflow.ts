@@ -1,10 +1,10 @@
 import { Result } from '../../data/model/result';
 import type { CopilotHistoryReadPort, CopilotHistoryRequest } from '../ports/copilot_history_ports';
-import { HISTORY_UNAVAILABLE, selectCopilotHistory } from '../policies/copilot_history_policy';
+import { HISTORY_UNAVAILABLE, HISTORY_UNSUPPORTED_SURFACE, selectCopilotHistory } from '../policies/copilot_history_policy';
 
 /** A failed read cannot prove empty history or an operation failure. */
 export async function readCopilotHistory(request: CopilotHistoryRequest, ports?: CopilotHistoryReadPort): Promise<Result> {
-    let history = HISTORY_UNAVAILABLE;
+    let history = request.generalConversation ? HISTORY_UNAVAILABLE : HISTORY_UNSUPPORTED_SURFACE;
     if (ports && request.generalConversation && request.botLogin && Number.isSafeInteger(request.target.number)
         && request.target.number > 0 && Number.isSafeInteger(request.queryId) && request.queryId > 0) {
         try {

@@ -15,6 +15,7 @@ export function renderCopilotHistory(view: HistoryProjection, catalog: Publicati
     const heading = `## ${render('interaction.history.heading')}`;
     const unavailable = `${heading}\n\n${render('interaction.history.unavailable')}`;
     if (!origin || !identity || view.state === 'unavailable') return unavailable;
+    if (view.state === 'unsupported-surface') return `${heading}\n\n${render('interaction.history.useConversation')}`;
     const root = `${origin}/${view.owner}/${view.repository}`;
     const target = `${root}/${view.target.kind === 'pr' ? 'pull' : 'issues'}/${view.target.number}`;
     const lines = [heading, '', render('interaction.history.scope'), '',

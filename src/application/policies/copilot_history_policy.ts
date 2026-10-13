@@ -18,10 +18,11 @@ export interface HistoryRow {
 }
 export interface CopilotHistory {
     readonly kind: 'history-command';
-    readonly state: 'complete' | 'partial' | 'unavailable';
+    readonly state: 'complete' | 'partial' | 'unavailable' | 'unsupported-surface';
     readonly rows: readonly HistoryRow[];
 }
 export const HISTORY_UNAVAILABLE: CopilotHistory = Object.freeze({ kind: 'history-command', state: 'unavailable', rows: Object.freeze([]) });
+export const HISTORY_UNSUPPORTED_SURFACE: CopilotHistory = Object.freeze({ kind: 'history-command', state: 'unsupported-surface', rows: Object.freeze([]) });
 const KEYS: Readonly<Record<HistoryCommand, readonly string[]>> = Object.freeze({
     'sync-branch': ['branch-sync-result', 'application-error'], remember: ['state-command-result', 'application-error'],
     dismiss: ['state-command-result', 'application-error'], implement: ['implementation-result', 'application-error'],

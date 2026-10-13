@@ -43238,13 +43238,14 @@ function safeEvidenceTitle(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HISTORY_UNAVAILABLE = void 0;
+exports.HISTORY_UNSUPPORTED_SURFACE = exports.HISTORY_UNAVAILABLE = void 0;
 exports.selectCopilotHistory = selectCopilotHistory;
 const copilot_command_1 = __nccwpck_require__(11771);
 const copilot_operation_1 = __nccwpck_require__(40221);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 exports.HISTORY_UNAVAILABLE = Object.freeze({ kind: 'history-command', state: 'unavailable', rows: Object.freeze([]) });
+exports.HISTORY_UNSUPPORTED_SURFACE = Object.freeze({ kind: 'history-command', state: 'unsupported-surface', rows: Object.freeze([]) });
 const KEYS = Object.freeze({
     'sync-branch': ['branch-sync-result', 'application-error'], remember: ['state-command-result', 'application-error'],
     dismiss: ['state-command-result', 'application-error'], implement: ['implementation-result', 'application-error'],
@@ -43316,6 +43317,8 @@ function renderCopilotHistory(view, catalog) {
     const unavailable = `${heading}\n\n${render('interaction.history.unavailable')}`;
     if (!origin || !identity || view.state === 'unavailable')
         return unavailable;
+    if (view.state === 'unsupported-surface')
+        return `${heading}\n\n${render('interaction.history.useConversation')}`;
     const root = `${origin}/${view.owner}/${view.repository}`;
     const target = `${root}/${view.target.kind === 'pr' ? 'pull' : 'issues'}/${view.target.number}`;
     const lines = [heading, '', render('interaction.history.scope'), '',
@@ -43363,10 +43366,10 @@ function readHistoryProjection(value, bound) {
         return undefined;
     const data = value;
     const target = data.target;
-    if (data.kind !== 'history-command' || !['complete', 'partial', 'unavailable'].includes(String(data.state))
+    if (data.kind !== 'history-command' || !['complete', 'partial', 'unavailable', 'unsupported-surface'].includes(String(data.state))
         || typeof data.owner !== 'string' || typeof data.repository !== 'string' || typeof data.serverOrigin !== 'string'
         || !target || Object.keys(target).some(key => !['kind', 'number'].includes(key)) || target.number !== bound.number || target.kind !== (bound.kind === 'pull-request' ? 'pr' : 'issue')
-        || !Array.isArray(data.rows) || data.rows.length > 10 || (data.state === 'unavailable' && data.rows.length !== 0)
+        || !Array.isArray(data.rows) || data.rows.length > 10 || (['unavailable', 'unsupported-surface'].includes(String(data.state)) && data.rows.length !== 0)
         || Object.keys(data).some(key => !['kind', 'state', 'rows', 'owner', 'repository', 'target', 'serverOrigin'].includes(key)))
         return undefined;
     const rows = [];
@@ -45469,6 +45472,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.history.empty',
     'interaction.history.partial',
     'interaction.history.unavailable',
+    'interaction.history.useConversation',
     'interaction.history.count',
     'interaction.history.operation',
     'interaction.history.outcome',
@@ -45610,6 +45614,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.history.empty': 'No supported requests in this conversation',
     'interaction.history.partial': 'Partial comment coverage; the latest ten operations cannot be guaranteed. Retry /copilot history if needed.',
     'interaction.history.unavailable': 'Operation history unavailable; inspect the workflow and retry /copilot history.',
+    'interaction.history.useConversation': 'Post /copilot history in the main conversation of this issue or pull request. Review threads are outside its history scope.',
     'interaction.history.count': 'Showing {count} supported requests',
     'interaction.history.operation': 'Operation',
     'interaction.history.outcome': 'Outcome',
@@ -45760,6 +45765,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.history.empty': 'No hay solicitudes compatibles en esta conversación',
     'interaction.history.partial': 'Cobertura parcial de comentarios; no se pueden garantizar las diez operaciones más recientes. Reintenta /copilot history si lo necesitas.',
     'interaction.history.unavailable': 'Historial de operaciones no disponible; revisa la ejecución y reintenta /copilot history.',
+    'interaction.history.useConversation': 'Publica /copilot history en la conversación principal de esta issue o pull request. Los hilos de revisión quedan fuera del historial.',
     'interaction.history.count': 'Se muestran {count} solicitudes compatibles',
     'interaction.history.operation': 'Operación',
     'interaction.history.outcome': 'Resultado',
@@ -55265,7 +55271,7 @@ const result_1 = __nccwpck_require__(73817);
 const copilot_history_policy_1 = __nccwpck_require__(14335);
 /** A failed read cannot prove empty history or an operation failure. */
 async function readCopilotHistory(request, ports) {
-    let history = copilot_history_policy_1.HISTORY_UNAVAILABLE;
+    let history = request.generalConversation ? copilot_history_policy_1.HISTORY_UNAVAILABLE : copilot_history_policy_1.HISTORY_UNSUPPORTED_SURFACE;
     if (ports && request.generalConversation && request.botLogin && Number.isSafeInteger(request.target.number)
         && request.target.number > 0 && Number.isSafeInteger(request.queryId) && request.queryId > 0) {
         try {

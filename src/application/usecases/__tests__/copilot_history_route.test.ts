@@ -29,7 +29,7 @@ describe('real history command entrypoints', () => {
     });
     it('does not read review-thread history or infer an issue from the PR number', async () => {
         const { useCase,input,readComments } = setup('pr','pull_request_review_comment');
-        const result = await useCase.invoke(input); expect(JSON.stringify(result)).toContain('unavailable'); expect(readComments).not.toHaveBeenCalled(); expect(forbidden.invoke).not.toHaveBeenCalled();
+        const result = await useCase.invoke(input); expect(JSON.stringify(result)).toContain('unsupported-surface'); expect(readComments).not.toHaveBeenCalled(); expect(forbidden.invoke).not.toHaveBeenCalled();
     });
     it.each(['/copilot history extra','/copilot history model=gpt-6-luna'])('rejects argument-bearing query %s', command => expect(parseCopilotCommand(command).kind).toBe('invalid'));
     it.each([['issue', '/copilot history extra'], ['issue', '/copilot history model=gpt-6-luna'],

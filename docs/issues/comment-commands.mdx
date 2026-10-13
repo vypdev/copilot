@@ -348,3 +348,10 @@ History requests are deterministic on issue comments and PR review comments.
 Their activity-admission policy neither inspects agent role availability nor activates the temporary agent
 activity label; unavailable model configuration does not turn a history read
 into model work. Normal read-evidence and correlated publication guards apply.
+
+
+`/copilot history` is available in the main issue or pull request conversation.
+A request in a review thread tells you to post it there; retrying the same thread
+cannot expand the history scope. That response reads no history and activates no
+agent. A failed read in the supported conversation instead directs you to the
+workflow and a retry.

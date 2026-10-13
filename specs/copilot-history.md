@@ -324,7 +324,7 @@ Update command catalog/discoverability and `specs/catalog.json` evidence; regene
 - [ ] Existing owner contract remains intact and this appendix is incorporated without replacing it.
 - [ ] All acceptance scenarios and traceability rows have evidence.
 - [ ] Architecture boundaries and schema/workflow checks are executable and pass.
-- [x] The original 34-case floor is exceeded by 164 distinct cases; new pure policy branch coverage exceeds 90% and all existing coverage budgets pass.
+- [x] The original 34-case floor is exceeded by 168 distinct cases; new pure policy branch coverage exceeds 90% and all existing coverage budgets pass.
 - [ ] Only five supported command names, exact target, general-conversation stream, fixed ten-row limit, and no-argument/no-model behavior are implemented.
 - [ ] Complete, partial, unavailable, and complete-empty behavior plus every outcome are reviewed in English and Spanish.
 - [ ] Replay, conflict, legacy evidence, safe links, and no-mutation behavior pass.
@@ -387,3 +387,23 @@ adds these two once, for **164** distinct feature cases. The shared activity
 suite passes 32 cases; its other 30 cases are retained shared coverage, not
 added to this history allocation. Required full gates and live acceptance remain
 pending until this exact head is published and reviewed.
+
+
+### Live scope recovery (2026-10-13)
+
+Run `38331198935` on current head `b037ab4b` handled a PR review-thread history
+request with no model/tool execution or temporary activity transition. Excluding
+review threads is the specified stream boundary, but the generic unavailable
+reply incorrectly recommended retrying that same unsupported surface. The
+trusted request now projects `unsupported-surface` with no rows or provider read;
+English and Spanish replies tell the developer to post `/copilot history` in
+the issue or PR main conversation. Provider/read failures on the supported
+surface retain unavailable and its workflow/retry recovery. Publication admits
+the new state only with an empty exact-target projection, and never infers
+operation outcomes from it.
+
+Four distinct presentation/closed-publication contracts cover the two locales,
+valid empty scope refusal and rejection of invented rows. The own inventory is
+now **168** (164 + 4), with those four allocated only to UI/publication. Shared
+locale/communication ledgers are regenerated from their actual cases. Full
+gates and live replay of the corrected recovery remain pending.

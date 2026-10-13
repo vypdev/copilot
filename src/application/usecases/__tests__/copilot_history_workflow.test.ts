@@ -28,7 +28,7 @@ describe('bounded exact-conversation history workflow', () => {
         expect(publication(result).state).toBe('unavailable'); expect(JSON.stringify(result)).not.toContain('SECRET');
     });
     it.each([{ generalConversation: false }, { botLogin: '' }, { queryId: 0 }, { target: { kind: 'issue' as const, number: 0 } }])('does not read an unavailable target binding %#', async changed => {
-        const readComments = jest.fn(); expect(publication(await readCopilotHistory({ ...request, ...changed }, { serverOrigin: 'https://github.com', readComments })).state).toBe('unavailable'); expect(readComments).not.toHaveBeenCalled();
+        const readComments = jest.fn(); expect(publication(await readCopilotHistory({ ...request, ...changed }, { serverOrigin: 'https://github.com', readComments })).state).toBe('generalConversation' in changed ? 'unsupported-surface' : 'unavailable'); expect(readComments).not.toHaveBeenCalled();
     });
     it('keeps an unavailable composition unknown', async () => expect(publication(await readCopilotHistory(request)).state).toBe('unavailable'));
     it.each([{ source: 'review-threads' as const }, { itemsRetained: 2 }, { itemsFetched: 0 }])('rejects contradictory provider coverage %#', async changed => expect(publication(await readCopilotHistory(request,
