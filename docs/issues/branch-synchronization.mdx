@@ -266,3 +266,6 @@ merged-PR operation. Cleanup preserves other metadata and does not launch open
 work, change labels, run a model or rewrite hidden configuration. Reopening
 allows the next branch observation to replace historical closure with its fresh
 aligned or stale comparison.
+
+Later edits and label changes on an already-closed issue do not repeat retirement
+or restart its work. Retry the original close event when cleanup needs recovery.

@@ -639,3 +639,13 @@ issue locale; the budget is now 286 (237 + 49). CI `38370750425` also exposed
 three new route fixtures inheriting live workflow identity after the existing
 suite restored its environment. Their before/after hooks now isolate and
 restore those four variables; the same tests and queue/runtime gates remain.
+
+
+Native finding `4256651462` exposed retirement running on later edits or label
+callbacks whose issue was already closed. Only exact `issues:closed` enters
+retirement; other native closed-issue callbacks MUST be quiet no-ops before
+runtime, open-work, retirement or lifecycle/activity mutations. This preserves
+the earlier artifact-label protection while avoiding unsolicited cleanup
+retries. Two distinct edit/label integration regressions failed before the
+correction and raise this capability to 288 cases (237 + 51); the four separate
+configuration-persistence cases remain owned by execution lifecycle.

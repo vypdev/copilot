@@ -905,6 +905,19 @@ describe('terminal issue lifecycle route', () => {
     expect(mockAgentActivityStart).not.toHaveBeenCalled(); expect(mockAgentActivityFinish).not.toHaveBeenCalled();
     expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled(); expect(mockIssueInvoke).not.toHaveBeenCalled();
   });
+  it.each(['edited', 'labeled'])('ignores a closed issue %s callback without retirement or open-work effects', async action => {
+    mockClosedIssueRetireInvoke.mockResolvedValue([]);
+    const prepare = jest.fn();
+    const execution = mockExecution({ eventName: 'issues', isIssue: true, inputs: { action, issue: { number: 42, state: 'closed' } },
+      locale: { issue: 'en-US' } });
+    const actual = await productionMainRun(execution, projectBoardCommandPort, latestTagQueryPort, 'github-workflow',
+      { invoke: mockLifecycleStateInvoke } as never, { start: mockAgentActivityStart, finish: mockAgentActivityFinish } as never, prepare);
+    expect(actual).toEqual([]);
+    expect(mockClosedIssueRetireInvoke).not.toHaveBeenCalled(); expect(prepare).not.toHaveBeenCalled();
+    expect(mockLifecycleStateInvoke).not.toHaveBeenCalled(); expect(mockAgentActivityStart).not.toHaveBeenCalled();
+    expect(mockAgentActivityFinish).not.toHaveBeenCalled(); expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled();
+    expect(mockIssueInvoke).not.toHaveBeenCalled();
+  });
   it('can retire a closed issue even when current workflow labels are unmanaged', async () => {
     mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(context, { status: 'unmanaged' }));
     mockClosedIssueRetireInvoke.mockResolvedValue([]);
