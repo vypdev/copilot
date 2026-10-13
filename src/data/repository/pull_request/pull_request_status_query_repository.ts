@@ -37,7 +37,7 @@ export class PullRequestStatusQueryRepository {
         if (target.owner.toLowerCase() !== this.owner.toLowerCase() || target.repository.toLowerCase() !== this.repository.toLowerCase()
             || !integer(target.repositoryId) || !integer(target.pullNumber)) throw new Error('Status target unavailable.');
         const { data: pull } = await this.octokit.rest.pulls.get({ owner: this.owner, repo: this.repository, pull_number: target.pullNumber });
-        if (pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
+        if (pull.state !== 'open' || pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
             || !sha(pull.head.sha) || !sha(pull.base.sha)) throw new Error('Status revision unavailable.');
         const baseSha = await readCurrentBaseRevision(this.octokit.rest.git,
             { owner: this.owner, repository: this.repository }, pull.base.ref);

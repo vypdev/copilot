@@ -285,11 +285,11 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 |---|---:|---|
 | Domain/configuration/pure planning | 62 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
 | State/application/idempotency/races | 49 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
-| Adapters/provider contracts | 25 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
+| Adapters/provider contracts | 28 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 24 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **174** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **177** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -526,3 +526,5 @@ The existing approval adapter tests protect the shared reader without being
 counted again. Its new explicit coverage gate is 100% in every dimension; no
 existing gate is lowered. Combined validation, fresh native review and live
 status acceptance on the final published head remain required.
+
+Native finding `4253826672` showed that unchanged head/base revisions could outlive the PR's open state. The final native revision reader MUST verify the PR remains open before reading its current base, otherwise its evidence is unavailable. Three new distinct cases cover native closed state, missing state, and the full status workflow with a PR closing after approval collection while both revisions remain unchanged. They belong to the provider-contract allocation (25 + 3 = 28), bringing the extension inventory to **177**. Existing denied-final-read behavior withholds satisfied readiness and any human-review recommendation. No writer, permission or policy threshold changes.

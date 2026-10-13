@@ -366,3 +366,5 @@ while independent verified checks retain their own states. Unavailable status
 gives the recovery action for the missing evidence. Pending or blocked readiness
 offers wait or resolve. The report asserts a human-review requirement only when
 recommend readiness is satisfied without a verified current human approval.
+
+PR readiness also verifies that the PR remains open at its final native revision read. Closing it while evidence is collected withholds a satisfied result even if the head and base revisions have not changed.

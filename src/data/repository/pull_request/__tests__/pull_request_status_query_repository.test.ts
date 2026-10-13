@@ -1,3 +1,5 @@
+import { readCopilotStatus } from '../../../../application/usecases/read_copilot_status_workflow';
+import { readinessFixture } from '../../../../application/usecases/__tests__/fixtures/pr_readiness_fixture';
 import * as github from '@actions/github';
 import { PullRequestStatusQueryRepository } from '../pull_request_status_query_repository';
 const mockGraphql=jest.fn(), mockGet=jest.fn(), mockGetRef=jest.fn();
@@ -9,8 +11,22 @@ function links() { return { repository: { databaseId: 1, nameWithOwner: 'o/r', i
 const target={ owner: 'o', repository: 'r', repositoryId: 1, pullNumber: 11 };
 beforeEach(() => { jest.clearAllMocks(); mockGraphql.mockResolvedValue(links());
     mockGetRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: base } } });
-    mockGet.mockResolvedValue({ data: { number: 11, base: { sha: base, ref: 'develop', repo: { id: 1 } }, head: { sha: head, repo: { id: 1 } } } }); });
+    mockGet.mockResolvedValue({ data: { number: 11, state: 'open', base: { sha: base, ref: 'develop', repo: { id: 1 } }, head: { sha: head, repo: { id: 1 } } } }); });
 describe('bounded native PR status query', () => {
+    it.each(['closed', undefined])('refuses final PR state %s before reading the current base', async state => {
+        mockGet.mockResolvedValue({ data: { number: 11, state, base: { sha: base, ref: 'develop', repo: { id: 1 } }, head: { sha: head, repo: { id: 1 } } } });
+        await expect(new PullRequestStatusQueryRepository('o','r','t').readRevision(target)).rejects.toThrow('unavailable');
+        expect(mockGetRef).not.toHaveBeenCalled();
+    });
+    it('withholds satisfied readiness when the final native PR has closed with unchanged revisions', async () => {
+        const f = readinessFixture(); const repository = new PullRequestStatusQueryRepository('o','r','t');
+        f.ports.approval.readRevision.mockImplementation(value => repository.readRevision(value));
+        mockGet.mockResolvedValue({ data: { number: 11, state: 'closed', base: { sha: base, ref: 'develop', repo: { id: 1 } }, head: { sha: head, repo: { id: 1 } } } });
+        expect((await readCopilotStatus(f.context, 'Status', f.ports)).payload).toMatchObject({ status: {
+            pullRequestReadiness: { readiness: 'unavailable', code: 'final-evidence-unavailable', humanReviewRequired: false } } });
+        expect(mockGetRef).not.toHaveBeenCalled();
+    });
+
     it('uses the current base branch instead of the cached PR base SHA', async () => {
         const advanced = 'c'.repeat(40);
         mockGetRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: advanced } } });
