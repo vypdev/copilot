@@ -1,4 +1,8 @@
 import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
+import { invalidCommentCommandResult } from './comment_automation_command_workflow';
+import { readCopilotHistory } from './read_copilot_history_workflow';
+import type { CopilotHistoryReadPort } from '../ports/copilot_history_ports';
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -48,13 +52,23 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly historyReadPort?: CopilotHistoryReadPort,
     private readonly sddQueryPort?: SddEvidenceQueryPort,
+    private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
     private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
-    const command = parseCopilotCommand(param.issue.commentBody);
-    const isDoctor = command.kind === 'command' && command.command.name === 'doctor';
+    const historyCommand = parseCopilotCommand(param.issue.commentBody);
+    if (historyCommand.kind === 'invalid') return [invalidCommentCommandResult(this.taskId, historyCommand.reason)];
+    if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+      return [await readCopilotHistory({ owner: param.owner, repository: param.repo,
+        target: param.isPullRequest ? { kind: 'pr', number: param.pullRequest.number } : { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+        botLogin: param.tokenUser ?? '', locale: param.isPullRequest ? param.locale.pullRequest : param.locale.issue,
+        generalConversation: param.eventName === 'issue_comment',
+      }, this.historyReadPort)];
+    }
+    const isDoctor = historyCommand.kind === 'command' && historyCommand.command.name === 'doctor';
     if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
       return [new Result({
         id: this.taskId, success: false, executed: true,
@@ -96,6 +110,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
         doctorReadPorts: this.doctorReadPorts,
+        nativeStatusReadPort: this.nativeStatusReadPort,
         sddQueryPort: this.sddQueryPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }

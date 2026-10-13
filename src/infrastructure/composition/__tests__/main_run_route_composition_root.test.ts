@@ -132,6 +132,10 @@ describe("main run route composition root", () => {
     expect(query).toMatchObject({ read: expect.any(Function) });
     expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
     expect(Object.isFrozen(query)).toBe(true);
+    const historyPort = call.find(value => value && typeof value === 'object' && 'readComments' in value && 'serverOrigin' in value);
+    expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {
@@ -152,6 +156,10 @@ describe("main run route composition root", () => {
         getPullRequestHeadSha: expect.any(Function),
       }),
     });
+    const historyPort = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0][14];
+    expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
   });
 
   it("exposes one handler for every executable route", () => {

@@ -35316,6 +35316,15 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
     (0, setup_execution_boundary_1.applySetupExecutionResult)(execution, await setupExecution.invoke((0, setup_execution_boundary_1.projectSetupExecutionContext)(execution)));
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
+    if (!execution.isSingleAction && execution.isIssue && execution.eventName === 'issues'
+        && execution.inputs?.issue?.state === 'closed') {
+        // Later edits and label callbacks must not restart closed work or retry
+        // lifecycle cleanup. Only the native close action retires existing cards.
+        if (execution.inputs.action !== 'closed')
+            return [];
+        return (0, main_run_route_composition_root_1.createClosedIssueRetirementUseCase)({ owner: repository.owner, repository: repository.repo, token: execution.tokens.token })
+            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser });
+    }
     const runtimeDecision = (0, issue_workflow_runtime_policy_1.decideIssueWorkflowRuntime)({
         admission: execution.currentIssueWorkflowAdmission,
         unlinkedPullRequest: execution.isPullRequest && execution.issueNumber < 1,
@@ -36940,7 +36949,7 @@ exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
 const agent_1 = __nccwpck_require__(89040);
 const copilot_command_1 = __nccwpck_require__(11771);
 const branch_sync_command_1 = __nccwpck_require__(51114);
-const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'doctor', 'dismiss', 'remember']);
+const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'doctor', 'history', 'dismiss', 'remember']);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))
@@ -37981,6 +37990,11 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'workspace-changes-rejected': Object.freeze({
+        impact: 'The changes were rejected during workspace verification.',
+        action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
+        retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -38043,6 +38057,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'workspace-changes-rejected': Object.freeze({
+        impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
+        action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
+        retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
         action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
@@ -38449,6 +38468,9 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.heading',
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
+    'branchSync.closed.heading',
+    'branchSync.closed.status',
+    'branchSync.closed.history',
     'branchSync.transition.required',
     'branchSync.transition.requiredCompact',
     'branchSync.transition.openStatus',
@@ -38470,6 +38492,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Branch synchronized',
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+    'branchSync.closed.heading': 'Issue closed: synchronization recommendation retired',
+    'branchSync.closed.status': 'No branch synchronization is required for this closed issue.',
+    'branchSync.closed.history': 'The previous recommendation is historical. Issue closure does not certify that the branches are synchronized.',
     'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
     'branchSync.transition.requiredCompact': 'Branch synchronization needs attention.',
     'branchSync.transition.openStatus': 'Open the current status',
@@ -38493,6 +38518,9 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Rama sincronizada',
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+    'branchSync.closed.heading': 'Issue cerrada: recomendación de sincronización retirada',
+    'branchSync.closed.status': 'Esta issue cerrada no requiere sincronizar su rama.',
+    'branchSync.closed.history': 'La recomendación anterior es histórica. El cierre de la issue no certifica que las ramas estén sincronizadas.',
     'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
     'branchSync.transition.requiredCompact': 'La sincronización de la rama necesita atención.',
     'branchSync.transition.openStatus': 'Abrir el estado actual',
@@ -38541,6 +38569,7 @@ exports.buildBranchSyncStatusCommentUrl = buildBranchSyncStatusCommentUrl;
 exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
+exports.buildRetiredBranchSyncComment = buildRetiredBranchSyncComment;
 const github_user_policy_1 = __nccwpck_require__(84403);
 const git_object_id_1 = __nccwpck_require__(88623);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -38680,6 +38709,16 @@ function safeLinkLabel(value) {
         .replace(/[\r\n()[\]<>]/gu, '')
         .slice(0, 40)
         .trim() || 'Open notification';
+}
+/** Preserve the exact owned card identity without claiming Git alignment. */
+function buildRetiredBranchSyncComment(identity, messages) {
+    return `${(0, publication_identity_policy_1.buildPublicationMarker)({ identity, sourceVersion: 'closed:issue', digest: (0, publication_identity_policy_1.createSemanticDigest)({ state: 'closed', identity }) })}
+
+## ${messages.message('branchSync.closed.heading')}
+
+${messages.message('branchSync.closed.status')}
+
+${messages.message('branchSync.closed.history')}`;
 }
 
 
@@ -40554,6 +40593,169 @@ function neutralizeQuotedOriginal(value) {
 
 /***/ }),
 
+/***/ 14335:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HISTORY_UNSUPPORTED_SURFACE = exports.HISTORY_UNAVAILABLE = void 0;
+exports.selectCopilotHistory = selectCopilotHistory;
+const copilot_command_1 = __nccwpck_require__(11771);
+const copilot_operation_1 = __nccwpck_require__(40221);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+exports.HISTORY_UNAVAILABLE = Object.freeze({ kind: 'history-command', state: 'unavailable', rows: Object.freeze([]) });
+exports.HISTORY_UNSUPPORTED_SURFACE = Object.freeze({ kind: 'history-command', state: 'unsupported-surface', rows: Object.freeze([]) });
+const KEYS = Object.freeze({
+    'sync-branch': ['branch-sync-result', 'application-error'], remember: ['state-command-result', 'application-error'],
+    dismiss: ['state-command-result', 'application-error'], implement: ['implementation-result', 'application-error'],
+    fix: ['fix-result', 'application-error'],
+});
+function selectCopilotHistory(input) {
+    if (!/^(?:issue|pr):[1-9]\d*$/u.test(input.target) || !positive(Number(input.target.split(':')[1])) || !positive(input.queryId)
+        || !/^[A-Za-z0-9-]{1,100}(?:\[bot\])?$/u.test(input.botLogin) || input.comments.length > 1000)
+        return exports.HISTORY_UNAVAILABLE;
+    const seen = new Set();
+    if (input.comments.some(comment => !positive(comment.id) || seen.has(comment.id) || !seen.add(comment.id)))
+        return exports.HISTORY_UNAVAILABLE;
+    if (!input.complete && input.comments.length === 0)
+        return exports.HISTORY_UNAVAILABLE;
+    const rows = input.comments.flatMap(source => {
+        if (source.id >= input.queryId || source.automated || !source.author || (0, github_user_policy_1.githubUsersMatch)(source.author, input.botLogin))
+            return [];
+        const parsed = (0, copilot_command_1.parseCopilotCommand)(source.body);
+        if (parsed.kind !== 'command' || !(0, copilot_operation_1.isHistoryCommand)(parsed.command.name))
+            return [];
+        const command = parsed.command.name;
+        const receipts = input.comments.flatMap(comment => {
+            if (comment.id <= source.id || !(0, github_user_policy_1.githubUsersMatch)(comment.author, input.botLogin) || !comment.body)
+                return [];
+            const marker = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
+            if (!marker || marker.target !== input.target || marker.correlationId !== `comment:${source.id}`
+                || !KEYS[command].includes(marker.messageKey)
+                || !comment.body.startsWith((0, publication_identity_policy_1.buildPublicationReplyMarker)(marker))
+                || comment.body.split('<!-- copilot:reply').length !== 2)
+                return [];
+            const evidence = (0, copilot_operation_1.readOperationEvidence)(comment.body);
+            const compatible = marker.messageKey === 'application-error'
+                ? ['blocked', 'partial', 'failed', 'unavailable'].includes(evidence?.outcome ?? '')
+                : ['applied', 'already-current', 'not-applied'].includes(evidence?.outcome ?? '');
+            return [{ id: comment.id, evidence: compatible ? evidence : undefined, legacy: !comment.body.includes('<!-- copilot:operation:') }];
+        });
+        // A malformed or legacy receipt cannot establish the effect; disagreeing receipts cannot be selected.
+        const qualified = receipts.filter(receipt => receipt.evidence?.target === input.target
+            && receipt.evidence.correlationId === `comment:${source.id}` && receipt.evidence.command === command);
+        const evidence = qualified[0]?.evidence;
+        const agreement = evidence && qualified.length === receipts.length
+            && qualified.every(receipt => receipt.evidence?.outcome === evidence.outcome && receipt.evidence?.commitSha === evidence.commitSha);
+        return [Object.freeze({ sourceId: source.id, command, outcome: agreement ? evidence.outcome : 'unavailable',
+                ...(!agreement && receipts.length === 1 && receipts[0].legacy ? { receiptId: receipts[0].id } : {}),
+                ...(agreement ? { receiptId: Math.min(...qualified.map(receipt => receipt.id)),
+                    ...(evidence.commitSha ? { commitSha: evidence.commitSha } : {}) } : {}) })];
+    }).sort((a, b) => b.sourceId - a.sourceId).slice(0, 10);
+    return Object.freeze({ kind: 'history-command', state: input.complete ? 'complete' : 'partial', rows: Object.freeze(rows) });
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+
+
+/***/ }),
+
+/***/ 55507:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderCopilotHistory = renderCopilotHistory;
+/** Links come from a bound server/repository and validated IDs, never conversation URLs. */
+function renderCopilotHistory(view, catalog) {
+    const render = catalog.render;
+    const origin = safeOrigin(view.serverOrigin);
+    const identity = /^[A-Za-z0-9_.-]{1,100}$/u.test(view.owner) && /^[A-Za-z0-9_.-]{1,100}$/u.test(view.repository)
+        && !['.', '..'].includes(view.owner) && !['.', '..'].includes(view.repository);
+    const heading = `## ${render('interaction.history.heading')}`;
+    const unavailable = `${heading}\n\n${render('interaction.history.unavailable')}`;
+    if (!origin || !identity || view.state === 'unavailable')
+        return unavailable;
+    if (view.state === 'unsupported-surface')
+        return `${heading}\n\n${render('interaction.history.useConversation')}`;
+    const root = `${origin}/${view.owner}/${view.repository}`;
+    const target = `${root}/${view.target.kind === 'pr' ? 'pull' : 'issues'}/${view.target.number}`;
+    const lines = [heading, '', render('interaction.history.scope'), '',
+        ...(view.state === 'partial' ? [render('interaction.history.partial'), ''] : []),
+        ...(view.rows.length ? [render('interaction.history.count', { count: view.rows.length }), '',
+            `| ${render('interaction.history.operation')} | ${render('interaction.history.outcome')} | ${render('interaction.history.evidence')} |`,
+            '|---|---|---|', ...view.rows.map(row => {
+                const links = [`[${render('interaction.history.request')}](${target}#issuecomment-${row.sourceId})`,
+                    ...(row.receiptId ? [`[${render('interaction.history.receipt')}](${target}#issuecomment-${row.receiptId})`] : []),
+                    ...(row.commitSha ? [`[${render('interaction.history.commit')}](${root}/commit/${row.commitSha})`] : [])];
+                return `| ${row.command} | ${render(row.outcome === 'unavailable' ? 'interaction.history.unavailableOutcome'
+                    : row.outcome === 'partial' ? 'interaction.history.partialOutcome' : `interaction.history.${row.outcome}`)} | ${links.join(' · ')} |`;
+            })] : [render('interaction.history.empty')])];
+    const body = lines.join('\n');
+    return body.length <= 5600 ? body : unavailable;
+}
+function safeOrigin(value) {
+    if (value.length > 200)
+        return undefined;
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && !url.username && !url.password
+            && url.pathname === '/' && !url.search && !url.hash ? url.origin : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
+/***/ 99186:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readHistoryProjection = readHistoryProjection;
+const git_object_id_1 = __nccwpck_require__(88623);
+const copilot_operation_1 = __nccwpck_require__(40221);
+/** Typed publisher boundary rejects malformed result data rather than trusting a kind string. */
+function readHistoryProjection(value, bound) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    const data = value;
+    const target = data.target;
+    if (data.kind !== 'history-command' || !['complete', 'partial', 'unavailable', 'unsupported-surface'].includes(String(data.state))
+        || typeof data.owner !== 'string' || typeof data.repository !== 'string' || typeof data.serverOrigin !== 'string'
+        || !target || Object.keys(target).some(key => !['kind', 'number'].includes(key)) || target.number !== bound.number || target.kind !== (bound.kind === 'pull-request' ? 'pr' : 'issue')
+        || !Array.isArray(data.rows) || data.rows.length > 10 || (['unavailable', 'unsupported-surface'].includes(String(data.state)) && data.rows.length !== 0)
+        || Object.keys(data).some(key => !['kind', 'state', 'rows', 'owner', 'repository', 'target', 'serverOrigin'].includes(key)))
+        return undefined;
+    const rows = [];
+    let previous = Number.MAX_SAFE_INTEGER;
+    for (const row of data.rows) {
+        if (!row || typeof row !== 'object' || !positive(row.sourceId) || row.sourceId >= previous || !(0, copilot_operation_1.isHistoryCommand)(row.command)
+            || !copilot_operation_1.OPERATION_OUTCOMES.includes(row.outcome)
+            || ('receiptId' in row && (!positive(row.receiptId) || row.receiptId <= row.sourceId))
+            || ('commitSha' in row && (typeof row.commitSha !== 'string' || (0, git_object_id_1.canonicalGitObjectId)(row.commitSha) !== row.commitSha
+                || row.outcome !== 'applied' || !row.receiptId))
+            || Object.keys(row).some(key => !['sourceId', 'command', 'outcome', 'receiptId', 'commitSha'].includes(key)))
+            return undefined;
+        rows.push(Object.freeze({ sourceId: row.sourceId, command: row.command, outcome: row.outcome,
+            ...(row.receiptId ? { receiptId: row.receiptId } : {}), ...(row.commitSha ? { commitSha: row.commitSha } : {}) }));
+        previous = row.sourceId;
+    }
+    return Object.freeze({ kind: 'history-command', state: data.state, rows: Object.freeze(rows),
+        owner: data.owner, repository: data.repository, serverOrigin: data.serverOrigin,
+        target: Object.freeze({ kind: target.kind, number: bound.number }) });
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+
+
+/***/ }),
+
 /***/ 90108:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -40584,6 +40786,7 @@ const READ_ONLY_COMMANDS = Object.freeze([
     ['/copilot description', 'interaction.help.command.description'],
     ['/copilot status', 'interaction.help.command.status'],
     ['/copilot doctor', 'interaction.help.command.doctor'],
+    ['/copilot history', 'interaction.help.command.history'],
 ]);
 const CHANGE_COMMANDS = Object.freeze([
     ['/copilot fix <finding-id>', 'interaction.help.command.fixOne'],
@@ -42839,6 +43042,29 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.help.command.description',
     'interaction.help.command.status',
     'interaction.help.command.doctor',
+    'interaction.help.command.history',
+    'interaction.history.fixPushed',
+    'interaction.history.fixNoChanges',
+    'interaction.history.heading',
+    'interaction.history.scope',
+    'interaction.history.empty',
+    'interaction.history.partial',
+    'interaction.history.unavailable',
+    'interaction.history.useConversation',
+    'interaction.history.count',
+    'interaction.history.operation',
+    'interaction.history.outcome',
+    'interaction.history.evidence',
+    'interaction.history.request',
+    'interaction.history.receipt',
+    'interaction.history.commit',
+    'interaction.history.applied',
+    'interaction.history.already-current',
+    'interaction.history.not-applied',
+    'interaction.history.blocked',
+    'interaction.history.failed',
+    'interaction.history.partialOutcome',
+    'interaction.history.unavailableOutcome',
     'interaction.help.command.fixOne',
     'interaction.help.command.fixAll',
     'interaction.help.command.dismiss',
@@ -42938,6 +43164,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.sddNextAnswers',
     'interaction.status.sddNextPublication',
     'interaction.status.sddNextReady',
+    'interaction.status.sddNextHistorical',
     'interaction.status.sddCard',
     'cli.answer',
     'cli.outcome',
@@ -42994,6 +43221,29 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.help.command.description': 'refresh the pull-request description.',
     'interaction.help.command.status': 'show the current automation status.',
     'interaction.help.command.doctor': 'check available runtime prerequisites without making repository changes.',
+    'interaction.help.command.history': 'show up to ten supported operations and their verified receipts.',
+    'interaction.history.fixPushed': 'Fix changes were pushed. Findings require an independent review of the pushed revision.',
+    'interaction.history.fixNoChanges': 'The fix produced no changes to push.',
+    'interaction.history.heading': 'Operation history',
+    'interaction.history.scope': 'General conversation comments',
+    'interaction.history.empty': 'No supported requests in this conversation',
+    'interaction.history.partial': 'Partial comment coverage; the latest ten operations cannot be guaranteed. Retry /copilot history if needed.',
+    'interaction.history.unavailable': 'Operation history unavailable; inspect the workflow and retry /copilot history.',
+    'interaction.history.useConversation': 'Post /copilot history in the main conversation of this issue or pull request. Review threads are outside its history scope.',
+    'interaction.history.count': 'Showing {count} supported requests',
+    'interaction.history.operation': 'Operation',
+    'interaction.history.outcome': 'Outcome',
+    'interaction.history.evidence': 'Evidence',
+    'interaction.history.request': 'Request',
+    'interaction.history.receipt': 'Receipt',
+    'interaction.history.commit': 'Commit',
+    'interaction.history.applied': 'Applied',
+    'interaction.history.already-current': 'Already current',
+    'interaction.history.not-applied': 'Not applied',
+    'interaction.history.blocked': 'Blocked',
+    'interaction.history.failed': 'Failed',
+    'interaction.history.partialOutcome': 'Partial',
+    'interaction.history.unavailableOutcome': 'Outcome unavailable',
     'interaction.help.command.fixOne': 'fix one reported finding.',
     'interaction.help.command.fixAll': 'fix all unresolved findings.',
     'interaction.help.command.dismiss': 'dismiss a finding.',
@@ -43105,6 +43355,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.sddNextAnswers': 'Answer these questions in the issue using their question identifiers.',
     'interaction.status.sddNextPublication': 'Resume SDD preparation to publish the approved specification.',
     'interaction.status.sddNextReady': 'Continue implementation on the linked branch.',
+    'interaction.status.sddNextHistorical': 'This SDD is historical evidence for a closed issue. No implementation or answers are requested.',
     'interaction.status.sddCard': 'Open SDD card',
     'cli.answer': 'Answer',
     'cli.outcome': 'Outcome',
@@ -43158,6 +43409,29 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.help.command.description': 'actualiza la descripción del pull request.',
     'interaction.help.command.status': 'muestra el estado actual de la automatización.',
     'interaction.help.command.doctor': 'comprueba los requisitos disponibles del runtime sin modificar el repositorio.',
+    'interaction.help.command.history': 'muestra hasta diez operaciones compatibles y sus recibos verificables.',
+    'interaction.history.fixPushed': 'Se publicaron los cambios de la corrección. Los hallazgos requieren una revisión independiente de esa revisión.',
+    'interaction.history.fixNoChanges': 'La corrección no produjo cambios que publicar.',
+    'interaction.history.heading': 'Historial de operaciones',
+    'interaction.history.scope': 'Comentarios de la conversación general',
+    'interaction.history.empty': 'No hay solicitudes compatibles en esta conversación',
+    'interaction.history.partial': 'Cobertura parcial de comentarios; no se pueden garantizar las diez operaciones más recientes. Reintenta /copilot history si lo necesitas.',
+    'interaction.history.unavailable': 'Historial de operaciones no disponible; revisa la ejecución y reintenta /copilot history.',
+    'interaction.history.useConversation': 'Publica /copilot history en la conversación principal de esta issue o pull request. Los hilos de revisión quedan fuera del historial.',
+    'interaction.history.count': 'Se muestran {count} solicitudes compatibles',
+    'interaction.history.operation': 'Operación',
+    'interaction.history.outcome': 'Resultado',
+    'interaction.history.evidence': 'Evidencia',
+    'interaction.history.request': 'Solicitud',
+    'interaction.history.receipt': 'Recibo',
+    'interaction.history.commit': 'Commit',
+    'interaction.history.applied': 'Aplicada',
+    'interaction.history.already-current': 'Ya estaba al día',
+    'interaction.history.not-applied': 'No aplicada',
+    'interaction.history.blocked': 'Bloqueada',
+    'interaction.history.failed': 'Fallida',
+    'interaction.history.partialOutcome': 'Parcial',
+    'interaction.history.unavailableOutcome': 'Resultado no disponible',
     'interaction.help.command.fixOne': 'corrige un hallazgo.',
     'interaction.help.command.fixAll': 'corrige todos los hallazgos sin resolver.',
     'interaction.help.command.dismiss': 'descarta un hallazgo.',
@@ -43273,6 +43547,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.sddNextAnswers': 'Responde estas preguntas en la issue usando sus identificadores.',
     'interaction.status.sddNextPublication': 'Retoma la preparación del SDD para publicar la especificación aprobada.',
     'interaction.status.sddNextReady': 'Continúa la implementación en la rama vinculada.',
+    'interaction.status.sddNextHistorical': 'Este SDD es evidencia histórica de una issue cerrada. No se solicita implementación ni respuestas.',
     'interaction.status.sddCard': 'Abrir tarjeta del SDD',
     'cli.answer': 'Respuesta',
     'cli.outcome': 'Resultado',
@@ -44294,7 +44569,7 @@ function projectSddStatus(evidence, initial) {
             : evidence.state === 'stale' ? (revisionPending ? 'revision-pending' : 'unverified') : evidence.state === 'invalid' ? 'unverified'
                 : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
                     : revisionPending ? 'revision-pending' : evidence.state;
-    return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
+    return Object.freeze({ state, ...(evidence.historical ? { historical: true } : {}), required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
         ...(path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path } : {}),
         ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
         ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
@@ -44329,7 +44604,7 @@ function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
     const base = safeIssueUrl(issueUrl, issueNumber, identity);
     if (path && !['unavailable', 'unverified'].includes(state))
         lines.push(label('interaction.status.sddOwner', `\`${path}\``));
-    if ((state === 'awaiting-answers' || state === 'revision-pending') && pending?.length)
+    if (!readiness.historical && (state === 'awaiting-answers' || state === 'revision-pending') && pending?.length)
         lines.push(label('interaction.status.sddQuestions', [...new Set(pending)].slice(0, 8).join(', ')));
     if (state === 'ready' && commitSha && path) {
         const evidence = base ? `[\`${commitSha}\`](${base.repository}/blob/${commitSha}/${path})` : `\`${commitSha}\``;
@@ -44339,7 +44614,9 @@ function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
         const evidence = base ? `[\`${firstCommitSha}\`](${base.repository}/blob/${firstCommitSha}/${path})` : `\`${firstCommitSha}\``;
         lines.push(label('interaction.status.sddFirstCommit', evidence));
     }
-    if (next[state])
+    if (readiness.historical && state !== 'not-required')
+        lines.push('', catalog.render('interaction.status.sddNextHistorical'));
+    else if (next[state])
         lines.push('', catalog.render(next[state]));
     if (base && Number.isSafeInteger(readiness.cardId) && readiness.cardId > 0)
         lines.push(`[${catalog.render('interaction.status.sddCard')}](${base.issue}#issuecomment-${readiness.cardId})`);
@@ -44381,6 +44658,9 @@ exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
 const github_runtime_doctor_presentation_policy_1 = __nccwpck_require__(2808);
+const copilot_operation_1 = __nccwpck_require__(40221);
+const copilot_history_presentation_policy_1 = __nccwpck_require__(55507);
+const copilot_history_projection_policy_1 = __nccwpck_require__(99186);
 const github_publication_1 = __nccwpck_require__(35793);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
@@ -44448,6 +44728,17 @@ function selectSemanticReplyIntents(context) {
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
             return [];
+        if (result.id === 'CommentAutomation.History' && result.executed) {
+            const history = (0, copilot_history_projection_policy_1.readHistoryProjection)(payload.publication, context.target);
+            if (history)
+                return [replyIntent(context, correlationId, 'copilot-history', history)];
+        }
+        const fixed = (0, result_1.getResultPayload)(payload.publication);
+        if (result.id === 'CommentAutomation.FixReply' && result.executed && fixed?.kind === 'fix-result'
+            && (fixed.outcome === 'changes-pushed' || fixed.outcome === 'no-changes')
+            && Object.keys(fixed).length === 2) {
+            return [replyIntent(context, correlationId, 'fix-result', Object.freeze({ kind: 'fix-result', outcome: fixed.outcome }))];
+        }
         const stateCommand = stateCommandReplyProjection(result.id, payload, context.correlationId);
         if (stateCommand)
             return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
@@ -44519,9 +44810,14 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
         digest: intent.digest,
     });
     const body = renderReplyBody(intent, catalog);
-    return `${marker}\n\n${body}`;
+    const operation = operationMarker(intent);
+    return `${marker}\n\n${body}${operation ? `\n\n${operation}` : ''}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'history-command')
+        return (0, copilot_history_presentation_policy_1.renderCopilotHistory)(intent.projection, catalog);
+    if (intent.projection.kind === 'fix-result')
+        return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed' ? 'interaction.history.fixPushed' : 'interaction.history.fixNoChanges'));
     if (intent.projection.kind === 'implementation-result') {
         return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
             ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges', { branch: inlineRef(intent.projection.branch) }));
@@ -44859,6 +45155,29 @@ function copyStatusSnapshot(snapshot) {
 }
 function safeDigest(value) {
     return /^[a-f0-9]{8,64}$/u.test(value) ? value : (0, publication_identity_policy_1.createSemanticDigest)(value);
+}
+function operationMarker(intent) {
+    if (!/^comment:[1-9]\d*$/u.test(intent.correlationId))
+        return undefined;
+    const projection = intent.projection;
+    const base = { target: (0, github_publication_1.publicationTargetToken)(intent.target), correlationId: intent.correlationId };
+    if (projection.kind === 'branch-sync-result') {
+        const outcome = projection.outcome === 'already-aligned' ? 'already-current'
+            : projection.outcome.startsWith('dry-run') ? 'not-applied' : 'applied';
+        // This producer proves completed push, but not an independent remote SHA read.
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: 'sync-branch', outcome });
+    }
+    if (projection.kind === 'implementation-result' || projection.kind === 'fix-result') {
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: projection.kind === 'fix-result' ? 'fix' : 'implement',
+            outcome: projection.outcome === 'changes-pushed' ? 'applied' : 'not-applied' });
+    }
+    if (projection.kind === 'state-command-result') {
+        const outcome = projection.outcome === 'not-applied' ? 'not-applied'
+            : projection.command === 'remember' ? projection.outcome === 'already-exists' ? 'already-current' : 'applied'
+                : projection.count === 0 ? 'already-current' : 'applied';
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: projection.command, outcome });
+    }
+    return undefined;
 }
 
 
@@ -49371,6 +49690,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
+exports.projectCurrentNativeStatus = projectCurrentNativeStatus;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const sdd_status_policy_1 = __nccwpck_require__(6853);
 const result_1 = __nccwpck_require__(73817);
@@ -49404,6 +49725,14 @@ function buildCopilotStatusSnapshot(execution) {
     const candidateIssue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.issueNumber)
         ?? (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.issue?.number);
     const issueNumber = candidateIssue === execution.pullRequest?.number ? undefined : candidateIssue;
+    const nativeLifecycle = !execution.isPush && isPullRequestTarget
+        && (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.pullRequest?.number) && execution.pullRequest.nativeState === 'closed'
+        ? execution.pullRequest.isMerged === true ? 'merged' : 'closed'
+        : !execution.isPush && !isPullRequestTarget && issueNumber
+            && issueNumber === (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.issue?.number) && execution.issue.nativeState === 'closed'
+            ? execution.issue.nativeStateReason === 'completed' ? 'completed' : 'closed' : undefined;
+    const currentLifecycle = nativeLifecycle ?? lifecycle;
+    const currentWaitingFor = nativeLifecycle ? undefined : waitingFor;
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -49419,8 +49748,9 @@ function buildCopilotStatusSnapshot(execution) {
         ...(issueNumber ? { issueNumber } : {}),
         ...(execution.pullRequest?.number > 0 ? { pullRequestNumber: execution.pullRequest.number } : {}),
         ...(branch ? { branch } : {}),
-        ...(lifecycle ? { lifecycle } : {}),
-        ...(waitingFor ? { waitingFor } : {}),
+        ...(currentLifecycle ? { lifecycle: currentLifecycle } : {}),
+        ...(currentWaitingFor ? { waitingFor: currentWaitingFor } : {}),
+        lifecycleLabels: Object.freeze({ ...(execution.labels?.lifecycle ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
         issueLabels: Object.freeze(issueLabels),
         pullRequestLabels: Object.freeze(pullRequestLabels),
         ...(findingStates ? { findingStates: Object.freeze({
@@ -49475,6 +49805,26 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
     if (snapshot.sddReadiness)
         lines.push(...(0, sdd_status_policy_1.formatSddStatus)(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
     return lines.join('\n');
+}
+/** A fresh native read supersedes event-derived terminal state without obtaining mutation authority. */
+function projectCurrentNativeStatus(status, facts) {
+    const issue = status.target === 'issue';
+    const targetNumber = issue ? status.issueNumber : status.target === 'pull-request' ? status.pullRequestNumber : undefined;
+    if (!(0, positive_integer_policy_1.parsePositiveSafeInteger)(targetNumber) || facts.number !== targetNumber || !['open', 'closed'].includes(facts.state)
+        || (issue ? !('labels' in facts) || !('reason' in facts) : !('merged' in facts) || typeof facts.merged !== 'boolean'))
+        return status;
+    const labels = status.lifecycleLabels ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS;
+    const currentLabels = issue && 'labels' in facts ? facts.labels : status.pullRequestLabels;
+    const state = (0, copilot_lifecycle_1.lifecycleStateFromLabels)(currentLabels, labels);
+    const active = state === 'working' ? 'in-progress' : state;
+    const waiting = currentLabels.includes(labels.awaitingMaintainer) ? 'maintainer'
+        : currentLabels.includes(labels.awaitingIssueAuthor) ? 'issue-author' : undefined;
+    const terminal = facts.state === 'closed'
+        ? issue ? 'reason' in facts && facts.reason === 'completed' ? 'completed' : 'closed'
+            : 'merged' in facts && facts.merged === true ? 'merged' : 'closed'
+        : undefined;
+    return Object.freeze({ ...status, ...(issue ? { issueLabels: Object.freeze([...currentLabels]) } : {}),
+        lifecycle: terminal ?? active, waitingFor: terminal ? undefined : waiting });
 }
 
 
@@ -49665,6 +50015,7 @@ exports.bindSddEvidenceReadPorts = bindSddEvidenceReadPorts;
 /** Retains only read operations, even when composition receives a broader adapter. */
 function bindSddEvidenceReadPorts(ports) {
     return Object.freeze({
+        ...(ports.nativeState ? { nativeState: Object.freeze({ readIssue: ports.nativeState.readIssue.bind(ports.nativeState) }) } : {}),
         comments: Object.freeze({ listIssueComments: ports.comments.listIssueComments.bind(ports.comments) }),
         descriptions: Object.freeze({ getDescription: ports.descriptions.getDescription.bind(ports.descriptions) }),
         titles: Object.freeze({ getTitle: ports.titles.getTitle.bind(ports.titles) }),
@@ -51762,6 +52113,7 @@ function projectEvidence(source) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ObserveBranchSyncUseCase = void 0;
+const publication_identity_policy_1 = __nccwpck_require__(45403);
 const result_1 = __nccwpck_require__(73817);
 const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -51769,17 +52121,20 @@ const application_error_1 = __nccwpck_require__(75999);
 const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const transition_notification_workflow_1 = __nccwpck_require__(1725);
 const publication_outcome_policy_1 = __nccwpck_require__(79719);
+const application_error_2 = __nccwpck_require__(75999);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
  * and maintains one stateful notification per issue; no agent is reachable.
  */
 class ObserveBranchSyncUseCase {
-    constructor(dependencies, comparisons, notifications, catalogResolver) {
+    constructor(dependencies, comparisons, notifications, catalogResolver, nativeIssues, retirement) {
         this.dependencies = dependencies;
         this.comparisons = comparisons;
         this.notifications = notifications;
         this.catalogResolver = catalogResolver;
+        this.nativeIssues = nativeIssues;
+        this.retirement = retirement;
         this.taskId = TASK_ID;
     }
     async invoke(context) {
@@ -51792,10 +52147,11 @@ class ObserveBranchSyncUseCase {
                 (0, logging_ports_1.logInfo)(`No open branch dependencies are affected by ${pushedBranch}.`);
                 return [];
             }
-            const messages = await (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver);
+            let catalog;
+            const getMessages = () => catalog ?? (catalog = (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver));
             const results = [];
             for (const dependency of dependencies) {
-                results.push(await this.reconcileDependency(context, dependency, messages));
+                results.push(await this.reconcileDependency(context, dependency, getMessages));
             }
             return results;
         }
@@ -51804,10 +52160,61 @@ class ObserveBranchSyncUseCase {
             return [failure("Unable to inspect branch synchronization safely.", cause)];
         }
     }
-    async reconcileDependency(context, dependency, messages) {
+    openNotifications(issueNumber) {
+        const assertOpen = async (number) => {
+            if (number !== issueNumber || !this.nativeIssues)
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+            const current = await this.nativeIssues.readIssue(number);
+            if (current.number !== number || current.state !== 'open')
+                throw new application_error_2.ApplicationError('workflow.stale', 'The issue is no longer open.');
+        };
+        return Object.freeze({
+            listIssueComments: (number) => this.notifications.listIssueComments(number),
+            addComment: async (number, body) => {
+                await assertOpen(number);
+                await this.notifications.addComment(number, body);
+            },
+            updateComment: async (number, id, body) => {
+                await assertOpen(number);
+                await this.notifications.updateComment(number, id, body);
+            },
+            removeComment: async (number, id) => {
+                await assertOpen(number);
+                return this.notifications.removeComment(number, id);
+            },
+        });
+    }
+    async reconcileDependency(context, dependency, getMessages) {
         try {
+            if (!this.nativeIssues)
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+            const initial = await this.nativeIssues.readIssue(dependency.issueNumber);
+            if (initial.number !== dependency.issueNumber || !['open', 'closed'].includes(initial.state))
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+            if (initial.state === 'closed') {
+                if (!this.retirement)
+                    throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+                const [result] = await this.retirement.invoke({
+                    issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+                });
+                return result;
+            }
+            const messages = await getMessages();
+            const beforeComparison = await this.nativeIssues.readIssue(dependency.issueNumber);
+            if (beforeComparison.number !== dependency.issueNumber || !['open', 'closed'].includes(beforeComparison.state)) {
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+            }
+            if (beforeComparison.state === 'closed') {
+                if (!this.retirement)
+                    throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+                const [result] = await this.retirement.invoke({
+                    issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+                });
+                return result;
+            }
+            const notifications = this.openNotifications(dependency.issueNumber);
             const comparison = await this.comparisons.compare(dependency.parentBranch, dependency.workingBranch);
-            const comments = await this.notifications.listIssueComments(dependency.issueNumber);
+            const comments = await notifications.listIssueComments(dependency.issueNumber);
             const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, context.trustedBotLogin, dependency);
             if (comparison.behindBy > 0) {
                 const comment = (0, branch_sync_notification_policy_1.buildStaleBranchSyncComment)({
@@ -51818,12 +52225,12 @@ class ObserveBranchSyncUseCase {
                     messages,
                 });
                 if (!latest) {
-                    await this.notifications.addComment(dependency.issueNumber, comment);
+                    await notifications.addComment(dependency.issueNumber, comment);
                     return success(dependency, comparison.behindBy, "stale");
                 }
                 const transitionedFromAligned = !(0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body);
                 if (latest.body !== comment) {
-                    await this.notifications.updateComment(dependency.issueNumber, latest.id, comment);
+                    await notifications.updateComment(dependency.issueNumber, latest.id, comment);
                 }
                 if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
                     return success(dependency, comparison.behindBy, "stale");
@@ -51837,7 +52244,7 @@ class ObserveBranchSyncUseCase {
                         intent,
                         message: (0, branch_sync_notification_policy_1.buildBranchSyncTransitionNotification)(dependency, messages, (0, branch_sync_notification_policy_1.buildBranchSyncStatusCommentUrl)(context.repository.owner, context.repository.name, dependency.issueNumber, latest.id)),
                         duplicatePointer: canonicalUrl => (0, branch_sync_notification_policy_1.buildBranchSyncDuplicatePointer)(messages, canonicalUrl),
-                    }, this.notifications);
+                    }, notifications);
                     const cleanup = (0, publication_outcome_policy_1.buildDuplicateCompactionPublicationPayload)(transition.compactedCommentIds);
                     return success(dependency, comparison.behindBy, "stale", {
                         ...(0, publication_outcome_policy_1.buildTransitionPublicationPayload)(intent, transition.effect),
@@ -51848,8 +52255,8 @@ class ObserveBranchSyncUseCase {
                     return failure(`Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`, cause, { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true });
                 }
             }
-            if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
-                await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
+            if (latest && ((0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body) || (0, publication_identity_policy_1.parsePublicationMarker)(latest.body)?.sourceVersion === 'closed:issue')) {
+                await notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
             }
             return success(dependency, 0, "aligned");
         }
@@ -52504,6 +52911,92 @@ function failure(taskId, message, code) {
 
 /***/ }),
 
+/***/ 74111:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireBranchSyncUseCase = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const result_1 = __nccwpck_require__(73817);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
+const application_error_1 = __nccwpck_require__(75999);
+/** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
+class RetireBranchSyncUseCase {
+    constructor(issues, comments, cardFreshness) {
+        this.issues = issues;
+        this.comments = comments;
+        this.cardFreshness = cardFreshness;
+        this.taskId = 'RetireBranchSyncUseCase';
+    }
+    async invoke(context) {
+        let retired = 0;
+        let nativeClosed = false;
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
+                return [this.result(retired, nativeClosed)];
+            }
+            const initial = await this.issues.readIssue(context.issueNumber);
+            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state))
+                throw stale();
+            if (initial.state !== 'closed')
+                return [this.result(retired, nativeClosed)];
+            nativeClosed = true;
+            const messages = (0, branch_sync_message_catalog_1.resolveStaticBranchSyncCatalog)(context.locale);
+            const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+                return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
+                    && marker.identity.target.number === context.issueNumber && /^dependency:[a-f0-9]{16}$/u.test(marker.identity.key)
+                    && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue')
+                    && Number.isSafeInteger(comment.id) && comment.id > 0
+                    && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
+            });
+            if (cards.length > 20)
+                throw stale();
+            for (const card of cards) {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(card.body);
+                const body = (0, branch_sync_notification_policy_1.buildRetiredBranchSyncComment)(marker.identity, messages);
+                if (card.body === body)
+                    continue;
+                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
+                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
+                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
+                if (!await this.cardFreshness.matches(witness))
+                    throw stale();
+                const fresh = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
+                if (!nativeClosed || fresh.reason !== initial.reason)
+                    throw stale();
+                await this.comments.updateComment(context.issueNumber, card.id, body);
+                retired++;
+            }
+            return [this.result(retired, nativeClosed)];
+        }
+        catch (cause) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
+                    steps: [nativeClosed ? 'Issue closure is retained; synchronization recommendation retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; synchronization recommendations were left unchanged.'],
+                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire synchronization recommendations safely.')],
+                    payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
+        }
+    }
+    result(retired, nativeClosed) {
+        return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
+            steps: [retired ? 'The closed issue’s synchronization recommendations were retired.' : 'No synchronization recommendation required retirement.'],
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+    }
+}
+exports.RetireBranchSyncUseCase = RetireBranchSyncUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned synchronization card changed or is unavailable.');
+}
+
+
+/***/ }),
+
 /***/ 94894:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -53138,7 +53631,8 @@ async function runAutofixAction(param, options, intentPayload) {
         context: intentPayload.context,
         branchOverride: intentPayload.branchOverride,
     });
-    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort);
+    let completedOutcome;
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort, outcome => { completedOutcome = outcome; });
     if (resolutionErrors.length > 0) {
         autofixResults.push(new result_1.Result({
             id: `${options.taskId}.AutofixPostflight`,
@@ -53160,6 +53654,9 @@ async function runAutofixAction(param, options, intentPayload) {
         }
         autofixResults.push(...reviewResults);
     }
+    if (completedOutcome)
+        autofixResults.push(new result_1.Result({ id: 'CommentAutomation.FixReply', success: true, executed: true,
+            payload: { publication: Object.freeze({ kind: 'fix-result', outcome: completedOutcome }) } }));
     return autofixResults;
 }
 function isSupersededReviewResult(result) {
@@ -53197,8 +53694,11 @@ async function runDoUserRequestAction(param, options, intentPayload) {
     const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
     if (!committed || commitResults.some(result => !result.success || result.errors.length > 0))
         return results;
+    const outcome = committed.payload?.commitOutcome;
+    if (outcome !== 'changes-pushed' && outcome !== 'no-changes')
+        return results;
     const publication = Object.freeze({
-        kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+        kind: 'implementation-result', outcome, branch: branchOverride,
     });
     return [...results, new result_1.Result({ id: implementation_result_policy_1.IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
             payload: { publication } })];
@@ -53216,6 +53716,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
 const read_copilot_doctor_workflow_1 = __nccwpck_require__(12416);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const result_1 = __nccwpck_require__(73817);
 const read_copilot_status_workflow_1 = __nccwpck_require__(57206);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
@@ -53229,12 +53730,18 @@ const comment_mutation_target_workflow_1 = __nccwpck_require__(81324);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
+    if (command.name === 'history')
+        return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({
+                owner: param.bugbot.review.repository.owner, repository: param.bugbot.review.repository.name,
+                target: { kind: param.bugbot.review.target.isPullRequest ? 'pr' : 'issue', number: param.language.issueNumber },
+                queryId: param.language.commentId, botLogin: param.trustedBotLogin, locale: param.language.locale, generalConversation: false,
+            })];
     if (command.name === 'help')
         return runHelpCommand(param, options);
     if (command.name === 'doctor')
         return [await (0, read_copilot_doctor_workflow_1.readCopilotDoctor)(param, options.taskId, options.doctorReadPorts)];
     if (command.name === 'status')
-        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
+        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts, options.sddQueryPort, options.nativeStatusReadPort)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember')
@@ -53296,7 +53803,8 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     }
     const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, targetBranch, results, options.bugbotGitMutationPort);
     const committed = commitResults.at(-1);
-    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
+    const commitOutcome = committed?.payload?.commitOutcome;
+    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && commitOutcome === 'changes-pushed'
             ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
 }
 function rememberFailure(error) {
@@ -53672,7 +54180,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
         const isPublicMetadataCommand = command.kind === 'command'
-            && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'doctor');
+            && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'doctor' || command.command.name === 'history');
         if (!isPublicMetadataCommand && param.membersOnly
             && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
@@ -54302,6 +54810,8 @@ function positiveIssueNumberOrUndefined(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const result_1 = __nccwpck_require__(73817);
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
@@ -54310,7 +54820,7 @@ const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const copilot_command_1 = __nccwpck_require__(11771);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, sddQueryPort, doctorReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, historyReadPort, sddQueryPort, nativeStatusReadPort, doctorReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -54326,13 +54836,24 @@ class IssueCommentUseCase {
         this.preBranchSddContinuation = preBranchSddContinuation;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.historyReadPort = historyReadPort;
         this.sddQueryPort = sddQueryPort;
+        this.nativeStatusReadPort = nativeStatusReadPort;
         this.doctorReadPorts = doctorReadPorts;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
-        const command = (0, copilot_command_1.parseCopilotCommand)(param.issue.commentBody);
-        const isDoctor = command.kind === 'command' && command.command.name === 'doctor';
+        const historyCommand = (0, copilot_command_1.parseCopilotCommand)(param.issue.commentBody);
+        if (historyCommand.kind === 'invalid')
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
+        if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+            return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
+                    target: param.isPullRequest ? { kind: 'pr', number: param.pullRequest.number } : { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.isPullRequest ? param.locale.pullRequest : param.locale.issue,
+                    generalConversation: param.eventName === 'issue_comment',
+                }, this.historyReadPort)];
+        }
+        const isDoctor = historyCommand.kind === 'command' && historyCommand.command.name === 'doctor';
         if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
             return [new result_1.Result({
                     id: this.taskId, success: false, executed: true,
@@ -54368,6 +54889,7 @@ class IssueCommentUseCase {
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
             doctorReadPorts: this.doctorReadPorts,
+            nativeStatusReadPort: this.nativeStatusReadPort,
             sddQueryPort: this.sddQueryPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
@@ -54413,6 +54935,10 @@ class IssueUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        if (param.inputs?.issue?.state === 'closed') {
+            return [new result_1.Result({ id: this.taskId, success: true, executed: false,
+                    steps: ['The native issue is closed; open-issue branch and SDD preparation were skipped.'] })];
+        }
         if (param.preBranchSdd && !param.issue.issueManagedBranches) {
             const message = 'pre-branch-sdd requires issue-managed-branches; correct the Action configuration before starting work.';
             return [new result_1.Result({
@@ -55022,12 +55548,15 @@ function buildCatalogResponseSchema(source, ids, targetLocale = 'en-US') {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const copilot_command_1 = __nccwpck_require__(11771);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, doctorReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, historyReadPort, nativeStatusReadPort, doctorReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -55042,10 +55571,22 @@ class PullRequestReviewCommentUseCase {
         this.syncBranchUseCase = syncBranchUseCase;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.historyReadPort = historyReadPort;
+        this.nativeStatusReadPort = nativeStatusReadPort;
         this.doctorReadPorts = doctorReadPorts;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
+        const historyCommand = (0, copilot_command_1.parseCopilotCommand)(param.pullRequest.commentBody);
+        if (historyCommand.kind === 'invalid')
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
+        if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+            return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
+                    target: { kind: 'pr', number: param.pullRequest.number }, queryId: param.pullRequest.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.locale.pullRequest,
+                    generalConversation: param.eventName === 'issue_comment',
+                }, this.historyReadPort)];
+        }
         const context = (0, comment_automation_context_1.projectCommentAutomationContext)(param, (0, check_pull_request_comment_language_use_case_1.projectPullRequestCommentLanguageRequest)(param), param.pullRequest.commentBody ?? '');
         return (0, comment_automation_use_case_1.runCommentAutomation)(context, {
             taskId: this.taskId,
@@ -55069,6 +55610,7 @@ class PullRequestReviewCommentUseCase {
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
             doctorReadPorts: this.doctorReadPorts,
+            nativeStatusReadPort: this.nativeStatusReadPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -55202,7 +55744,10 @@ async function runPullRequestWorkflow(context, taskId, ports) {
             return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
         }
         if (context.closed && context.merged) {
-            return ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+            const results = await ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+            if (ports.workflowSteps.retireBranchSync)
+                results.push(...await ports.workflowSteps.retireBranchSync.invoke(ports.sharedContexts.steps.retireBranchSync));
+            return results;
         }
     }
     catch (cause) {
@@ -55250,6 +55795,7 @@ function logPullRequestState(context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectPullRequestWorkflowStepContexts = projectPullRequestWorkflowStepContexts;
 exports.projectPullRequestDescriptionContext = projectPullRequestDescriptionContext;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
 function projectPullRequestWorkflowStepContexts(source) {
     const projects = (0, issue_workflow_context_1.copyProjects)(source.project.getProjects());
@@ -55283,7 +55829,12 @@ function projectPullRequestWorkflowStepContexts(source) {
             projects,
         }),
         description: projectPullRequestDescriptionContext(source),
+        retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.issue ?? 'en-US', trustedBotLogin: source.tokenUser }),
         closeIssue: Object.freeze({
+            completionLabels: Object.freeze({
+                lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
+                protectedLabels: Object.freeze([...(source.labels.completionProtectedLabels ?? ['branched', 'SDD', 'contract-change'])]),
+            }),
             issueNumber: source.issueNumber,
             pullRequestNumber: source.pullRequest.number,
         }),
@@ -55662,6 +56213,47 @@ function doctorResult(taskId, report, serverOrigin, revision, owner, repository)
 
 /***/ }),
 
+/***/ 8140:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCopilotHistory = readCopilotHistory;
+const result_1 = __nccwpck_require__(73817);
+const copilot_history_policy_1 = __nccwpck_require__(14335);
+/** A failed read cannot prove empty history or an operation failure. */
+async function readCopilotHistory(request, ports) {
+    let history = request.generalConversation ? copilot_history_policy_1.HISTORY_UNAVAILABLE : copilot_history_policy_1.HISTORY_UNSUPPORTED_SURFACE;
+    if (ports && request.generalConversation && request.botLogin && Number.isSafeInteger(request.target.number)
+        && request.target.number > 0 && Number.isSafeInteger(request.queryId) && request.queryId > 0) {
+        try {
+            const read = await ports.readComments(request.target.number);
+            const coverage = read.coverage;
+            const counters = [coverage.pagesFetched, coverage.itemsFetched, coverage.itemsRetained, coverage.omittedItems, coverage.truncatedItems];
+            if (counters.some(value => !Number.isSafeInteger(value) || value < 0)
+                || typeof coverage.limitReached !== 'boolean'
+                || (coverage.providerLimitReached !== undefined && typeof coverage.providerLimitReached !== 'boolean'))
+                throw new Error('Invalid history coverage counters.');
+            if (coverage.source !== 'issue-comments' || coverage.itemsRetained !== read.value.length
+                || coverage.itemsFetched < coverage.itemsRetained || !['complete', 'partial'].includes(coverage.status))
+                throw new Error('Invalid history coverage.');
+            history = (0, copilot_history_policy_1.selectCopilotHistory)({ target: `${request.target.kind}:${request.target.number}`, queryId: request.queryId,
+                botLogin: request.botLogin, complete: coverage.status === 'complete' && coverage.omittedItems === 0
+                    && coverage.truncatedItems === 0 && !coverage.limitReached && !coverage.providerLimitReached,
+                comments: read.value.map(comment => Object.freeze({ id: comment.id, body: comment.body,
+                    author: comment.user?.login ?? '', automated: comment.isAutomatedAuthor })) });
+        }
+        catch { /* Provider errors disclose no inferred absence and no raw error. */ }
+    }
+    return new result_1.Result({ id: 'CommentAutomation.History', success: true, executed: true,
+        payload: { publication: Object.freeze({ ...history, owner: request.owner, repository: request.repository,
+                target: Object.freeze({ ...request.target }), serverOrigin: ports?.serverOrigin ?? 'https://github.com' }) } });
+}
+
+
+/***/ }),
+
 /***/ 57206:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -55678,11 +56270,34 @@ const context_1 = __nccwpck_require__(14712);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
 const application_error_1 = __nccwpck_require__(75999);
 /** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
-async function readCopilotStatus(param, taskId, ports, sddQuery) {
+async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
+    let initialIssue;
+    let initialPull;
     let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
+    if (nativeStatus && status.target === 'issue' && status.issueNumber) {
+        const facts = await nativeStatus.readIssue(status.issueNumber);
+        if (facts.number !== status.issueNumber)
+            throw unavailableStatus();
+        initialIssue = facts;
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, facts);
+    }
+    else if (nativeStatus && status.target === 'pull-request' && status.pullRequestNumber) {
+        const facts = await nativeStatus.readPullRequest(status.pullRequestNumber);
+        if (facts.number !== status.pullRequestNumber)
+            throw unavailableStatus();
+        initialPull = facts;
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, facts);
+        if (facts.state === 'closed') {
+            await fenceNativePull(nativeStatus, facts);
+            return (0, status_command_policy_1.buildCopilotStatusResult)({ ...status, findingStates: undefined, findingStateEvidence: undefined }, taskId);
+        }
+    }
     if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
         const evidence = await sddQuery.read(param.sdd);
         status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
+    }
+    if (nativeStatus && initialIssue) {
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, await fenceNativeIssue(nativeStatus, initialIssue));
     }
     if (!status.pullRequestNumber || !ports)
         return (0, status_command_policy_1.buildCopilotStatusResult)(status, taskId);
@@ -55704,7 +56319,11 @@ async function readCopilotStatus(param, taskId, ports, sddQuery) {
     const counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', pull.number, pull.headSha);
     if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha)
         throw unavailableStatus();
-    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...param.status,
+    if (nativeStatus && initialPull)
+        await fenceNativePull(nativeStatus, initialPull);
+    if (nativeStatus && initialIssue)
+        await fenceNativeIssue(nativeStatus, initialIssue);
+    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...status,
         findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened,
             verificationRequired: counts['verification-required'], unknown: counts.unknown,
@@ -55713,6 +56332,18 @@ async function readCopilotStatus(param, taskId, ports, sddQuery) {
 }
 function unavailableStatus() {
     return new application_error_1.ApplicationError('workflow.stale', 'Current Bugbot status evidence is unavailable, incomplete or stale. Run /copilot recheck and retry status.');
+}
+async function fenceNativePull(port, original) {
+    const fresh = await port.readPullRequest(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.merged !== original.merged)
+        throw unavailableStatus();
+}
+async function fenceNativeIssue(port, original) {
+    const fresh = await port.readIssue(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.reason !== original.reason
+        || JSON.stringify([...fresh.labels].sort()) !== JSON.stringify([...original.labels].sort()))
+        throw unavailableStatus();
+    return fresh;
 }
 
 
@@ -56149,9 +56780,11 @@ class SddEvidenceQueryUseCase {
             if (context.admittedKind === 'help' || !context.preBranchSdd)
                 return { state: 'not-required' };
             const facts = await this.readFacts(context.issueNumber);
-            if (!this.required(context, facts.labels))
-                return { state: 'not-required' };
             const selection = (0, sdd_query_card_policy_1.selectOwnedSddCard)(facts.comments, context.issueNumber, context.trustedBotLogin);
+            const historical = facts.nativeState === 'closed' && selection.state === 'valid'
+                && fullSha(selection.record.commitSha) && this.historicalEligible(context, facts.labels);
+            if (!this.required(context, facts.labels) && !historical)
+                return { state: 'not-required' };
             if (selection.state !== 'valid')
                 return { state: selection.state };
             const { record, id: cardId } = selection;
@@ -56159,9 +56792,9 @@ class SddEvidenceQueryUseCase {
             const stale = digest !== record.issueDigest;
             const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
             if (!['invalid', 'unavailable'].includes(result.state)
-                && !await this.fence(context, facts, selection.body, cardId, record, result.verified))
+                && !await this.fence(context, facts, selection.body, cardId, record, result.verified, historical))
                 return { state: 'stale' };
-            return Object.freeze(result);
+            return Object.freeze({ ...result, ...(historical ? { historical: true } : {}) });
         }
         catch {
             return { state: 'unavailable' };
@@ -56268,13 +56901,14 @@ class SddEvidenceQueryUseCase {
         }
         return authorization;
     }
-    async fence(context, original, cardBody, cardId, record, verified) {
+    async fence(context, original, cardBody, cardId, record, verified, historical = false) {
         const fresh = await this.readFacts(context.issueNumber);
         const card = (0, sdd_query_card_policy_1.selectOwnedSddCard)(fresh.comments, context.issueNumber, context.trustedBotLogin);
         if (card.state !== 'valid' || card.id !== cardId || card.body !== cardBody
             || this.digest(context, fresh, record.baseSha) !== this.digest(context, original, record.baseSha)
             || canonicalLabels(fresh.labels) !== canonicalLabels(original.labels)
-            || !this.required(context, fresh.labels))
+            || fresh.nativeState !== original.nativeState
+            || !(this.required(context, fresh.labels) || historical && fresh.nativeState === 'closed' && this.historicalEligible(context, fresh.labels)))
             return false;
         // Answer arrivals or edits must not let a stale question projection become current.
         if (record.phase === 'awaiting-answer'
@@ -56293,6 +56927,9 @@ class SddEvidenceQueryUseCase {
             return false;
         return true;
     }
+    historicalEligible(context, labels) {
+        return context.admittedKind === 'feature' || labels.some(label => label.toLowerCase() === 'contract-change');
+    }
     required(context, labels) {
         return (0, issue_start_policy_1.decideIssueStart)({ kind: context.admittedKind, labels,
             issueManagedBranches: context.issueManagedBranches, preBranchSdd: context.preBranchSdd }).sddRequired;
@@ -56302,15 +56939,18 @@ class SddEvidenceQueryUseCase {
             admittedKind: context.admittedKind, profileDigest: context.profileDigest }, baseSha);
     }
     async readFacts(issueNumber) {
-        const [title, body, labels, comments] = await Promise.all([
+        const [title, body, labels, comments, native] = await Promise.all([
             this.ports.titles.getTitle(issueNumber), this.ports.descriptions.getDescription(issueNumber),
-            this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+            this.ports.nativeState ? Promise.resolve([]) : this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+            this.ports.nativeState?.readIssue(issueNumber),
         ]);
         if (title === undefined || body === undefined || comments.coverage.source !== 'issue-comments'
             || comments.coverage.status !== 'complete' || comments.coverage.limitReached || comments.coverage.providerLimitReached
             || comments.coverage.omittedItems !== 0 || comments.coverage.truncatedItems !== 0)
             throw new Error('Incomplete SDD authority.');
-        return { title, body, labels, comments: comments.value };
+        if (native && native.number !== issueNumber)
+            throw new Error('Foreign native SDD subject.');
+        return { title, body, labels: native?.labels ?? labels, comments: comments.value, ...(native ? { nativeState: native.state } : {}) };
     }
 }
 exports.SddEvidenceQueryUseCase = SddEvidenceQueryUseCase;
@@ -60159,6 +60799,8 @@ function normalizedObjectId(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushPreflight = runCommitAndPushPreflight;
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 const logging_ports_1 = __nccwpck_require__(6152);
 const git_branch_checkout_1 = __nccwpck_require__(68549);
 const verify_command_policy_1 = __nccwpck_require__(96031);
@@ -60171,6 +60813,15 @@ async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort))) {
         return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
     }
+    let excludedBeforeVerification = [];
+    if (options.workspacePaths) {
+        try {
+            excludedBeforeVerification = (await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort)).filter(path => !options.workspacePaths.includes(path));
+        }
+        catch (error) {
+            return { status: "failure", error: (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Pre-verification workspace could not be verified.').message };
+        }
+    }
     const verification = await runVerification(context, gitCommitPort);
     if (verification)
         return { status: "failure", error: verification };
@@ -60179,6 +60830,15 @@ async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     }
     if (options.workspacePaths && options.workspacePaths.length === 0) {
         return { status: "failure", error: "No safe workspace paths to commit." };
+    }
+    if (options.workspacePaths) {
+        try {
+            const final = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(gitCommitPort, excludedBeforeVerification, 'Automated commit verification');
+            return { status: "ready", workspacePaths: final.workspacePaths };
+        }
+        catch (error) {
+            return { status: "failure", error: (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Post-verification workspace could not be verified.').message };
+        }
     }
     return { status: "ready" };
 }
@@ -60223,8 +60883,9 @@ async function runCommitAndPushWorkflow(context, options, gitCommitPort) {
         const { name, email } = await gitCommitPort.getAuthenticatedUserDetails();
         await gitCommitPort.configureAuthor(name, email);
         (0, logging_ports_1.logDebugInfo)(`Git author set to ${name} <${email}>.`);
-        if (options.workspacePaths) {
-            await gitCommitPort.stagePaths(options.workspacePaths);
+        const workspacePaths = preflight.workspacePaths ?? options.workspacePaths;
+        if (workspacePaths) {
+            await gitCommitPort.stagePaths(workspacePaths);
         }
         else {
             await gitCommitPort.stageAll();
@@ -60254,7 +60915,7 @@ exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort) {
+async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort, onCompleted) {
     const lastAutofix = autofixResults.at(-1);
     if (!lastAutofix?.success) {
         (0, logging_ports_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
@@ -60273,6 +60934,7 @@ async function commitAutofixAndResolveFindings(context, payload, autofixResults,
         (0, logging_ports_1.logInfo)(`Bugbot autofix commit failed: ${message}`);
         return [new Error(message)];
     }
+    onCompleted?.(commitResult.committed ? 'changes-pushed' : 'no-changes');
     if (commitResult.committed && payload.context) {
         (0, logging_ports_1.logInfo)(`Committed autofix for ${payload.targetFindingIds.length} ${payload.targetFindingIds.length === 1 ? 'finding' : 'findings'}. `
             + 'Findings remain open until a fresh review verifies the pushed revision.');
@@ -60378,6 +61040,7 @@ async function commitUserRequestIfSuccessful(context, branchOverride, results, g
             id: 'DoUserRequestCommitAndPush',
             success: true,
             executed: commitResult.committed,
+            payload: Object.freeze({ commitOutcome: commitResult.committed ? 'changes-pushed' : 'no-changes' }),
             steps: [commitResult.committed ? 'User request changes committed and pushed.' : 'No changes were produced by the user request.'],
         })];
 }
@@ -63361,14 +64024,14 @@ async function finalizeWorkspaceMutation(gitCommitPort, before, operation) {
     const workspacePathsAfter = await inspectWorkspace(gitCommitPort, `after ${operation}`);
     const unsafePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
     if (unsafePaths.length > 0) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`);
+        throw new application_error_1.ApplicationError('workflow.failed', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`, { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
     }
     const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)([...before], workspacePathsAfter);
     if (workspacePaths.length === 0) {
         throw new application_error_1.ApplicationError('agent.failed', `${operation} produced no safe workspace paths to commit.`);
     }
     if (workspacePaths.length > exports.MAX_AUTOMATED_CHANGED_PATHS) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`);
+        throw new application_error_1.ApplicationError('workflow.failed', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`, { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
     }
     return { workspacePaths };
 }
@@ -65095,67 +65758,92 @@ exports.CheckPriorityIssueSizeUseCase = CheckPriorityIssueSizeUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseIssueAfterMergingUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logging_ports_1 = __nccwpck_require__(6152);
-const task_emoji_1 = __nccwpck_require__(46103);
+const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+/** Native completion first, selective metadata second; retained effects survive partial failures. */
 class CloseIssueAfterMergingUseCase {
-    constructor(issueRepository) {
-        this.issueRepository = issueRepository;
+    constructor(issues) {
+        this.issues = issues;
         this.taskId = 'CloseIssueAfterMergingUseCase';
     }
     async invoke(param) {
-        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const result = [];
-        const linkedIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
-        if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
-            (0, logging_ports_1.logDebugInfo)('CloseIssueAfterMerging: no issue was inferred from the pull-request branch; skipping issue closure.');
-            return [new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: false,
-                    steps: ['No linked issue was found; the pull request was not used to close an issue.'],
-                })];
-        }
+        const number = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+        const pullNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.pullRequestNumber);
+        if (!number || !pullNumber || number === pullNumber)
+            return [new result_1.Result({ id: this.taskId, success: true, executed: false,
+                    steps: ['No separate safe linked issue and pull request were found; issue closure was skipped.'] })];
+        let closedThisRun = false;
+        let nativeClosed = false;
+        let labelsChanged = 0;
         try {
-            const closed = await this.issueRepository.closeIssue(linkedIssueNumber);
-            if (closed) {
-                (0, logging_ports_1.logInfo)(`Issue #${linkedIssueNumber} closed after merging PR #${param.pullRequestNumber}.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `#${linkedIssueNumber} was automatically closed after merging this pull request.`
-                    ]
-                }));
+            const pull = await this.issues.readPullRequest(pullNumber);
+            if (pull.number !== pullNumber || pull.state !== 'closed' || pull.merged !== true)
+                throw stale();
+            const target = this.issues.forIssue(number);
+            const read = async () => {
+                const current = await target.read();
+                if (current.number === number && ['open', 'closed'].includes(current.state))
+                    nativeClosed = current.state === 'closed';
+                if (current.number !== number || (0, issue_completion_1.planIssueCompletion)(current, param.completionLabels).kind === 'invalid')
+                    throw stale();
+                return current;
+            };
+            let facts = await read();
+            if (facts.state === 'open' && facts.reason === 'reopened')
+                throw stale();
+            if (facts.state === 'open') {
+                closedThisRun = await target.close();
+                facts = await read();
             }
-            else {
-                (0, logging_ports_1.logDebugInfo)(`Issue #${linkedIssueNumber} was already closed or close failed after merge.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: false,
-                }));
+            nativeClosed = facts.state === 'closed';
+            if (!nativeClosed || closedThisRun && facts.reason !== 'completed')
+                throw stale();
+            const fence = async () => {
+                const freshFacts = await read();
+                const freshPlan = (0, issue_completion_1.planIssueCompletion)(freshFacts, param.completionLabels);
+                if (freshPlan.kind !== 'closed' || freshFacts.reason !== facts.reason)
+                    throw stale();
+                return freshPlan;
+            };
+            const plan = (0, issue_completion_1.planIssueCompletion)(facts, param.completionLabels);
+            if (plan.kind !== 'closed')
+                throw stale();
+            for (const label of plan.remove) {
+                const fresh = await fence();
+                if (fresh.remove.includes(label)) {
+                    await target.removeLabel(label);
+                    labelsChanged++;
+                }
             }
+            for (const label of plan.add) {
+                const fresh = await fence();
+                if (fresh.add.includes(label)) {
+                    await target.addLabel(label);
+                    labelsChanged++;
+                }
+            }
+            const final = await fence();
+            if (final.remove.length || final.add.length)
+                throw stale();
+            return [new result_1.Result({ id: this.taskId, success: true, executed: closedThisRun || labelsChanged > 0,
+                    steps: [`Issue #${number} is closed and its completion metadata was verified after PR #${pullNumber} merged.`],
+                    payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reason: facts.reason, reconciled: true }) } })];
         }
         catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to close issue #${linkedIssueNumber}.`);
-            (0, logging_ports_1.logError)(semanticError);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                steps: [
-                    `Tried to close issue #${linkedIssueNumber}, but there was a problem.`,
-                ],
-                errors: [semanticError],
-            }));
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', nativeClosed
+                ? 'The issue is closed, but completion metadata could not be fully verified. Retry the verified merged-PR operation.'
+                : 'Native issue completion could not be verified. Inspect the linked run before retrying.');
+            return [new result_1.Result({ id: this.taskId, success: false, executed: closedThisRun || labelsChanged > 0,
+                    steps: [nativeClosed ? 'The native issue closure was retained; completion metadata remains unverified.' : 'Native issue completion remains unverified.'],
+                    errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reconciled: false }) } })];
         }
-        return result;
     }
 }
 exports.CloseIssueAfterMergingUseCase = CloseIssueAfterMergingUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The verified native issue or merged pull-request state changed or is unavailable.');
+}
 
 
 /***/ }),
@@ -71976,6 +72664,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'workspace-changes-rejected',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -72167,6 +72856,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'workspace-changes-rejected': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -72712,6 +73402,11 @@ exports.Labels = void 0;
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 class Labels {
+    get completionProtectedLabels() {
+        return Object.freeze([...new Set([this.bug, this.bugfix, this.hotfix, this.enhancement, this.feature,
+                this.release, this.question, this.help, this.docs, this.documentation, this.chore, this.maintenance,
+                this.deploy, this.deployed, ...this.sizeLabels, ...this.priorityLabels, issue_start_policy_1.BRANCH_READY_LABEL, 'SDD', 'contract-change'])]);
+    }
     get isMandatoryBranchedLabel() {
         return this.isHotfix || this.isRelease;
     }
@@ -77905,6 +78600,114 @@ exports.IssueClosureRepository = IssueClosureRepository;
 
 /***/ }),
 
+/***/ 70791:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueCompletionRepository = void 0;
+const issue_completion_1 = __nccwpck_require__(31147);
+const application_error_1 = __nccwpck_require__(75999);
+/** Exact repository/subject reads and selective writes. Never replaces a label inventory. */
+class IssueCompletionRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = binding;
+    }
+    parameters(number) {
+        if (!Number.isSafeInteger(number) || number < 1)
+            throw invalid();
+        return { owner: this.binding.owner, repo: this.binding.repository, issue_number: number, request: { redirect: 'error' } };
+    }
+    apiPath(path) {
+        const base = new URL(this.binding.apiBaseUrl);
+        if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash)
+            throw invalid();
+        return `${base.href.replace(/\/$/u, '')}/repos/${encodeURIComponent(this.binding.owner)}/${encodeURIComponent(this.binding.repository)}${path}`;
+    }
+    exactUrl(value, path) {
+        return typeof value === 'string' && value.toLowerCase() === this.apiPath(path).toLowerCase();
+    }
+    async readIssue(number) {
+        try {
+            const response = await this.client.getClient(this.binding.token).rest.issues.get(this.parameters(number));
+            const data = object(response.data);
+            if (!this.exactUrl(response.url, `/issues/${number}`) || data.number !== number || 'pull_request' in data
+                || !this.exactUrl(data.repository_url, '') || !['open', 'closed'].includes(data.state)
+                || !(data.state_reason === null || ['completed', 'not_planned', 'duplicate', 'reopened'].includes(data.state_reason))
+                || !Array.isArray(data.labels) || data.labels.length > issue_completion_1.ISSUE_COMPLETION_LABEL_LIMIT)
+                throw invalid();
+            const labels = data.labels.map(value => typeof value === 'string' ? value : object(value).name);
+            if (labels.some(value => !(0, issue_completion_1.isIssueCompletionLabelName)(value))
+                || new Set(labels.map(value => value.toLowerCase())).size !== labels.length)
+                throw invalid();
+            return Object.freeze({ number, state: data.state,
+                reason: data.state_reason === null ? 'unknown' : data.state_reason,
+                labels: Object.freeze(labels) });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Current native issue completion facts could not be verified.');
+        }
+    }
+    async readPullRequest(number) {
+        try {
+            const parameters = this.parameters(number);
+            delete parameters.issue_number;
+            const response = await this.client.getClient(this.binding.token).rest.pulls.get({ ...parameters, pull_number: number });
+            const data = object(response.data);
+            const repo = object(object(data.base).repo);
+            if (!this.exactUrl(response.url, `/pulls/${number}`) || data.number !== number
+                || !this.exactUrl(repo.url, '') || !['open', 'closed'].includes(data.state)
+                || typeof data.merged !== 'boolean')
+                throw invalid();
+            return Object.freeze({ number, state: data.state, merged: data.merged });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Current native pull-request state could not be verified.');
+        }
+    }
+    async closeIssue(number) {
+        if ((await this.readIssue(number)).state === 'closed')
+            return false;
+        try {
+            await this.client.getClient(this.binding.token).rest.issues.update({ ...this.parameters(number), state: 'closed', state_reason: 'completed' });
+            return true;
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The native issue close request failed.');
+        }
+    }
+    async addLabel(number, label) {
+        try {
+            await this.client.getClient(this.binding.token).rest.issues.addLabels({ ...this.parameters(number), labels: [label] });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'A completion label could not be added.');
+        }
+    }
+    async removeLabel(number, label) {
+        try {
+            await this.client.getClient(this.binding.token).rest.issues.removeLabel({ ...this.parameters(number), name: label });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'A stale completion label could not be removed.');
+        }
+    }
+}
+exports.IssueCompletionRepository = IssueCompletionRepository;
+function object(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw invalid();
+    return value;
+}
+function invalid() {
+    return new application_error_1.ApplicationError('provider.contract-invalid', 'Native completion facts do not match the verified repository and subject.');
+}
+
+
+/***/ }),
+
 /***/ 2313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -81631,6 +82434,58 @@ function releaseIdAsString(id) {
 
 /***/ }),
 
+/***/ 2879:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReplyRequestRepository = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const github_user_policy_1 = __nccwpck_require__(84403);
+/** Provider identity and diagnostics terminate here. Requests forbid redirects. */
+class ReplyRequestRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = Object.freeze({ ...binding });
+    }
+    async matches(snapshot) {
+        try {
+            const base = new URL(this.binding.apiBaseUrl);
+            if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash
+                || !Number.isSafeInteger(snapshot.commentId) || snapshot.commentId < 1
+                || !Number.isSafeInteger(snapshot.target.number) || snapshot.target.number < 1
+                || !['issue', 'pull-request'].includes(snapshot.target.kind)
+                || !['issue-comment', 'review-comment'].includes(snapshot.surface)
+                || snapshot.surface === 'review-comment' && snapshot.target.kind !== 'pull-request'
+                || !/^[a-f0-9]{64}$/u.test(snapshot.bodyDigest) || !snapshot.author)
+                return false;
+            const root = base.href.replace(/\/$/u, '') + '/repos/' + encodeURIComponent(this.binding.owner) + '/' + encodeURIComponent(this.binding.repository);
+            const parameters = { owner: this.binding.owner, repo: this.binding.repository, comment_id: snapshot.commentId,
+                request: { redirect: 'error' } };
+            const review = snapshot.surface === 'review-comment';
+            const response = review ? await this.client.rest.pulls.getReviewComment(parameters) : await this.client.rest.issues.getComment(parameters);
+            const data = record(response.data), user = record(data.user);
+            if (response.url !== root + (review ? '/pulls/comments/' : '/issues/comments/') + snapshot.commentId
+                || data.id !== snapshot.commentId || typeof data.body !== 'string' || data.body.length > 70000
+                || typeof user.login !== 'string' || !(0, github_user_policy_1.githubUsersMatch)(user.login, snapshot.author)
+                || data[review ? 'pull_request_url' : 'issue_url'] !== root + (review ? '/pulls/' : '/issues/') + snapshot.target.number)
+                return false;
+            return (0, reply_request_digest_1.replyRequestBodyDigest)(data.body) === snapshot.bodyDigest;
+        }
+        catch {
+            return false;
+        }
+    }
+}
+exports.ReplyRequestRepository = ReplyRequestRepository;
+function record(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
 /***/ 28493:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -82741,6 +83596,7 @@ exports.COPILOT_COMMAND_NAMES = [
     'test-plan',
     'status',
     'doctor',
+    'history',
     'description',
     'explain',
     'diagnose',
@@ -82804,6 +83660,9 @@ function parseCopilotCommand(raw) {
     }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+    }
+    if (name === 'history' && argumentsList.length) {
+        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
     }
     return {
         kind: 'command',
@@ -82983,6 +83842,70 @@ function waitingStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LAB
 function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
     return lifecycleLabelDefinitions(labels).find(definition => normalized.has(definition.name.trim().toLowerCase()))?.state;
+}
+
+
+/***/ }),
+
+/***/ 40221:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OPERATION_MARKER_PREFIX = exports.OPERATION_OUTCOMES = exports.HISTORY_COMMANDS = void 0;
+exports.isHistoryCommand = isHistoryCommand;
+exports.readOperationEvidence = readOperationEvidence;
+exports.validateOperationEvidence = validateOperationEvidence;
+exports.buildOperationEvidenceMarker = buildOperationEvidenceMarker;
+const git_object_id_1 = __nccwpck_require__(88623);
+exports.HISTORY_COMMANDS = ['sync-branch', 'remember', 'dismiss', 'implement', 'fix'];
+exports.OPERATION_OUTCOMES = ['applied', 'already-current', 'not-applied', 'blocked', 'partial', 'failed', 'unavailable'];
+exports.OPERATION_MARKER_PREFIX = '<!-- copilot:operation:v1 ';
+function isHistoryCommand(value) {
+    return exports.HISTORY_COMMANDS.includes(value);
+}
+function readOperationEvidence(body) {
+    if (body.split('<!-- copilot:operation:').length !== 2)
+        return undefined;
+    const match = body.match(/<!-- copilot:operation:v1 ([\s\S]{1,1200}?) -->/u);
+    if (!match)
+        return undefined;
+    try {
+        return validateOperationEvidence(JSON.parse(match[1]));
+    }
+    catch {
+        return undefined;
+    }
+}
+function validateOperationEvidence(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    const item = value;
+    if (Object.keys(item).some(key => !['version', 'target', 'correlationId', 'command', 'outcome', 'commitSha'].includes(key))
+        || item.version !== 1 || !validIdentity(item.target, /^(?:issue|pr):([1-9]\d*)$/u)
+        || !validIdentity(item.correlationId, /^comment:([1-9]\d*)$/u)
+        || !isHistoryCommand(item.command) || !exports.OPERATION_OUTCOMES.includes(item.outcome)
+        || ('commitSha' in item && (typeof item.commitSha !== 'string' || (0, git_object_id_1.canonicalGitObjectId)(item.commitSha) !== item.commitSha || item.outcome !== 'applied')))
+        return undefined;
+    return Object.freeze({ version: 1, target: item.target, correlationId: item.correlationId,
+        command: item.command, outcome: item.outcome,
+        ...('commitSha' in item ? { commitSha: item.commitSha } : {}) });
+}
+/** Only trusted finalized producers call this; a SHA requires independent post-push agreement. */
+function buildOperationEvidenceMarker(evidence, pushedRevision) {
+    const sha = pushedRevision && (0, git_object_id_1.canonicalGitObjectId)(pushedRevision.localSha);
+    const value = validateOperationEvidence({ version: 1, ...evidence,
+        ...(sha && pushedRevision?.remoteSha === sha && evidence.outcome === 'applied' ? { commitSha: sha } : {}) });
+    if (!value)
+        throw new Error('Invalid operation evidence.');
+    return `${exports.OPERATION_MARKER_PREFIX}${JSON.stringify(value)} -->`;
+}
+function validIdentity(value, pattern) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(pattern);
+    return Boolean(match && Number.isSafeInteger(Number(match[1])));
 }
 
 
@@ -83691,6 +84614,52 @@ function isRecord(value) {
 }
 function hasOnlyKeys(value, allowed) {
     return Object.keys(value).every(key => allowed.includes(key));
+}
+
+
+/***/ }),
+
+/***/ 31147:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isIssueCompletionLabelName = exports.ISSUE_COMPLETION_LABEL_LIMIT = void 0;
+exports.planIssueCompletion = planIssueCompletion;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+exports.ISSUE_COMPLETION_LABEL_LIMIT = 1000;
+const canonicalProgress = /^(?:0|[1-9][0-9]?|100)%$/u;
+const isIssueCompletionLabelName = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
+    && Array.from(value).every(character => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127);
+exports.isIssueCompletionLabelName = isIssueCompletionLabelName;
+const labelsValid = (value) => Array.isArray(value) && value.length <= exports.ISSUE_COMPLETION_LABEL_LIMIT
+    && value.every(exports.isIssueCompletionLabelName) && new Set(value.map(label => label.toLowerCase())).size === value.length;
+/** Native closure owns completion; labels alone cannot produce a write plan. */
+function planIssueCompletion(facts, configuration) {
+    if (!Number.isSafeInteger(facts?.number) || facts.number < 1)
+        return Object.freeze({ kind: 'invalid', code: 'invalid-identity' });
+    if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'duplicate', 'reopened', 'unknown'].includes(facts.reason)
+        || !labelsValid(facts.labels)
+        || facts.state === 'open' && ['completed', 'not_planned', 'duplicate'].includes(facts.reason)
+        || facts.state === 'closed' && facts.reason === 'reopened')
+        return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
+    const keys = Object.keys(copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS);
+    if (!configuration?.lifecycle || !keys.every(key => (0, exports.isIssueCompletionLabelName)(configuration.lifecycle[key]) && !canonicalProgress.test(configuration.lifecycle[key]))
+        || !labelsValid(configuration.protectedLabels))
+        return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
+    const managed = new Set([issue_start_policy_1.ISSUE_START_LABEL, ...keys.map(key => configuration.lifecycle[key])].map(name => name.toLowerCase()));
+    if (configuration.protectedLabels.some(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name))) {
+        return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
+    }
+    if (facts.state === 'open')
+        return Object.freeze({ kind: 'open' });
+    const completed = facts.reason === 'completed';
+    return Object.freeze({ kind: 'closed', reason: facts.reason,
+        remove: Object.freeze(facts.labels.filter(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name) && (!completed || name !== '100%'))),
+        add: Object.freeze(completed && !facts.labels.includes('100%') ? ['100%'] : []),
+    });
 }
 
 
@@ -85108,6 +86077,22 @@ function mergeManagedPullRequestDescription(currentBody, generated) {
 }
 function shouldAutomaticallyUpdatePullRequestDescription(mode) {
     return mode === 'replace' || mode === 'append';
+}
+
+
+/***/ }),
+
+/***/ 47971:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.replyRequestBodyDigest = replyRequestBodyDigest;
+const node_crypto_1 = __nccwpck_require__(6005);
+/** Private complete request witness; public reply-marker identities stay unchanged. */
+function replyRequestBodyDigest(body) {
+    return (0, node_crypto_1.createHash)('sha256').update(body, 'utf8').digest('hex');
 }
 
 
@@ -87012,6 +87997,21 @@ function createUpgradeCliUseCase(cliUpgradePort = new pnpm_cli_upgrade_adapter_1
 
 /***/ }),
 
+/***/ 12321:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCopilotHistoryReadPort = createCopilotHistoryReadPort;
+/** Project only the existing bounded general-comment query, preserving its receiver. */
+function createCopilotHistoryReadPort(source, serverOrigin = 'https://github.com') {
+    return Object.freeze({ serverOrigin, readComments: (number) => source.listIssueComments(number) });
+}
+
+
+/***/ }),
+
 /***/ 98313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -87277,6 +88277,43 @@ exports.composeInitialSetupUseCase = composeInitialSetupUseCase;
 const initial_setup_use_case_1 = __nccwpck_require__(84837);
 function composeInitialSetupUseCase(...dependencies) {
     return new initial_setup_use_case_1.InitialSetupUseCase(...dependencies);
+}
+
+
+/***/ }),
+
+/***/ 63719:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bindIssueCompletion = bindIssueCompletion;
+exports.bindNativeStatusRead = bindNativeStatusRead;
+exports.createIssueCompletionRepository = createIssueCompletionRepository;
+exports.createNativeStatusReadPort = createNativeStatusReadPort;
+const issue_completion_repository_1 = __nccwpck_require__(70791);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+function bindIssueCompletion(repository) {
+    return Object.freeze({ readPullRequest: (number) => repository.readPullRequest(number), forIssue: (number) => {
+            if (!Number.isSafeInteger(number) || number < 1)
+                throw new Error('A safe issue number is required.');
+            return Object.freeze({
+                read: () => repository.readIssue(number), close: () => repository.closeIssue(number),
+                addLabel: (label) => repository.addLabel(number, label),
+                removeLabel: (label) => repository.removeLabel(number, label),
+            });
+        } });
+}
+function bindNativeStatusRead(repository) {
+    return Object.freeze({ readIssue: (number) => repository.readIssue(number),
+        readPullRequest: (number) => repository.readPullRequest(number) });
+}
+function createIssueCompletionRepository(binding) {
+    return new issue_completion_repository_1.IssueCompletionRepository({ getClient: token => (0, octokit_client_resolver_1.getOctokitClient)(token) }, Object.freeze({ ...binding, apiBaseUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com' }));
+}
+function createNativeStatusReadPort(binding) {
+    return bindNativeStatusRead(createIssueCompletionRepository(binding));
 }
 
 
@@ -87654,7 +88691,11 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
 const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
+const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
@@ -87741,7 +88782,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgres
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), createClosedIssueRetirementUseCase(binding)), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -87759,6 +88800,7 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         catalogResolver,
     });
 }
+const copilot_history_port_factory_1 = __nccwpck_require__(12321);
 function createIssueCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
@@ -87773,7 +88815,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -87789,7 +88831,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -87843,6 +88885,11 @@ function rememberBranchPorts(binding, pullRequests) {
             getLinkedBranch: (issueNumber, branchName) => repository.getLinkedBranch(binding.owner, binding.repository, issueNumber, branchName, binding.token),
         },
     };
+}
+/** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
+function createClosedIssueRetirementUseCase(binding) {
+    const comments = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
+    return new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding));
 }
 
 
@@ -87925,6 +88972,10 @@ function composePullRequestUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const github_project_client_factory_1 = __nccwpck_require__(23691);
@@ -87940,10 +88991,8 @@ const link_pull_request_project_use_case_1 = __nccwpck_require__(57169);
 const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(89085);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_assignment_repository_1 = __nccwpck_require__(75023);
-const issue_closure_repository_1 = __nccwpck_require__(23231);
 const issue_content_repository_1 = __nccwpck_require__(2313);
 const issue_label_repository_1 = __nccwpck_require__(45725);
-const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
 const issue_metadata_repository_1 = __nccwpck_require__(11333);
 const issue_title_repository_1 = __nccwpck_require__(10121);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
@@ -87959,7 +89008,6 @@ const actor_authorization_composition_root_1 = __nccwpck_require__(233);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 function createPullRequestUseCaseCompositionRoot(binding) {
-    const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const pullRequestLifecycle = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
@@ -87968,7 +89016,6 @@ function createPullRequestUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const issueTitle = new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata);
     const projectContent = (0, shared_capability_port_binding_1.bindProjectContent)(issueMetadata, projectBoard.command, projectBoard.link, binding);
-    const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
     const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
     const pullRequestLabels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const pullRequestReviewer = (0, pull_request_reviewer_composition_root_1.createPullRequestReviewerCompositionRoot)();
@@ -87985,7 +89032,8 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
-        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, lifecycle_capability_port_binding_1.bindIssueClosure)(issueClosure, binding)),
+        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)),
+        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
@@ -88029,6 +89077,7 @@ exports.bindIssueTypes = bindIssueTypes;
 exports.bindSetupVariables = bindSetupVariables;
 exports.bindSetupSecrets = bindSetupSecrets;
 exports.bindSetupRemoteConfiguration = bindSetupRemoteConfiguration;
+exports.bindBranchSyncRetirementComments = bindBranchSyncRetirementComments;
 function bindManagedPullRequests(port, binding) {
     return Object.freeze({
         findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
@@ -88219,6 +89268,31 @@ function bindSetupSecrets(port, binding) {
 function bindSetupRemoteConfiguration(port, binding) {
     return Object.freeze({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
 }
+/** Physically restrict retirement to reading and updating existing comments. */
+function bindBranchSyncRetirementComments(comments) {
+    return Object.freeze({
+        listIssueComments: comments.listIssueComments.bind(comments),
+        updateComment: comments.updateComment.bind(comments),
+    });
+}
+
+
+/***/ }),
+
+/***/ 99065:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createReplyRequestReadPort = createReplyRequestReadPort;
+const reply_request_repository_1 = __nccwpck_require__(2879);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+function createReplyRequestReadPort(binding) {
+    const captured = Object.freeze({ ...binding, apiBaseUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com' });
+    const repository = new reply_request_repository_1.ReplyRequestRepository((0, octokit_client_resolver_1.getOctokitClient)(captured.token), captured);
+    return Object.freeze({ matches: (snapshot) => repository.matches(snapshot) });
+}
 
 
 /***/ }),
@@ -88231,6 +89305,7 @@ function bindSetupRemoteConfiguration(port, binding) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSddEvidenceReadPorts = createSddEvidenceReadPorts;
 exports.createSddEvidenceQueryPort = createSddEvidenceQueryPort;
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_query_use_case_1 = __nccwpck_require__(39893);
 const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
@@ -88248,6 +89323,7 @@ function createSddEvidenceReadPorts(binding, comments) {
     const branches = new linked_branch_readiness_repository_1.LinkedBranchReadinessRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
     return (0, sdd_evidence_read_ports_1.bindSddEvidenceReadPorts)({
         comments,
+        nativeState: (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding),
         descriptions: (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding),
         titles: { getTitle: issueNumber => titles.getTitle(binding.owner, binding.repository, issueNumber, binding.token) },
         labels: (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
@@ -93526,7 +94602,7 @@ Working branch: {{workingBranch}}
 Files with merge conflicts:
 {{conflictPaths}}
 
-Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. Before returning, run existing offline tests for the affected source modules and the repository typecheck when their toolchains are available. Preserve behavior for missing optional adapters and for both issue and pull-request entrypoints. A compilation or test failure means the resolution is incomplete: correct only the listed conflicted files. Do not claim checks passed when tools are unavailable. Then give a concise summary of the decisions and checks you made.`;
+Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. If canonical generated bundles are in the conflict list, regenerate them with the existing offline repository build before returning; do not concatenate or hand-edit generated conflict hunks. Inspect the resulting changes and preserve the original conflict-path boundary: do not change or stage a non-listed file. The trusted Action stages your completed resolution before its verification commands; those commands must reproduce the same bundle bytes without any worktree changes. A build changing files outside the admitted conflict list means the resolution is incomplete and must be reported, not silently accepted. Before returning, run existing offline tests for the affected source modules and the repository typecheck when their toolchains are available. Preserve behavior for missing optional adapters and for both issue and pull-request entrypoints. A compilation or test failure means the resolution is incomplete: correct only the listed conflicted files. Do not claim checks passed when tools are unavailable. Then give a concise summary of the decisions and checks you made.`;
 function getBranchSyncConflictsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, params);
 }

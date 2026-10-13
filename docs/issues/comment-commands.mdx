@@ -358,6 +358,35 @@ the required event. Disabled jobs or steps cannot make it pass. Runtime-dependen
 or unsupported conditions are reported as unavailable because a repository
 snapshot cannot establish their result. Inspect those conditions and the actual
 workflow run; a structural pass still does not prove runner availability.
+### Recent operation history
+
+`/copilot history` shows at most ten supported requests in this issue or PR's
+**general conversation**, newest request first. It accepts no arguments or model
+selection. It does not include review threads or reviews and does not call an
+agent. Each row links to the request and, when validated, its trusted receipt.
+Supported operations are `sync-branch`, `remember`, `dismiss`, `implement`, and
+`fix`; the query does not perform any of them.
+
+Outcomes require matching structured receipts from the configured bot. Earlier
+replies, missing receipts and conflicting evidence remain unavailable. Applied
+means the particular operation completed; a pushed fix still needs a fresh
+review. It does not mean the issue is complete or the PR is ready to merge.
+A Commit link requires independently verified evidence for the exact remote SHA;
+current producers omit it when that proof is absent.
+
+For example, a complete English reply can show `sync-branch | Already current`
+and links named `Request` and `Receipt`. The same evidence in Spanish uses
+`sync-branch | Ya estaba al día` with `Solicitud` and `Recibo`. A complete empty
+reply explicitly says no supported requests were found in the inspected stream.
+Partial coverage warns that the latest ten operations cannot be guaranteed.
+Unavailable coverage means the read or identity could not be verified, and does
+not prove an empty history or a failed operation. Retry `/copilot history` after
+checking the workflow's comment-read access. No new setting, permission or data
+migration is required; older conversations are not backfilled.
+
+A retried webhook for the same history request reuses its correlated response.
+Post a new `/copilot history` comment to take a new snapshot. The command preserves
+lifecycle labels and branches and never executes command text found in comments.
 
 SDD status keeps an unknown requirement visible when the issue has no admitted
 workflow kind. Evidence links use the configured GitHub server origin and the
@@ -384,3 +413,71 @@ A static empty matrix blocks that job. Dynamic matrices and include/exclude
 transformations are reported as unavailable because doctor does not simulate
 the workflow. Ordinary nonmatrix and supported static jobs remain eligible;
 this check does not certify a runner or real tool execution.
+History requests are deterministic on issue comments and PR review comments.
+Their activity-admission policy neither inspects agent role availability nor activates the temporary agent
+activity label; unavailable model configuration does not turn a history read
+into model work. Normal read-evidence and correlated publication guards apply.
+
+
+`/copilot history` is available in the main issue or pull request conversation.
+A request in a review thread tells you to post it there; retrying the same thread
+cannot expand the history scope. That response reads no history and activates no
+agent. A failed read in the supported conversation instead directs you to the
+workflow and a retry.
+
+Read-only command replies and failures reuse their existing response when a
+new result is verified for the same current request. GitHub's native comment,
+parent and author must match the captured request; a changed or unreadable
+request withholds stale edits. Successful mutation receipts remain effect
+records. Read-only queries do not rewrite hidden issue/PR configuration.
+
+If the agent ran but workspace verification rejected its changes, the error
+identifies that stage and asks you to inspect rejected paths before retrying.
+Normal commit/push steps are skipped; an earlier syntax error is not retained
+as the description of the newer verified failure. Keep repository-local test
+scratch such as `.tmp/` ignored or use the normal external temporary directory.
+
+## Native completion and historical SDDs
+
+`status` reads the current native issue or PR after queueing. A completed native
+issue is shown as completed even if old active labels remain; a closed issue
+without a completed reason is shown as closed. A PR is shown as merged only
+when its current native `merged` flag is true. Reopening supersedes a queued
+closed event. These reads do not mutate labels or call an agent.
+
+After a linked PR merges, Copilot verifies the exact native PR and issue, closes
+only when needed, and reconciles completion labels with selective writes. It
+removes obsolete configured active/waiting/activity labels and canonical old
+percentages, preserves kind/priority/size/branched/SDD and unrelated labels, and
+adds `100%` only for verified completed closure. Already-correct replay performs
+no write. Deliberately reopened work is never reclosed by an older delivery.
+
+If a read or label write fails, the run reports retained native closure separately
+from unverified metadata. Inspect the linked run and retry the verified merged-PR
+operation after resolving the cause; do not manually invent completion evidence.
+Known state or reason movement stops further metadata writes. GitHub updates are
+not atomic, so concurrent changes may require another verified retry.
+
+For closed issues, a previously published SDD remains read-only historical
+evidence after `in-progress` is removed. Immutable publication, ownership, branch
+and final-state proofs still apply. Historical ready or pending artifacts do not
+ask for implementation or answers to old questions. Without a verified first
+publication, closing unstarted work does not create a fictitious required SDD.
+
+Closing an issue does not verify its SDD. Unavailable or unverified evidence keeps its inspection guidance; only the verified query result can establish historical publication.
+
+Status rejects an issue snapshot if its labels change between the initial and final native reads, so SDD eligibility and the displayed metadata describe the same verified sample. Label ordering alone does not invalidate a sample.
+
+When issue status also collects linked PR findings, it repeats the native issue fence after those asynchronous reads before returning the combined result.
+
+
+Replies to comment commands require a valid captured request and a fresh native
+source check. If the event lacks that request evidence, the Action withholds
+creation, updates and duplicate cleanup instead of assuming freshness. Initial
+help answers from non-comment events retain their ordinary immutable reply.
+
+
+`/copilot history` in a pull request's main conversation reads and publishes for
+that exact PR, even when its linked issue has a different number. The query uses
+the PR locale and does not infer an issue from the PR number. Review threads
+continue to direct you to the main conversation; arguments are not accepted.

@@ -38,6 +38,10 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
+    if (param.inputs?.issue?.state === 'closed') {
+      return [new Result({ id: this.taskId, success: true, executed: false,
+        steps: ['The native issue is closed; open-issue branch and SDD preparation were skipped.'] })];
+    }
     if (param.preBranchSdd && !param.issue.issueManagedBranches) {
       const message = 'pre-branch-sdd requires issue-managed-branches; correct the Action configuration before starting work.';
       return [new Result({

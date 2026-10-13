@@ -1,4 +1,7 @@
 import { formatGithubRuntimeDoctor, isGithubRuntimeDoctorProjection, type GithubRuntimeDoctorProjection } from './github_runtime_doctor_presentation_policy';
+import { buildOperationEvidenceMarker } from '../../domain/copilot_operation';
+import { renderCopilotHistory, type HistoryProjection } from './copilot_history_presentation_policy';
+import { readHistoryProjection } from './copilot_history_projection_policy';
 import { publicationTargetToken, type PublicationTarget, type ReplyPublicationIntent, type StatusPublicationIntent } from '../../domain/github_publication';
 import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { Result } from '../../data/model/result';
@@ -87,6 +90,8 @@ type BranchSyncReplyProjection =
     };
 
 export type SemanticReplyProjection =
+    | HistoryProjection
+    | { readonly kind: 'fix-result'; readonly outcome: 'changes-pushed' | 'no-changes' }
     | { readonly kind: 'help'; readonly botLogin: string }
     | { readonly kind: 'welcome'; readonly botLogin: string }
     | { readonly kind: 'implementation-plan'; readonly plan: ImplementationPlan; readonly translation?: TranslationPublication }
@@ -174,6 +179,16 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         if (!result.success) return [];
         const payload = getResultPayload(result.payload);
         if (!payload) return [];
+        if (result.id === 'CommentAutomation.History' && result.executed) {
+            const history = readHistoryProjection(payload.publication, context.target!);
+            if (history) return [replyIntent(context, correlationId, 'copilot-history', history)];
+        }
+        const fixed = getResultPayload(payload.publication);
+        if (result.id === 'CommentAutomation.FixReply' && result.executed && fixed?.kind === 'fix-result'
+            && (fixed.outcome === 'changes-pushed' || fixed.outcome === 'no-changes')
+            && Object.keys(fixed).length === 2) {
+            return [replyIntent(context, correlationId, 'fix-result', Object.freeze({ kind: 'fix-result', outcome: fixed.outcome }))];
+        }
         const stateCommand = stateCommandReplyProjection(result.id, payload, context.correlationId);
         if (stateCommand) return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
         const branchSync = branchSyncResultProjection(result.id, payload, context.correlationId);
@@ -240,10 +255,14 @@ export function renderSemanticReply(
         digest: intent.digest,
     });
     const body = renderReplyBody(intent, catalog);
-    return `${marker}\n\n${body}`;
+    const operation = operationMarker(intent);
+    return `${marker}\n\n${body}${operation ? `\n\n${operation}` : ''}`;
 }
 
 function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessageCatalog): string {
+    if (intent.projection.kind === 'history-command') return renderCopilotHistory(intent.projection, catalog);
+    if (intent.projection.kind === 'fix-result') return safeCatalogSentence(catalog.render(
+        intent.projection.outcome === 'changes-pushed' ? 'interaction.history.fixPushed' : 'interaction.history.fixNoChanges'));
     if (intent.projection.kind === 'implementation-result') {
         return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
             ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges',
@@ -632,4 +651,28 @@ function copyStatusSnapshot(snapshot: CopilotStatusSnapshot): CopilotStatusSnaps
 
 function safeDigest(value: string): string {
     return /^[a-f0-9]{8,64}$/u.test(value) ? value : createSemanticDigest(value);
+}
+
+
+function operationMarker(intent: SemanticReplyIntent): string | undefined {
+    if (!/^comment:[1-9]\d*$/u.test(intent.correlationId)) return undefined;
+    const projection = intent.projection;
+    const base = { target: publicationTargetToken(intent.target), correlationId: intent.correlationId };
+    if (projection.kind === 'branch-sync-result') {
+        const outcome = projection.outcome === 'already-aligned' ? 'already-current'
+            : projection.outcome.startsWith('dry-run') ? 'not-applied' : 'applied';
+        // This producer proves completed push, but not an independent remote SHA read.
+        return buildOperationEvidenceMarker({ ...base, command: 'sync-branch', outcome });
+    }
+    if (projection.kind === 'implementation-result' || projection.kind === 'fix-result') {
+        return buildOperationEvidenceMarker({ ...base, command: projection.kind === 'fix-result' ? 'fix' : 'implement',
+            outcome: projection.outcome === 'changes-pushed' ? 'applied' : 'not-applied' });
+    }
+    if (projection.kind === 'state-command-result') {
+        const outcome = projection.outcome === 'not-applied' ? 'not-applied'
+            : projection.command === 'remember' ? projection.outcome === 'already-exists' ? 'already-current' : 'applied'
+                : projection.count === 0 ? 'already-current' : 'applied';
+        return buildOperationEvidenceMarker({ ...base, command: projection.command, outcome });
+    }
+    return undefined;
 }

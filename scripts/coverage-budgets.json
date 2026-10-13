@@ -570,6 +570,81 @@
         }
       ],
       "successMessage": "doctor matrix eligibility coverage: PASS (100% all metrics)"
+    },
+    {
+      "name": "Reply request freshness",
+      "missingEntryLabel": "reply request freshness",
+      "rules": [
+        {
+          "files": [
+            "src/domain/reply_request_digest.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/reply_request_repository.ts",
+            "src/infrastructure/composition/reply_request_composition_root.ts",
+            "src/application/usecases/steps/common/reply_publication_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "reply request freshness coverage: PASS (private digest 100%; native read, binding and guarded publication 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Verified native issue completion",
+      "missingEntryLabel": "verified native issue completion",
+      "rules": [
+        {
+          "files": [
+            "src/domain/issue_completion.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/steps/issue/close_issue_after_merging_use_case.ts",
+            "src/data/repository/issue/issue_completion_repository.ts",
+            "src/infrastructure/composition/issue_completion_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "native issue completion coverage: PASS (pure planner 100%; guarded application, adapter and binding 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Terminal branch synchronization retirement",
+      "missingEntryLabel": "terminal branch synchronization retirement",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/actions/retire_branch_sync_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "terminal branch synchronization retirement coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Post-verification workspace capture",
+      "missingEntryLabel": "post-verification workspace capture",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+            "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "post-verification workspace capture coverage: PASS (each changed module 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

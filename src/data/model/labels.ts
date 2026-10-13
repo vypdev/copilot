@@ -37,6 +37,12 @@ export class Labels {
     currentIssueLabels: string[] = [];
     currentPullRequestLabels: string[] = [];
 
+    get completionProtectedLabels(): readonly string[] {
+        return Object.freeze([...new Set([this.bug, this.bugfix, this.hotfix, this.enhancement, this.feature,
+            this.release, this.question, this.help, this.docs, this.documentation, this.chore, this.maintenance,
+            this.deploy, this.deployed, ...this.sizeLabels, ...this.priorityLabels, BRANCH_READY_LABEL, 'SDD', 'contract-change'])]);
+    }
+
     get isMandatoryBranchedLabel(): boolean {
         return this.isHotfix || this.isRelease;
     }

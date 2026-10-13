@@ -2,11 +2,11 @@ name: Copilot - Issue
 
 on:
   issues:
-    types: [opened, reopened, edited, labeled, unlabeled, assigned, unassigned]
+    types: [opened, reopened, closed, edited, labeled, unlabeled, assigned, unassigned]
 
 jobs:
   copilot-issues:
-    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
+    if: ${{ (github.event.action == 'closed' && github.event.issue.state == 'closed') || vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Issue
     runs-on: ubuntu-latest
     timeout-minutes: 120

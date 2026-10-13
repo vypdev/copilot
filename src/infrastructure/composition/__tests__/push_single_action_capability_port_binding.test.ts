@@ -14,6 +14,7 @@ import {
   bindDeploymentState,
   bindDeploymentTargetRules,
   bindIssueCommentPublication,
+  bindBranchSyncRetirementComments,
   bindIssueInactivityQuery,
   bindIssueProgress,
   bindIssueReopen,
@@ -337,5 +338,26 @@ describe('push and single-action capability binding', () => {
     expect(secretPort.upsertScopedSecrets).toHaveBeenCalledWith(
       'owner', 'repo', 'secret-token', {}, [{ name: 'PAT', value: 'value' }],
     );
+  });
+});
+
+
+describe('physical terminal comment authority', () => {
+  function port() { return { listIssueComments: jest.fn(async () => []), updateComment: jest.fn(async () => undefined),
+    addComment: jest.fn(async () => undefined), removeComment: jest.fn(async () => 'removed' as const) }; }
+  it('exposes only a frozen read/update facade without create/delete capability', () => {
+    const facade = bindBranchSyncRetirementComments(port());
+    expect(Object.keys(facade).sort()).toEqual(['listIssueComments', 'updateComment']);
+    expect(Object.isFrozen(facade)).toBe(true);
+    expect(facade).not.toHaveProperty('addComment'); expect(facade).not.toHaveProperty('removeComment');
+  });
+  it('captures exact original operations despite later mutation of the wider facade', async () => {
+    const original = port(), read = original.listIssueComments, update = original.updateComment;
+    const facade = bindBranchSyncRetirementComments(original);
+    original.listIssueComments = jest.fn(async () => []); original.updateComment = jest.fn(async () => undefined);
+    await facade.listIssueComments(42); await facade.updateComment(42, 8, 'Retired current card');
+    expect(read).toHaveBeenCalledWith(42); expect(update).toHaveBeenCalledWith(42, 8, 'Retired current card');
+    expect(original.listIssueComments).not.toHaveBeenCalled(); expect(original.updateComment).not.toHaveBeenCalled();
+    expect(original.addComment).not.toHaveBeenCalled(); expect(original.removeComment).not.toHaveBeenCalled();
   });
 });

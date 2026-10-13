@@ -37,3 +37,31 @@ describe('shouldPersistConfiguration', () => {
         } as never)).toBe(false);
     });
 });
+
+
+describe('read-only request persistence', () => {
+    const base = { isSingleAction: false, singleAction: { isRecommendStepsAction: false } };
+    it.each(['issue_comment', 'pull_request_review_comment'])('does not rewrite hidden configuration after a %s status query', eventName => {
+        expect(shouldPersistConfiguration({ ...base, eventName, inputs: { comment: { body: '  /CoPiLoT STATUS  ' } } })).toBe(false);
+    });
+    it('does not rewrite configuration for help on the review transport alias', () => {
+        expect(shouldPersistConfiguration({ ...base, eventName: 'pull_request_review_comment', inputs: { pull_request_review_comment: { body: '/copilot help' } } })).toBe(false);
+    });
+    it.each(['/copilot remember new rule', '/copilot dismiss finding:42', '/copilot status extra', 'ordinary prose', null])('preserves persistence for non-read-only request %#', body => {
+        expect(shouldPersistConfiguration({ ...base, eventName: 'issue_comment', inputs: { comment: { body } } })).toBe(true);
+    });
+});
+
+
+describe('closed issue retirement persistence', () => {
+    it.each(['closed', 'labeled'])('does not rewrite execution configuration on a native closed issue %s callback', action => {
+        expect(shouldPersistConfiguration({ isSingleAction: false, eventName: 'issues', inputs: { action, issue: { state: 'closed' } },
+            singleAction: { isRecommendStepsAction: false } } as never)).toBe(false);
+    });
+});
+
+
+it.each(['open', undefined])('retains normal persistence without native closed evidence (%s)', state => {
+    expect(shouldPersistConfiguration({ isSingleAction: false, eventName: 'issues', inputs: { issue: { state } },
+        singleAction: { isRecommendStepsAction: false } })).toBe(true);
+});

@@ -61,8 +61,9 @@ export async function finalizeWorkspaceMutation(
     const unsafePaths = workspacePathsAfter.filter(isSensitiveWorkspacePath);
     if (unsafePaths.length > 0) {
         throw new ApplicationError(
-            'agent.policy-rejected',
+            'workflow.failed',
             `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`,
+            { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } },
         );
     }
 
@@ -72,8 +73,9 @@ export async function finalizeWorkspaceMutation(
     }
     if (workspacePaths.length > MAX_AUTOMATED_CHANGED_PATHS) {
         throw new ApplicationError(
-            'agent.policy-rejected',
+            'workflow.failed',
             `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${MAX_AUTOMATED_CHANGED_PATHS}.`,
+            { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } },
         );
     }
     return { workspacePaths };
