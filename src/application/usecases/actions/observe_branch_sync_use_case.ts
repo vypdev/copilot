@@ -1,3 +1,4 @@
+import { parsePublicationMarker } from '../../policies/publication_identity_policy';
 import { Result } from "../../../data/model/result";
 import {
   buildAlignedBranchSyncComment,
@@ -193,7 +194,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
         }
       }
 
-      if (latest && isStaleBranchSyncComment(latest.body)) {
+      if (latest && (isStaleBranchSyncComment(latest.body) || parsePublicationMarker(latest.body)?.sourceVersion === 'closed:issue')) {
         await notifications.updateComment(
           dependency.issueNumber,
           latest.id,

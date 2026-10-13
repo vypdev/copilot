@@ -98,6 +98,7 @@ import {
   bindDeploymentState,
   bindDeploymentTargetRules,
   bindIssueCommentPublication,
+  bindBranchSyncRetirementComments,
   bindIssueReopen,
   bindManagedPullRequests,
   bindPullRequestBranchQuery,
@@ -159,7 +160,7 @@ export function createSingleActionUseCaseCompositionRoot(
       bindIssueCommentPublication(issueDescriptionQueryPort, binding),
       catalogResolver,
       createNativeStatusReadPort(binding),
-      new RetireBranchSyncUseCase(createNativeStatusReadPort(binding), bindIssueCommentPublication(issueDescriptionQueryPort, binding)),
+      new RetireBranchSyncUseCase(createNativeStatusReadPort(binding), bindBranchSyncRetirementComments(bindIssueCommentPublication(issueDescriptionQueryPort, binding))),
     ),
     deploymentOrchestration,
   );

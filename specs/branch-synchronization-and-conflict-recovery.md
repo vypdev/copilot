@@ -331,12 +331,12 @@ that information. The phase is captured by trusted validation before abort.
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 56 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| State/idempotency/races | 59 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
-| Adapters/workflow contracts | 51 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
+| Adapters/workflow contracts | 53 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
 | Integration/security/cutover | 22 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **272** | no double counting |
+| **Total** | **277** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 272-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 277-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -566,10 +566,10 @@ The original comment ID/link and marker identity remain; obsolete command and
 comparison guidance disappear. Previous short transition alerts remain
 historical and their status link now points to the retired card.
 
-Thirty-five distinct new cases extend the prior 237 to 272: six observer
+Forty distinct new cases extend the prior 237 to 277: nine observer
 closure/denial/race cases, twenty-four retirement ownership/replay/provider/
 partial-effect/limit cases, two complete English/Spanish presentations, and
-three merged/unmerged workflow sequencing cases. The new retirement use case
+three merged/unmerged workflow sequencing cases and two physical comment-facade cases. The new retirement use case
 requires 95% lines/statements and 90% branches/functions; global and existing
 module thresholds remain. Publication-writer architecture evidence explicitly
 records the one retirement updater and fresh-open mutation wrappers.
@@ -582,3 +582,13 @@ current card untouched and preserves earlier effects. User documentation in
 `docs/issues/branch-synchronization.mdx` describes history, retry and reopening.
 Native browser evidence must verify the existing link and retired copy after
 promotion; local tests alone do not certify the provider lifecycle.
+
+
+Native finding `4255545522` exposed a reopened issue whose aligned branch retained
+the `closed:issue` card. Two explicit reopened comparisons verify terminal copy
+is replaced by the fresh aligned/stale result; the aligned case failed before
+the fix. A third case preserves quiet replay of an already aligned reopened
+card. Retirement composition also supplies a physically frozen read/update-only
+comment facade, excluding create/delete methods and capturing original bound
+operations. Two capability cases verify that boundary and mutable-alias safety.
+These five distinct cases complete the 277-case budget without changing any gate.

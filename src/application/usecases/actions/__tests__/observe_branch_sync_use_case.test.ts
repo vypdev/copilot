@@ -2,6 +2,8 @@ import { RetireBranchSyncUseCase } from '../retire_branch_sync_use_case';
 import type { Execution } from "../../../../data/model/execution";
 import {
   buildAlignedBranchSyncComment,
+  buildRetiredBranchSyncComment,
+  branchSyncPublicationIdentity,
   buildBranchSyncTransitionIntent,
   buildStaleBranchSyncComment,
 } from "../../../policies/branch_sync_notification_policy";
@@ -350,4 +352,26 @@ describe('terminal observation publication fences', () => {
     expect(result.success).toBe(false); expect(f.comparisons.compare).not.toHaveBeenCalled();
     expect(f.notifications.addComment).not.toHaveBeenCalled();
   });
+});
+
+
+describe('reopened synchronization card', () => {
+  it.each([0, 2])('replaces terminal copy with a fresh open comparison (%s behind)', async behindBy => {
+    const body = buildRetiredBranchSyncComment(branchSyncPublicationIdentity(dependency), messages);
+    const f = setup({ behindBy, comments: [{ id: 8, body, user: { login: 'vypbot' } }] });
+    f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'open', reason: 'reopened', labels: [] });
+    const [result] = await f.useCase.invoke(execution({ inputs: { after: 'a'.repeat(40) } }));
+    expect(f.notifications.updateComment).toHaveBeenCalledWith(42, 8, expect.stringContaining(behindBy ? 'Action required' : 'Branch synchronized'));
+    expect(f.stored[0].body).not.toContain('Issue closed');
+    expect(result).toMatchObject({ success: true, payload: { state: behindBy ? 'stale' : 'aligned' } });
+  });
+});
+
+
+it('keeps an already aligned reopened card unchanged', async () => {
+  const body = buildAlignedBranchSyncComment(dependency, messages);
+  const f = setup({ behindBy: 0, comments: [{ id: 8, body, user: { login: 'vypbot' } }] });
+  f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'open', reason: 'reopened', labels: [] });
+  await f.useCase.invoke(execution());
+  expect(f.notifications.updateComment).not.toHaveBeenCalled(); expect(f.notifications.addComment).not.toHaveBeenCalled();
 });
