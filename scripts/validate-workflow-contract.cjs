@@ -1271,6 +1271,28 @@ function assertIssueWorkflowProfileInput(file, workflow) {
   }
 }
 
+function assertIssueBranchConfigurationInputs(file, workflow) {
+  if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  const relativeFile = relativeWorkflow(file);
+  const distributed = relativeFile.startsWith('setup/workflows/');
+  const branches = JSON.parse(readFileSync(path.join(repositoryRoot, '.copilot/repository-profile.json'), 'utf8')).branches;
+  const expected = distributed
+    ? {
+      'issue-managed-branches': "${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}",
+      'pre-branch-sdd': "${{ vars.PRE_BRANCH_SDD || 'false' }}",
+    }
+    : {
+      'issue-managed-branches': branches.issueManagedBranches,
+      'pre-branch-sdd': branches.preBranchSdd,
+    };
+  const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
+    .filter(isCopilotAction);
+  if (actionSteps.length === 0 || actionSteps.some(step =>
+    Object.entries(expected).some(([input, value]) => step.with?.[input] !== value))) {
+    throw new Error(`${relativeFile} must pass consistent issue-managed-branches and pre-branch-sdd inputs to every Copilot callback.`);
+  }
+}
+
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
   assertDirectEventTriggers(file, workflow);
@@ -1293,6 +1315,7 @@ function validateWorkflow(file, workflow) {
   assertMajorActionReferences(file, workflow);
   assertCopilotActionInputs(file, workflow);
   assertIssueWorkflowProfileInput(file, workflow);
+  assertIssueBranchConfigurationInputs(file, workflow);
 }
 
 function main() {
@@ -1333,6 +1356,7 @@ module.exports = {
   assertMajorActionReferences,
   assertCopilotActionInputs,
   assertIssueWorkflowProfileInput,
+  assertIssueBranchConfigurationInputs,
   assertAgentInputs,
   assertRepositoryLocaleInputs,
   assertRepositoryBugbotContextExclusions,
