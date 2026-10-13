@@ -1,3 +1,4 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
 import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import type { Result } from "../../data/model/result";
@@ -42,6 +43,7 @@ export interface CommentAutomationOptions {
   readonly doctorReadPorts?: GithubRuntimeDoctorPorts;
   readonly nativeStatusReadPort?: BoundNativeStatusReadPort;
   readonly sddQueryPort?: SddEvidenceQueryPort;
+  readonly sddDiffQueryPort?: SddDiffQueryPort;
   readonly taskId: string;
   readonly languageUseCase: ParamUseCase<CommentLanguageRequest, Result[]>;
   readonly intentUseCase: ParamUseCase<BugbotFixIntentContext, Result[]>;

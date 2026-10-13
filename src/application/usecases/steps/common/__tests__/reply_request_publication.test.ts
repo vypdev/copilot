@@ -140,3 +140,22 @@ describe('missing comment request witness', () => {
         expect(f.port.listIssueComments).not.toHaveBeenCalled(); expect(f.port.addComment).not.toHaveBeenCalled();
     });
 });
+
+
+describe('missing comment request reader after integration', () => {
+    it.each(['comment:41', 'comment:pull_request_review_comment:41'])('withholds every publication effect for %s without witness or reader', async correlationId => {
+        const f = fixture();
+        await reconcileReply({ ...f.context, intent: { ...f.context.intent, correlationId }, requestSource: undefined }, f.port);
+        expect(f.port.listIssueComments).not.toHaveBeenCalled(); expect(f.port.addComment).not.toHaveBeenCalled();
+        expect(f.port.updateComment).not.toHaveBeenCalled(); expect(f.port.removeComment).not.toHaveBeenCalled();
+    });
+    it('withholds an immutable mutation receipt without witness or reader', async () => {
+        const f = fixture();
+        const receipt = selectSemanticReplyIntents({ locale: 'en-US', target: f.context.intent.target, correlationId: 'comment:41',
+            results: [new Result({ id: 'CommentAutomation.StateCommandReply', success: true, executed: true,
+                payload: { publication: { kind: 'state-command-result', command: 'dismiss', outcome: 'completed', count: 1 } } })] })[0];
+        await reconcileReply({ ...f.context, intent: receipt, requestSource: undefined }, f.port);
+        expect(f.port.listIssueComments).not.toHaveBeenCalled(); expect(f.port.addComment).not.toHaveBeenCalled();
+        expect(f.port.updateComment).not.toHaveBeenCalled(); expect(f.port.removeComment).not.toHaveBeenCalled();
+    });
+});

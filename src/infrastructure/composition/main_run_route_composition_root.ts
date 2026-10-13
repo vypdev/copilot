@@ -1,3 +1,4 @@
+import { createSddDiffQueryPort } from './sdd_diff_composition_root';
 import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
 import { createGithubRuntimeDoctorPorts } from './github_runtime_doctor_composition_root';
 import { createReplyRequestReadPort } from './reply_request_composition_root';
@@ -254,6 +255,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     createPullRequestStatusReadPorts(binding, bugbot.scm.context),
     createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
+    createSddDiffQueryPort(binding, bugbot.scm.context),
     createNativeStatusReadPort(binding),
     createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
   );
@@ -314,6 +316,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     rememberBranchPorts(binding, bugbot.scm.context),
     createPullRequestStatusReadPorts(binding, bugbot.scm.context),
     createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
+    createSddDiffQueryPort(binding, bugbot.scm.context),
     createNativeStatusReadPort(binding),
     createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
   );

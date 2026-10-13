@@ -7,6 +7,7 @@ export const COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'sdd-diff',
     'doctor',
     'history',
     'description',
@@ -86,6 +87,7 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
         && name !== 'remember') {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
+    if (name === 'sdd-diff' && argumentsList.length > 0) return { kind: 'invalid', reason: '/copilot sdd-diff does not accept arguments.' };
     if (name === 'doctor' && argumentsList.length > 0) {
         return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
     }

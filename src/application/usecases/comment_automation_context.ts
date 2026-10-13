@@ -1,3 +1,4 @@
+import type { SddDiffRequest } from '../ports/sdd_diff_read_ports';
 import type { DoctorConfiguration } from '../ports/github_runtime_doctor_ports';
 import type { IssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
@@ -49,6 +50,7 @@ export interface CommentAutomationContext {
     readonly think: ThinkContext;
     readonly status: CopilotStatusSnapshot;
     readonly sdd?: SddEvidenceQueryContext;
+    readonly sddDiff?: SddDiffRequest;
     readonly userRequest: UserRequestContext;
     readonly branchSync: BranchSyncContext;
     readonly bugbot: {
@@ -70,11 +72,10 @@ export type CommentAutomationContextSource =
     & PushSingleActionContextSource
     & {
         readonly actor: string;
-        readonly tokenUser?: string;
         readonly issueWorkflowProfile?: IssueWorkflowProfile;
-        readonly labels?: { readonly feature?: string; readonly enhancement?: string; readonly bugfix?: string; readonly bug?: string;
-            readonly documentation?: string; readonly docs?: string; readonly chore?: string; readonly maintenance?: string;
-            readonly help?: string; readonly question?: string; readonly release?: string; readonly hotfix?: string };
+        readonly inputs?: { readonly repository?: { readonly id?: number }; readonly issue?: { readonly number?: number; readonly user?: { readonly login?: string } } };
+        readonly labels: CopilotStatusExecutionContext['labels'] & Readonly<Partial<Record<'feature' | 'enhancement' | 'bugfix' | 'bug' | 'documentation' | 'docs' | 'chore' | 'maintenance' | 'help' | 'question' | 'hotfix' | 'release', string>>>;
+        readonly tokenUser?: string;
         readonly preBranchSdd?: boolean;
         readonly issue: ThinkContextSource['issue'] & { readonly issueManagedBranches?: boolean };
 
@@ -127,6 +128,7 @@ export function projectCommentAutomationContext(
         }),
         think: projectThinkContext(source),
         status: buildCopilotStatusSnapshot(source),
+        ...projectSddDiffRequest(source),
         ...(source.issue?.number > 0 && !(source.pullRequest?.number > 0) ? { sdd: Object.freeze({
             issueNumber: source.issue.number,
             admittedKind: ISSUE_WORKFLOW_KINDS.find(kind => kind === source.issueWorkflowKind),
@@ -186,4 +188,27 @@ export function withCommentLanguageAdaptation(
             }),
         }),
     });
+}
+
+/** Copies trusted workflow/profile facts; PR issue identity/author come only from the native link query. */
+function projectSddDiffRequest(source: CommentAutomationContextSource): { readonly sddDiff?: SddDiffRequest } {
+    const status = buildCopilotStatusSnapshot(source);
+    const repositoryId = source.inputs?.repository?.id;
+    const number = status.target === 'pull-request' ? status.pullRequestNumber : status.issueNumber;
+    if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId < 1 || !number || number < 1
+        || !source.issueWorkflowProfile || typeof source.issue.issueManagedBranches !== 'boolean'
+        || typeof source.preBranchSdd !== 'boolean') return {};
+    const list = (...values: (string | undefined)[]) => Object.freeze(values.filter((value): value is string => typeof value === 'string'));
+    const labels = source.labels;
+    return { sddDiff: Object.freeze({
+        target: Object.freeze({ kind: status.target as 'issue' | 'pull-request', number }), repositoryId,
+        ...(status.target === 'issue' && source.inputs?.issue?.number === number
+            ? { issueAuthor: source.inputs.issue.user?.login } : {}),
+        profile: Object.freeze({ schemaVersion: source.issueWorkflowProfile.schemaVersion, enabled: Object.freeze([...source.issueWorkflowProfile.enabled]) }),
+        labelConfiguration: Object.freeze({ feature: list(labels.feature, labels.enhancement), bugfix: list(labels.bugfix, labels.bug),
+            documentation: list(labels.documentation, labels.docs), chore: list(labels.chore, labels.maintenance),
+            help: list(labels.help, labels.question), hotfix: list(labels.hotfix), release: list(labels.release) }),
+        profileDigest: source.issueWorkflowProfileDigest, trustedBotLogin: source.tokenUser?.trim() ?? '',
+        issueManagedBranches: source.issue.issueManagedBranches, preBranchSdd: source.preBranchSdd, baseBranch: source.branches?.development,
+    }) };
 }

@@ -1441,6 +1441,12 @@ The repair owns **30 distinct cases**: 26 provider-bound immutable-comparison ca
 Live human doctor push `38162035628`, head `25950008`, exposed a second comparison-boundary problem: 39 files contained 248,563 raw source-patch bytes, including 89,186 bytes of the generated specification index; JSON escaping exceeded the unchanged 256,000-byte budget. The exact generated `specs/CATALOG.md` path now carries metadata only, alongside build outputs. The editable `specs/catalog.json` still requires its full patch. Two distinct provider contracts cover the generated index and its source. Bounds/incomplete data now report `provider.unavailable`; only invalid or contradictory object identity uses `workflow.stale`, so the Job Summary does not falsely claim the branch advanced. Fresh live acceptance remains pending.
 
 
+### Read-only SDD comparison reply refresh (2026-10-12)
+
+`/copilot sdd-diff` adds the closed `copilot-sdd-diff` correlated reply family. Its already bounded EN/ES presentation is selected only from an executed successful `.SddDiff` result with a valid resolved locale. Composition uses the static publication catalog for this deterministic reply, without invoking translation or an agent.
+
+For this family only, a repeated source comment refreshes the exact bot-owned target/correlation/message-key canonical reply when the latest verified reading changes; an identical replay is unchanged. Other reply families retain create-once behavior. Existing owned duplicate cleanup remains applicable and foreign markers are inert. The final sanitizer neutralizes automation markers and mentions. These 17 dedicated cases are allocated to the structural comparison's 217-case inventory, not recounted in the existing 135-case minimum or communication ledgers. Authority/freshness belongs to the comparison application and its shared evidence query; comment publication does not claim an atomic GitHub transaction.
+
 ### Current request reply recovery: dogfooding #474 (2026-10-13)
 
 Native run `38331274938` failed after actual Codex execution, but its source
@@ -1702,3 +1708,22 @@ the unchanged 28,000-unit ceiling. Two additional cases cover withholding the
 unsafe boundary and all safe near-limit replays; one failed before correction.
 The current inventory is 89 runtime cases (39 pure, 33 retirement, 2 coordination,
 11 publication and 4 analysis) and 45 conservative declarations.
+
+
+### Missing-reader integration regression (2026-10-13)
+
+The Action-owned SDD comparison integration `20e817bd` retained the comparison
+source guard but restored a legacy fallback for other comment-correlated
+replies when both witness and reader were absent. Three distinct regressions
+failed before correction: ordinary issue-comment reply, review-comment reply,
+and immutable mutation receipt. Every `comment:` correlation now requires its
+private native request witness before any comment read or publication effect,
+independently of whether a reader was bound. Verified read-only refreshes and
+non-comment immutable publication retain their existing contracts.
+
+These **three cases** belong only to semantic publication, bringing that
+request-witness extension from 56 to **59** cases; the original cross-capability
+allocation becomes **76** (59 + 11 execution + 6 autofix). They are excluded
+from the SDD comparison's separate 254-case inventory. No permission,
+configuration, coverage threshold or platform changes. Documentation of the
+source-freshness boundary remains in the comment-command guide.

@@ -95,3 +95,20 @@ unavailable; a corrupted card, changed issue or racing branch cannot produce a
 ready result. A newer invalid owned card never restores an older ready state.
 Answers from older rounds without matching question provenance remain pending.
 Help issues remain branchless and do not require an SDD.
+
+
+## Compare the first and current publication
+
+Use `/copilot sdd-diff` in the issue to inspect a bounded structural comparison
+of the first and current verified SDD. A reply shows immutable document and
+commit links, exact added/removed line counts and up to eight escaped changed
+section titles. It does not quote document contents or decide whether semantic
+requirements changed. The commit comparison may show other files; the command's
+counts concern only the owning SDD.
+
+Only a first publication means there is no revision pair. Pending clarifications
+or stale issue evidence withhold current counts and return you to the existing
+SDD card. Invalid or unavailable authority cannot certify a comparison. Repeating
+the same source comment refreshes one reply; it never regenerates the SDD or
+changes the branch. See [comment commands](./comment-commands.mdx) for exact PR
+link rules, fixed limits and the English/Spanish fallback contract.

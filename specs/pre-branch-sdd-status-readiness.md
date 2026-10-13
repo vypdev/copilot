@@ -1,9 +1,9 @@
 # Pre-branch SDD Readiness in `/copilot status`
 
-- Status: Proposed
+- Status: Implemented
 - Date: 2026-10-10
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-11
+- Last verified: 2026-10-12
 - Owners: Copilot maintainers
 - Scope: Add a localized, read-only view of pre-branch SDD readiness to the existing issue status answer.
 - Related issues/PRs: Issue #454; existing owning specification `specs/pre-branch-sdd-gate.md`
@@ -524,11 +524,17 @@ graph update and build passed. A fresh native status request remains required;
 these offline checks do not certify that live result.
 
 
+### Opaque authority identity for structural comparison (2026-10-12)
+
+The shared read-only snapshot optionally exposes `authorityDigest`, a SHA-256 fingerprint of the exact fenced bot-owned card body, canonical current issue digest/labels and relevant awaiting-answer provenance. It exposes none of those contents. Existing status presentation ignores this optional field and the stored schema-v1 gate record is unchanged. The structural comparison consumer requires and rechecks this digest, so a card-body mutation that preserves the visible publication fields cannot reuse old current counts.
+
+Two distinct authority-reader regressions prove stable opaque output and changed identity after a same-projection card-body replacement. These two cases are allocated once to this owning authority-reader inventory: the corrected default-branch 182 plus two is 184. They are excluded from the separate 229-case structural comparison inventory. Prior dated validation counts remain historical evidence.
+
 ### Shared workflow coverage for independent SDD reads (2026-10-12)
 
 Readiness parent integration `38255933907` passed its full Jest cases but failed the stricter per-module coverage gate because the existing SDD status bridge lacked direct workflow tests. Six contracts now exercise verified/unavailable projection independently of the PR adapter and exclude foreign issue, missing initial readiness, PR target and missing context. They cover the existing bridge without copying shared implementation into a managed feature or lowering a coverage threshold.
 
-These six shared status cases raise its default-branch authority allocation from 65 to 71 and total from 198 to 204. The separate structural comparison contribution adds two opaque-authority cases; when both contributions are integrated the companion total is 206, never 204 + the full comparison inventory. The gate's 149 cases remain separate.
+These six shared status cases were added to the authority/application/fences allocation. The separate structural comparison contribution retains its own tests and coverage entry; the gate's 149 cases remain separate.
 
 ### Correct the distinct-case inventory (2026-10-12)
 
@@ -546,12 +552,25 @@ functional assertion and risk requirement remains; coverage thresholds, the
 Historical physical Jest totals remain execution evidence; earlier extension
 figures 141/181/198/204 included these 22 copies and must not be read as
 independent behaviors. Their corrected distinct counts are 119/159/176/182.
-The separate comparison's two opaque-authority contracts would make 184 when
-integrated; its entire test inventory is never added to this companion.
+The default-branch correction is 182. On this combined head, the comparison's
+two authority-reader contracts are allocated here once, making 184; the
+separate structural comparison inventory remains 229 and excludes them.
 
 Focused status tests and full coverage MUST retain the same production-module
 coverage after deduplication. No runtime, label, model, platform, publication
 or deployment behavior changes in this correction.
+
+### Reconcile the allocation after native parent integration (2026-10-13)
+
+Action merge `139955e8` preserved both opaque-authority regression bodies but
+rewrote their allocation outside this companion while the comparison SDD still
+excluded them. The corrected non-overlapping inventory is 73 authority cases
+and 184 total here; the comparison's 229 and gate's 149 remain separate. This
+repairs contradictory metadata only: no test is added, removed or counted twice,
+and the 22 deleted copies are not restored. Existing tests and thresholds stay
+unchanged. Prior physical Jest totals remain dated execution evidence. The
+subsequent closed-history corrections below supersede this intermediate
+184-case allocation with the current 194-case total.
 
 ### Native closed history (2026-10-13; local correction, live acceptance pending)
 

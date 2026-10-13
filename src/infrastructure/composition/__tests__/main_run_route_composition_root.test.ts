@@ -121,6 +121,23 @@ describe("main run route composition root", () => {
     expect(call.slice(0, 15)).toEqual([
       ...Array.from({ length: 14 }, () => expect.anything()), mockStatusReadPorts,
     ]);
+    const historyPort = call[15];
+    expect(historyPort).toEqual(expect.objectContaining({
+      readComments: expect.any(Function),
+      serverOrigin: expect.any(String),
+    }));
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
+    const sddQuery = call[16];
+    expect(sddQuery).toEqual(expect.objectContaining({
+      read: expect.any(Function),
+      serverOrigin: expect.any(String),
+    }));
+    expect(Object.keys(sddQuery!)).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(sddQuery)).toBe(true);
+    const diff = call[17];
+    expect(Object.keys(diff!).sort()).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(diff)).toBe(true);
     const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
     expect(doctor).toMatchObject({
       readRepository: expect.any(Function),
@@ -130,14 +147,6 @@ describe("main run route composition root", () => {
         getPullRequestHeadSha: expect.any(Function),
       }),
     });
-    const query = call.find(value => value && typeof value === 'object' && 'read' in value && 'serverOrigin' in value);
-    expect(query).toMatchObject({ read: expect.any(Function) });
-    expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
-    expect(Object.isFrozen(query)).toBe(true);
-    const historyPort = call.find(value => value && typeof value === 'object' && 'readComments' in value && 'serverOrigin' in value);
-    expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
-    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
-    expect(Object.isFrozen(historyPort)).toBe(true);
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {

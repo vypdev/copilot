@@ -1,3 +1,4 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
 import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import { invalidCommentCommandResult } from './comment_automation_command_workflow';
 import { readCopilotHistory } from './read_copilot_history_workflow';
@@ -54,6 +55,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly statusReadPorts?: CopilotStatusReadPorts,
     private readonly historyReadPort?: CopilotHistoryReadPort,
     private readonly sddQueryPort?: SddEvidenceQueryPort,
+    private readonly sddDiffQueryPort?: SddDiffQueryPort,
     private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
     private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
@@ -112,6 +114,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         doctorReadPorts: this.doctorReadPorts,
         nativeStatusReadPort: this.nativeStatusReadPort,
         sddQueryPort: this.sddQueryPort,
+        sddDiffQueryPort: this.sddDiffQueryPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

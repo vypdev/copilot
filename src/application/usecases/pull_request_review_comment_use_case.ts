@@ -1,3 +1,4 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
 import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import { invalidCommentCommandResult } from './comment_automation_command_workflow';
 import { parseCopilotCommand } from '../../domain/copilot_command';
@@ -53,6 +54,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
     private readonly historyReadPort?: CopilotHistoryReadPort,
+    private readonly sddDiffQueryPort?: SddDiffQueryPort,
     private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
     private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
@@ -95,6 +97,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        sddDiffQueryPort: this.sddDiffQueryPort,
         doctorReadPorts: this.doctorReadPorts,
         nativeStatusReadPort: this.nativeStatusReadPort,
         syncBranchUseCase: this.syncBranchUseCase

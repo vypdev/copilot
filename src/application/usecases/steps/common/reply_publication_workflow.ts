@@ -27,7 +27,7 @@ export interface ReplyPublicationOutcome {
     readonly compactedCommentIds: readonly number[];
 }
 
-/** Publishes an explicit reply at most once for a trusted request correlation. */
+/** Publishes trusted correlated replies and refreshes verified read-only projections. */
 export async function reconcileReply(
     context: ReplyPublicationContext,
     comments: BoundIssueCommentPublicationPort,
