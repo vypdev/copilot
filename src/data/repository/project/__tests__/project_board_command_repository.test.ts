@@ -68,6 +68,7 @@ interface HarnessOptions {
   fieldConnection?: "present" | "missing";
   itemConnection?: "present" | "missing";
   mutationItemId?: string;
+  mutationApplied?: boolean;
   statusItem?: unknown;
 }
 
@@ -80,7 +81,7 @@ function createHarness(options: HarnessOptions = {}) {
       ),
   };
   const fieldPages = options.fieldPages ?? [terminalPage([statusField])];
-  const itemPages = options.itemPages ?? [terminalPage([projectItem()])];
+  let itemPages = options.itemPages ?? [terminalPage([projectItem()])];
 
   const pageForCursor = <T>(pages: Page<T>[], cursor: unknown): Page<T> => {
     if (cursor === null || cursor === undefined) return pages[0];
@@ -97,6 +98,14 @@ function createHarness(options: HarnessOptions = {}) {
         } };
       }
       if (document.includes("mutation(")) {
+        if (options.mutationApplied !== false && (options.mutationItemId === undefined || options.mutationItemId)) {
+          if (variables?.fieldId === "PVTSSF_status") {
+            itemPages = itemPages.map(page => ({
+              ...page,
+              nodes: page.nodes.map(item => item.id === "PVTI_item" ? projectItem("Status", "option_in_progress") : item),
+            }));
+          }
+        }
         return options.mutationItemId === undefined
           ? {
               updateProjectV2ItemFieldValue: {
@@ -388,7 +397,7 @@ describe("ProjectBoardCommandRepository", () => {
       harness.graphql.mock.calls.filter(([document]) =>
         String(document).includes("items(first"),
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(4);
   });
 
   it("finds an item beyond the generic 100-page pagination boundary", async () => {
@@ -543,7 +552,7 @@ describe("ProjectBoardCommandRepository", () => {
     );
   });
 
-  it("returns false when the mutation does not return a project item", async () => {
+  it("fails when the mutation does not return a project item", async () => {
     const harness = createHarness({ mutationItemId: "" });
 
     await expect(
@@ -555,7 +564,15 @@ describe("ProjectBoardCommandRepository", () => {
         "In progress",
         "token",
       ),
-    ).resolves.toBe(false);
+    ).rejects.toThrow("Project item PVTI_item was not returned after updating field 'Status'.");
+  });
+
+  it("fails when the updated Project status cannot be verified", async () => {
+    const harness = createHarness({ mutationApplied: false });
+
+    await expect(
+      harness.repository.moveIssueToColumn(project, "owner", "repo", 42, "In progress", "token"),
+    ).rejects.toThrow("Project field 'Status' was not verified as 'In progress' after update.");
   });
 
   it.each([

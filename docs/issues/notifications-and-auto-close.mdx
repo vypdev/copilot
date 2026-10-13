@@ -109,6 +109,15 @@ If an issue was **closed** but someone pushes again to its branch, you may want 
 Reopen is a native state transition. A successful reopen creates no separate
 conversation comment. This applies only when the **Commit** workflow runs.
 
+For a started managed issue, its reopened Issue event restores the configured
+active Project Status before other field enrichment, even when its SDD and
+branch are reused. An existing Done status can otherwise cause GitHub's Project
+Auto-close issue rule to close active work again. This resumption preserves
+branch and SDD history and creates no success comment. If its current native
+state or start label changes, enrichment stops; inspect and retry the actual
+reopened-issue run after checking Project access and its active-column option.
+See [Assignees and Projects](/issues/assignees-and-projects).
+
 ## Auto-close when branch is merged
 
 When the **branch** created for the issue (e.g. `feature/123-title`) is **merged** (e.g. into `develop` or `main`), Copilot can **automatically close the issue**. You don’t have to remember to close it manually.

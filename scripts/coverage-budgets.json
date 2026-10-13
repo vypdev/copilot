@@ -713,6 +713,21 @@
         }
       ],
       "successMessage": "closed issue progress retirement coverage: PASS (presentation 100%; guarded retirement and coordination 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Reopened issue Project state",
+      "missingEntryLabel": "reopened issue Project state",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/steps/issue/resume_issue_project_use_case.ts",
+            "src/data/repository/project/project_board_field_update.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "reopened issue Project state coverage: PASS (95% lines/statements, 90% branches/functions)"
     }
   ]
 }

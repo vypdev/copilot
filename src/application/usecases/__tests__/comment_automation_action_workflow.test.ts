@@ -13,6 +13,7 @@ jest.mock('../steps/commit/bugbot/commit_autofix_and_resolve_workflow', () => ({
 function options(overrides: Record<string, unknown> = {}) {
   return {
     taskId: 'CommentAutomation',
+    rememberBranchPorts: { linkedBranches: { getLinkedBranch: jest.fn().mockResolvedValue({ name: 'feature/42-managed', headSha: 'a'.repeat(40) }) }, pullRequests: { getPullRequest: jest.fn() } },
     ...overrides,
   } as never;
 }
@@ -20,10 +21,12 @@ function options(overrides: Record<string, unknown> = {}) {
 function execution(publicationMode: 'publish' | 'dry-run' = 'publish') {
   return {
     userComment: '@vypbot analyze this',
+    status: { branch: 'feature/42-managed' },
     bugbot: {
       publicationMode,
       review: {},
       autofix: {},
+      fixIntent: { target: { isPullRequest: false, issueNumber: 42, headBranch: 'feature/42-managed' } },
       commit: {},
     },
   } as never;

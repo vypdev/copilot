@@ -51,6 +51,13 @@ it.each(['timeout', 'workflow.cancelled', 'agent.failed'] as const)('retains %s 
   expect(results.at(-1)?.errors[0].correlationId).toBe(correlationId);
 });
 
+function verifiedPullRequestReaders(number: number, headRef: string): NonNullable<CommentAutomationOptions['rememberBranchPorts']> {
+  return { linkedBranches: { getLinkedBranch: jest.fn() }, pullRequests: { getPullRequest: jest.fn().mockResolvedValue({
+    number, state: 'open', draft: false, baseRepository: { owner: 'o', name: 'r' },
+    headRepositoryOwner: 'o', headRepositoryName: 'r', headRef, headSha: 'a'.repeat(40),
+  }) } };
+}
+
 function successfulResult(id: string, payload?: unknown): Result {
   return new Result({
     id,
@@ -177,9 +184,12 @@ describe("runCommentAutomation", () => {
         actor: "actor",
         tokenUser: "vypbot",
         tokens: { token: "t" },
+        isPullRequest: true, eventName: "issue_comment",
+        commit: { branch: "" }, pullRequest: { number: 77, head: "bugfix/42-managed" },
       } as unknown as Execution,
       {
         taskId: "CommentAutomation",
+        rememberBranchPorts: verifiedPullRequestReaders(77, "bugfix/42-managed"),
         languageUseCase: {
           taskId: "language",
           invoke: jest.fn().mockResolvedValue([]),
@@ -237,7 +247,7 @@ describe("runCommentAutomation", () => {
       tokens: { token: 't' }, isPullRequest: true, eventName: 'pull_request_review_comment',
       commit: { branch: '' }, pullRequest: { number: 460, head: 'docs/work', isPullRequestReviewComment: true, commentBody: userComment },
     } as unknown as Execution, {
-      taskId: 'CommentAutomation', languageUseCase: language as never, intentUseCase: intent as never,
+      taskId: 'CommentAutomation', rememberBranchPorts: verifiedPullRequestReaders(460, 'docs/work'), languageUseCase: language as never, intentUseCase: intent as never,
       thinkUseCase: {} as never, autofixUseCase: autofix as never, doUserRequestUseCase: {} as never, userComment,
     }, { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never);
     expect(language.invoke).not.toHaveBeenCalled();
