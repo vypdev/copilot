@@ -755,17 +755,17 @@ describe('workflow contract validator', () => {
     })).toThrow('runs-on self-hosted, codex');
   });
 
-  it('routes the shared Codex pool to macOS and Ubuntu after Windows registrations omit the label', () => {
+  it('temporarily routes installed Codex jobs to Ubuntu while Apple runners are unstable', () => {
     const workflow = yaml.load(readFileSync(queueFile, 'utf8')) as MutationWorkflow;
     const requiredLabels = workflow.jobs['copilot-issues']['runs-on'] as string[];
-    expect(requiredLabels).toEqual(['self-hosted', 'codex']);
+    expect(requiredLabels).toEqual(['self-hosted', 'codex', 'Linux']);
     const registrations = [
       { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
       { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
       { platform: 'Windows', labels: ['self-hosted', 'Windows'] },
     ];
     expect(registrations.filter(runner => requiredLabels.every(label => runner.labels.includes(label)))
-      .map(runner => runner.platform)).toEqual(['macOS', 'Ubuntu']);
+      .map(runner => runner.platform)).toEqual(['Ubuntu']);
     expect(() => assertRunner(queueFile, workflow)).not.toThrow();
   });
 
@@ -783,8 +783,8 @@ describe('workflow contract validator', () => {
     });
     const codexJobs = jobs.filter(job => Array.isArray(job['runs-on']) && job['runs-on'].includes('codex'));
     expect(codexJobs.length).toBeGreaterThan(20);
-    expect(codexJobs.every(job => [JSON.stringify(['self-hosted', 'codex']), JSON.stringify(['self-hosted', 'codex', 'Linux'])]
-      .includes(JSON.stringify(job['runs-on'])))).toBe(true);
+    expect(codexJobs.every(job => JSON.stringify(job['runs-on'])
+      === JSON.stringify(['self-hosted', 'codex', 'Linux']))).toBe(true);
     expect(jobs.some(job => job['runs-on'] === 'windows-latest')).toBe(true);
   });
 
@@ -793,7 +793,6 @@ describe('workflow contract validator', () => {
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(workflow.jobs['setup-platform-smoke'].strategy.matrix.os).toContain('windows-latest');
     expect(workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include).toEqual([
-      { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
       { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
     ]);
     workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.push({

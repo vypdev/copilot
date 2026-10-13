@@ -377,7 +377,8 @@ function assertRunner(file, workflow) {
         ];
         if (job['runs-on'] !== '${{ matrix.labels }}'
           || job.name !== 'Setup package and local session (self-hosted ${{ matrix.platform }} codex)'
-          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(expectedMatrix)
+          || ![expectedMatrix, [expectedMatrix[1]]].some(matrix =>
+            JSON.stringify(job.strategy?.matrix?.include) === JSON.stringify(matrix))
           || job.strategy?.['fail-fast'] !== false) {
           throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners; Windows services are unsupported.`);
         }
@@ -430,7 +431,9 @@ function assertRunner(file, workflow) {
       expected = [QUALITY_RUNNER_BY_TRUST];
     }
     const labels = runnerLabels(job['runs-on']);
-    if (JSON.stringify(labels) !== JSON.stringify(expected)) {
+    const linuxOnly = JSON.stringify(expected) === JSON.stringify(['self-hosted', 'codex'])
+      && JSON.stringify(labels) === JSON.stringify(['self-hosted', 'codex', 'Linux']);
+    if (JSON.stringify(labels) !== JSON.stringify(expected) && !linuxOnly) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
     }
     assertIsolatedPnpm(relativeFile, jobId, job);
