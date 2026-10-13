@@ -5,7 +5,7 @@ import type { BoundBugbotContextReadPorts } from './bugbot_context_ports';
 import type { BoundIssueDescriptionQueryPort } from './issue_description_ports';
 import type { BoundIssueLabelsPort } from './issue_management_ports';
 import type { BoundIssueTitlePort } from './issue_title_ports';
-import type { BoundLinkedBranchReadinessPort } from './linked_branch_readiness_ports';
+import type { BoundLinkedBranchReadinessPort, LinkedBranchEvidence } from './linked_branch_readiness_ports';
 import type { PreBranchSddWorkspacePort, SddCatalogSnapshot } from './pre_branch_sdd_ports';
 
 export interface SddEvidenceQueryContext {
@@ -26,7 +26,9 @@ export interface SddEvidenceReadPorts {
     readonly titles: Pick<BoundIssueTitlePort, 'getTitle'>;
     readonly labels: Pick<BoundIssueLabelsPort, 'getLabels'>;
     readonly actors: Pick<BoundActorAuthorizationPort, 'isActorAllowedToModifyFiles'>;
-    readonly branches: BoundLinkedBranchReadinessPort;
+    readonly branches: BoundLinkedBranchReadinessPort & {
+        getHistoricalLinkedBranch?(issueNumber: number, branchName: string): Promise<LinkedBranchEvidence | undefined>;
+    };
     readonly workspace: Pick<PreBranchSddWorkspacePort, 'loadSnapshot' | 'verifyPublication' | 'isAncestor'> & {
         loadSnapshotAtCommit(commitSha: string): Promise<SddCatalogSnapshot>;
     };
@@ -41,7 +43,8 @@ export function bindSddEvidenceReadPorts(ports: SddEvidenceReadPorts): SddEviden
         titles: Object.freeze({ getTitle: ports.titles.getTitle.bind(ports.titles) }),
         labels: Object.freeze({ getLabels: ports.labels.getLabels.bind(ports.labels) }),
         actors: Object.freeze({ isActorAllowedToModifyFiles: ports.actors.isActorAllowedToModifyFiles.bind(ports.actors) }),
-        branches: Object.freeze({ getLinkedBranch: ports.branches.getLinkedBranch.bind(ports.branches) }),
+        branches: Object.freeze({ getLinkedBranch: ports.branches.getLinkedBranch.bind(ports.branches),
+            ...(ports.branches.getHistoricalLinkedBranch ? { getHistoricalLinkedBranch: ports.branches.getHistoricalLinkedBranch.bind(ports.branches) } : {}) }),
         workspace: Object.freeze({
             loadSnapshot: ports.workspace.loadSnapshot.bind(ports.workspace),
             loadSnapshotAtCommit: ports.workspace.loadSnapshotAtCommit.bind(ports.workspace),

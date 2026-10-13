@@ -34,6 +34,15 @@ export class LinkedBranchReadinessRepository implements LinkedBranchReadinessPor
     branchName: string,
     token: string,
   ): Promise<LinkedBranchEvidence | undefined> {
+    return this.readEvidence(owner, repository, issueNumber, branchName, token, false);
+  }
+
+  /** Historical query only; merged PRs never certify active implementation readiness. */
+  async getHistoricalLinkedBranch(owner: string, repository: string, issueNumber: number, branchName: string, token: string): Promise<LinkedBranchEvidence | undefined> {
+    return this.readEvidence(owner, repository, issueNumber, branchName, token, true);
+  }
+
+  private async readEvidence(owner: string, repository: string, issueNumber: number, branchName: string, token: string, historical: boolean): Promise<LinkedBranchEvidence | undefined> {
     const expected = branchName.trim();
     if (!expected || expected.startsWith('/') || expected.includes('..')) return undefined;
     const response = await this.client.getClient(token).graphql<Response>(`
@@ -64,7 +73,7 @@ export class LinkedBranchReadinessRepository implements LinkedBranchReadinessPor
     // Native issue association plus the exact same-repository live ref retains
     // that proof; a PR body or a stale/deleted head alone is insufficient.
     const linkedPullRequest = response.repository?.issue?.closedByPullRequestsReferences?.nodes?.find(pr =>
-      pr?.state === 'OPEN' && pr.headRefName === expected
+      (pr?.state === 'OPEN' || historical && pr?.state === 'MERGED') && pr.headRefName === expected
       && pr.headRepository?.nameWithOwner?.toLowerCase() === `${owner}/${repository}`.toLowerCase()
       && fullSha(pr.headRefOid) === remoteSha);
     return remoteSha && linkedPullRequest ? Object.freeze({ name: expected, headSha: remoteSha }) : undefined;

@@ -74,4 +74,25 @@ describe('LinkedBranchReadinessRepository', () => {
     const repository = new LinkedBranchReadinessRepository({ getClient: () => ({ graphql }) } as never);
     await expect(repository.getLinkedBranch('acme', 'repo', 42, 'feature/42-change', 'token')).resolves.toBeUndefined();
   });
+
+  function mergedHarness(overrides: object = {}, remoteSha: string | null = sha) {
+    const graphql = jest.fn().mockResolvedValue({ repository: { ref: { target: { oid: remoteSha } }, issue: {
+      linkedBranches: { nodes: [] }, closedByPullRequestsReferences: { nodes: [{ ...linkedPr(), state: 'MERGED', ...overrides }] },
+    } } });
+    return new LinkedBranchReadinessRepository({ getClient: () => ({ graphql }) } as never);
+  }
+  it('certifies retained historical ref from an exact same-repository merged association', async () => {
+    await expect(mergedHarness().getHistoricalLinkedBranch('acme', 'repo', 42, 'feature/42-change', 'token'))
+      .resolves.toEqual({ name: 'feature/42-change', headSha: sha });
+  });
+  it('keeps merged associations out of active implementation readiness', async () => {
+    await expect(mergedHarness().getLinkedBranch('acme', 'repo', 42, 'feature/42-change', 'token')).resolves.toBeUndefined();
+  });
+  it.each([
+    ['closed unmerged', { state: 'CLOSED' }, sha], ['foreign', { headRepository: { nameWithOwner: 'other/repo' } }, sha],
+    ['wrong branch', { headRefName: 'feature/420' }, sha], ['stale head', { headRefOid: 'b'.repeat(40) }, sha],
+    ['deleted ref', {}, null], ['invalid ref SHA', {}, 'invalid'],
+  ])('refuses %s historical merged proof', async (_reason, overrides, remoteSha) => {
+    await expect(mergedHarness(overrides, remoteSha).getHistoricalLinkedBranch('acme', 'repo', 42, 'feature/42-change', 'token')).resolves.toBeUndefined();
+  });
 });

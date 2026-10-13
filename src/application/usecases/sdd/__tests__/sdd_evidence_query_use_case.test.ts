@@ -353,4 +353,40 @@ describe('historical SDD for native closed work', () => {
         const f = closedFixture(); f.nativeState.readIssue.mockResolvedValueOnce(f.facts).mockResolvedValue({ ...f.facts, state: 'open', reason: 'reopened' });
         expect(await f.query.read(f.context)).toEqual({ state: 'stale' });
     });
+
+    function mergedFixture() {
+        const f = closedFixture();
+        f.ports.branches.getLinkedBranch.mockResolvedValue(undefined as never);
+        const getHistoricalLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42', headSha: head });
+        const ports = { ...f.ports, nativeState: f.nativeState, branches: { ...f.ports.branches, getHistoricalLinkedBranch } };
+        return { ...f, getHistoricalLinkedBranch, ports, query: new SddEvidenceQueryUseCase(ports) };
+    }
+    it('verifies closed publication through merged association after native branch linkage disappears', async () => {
+        const f = mergedFixture();
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'published', historical: true, verified: { firstSha: first, currentSha: first } });
+        expect(f.getHistoricalLinkedBranch).toHaveBeenCalledTimes(2);
+        expect(f.getHistoricalLinkedBranch).toHaveBeenCalledWith(42, 'feature/42');
+    });
+    it('does not use merged history for active open work', async () => {
+        const f = mergedFixture(); f.nativeState.readIssue.mockResolvedValue({ ...f.facts, state: 'open', labels: ['feature', 'in-progress'] });
+        expect(await f.query.read(f.context)).toMatchObject({ state: 'invalid' });
+        expect(f.getHistoricalLinkedBranch).not.toHaveBeenCalled();
+    });
+    it('does not hide denied active branch reads behind historical fallback', async () => {
+        const f = mergedFixture(); f.ports.branches.getLinkedBranch.mockRejectedValue(new Error('denied'));
+        expect(await f.query.read(f.context)).toEqual({ state: 'unavailable' });
+        expect(f.getHistoricalLinkedBranch).not.toHaveBeenCalled();
+    });
+    it('reports denied historical reads as unavailable', async () => {
+        const f = mergedFixture(); f.getHistoricalLinkedBranch.mockRejectedValue(new Error('denied'));
+        expect(await f.query.read(f.context)).toEqual({ state: 'unavailable' });
+    });
+    it('does not certify missing historical authority in a legacy composition', async () => {
+        const f = mergedFixture();
+        expect(await new SddEvidenceQueryUseCase({ ...f.ports, branches: { getLinkedBranch: f.ports.branches.getLinkedBranch } }).read(f.context)).toMatchObject({ state: 'invalid' });
+    });
+    it('withholds comparison after historical head proof moves during the final fence', async () => {
+        const f = mergedFixture(); f.getHistoricalLinkedBranch.mockResolvedValueOnce({ name: 'feature/42', headSha: head }).mockResolvedValue({ name: 'feature/42', headSha: 'f'.repeat(40) });
+        expect(await f.query.read(f.context)).toEqual({ state: 'stale' });
+    });
 });

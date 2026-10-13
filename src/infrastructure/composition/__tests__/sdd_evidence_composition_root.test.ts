@@ -1,6 +1,6 @@
 import { renderSddGateRecord, type SddGateRecord } from '../../../domain/pre_branch_sdd';
 import { buildSddIssueDigest } from '../../../application/policies/sdd_issue_identity_policy';
-import { createSddEvidenceQueryPort } from '../sdd_evidence_composition_root';
+import { createSddEvidenceQueryPort, createSddEvidenceReadPorts } from '../sdd_evidence_composition_root';
 
 const mockTitle = jest.fn(async () => 'Feature');
 const mockDescription = jest.fn(async () => 'Human requirements');
@@ -33,6 +33,14 @@ jest.mock('../../pre_branch_sdd_workspace_adapter', () => ({ PreBranchSddWorkspa
 })) }));
 
 describe('composed read-only SDD query', () => {
+    it('binds historical branch reads while physically discarding writer capabilities', async () => {
+        const ports = createSddEvidenceReadPorts({ owner: 'acme', repository: 'demo', token: 'fixture-token' }, { listIssueComments: jest.fn() });
+        expect(Object.keys(ports.branches).sort()).toEqual(['getHistoricalLinkedBranch', 'getLinkedBranch']);
+        expect(Object.isFrozen(ports.branches)).toBe(true);
+        await expect(ports.branches.getHistoricalLinkedBranch!(42, 'feature/42')).resolves.toEqual({ name: 'feature/42', headSha: mockHead });
+        expect(mockGetClient).toHaveBeenCalledWith('fixture-token');
+        expect(mockWrite).not.toHaveBeenCalled();
+    });
     it('reads owned publication and currently authorized answers with the bound repository identity while discarding mutation capabilities', async () => {
         const binding = { owner: 'acme', repository: 'demo', token: 'fixture-token' };
         const context = { issueNumber: 42, admittedKind: 'feature' as const, profileDigest: 'profile', issueAuthor: 'author',

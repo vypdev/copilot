@@ -38,7 +38,7 @@ export class SddEvidenceQueryUseCase {
             const { record, id: cardId } = selection;
             const digest = this.digest(context, facts, record.baseSha);
             const stale = digest !== record.issueDigest;
-            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
+            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map(), historical);
             if (!['invalid', 'unavailable'].includes(result.state)
                 && !await this.fence(context, facts, selection.body, cardId, record, result.verified, historical)) return { state: 'stale' };
             return Object.freeze({ ...result, ...(!['invalid', 'unavailable'].includes(result.state) ? {
@@ -49,12 +49,12 @@ export class SddEvidenceQueryUseCase {
     }
 
     private async inspectRecord(context: SddEvidenceQueryContext, facts: ReadFacts, record: SddGateRecord, cardId: number, stale: boolean,
-        authorizations: Map<string, Promise<boolean>>): Promise<SddEvidenceSnapshot> {
+        authorizations: Map<string, Promise<boolean>>, historical: boolean): Promise<SddEvidenceSnapshot> {
         const path = record.plan.path;
         let verified: VerifiedSddEvidence | undefined;
         if (record.commitSha) {
             if (!record.branchName) return { state: 'invalid' };
-            const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+            const linked = await this.linkedBranch(context.issueNumber, record.branchName, historical);
             if (linked?.name !== record.branchName || !fullSha(linked.headSha)) return { state: 'invalid' };
             if (!await this.ports.workspace.verifyPublication(record.branchName, record.baseSha, record.commitSha, path)
                 || !await this.ports.workspace.isAncestor(record.commitSha, linked.headSha)) return { state: 'invalid' };
@@ -140,7 +140,7 @@ export class SddEvidenceQueryUseCase {
         if (record.phase === 'awaiting-answer'
             && JSON.stringify(fresh.comments) !== JSON.stringify(original.comments)) return false;
         if (record.branchName) {
-            const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+            const linked = await this.linkedBranch(context.issueNumber, record.branchName, historical);
             if (linked?.name !== record.branchName || linked.headSha !== (verified?.branchHeadSha ?? record.baseSha)) return false;
             if (verified && (!await this.ports.workspace.verifyPublication(record.branchName, record.baseSha, record.commitSha!, record.plan.path)
                 || (record.phase === 'published' && record.revisionSha
@@ -151,6 +151,11 @@ export class SddEvidenceQueryUseCase {
 
     private historicalEligible(context: SddEvidenceQueryContext, labels: readonly string[]): boolean {
         return context.admittedKind === 'feature' || labels.some(label => label.toLowerCase() === 'contract-change');
+    }
+
+    private async linkedBranch(issueNumber: number, branchName: string, historical: boolean) {
+        const active = await this.ports.branches.getLinkedBranch(issueNumber, branchName);
+        return active ?? (historical ? await this.ports.branches.getHistoricalLinkedBranch?.(issueNumber, branchName) : undefined);
     }
 
     private required(context: SddEvidenceQueryContext, labels: readonly string[]): boolean {

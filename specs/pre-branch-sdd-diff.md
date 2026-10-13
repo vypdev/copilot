@@ -543,3 +543,38 @@ links/counts or truthful current-evidence failure, with no native state/label or
 publication mutation. Full coverage, build/bundles, documentation/specification
 validators, current-head review/CI and Graphify remain mandatory. Rollback
 restores premature exemption; no data migration is required.
+
+### Retained merged-branch authority for closed history (2026-10-14)
+
+After promotion, [native query 6156673698](https://github.com/vypdev/copilot/issues/454#issuecomment-6156673698)
+correctly entered historical scope but could not certify the retained branch.
+GitHub had replaced `linkedBranches` with the issue's native associated PRs;
+both PRs were merged, while the live ref still exactly matched the later merged
+head. The active readiness adapter intentionally accepted only open PRs.
+
+Closed historical queries MAY use a separate, physically read-only
+`getHistoricalLinkedBranch` capability after the active read proves absence.
+It accepts only the exact issue-associated, same-repository merged PR whose
+head name and full SHA match the live remote ref. A closed unmerged PR, fork,
+other branch, moved SHA or deleted ref remains insufficient. Denied active
+reads MUST propagate without fallback. Active implementation readiness MUST
+continue to reject merged associations; no input, permission, model, writer,
+branch recovery or migration is introduced.
+
+Flow: native closed publication -> active linkage absent -> exact merged
+association/live-ref proof -> immutable publication/catalog checks -> final
+native/card/head fence -> historical structural comparison. The reply retains
+the first/current commit links and bounded section counts. If the issue reopens,
+the ref moves, or proof becomes unavailable, current comparison is withheld.
+Deleted branches remain unverified; this query never recreates them.
+
+Additional floor: **15 distinct cases**: eight adapter cases (exact merged
+history, active rejection, six invalid associations/refs), six query cases
+(closed success, open exclusion, denied active read, denied history, missing
+history capability, moved final head), and one physical binding case. The four
+changed runtime modules retain at least 95% lines/statements and 90%
+branches/functions. Existing SDD ownership, publication, read-only and native
+fence budgets remain. Documentation in `docs/issues/comment-commands.mdx`
+explains retained merged association and deleted-ref limits. Native acceptance
+repeats the closed #454 comparison without labels/state/publication writes;
+full coverage, synchronized build, validators and Graphify update are required.

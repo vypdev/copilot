@@ -642,3 +642,10 @@ An open paused issue or a closed issue without verified publication history
 does not acquire historical scope. Unreadable history remains unavailable;
 multiple native historical candidates remain ambiguous. No labels, branches or
 SDD publications are changed by this command.
+
+When GitHub has replaced the issue's branch link with its merged PR, a closed
+historical query can verify that native association against the retained live
+ref and exact merged head. Active implementation still requires active branch
+readiness. A deleted ref, different head, foreign repository or closed unmerged
+PR does not certify historical comparison; the command does not recreate a
+branch or substitute an unverified publication.

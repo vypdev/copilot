@@ -762,6 +762,21 @@
         }
       ],
       "successMessage": "native closed-issue metadata coverage: PASS (each new module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Historical merged SDD authority",
+      "missingEntryLabel": "historical merged SDD authority",
+      "rules": [{
+        "files": [
+          "src/application/ports/sdd_evidence_read_ports.ts",
+          "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
+          "src/data/repository/branch/linked_branch_readiness_repository.ts",
+          "src/infrastructure/composition/sdd_evidence_composition_root.ts"
+        ],
+        "mode": "each",
+        "thresholdProfile": "default"
+      }],
+      "successMessage": "historical merged SDD authority coverage: PASS (95% lines/statements, 90% branches/functions)"
     }
   ]
 }

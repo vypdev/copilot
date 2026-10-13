@@ -51831,7 +51831,8 @@ function bindSddEvidenceReadPorts(ports) {
         titles: Object.freeze({ getTitle: ports.titles.getTitle.bind(ports.titles) }),
         labels: Object.freeze({ getLabels: ports.labels.getLabels.bind(ports.labels) }),
         actors: Object.freeze({ isActorAllowedToModifyFiles: ports.actors.isActorAllowedToModifyFiles.bind(ports.actors) }),
-        branches: Object.freeze({ getLinkedBranch: ports.branches.getLinkedBranch.bind(ports.branches) }),
+        branches: Object.freeze({ getLinkedBranch: ports.branches.getLinkedBranch.bind(ports.branches),
+            ...(ports.branches.getHistoricalLinkedBranch ? { getHistoricalLinkedBranch: ports.branches.getHistoricalLinkedBranch.bind(ports.branches) } : {}) }),
         workspace: Object.freeze({
             loadSnapshot: ports.workspace.loadSnapshot.bind(ports.workspace),
             loadSnapshotAtCommit: ports.workspace.loadSnapshotAtCommit.bind(ports.workspace),
@@ -59255,7 +59256,7 @@ class SddEvidenceQueryUseCase {
             const { record, id: cardId } = selection;
             const digest = this.digest(context, facts, record.baseSha);
             const stale = digest !== record.issueDigest;
-            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
+            const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map(), historical);
             if (!['invalid', 'unavailable'].includes(result.state)
                 && !await this.fence(context, facts, selection.body, cardId, record, result.verified, historical))
                 return { state: 'stale' };
@@ -59268,13 +59269,13 @@ class SddEvidenceQueryUseCase {
             return { state: 'unavailable' };
         }
     }
-    async inspectRecord(context, facts, record, cardId, stale, authorizations) {
+    async inspectRecord(context, facts, record, cardId, stale, authorizations, historical) {
         const path = record.plan.path;
         let verified;
         if (record.commitSha) {
             if (!record.branchName)
                 return { state: 'invalid' };
-            const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+            const linked = await this.linkedBranch(context.issueNumber, record.branchName, historical);
             if (linked?.name !== record.branchName || !fullSha(linked.headSha))
                 return { state: 'invalid' };
             if (!await this.ports.workspace.verifyPublication(record.branchName, record.baseSha, record.commitSha, path)
@@ -59383,7 +59384,7 @@ class SddEvidenceQueryUseCase {
             && JSON.stringify(fresh.comments) !== JSON.stringify(original.comments))
             return false;
         if (record.branchName) {
-            const linked = await this.ports.branches.getLinkedBranch(context.issueNumber, record.branchName);
+            const linked = await this.linkedBranch(context.issueNumber, record.branchName, historical);
             if (linked?.name !== record.branchName || linked.headSha !== (verified?.branchHeadSha ?? record.baseSha))
                 return false;
             if (verified && (!await this.ports.workspace.verifyPublication(record.branchName, record.baseSha, record.commitSha, record.plan.path)
@@ -59397,6 +59398,10 @@ class SddEvidenceQueryUseCase {
     }
     historicalEligible(context, labels) {
         return context.admittedKind === 'feature' || labels.some(label => label.toLowerCase() === 'contract-change');
+    }
+    async linkedBranch(issueNumber, branchName, historical) {
+        const active = await this.ports.branches.getLinkedBranch(issueNumber, branchName);
+        return active ?? (historical ? await this.ports.branches.getHistoricalLinkedBranch?.(issueNumber, branchName) : undefined);
     }
     required(context, labels) {
         return (0, issue_start_policy_1.decideIssueStart)({ kind: context.admittedKind, labels,
@@ -78408,6 +78413,13 @@ class LinkedBranchReadinessRepository {
         this.client = client;
     }
     async getLinkedBranch(owner, repository, issueNumber, branchName, token) {
+        return this.readEvidence(owner, repository, issueNumber, branchName, token, false);
+    }
+    /** Historical query only; merged PRs never certify active implementation readiness. */
+    async getHistoricalLinkedBranch(owner, repository, issueNumber, branchName, token) {
+        return this.readEvidence(owner, repository, issueNumber, branchName, token, true);
+    }
+    async readEvidence(owner, repository, issueNumber, branchName, token, historical) {
         const expected = branchName.trim();
         if (!expected || expected.startsWith('/') || expected.includes('..'))
             return undefined;
@@ -78439,7 +78451,7 @@ class LinkedBranchReadinessRepository {
         // GitHub removes linkedBranches when its branch becomes a linked PR.
         // Native issue association plus the exact same-repository live ref retains
         // that proof; a PR body or a stale/deleted head alone is insufficient.
-        const linkedPullRequest = response.repository?.issue?.closedByPullRequestsReferences?.nodes?.find(pr => pr?.state === 'OPEN' && pr.headRefName === expected
+        const linkedPullRequest = response.repository?.issue?.closedByPullRequestsReferences?.nodes?.find(pr => (pr?.state === 'OPEN' || historical && pr?.state === 'MERGED') && pr.headRefName === expected
             && pr.headRepository?.nameWithOwner?.toLowerCase() === `${owner}/${repository}`.toLowerCase()
             && fullSha(pr.headRefOid) === remoteSha);
         return remoteSha && linkedPullRequest ? Object.freeze({ name: expected, headSha: remoteSha }) : undefined;
@@ -92646,7 +92658,10 @@ function createSddEvidenceReadPorts(binding, comments) {
         titles: { getTitle: issueNumber => titles.getTitle(binding.owner, binding.repository, issueNumber, binding.token) },
         labels: (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
         actors: (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding),
-        branches: { getLinkedBranch: (issueNumber, name) => branches.getLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token) },
+        branches: {
+            getLinkedBranch: (issueNumber, name) => branches.getLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token),
+            getHistoricalLinkedBranch: (issueNumber, name) => branches.getHistoricalLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token),
+        },
         workspace: new pre_branch_sdd_workspace_adapter_1.PreBranchSddWorkspaceAdapter(process.cwd(), binding.token),
     });
 }

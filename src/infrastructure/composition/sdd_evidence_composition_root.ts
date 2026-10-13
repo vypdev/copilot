@@ -24,7 +24,10 @@ export function createSddEvidenceReadPorts(binding: BugbotScmBinding, comments: 
         titles: { getTitle: issueNumber => titles.getTitle(binding.owner, binding.repository, issueNumber, binding.token) },
         labels: bindIssueLabels(createIssueLabelRepository(), binding),
         actors: bindActorAuthorization(createActorAuthorizationRepository(), binding),
-        branches: { getLinkedBranch: (issueNumber, name) => branches.getLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token) },
+        branches: {
+            getLinkedBranch: (issueNumber, name) => branches.getLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token),
+            getHistoricalLinkedBranch: (issueNumber, name) => branches.getHistoricalLinkedBranch(binding.owner, binding.repository, issueNumber, name, binding.token),
+        },
         workspace: new PreBranchSddWorkspaceAdapter(process.cwd(), binding.token),
     });
 }
