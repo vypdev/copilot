@@ -54185,8 +54185,8 @@ class IssueCommentUseCase {
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
         if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
             return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
-                    target: { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
-                    botLogin: param.tokenUser ?? '', locale: param.locale.issue,
+                    target: param.isPullRequest ? { kind: 'pr', number: param.pullRequest.number } : { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.isPullRequest ? param.locale.pullRequest : param.locale.issue,
                     generalConversation: param.eventName === 'issue_comment',
                 }, this.historyReadPort)];
         }
