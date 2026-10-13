@@ -663,3 +663,13 @@ cases retain their own ownership and are not counted twice. One twenty-card
 call-budget regression failed before the correction; two distinct targeted
 reader rejection cases extend branch synchronization to 291 (237 + 54). Four
 execution-persistence cases remain disjoint.
+
+
+Retirement's no-model boundary intentionally differs from active observation:
+English and Spanish use bundled complete copy, while other configured issue
+locales MUST receive complete English fallback without a catalog-generation
+request. Native finding `4257093263` interpreted the active-observation locale
+paragraph as a promise for closure too. User documentation now makes the
+retirement boundary explicit. One distinct unsupported-locale application case
+verifies fallback, retained card identity and the narrow read budget; the owning
+inventory becomes 292 (237 + 55), with four execution cases still separate.

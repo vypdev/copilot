@@ -41,6 +41,13 @@ describe('terminal synchronization recommendation retirement', () => {
     expect(f.stored[0].body).toContain('Issue cerrada'); expect(f.stored[0].body).toContain('no certifica');
     expect(f.stored[0].body).not.toContain('completada');
   });
+  it('uses complete English fallback for an unsupported retirement locale', async () => {
+    const f = fixture(); const [result] = await f.useCase.invoke({ ...context, locale: 'fr-FR' });
+    expect(result).toMatchObject({ success: true, payload: { retiredCards: 1 } });
+    expect(f.stored[0].body).toContain('Issue closed'); expect(f.stored[0].body).toContain('does not certify');
+    expect(parsePublicationMarker(f.stored[0].body)?.identity).toEqual(parsePublicationMarker(warning)?.identity);
+    expect(f.comments.listIssueComments).toHaveBeenCalledTimes(1); expect(f.freshness.matches).toHaveBeenCalledTimes(1);
+  });
   it('is idempotent on replay without another update', async () => {
     const f = fixture(); await f.useCase.invoke(context); const [result] = await f.useCase.invoke(context);
     expect(f.comments.updateComment).toHaveBeenCalledTimes(1); expect(result.executed).toBe(false);

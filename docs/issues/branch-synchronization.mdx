@@ -260,6 +260,8 @@ merged-PR operation after resolving the provider error. Retirement does not
 create branches, run a fixer, change labels or publish another notification.
 
 
+Closed-issue retirement uses bundled English or Spanish copy. Other issue locales receive complete English fallback; retirement never starts a language model. Active branch observations retain the configured catalog-localization behavior described above.
+
 Manual closures and the inactivity bot use the same retirement rule through the
 closed-issue event. If that cleanup fails, retry the closed event or verified
 merged-PR operation. Cleanup preserves other metadata and does not launch open
