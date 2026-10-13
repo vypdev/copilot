@@ -26,6 +26,64 @@ function fixture() {
   return { request, ports, links, query: new SddDiffQueryUseCase(ports) };
 }
 
+describe('verified historical SDD scope after completion clears start', () => {
+  function historicalFixture() {
+    const f = fixture(); f.ports.labels.getLabels.mockResolvedValue(['feature', '100%', 'SDD']);
+    f.ports.evidence.read.mockResolvedValue({ ...published(), historical: true });
+    return f;
+  }
+  it('compares a closed feature publication without restoring its start label', async () => {
+    const f = historicalFixture(); await expect(f.query.read(f.request)).resolves.toMatchObject({ state: 'compared' });
+    expect(f.ports.evidence.read).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 42, admittedKind: 'feature' }));
+    expect(f.ports.labels.getLabels.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+  it('compares verified contract-change bugfix history without requiring an active start label', async () => {
+    const f = historicalFixture(); f.ports.labels.getLabels.mockResolvedValue(['bugfix', 'contract-change', '100%']);
+    f.ports.descriptions.getDescription.mockResolvedValue('### Description\nBug\n### Reproducing the issue\nSteps\n### copilot Version\nmaster');
+    await expect(f.query.read(f.request)).resolves.toMatchObject({ state: 'compared' });
+  });
+  it('does not invent historical applicability for a closed issue without a publication', async () => {
+    const f = historicalFixture(); f.ports.evidence.read.mockResolvedValue({ state: 'not-required' });
+    await expect(f.query.read(f.request)).resolves.toEqual({ state: 'not-applicable' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+  it('does not promote an open paused feature into historical comparison', async () => {
+    const f = fixture(); f.ports.labels.getLabels.mockResolvedValue(['feature']);
+    f.ports.evidence.read.mockResolvedValue({ state: 'not-required' });
+    await expect(f.query.read(f.request)).resolves.toEqual({ state: 'not-applicable' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+  it.each(['sdd-disabled', 'branches-disabled'])('retains disabled historical scope for %s', setting => {
+    const f = historicalFixture();
+    return expect(f.query.read({ ...f.request, preBranchSdd: false,
+      issueManagedBranches: setting !== 'branches-disabled' })).resolves.toEqual({ state: 'not-applicable' });
+  });
+  it('does not convert unavailable historical evidence into an exemption', async () => {
+    const f = historicalFixture(); f.ports.evidence.read.mockResolvedValue({ state: 'unavailable' });
+    await expect(f.query.read(f.request)).resolves.toEqual({ state: 'unavailable' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+  it('withholds old counts when historical scope is lost during immutable document reads', async () => {
+    const f = historicalFixture();
+    f.ports.documents.readSdd.mockImplementation(async () => {
+      f.ports.evidence.read.mockResolvedValue({ state: 'not-required' }); return '# Scope\nText';
+    });
+    const result = await f.query.read(f.request);
+    expect(result.state).toBe('stale'); expect(result).not.toHaveProperty('changes');
+  });
+  it('does not guess between two natively linked verified historical features', async () => {
+    const f = historicalFixture(), links = f.links(); if (links.state !== 'verified') throw new Error('Fixture unavailable');
+    f.ports.links.readClosingIssues.mockResolvedValue({ ...links, issueNumbers: [42, 43], issueAuthors: { 42: 'a', 43: 'b' } });
+    await expect(f.query.read({ ...f.request, target: { kind: 'pull-request', number: 99 } })).resolves.toEqual({ state: 'ambiguous' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+  it('refuses a claimed publication without the shared historical authority flag', async () => {
+    const f = historicalFixture(); f.ports.evidence.read.mockResolvedValue(published());
+    await expect(f.query.read(f.request)).resolves.toEqual({ state: 'unavailable' });
+    expect(f.ports.documents.readSdd).not.toHaveBeenCalled();
+  });
+});
+
 describe('fenced structural SDD comparison query', () => {
   it('withholds a previously exempt PR when its linked issue becomes eligible', async () => {
     const f = fixture(); f.ports.labels.getLabels.mockResolvedValueOnce([]).mockResolvedValue(['feature', 'in-progress']);

@@ -183,3 +183,22 @@ the missing context matters.
 - **[Workflow setup](/issues/workflow-setup)** — Issue workflow events and scheduled inactivity cleanup.
 - **[Configuration](/issues/configuration)** — `reopen-issue-on-push`, locale, and lifecycle policy.
 - [How to use](/how-to-use) — Full setup including Commit workflow.
+
+## Completion after a manual close
+
+Closing an issue through GitHub runs the same selective completion-label repair
+as a merged PR. Copilot clears its active/waiting/activity labels and the start
+label, retains kind, size, priority and branch/SDD history, and records 100%
+only when GitHub confirms the native reason is completed. Not-planned,
+duplicate and unknown closure clear obsolete progress without claiming 100%.
+
+The closed workflow also retires existing progress and synchronization cards.
+It creates no new conversation comment, branch or agent task. Repeating the
+same closed run is a no-write replay after metadata is correct; label callbacks
+on the closed issue do not restart cleanup or work.
+
+If cleanup fails, native closure and completed label changes remain. Inspect
+the closed workflow run and retry it after resolving the named evidence or
+permission problem. If someone reopens the issue during cleanup, repair stops
+without closing it again. `/copilot status` continues to report current native
+state independently of stale labels.

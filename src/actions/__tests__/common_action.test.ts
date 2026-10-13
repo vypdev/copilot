@@ -194,6 +194,7 @@ function mockExecution(overrides: Record<string, unknown> = {}): Execution {
       hotfix: 'hotfix', release: 'release', docs: 'docs', documentation: 'documentation',
       chore: 'chore', maintenance: 'maintenance', currentPullRequestLabels: [], currentIssueLabels: [],
       lifecycle: { aiProcessing: 'state:ai-processing' },
+      completionProtectedLabels: ['branched', 'SDD', 'contract-change'],
     },
     release: { active: false },
     hotfix: { active: false },
@@ -900,7 +901,8 @@ describe('terminal issue lifecycle route', () => {
     const actual = await productionMainRun(execution, projectBoardCommandPort, latestTagQueryPort, 'github-workflow',
       { invoke: mockLifecycleStateInvoke } as never, { start: mockAgentActivityStart, finish: mockAgentActivityFinish } as never, prepare);
     expect(actual).toEqual([result]);
-    expect(mockClosedIssueRetireInvoke).toHaveBeenCalledWith({ issueNumber: 42, locale: 'en-US', trustedBotLogin: 'user' });
+    expect(mockClosedIssueRetireInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 42, locale: 'en-US', trustedBotLogin: 'user',
+      completionLabels: expect.objectContaining({ lifecycle: expect.any(Object), protectedLabels: expect.any(Array) }) }));
     expect(prepare).not.toHaveBeenCalled(); expect(mockLifecycleStateInvoke).not.toHaveBeenCalled();
     expect(mockAgentActivityStart).not.toHaveBeenCalled(); expect(mockAgentActivityFinish).not.toHaveBeenCalled();
     expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled(); expect(mockIssueInvoke).not.toHaveBeenCalled();

@@ -36602,11 +36602,13 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
     if (!execution.isSingleAction && execution.isIssue && execution.eventName === 'issues'
         && execution.inputs?.issue?.state === 'closed') {
         // Later edits and label callbacks must not restart closed work or retry
-        // lifecycle cleanup. Only the native close action retires existing cards.
+        // lifecycle cleanup. Only the native close action reconciles closed work.
         if (execution.inputs.action !== 'closed')
             return [];
         return (0, main_run_route_composition_root_1.createClosedIssueRetirementUseCase)({ owner: repository.owner, repository: repository.repo, token: execution.tokens.token })
-            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser });
+            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser,
+            completionLabels: Object.freeze({ lifecycle: Object.freeze({ ...execution.labels.lifecycle }),
+                protectedLabels: Object.freeze([...execution.labels.completionProtectedLabels]) }) });
     }
     const runtimeDecision = (0, issue_workflow_runtime_policy_1.decideIssueWorkflowRuntime)({
         admission: execution.currentIssueWorkflowAdmission,
@@ -54725,6 +54727,101 @@ function failure(taskId, message, code) {
 
 /***/ }),
 
+/***/ 49050:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReconcileClosedIssueMetadataUseCase = void 0;
+const result_1 = __nccwpck_require__(73817);
+const issue_completion_1 = __nccwpck_require__(31147);
+const application_error_1 = __nccwpck_require__(75999);
+/** Selective completion repair from fresh native facts; no native state authority. */
+class ReconcileClosedIssueMetadataUseCase {
+    constructor(issues) {
+        this.issues = issues;
+        this.taskId = 'ReconcileClosedIssueMetadataUseCase';
+    }
+    async invoke(context) {
+        let labelsChanged = 0;
+        let nativeClosed = false;
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1)
+                throw stale();
+            const target = this.issues.forIssue(context.issueNumber);
+            const initial = await target.read();
+            nativeClosed = initial.number === context.issueNumber && initial.state === 'closed';
+            const initialPlan = (0, issue_completion_1.planIssueCompletion)(initial, context.completionLabels);
+            if (!nativeClosed || initialPlan.kind !== 'closed')
+                throw stale();
+            const fence = async () => {
+                const current = await target.read();
+                nativeClosed = current.number === context.issueNumber && current.state === 'closed';
+                const plan = (0, issue_completion_1.planIssueCompletion)(current, context.completionLabels);
+                if (!nativeClosed || plan.kind !== 'closed' || current.reason !== initial.reason)
+                    throw stale();
+                return plan;
+            };
+            for (const label of initialPlan.remove) {
+                if ((await fence()).remove.includes(label)) {
+                    await target.removeLabel(label);
+                    labelsChanged++;
+                }
+            }
+            for (const label of initialPlan.add) {
+                if ((await fence()).add.includes(label)) {
+                    await target.addLabel(label);
+                    labelsChanged++;
+                }
+            }
+            const final = await fence();
+            if (final.remove.length || final.add.length)
+                throw stale();
+            return [new result_1.Result({ id: this.taskId, success: true, executed: labelsChanged > 0,
+                    steps: ['The closed issue completion metadata was verified; historical and unrelated labels were retained.'],
+                    payload: { issueCompletion: { nativeClosed, labelsChanged, reconciled: true, reason: initial.reason } } })];
+        }
+        catch (cause) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: labelsChanged > 0,
+                    steps: [nativeClosed ? 'The issue remains closed; completion metadata could not be fully verified. Inspect and retry the closed-issue workflow.'
+                            : 'Current native issue closure could not be verified; completion repair stopped without changing native state.'],
+                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Closed issue completion metadata remains unverified.')],
+                    payload: { issueCompletion: { nativeClosed, labelsChanged, reconciled: false } } })];
+        }
+    }
+}
+exports.ReconcileClosedIssueMetadataUseCase = ReconcileClosedIssueMetadataUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The native closed issue identity, reason, or completion metadata changed or is unavailable.');
+}
+
+
+/***/ }),
+
+/***/ 11687:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReconcileClosedIssueUseCase = void 0;
+/** Retain independent cleanup results when metadata or existing cards fail. */
+class ReconcileClosedIssueUseCase {
+    constructor(metadata, cards) {
+        this.metadata = metadata;
+        this.cards = cards;
+        this.taskId = 'ReconcileClosedIssueUseCase';
+    }
+    async invoke(context) {
+        return [...await this.metadata.invoke(context), ...await this.cards.invoke(context)];
+    }
+}
+exports.ReconcileClosedIssueUseCase = ReconcileClosedIssueUseCase;
+
+
+/***/ }),
+
 /***/ 74111:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59053,10 +59150,23 @@ class SddDiffQueryUseCase {
         if (body === undefined)
             throw new Error('Issue admission is unavailable.');
         const admission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(labels, request.profile, request.labelConfiguration, body);
-        return admission.status === 'eligible' && (0, issue_start_policy_1.decideIssueStart)({ kind: admission.kind, labels,
-            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
+        if (admission.status !== 'eligible' || !request.issueManagedBranches || !request.preBranchSdd
+            || admission.kind === 'help' || admission.kind !== 'feature' && !labels.some(label => label.toLowerCase() === 'contract-change'))
+            return undefined;
+        const context = Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
             profileDigest: request.profileDigest, trustedBotLogin: request.trustedBotLogin,
-            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch }) : undefined;
+            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch });
+        if ((0, issue_start_policy_1.decideIssueStart)({ kind: admission.kind, labels,
+            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired)
+            return context;
+        // Completion legitimately removes the start label. Only the shared native,
+        // immutable-publication proof can admit that historical scope again.
+        const historical = await this.ports.evidence.read(context);
+        if (historical.historical === true)
+            return context;
+        if (historical.state !== 'not-required')
+            throw new Error('Historical SDD eligibility could not be verified.');
+        return undefined;
     }
 }
 exports.SddDiffQueryUseCase = SddDiffQueryUseCase;
@@ -91380,6 +91490,7 @@ function composeInitialSetupUseCase(...dependencies) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bindIssueCompletion = bindIssueCompletion;
 exports.bindNativeStatusRead = bindNativeStatusRead;
+exports.bindIssueCompletionMetadata = bindIssueCompletionMetadata;
 exports.createIssueCompletionRepository = createIssueCompletionRepository;
 exports.createNativeStatusReadPort = createNativeStatusReadPort;
 const issue_completion_repository_1 = __nccwpck_require__(70791);
@@ -91398,6 +91509,15 @@ function bindIssueCompletion(repository) {
 function bindNativeStatusRead(repository) {
     return Object.freeze({ readIssue: (number) => repository.readIssue(number),
         readPullRequest: (number) => repository.readPullRequest(number) });
+}
+function bindIssueCompletionMetadata(repository) {
+    return Object.freeze({ forIssue: (number) => {
+            if (!Number.isSafeInteger(number) || number < 1)
+                throw new Error('A safe issue number is required.');
+            return Object.freeze({ read: () => repository.readIssue(number),
+                addLabel: (label) => repository.addLabel(number, label),
+                removeLabel: (label) => repository.removeLabel(number, label) });
+        } });
 }
 function createIssueCompletionRepository(binding) {
     return new issue_completion_repository_1.IssueCompletionRepository({ getClient: token => (0, octokit_client_resolver_1.getOctokitClient)(token) }, Object.freeze({ ...binding, apiBaseUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com' }));
@@ -91792,7 +91912,10 @@ const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
 const retire_progress_use_case_1 = __nccwpck_require__(17025);
 const retire_closed_issue_cards_use_case_1 = __nccwpck_require__(11529);
+const reconcile_closed_issue_metadata_use_case_1 = __nccwpck_require__(49050);
+const reconcile_closed_issue_use_case_1 = __nccwpck_require__(11687);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
+const issue_completion_composition_root_2 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
@@ -91880,7 +92003,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgres
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), createClosedIssueRetirementUseCase(binding)), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), createClosedIssueRetirementUseCase(binding)), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -91913,7 +92036,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -91929,7 +92052,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, change_size_project_membership_composition_root_1.createChangeSizeProjectMembershipQueryPort)(binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -91984,13 +92107,13 @@ function rememberBranchPorts(binding, pullRequests) {
         },
     };
 }
-/** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
+/** Closed-event path exposes guarded metadata repair and existing-card retirement. */
 function createClosedIssueRetirementUseCase(binding) {
     const comments = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    const native = (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding);
+    const native = (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding);
     const cards = (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding));
     const freshness = (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding);
-    return new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase(native, cards, freshness), new retire_progress_use_case_1.RetireProgressUseCase(native, cards, freshness));
+    return new reconcile_closed_issue_use_case_1.ReconcileClosedIssueUseCase(new reconcile_closed_issue_metadata_use_case_1.ReconcileClosedIssueMetadataUseCase((0, issue_completion_composition_root_1.bindIssueCompletionMetadata)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))), new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase(native, cards, freshness), new retire_progress_use_case_1.RetireProgressUseCase(native, cards, freshness)));
 }
 
 

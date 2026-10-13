@@ -1426,7 +1426,9 @@
         "src/infrastructure/composition/main_run_route_composition_root.ts",
         "scripts/coverage-budgets.json",
         "src/application/usecases/steps/issue/resume_issue_project_use_case.ts",
-        "src/data/repository/project/project_board_field_update.ts"
+        "src/data/repository/project/project_board_field_update.ts",
+        "src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts",
+        "src/application/usecases/actions/reconcile_closed_issue_use_case.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1449,7 +1451,9 @@
         "src/application/policies/__tests__/status_command_policy.test.ts",
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
         "src/application/usecases/steps/issue/__tests__/resume_issue_project_use_case.test.ts",
-        "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts",
+        "src/application/usecases/actions/__tests__/reconcile_closed_issue_metadata_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/reconcile_closed_issue_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

@@ -492,3 +492,54 @@ Two reproduced the bypass before correction; two are retained negative controls.
 The comparison inventory is **254** (250 + 4); the independently allocated
 shared authority inventory is unchanged. Global/module coverage and native
 reply replay and revision-change acceptance remain required.
+
+## Historical comparison after native completion — dogfooding #496 (2026-10-13)
+
+Native [request on completed feature #454](https://github.com/vypdev/copilot/issues/454#issuecomment-6155687638)
+returned not-applicable after completion removed `in-progress`, although the
+shared SDD evidence reader supports verified closed publication history. The
+outer comparison selector rejected the issue before reaching that reader.
+
+The selector MUST retain current form/profile/kind/configuration admission and
+use the shared fenced historical evidence reader when the start label is absent.
+Only its verified `historical: true` authority can restore historical comparison
+scope. The selector MUST NOT inject a synthetic start label, reopen an issue,
+create a publication, call a model, or bypass any immutable commit/card/branch/
+authority proof. A feature or branch-bearing contract-change kind remains a
+candidate only when managed branches and pre-branch SDD are enabled. Help,
+non-contract work, disabled profiles and incomplete forms remain exempt.
+
+Flow: native completed issue -> retained form/kind -> shared historical proof
+-> verified first/current immutable documents -> final historical/native fence
+-> structural comparison. Text equivalent: completion can remove the start
+label without erasing published SDD history; current native and immutable proof
+still authorize every read. Open paused work and closed work without a verified
+publication do not acquire historical scope. Unavailable or malformed history
+cannot be presented as a proven exemption. Losing historical scope during
+comparison withholds old counts. Multiple verified native historical candidates
+remain ambiguous rather than guessed.
+
+The existing comparison UI is unchanged: **Compared** shows verified first and
+current links and bounded structural counts; **Not applicable** requires proven
+exemption; **Unavailable/stale** offers inspection/retry while withholding
+unverified counts; **Ambiguous** asks for the exact issue conversation. No new
+comment, permission, input, schema or locale surface is introduced. Existing
+reply correlation, sanitization and native PR association fences remain.
+
+Additional floor: **10 distinct selector cases**: historical feature and
+contract-change bugfix success (2), closed unpublished and open paused exemption
+(2), two disabled configurations (2), unavailable history (1), historical scope
+race (1), multiple native historical candidates (1), and missing shared authority
+flag (1). These are counted only here; all prior shared reader, immutable
+publication, PR linkage, bounded comparison and security cases remain. The
+existing 95% lines/statements and 90% branches/functions module gate applies.
+
+Traceability: historical eligibility -> `SddDiffQueryUseCase.context` -> the ten
+new cases; immutable/native final proof -> existing shared evidence and final
+comparison fences. `docs/issues/comment-commands.mdx` MUST document comparison
+of a completed published issue without restoring `in-progress`. Native
+acceptance repeats the #454 request after promotion and verifies historical
+links/counts or truthful current-evidence failure, with no native state/label or
+publication mutation. Full coverage, build/bundles, documentation/specification
+validators, current-head review/CI and Graphify remain mandatory. Rollback
+restores premature exemption; no data migration is required.

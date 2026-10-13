@@ -745,6 +745,21 @@
         }
       ],
       "successMessage": "concurrent PR Project sizing coverage: PASS (each changed module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Native closed-issue metadata",
+      "missingEntryLabel": "native closed-issue metadata",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts",
+            "src/application/usecases/actions/reconcile_closed_issue_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "native closed-issue metadata coverage: PASS (each new module 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

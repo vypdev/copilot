@@ -78,10 +78,12 @@ export async function mainRun(
     if (!execution.isSingleAction && execution.isIssue && execution.eventName === 'issues'
         && execution.inputs?.issue?.state === 'closed') {
         // Later edits and label callbacks must not restart closed work or retry
-        // lifecycle cleanup. Only the native close action retires existing cards.
+        // lifecycle cleanup. Only the native close action reconciles closed work.
         if (execution.inputs.action !== 'closed') return [];
         return createClosedIssueRetirementUseCase({ owner: repository.owner, repository: repository.repo, token: execution.tokens.token })
-            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser });
+            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser,
+                completionLabels: Object.freeze({ lifecycle: Object.freeze({ ...execution.labels.lifecycle }),
+                    protectedLabels: Object.freeze([...execution.labels.completionProtectedLabels]) }) });
     }
 
     const runtimeDecision = decideIssueWorkflowRuntime({
