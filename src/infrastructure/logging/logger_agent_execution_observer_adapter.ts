@@ -1,4 +1,4 @@
-import { AGENT_EXECUTION_OUTPUT_DIAGNOSTICS } from '../../application/ports/agent_execution_observation_ports';
+import { AGENT_EXECUTION_OUTPUT_DIAGNOSTICS, AGENT_EXECUTION_TOOL_DIAGNOSTICS } from '../../application/ports/agent_execution_observation_ports';
 import type {
     AgentExecutionObservation,
     AgentExecutionObserverPort,
@@ -22,7 +22,11 @@ export class LoggerAgentExecutionObserverAdapter implements AgentExecutionObserv
             return;
         }
         if (observation.state === 'completed') {
-            logInfo('Agent execution completed.', false, { agentExecution: observation });
+            const toolDiagnostic = AGENT_EXECUTION_TOOL_DIAGNOSTICS.find(code => code === observation.toolDiagnostic);
+            const message = toolDiagnostic
+                ? `Agent CLI completed; provider reported a sandbox tool failure (${toolDiagnostic}). Inspect the runner sandbox setup.`
+                : 'Agent execution completed.';
+            logInfo(message, false, { agentExecution: { ...observation, toolDiagnostic } });
             return;
         }
         if (observation.state === 'admitted') {

@@ -5,6 +5,7 @@ import type {
   BranchSyncWorkspacePort,
 } from "../application/ports/branch_sync_ports";
 import type { BranchSyncValidationCode } from '../domain/branch_sync_validation';
+import { logInfo } from '../application/ports/logging_ports';
 import type { GitCommitPort } from "../application/ports/git_ports";
 import { listWorkspacePaths as inspectWorkspacePaths } from "../application/usecases/steps/commit/bugbot/workspace_changes";
 import { refreshBranchSyncSddCatalog, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from './branch_sync_sdd_catalog';
@@ -89,7 +90,11 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     if (unresolved.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unresolved.length > 0)) {
       return invalid("Unresolved merge conflicts remain.", "unresolved-conflicts");
     }
-    if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths)) return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+    const currentPaths = await this.listWorkspacePaths();
+    if (!sameSet(currentPaths, snapshot.workspacePaths)) {
+      reportWorkspacePathRejection(snapshot, currentPaths, this.resolutionValidated ? 'verification' : 'resolution');
+      return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+    }
     const unstaged = await this.readPaths(["diff", "--name-only", "-z"]);
     if (unstaged.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unstaged.length > 0)) {
       return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
@@ -129,6 +134,7 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
       const resolvedPaths = await this.listWorkspacePaths();
       if (resolvedPaths.some(path => !snapshot.workspacePaths.includes(path))
         || snapshot.workspacePaths.some(path => !resolvedPaths.includes(path) && !snapshot.conflictPaths.includes(path))) {
+        reportWorkspacePathRejection(snapshot, resolvedPaths, 'trusted-staging');
         return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
       }
       this.snapshot = { ...snapshot, workspacePaths: resolvedPaths };
@@ -234,6 +240,16 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     await this.git.execute(program, args, { stdout: (data) => chunks.push(data) });
     return Buffer.concat(chunks).toString("utf8");
   }
+}
+
+/** Counts and fixed phases only; never disclose private workspace path names. */
+function reportWorkspacePathRejection(snapshot: MergeWorkspaceSnapshot, current: readonly string[],
+  phase: 'resolution' | 'trusted-staging' | 'verification'): void {
+  const added = current.filter(path => !snapshot.workspacePaths.includes(path));
+  const removed = snapshot.workspacePaths.filter(path => !current.includes(path));
+  const conflicts = removed.filter(path => snapshot.conflictPaths.includes(path)).length;
+  const bundles = added.filter(path => GENERATED_BUNDLES.includes(path)).length;
+  logInfo(`Branch synchronization workspace rejected (${phase}; added=${added.length}; removed-conflicts=${conflicts}; removed-protected=${removed.length - conflicts}; generated-bundles=${bundles}).`);
 }
 
 function sameSet(left: readonly string[], right: readonly string[]): boolean {

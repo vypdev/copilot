@@ -5,6 +5,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import * as logging from '../../application/ports/logging_ports';
+
 type Reply = string | number | Error;
 
 function createGit(replies: Record<string, Reply[]> = {}) {
@@ -51,6 +53,27 @@ async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
 }
 
 describe("BranchSyncWorkspaceAdapter", () => {
+  it.each(['generated bundle added', 'protected path disappeared', 'verification path added'] as const)(
+    'reports only closed phase and counts for %s', async scenario => {
+      const report = jest.spyOn(logging, 'logInfo').mockImplementation(() => undefined);
+      const original = 'M  src/a.ts\n';
+      const changed = scenario === 'protected path disappeared' ? ''
+        : original + (scenario === 'generated bundle added' ? '?? build/cli/index.js\n' : '?? fixture-private-path.ts\n');
+      const statuses = scenario === 'verification path added'
+        ? ['', original, original, original, changed] : ['', original, changed];
+      try {
+        const {adapter} = await prepareCleanAdapter({[STATUS]: statuses, 'rev-parse HEAD':['child','child','child'],
+          'rev-parse MERGE_HEAD':['parent','parent'], [UNRESOLVED]:['','','']});
+        if (scenario === 'verification path added') expect(await adapter.validatePreparedMerge([])).toEqual({valid:true});
+        expect(await adapter.validatePreparedMerge([])).toMatchObject({valid:false,code:'unexpected-paths'});
+        const phase = scenario === 'verification path added' ? 'verification' : 'resolution';
+        const removed = scenario === 'protected path disappeared' ? 1 : 0;
+        const bundle = scenario === 'generated bundle added' ? 1 : 0;
+        expect(report.mock.calls).toEqual([[`Branch synchronization workspace rejected (${phase}; added=${removed ? 0 : 1}; removed-conflicts=0; removed-protected=${removed}; generated-bundles=${bundle}).`]]);
+        expect(JSON.stringify(report.mock.calls)).not.toMatch(/fixture-private-path|src\/a|build\/cli/);
+      } finally {report.mockRestore();}
+    });
+
   it('prepares and aborts a real merge without runner identity or persistent author configuration', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'copilot-sync-identity-'));
     const remote = join(directory, 'remote.git');

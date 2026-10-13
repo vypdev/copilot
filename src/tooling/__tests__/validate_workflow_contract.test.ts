@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { runInNewContext } from 'node:vm';
@@ -20,6 +20,7 @@ interface ContractModule {
   assertAgentInstallationPrerequisites(file: string, workflow: Record<string, unknown>): void;
   assertRepositoryLocaleInputs(file: string, workflow: Record<string, unknown>): void;
   assertRepositoryBugbotContextExclusions(file: string, workflow: Record<string, unknown>): void;
+  assertIssueBranchConfigurationInputs(file: string, workflow: Record<string, unknown>): void;
   assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES: number;
@@ -46,6 +47,7 @@ const {
   assertAgentInstallationPrerequisites,
   assertRepositoryLocaleInputs,
   assertRepositoryBugbotContextExclusions,
+  assertIssueBranchConfigurationInputs,
   assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
@@ -97,6 +99,36 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it('keeps branch and SDD configuration consistent across issue, PR, review and push callbacks', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      for (const fileName of ['copilot_issue.yml', 'copilot_issue_comment.yml', 'copilot_commit.yml',
+        'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml', 'copilot_pull_request_comment.yml']) {
+        const { file, workflow } = loadMutationWorkflow(directory, fileName);
+        expect(() => assertIssueBranchConfigurationInputs(file, workflow)).not.toThrow();
+      }
+    }
+  });
+
+  it.each(['issue-managed-branches', 'pre-branch-sdd'])(
+    'rejects a PR comment callback that omits or disables the installed %s policy', input => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_pull_request_comment.yml');
+      const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses === './');
+      delete action.with[input];
+      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+      action.with[input] = false;
+      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+    },
+  );
+
+  it('rejects a distributed callback that enables the SDD gate instead of inheriting its configured default', () => {
+    const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_pull_request_comment.yml');
+    const action = workflow.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
+    );
+    action.with['pre-branch-sdd'] = "${{ vars.PRE_BRANCH_SDD || 'true' }}";
+    expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+  });
+
   it('rejects installed and generated PR workflows that omit the draft-to-ready event', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
@@ -722,6 +754,62 @@ describe('workflow contract validator', () => {
     })).toThrow('runs-on self-hosted, codex');
   });
 
+  it('routes the shared Codex pool to macOS and Ubuntu after Windows registrations omit the label', () => {
+    const workflow = yaml.load(readFileSync(queueFile, 'utf8')) as MutationWorkflow;
+    const requiredLabels = workflow.jobs['copilot-issues']['runs-on'] as string[];
+    expect(requiredLabels).toEqual(['self-hosted', 'codex']);
+    const registrations = [
+      { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
+      { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
+      { platform: 'Windows', labels: ['self-hosted', 'Windows'] },
+    ];
+    expect(registrations.filter(runner => requiredLabels.every(label => runner.labels.includes(label)))
+      .map(runner => runner.platform)).toEqual(['macOS', 'Ubuntu']);
+    expect(() => assertRunner(queueFile, workflow)).not.toThrow();
+  });
+
+  it('rejects explicit Windows service routing for Codex operations', () => {
+    expect(() => assertRunner(queueFile, {
+      jobs: { 'copilot-issues': { 'runs-on': ['self-hosted', 'codex', 'Windows'] } },
+    })).toThrow('runs-on self-hosted, codex');
+  });
+
+  it('keeps installed Codex jobs on the shared supported pool or explicit Linux diagnostics', () => {
+    const directory = path.join(process.cwd(), '.github', 'workflows');
+    const jobs = readdirSync(directory).filter(file => file.endsWith('.yml')).flatMap(file => {
+      const workflow = yaml.load(readFileSync(path.join(directory, file), 'utf8')) as MutationWorkflow;
+      return Object.values(workflow.jobs);
+    });
+    const codexJobs = jobs.filter(job => Array.isArray(job['runs-on']) && job['runs-on'].includes('codex'));
+    expect(codexJobs.length).toBeGreaterThan(20);
+    expect(codexJobs.every(job => [JSON.stringify(['self-hosted', 'codex']), JSON.stringify(['self-hosted', 'codex', 'Linux'])]
+      .includes(JSON.stringify(job['runs-on'])))).toBe(true);
+    expect(jobs.some(job => job['runs-on'] === 'windows-latest')).toBe(true);
+  });
+
+  it('rejects reintroducing Windows into the Codex fixture matrix without removing ordinary Windows coverage', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(workflow.jobs['setup-platform-smoke'].strategy.matrix.os).toContain('windows-latest');
+    expect(workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include).toEqual([
+      { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
+      { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
+    ]);
+    workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.push({
+      platform: 'Windows', labels: ['self-hosted', 'codex', 'Windows'],
+    });
+    expect(() => assertRunner(file, workflow)).toThrow('Windows services are unsupported');
+  });
+
+  it.each(['windows', 'missing-linux'])('rejects the unsupported Codex diagnostics shape %s', shape => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'copilot_runner_diagnostics.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    if (shape === 'windows') workflow.jobs.windows = { 'runs-on': ['self-hosted', 'codex', 'Windows'], steps: [] };
+    else delete workflow.jobs.linux;
+    expect(() => assertRunner(file, workflow)).toThrow('only the supported Linux Codex diagnostic job');
+  });
+
   it('requires the Ubuntu, Windows and macOS setup fixture matrix', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
@@ -769,7 +857,7 @@ describe('workflow contract validator', () => {
     expect(hosted.with.cache).toBe('pnpm');
   });
 
-  it('requires isolated fixtures on all three manually dispatched codex runner platforms', () => {
+  it('requires isolated fixtures on both supported manually dispatched Codex runner platforms', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
@@ -786,10 +874,10 @@ describe('workflow contract validator', () => {
       })).toBe(expected);
     }
     workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = ['self-hosted', 'codex'];
-    expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows, macOS and Ubuntu');
+    expect(() => assertRunner(file, workflow)).toThrow('self-hosted macOS and Ubuntu');
     workflow.jobs['setup-self-hosted-codex-smoke']['runs-on'] = '${{ matrix.labels }}';
     workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.pop();
-    expect(() => assertRunner(file, workflow)).toThrow('self-hosted Windows, macOS and Ubuntu');
+    expect(() => assertRunner(file, workflow)).toThrow('self-hosted macOS and Ubuntu');
     workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include =
       (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow).jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include;
     delete workflow.jobs['setup-self-hosted-codex-smoke'].if;
@@ -812,7 +900,7 @@ describe('workflow contract validator', () => {
     workflow.jobs['setup-self-hosted-codex-smoke'].steps = (yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow)
       .jobs['setup-self-hosted-codex-smoke'].steps
       .filter((step: { name?: string }) => step.name !== 'Verify Ubuntu distribution');
-    expect(() => assertRunner(file, workflow)).toThrow('verify Ubuntu and Windows Bash');
+    expect(() => assertRunner(file, workflow)).toThrow('verify Ubuntu on self-hosted Codex runners');
     delete workflow.jobs['setup-self-hosted-codex-smoke'];
     expect(() => assertRunner(file, workflow)).toThrow('must retain hosted and manually dispatched self-hosted');
   });
@@ -862,7 +950,7 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('default Windows Codecov export to disabled');
   });
 
-  it.each(['setup-platform-smoke', 'setup-self-hosted-codex-smoke'])(
+  it.each(['setup-platform-smoke'])(
     'requires the real Windows job Node npm preflight in %s', (jobId) => {
       const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
@@ -873,16 +961,17 @@ describe('workflow contract validator', () => {
     },
   );
 
-  it('limits Jest worker recycling to the Windows service-runner coverage step', () => {
+  it('excludes Windows service-runner settings from the supported Codex and hosted coverage jobs', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const original = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const workflow = JSON.parse(JSON.stringify(original)) as MutationWorkflow;
     const coverage = (jobId: string) => workflow.jobs[jobId].steps.find(
       (step: { name?: string }) => step.name === 'Full platform coverage and acceptance budgets',
     );
-    delete coverage('setup-self-hosted-codex-smoke').env;
-    expect(() => assertRunner(file, workflow)).toThrow('recycle Windows service-runner Jest workers');
+    expect(coverage('setup-self-hosted-codex-smoke').env).toBeUndefined();
     coverage('setup-self-hosted-codex-smoke').env = { COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1' };
+    expect(() => assertRunner(file, workflow)).toThrow('must not apply Windows service-runner settings');
+    delete coverage('setup-self-hosted-codex-smoke').env;
     coverage('setup-platform-smoke').env = { COPILOT_JEST_WINDOWS_SERVICE_COVERAGE: '1' };
     expect(() => assertRunner(file, workflow)).toThrow('must not recycle hosted Windows Jest workers');
   });

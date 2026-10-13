@@ -2650,3 +2650,48 @@ pass; the prior manual result does not substitute for it.
   `--yes` as web approval, and promising automatic PAT revocation.
 - Follow-up outside scope: future GitHub App authentication and optional
   durable resume require separate credential/data-safety specifications.
+
+### Codex fixture scope update (2026-10-12)
+
+The [agent-runtime service retirement](./agent-runtime-provider-and-model-routing.md)
+supersedes historical requests in this SDD for a live Windows-service Codex
+retry or a Windows entry in the self-hosted Codex matrix. The shared `codex`
+pool remains Mac/Ubuntu once Windows registrations omit that label. The manual
+Codex fixture matrix retains those two platforms; general hosted Ubuntu,
+Windows and macOS full coverage, fake platform-safety fixtures and all
+350 acceptance rows remain. No open row is reclassified as passed because of
+retirement. Model/CLI success is distinct from verified tool execution. The
+six new routing cases are owned and counted once by the agent-runtime SDD.
+
+### Reuse the real semantic renderer during dogfooding (2026-10-13)
+
+Readiness parent integration `38313513855` on Ubuntu reported a Jest worker
+`SIGKILL` in `web_setup_management_components.test.ts`, followed by job
+cancellation. The operating system's reason is not available in this evidence.
+The management suite started a fresh Node/Vite/Svelte compiler for each of its
+51 render requests; the companion semantics suite used the same per-request
+startup pattern.
+
+Both suites now use `test-support/web-setup-renderer.ts` and one isolated real renderer per suite. Each request is
+serialized, sets its own locale and props, and returns a freshly rendered HTML
+body. There is no cached HTML, mock, deleted assertion or changed test title.
+The renderer is closed after the suite, and startup/process/render failures
+reject the request. The existing single-render CLI remains available. This is
+test infrastructure only: no product setting, published setup flow, credential,
+worker/heap limit, timeout, coverage threshold or platform selection changes.
+
+All 147 existing semantic component cases pass, including the 32 management
+cases and all four locales. In comparable sequential local measurements, those
+same 32 cases went from 27.334 to 2.057 seconds. Maximum resident set size was
+732,119,040 versus 730,218,496 bytes, so no substantial peak-memory reduction is
+claimed. Reusing the compiler reduces repeated startup/CPU work; it does not
+prove the cause of Ubuntu's signal. Full unchanged coverage, hooks and fresh
+native integration remain required. The 350-row setup ledger and its explicit
+open human acceptance rows are unchanged; these existing cases are not counted
+again.
+
+Full local verification on this correction passes 578 suites / 7,813 tests,
+with 35 unchanged skips, every unchanged coverage gate and 308/350 setup
+acceptance (42 explicitly open). The full Jest run took 64.992 seconds. Types,
+lint, documentation/workflow/specification validation, bundle synchronization
+and the AST graph update pass. Native CI remains independent evidence.
