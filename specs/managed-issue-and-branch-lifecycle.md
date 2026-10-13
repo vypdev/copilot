@@ -2,7 +2,7 @@
 
 - Status: As-built baseline
 - Date: 2026-09-13
-- Last verified: 2026-10-11 on `master`
+- Last verified: 2026-10-13; reopened Project correction tracked in #492
 - Owners: Copilot maintainers
 - Scope: issue admission, metadata enrichment, managed branch creation, lifecycle state, and merge-driven closure
 - Related issues/PRs: release orchestration and branch synchronization SDDs
@@ -129,7 +129,7 @@ the route only after the preparation step returns.
 7. Commits and a linked PR advance review state; merge closes the issue.
 
 Project enrichment is immediate and deterministic: the existing-item query or
-add mutation returns the exact ProjectV2 item ID. A direct read of that node verifies its Project and current Status. Linking initializes the configured created status only when the field is null; an existing status is retained on edits, replay, and reopening. No fixed sleep or second board-list lookup is used. Missing, foreign, or malformed status evidence fails before mutation. A failed initialization leaves the valid item linked and can retry while the field remains unset. Explicit lifecycle transitions still move the issue to the configured in-progress status after branch readiness.
+add mutation returns the exact ProjectV2 item ID. A direct read of that node verifies its Project and current Status. Linking initializes the configured created status only when the field is null; an existing status is retained on edits, replay, and reopening. No fixed sleep or second board-list lookup is used. Missing, foreign, or malformed status evidence fails before mutation. A failed initialization leaves the valid item linked and can retry while the field remains unset. Explicit lifecycle transitions still move the issue to the configured in-progress status after branch readiness. A started branch-bearing issue reopening additionally restores its configured active Project state before priority/size enrichment, independently of whether its branch or SDD must be created again.
 
 ### 6.2 Alternative paths
 
@@ -324,7 +324,7 @@ dark/light, and non-English fallback.
 ## 19. Definition of Done
 
 - [ ] Origins, branch state, retries, cleanup, and closure remain deterministic.
-- [ ] Architecture checks and the 109-case budget pass.
+- [ ] Architecture checks and the baseline plus explicitly allocated extension budgets pass.
 - [ ] All issue UI states and next actions are readable and localized/fallback-safe.
 - [ ] Workflow/template/config/docs/catalog contracts agree.
 - [ ] Security tests cover authorization, names, markers, and cleanup targeting.
@@ -555,3 +555,111 @@ Native finding `4254501697` exposed label movement between the SDD query and the
 Native finding `4254598438` exposed additional asynchronous PR count reads after the issue fence. For a combined issue/linked-PR status, native issue identity/state/reason/labels MUST be fenced again after count collection, immediately before returning. Two new distinct integration cases reproduce reopening and label movement during that later phase. Native completion/status now owns **111** added cases; the 12 new SDD companion cases remain separate (123 overall). No write/model authority or limit changes.
 
 Live legacy recovery kept artifact labels initially, but subsequent closed-issue labeled/unlabeled deliveries removed `branched` and `SDD`. A native closed issue event MUST bypass open-issue onboarding, branch/SDD preparation and readiness reconciliation. Reopened events remain open work. Two distinct event regressions reproduce added-label and removed-label callbacks without any branch/title/readiness mutation. Native completion/status owns 113 added cases, and its 12 companion cases stay separate. Restoring the verified original artifact labels requires the published correction first.
+
+
+## Reopened Project state correction — issue #492 (2026-10-13)
+
+### Evidence, journey, and boundaries
+
+Native [#454 event 33158611454](https://github.com/vypdev/copilot/issues/454#event-33158611454)
+records closure **by moving to Done in Project vypdev** during size enrichment
+in [commit run 38442749084](https://github.com/vypdev/copilot/actions/runs/38442749084).
+The enabled native Auto-close issue workflow closes items whose Status is Done;
+Item reopened is disabled. Reopening retained Done, and reuse of an already
+published SDD skipped the branch-creation-only active-column transition.
+This correction restores active work using the existing configured Project
+column. It MUST NOT change shared organization Project workflows, create a
+branch, republish an SDD, or infer a new progress percentage.
+
+```text
+authorized admitted reopened issue + in-progress + branch-bearing kind
+ -> reuse/link Project item -> verify native open/reopened/start
+ -> restore configured active Status with per-write native fences
+ -> verify retained issue state -> priority/size -> existing SDD/branch flow
+```
+
+The text equivalent is: authorization and admission happen first; explicit
+resumption restores the active Project state before other field enrichment;
+existing branch and immutable SDD evidence continue through their own guards.
+This is a resumption transition, not the generic link initializer. Ordinary
+edits and link replays continue to retain existing Status. Unstarted, branchless
+help, closed, unmanaged and unauthorized issues MUST NOT enter this transition.
+
+### State, architecture, security, and recovery
+
+The issue route copies trusted `issues:reopened` into an immutable routing fact.
+The application step depends only on the existing physically read-only native
+issue facade and bound Project command port. The adapter owns exact repository,
+issue and Project identity validation and no-op field comparisons; composition
+owns credentials. No provider DTO, SDK, process, mutable Execution, close/label,
+branch-management or model authority is passed to the step.
+
+Before the first and every subsequent Project write, and immediately after each
+write, native identity, open state, reopened reason and the fixed `in-progress`
+label MUST remain verified. A missing capability or empty/failed step result
+MUST stop later enrichment. A denied/unavailable read, native closure, removed
+start label or provider failure produces a failed retained-state result, and
+priority/size/SDD/branch work does not continue. Successful earlier Project
+updates remain retained; no cross-Project rollback is attempted. GitHub provides
+separate reads and writes rather than an atomic compare-and-set, so an external
+change can still occur between them; the final guard reports known movement.
+A replay uses adapter no-op comparisons and creates no conversation comment.
+
+| State | Visible result | Next action |
+|---|---|---|
+| Pending | Issue is open; its prior Project status is being checked | Wait for the reopened-issue run |
+| Complete | Project Status is the configured active column; branch and SDD history are retained | Continue on the linked Action branch |
+| Action required | Start label was removed or native facts changed; enrichment stopped | Inspect current issue state and decide whether work should resume |
+| Failed | Current Project state could not be verified | Inspect the linked run and configured Project access/column, then retry that run |
+| Partial | Earlier Project updates were retained; later enrichment stopped | Correct the affected Project and retry the reopened-issue run |
+
+The Job Summary supplies localized category recovery using existing catalogs;
+internal step text and arbitrary provider messages are not timeline UI. Native
+Project Status is the primary product evidence. There are zero new comments,
+labels, public inputs, permissions or translation artifacts. Existing
+`project-column-issue-in-progress` defaults/validation/operation snapshot remain
+unchanged; recommend In Progress, allow another verified active column such as
+Working. Operators must select an active option compatible with native Project
+rules. A configured option that itself closes issues cannot be made safe by a
+non-atomic application transition and remains an operator configuration error.
+
+No data/schema migration is needed. Install the correction and retry the actual
+reopened-issue workflow for retained terminal items; historical merged PRs do
+not become open branch authority. Rollback restores earlier enrichment behavior
+and requires manual active-column repair for reopened work.
+
+### Numeric verification budget and executable acceptance
+
+Allocate **28 distinct additional cases**, separate from the baseline and native
+completion/status extensions: **18 guarded step cases** (success, no-op replay,
+no Project, four stale native facts, read/write failures, before/after/between
+Project races, retained partial effects, configured column, multiple Projects,
+and two unsafe identities), plus **10 route cases** (existing branch and
+published SDD, failed/missing/empty step, and five admission/security exclusions).
+Strengthen the existing composition case without counting it again. Deterministic
+fakes replace network/sleeps. Changed guarded runtime coverage MUST remain at
+least 95% lines/statements and 90% branches/functions; global 90% lines/statements,
+88% functions and 82% branches remain unchanged. No new pure policy is needed.
+Dependency/context/credential constraints, workflow/specification/documentation
+validators, generated bundles and normal commit hooks remain required.
+
+| Requirement | Implementation/evidence | Documentation |
+|---|---|---|
+| Resume before field enrichment, including published SDD reuse | issue route ordering tests and real reopened #454 Project state | assignees-and-projects, notifications-and-auto-close |
+| Strict native/start identity and per-write fences | ResumeIssueProjectUseCase 18 cases and existing native adapter contracts | operator retry guidance |
+| Exclusions and missing/failed capability stop | ten issue route cases and strengthened composition case | managed issue lifecycle guide |
+| Quiet replay and retained partial facts | adapter no-op contract, guarded step tests, native timeline and Job Summary | notifications-and-auto-close |
+
+Acceptance: a real admitted bugfix follows Action branch/commit/PR gates; after
+promotion, reopen #454 with its existing start label and real linked follow-up
+PR, verify Project Status moves from Done to the configured active column while
+its branch HEAD and both immutable SDD publication commits stay unchanged.
+A duplicate current reopened workflow retains the active state and publishes no
+new resume-success comment. Close the explicitly authorized temporary issue
+after comparison and resumption proof. Existing external Project workflow
+settings MUST remain unchanged.
+
+Definition of Done: all 28 cases and coverage gates pass; catalogs and generated
+specification index, user/operator documentation and bundles agree; native
+current-head CI/review and live resumption/replay evidence are recorded. This
+section does not declare live acceptance complete before that evidence exists.

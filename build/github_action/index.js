@@ -55433,6 +55433,7 @@ function projectIssueWorkflowRouteContext(param) {
     const recommendSteps = (0, push_single_action_contexts_1.projectRecommendStepsContext)(param);
     return Object.freeze({
         started,
+        reopened: param.eventName === 'issues' && param.inputs?.action === 'reopened',
         sddRequired: param.issueStartDecision.sddRequired,
         issueNumber: param.issue.number,
         branchName: param.currentConfiguration.workingBranch,
@@ -55526,6 +55527,17 @@ async function runIssueWorkflow(context, taskId, ports) {
     results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
     results.push(...(await ports.workflowSteps.updateIssueType.invoke(ports.sharedContexts.steps.issueType)));
     results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
+    if (context.reopened && context.started && context.branchRequired) {
+        const resume = ports.workflowSteps.resumeIssueProject;
+        const resumeResults = resume ? await resume.invoke(ports.sharedContexts.steps.prepareBranches.moveToInProgress)
+            : [new result_1.Result({ id: 'ResumeIssueProjectUseCase', success: false, executed: false,
+                    errors: [new application_error_1.ApplicationError('configuration.invalid', 'Reopened issue Project reconciliation is unavailable.')] })];
+        const resumed = resumeResults.length ? resumeResults : [new result_1.Result({ id: 'ResumeIssueProjectUseCase', success: false, executed: false,
+                errors: [new application_error_1.ApplicationError('provider.contract-invalid', 'Reopened issue Project reconciliation returned no evidence.')] })];
+        results.push(...resumed);
+        if (resumed.some(result => !result.success))
+            return issueWorkflowOutcome(results);
+    }
     results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(ports.sharedContexts.steps.priority)));
     let sddPublished = false;
     let sddWaiting = false;
@@ -66099,6 +66111,60 @@ class RemoveNotNeededBranchesUseCase {
     }
 }
 exports.RemoveNotNeededBranchesUseCase = RemoveNotNeededBranchesUseCase;
+
+
+/***/ }),
+
+/***/ 27065:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ResumeIssueProjectUseCase = void 0;
+const result_1 = __nccwpck_require__(73817);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const application_error_1 = __nccwpck_require__(75999);
+/** Restore active Project state before other field writes can retrigger native autoclose. */
+class ResumeIssueProjectUseCase {
+    constructor(native, projects) {
+        this.native = native;
+        this.projects = projects;
+        this.taskId = 'ResumeIssueProjectUseCase';
+    }
+    async invoke(context) {
+        let changed = 0;
+        const fence = async () => {
+            const current = await this.native.readIssue(context.issueNumber);
+            if (current.number !== context.issueNumber || current.state !== 'open' || current.reason !== 'reopened'
+                || !current.labels.includes(issue_start_policy_1.ISSUE_START_LABEL)) {
+                throw new application_error_1.ApplicationError('workflow.stale', 'The reopened issue is no longer open and started; Project enrichment was stopped.');
+            }
+        };
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1) {
+                throw new application_error_1.ApplicationError('provider.contract-invalid', 'A safe issue identity is required before Project enrichment.');
+            }
+            await fence();
+            for (const project of context.projects) {
+                await fence();
+                if (await this.projects.moveIssueToColumn(project, context.issueNumber, context.columnName))
+                    changed++;
+                await fence();
+            }
+            return [new result_1.Result({ id: this.taskId, success: true, executed: changed > 0,
+                    steps: ['The reopened issue Project state was verified before enrichment.'],
+                    payload: { resumedProject: { changed, verified: true } } })];
+        }
+        catch (error) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: changed > 0,
+                    steps: ['Project enrichment stopped. Retry the reopened-issue run after checking its current start label and configured Project column; any successful Project updates were retained.'],
+                    errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The reopened issue Project state could not be verified.')],
+                    payload: { resumedProject: { changed, verified: false } } })];
+        }
+    }
+}
+exports.ResumeIssueProjectUseCase = ResumeIssueProjectUseCase;
 
 
 /***/ }),
@@ -83834,6 +83900,8 @@ const check_priority_issue_size_use_case_1 = __nccwpck_require__(19511);
 const close_not_allowed_issue_use_case_1 = __nccwpck_require__(86675);
 const label_deploy_added_use_case_1 = __nccwpck_require__(27708);
 const link_issue_project_use_case_1 = __nccwpck_require__(34100);
+const resume_issue_project_use_case_1 = __nccwpck_require__(27065);
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const move_issue_to_in_progress_1 = __nccwpck_require__(52309);
 const prepare_branches_use_case_1 = __nccwpck_require__(67546);
 const remove_issue_branches_use_case_1 = __nccwpck_require__(15608);
@@ -83900,6 +83968,7 @@ function createIssueUseCaseCompositionRoot(binding) {
         updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         updateIssueType: new update_issue_type_use_case_1.UpdateIssueTypeUseCase((0, lifecycle_capability_port_binding_1.bindIssueTypeAssignment)(issueTypeAssignment, binding)),
         linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(projectContent),
+        resumeIssueProject: new resume_issue_project_use_case_1.ResumeIssueProjectUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), boundProjectBoard),
         checkPriorityIssueSize: new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(boundProjectBoard),
         prepareBranches: new prepare_branches_use_case_1.PrepareBranchesUseCase(boundBranchLifecycle, branchName, gitCli, gitCli, boundLinkedBranch, branchPropagationDelay, moveIssueToInProgress),
         reconcileBranchReadiness: new reconcile_branch_readiness_use_case_1.ReconcileBranchReadinessUseCase(boundLinkedBranchReadiness, (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding)),

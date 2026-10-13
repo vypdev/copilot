@@ -27,6 +27,7 @@ import type { PreBranchSddContext, PreBranchSddGateUseCase } from './sdd/pre_bra
 
 export interface IssueWorkflowRouteContext {
   readonly started: boolean;
+  readonly reopened?: boolean;
   readonly cleanIssueBranches: boolean;
   readonly branchRequired: boolean;
   readonly sddRequired?: boolean;
@@ -104,6 +105,16 @@ export async function runIssueWorkflow(
   results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
   results.push(...(await ports.workflowSteps.updateIssueType.invoke(ports.sharedContexts.steps.issueType)));
   results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
+  if (context.reopened && context.started && context.branchRequired) {
+    const resume = ports.workflowSteps.resumeIssueProject;
+    const resumeResults = resume ? await resume.invoke(ports.sharedContexts.steps.prepareBranches.moveToInProgress)
+      : [new Result({ id: 'ResumeIssueProjectUseCase', success: false, executed: false,
+        errors: [new ApplicationError('configuration.invalid', 'Reopened issue Project reconciliation is unavailable.')] })];
+    const resumed = resumeResults.length ? resumeResults : [new Result({ id: 'ResumeIssueProjectUseCase', success: false, executed: false,
+      errors: [new ApplicationError('provider.contract-invalid', 'Reopened issue Project reconciliation returned no evidence.')] })];
+    results.push(...resumed);
+    if (resumed.some(result => !result.success)) return issueWorkflowOutcome(results);
+  }
   results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(ports.sharedContexts.steps.priority)));
   let sddPublished = false;
   let sddWaiting = false;

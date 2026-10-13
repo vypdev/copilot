@@ -13,6 +13,7 @@ const mockUpdateTitleInvoke = jest.fn();
 const mockUpdateIssueTypeInvoke = jest.fn();
 const mockLinkIssueProjectInvoke = jest.fn();
 const mockCheckPriorityInvoke = jest.fn();
+const mockResumeProjectInvoke = jest.fn();
 const mockPrepareBranchesInvoke = jest.fn();
 const mockRemoveNotNeededInvoke = jest.fn();
 const mockDeployAddedInvoke = jest.fn();
@@ -38,6 +39,7 @@ const workflowSteps = {
   updateIssueType: { taskId: 'update-type', invoke: mockUpdateIssueTypeInvoke },
   linkIssueProject: { taskId: 'link-project', invoke: mockLinkIssueProjectInvoke },
   checkPriorityIssueSize: { taskId: 'check-priority', invoke: mockCheckPriorityInvoke },
+  resumeIssueProject: { taskId: 'resume-project', invoke: mockResumeProjectInvoke },
   prepareBranches: { taskId: 'prepare-branches', invoke: mockPrepareBranchesInvoke },
   removeNotNeededBranches: { taskId: 'remove-not-needed', invoke: mockRemoveNotNeededInvoke },
   deployAdded: { taskId: 'deploy-added', invoke: mockDeployAddedInvoke },
@@ -146,6 +148,7 @@ describe("IssueUseCase", () => {
     mockUpdateIssueTypeInvoke.mockResolvedValue([]);
     mockLinkIssueProjectInvoke.mockResolvedValue([]);
     mockCheckPriorityInvoke.mockResolvedValue([]);
+    mockResumeProjectInvoke.mockResolvedValue([new Result({ id: "resume-project", success: true, executed: false })]);
     mockPrepareBranchesInvoke.mockResolvedValue({ results: [], configurationPatch: {} });
     mockRemoveNotNeededInvoke.mockResolvedValue([]);
     mockDeployAddedInvoke.mockResolvedValue([]);
@@ -162,6 +165,44 @@ describe("IssueUseCase", () => {
     expect(result).toMatchObject([{ success: true, executed: false }]);
     expect(readiness).not.toHaveBeenCalled(); expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
     expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled(); expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('resumes reopened Project before enrichment with sddRequired=%s', async sddRequired => {
+    const gate = { begin: jest.fn().mockResolvedValue({ status: 'published', branchName: 'feature/8-existing', results: [] }), publish: jest.fn() };
+    await createUseCase(undefined, gate as never).invoke(minimalExecution({ eventName: 'issues', inputs: { action: 'reopened', issue: { state: 'open' } },
+      issueStartDecision: { started: true, branchRequired: true, sddRequired, helpRequired: false } }));
+    expect(mockResumeProjectInvoke).toHaveBeenCalledWith({ issueNumber: 8, columnName: 'In Progress', projects: [] });
+    expect(mockLinkIssueProjectInvoke.mock.invocationCallOrder[0]).toBeLessThan(mockResumeProjectInvoke.mock.invocationCallOrder[0]);
+    expect(mockResumeProjectInvoke.mock.invocationCallOrder[0]).toBeLessThan(mockCheckPriorityInvoke.mock.invocationCallOrder[0]);
+  });
+
+  it('stops enrichment after failed reopened Project reconciliation', async () => {
+    mockResumeProjectInvoke.mockResolvedValue([new Result({ id: 'resume-project', success: false, executed: true })]);
+    const results = await createUseCase().invoke(minimalExecution({ eventName: 'issues', inputs: { action: 'reopened' } }));
+    expect(results.some(result => !result.success)).toBe(true);
+    expect(mockCheckPriorityInvoke).not.toHaveBeenCalled(); expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['unstarted', { issueStartDecision: { started: false, branchRequired: true, sddRequired: false } }],
+    ['branchless', { issueStartDecision: { started: true, branchRequired: false, sddRequired: false } }],
+    ['closed', { inputs: { action: 'reopened', issue: { state: 'closed' } } }],
+    ['unmanaged', { issueWorkflowAdmission: { status: 'unmanaged' } }],
+    ['unauthorized', {}],
+  ])('does not resume a %s issue', async (kind, overrides) => {
+    if (kind === 'unauthorized') mockCheckPermissionsInvoke.mockResolvedValue([new Result({ id: 'perm', success: false, executed: true })]);
+    await createUseCase().invoke(minimalExecution({ eventName: 'issues', inputs: { action: 'reopened' }, ...overrides }));
+    expect(mockResumeProjectInvoke).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing capability', 'empty result'])('stops resumed enrichment with %s', async kind => {
+    const steps = { ...workflowSteps, ...(kind === 'missing capability' ? { resumeIssueProject: undefined } : {}) };
+    if (kind === 'empty result') mockResumeProjectInvoke.mockResolvedValue([]);
+    const useCase = new IssueUseCase({ taskId: 'recommend', invoke: mockRecommendStepsInvoke },
+      { taskId: 'answer', invoke: mockAnswerIssueHelpInvoke }, steps, { listIssueComments: mockListIssueComments });
+    const results = await useCase.invoke(minimalExecution({ eventName: 'issues', inputs: { action: 'reopened' } }));
+    expect(results.some(result => !result.success)).toBe(true);
+    expect(mockCheckPriorityInvoke).not.toHaveBeenCalled(); expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
   });
 
   it("closes and returns early when permissions fail", async () => {
