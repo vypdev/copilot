@@ -549,3 +549,5 @@ allocated only to their companion, for 115 new cases overall. The fixture's open
 default was corrected from synthetic completed to the provider's unknown/null.
 Focused verification passes 122 cases; full gates and native acceptance remain
 pending.
+
+Native finding `4254501697` exposed label movement between the SDD query and the final native status read. The final issue fence MUST compare the complete label set as well as number/state/reason. Changed labels invalidate the status instead of combining new metadata with earlier SDD eligibility; order-only provider differences remain valid. Two new distinct status integration cases cover removed contract eligibility after a historical publication query and identical reordered labels. Allocate both to native completion/status (107 + 2 = **109**), separate from the SDD companion's 194-case inventory and its 12 added cases.

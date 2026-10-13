@@ -159,6 +159,20 @@ describe('status after current native reads', () => {
         await readCopilotStatus(context, 'Status', undefined, undefined, f.native);
         expect(f.native.readIssue).not.toHaveBeenCalled(); expect(f.native.readPullRequest).not.toHaveBeenCalled();
     });
+    it('withholds historical SDD readiness when native contract labels move after its query', async () => {
+        const f = nativeFixture(); const initial = { ...f.current, labels: ['contract-change', 'SDD'] };
+        f.native.readIssue.mockResolvedValueOnce(initial).mockResolvedValue({ ...initial, labels: ['SDD'] });
+        const sha = 'b'.repeat(40), sdd = { read: jest.fn().mockResolvedValue({ state: 'published', path: 'specs/history.md',
+            verified: { path: 'specs/history.md', firstSha: sha, currentSha: sha }, historical: true }) };
+        const context = { ...f.issueContext, sdd: { issueNumber: 7 } as never,
+            status: { ...f.issueContext.status, sddReadiness: { state: 'unavailable' as const, required: true } } };
+        await expect(readCopilotStatus(context, 'Status', undefined, sdd, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });
+    });
+    it('accepts unchanged native labels returned in a different order at the final fence', async () => {
+        const f = nativeFixture(); f.native.readIssue.mockResolvedValueOnce(f.current).mockResolvedValue({ ...f.current, labels: [...f.current.labels].reverse() });
+        expect((await readCopilotStatus(f.issueContext, 'Status', undefined, undefined, f.native)).payload)
+            .toMatchObject({ status: { lifecycle: 'completed' } });
+    });
     it('rejects changed closure reason at the final native fence', async () => {
         const f = nativeFixture(); f.native.readIssue.mockResolvedValueOnce(f.current).mockResolvedValue({ ...f.current, reason: 'not_planned' });
         await expect(readCopilotStatus(f.issueContext, 'Status', undefined, undefined, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });

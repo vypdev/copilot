@@ -54987,7 +54987,8 @@ async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
     }
     if (nativeStatus && initialIssue) {
         const final = await nativeStatus.readIssue(initialIssue.number);
-        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason)
+        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason
+            || JSON.stringify([...final.labels].sort()) !== JSON.stringify([...initialIssue.labels].sort()))
             throw unavailableStatus();
         status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, final);
     }

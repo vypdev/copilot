@@ -42,7 +42,8 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     }
     if (nativeStatus && initialIssue) {
         const final = await nativeStatus.readIssue(initialIssue.number);
-        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason) throw unavailableStatus();
+        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason
+            || JSON.stringify([...final.labels].sort()) !== JSON.stringify([...initialIssue.labels].sort())) throw unavailableStatus();
         status = projectCurrentNativeStatus(status, final);
     }
     if (!status.pullRequestNumber || !ports) return buildCopilotStatusResult(status, taskId);
