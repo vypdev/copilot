@@ -20,6 +20,8 @@ import {
 const mockIssue = {};
 const mockPullRequest = {};
 const mockContext = { kind: 'context', listIssueComments: jest.fn() };
+const mockStatusReadPorts = { kind: 'status-read-ports' };
+jest.mock('../pull_request_status_composition_root', () => ({ createPullRequestStatusReadPorts: jest.fn(() => mockStatusReadPorts) }));
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
@@ -115,14 +117,36 @@ describe("main run route composition root", () => {
     }));
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 14 }, () => expect.anything()),
-      mockContext,
-      expect.objectContaining({ read: expect.any(Function) }),
-    );
-    const query = jest.mocked(IssueCommentUseCase).mock.calls[0][15];
-    expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
-    expect(Object.isFrozen(query)).toBe(true);
+    const call = jest.mocked(IssueCommentUseCase).mock.calls[0];
+    expect(call.slice(0, 15)).toEqual([
+      ...Array.from({ length: 14 }, () => expect.anything()), mockStatusReadPorts,
+    ]);
+    const historyPort = call[15];
+    expect(historyPort).toEqual(expect.objectContaining({
+      readComments: expect.any(Function),
+      serverOrigin: expect.any(String),
+    }));
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
+    const sddQuery = call[16];
+    expect(sddQuery).toEqual(expect.objectContaining({
+      read: expect.any(Function),
+      serverOrigin: expect.any(String),
+    }));
+    expect(Object.keys(sddQuery!)).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(sddQuery)).toBe(true);
+    const diff = call[17];
+    expect(Object.keys(diff!).sort()).toEqual(['read', 'serverOrigin']);
+    expect(Object.isFrozen(diff)).toBe(true);
+    const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
+    expect(doctor).toMatchObject({
+      readRepository: expect.any(Function),
+      readApprovalPolicy: expect.any(Function),
+      pullRequests: expect.objectContaining({
+        getPullRequest: expect.any(Function),
+        getPullRequestHeadSha: expect.any(Function),
+      }),
+    });
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {
@@ -130,10 +154,23 @@ describe("main run route composition root", () => {
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
-      ...Array.from({ length: 13 }, () => expect.anything()),
-      mockContext,
-    );
+    const call = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0];
+    expect(call.slice(0, 14)).toEqual([
+      ...Array.from({ length: 13 }, () => expect.anything()), mockStatusReadPorts,
+    ]);
+    const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
+    expect(doctor).toMatchObject({
+      readRepository: expect.any(Function),
+      readApprovalPolicy: expect.any(Function),
+      pullRequests: expect.objectContaining({
+        getPullRequest: expect.any(Function),
+        getPullRequestHeadSha: expect.any(Function),
+      }),
+    });
+    const historyPort = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0][14];
+    expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
+    expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
+    expect(Object.isFrozen(historyPort)).toBe(true);
   });
 
   it("exposes one handler for every executable route", () => {

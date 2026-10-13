@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { decideIssueStart } from '../../../domain/issue_start_policy';
 import { parseSddAnswer, parseSddPlan, type SddGateRecord } from '../../../domain/pre_branch_sdd';
 import { bindSddEvidenceReadPorts, type SddEvidenceQueryContext, type SddEvidenceReadPorts, type VerifiedSddEvidence, type SddEvidenceSnapshot } from '../../ports/sdd_evidence_read_ports';
@@ -8,6 +9,7 @@ import { selectOwnedSddCard, type SddQueryComment } from '../../policies/sdd_que
 export type { VerifiedSddEvidence, SddEvidenceSnapshot } from '../../ports/sdd_evidence_read_ports';
 
 interface ReadFacts {
+    readonly nativeState?: 'open' | 'closed';
     readonly title: string;
     readonly body: string;
     readonly labels: readonly string[];
@@ -28,16 +30,21 @@ export class SddEvidenceQueryUseCase {
             decideIssueStart({ kind: context.admittedKind, labels: [], issueManagedBranches: context.issueManagedBranches, preBranchSdd: context.preBranchSdd });
             if (context.admittedKind === 'help' || !context.preBranchSdd) return { state: 'not-required' };
             const facts = await this.readFacts(context.issueNumber);
-            if (!this.required(context, facts.labels)) return { state: 'not-required' };
             const selection = selectOwnedSddCard(facts.comments, context.issueNumber, context.trustedBotLogin);
+            const historical = facts.nativeState === 'closed' && selection.state === 'valid'
+                && fullSha(selection.record.commitSha) && this.historicalEligible(context, facts.labels);
+            if (!this.required(context, facts.labels) && !historical) return { state: 'not-required' };
             if (selection.state !== 'valid') return { state: selection.state };
             const { record, id: cardId } = selection;
             const digest = this.digest(context, facts, record.baseSha);
             const stale = digest !== record.issueDigest;
             const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
             if (!['invalid', 'unavailable'].includes(result.state)
-                && !await this.fence(context, facts, selection.body, cardId, record, result.verified)) return { state: 'stale' };
-            return Object.freeze(result);
+                && !await this.fence(context, facts, selection.body, cardId, record, result.verified, historical)) return { state: 'stale' };
+            return Object.freeze({ ...result, ...(!['invalid', 'unavailable'].includes(result.state) ? {
+                authorityDigest: createHash('sha256').update(JSON.stringify([cardId, selection.body, digest, canonicalLabels(facts.labels),
+                    record.phase === 'awaiting-answer' ? facts.comments : null])).digest('hex'),
+            } : {}), ...(historical ? { historical: true } : {}) });
         } catch { return { state: 'unavailable' }; }
     }
 
@@ -121,13 +128,14 @@ export class SddEvidenceQueryUseCase {
         return authorization;
     }
 
-    private async fence(context: SddEvidenceQueryContext, original: ReadFacts, cardBody: string, cardId: number, record: SddGateRecord, verified?: VerifiedSddEvidence): Promise<boolean> {
+    private async fence(context: SddEvidenceQueryContext, original: ReadFacts, cardBody: string, cardId: number, record: SddGateRecord, verified?: VerifiedSddEvidence, historical = false): Promise<boolean> {
         const fresh = await this.readFacts(context.issueNumber);
         const card = selectOwnedSddCard(fresh.comments, context.issueNumber, context.trustedBotLogin);
         if (card.state !== 'valid' || card.id !== cardId || card.body !== cardBody
             || this.digest(context, fresh, record.baseSha) !== this.digest(context, original, record.baseSha)
             || canonicalLabels(fresh.labels) !== canonicalLabels(original.labels)
-            || !this.required(context, fresh.labels)) return false;
+            || fresh.nativeState !== original.nativeState
+            || !(this.required(context, fresh.labels) || historical && fresh.nativeState === 'closed' && this.historicalEligible(context, fresh.labels))) return false;
         // Answer arrivals or edits must not let a stale question projection become current.
         if (record.phase === 'awaiting-answer'
             && JSON.stringify(fresh.comments) !== JSON.stringify(original.comments)) return false;
@@ -141,6 +149,10 @@ export class SddEvidenceQueryUseCase {
         return true;
     }
 
+    private historicalEligible(context: SddEvidenceQueryContext, labels: readonly string[]): boolean {
+        return context.admittedKind === 'feature' || labels.some(label => label.toLowerCase() === 'contract-change');
+    }
+
     private required(context: SddEvidenceQueryContext, labels: readonly string[]): boolean {
         return decideIssueStart({ kind: context.admittedKind, labels,
             issueManagedBranches: context.issueManagedBranches!, preBranchSdd: context.preBranchSdd! }).sddRequired;
@@ -152,14 +164,16 @@ export class SddEvidenceQueryUseCase {
     }
 
     private async readFacts(issueNumber: number): Promise<ReadFacts> {
-        const [title, body, labels, comments] = await Promise.all([
+        const [title, body, labels, comments, native] = await Promise.all([
             this.ports.titles.getTitle(issueNumber), this.ports.descriptions.getDescription(issueNumber),
-            this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+            this.ports.nativeState ? Promise.resolve([]) : this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+            this.ports.nativeState?.readIssue(issueNumber),
         ]);
         if (title === undefined || body === undefined || comments.coverage.source !== 'issue-comments'
             || comments.coverage.status !== 'complete' || comments.coverage.limitReached || comments.coverage.providerLimitReached
             || comments.coverage.omittedItems !== 0 || comments.coverage.truncatedItems !== 0) throw new Error('Incomplete SDD authority.');
-        return { title, body, labels, comments: comments.value };
+        if (native && native.number !== issueNumber) throw new Error('Foreign native SDD subject.');
+        return { title, body, labels: native?.labels ?? labels, comments: comments.value, ...(native ? { nativeState: native.state } : {}) };
     }
 }
 

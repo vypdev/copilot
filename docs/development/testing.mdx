@@ -135,3 +135,53 @@ approval and backups, `.env` exclusion, and the read-only doctor path.
 The reproducible `metrics:architecture` collector is the full evidence
 workflow; it requires a clean working tree and writes reports outside the
 repository.
+
+Architecture fixtures that resolve TypeScript symbols should share one compiler
+program containing production sources and isolated fixture modules. Retain the
+real bindings and every assertion; rebuilding the whole project for each fixture
+can exhaust a Jest worker during full platform verification.
+The raw-error boundary suite shares one real TypeScript compiler graph across
+the repository scan and its six fixture modules. It keeps all seven assertions
+and checks the real logger/sanitizer declarations. This reduces repeated
+compiler construction without changing workers, memory limits or platform gates.
+
+## Dependency security and coverage-loader compatibility
+
+Use a frozen pnpm lockfile when validating dependency changes. Security overrides
+are constrained to affected version ranges; the Handlebars, source-map-js and
+brace-expansion patches retain their existing major versions.
+
+The legacy `@istanbuljs/load-nyc-config` edge uses `js-yaml` 4.3.2, whose `load`
+API is compatible with that loader. This removes the old argparse/sprintf-js
+chain from development tooling rather than claiming a patched sprintf-js release
+exists. The Action's direct runtime YAML dependency is independent of this edge.
+
+Verify the real loader with representative `.nycrc.yaml` configuration and run
+the complete coverage, build and packaged CLI checks. Retain Windows, macOS and
+Linux CI and every acceptance/coverage budget. Inspect the final resolved graph
+and refreshed Dependabot alerts after promotion to the default branch. An audit
+result applies to the current lockfile; it is not an exploitability assessment.
+
+## Codex fixture platforms
+
+Codex service integration is unsupported on Windows. Keep `[self-hosted, codex]`
+for Mac/Ubuntu and omit `codex` from Windows service registrations. The manual
+Codex fixture matrix includes only macOS and Ubuntu. Hosted general fixture and
+full-coverage jobs still include Ubuntu, Windows and macOS, including fake
+launcher, ACL, process and installer tests. These doubles do not authenticate a
+model or exercise the official Codex sandbox.
+
+The workflow validator and six routing regressions prevent explicit Windows
+Codex jobs/matrix entries and retain ordinary Windows coverage. A green fixture
+or model-only `READY` response cannot certify real tool execution. See
+[tool smoke evidence](/security-operations/operations/smoke-tests).
+
+
+## Semantic component rendering
+
+The component suites use a real Vite/Svelte SSR renderer isolated from Jest.
+One renderer serves each suite; every request renders its own props and locale,
+including sequential English, Spanish, French and Portuguese assertions. HTML
+is not cached or replaced by snapshots. The helper closes the renderer after
+the suite and propagates startup, process and render failures. Keep these real
+semantic assertions when changing component content or controls.

@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last verified: 2026-10-11
+- Last verified: 2026-10-13
 - Owners: Copilot maintainers
 - Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
 - Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
@@ -331,12 +331,12 @@ that information. The phase is captured by trusted validation before abort.
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 24 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 49 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fourteen closed/forged diagnostic cases with localized replies and no push |
-| Adapters/workflow contracts | 35 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
-| UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
-| Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **170** | no double counting |
+| State/idempotency/races | 59 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
+| Adapters/workflow contracts | 55 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
+| UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
+| Integration/security/cutover | 29 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **286** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 170-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 286-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -434,3 +434,268 @@ setup acceptance validator also run. No tests, skips, thresholds, or runtime
 permissions were weakened. Comment 6110538037 starts the Action-owned retry;
 its final native verification and remote publication remain acceptance evidence
 to collect, not an assumed successful result.
+
+### Generated-bundle conflict recovery (2026-10-12)
+
+Native readiness sync `38240164032` on macOS resolved nine conflicts, then stopped
+before verification because ordinary ncc/vendor whitespace in the two generated
+bundles failed `git diff --check`. No source conflict markers remained in that log;
+no synchronization commit was pushed. Ten new real-Git cases reproduce three
+false rejections and retain seven independent source, marker, index and
+verification-mutation boundaries.
+
+Whitespace validation MUST remain strict on source and every unregistered
+path. Exactly `build/cli/index.js`, `build/api/index.js` and
+`build/github_action/index.js` MAY retain generator whitespace; Git conflict-marker
+validation MUST still run on all three, both before trusted staging and on the
+staged result. No content is normalized or rewritten by this check. Protected
+non-conflicted index entries, original conflict paths, HEAD/MERGE_HEAD, subsequent
+verification immutability and remote-head fences remain unchanged. The 180-case
+budget includes these ten additional cases; native recovery is pending.
+
+### Command preparation and integration checks (2026-10-12)
+
+Native38243835206 accepted a command with leading whitespace, prepared a clean
+merge, then failed its first verification because the workflow had skipped Node,
+pnpm and dependencies. Its literal prefix test disagreed with the whitespace-
+accepting domain parser. The same canonical command in38244493155 prepared
+tools, passed572suites7747tests20Windowsplatformskips and five verification
+commands, and published0f016278. Its later provider read failure during
+configuration persistence retained the completed push and durable reply;
+reconciliation38251354862 reportedalready-aligned and completedSUCCESS without
+a second merge/push. This distinguishes operation completion from run completion.
+
+The installed preparation expressions MUST cover parser whitespace and bot
+mentions when verification is configured. They MAY conservatively prepare an
+otherwise read-only request; this is a toolchain scheduling hint and MUST NOT
+authorize commands, edits, branch work or models. Existing fork/actor admission,
+runner selectors, dry-run/no-agent semantics, timeout and test budgets remain
+unchanged. Existing154structural workflow cases and fresh native whitespace
+acceptance validate this reversible workflow correction; no mirrored prose tests
+are added. The conflict prompt also requires available offline affected-module
+tests and typecheck, including missing optional adapters and both entrypoints.
+Independent mandatory verification remains the publication gate. This addresses
+readiness integration38243961378, where7852cases passed but the optional-adapter
+fallback was lost by the merge resolution. Native recovery remains pending.
+
+
+### Recover issue work state after completed synchronization (2026-10-12)
+
+Native run `38253646042` completed all five checks and published merge `86db9b1962915111f02613b4f49ec50a6a3f1cf6` on Windows, but issue #464 retained `state:blocked` and `state:awaiting-maintainer` while develop remained unchanged. Lifecycle policy recognized completed implementation and branch readiness, but not the completed synchronization result.
+
+For an issue-comment request on a branch-bearing issue, a current successful `SyncBranchUseCase` result now recovers `working` only with canonical parent/child object IDs, bounded distinct branch names and a nonnegative integer check count. A merged result must have executed and retain a canonical pushed commit. Already-aligned evidence can recover work without repeating the merge or push. Any other current executed failure takes precedence. Dry-runs, unavailable/malformed/foreign results, branchless help, unrelated events and PR readiness remain unchanged. This is a coarse work-state transition, not certification of current SDD or approval readiness.
+
+Twenty-four risk cases reproduce three missing transitions before the change; two additional nonexecuted-failure/count contracts complete 26 distinct regressions. They increase only the state allocation from 24 to 50 and the total from 180 to 206. No shared communication, SDD gate or feature case is recounted. Live recovery remains pending publication and replay on the aligned issue.
+
+### Freeze the resolved workspace after trusted staging (2026-10-12)
+
+Native diff synchronization `38270632343` passed all configured verification commands but was rejected by the final `unexpected-paths` guard. Six real-Git regressions reproduce original conflicts resolved to the child's unchanged bytes or deletion: trusted staging removes those paths from porcelain status, so the prepared unmerged path set is not the correct verification baseline.
+
+After the first trusted staging and all existing checks, the adapter MUST freeze the resolved workspace paths. Only disappearance of original conflicted paths is admitted at this transition; new paths and disappearance of non-conflicted parent changes remain rejected. Every later validation retains exact equality with this resolved baseline. This also rejects staged or unstaged verification mutations that reintroduce an unchanged resolved path. HEAD, MERGE_HEAD, original conflict authority, protected index entries, whitespace, catalog, verification and remote-head guards remain required. The inventory is now 212 distinct cases, including six new real-Git resolution and mutation cases. Native retry remains required to certify the observed incident.
+
+
+### Derive communication totals from verified evidence (2026-10-12)
+
+Native history sync `38277725099` passed its functional tests but rejected the merged communication ledger: semantic allocations totaled 247 with declared total 245; locale allocations totaled 153 with declared total 157. Within an original conflict on `src/architecture/github_communication_test_budget.json`, trusted infrastructure MUST derive only each `allocatedCases` value from the retained file rows before first staging. It MUST validate the derived ledger with the Action-bundled validator, preserving the fixed baseline, identities, specification ownership, required 135/146 minima, disjoint evidence and actual qualifying test declarations. No merged-branch script is loaded. Invalid or missing metadata/evidence aborts with `communication-budget-invalid` and a closed phase only.
+
+The ledger, specification and test files are regular files confined to the workspace and bounded to 512 KiB each; evidence remains within `src/…test.ts`, with at most 256 positive allocations per budget and at most 10,000 cases per row. These are fixed controls, without new configuration. Healthy ledger bytes remain untouched. Normalization MUST NOT occur for an unclaimed conflict, unrelated file or later verification pass. Sixteen adapter cases and five real-Git merge cases verify arithmetic-only repair, healthy preservation, unchanged invalid inputs, path/size/shape/privacy limits, evidence counts, original authority, verification mutation and moved-head protection. One additional existing localized diagnostic row covers the new closed code. The inventory is 234 distinct cases.
+
+A real verification-mutation test also showed that Git's normal `merge --abort` can refuse a tracked resolution changed after staging. If normal abort fails, infrastructure MAY restore the originally clean prepared workspace with `reset --hard` to its captured child SHA only after independently confirming both HEAD and MERGE_HEAD still match the prepared identities. A moved identity MUST remain untouched; no untracked file cleanup is authorized. This fallback runs only inside the Action-owned prepared workspace, never on a contributor checkout.
+
+Acceptance: a resolved ledger with correct retained rows and stale totals passes first validation with only totals changed; wrong minima/baseline, duplicate or overclaimed evidence never stage or push; a later verification mutation is rejected, never normalized again, and restores the original child when identities remain unchanged. A moved HEAD is retained. Every existing verification and final remote-head fence remains required. Native retry remains necessary to certify the observed history incident.
+
+Local verification passed all 578 suites and 7,813 tests, with 35 configured platform skips (7,848 total), unchanged global/module gates and the explicit 308/350 setup ledger. The new normalizer has 100% lines/functions, 98.3% statements and 97.82% branches in its focused coverage run. Typecheck, lint, documentation, catalog/specifications and graph update passed. The first restricted run could not bind the local web fixtures to 127.0.0.1; the identical full suite passed with loopback permitted, without skips or test changes.
+
+
+### Closed workspace-shape diagnosis (2026-10-12)
+
+Native history retry `38287091398` on macOS stopped with `unexpected-paths` before metadata normalization. The abort preserved both remote branches, but no retained evidence distinguished additions from disappearing prepared paths. On this rejection, trusted infrastructure MUST report only a fixed phase (resolution, trusted staging or verification) and numeric counts of added paths, removed conflicted/protected paths and added canonical generated bundles. Private names, paths, raw Git/provider output and metadata values remain excluded. Validation authority and abort behavior remain unchanged. Three distinct phase/count/privacy cases extend the inventory from 234 to 237. The log supports a targeted recovery; it does not establish which cause occurred in the earlier run.
+
+### Codex service platform scope (2026-10-12)
+
+The Windows heap incident above remains historical verification evidence.
+Agent-capable synchronization now uses the shared Mac/Ubuntu `codex` pool;
+Windows service registrations omit `codex`. No new Windows-service Codex
+sync/fixer retry is an acceptance requirement. General Windows fixtures and
+coverage budgets remain. Failed verification preserves the managed remote
+head, and model/CLI success is not proof of real tools. See the authoritative
+[service retirement and six-case routing budget](./agent-runtime-provider-and-model-routing.md).
+
+
+### Retire synchronization advice after native closure (2026-10-13, issue #478)
+
+Native PR #473 merged and closed issue #472 with verified `100%` and Project
+Done, while its existing card `6132289120` still requested synchronization.
+The parent-push observer had read the issue while it was open; no closure step
+retired the card. Native closure and Git alignment are independent facts.
+
+```text
+parent push -> discover dependency -> fresh native issue -> open: compare + fenced writes
+                                                   -> closed: retire owned existing cards
+merged PR -> native closure + selective metadata -> fresh closure -> retire owned cards
+reopen/change/denied read -> retain current comments, report verification unavailable
+```
+
+The observer MUST verify the exact native issue before comparing and immediately
+before every card, transition and duplicate mutation. A closed issue MUST NOT
+receive new synchronization advice. The merged-PR route MUST run independent
+retirement after completion reconciliation, including retained native closure
+with a metadata failure. Retirement only reads native issue state and comments
+and updates existing bot-owned shared-envelope branch-sync cards for that exact
+issue and dependency key. It MUST NOT create/delete comments, mutate labels,
+change branches, run a model or claim alignment/completion from closure alone.
+Unknown/malformed envelopes, foreign users/targets, and immutable transition
+notifications remain untouched. At most twenty matching status cards are
+admitted per run; a larger set fails before writes. This fixed boundary has no
+configuration or permission expansion.
+
+Before each update the original card body and author MUST still match and a
+fresh native sample MUST remain closed with the same reason. Reopening, changed
+ownership/body/reason, denied reads and invalid identity stop publication.
+Earlier completed updates survive a later failure and the result reports their
+count; replay performs no unchanged writes. GitHub does not provide a joint
+issue/comment conditional transaction: the fresh read bounds the race but cannot
+make those separate provider operations atomic. A later closure reconciliation
+repairs the card. Reopened work becomes eligible for fresh normal observation.
+
+Representative English card: **Issue closed: synchronization recommendation
+retired. No branch synchronization is required for this closed issue. The
+previous recommendation is historical. Issue closure does not certify that the
+branches are synchronized.** Spanish uses the complete equivalent catalog.
+The original comment ID/link and marker identity remain; obsolete command and
+comparison guidance disappear. Previous short transition alerts remain
+historical and their status link now points to the retired card.
+
+Forty distinct new cases extend the prior 237 to 277: nine observer
+closure/denial/race cases, twenty-four retirement ownership/replay/provider/
+partial-effect/limit cases, two complete English/Spanish presentations, and
+three merged/unmerged workflow sequencing cases and two physical comment-facade cases. The new retirement use case
+requires 95% lines/statements and 90% branches/functions; global and existing
+module thresholds remain. Publication-writer architecture evidence explicitly
+records the one retirement updater and fresh-open mutation wrappers.
+
+Acceptance: merging an open managed PR closes its linked issue, retains native
+completion metadata, and changes an existing status card to historical closure
+without another alert or Git operation. Replaying that closed PR performs no
+unchanged update. A concurrent reopen/changed card/provider denial leaves the
+current card untouched and preserves earlier effects. User documentation in
+`docs/issues/branch-synchronization.mdx` describes history, retry and reopening.
+Native browser evidence must verify the existing link and retired copy after
+promotion; local tests alone do not certify the provider lifecycle.
+
+
+Native finding `4255545522` exposed a reopened issue whose aligned branch retained
+the `closed:issue` card. Two explicit reopened comparisons verify terminal copy
+is replaced by the fresh aligned/stale result; the aligned case failed before
+the fix. A third case preserves quiet replay of an already aligned reopened
+card. Retirement composition also supplies a physically frozen read/update-only
+comment facade, excluding create/delete methods and capturing original bound
+operations. Two capability cases verify that boundary and mutable-alias safety.
+These five distinct cases complete the 277-case budget without changing any gate.
+
+
+### Closed-issue lifecycle entrypoint (2026-10-13)
+
+Native finding `4255769345` correctly observed that already-closed issues cannot
+be discovered through the open-dependency query. Push-time retirement is a
+race fence, not a historical closed-issue scan. Both installed and distributed
+issue workflows MUST subscribe to `closed`, including bot-authored native
+closures. Only exact `issues:closed` with native closed state and a positive
+safe issue number bypasses the PAT-user loop gate; bot label/comment/other
+feedback remains discarded and single actions retain their existing admission.
+
+After the ordinary queue/setup reads, a trusted closed issue callback MUST enter
+a dedicated retirement route before workflow admission or runtime preparation.
+It receives only the existing-card retirement use case. It MUST NOT invoke
+open-work routes, agents, lifecycle/activity label writers, branch/SDD preparation
+or hidden configuration persistence, even when retirement fails or current
+workflow labels are unmanaged. The same fresh native/card fences and replay
+budget apply; normal open or unknown-state events retain their previous behavior.
+Manually closed and inactivity-bot closed issues therefore retire their cards
+without requiring a merged PR. Existing unrelated metadata is preserved.
+
+Six additional distinct integration cases cover successful/failed terminal
+routing, unmanaged closed work and the narrow bot-event positive/unsafe-ID/
+feedback boundaries, extending this capability to 283 cases (237 + 46). Four
+closed/open/unknown-state persistence cases belong only to execution lifecycle
+and are not counted here. Existing workflow structural validation covers both
+templates; runner, timeout and permission contracts remain unchanged.
+Acceptance requires a real non-PR closure to update its existing owned card with
+no branch, SDD, label, model or configuration effects, followed by quiet replay.
+
+
+Two further structural workflow cases enforce the closed subscription and reject
+using its bot exception on an ordinary comment workflow. The validator requires
+the exact narrow exception only for issue lifecycle templates; all other actor
+and fork gates retain their previous expressions. This brings the owning budget
+to 285 (237 + 48). The four persistence cases above remain disjoint.
+
+
+Native finding `4256491077` identified issue cards retired using the PR locale.
+Merged-PR retirement MUST capture the issue locale, with complete English
+fallback when a legacy partial context omits it. A distinct mixed-locale
+projection case failed before the correction and verifies the immutable captured
+issue locale; the budget is now 286 (237 + 49). CI `38370750425` also exposed
+three new route fixtures inheriting live workflow identity after the existing
+suite restored its environment. Their before/after hooks now isolate and
+restore those four variables; the same tests and queue/runtime gates remain.
+
+
+Native finding `4256651462` exposed retirement running on later edits or label
+callbacks whose issue was already closed. Only exact `issues:closed` enters
+retirement; other native closed-issue callbacks MUST be quiet no-ops before
+runtime, open-work, retirement or lifecycle/activity mutations. This preserves
+the earlier artifact-label protection while avoiding unsolicited cleanup
+retries. Two distinct edit/label integration regressions failed before the
+correction and raise this capability to 288 cases (237 + 51); the four separate
+configuration-persistence cases remain owned by execution lifecycle.
+
+
+Native finding `4256913955` exposed repeated full-history enumeration before each
+card update. Retirement MUST enumerate the existing inventory once and use at
+most twenty targeted native comment reads before updates. The shared physically
+read-only native witness adapter verifies exact repository endpoint, comment ID,
+issue URL, bot author and private SHA-256 body identity without redirects or
+returning comment prose. The witness and target are frozen. Denied, unavailable,
+changed or malformed native facts preserve closure and prevent that update;
+previously completed updates remain reported. Existing native witness security
+cases retain their own ownership and are not counted twice. One twenty-card
+call-budget regression failed before the correction; two distinct targeted
+reader rejection cases extend branch synchronization to 291 (237 + 54). Four
+execution-persistence cases remain disjoint.
+
+
+Retirement's no-model boundary intentionally differs from active observation:
+English and Spanish use bundled complete copy, while other configured issue
+locales MUST receive complete English fallback without a catalog-generation
+request. Native finding `4257093263` interpreted the active-observation locale
+paragraph as a promise for closure too. User documentation now makes the
+retirement boundary explicit. One distinct unsupported-locale application case
+verifies fallback, retained card identity and the narrow read budget; the owning
+inventory becomes 292 (237 + 55), with four execution cases still separate.
+
+
+Native review `38379114626` identified catalog resolution occurring before the
+fresh native closure read. The observer MUST admit a currently open dependency
+before requesting its locale catalog and MUST re-read native state after that
+await before comparing branches. Closed dependencies enter static retirement
+without invoking the catalog resolver. A dependency closing during localization
+is retired without comparison or a new alert. One catalog promise remains shared
+across admitted open dependencies. Five distinct order/race/call-budget cases cover initial closure (failed before
+the correction), closure during localization, denied/foreign final native reads
+and one shared catalog across two admitted dependencies. The owning inventory
+is now 297 (237 + 60), plus four separately owned configuration-persistence cases.
+
+### Generated resolution must precede trusted staging (2026-10-13)
+
+Native Doctor synchronization `38380102768` passed 602 suites, 8,434 tests and
+all six verification commands but correctly rejected `unstaged-changes` after
+the build regenerated previously staged conflict bundles. The fixer prompt now
+requires the existing offline build to regenerate admitted canonical bundles
+before returning its resolution. It MUST preserve the original conflict-path
+boundary and report any build touching a non-listed path; it cannot stage files.
+Trusted staging and all verification immutability checks remain unchanged.
+Arbitrary bundle changes during verification MUST still fail. Existing real-Git
+verification-mutation cases retain their assertions and budget; this prompt
+correction adds no counted case. Acceptance requires a fresh native parent sync
+to pass the existing six commands and publish its verified head.

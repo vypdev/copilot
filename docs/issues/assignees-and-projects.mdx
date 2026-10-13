@@ -80,6 +80,15 @@ the normal lifecycle transition selects the configured in-progress Status.
 If initialization fails, retrying reads the same item and can fill its unset
 Status without adding another item.
 
+If a subsequent priority or size update cannot find a newly linked item in the
+board listing, Copilot checks the exact issue or PR's own Project memberships
+before reporting a failure. This recovery reads at most 200 memberships. If a
+known item's field is absent from the listing, one direct item read verifies its
+Project and current field value. Matching values stay unchanged on replay.
+Permission errors, incomplete evidence and persistent absence remain visible
+failures; rerun after checking access and membership. Successful linking and
+other completed updates are retained.
+
 ### How many boards?
 
 You can link each issue to **multiple** boards by listing several IDs:

@@ -1,3 +1,9 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
+import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
+import { invalidCommentCommandResult } from './comment_automation_command_workflow';
+import { readCopilotHistory } from './read_copilot_history_workflow';
+import type { CopilotHistoryReadPort } from '../ports/copilot_history_ports';
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
@@ -23,6 +29,7 @@ import { projectIssueCommentLanguageRequest } from './steps/issue_comment/check_
 import { projectCommentAutomationContext } from './comment_automation_context';
 import { projectPullRequestDescriptionContext } from './pull_request_workflow_context';
 import { isSddAnswerComment } from '../../domain/pre_branch_sdd';
+import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
   taskId = "IssueCommentUseCase";
@@ -46,17 +53,31 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
+    private readonly historyReadPort?: CopilotHistoryReadPort,
     private readonly sddQueryPort?: SddEvidenceQueryPort,
+    private readonly sddDiffQueryPort?: SddDiffQueryPort,
+    private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
+    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
-    if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+    const historyCommand = parseCopilotCommand(param.issue.commentBody);
+    if (historyCommand.kind === 'invalid') return [invalidCommentCommandResult(this.taskId, historyCommand.reason)];
+    if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+      return [await readCopilotHistory({ owner: param.owner, repository: param.repo,
+        target: param.isPullRequest ? { kind: 'pr', number: param.pullRequest.number } : { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+        botLogin: param.tokenUser ?? '', locale: param.isPullRequest ? param.locale.pullRequest : param.locale.issue,
+        generalConversation: param.eventName === 'issue_comment',
+      }, this.historyReadPort)];
+    }
+    const isDoctor = historyCommand.kind === 'command' && historyCommand.command.name === 'doctor';
+    if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
       return [new Result({
         id: this.taskId, success: false, executed: true,
         steps: ['pre-branch-sdd requires issue-managed-branches; correct the Action configuration.'],
       })];
     }
-    if (this.preBranchSddContinuation
+    if (!isDoctor && this.preBranchSddContinuation
       && param.issueStartDecision.sddRequired
       && isSddAnswerComment(param.issue.commentBody)
       && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
@@ -90,7 +111,10 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        doctorReadPorts: this.doctorReadPorts,
+        nativeStatusReadPort: this.nativeStatusReadPort,
         sddQueryPort: this.sddQueryPort,
+        sddDiffQueryPort: this.sddDiffQueryPort,
         syncBranchUseCase: this.syncBranchUseCase
           ? { invoke: (options) => this.syncBranchUseCase!.invoke({ context: context.branchSync, options }) }
           : undefined,

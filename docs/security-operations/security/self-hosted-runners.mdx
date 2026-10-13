@@ -29,7 +29,7 @@ runners. A merge group can contain fork code without exposing its origin to
 the runner selector; never route it to a persistent service runner. The trusted-default-branch
 PR approval observer also runs on a self-hosted Ubuntu `codex` runner. The
 automatic setup fixture matrix remains GitHub-hosted on Ubuntu, Windows and
-macOS. Its separate fixture matrix for persistent Windows, macOS and Ubuntu
+macOS. Its separate fixture matrix for persistent macOS and Ubuntu
 `codex` runners runs only through a manual workflow dispatch of a reviewed
 ref. An ordinary manual dispatch skips the hosted matrix to save hosted
 minutes; `upload_windows_coverage=true` also runs it to generate the coverage
@@ -50,11 +50,17 @@ run-specific temporary directories, and removes them after artifact upload.
 Its runner needs a writable Actions tool cache; the workflow does not install
 Ubuntu system packages.
 
-The `codex` label can route a job to macOS, Windows or Linux. Install Git and
-Bash on every runner; Windows needs Git for Windows with its Bash available to
-the Actions runner service. Installed workflows select `shell: bash` for
-`run` steps so Windows does not create PowerShell scripts subject to local
-execution policy. The distributed agent workflows do not require Node, npm, or pnpm installed separately; development and packaging jobs use their own toolchain.
+The `[self-hosted, codex]` pool routes agent jobs to macOS and Ubuntu. Windows
+services MUST omit `codex` on registration; recreate existing registrations to
+remove it. The four Windows services remain available for other jobs. Install
+Git and Bash on runners selected by the installed Bash workflows. Distributed
+agent workflows use the embedded Action Node; development and packaging jobs
+keep their own toolchain.
+
+**Codex no soportado en runners Windows ejecutados como servicio.** The
+session-0 service limitation does not claim that interactive Windows fails.
+Do not deploy a patched CLI, disable its sandbox, or require interactive login
+as recovery. See [Codex runtime support](/agents/codex-openai).
 
 The JavaScript Action runs under the runner's embedded Node. Missing agent CLIs and confirmed newer official releases use standalone installers and release archives in private job directories. Self-update commands are not run against installed CLIs. Existing npm `.cmd` shims on Windows still need a separately trusted Node executable; native installed CLIs do not.
 Verify each operating system with an actual runner job before
@@ -75,3 +81,10 @@ Their timeout stays unchanged. This avoids depending on a host's warm module
 cache and keeps the runtime's private profile and checkout-cleanliness checks.
 A runner-disconnection annotation is an infrastructure failure; passing tests on
 another platform does not turn that job into a successful smoke run.
+
+The manual `Copilot - Runner diagnostics` workflow retains only its Linux
+Codex prerequisite job. General Windows PowerShell startup diagnostics and
+hosted platform fixtures remain separate and do not invoke real Codex. CLI or
+model success is distinct from a verified tool read, edit, or command. A model
+reply and a setup marker cannot certify sandbox tools. No new Windows-service
+Codex acceptance run is required or scheduled.

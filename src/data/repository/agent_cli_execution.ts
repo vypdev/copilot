@@ -5,15 +5,16 @@ import { basename, dirname, isAbsolute, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AgentExecutionPlan, AgentOutputProtocol } from '../../domain/agent_execution_plan';
 import { AgentCliError } from './agent_cli_contracts';
-import type { AgentExecutionOutputDiagnostic } from '../../application/ports/agent_execution_observation_ports';
-import { classifyAgentCliExitDiagnostic } from './agent_cli_exit_diagnostic';
+import type { AgentExecutionOutputDiagnostic, AgentExecutionToolDiagnostic } from '../../application/ports/agent_execution_observation_ports';
+import { classifyAgentCliExitDiagnostic, classifyAgentCliToolDiagnostic } from './agent_cli_exit_diagnostic';
 import { verifyWindowsRuntimePathPrivate } from '../../infrastructure/agents/windows_runtime_acl';
 import { validateAgentExecutableFile } from '../../infrastructure/agents/agent_executable_file';
 import { trustedWindowsSystemTool } from '../../infrastructure/agents/agent_trusted_system_tools';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
-export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: AbortSignal): Promise<string> {
+export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: AbortSignal,
+    onToolDiagnostic?: (diagnostic: AgentExecutionToolDiagnostic) => void): Promise<string> {
     return new Promise((resolve, reject) => {
         let runtimeDirectory: string | undefined;
         try {
@@ -54,6 +55,7 @@ export function runAgentCli(plan: AgentExecutionPlan, prompt: string, signal?: A
             signal,
             (value) => { cleanup(); resolve(value); },
             (error) => { cleanup(); reject(error); },
+            onToolDiagnostic,
         );
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
@@ -72,6 +74,7 @@ export function createAgentProcessLifecycle(
     signal: AbortSignal | undefined,
     resolve: (value: string) => void,
     reject: (error: Error) => void,
+    onToolDiagnostic?: (diagnostic: AgentExecutionToolDiagnostic) => void,
 ) {
     const stdoutChunks: Buffer[] = [];
     let stderrBytes = 0;
@@ -148,6 +151,11 @@ export function createAgentProcessLifecycle(
             return;
         }
         try {
+            const toolDiagnostic = classifyAgentCliToolDiagnostic(Buffer.concat(stderrChunks).toString('utf8'));
+            if (toolDiagnostic) {
+                try { onToolDiagnostic?.(toolDiagnostic); }
+                catch { /* Diagnostic observers cannot change execution semantics. */ }
+            }
             finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
         } catch (error) {
             finishReject(error instanceof AgentCliError

@@ -134,6 +134,12 @@ conflict paths, merge identity, protected index entries and remaining markers,
 then stages only those resolved conflicts through trusted Git code. It rejects
 later changes introduced by verification rather than staging them again.
 
+The three checked-in `ncc` bundles (`build/cli/index.js`, `build/api/index.js`,
+`build/github_action/index.js`) retain their generator's whitespace. Source and
+all other paths retain strict whitespace checks. Conflict markers are rejected in
+all files, including those bundles, before staging and in the staged result.
+This changes no content, allowed edit paths or verification requirements.
+
 If `specs/CATALOG.md` is conflicted, Copilot treats it as a generated index:
 after the catalog metadata is resolved, the Action validates that metadata and
 regenerates the index with its bundled catalog renderer before verification.
@@ -142,6 +148,18 @@ The fixer must preserve both branches' specification ownership and evidence in
 already changes both catalog files. It never adds an unrelated file to the merge
 or loads a generator from the merged branch. Invalid metadata, missing evidence,
 external links, or a later verification change still abort the synchronization.
+
+When the communication test-budget ledger is an original merge conflict,
+Copilot derives its totals from the retained test-file allocations and validates
+the complete ledger before staging. It preserves the minimum budgets and checks
+that every allocation has real test evidence. Invalid input produces
+`communication-budget-invalid`; inspect the closed validation phase in the run,
+correct the resolution and retry. A later verification change is rejected and
+cannot trigger another normalization.
+
+If verification prevents a normal Git abort, Copilot restores the captured
+child only while both prepared merge identities remain unchanged. A moved
+HEAD or parent is retained and requires inspection of the run.
 
 If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
 
@@ -193,8 +211,76 @@ bot feedback loops on integration branches.
 
 The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
 
-For this repository's Windows service runners, verification uses `test:coverage`
-with the existing bounded worker recycling. Forcing the whole suite into one
-process with `--runInBand` can exhaust the heap before synchronization publishes.
-A failed verification retains the managed remote head; inspect the failure and
-retry `/copilot sync-branch` after correcting the verification configuration.
+This repository runs agent-capable synchronization on the shared Mac/Ubuntu
+`codex` pool. Windows services omit `codex`; no new Windows Codex synchronization
+is scheduled. Verification retains `test:coverage`, its two-worker limit and all
+coverage/acceptance budgets. A failed verification retains the managed remote
+head; inspect the failure before retrying `/copilot sync-branch`.
+
+Commands accept leading whitespace, line breaks and repeated whitespace between
+`/copilot` and the command name. This repository prepares its verification
+toolchain for those requests and addressed bot mentions before the Action runs.
+Preparation is only a conservative scheduling hint; the Action's parser, actor
+permissions, original conflict set and dry-run/no-agent rules remain authoritative.
+The fixer must check existing offline tests for affected modules and typecheck
+when tools are available; mandatory Action verification still runs independently.
+
+
+A completed issue synchronization returns the issue to working, including an
+already-aligned retry after a previous failure. The Action verifies the retained
+completion facts before that transition. Dry-runs and unavailable results keep
+existing state; another error in the same run still blocks it. Synchronizing a
+branch does not establish PR approval or current SDD readiness.
+
+A conflict resolved to the working branch's unchanged content or deletion may
+disappear from Git status after trusted staging. Copilot uses that resolved
+workspace as the verification baseline while still rejecting added files, lost
+non-conflicted parent changes, and later changes to the resolved path set.
+
+
+For `unexpected-paths`, the run also shows a fixed validation phase and counts
+of added paths, removed conflict/protected paths and added canonical bundles.
+Use that distinction to inspect the resolution or verification step before
+retrying. Copilot omits private filenames and preserves the same merge guards.
+
+
+## When the issue closes
+
+After a managed PR merges, the Action retires existing synchronization cards
+for its closed issue. The same card and link now explain that the recommendation
+is historical and no synchronization is required for that closed work. Closing
+an issue does not prove that its branches are synchronized. Earlier timeline
+alerts remain historical; follow their status link to read the current card.
+
+The observer also checks native issue state before publishing advice. A reopened
+issue can receive a fresh comparison and recommendation. If retirement cannot
+verify the issue or its existing card, the run reports the incomplete cleanup
+and retains native closure and any updates already completed. Retry the verified
+merged-PR operation after resolving the provider error. Retirement does not
+create branches, run a fixer, change labels or publish another notification.
+
+
+Closed-issue retirement uses bundled English or Spanish copy. Other issue locales receive complete English fallback; retirement never starts a language model. Active branch observations retain the configured catalog-localization behavior described above.
+
+Manual closures and the inactivity bot use the same retirement rule through the
+closed-issue event. If that cleanup fails, retry the closed event or verified
+merged-PR operation. Cleanup preserves other metadata and does not launch open
+work, change labels, run a model or rewrite hidden configuration. Reopening
+allows the next branch observation to replace historical closure with its fresh
+aligned or stale comparison.
+
+Later edits and label changes on an already-closed issue do not repeat retirement
+or restart its work. Retry the original close event when cleanup needs recovery.
+
+Cleanup reads the comment inventory once, then verifies each card directly by its
+comment ID before editing it. A failed or changed card read leaves that card
+unchanged and reports incomplete cleanup; earlier successful edits are retained.
+
+The observer checks that an issue is still open before requesting locale copy.
+If it closes while that copy is being resolved, the observer retires its existing
+card and skips the branch comparison and new advice.
+
+When generated bundles conflict, the fixer must regenerate the admitted bundles
+before returning its resolution. The Action stages that result and verifies it
+again. A rebuild that changes the staged resolution during verification stops
+the synchronization with `unstaged-changes`; no synchronization commit is pushed.

@@ -718,7 +718,7 @@ this feature introduces no PRD/ADR documentation or catalog schema.
 
 ## Proposed status readiness extension
 
-The read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its authoritative current extension minimum is 195 distinct cases, including the original 30 rendering/localization cases as a subset. This is separate from the owning gate's current 149-case budget above. The managed implementation reads the latest owned gate record, verifies immutable catalog ownership and remote publication, and fences current issue/card/branch evidence. Live command acceptance and promotion remain pending; local implementation evidence alone does not certify them.
+The read-only status extension from [issue #454](https://github.com/vypdev/copilot/issues/454) is specified in [`pre-branch-sdd-status-readiness.md`](./pre-branch-sdd-status-readiness.md). Its authoritative current extension minimum is 198 distinct cases, including the original 30 rendering/localization cases as a subset. This is separate from the owning gate's current 149-case budget above. The managed implementation reads the latest owned gate record, verifies immutable catalog ownership and remote publication, and fences current issue/card/branch evidence. PR #465 was promoted on 2026-10-12; live command acceptance then identified a runtime profile projection defect. The companion records its correction and the remaining live acceptance gates; promotion alone does not certify them.
 
 ### 1. Executive summary
 

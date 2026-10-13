@@ -1,3 +1,11 @@
+import { createSddDiffQueryPort } from './sdd_diff_composition_root';
+import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
+import { createGithubRuntimeDoctorPorts } from './github_runtime_doctor_composition_root';
+import { createReplyRequestReadPort } from './reply_request_composition_root';
+import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
+import { RetireProgressUseCase } from '../../application/usecases/actions/retire_progress_use_case';
+import { RetireClosedIssueCardsUseCase } from '../../application/usecases/actions/retire_closed_issue_cards_use_case';
+import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
 import { LinkedBranchReadinessRepository } from '../../data/repository/branch/linked_branch_readiness_repository';
@@ -96,6 +104,7 @@ import {
   bindDeploymentState,
   bindDeploymentTargetRules,
   bindIssueCommentPublication,
+  bindBranchSyncRetirementComments,
   bindIssueReopen,
   bindManagedPullRequests,
   bindPullRequestBranchQuery,
@@ -156,6 +165,8 @@ export function createSingleActionUseCaseCompositionRoot(
       bindBranchComparison(new BranchCompareRepository(createBranchComparisonClient()), binding),
       bindIssueCommentPublication(issueDescriptionQueryPort, binding),
       catalogResolver,
+      createNativeStatusReadPort(binding),
+      createClosedIssueRetirementUseCase(binding),
     ),
     deploymentOrchestration,
   );
@@ -184,6 +195,8 @@ function createDeploymentOrchestrationUseCase(
     catalogResolver,
   });
 }
+
+import { createCopilotHistoryReadPort } from './copilot_history_port_factory';
 
 export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBinding): IssueCommentUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
@@ -239,8 +252,12 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     branchSync,
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
-    bugbot.scm.context,
+    createPullRequestStatusReadPorts(binding, bugbot.scm.context),
+    createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
+    createSddDiffQueryPort(binding, bugbot.scm.context),
+    createNativeStatusReadPort(binding),
+    createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
   );
 }
 
@@ -297,7 +314,11 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
     rememberBranchPorts(binding, bugbot.scm.context),
-    bugbot.scm.context,
+    createPullRequestStatusReadPorts(binding, bugbot.scm.context),
+    createCopilotHistoryReadPort(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'),
+    createSddDiffQueryPort(binding, bugbot.scm.context),
+    createNativeStatusReadPort(binding),
+    createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
   );
 }
 
@@ -380,4 +401,14 @@ function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBr
       ),
     },
   };
+}
+
+/** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
+export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): RetireClosedIssueCardsUseCase {
+  const comments = createIssueContentCompositionRoot();
+  const native = createNativeStatusReadPort(binding);
+  const cards = bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding));
+  const freshness = createReplyRequestReadPort(binding);
+  return new RetireClosedIssueCardsUseCase(new RetireBranchSyncUseCase(native, cards, freshness),
+    new RetireProgressUseCase(native, cards, freshness));
 }

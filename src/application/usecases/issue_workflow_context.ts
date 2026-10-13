@@ -3,6 +3,7 @@ import type { ProjectReference } from '../ports/project_board_link_ports';
 import type { SelectedIssueType } from '../ports/issue_management_ports';
 import type { Result } from '../../data/model/result';
 import type { IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import type { IssueCompletionLabelConfiguration } from '../../domain/issue_completion';
 import { ISSUE_START_LABEL } from '../../domain/issue_start_policy';
 
 export interface AssignmentContext {
@@ -18,6 +19,7 @@ export interface IssueNumberContext {
 
 export interface CloseIssueAfterMergeContext extends IssueNumberContext {
   readonly pullRequestNumber: number;
+  readonly completionLabels: IssueCompletionLabelConfiguration;
 }
 
 export interface UpdateIssueTypeContext extends IssueNumberContext {

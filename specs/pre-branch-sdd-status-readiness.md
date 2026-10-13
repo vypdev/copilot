@@ -1,9 +1,9 @@
 # Pre-branch SDD Readiness in `/copilot status`
 
-- Status: Proposed
+- Status: Implemented
 - Date: 2026-10-10
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-11
+- Last verified: 2026-10-12
 - Owners: Copilot maintainers
 - Scope: Add a localized, read-only view of pre-branch SDD readiness to the existing issue status answer.
 - Related issues/PRs: Issue #454; existing owning specification `specs/pre-branch-sdd-gate.md`
@@ -308,19 +308,19 @@ No schema or configuration migration is introduced. Existing gate records remain
 
 ## 14. Testing strategy and numeric budget
 
-Minimum: **195 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
+Minimum: **194 distinct cases** for this extension. Existing gate and PR status cases are retained but not counted again here.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Existing basic status presentation | 30 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
+| Existing basic status presentation | 8 | Original issue readiness, unavailable/not-required and bilingual render regression cases |
 | Issue identity | 8 | Canonical visible body/title normalization, profile, kind, issue number and original base digest |
 | Owned card selection | 28 | Exact bot ownership, highest comment identity, corruption without older fallback, duplicate markers, safe IDs and retained answer IDs |
-| Authority/application/fences | 62 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes |
-| Closed projection/UX | 60 | Canonical requirement/configuration, eight evidence outcomes, explicitly historical first publication during a pending revision and alongside a different verified revision, malformed proof, safe same-issue links, bounded IDs and both bundled locales |
+| Authority/application/fences | 81 | Immutable first/revision proof, catalog ownership, current authorized answers, partial inventory, issue/card/label/head races, no write capabilities, status integration and both pending-revision outcomes; three native Execution profile projection contracts; six current native closed-history contracts |
+| Closed projection/UX | 62 | Canonical requirement/configuration, eight evidence outcomes, explicitly historical first publication during a pending revision and alongside a different verified revision, malformed proof, safe same-issue links, bounded IDs and both bundled locales; two closed-history locale/action contracts |
 | Native linked ref adapter | 4 | Stale/deleted refs, foreign/missing repository identity; none may fall back to another PR |
 | Immutable workspace reads | 2 | Read the original catalog without checkout/current-file mutation; reject non-SHA identifiers |
 | Read-only composition | 1 | Repository-bound live publication query and current maintainer authorization without mutation capability |
-| **Total** | **195** | No case counted twice |
+| **Total** | **194** | No case counted twice |
 
 
 Maintain repository-wide thresholds. New pure readiness policy should meet at least 95% branch coverage; changed status modules should meet existing module thresholds, with a target of 90% branches and 95% lines/statements. Use deterministic records, clocks, provider fakes, and publication proofs; no sleeps or live services. Parse catalog structures and gate records rather than grep prose. UI fixtures require semantic assertions beyond snapshots. Manual acceptance confirms the section is readable on mobile and desktop and preserves the existing status ordering.
@@ -368,7 +368,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 2. Define typed readiness result and semantic read/verification ports; add pure policy tests for ownership, identity, pending IDs, and state mapping.
 3. Integrate read-only orchestration into status while retaining the original snapshot on retrieval errors.
 4. Add catalog messages and compact rendering for all states; ensure no timeline-card path is invoked.
-5. Add adapter, integration, localization, security, and compatibility tests within the 195-case implementation budget.
+5. Add adapter, integration, localization, security, and compatibility tests within the 194-case implementation budget.
 6. Update command/operator documentation and contract examples.
 7. Run specification, architecture, catalog, and repository validation required by the existing project workflow.
 
@@ -378,7 +378,7 @@ Keep examples synchronized with catalog fixtures. No new guide is mandated if ex
 - [x] `/copilot status` remains read-only and preserves all existing fields and ordering.
 - [x] English and Spanish catalogs cover the readiness section.
 - [x] Typed application ports and Clean Architecture boundaries are enforced by tests/checks.
-- [x] All 195 distinct extension cases, full coverage budgets and generated bundles pass before publication.
+- [ ] All 194 distinct extension cases, full coverage budgets and generated bundles pass before publication.
 - [x] User documentation explains the evidence limit and fail-closed behavior.
 - [x] Existing command grammar, lifecycle, labels, finding counts, and gate record ownership remain compatible.
 - [x] `specs/catalog.json` evidence and generated `specs/CATALOG.md` remain current; `pnpm run validate:specifications` passes.
@@ -487,9 +487,113 @@ invalidates ambiguous ownership rather than exposing an older pending view.
 Twelve new pure authority cases cover full identifier loss, three other
 canonical surfaces, foreign/quoted identities, duplicate native-ID ambiguity,
 embedded SDD corruption and a newer valid replacement. Two application cases
-cover initial selection and final-fence loss. The current extension budget is
-181 + 12 + 2 = 195, distributed in section 14. The historical 30 presentation
+cover initial selection and final-fence loss. The extension budget at that verification was
+181 + 12 + 2 = 195. The historical 30 presentation
 cases remain a subset of this total; the gate's own budget is separate. Live
 command acceptance remains pending promotion.
 
 Full local validation of this correction passed 570 suites, 7,608 tests and 35 existing platform skips (7,643 total). The card selection policy has 100% statement/branch/function coverage and the evidence reader has 96.97% statements, 97.44% branches and 100% functions; all existing coverage budgets passed. Typecheck, lint, specification and documentation validation passed. Fresh native review and live command acceptance remain independent gates.
+
+
+### Native runtime profile projection correction — 2026-10-12
+
+PR #465 was merged into develop as `0d0f16de145b137e0ad4ae3506a47a842819ab94`
+and promoted normally to master after combined validation: 571 suites, 7,720
+passed tests and 35 configured skips. Native merge run 38220007840 closed issue
+#454 and projected the PR to verified/Done without a generic timeline comment.
+
+The first live status on issue #464, run 38220530791, retained a verified first
+publication but incorrectly reported revision pending. The producer received
+`Execution.issueWorkflowProfileDigest`; comment projection instead read the
+absent `profileDigest` property. The query therefore compared a different
+identity tuple despite an unchanged installed profile. The projection MUST use
+the native execution field while retaining `profileDigest` as the query port's
+semantic name. There is no alias fallback, schema migration, new configuration,
+permission, model or mutation capability. Genuine profile changes still fail
+current readiness.
+
+Three distinct cases in `src/data/model/__tests__/execution.test.ts` exercise
+the actual Execution class: native digest propagation, absent native digest,
+and rejection of an unrelated similarly named property. Two fail before the
+correction; all 139 focused Execution/status/evidence-reader cases pass after
+it. The extension minimum is now 195 + 3 = 198, allocated to application/fence
+integration. Existing gate tests are not recounted. Full validation passed 571
+suites and 7,723 tests with 35 configured skips; unchanged coverage budgets and
+the 308/350 setup ledger passed. Typecheck, lint, specifications, documentation,
+graph update and build passed. A fresh native status request remains required;
+these offline checks do not certify that live result.
+
+
+### Opaque authority identity for structural comparison (2026-10-12)
+
+The shared read-only snapshot optionally exposes `authorityDigest`, a SHA-256 fingerprint of the exact fenced bot-owned card body, canonical current issue digest/labels and relevant awaiting-answer provenance. It exposes none of those contents. Existing status presentation ignores this optional field and the stored schema-v1 gate record is unchanged. The structural comparison consumer requires and rechecks this digest, so a card-body mutation that preserves the visible publication fields cannot reuse old current counts.
+
+Two distinct authority-reader regressions prove stable opaque output and changed identity after a same-projection card-body replacement. These two cases are allocated once to this owning authority-reader inventory: the corrected default-branch 182 plus two is 184. They are excluded from the separate 229-case structural comparison inventory. Prior dated validation counts remain historical evidence.
+
+### Shared workflow coverage for independent SDD reads (2026-10-12)
+
+Readiness parent integration `38255933907` passed its full Jest cases but failed the stricter per-module coverage gate because the existing SDD status bridge lacked direct workflow tests. Six contracts now exercise verified/unavailable projection independently of the PR adapter and exclude foreign issue, missing initial readiness, PR target and missing context. They cover the existing bridge without copying shared implementation into a managed feature or lowering a coverage threshold.
+
+These six shared status cases were added to the authority/application/fences allocation. The separate structural comparison contribution retains its own tests and coverage entry; the gate's 149 cases remain separate.
+
+### Correct the distinct-case inventory (2026-10-12)
+
+The 24 `evidence variant` status cases added in `a396c0fc` contained only two
+distinct callback bodies, alternating English and Spanish. Changing the title
+created no additional scenario, assertion or coverage. Retain the two heading/
+identity contracts, give them descriptive names, and remove the other 22 exact
+copies. The separate required/unavailable copy assertions remain.
+
+The existing-basic-presentation allocation is therefore 8, not 30, and the
+current distinct extension inventory/budget is **182**, not 204. This corrects
+a miscount instead of manufacturing more cases to reach that number. Every
+functional assertion and risk requirement remains; coverage thresholds, the
+135/146 communication floors and 350-row setup acceptance ledger are unchanged.
+Historical physical Jest totals remain execution evidence; earlier extension
+figures 141/181/198/204 included these 22 copies and must not be read as
+independent behaviors. Their corrected distinct counts are 119/159/176/182.
+The default-branch correction is 182. On this combined head, the comparison's
+two authority-reader contracts are allocated here once, making 184; the
+separate structural comparison inventory remains 229 and excludes them.
+
+Focused status tests and full coverage MUST retain the same production-module
+coverage after deduplication. No runtime, label, model, platform, publication
+or deployment behavior changes in this correction.
+
+### Reconcile the allocation after native parent integration (2026-10-13)
+
+Action merge `139955e8` preserved both opaque-authority regression bodies but
+rewrote their allocation outside this companion while the comparison SDD still
+excluded them. The corrected non-overlapping inventory is 73 authority cases
+and 184 total here; the comparison's 229 and gate's 149 remain separate. This
+repairs contradictory metadata only: no test is added, removed or counted twice,
+and the 22 deleted copies are not restored. Existing tests and thresholds stay
+unchanged. Prior physical Jest totals remain dated execution evidence. The
+subsequent closed-history corrections below supersede this intermediate
+184-case allocation with the current 194-case total.
+
+### Native closed history (2026-10-13; local correction, live acceptance pending)
+
+Removing `in-progress` after verified native completion MUST NOT erase an
+otherwise verified first/current SDD publication. The query may use historical
+eligibility only for a current native closed issue with an owned first publication
+and an eligible feature or retained contract-change kind. It never synthesizes
+a start label, publication, ownership or branch proof. Closed unstarted work
+without publication remains not required; help remains exempt. Existing digest,
+immutable catalog, author, branch and final-fence checks remain mandatory. A
+current reopening cannot borrow closed-history eligibility, and native state
+movement during the final fence invalidates the sample.
+
+Ready or pending historical artifacts retain their verified links, while their
+English/Spanish status copy requests neither implementation nor old answers.
+The source correction has eight distinct cases: six native-history query paths
+and two locale-rendering contracts. Allocate all eight only to this owning
+companion, increasing its 182-case inventory to **190**; they are excluded from
+the native-completion capability's separate minimum. The two comparison-specific
+authority cases, when that feature is integrated, remain separately allocated
+once (192 combined), never restored as duplicated declaration variants.
+
+Documentation: `docs/issues/comment-commands.mdx`. Full local gates and native
+closed-status/browser acceptance remain pending.
+
+Native finding `4254345579` exposed an unconditional historical flag on closed issues. Native closure MUST NOT substitute for verified SDD history. The status workflow now preserves the query projection without adding historical authority. Four distinct regressions cover unavailable reads, absent publication, invalid evidence and a published record missing its immutable proof; verified historical ready evidence remains covered by the existing case. Allocate these four only to this companion: 190 + 4 = **194**, or 196 with the comparison feature's separate two authority cases. Inspection guidance remains visible for unavailable and unverified evidence.

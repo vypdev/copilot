@@ -117,6 +117,36 @@ export function decidePullRequestApproval(
     if (evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun) {
         return stop('blocked', 'bugbot-configuration', 'Bugbot must run with info severity and dry-run disabled.');
     }
+    const ciDecision = decideApprovalChecks(policy, evidence);
+    if (ciDecision) return ciDecision;
+    const bugbotDecision = decideApprovalBugbot(policy, evidence);
+    if (bugbotDecision) return bugbotDecision;
+    const coverageDecision = decideApprovalCoverage(policy, evidence);
+    if (coverageDecision) return coverageDecision;
+    const reviewDecision = decideApprovalReviews(policy, evidence);
+    if (reviewDecision) return reviewDecision;
+    if (policy.mode === 'recommend') return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
+    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
+}
+
+export function isDocumentationOnlyDiff(paths: readonly string[]): boolean {
+    return paths.length > 0 && paths.every(path =>
+        /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
+        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
+}
+
+function matchesGlob(path: string, glob: string): boolean {
+    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
+        .replace(/\*\*/gu, '\u0000')
+        .replace(/\*/gu, '[^/]*')
+        .replace(/\?/gu, '[^/]')
+        .split('\u0000').join('.*');
+    return new RegExp(`^${escaped}$`, 'u').test(path);
+}
+
+/** Canonical checks gate shared by approval and read-only status. */
+export function decideApprovalChecks(policy: PullRequestApprovalPolicy, evidence: ApprovalEvidence): ApprovalDecision | undefined {
+    const stop = (status: ApprovalDecisionStatus, code: string, detail: string): ApprovalDecision => ({ status, code, detail });
     const selected = [...policy.testChecks];
     const required = new Set([...evidence.requiredChecks, ...selected.map(check => check.name)]);
     for (const name of required) {
@@ -138,6 +168,12 @@ export function decidePullRequestApproval(
         if (latest.status !== 'completed') return stop('pending', 'check-pending', `Waiting for check: ${name}.`);
         if (latest.conclusion !== 'success') return stop('blocked', 'check-failed', `Check ${name} did not succeed.`);
     }
+    return undefined;
+}
+
+/** Canonical bugbot gate shared by approval and read-only status. */
+export function decideApprovalBugbot(policy: PullRequestApprovalPolicy, evidence: ApprovalEvidence): ApprovalDecision | undefined {
+    const stop = (status: ApprovalDecisionStatus, code: string, detail: string): ApprovalDecision => ({ status, code, detail });
     const bugbot = evidence.bugbot;
     if (!bugbot || bugbot.headSha !== evidence.headSha) return stop('pending', 'bugbot-missing', 'Waiting for a complete Bugbot review of this head.');
     if (bugbot.outcome !== 'complete' || bugbot.coverage !== 'complete') {
@@ -147,6 +183,12 @@ export function decidePullRequestApproval(
         || (!policy.allowHumanDismissed && bugbot.dismissed > 0)) {
         return stop('blocked', 'bugbot-findings', 'Bugbot has unresolved, unknown, or policy-blocked dismissed findings.');
     }
+    return undefined;
+}
+
+/** Canonical coverage gate shared by approval and read-only status. */
+export function decideApprovalCoverage(policy: PullRequestApprovalPolicy, evidence: ApprovalEvidence): ApprovalDecision | undefined {
+    const stop = (status: ApprovalDecisionStatus, code: string, detail: string): ApprovalDecision => ({ status, code, detail });
     // A complete, explicitly classified documentation-only diff has no
     // measurable executable lines. It still needs every declared CI and
     // Bugbot gate above; a zero-line code diff is never exempt.
@@ -162,6 +204,12 @@ export function decidePullRequestApproval(
             return stop('blocked', 'coverage-low', 'Diff coverage is below the configured threshold.');
         }
     }
+    return undefined;
+}
+
+/** Canonical reviews gate shared by approval and read-only status. */
+export function decideApprovalReviews(policy: PullRequestApprovalPolicy, evidence: ApprovalEvidence): ApprovalDecision | undefined {
+    const stop = (status: ApprovalDecisionStatus, code: string, detail: string): ApprovalDecision => ({ status, code, detail });
     if (!evidence.reviewHistoryComplete) return stop('blocked', 'reviews-unavailable', 'Native review history is incomplete.');
     const botReviewsForHead = evidence.reviews.filter(review => review.userId === evidence.botUserId && review.commitId === evidence.headSha);
     if (botReviewsForHead.some(review => review.state === 'DISMISSED')) {
@@ -181,21 +229,5 @@ export function decidePullRequestApproval(
         review.userId !== evidence.botUserId && review.state === 'APPROVED' && review.commitId === evidence.headSha)) {
         return stop('recommend', 'human-approved', 'A human has already approved this revision.');
     }
-    if (policy.mode === 'recommend') return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
-    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
-}
-
-export function isDocumentationOnlyDiff(paths: readonly string[]): boolean {
-    return paths.length > 0 && paths.every(path =>
-        /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
-        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
-}
-
-function matchesGlob(path: string, glob: string): boolean {
-    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
-        .replace(/\*\*/gu, '\u0000')
-        .replace(/\*/gu, '[^/]*')
-        .replace(/\?/gu, '[^/]')
-        .split('\u0000').join('.*');
-    return new RegExp(`^${escaped}$`, 'u').test(path);
+    return undefined;
 }

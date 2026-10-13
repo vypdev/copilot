@@ -1,3 +1,7 @@
+import { renderSddDiff } from '../policies/sdd_diff_presentation_policy';
+import { resolveSddDiffCatalog } from '../policies/sdd_diff_message_catalog';
+import { readCopilotDoctor } from './read_copilot_doctor_workflow';
+import { readCopilotHistory } from './read_copilot_history_workflow';
 import { Result } from '../../data/model/result';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
@@ -25,8 +29,23 @@ export async function runExplicitCommentCommand(
     command: ParsedCopilotCommand,
     actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[] | undefined> {
+    if (command.name === 'history') return [await readCopilotHistory({
+        owner: param.bugbot.review.repository.owner, repository: param.bugbot.review.repository.name,
+        target: { kind: param.bugbot.review.target.isPullRequest ? 'pr' : 'issue', number: param.language.issueNumber },
+        queryId: param.language.commentId, botLogin: param.trustedBotLogin, locale: param.language.locale, generalConversation: false,
+    })];
     if (command.name === 'help') return runHelpCommand(param, options);
-    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
+    if (command.name === 'sdd-diff') {
+        const snapshot = param.sddDiff && options.sddDiffQueryPort
+            ? await options.sddDiffQueryPort.read(param.sddDiff) : { state: 'unavailable' as const };
+        const catalog = resolveSddDiffCatalog(param.language.locale);
+        const markdown = renderSddDiff(snapshot, { owner: param.status.owner, repository: param.status.repository,
+            serverOrigin: options.sddDiffQueryPort?.serverOrigin ?? 'https://github.com' }, catalog);
+        return [new Result({ id: `${options.taskId}.SddDiff`, success: true, executed: true, stepFormat: 'markdown',
+            steps: [markdown], payload: Object.freeze({ publication: Object.freeze({ kind: 'sdd-diff', markdown, locale: catalog.locale }) }) })];
+    }
+    if (command.name === 'doctor') return [await readCopilotDoctor(param, options.taskId, options.doctorReadPorts)];
+    if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts, options.sddQueryPort, options.nativeStatusReadPort)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
@@ -98,7 +117,8 @@ async function runRememberCommand(
         options.bugbotGitMutationPort,
     );
     const committed = commitResults.at(-1);
-    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
+    const commitOutcome = (committed?.payload as { commitOutcome?: unknown } | undefined)?.commitOutcome;
+    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && commitOutcome === 'changes-pushed'
         ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
 }
 

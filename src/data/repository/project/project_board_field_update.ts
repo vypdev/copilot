@@ -251,7 +251,27 @@ async function findProjectItem(
         const item = page.nodes.find((candidate) => candidate.id === itemId);
         if (item) return item;
     }
-    const message = `Project item ${itemId} was not found while updating field '${fieldName}'.`;
-    logError(message);
-    throw new Error(message);
+    const result = await client.graphql<{
+        node?: { id?: string; __typename?: string; project?: { id?: string }; fieldValueByName?: { optionId?: string } | null } | null;
+    }>(`query($itemId: ID!, $fieldName: String!) {
+        node(id: $itemId) {
+            id __typename
+            ... on ProjectV2Item {
+                project { id }
+                fieldValueByName(name: $fieldName) {
+                    ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                }
+            }
+        }
+    }`, { itemId, fieldName });
+    const item = result.node;
+    if (item?.id !== itemId || item.__typename !== 'ProjectV2Item' || item.project?.id !== project.id
+        || !Object.prototype.hasOwnProperty.call(item, 'fieldValueByName')) {
+        throw new Error(`Project item ${itemId} has no verified field evidence in project ${project.id}.`);
+    }
+    const value = item.fieldValueByName;
+    if (value !== null && (typeof value?.optionId !== 'string' || !value.optionId.trim())) {
+        throw new Error('The direct Project item single-select value is malformed.');
+    }
+    return { id: itemId, fieldValues: { nodes: value === null ? [] : [{ field: { name: fieldName }, optionId: value.optionId }] } };
 }

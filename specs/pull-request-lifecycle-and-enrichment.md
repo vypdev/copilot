@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-15
-- Last verified: 2026-10-11 on `master`; PR #460 exposed a missing draft-to-ready review trigger during dogfooding
+- Last verified: 2026-10-12; live PR #468 exposed deterministic commands being presented as model activity during dogfooding
 - Owners: Copilot maintainers
 - Scope: PR-to-issue/project linkage, assignments, metadata, size/progress, description ownership, review integration, and merge closure
 - Related issues/PRs: managed issue lifecycle and Bugbot SDDs; live UX evidence from [PR #378](https://github.com/vypdev/copilot/pull/378), [PR #379](https://github.com/vypdev/copilot/pull/379), [PR #393](https://github.com/vypdev/copilot/pull/393), and [PR #394](https://github.com/vypdev/copilot/pull/394)
@@ -393,14 +393,14 @@ not altered.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Event/description/label policy | 43 | action matrix, optional/self linkage, modes, markers, bounds |
+| Event/description/label policy | 64 | action matrix, optional/self linkage, modes, markers, bounds; 21 deterministic-command, sync-option, reviewer-only, description activation and unsupported-route activity cases |
 | Orchestration/idempotency | 26 | order, unlinked route, replay, partial, merge closure |
 | Provider/agent adapters | 14 | link/project/reviewer/body/errors |
 | Workflow/config contracts | 17 | event exclusion, identity, forks, permissions, inputs |
 | PR UX/localization/sanitization | 17 | concise body/status/links/template/output, evidence-backed optional notes |
-| Integration/security/greenfield cutover | 12 | PR→issue close, mode changes, stale head |
+| Integration/security/greenfield cutover | 14 | PR→issue close, mode changes, stale head; two complete help/status dispatch cases without activity mutations |
 | Complete diff evidence | 12 | supplied evidence, partial/unavailable coverage, missing patch, byte budget, file budget |
-| **Total** | **141** | no double counting |
+| **Total** | **164** | no double counting |
 
 Seven draft-to-ready regression cases cover authorized and unauthorized review,
 semantic failure, reviewer-only activation, activity availability, reviewing
@@ -491,7 +491,7 @@ body mutation that produces no follow-up PR workflow.
 
 ## 19. Definition of Done
 
-- [ ] The 141-case budget, coverage, architecture, and workflow gates pass.
+- [ ] The 164-case budget, coverage, architecture, and workflow gates pass.
 - [ ] Event order, replay, partial state, stale head, and merge closure are proven.
 - [ ] All body modes preserve their documented ownership without compatibility-only paths.
 - [ ] UI states, accessibility, localization, sanitization, and noise pass.
@@ -575,3 +575,96 @@ PR lifecycle execution; offline checks cannot establish live completion.
 On PR #467 head `4122bd6c8cf65542aea8ebce0e09ec8bb8b2641a`, native run `38173442245` completed review with zero new findings and resolved the last open finding, but the overall job failed with `workflow.stale`. The description adapter retained 32 changed files and GitHub omitted the text patch for `build/cli/index.js` (2,687 changed lines). This is unavailable description evidence, not proof that the PR head moved or that review failed.
 
 Automatic generation now skips incomplete inventories and missing changed-text patches without creating an application error. It retains the human body and performs no model call or body write. Explicit authorized generation still rejects partial, unavailable and missing-patch evidence with the existing safe error. No partial evidence is described as complete, and the fixed file/character limits remain unchanged. Three new explicit-request contracts retain that distinction; three existing automatic cases first reproduced the failure, then passed with omission semantics. The extension budget is 141 distinct cases. Focused verification passed 38 cases; full local verification passed 565 suites and 7,468 tests with 35 configured skips (7,503 total), with unchanged coverage budgets, typecheck and lint. Live lifecycle verification remains required after runtime publication.
+
+### Dogfooding correction: truthful agent activity (2026-10-12)
+
+Live `/copilot status` on PR #468, source comment `6114748178` and run
+`38181729210`, added and removed `state:ai-processing` without executing a
+model. The query correctly withheld stale Bugbot evidence, but its temporary
+label falsely suggested analysis. Activity policy now uses the canonical
+command parser before considering configured agents.
+
+```text
+comment -> invalid command or help/status/dismiss/remember: no model activity
+        -> sync --dry-run/--no-agent/invalid options: no model activity
+        -> ordinary sync or analysis/review: track available agent activity
+```
+
+Text equivalent: deterministic commands and deterministic sync paths do not
+start or finish an agent activity mutation. Agent-capable comments retain the
+existing label lifecycle, including when only the reviewer is configured.
+This changes no command authorization, file mutation, verification, publication
+or model-selection rule; no new configuration or permission is introduced.
+
+Twenty-three distinct new cases are owned by this SDD: ten command/transport pairs,
+one missing required argument, three deterministic sync options, ordinary
+conflict-fixer sync, fresh findings, reviewer-only configuration, three
+description-mode/configuration states, an unsupported runtime route, and two
+full help/status dispatch contracts. Seventeen of the first nineteen cases
+failed against the prior implementation. The first focused run passed 61
+cases; final focused validation passes all 65 cases, including four additional
+activation/boundary cases. The activity policy reaches 100% lines, statements,
+branches and functions with an explicit 100% focused coverage threshold. The current minimum is 141 + 23 = 164, distributed in section 14. Full
+repository validation of the unchanged runtime passed 566 suites, 7,521 tests
+and 35 configured skips, with all official budgets and the 308/350 setup ledger
+(42 explicitly open). Live post-publication evidence remains required.
+
+Abrupt process or runner termination can prevent the existing `finally`
+cleanup. A retained activity label alone cannot prove a running agent. Inspect
+the correlated Actions job before recovering that label; a read-only status
+command does not perform implicit recovery writes. This observed limitation
+does not authorize clearing another active run's label or weakening a sync
+guard. Native History interruption `38179714921` retained its prior remote
+head without a success receipt or push.
+
+## 21. Live Project item visibility recovery (2026-10-13)
+
+Live PR [#485](https://github.com/vypdev/copilot/pull/485) was added to the
+Project and its Status initialized from the returned item, but subsequent
+priority and concurrent commit-size reads could not see that same PR in the
+board listing. Runs 38402185354 and 38402175824 failed on attempt 1 and succeeded
+on exact replay. Membership was retained; these failures did not invalidate the
+completed code review or imply a different PR base.
+
+The adapter MUST preserve the existing bounded board lookup. Only complete
+absence triggers an independent read of the exact content node's Project
+memberships, at most two pages of 100 items. Identity, content type, Project and
+item ID MUST match before a recovered ID is accepted. Exhausted pagination,
+malformed evidence and permission errors MUST remain failures rather than
+successful absence. A complete empty membership permits the existing missing
+item outcome. No retry timer, new permission, persistent cache or public input
+is added; these read bounds are fixed.
+
+```text
+board lookup -> exact content memberships (only if absent) -> verified item ID
+field list -> direct verified item/field (only if absent) -> unchanged or update
+```
+
+A field update whose known item is absent from the board listing MUST read that
+exact item once, verify its Project and native type, and read the named field.
+An explicit null means unset; missing/malformed field evidence blocks writes.
+An equal option remains a quiet no-op on replay. Retained project membership and
+other completed mutations are never undone to repair visibility.
+
+The existing semantic error/result UI remains: completed linkage stays visible;
+a persistent unavailable item reports failed enrichment and asks the operator to
+inspect/retry the run. Recovery adds no conversation comment or model call, and
+works identically with either locale. Recommended setup/Projects permissions
+remain unchanged. Rollback restores previous lookup behavior; no data migration
+or cleanup is required.
+
+An additional **22 adapter/security cases**, separate from the existing 164
+budget, cover Issue/PR recovery, second-page membership, truthful absence,
+malformed/foreign identity, exhausted reads, permission denial, direct field
+recovery, matching-value replay and six no-write evidence failures. Thirteen
+cases reproduced the old missing-item behavior; nine were negative controls.
+Global and changed-module gates remain in force. The tests map each MUST above
+to `project_board_visibility_recovery.test.ts`; user/operator documentation is
+`docs/issues/assignees-and-projects.mdx`. Live acceptance requires opening the
+managed correction PR, confirming Project/priority/size and current checks,
+then replaying without duplicate membership or reset Status. Unknown provider
+propagation timing is not asserted as a guaranteed consistency SLA.
+
+Primary schema references: [Issue projectItems](https://docs.github.com/en/graphql/reference/issues),
+[PullRequest projectItems](https://docs.github.com/en/graphql/reference/pulls),
+and [ProjectV2Item](https://docs.github.com/en/graphql/reference/projects).

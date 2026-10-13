@@ -44,6 +44,7 @@ const mockWaitForPreviousWorkflowRunsInvoke = jest.fn();
 const mockAgentActivityStart = jest.fn();
 const mockAgentActivityFinish = jest.fn();
 const mockLifecycleStateInvoke = jest.fn();
+const mockClosedIssueRetireInvoke = jest.fn();
 
 function unresolvedSetupResult(context: {
   tokenUser?: string;
@@ -88,6 +89,7 @@ function configuredSetupResult(
 }
 
 jest.mock('../../infrastructure/composition/main_run_route_composition_root', () => ({
+  createClosedIssueRetirementUseCase: jest.fn(() => ({ taskId: 'retire', invoke: mockClosedIssueRetireInvoke })),
   createMainRunRouteCompositionRoot: jest.fn().mockImplementation(() => ({
     'single-action': mockSingleActionInvoke,
     'issue-comment': mockIssueCommentInvoke,
@@ -791,6 +793,21 @@ describe('mainRun', () => {
     expect(execution.labels.currentIssueLabels).toEqual(['state:ready']);
   });
 
+  it.each(['help', 'status'])('dispatches deterministic %s without an agent activity mutation', async command => {
+    const execution = mockExecution({
+      eventName: 'issue_comment', isIssue: true,
+      issue: { isIssueComment: true, isIssue: false, commentBody: `/copilot ${command}` },
+      ai: {
+        getAgentConfiguration: jest.fn(() => ({ model: 'model' })),
+        getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
+      },
+    });
+    await runMainWithActivity(execution);
+    expect(mockIssueCommentInvoke).toHaveBeenCalledWith(execution);
+    expect(mockAgentActivityStart).not.toHaveBeenCalled();
+    expect(mockAgentActivityFinish).not.toHaveBeenCalled();
+  });
+
   it('returns a semantic failure when the action route is not handled', async () => {
     const execution = mockExecution({
       isIssue: false,
@@ -859,5 +876,52 @@ describe('mainRun', () => {
     const logCalls = logger.logError.mock.calls.flat().map(String).join('\n');
     expect(logCalls).toContain('Workflow queue check failed; sequential execution was not bypassed.');
     for (const marker of markers) expect(logCalls).not.toContain(marker);
+  });
+});
+
+
+describe('terminal issue lifecycle route', () => {
+  afterAll(() => {
+    restoreEnvironmentVariable('GITHUB_RUN_ID', originalRunId); restoreEnvironmentVariable('GITHUB_WORKFLOW', originalWorkflow);
+    restoreEnvironmentVariable('GITHUB_WORKFLOW_REF', originalWorkflowRef); restoreEnvironmentVariable('GITHUB_ACTIONS', originalGithubActions);
+  });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    delete process.env.GITHUB_RUN_ID; delete process.env.GITHUB_WORKFLOW;
+    delete process.env.GITHUB_WORKFLOW_REF; delete process.env.GITHUB_ACTIONS;
+    mockSetupExecutionInvoke.mockImplementation(async context => unresolvedSetupResult(context));
+  });
+  it.each([true, false])('retires closed work without agent/lifecycle/open-work effects, including failure (%s)', async success => {
+    const result = new Result({ id: 'retire', success, executed: success });
+    mockClosedIssueRetireInvoke.mockResolvedValue([result]);
+    const prepare = jest.fn();
+    const execution = mockExecution({ eventName: 'issues', isIssue: true, inputs: { action: 'closed', issue: { number: 42, state: 'closed' } },
+      locale: { issue: 'en-US' } });
+    const actual = await productionMainRun(execution, projectBoardCommandPort, latestTagQueryPort, 'github-workflow',
+      { invoke: mockLifecycleStateInvoke } as never, { start: mockAgentActivityStart, finish: mockAgentActivityFinish } as never, prepare);
+    expect(actual).toEqual([result]);
+    expect(mockClosedIssueRetireInvoke).toHaveBeenCalledWith({ issueNumber: 42, locale: 'en-US', trustedBotLogin: 'user' });
+    expect(prepare).not.toHaveBeenCalled(); expect(mockLifecycleStateInvoke).not.toHaveBeenCalled();
+    expect(mockAgentActivityStart).not.toHaveBeenCalled(); expect(mockAgentActivityFinish).not.toHaveBeenCalled();
+    expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled(); expect(mockIssueInvoke).not.toHaveBeenCalled();
+  });
+  it.each(['edited', 'labeled'])('ignores a closed issue %s callback without retirement or open-work effects', async action => {
+    mockClosedIssueRetireInvoke.mockResolvedValue([]);
+    const prepare = jest.fn();
+    const execution = mockExecution({ eventName: 'issues', isIssue: true, inputs: { action, issue: { number: 42, state: 'closed' } },
+      locale: { issue: 'en-US' } });
+    const actual = await productionMainRun(execution, projectBoardCommandPort, latestTagQueryPort, 'github-workflow',
+      { invoke: mockLifecycleStateInvoke } as never, { start: mockAgentActivityStart, finish: mockAgentActivityFinish } as never, prepare);
+    expect(actual).toEqual([]);
+    expect(mockClosedIssueRetireInvoke).not.toHaveBeenCalled(); expect(prepare).not.toHaveBeenCalled();
+    expect(mockLifecycleStateInvoke).not.toHaveBeenCalled(); expect(mockAgentActivityStart).not.toHaveBeenCalled();
+    expect(mockAgentActivityFinish).not.toHaveBeenCalled(); expect(createMainRunRouteCompositionRoot).not.toHaveBeenCalled();
+    expect(mockIssueInvoke).not.toHaveBeenCalled();
+  });
+  it('can retire a closed issue even when current workflow labels are unmanaged', async () => {
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(context, { status: 'unmanaged' }));
+    mockClosedIssueRetireInvoke.mockResolvedValue([]);
+    await runMain(mockExecution({ eventName: 'issues', isIssue: true, inputs: { action: 'closed', issue: { number: 42, state: 'closed' } }, locale: { issue: 'en-US' } }));
+    expect(mockClosedIssueRetireInvoke).toHaveBeenCalledTimes(1); expect(mockIssueInvoke).not.toHaveBeenCalled();
   });
 });

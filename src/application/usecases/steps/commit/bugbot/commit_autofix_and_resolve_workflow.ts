@@ -12,6 +12,7 @@ export async function commitAutofixAndResolveFindings(
   payload: NonNullable<ReturnType<typeof getBugbotFixIntentPayload>>,
   autofixResults: Result[],
   gitCommitPort: BugbotGitMutationPort,
+  onCompleted?: (outcome: 'changes-pushed' | 'no-changes') => void,
 ): Promise<Error[]> {
   const lastAutofix = autofixResults.at(-1);
   if (!lastAutofix?.success) {
@@ -37,6 +38,7 @@ export async function commitAutofixAndResolveFindings(
     logInfo(`Bugbot autofix commit failed: ${message}`);
     return [new Error(message)];
   }
+  onCompleted?.(commitResult.committed ? 'changes-pushed' : 'no-changes');
   if (commitResult.committed && payload.context) {
     logInfo(
       `Committed autofix for ${payload.targetFindingIds.length} ${payload.targetFindingIds.length === 1 ? 'finding' : 'findings'}. `

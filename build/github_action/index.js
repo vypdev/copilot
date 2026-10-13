@@ -36447,33 +36447,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ 98143:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveJsonInput = resolveJsonInput;
-exports.resolveActionInput = resolveActionInput;
-/**
- * Resolves one action input without coupling the caller to a specific lifecycle.
- * Explicit runtime parameters always override YAML/environment defaults.
- */
-function resolveJsonInput(inputVarsJson, key) {
-    if (!inputVarsJson) {
-        return undefined;
-    }
-    const inputVars = JSON.parse(inputVarsJson);
-    const value = inputVars[`INPUT_${key.toUpperCase()}`];
-    return value === undefined ? undefined : String(value);
-}
-function resolveActionInput(additionalParams, actionInputs, key) {
-    return (additionalParams[key] ?? actionInputs[key]);
-}
-
-
-/***/ }),
-
 /***/ 81248:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -36611,6 +36584,15 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
     (0, setup_execution_boundary_1.applySetupExecutionResult)(execution, await setupExecution.invoke((0, setup_execution_boundary_1.projectSetupExecutionContext)(execution)));
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
+    if (!execution.isSingleAction && execution.isIssue && execution.eventName === 'issues'
+        && execution.inputs?.issue?.state === 'closed') {
+        // Later edits and label callbacks must not restart closed work or retry
+        // lifecycle cleanup. Only the native close action retires existing cards.
+        if (execution.inputs.action !== 'closed')
+            return [];
+        return (0, main_run_route_composition_root_1.createClosedIssueRetirementUseCase)({ owner: repository.owner, repository: repository.repo, token: execution.tokens.token })
+            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser });
+    }
     const runtimeDecision = (0, issue_workflow_runtime_policy_1.decideIssueWorkflowRuntime)({
         admission: execution.currentIssueWorkflowAdmission,
         unlinkedPullRequest: execution.isPullRequest && execution.issueNumber < 1,
@@ -36913,6 +36895,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runGitHubAction = runGitHubAction;
 exports.runGitHubActionEntry = runGitHubActionEntry;
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const core = __importStar(__nccwpck_require__(75855));
 const github = __importStar(__nccwpck_require__(78227));
 const configuration_handler_1 = __nccwpck_require__(40188);
@@ -36983,7 +36966,10 @@ async function runGitHubAction() {
         repositoryId: github.context.payload.repository?.id,
         pullRequest: eventInputs.pull_request,
     });
-    if (admission.decision === 'discard' && !botAnalysisOnly) {
+    const botClosedIssueOnly = !singleAction.enabledSingleAction && eventInputs.eventName === 'issues'
+        && eventInputs.action === 'closed' && eventInputs.issue?.state === 'closed'
+        && typeof eventInputs.issue.number === 'number' && Number.isSafeInteger(eventInputs.issue.number) && eventInputs.issue.number > 0;
+    if (admission.decision === 'discard' && !botAnalysisOnly && !botClosedIssueOnly) {
         (0, logger_1.logInfo)('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }
@@ -37075,7 +37061,7 @@ async function runGitHubAction() {
             ...repositoryBinding,
             issueNumber: context.issueNumber,
         }, context),
-    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding));
+    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(repositoryBinding)));
 }
 /**
  * Runs the action entrypoint without forcing a successful process exit.
@@ -37231,6 +37217,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finishGithubAction = finishGithubAction;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const core = __importStar(__nccwpck_require__(75855));
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const result_1 = __nccwpck_require__(73817);
@@ -37260,7 +37247,11 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     const dryRun = results.some((result) => (0, result_1.getResultPayload)(result.payload)?.dryRun === true);
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        const publicationOutcome = await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, catalogResolver, publicationSourceQuery).invoke((0, publish_resume_workflow_1.projectPublishResultContext)(execution));
+        const publicationContext = (0, publish_resume_workflow_1.projectPublishResultContext)(execution);
+        const requestRead = publicationContext.requestSource ? (0, reply_request_composition_root_1.createReplyRequestReadPort)({
+            owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
+        }) : undefined;
+        const publicationOutcome = await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, catalogResolver, publicationSourceQuery, requestRead).invoke(publicationContext);
         if (publicationOutcome)
             results.push(publicationOutcome);
     }
@@ -37571,65 +37562,14 @@ function getCommitPrefixBuilder(getInput) {
 /***/ }),
 
 /***/ 8824:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getGithubActionInput = getGithubActionInput;
-const core = __importStar(__nccwpck_require__(75855));
-const action_input_source_1 = __nccwpck_require__(98143);
-const logger_1 = __nccwpck_require__(91151);
-const application_error_1 = __nccwpck_require__(75999);
-function getGithubActionInput(key, options) {
-    let value;
-    try {
-        const inputVarsJson = process.env.INPUT_VARS_JSON;
-        value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
-    }
-    catch (error) {
-        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
-    }
-    value = (value ?? core.getInput(key, options)).trim();
-    if (options?.required && value.length === 0)
-        throw new Error(`Input required and not supplied: ${key}`);
-    if (key.toLowerCase() === 'token' && value)
-        core.setSecret(value);
-    return value;
-}
+exports.getGithubActionInput = void 0;
+var github_action_input_1 = __nccwpck_require__(57581);
+Object.defineProperty(exports, "getGithubActionInput", ({ enumerable: true, get: function () { return github_action_input_1.getGithubActionInput; } }));
 
 
 /***/ }),
@@ -37979,18 +37919,14 @@ function parseStrictInteger(value) {
 /***/ }),
 
 /***/ 68841:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDelimitedValues = parseDelimitedValues;
-function parseDelimitedValues(value) {
-    return String(value ?? '')
-        .split(',')
-        .map(item => item.trim())
-        .filter(item => item.length > 0);
-}
+exports.parseDelimitedValues = void 0;
+var input_values_policy_1 = __nccwpck_require__(83592);
+Object.defineProperty(exports, "parseDelimitedValues", ({ enumerable: true, get: function () { return input_values_policy_1.parseDelimitedValues; } }));
 
 
 /***/ }),
@@ -39402,6 +39338,9 @@ function replaceAgentActivityLabel(currentLabels, activityLabel, active) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
 const agent_1 = __nccwpck_require__(89040);
+const copilot_command_1 = __nccwpck_require__(11771);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+const DETERMINISTIC_COMMENT_COMMANDS = new Set(['help', 'status', 'sdd-diff', 'doctor', 'history', 'dismiss', 'remember']);
 /** Decides whether a route can invoke an agent for its current event. */
 function shouldTrackAgentActivity(execution, route) {
     if (!hasTarget(execution))
@@ -39412,10 +39351,11 @@ function shouldTrackAgentActivity(execution, route) {
                 && isAgentReady(execution, 'planner');
         case 'issue-comment':
         case 'pull-request-review-comment':
-            return hasComment(execution)
+            return hasAgentCapableComment(execution)
                 && (isAgentReady(execution, 'planner')
                     || isAgentReady(execution, 'findings')
-                    || isAgentReady(execution, 'fixer'));
+                    || isAgentReady(execution, 'fixer')
+                    || isAgentReady(execution, 'reviewer'));
         case 'pull-request':
             if (execution.pullRequest.action === 'ready_for_review')
                 return isAgentReady(execution, 'reviewer');
@@ -39443,8 +39383,22 @@ function isAgentBackedSingleAction(execution) {
 function isAgentReady(execution, task) {
     return (0, agent_1.isAgentConfigurationReady)(execution.ai.getAgentConfiguration(task));
 }
-function hasComment(execution) {
-    return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
+function hasAgentCapableComment(execution) {
+    const body = execution.issue.commentBody || execution.pullRequest.commentBody || '';
+    if (!body.trim())
+        return false;
+    const parsed = (0, copilot_command_1.parseCopilotCommand)(body);
+    if (parsed.kind === 'invalid')
+        return false;
+    if (parsed.kind === 'command') {
+        if (DETERMINISTIC_COMMENT_COMMANDS.has(parsed.command.name))
+            return false;
+        if (parsed.command.name === 'sync-branch') {
+            const sync = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(parsed.command.arguments);
+            return sync.valid && !sync.options.dryRun && sync.options.useAgent;
+        }
+    }
+    return true;
 }
 function hasTarget(execution) {
     if (['pull_request', 'pull_request_review', 'pull_request_review_comment', 'check_suite', 'workflow_run'].includes(execution.eventName)) {
@@ -40572,6 +40526,11 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'workspace-changes-rejected': Object.freeze({
+        impact: 'The changes were rejected during workspace verification.',
+        action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
+        retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -40634,6 +40593,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'workspace-changes-rejected': Object.freeze({
+        impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
+        action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
+        retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
         action: 'Reintenta la preparación del SDD con la plantilla canónica y los criterios de aceptación explícitos.',
@@ -40966,6 +40930,9 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.heading',
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
+    'branchSync.closed.heading',
+    'branchSync.closed.status',
+    'branchSync.closed.history',
     'branchSync.transition.required',
     'branchSync.transition.requiredCompact',
     'branchSync.transition.openStatus',
@@ -40987,6 +40954,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Branch synchronized',
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+    'branchSync.closed.heading': 'Issue closed: synchronization recommendation retired',
+    'branchSync.closed.status': 'No branch synchronization is required for this closed issue.',
+    'branchSync.closed.history': 'The previous recommendation is historical. Issue closure does not certify that the branches are synchronized.',
     'branchSync.transition.required': 'Branch synchronization needs attention: {workingBranch} is behind {parentBranch}.',
     'branchSync.transition.requiredCompact': 'Branch synchronization needs attention.',
     'branchSync.transition.openStatus': 'Open the current status',
@@ -41010,6 +40980,9 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Rama sincronizada',
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+    'branchSync.closed.heading': 'Issue cerrada: recomendación de sincronización retirada',
+    'branchSync.closed.status': 'Esta issue cerrada no requiere sincronizar su rama.',
+    'branchSync.closed.history': 'La recomendación anterior es histórica. El cierre de la issue no certifica que las ramas estén sincronizadas.',
     'branchSync.transition.required': 'La sincronización de la rama necesita atención: {workingBranch} está por detrás de {parentBranch}.',
     'branchSync.transition.requiredCompact': 'La sincronización de la rama necesita atención.',
     'branchSync.transition.openStatus': 'Abrir el estado actual',
@@ -41058,6 +41031,7 @@ exports.buildBranchSyncStatusCommentUrl = buildBranchSyncStatusCommentUrl;
 exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
+exports.buildRetiredBranchSyncComment = buildRetiredBranchSyncComment;
 const github_user_policy_1 = __nccwpck_require__(84403);
 const git_object_id_1 = __nccwpck_require__(88623);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -41197,6 +41171,16 @@ function safeLinkLabel(value) {
         .replace(/[\r\n()[\]<>]/gu, '')
         .slice(0, 40)
         .trim() || 'Open notification';
+}
+/** Preserve the exact owned card identity without claiming Git alignment. */
+function buildRetiredBranchSyncComment(identity, messages) {
+    return `${(0, publication_identity_policy_1.buildPublicationMarker)({ identity, sourceVersion: 'closed:issue', digest: (0, publication_identity_policy_1.createSemanticDigest)({ state: 'closed', identity }) })}
+
+## ${messages.message('branchSync.closed.heading')}
+
+${messages.message('branchSync.closed.status')}
+
+${messages.message('branchSync.closed.history')}`;
 }
 
 
@@ -43072,12 +43056,13 @@ function neutralizeQuotedOriginal(value) {
 /***/ }),
 
 /***/ 65388:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldPersistConfiguration = shouldPersistConfiguration;
+const copilot_command_1 = __nccwpck_require__(11771);
 /**
  * Decides whether the completion phase has persistent execution state to save.
  *
@@ -43088,8 +43073,17 @@ exports.shouldPersistConfiguration = shouldPersistConfiguration;
  * fingerprint and latest recommendation in the hidden issue configuration.
  */
 function shouldPersistConfiguration(execution) {
-    if (!execution.isSingleAction)
+    if (!execution.isSingleAction) {
+        if (execution.eventName === 'issues' && execution.inputs?.issue?.state === 'closed')
+            return false;
+        if (['issue_comment', 'pull_request_review_comment'].includes(execution.eventName ?? '')) {
+            const body = execution.inputs?.pull_request_review_comment?.body ?? execution.inputs?.comment?.body;
+            const command = (0, copilot_command_1.parseCopilotCommand)(typeof body === 'string' ? body : '');
+            if (command.kind === 'command' && command.command.arguments.length === 0 && ['help', 'status', 'doctor', 'history', 'sdd-diff'].includes(command.command.name))
+                return false;
+        }
         return true;
+    }
     return execution.singleAction.isRecommendStepsAction;
 }
 
@@ -43214,6 +43208,169 @@ function safeEvidenceTitle(value) {
 
 /***/ }),
 
+/***/ 14335:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HISTORY_UNSUPPORTED_SURFACE = exports.HISTORY_UNAVAILABLE = void 0;
+exports.selectCopilotHistory = selectCopilotHistory;
+const copilot_command_1 = __nccwpck_require__(11771);
+const copilot_operation_1 = __nccwpck_require__(40221);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+exports.HISTORY_UNAVAILABLE = Object.freeze({ kind: 'history-command', state: 'unavailable', rows: Object.freeze([]) });
+exports.HISTORY_UNSUPPORTED_SURFACE = Object.freeze({ kind: 'history-command', state: 'unsupported-surface', rows: Object.freeze([]) });
+const KEYS = Object.freeze({
+    'sync-branch': ['branch-sync-result', 'application-error'], remember: ['state-command-result', 'application-error'],
+    dismiss: ['state-command-result', 'application-error'], implement: ['implementation-result', 'application-error'],
+    fix: ['fix-result', 'application-error'],
+});
+function selectCopilotHistory(input) {
+    if (!/^(?:issue|pr):[1-9]\d*$/u.test(input.target) || !positive(Number(input.target.split(':')[1])) || !positive(input.queryId)
+        || !/^[A-Za-z0-9-]{1,100}(?:\[bot\])?$/u.test(input.botLogin) || input.comments.length > 1000)
+        return exports.HISTORY_UNAVAILABLE;
+    const seen = new Set();
+    if (input.comments.some(comment => !positive(comment.id) || seen.has(comment.id) || !seen.add(comment.id)))
+        return exports.HISTORY_UNAVAILABLE;
+    if (!input.complete && input.comments.length === 0)
+        return exports.HISTORY_UNAVAILABLE;
+    const rows = input.comments.flatMap(source => {
+        if (source.id >= input.queryId || source.automated || !source.author || (0, github_user_policy_1.githubUsersMatch)(source.author, input.botLogin))
+            return [];
+        const parsed = (0, copilot_command_1.parseCopilotCommand)(source.body);
+        if (parsed.kind !== 'command' || !(0, copilot_operation_1.isHistoryCommand)(parsed.command.name))
+            return [];
+        const command = parsed.command.name;
+        const receipts = input.comments.flatMap(comment => {
+            if (comment.id <= source.id || !(0, github_user_policy_1.githubUsersMatch)(comment.author, input.botLogin) || !comment.body)
+                return [];
+            const marker = (0, publication_identity_policy_1.parsePublicationReplyMarker)(comment.body);
+            if (!marker || marker.target !== input.target || marker.correlationId !== `comment:${source.id}`
+                || !KEYS[command].includes(marker.messageKey)
+                || !comment.body.startsWith((0, publication_identity_policy_1.buildPublicationReplyMarker)(marker))
+                || comment.body.split('<!-- copilot:reply').length !== 2)
+                return [];
+            const evidence = (0, copilot_operation_1.readOperationEvidence)(comment.body);
+            const compatible = marker.messageKey === 'application-error'
+                ? ['blocked', 'partial', 'failed', 'unavailable'].includes(evidence?.outcome ?? '')
+                : ['applied', 'already-current', 'not-applied'].includes(evidence?.outcome ?? '');
+            return [{ id: comment.id, evidence: compatible ? evidence : undefined, legacy: !comment.body.includes('<!-- copilot:operation:') }];
+        });
+        // A malformed or legacy receipt cannot establish the effect; disagreeing receipts cannot be selected.
+        const qualified = receipts.filter(receipt => receipt.evidence?.target === input.target
+            && receipt.evidence.correlationId === `comment:${source.id}` && receipt.evidence.command === command);
+        const evidence = qualified[0]?.evidence;
+        const agreement = evidence && qualified.length === receipts.length
+            && qualified.every(receipt => receipt.evidence?.outcome === evidence.outcome && receipt.evidence?.commitSha === evidence.commitSha);
+        return [Object.freeze({ sourceId: source.id, command, outcome: agreement ? evidence.outcome : 'unavailable',
+                ...(!agreement && receipts.length === 1 && receipts[0].legacy ? { receiptId: receipts[0].id } : {}),
+                ...(agreement ? { receiptId: Math.min(...qualified.map(receipt => receipt.id)),
+                    ...(evidence.commitSha ? { commitSha: evidence.commitSha } : {}) } : {}) })];
+    }).sort((a, b) => b.sourceId - a.sourceId).slice(0, 10);
+    return Object.freeze({ kind: 'history-command', state: input.complete ? 'complete' : 'partial', rows: Object.freeze(rows) });
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+
+
+/***/ }),
+
+/***/ 55507:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderCopilotHistory = renderCopilotHistory;
+/** Links come from a bound server/repository and validated IDs, never conversation URLs. */
+function renderCopilotHistory(view, catalog) {
+    const render = catalog.render;
+    const origin = safeOrigin(view.serverOrigin);
+    const identity = /^[A-Za-z0-9_.-]{1,100}$/u.test(view.owner) && /^[A-Za-z0-9_.-]{1,100}$/u.test(view.repository)
+        && !['.', '..'].includes(view.owner) && !['.', '..'].includes(view.repository);
+    const heading = `## ${render('interaction.history.heading')}`;
+    const unavailable = `${heading}\n\n${render('interaction.history.unavailable')}`;
+    if (!origin || !identity || view.state === 'unavailable')
+        return unavailable;
+    if (view.state === 'unsupported-surface')
+        return `${heading}\n\n${render('interaction.history.useConversation')}`;
+    const root = `${origin}/${view.owner}/${view.repository}`;
+    const target = `${root}/${view.target.kind === 'pr' ? 'pull' : 'issues'}/${view.target.number}`;
+    const lines = [heading, '', render('interaction.history.scope'), '',
+        ...(view.state === 'partial' ? [render('interaction.history.partial'), ''] : []),
+        ...(view.rows.length ? [render('interaction.history.count', { count: view.rows.length }), '',
+            `| ${render('interaction.history.operation')} | ${render('interaction.history.outcome')} | ${render('interaction.history.evidence')} |`,
+            '|---|---|---|', ...view.rows.map(row => {
+                const links = [`[${render('interaction.history.request')}](${target}#issuecomment-${row.sourceId})`,
+                    ...(row.receiptId ? [`[${render('interaction.history.receipt')}](${target}#issuecomment-${row.receiptId})`] : []),
+                    ...(row.commitSha ? [`[${render('interaction.history.commit')}](${root}/commit/${row.commitSha})`] : [])];
+                return `| ${row.command} | ${render(row.outcome === 'unavailable' ? 'interaction.history.unavailableOutcome'
+                    : row.outcome === 'partial' ? 'interaction.history.partialOutcome' : `interaction.history.${row.outcome}`)} | ${links.join(' · ')} |`;
+            })] : [render('interaction.history.empty')])];
+    const body = lines.join('\n');
+    return body.length <= 5600 ? body : unavailable;
+}
+function safeOrigin(value) {
+    if (value.length > 200)
+        return undefined;
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && !url.username && !url.password
+            && url.pathname === '/' && !url.search && !url.hash ? url.origin : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
+/***/ 99186:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readHistoryProjection = readHistoryProjection;
+const git_object_id_1 = __nccwpck_require__(88623);
+const copilot_operation_1 = __nccwpck_require__(40221);
+/** Typed publisher boundary rejects malformed result data rather than trusting a kind string. */
+function readHistoryProjection(value, bound) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    const data = value;
+    const target = data.target;
+    if (data.kind !== 'history-command' || !['complete', 'partial', 'unavailable', 'unsupported-surface'].includes(String(data.state))
+        || typeof data.owner !== 'string' || typeof data.repository !== 'string' || typeof data.serverOrigin !== 'string'
+        || !target || Object.keys(target).some(key => !['kind', 'number'].includes(key)) || target.number !== bound.number || target.kind !== (bound.kind === 'pull-request' ? 'pr' : 'issue')
+        || !Array.isArray(data.rows) || data.rows.length > 10 || (['unavailable', 'unsupported-surface'].includes(String(data.state)) && data.rows.length !== 0)
+        || Object.keys(data).some(key => !['kind', 'state', 'rows', 'owner', 'repository', 'target', 'serverOrigin'].includes(key)))
+        return undefined;
+    const rows = [];
+    let previous = Number.MAX_SAFE_INTEGER;
+    for (const row of data.rows) {
+        if (!row || typeof row !== 'object' || !positive(row.sourceId) || row.sourceId >= previous || !(0, copilot_operation_1.isHistoryCommand)(row.command)
+            || !copilot_operation_1.OPERATION_OUTCOMES.includes(row.outcome)
+            || ('receiptId' in row && (!positive(row.receiptId) || row.receiptId <= row.sourceId))
+            || ('commitSha' in row && (typeof row.commitSha !== 'string' || (0, git_object_id_1.canonicalGitObjectId)(row.commitSha) !== row.commitSha
+                || row.outcome !== 'applied' || !row.receiptId))
+            || Object.keys(row).some(key => !['sourceId', 'command', 'outcome', 'receiptId', 'commitSha'].includes(key)))
+            return undefined;
+        rows.push(Object.freeze({ sourceId: row.sourceId, command: row.command, outcome: row.outcome,
+            ...(row.receiptId ? { receiptId: row.receiptId } : {}), ...(row.commitSha ? { commitSha: row.commitSha } : {}) }));
+        previous = row.sourceId;
+    }
+    return Object.freeze({ kind: 'history-command', state: data.state, rows: Object.freeze(rows),
+        owner: data.owner, repository: data.repository, serverOrigin: data.serverOrigin,
+        target: Object.freeze({ kind: target.kind, number: bound.number }) });
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+
+
+/***/ }),
+
 /***/ 90108:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -43243,6 +43400,9 @@ const READ_ONLY_COMMANDS = Object.freeze([
     ['/copilot recheck', 'interaction.help.command.recheck'],
     ['/copilot description', 'interaction.help.command.description'],
     ['/copilot status', 'interaction.help.command.status'],
+    ['/copilot sdd-diff', 'interaction.help.command.sddDiff'],
+    ['/copilot doctor', 'interaction.help.command.doctor'],
+    ['/copilot history', 'interaction.help.command.history'],
 ]);
 const CHANGE_COMMANDS = Object.freeze([
     ['/copilot fix <finding-id>', 'interaction.help.command.fixOne'],
@@ -44203,6 +44363,138 @@ function shortSha(value) {
 
 /***/ }),
 
+/***/ 61833:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.doctorWorkflowCondition = doctorWorkflowCondition;
+/** Bounded three-valued interpretation; unsupported runtime facts remain unknown. Never eval YAML. */
+function doctorWorkflowCondition(value, event) {
+    if (value === undefined)
+        return true;
+    if (typeof value === 'boolean')
+        return value;
+    if (typeof value !== 'string' || value.length > 1000)
+        return undefined;
+    const input = value.trim().replace(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/u, '$1');
+    const tokens = input.match(/\s+|&&|\|\||==|!=|[!()]|'(?:[^']|'')*'|[A-Za-z_][A-Za-z0-9_.]*|./gu)?.filter(token => !/^\s+$/u.test(token)) ?? [];
+    let cursor = 0;
+    let depth = 0;
+    const truth = (item) => typeof item === 'string' ? item.length > 0 : item;
+    function atom() {
+        if (++depth > 32)
+            throw new Error('Condition too deep.');
+        const token = tokens[cursor++];
+        let result;
+        if (token === '(') {
+            result = or();
+            if (tokens[cursor++] !== ')')
+                throw new Error('Missing bracket.');
+        }
+        else if (token === '!') {
+            const inner = truth(atom());
+            result = inner === undefined ? undefined : !inner;
+        }
+        else if (token === 'true' || token === 'false')
+            result = token === 'true';
+        else if (token === 'github.event_name')
+            result = event;
+        else if (token?.startsWith("'") && token.endsWith("'"))
+            result = token.slice(1, -1).replace(/''/gu, "'");
+        else if (token && /^[A-Za-z_][A-Za-z0-9_.]*$/u.test(token))
+            result = undefined;
+        else
+            throw new Error('Unsupported condition.');
+        depth--;
+        return result;
+    }
+    function comparison() {
+        const left = atom();
+        if (tokens[cursor] === '==' || tokens[cursor] === '!=') {
+            const operator = tokens[cursor++];
+            const right = atom();
+            if (left === undefined || right === undefined || typeof left !== typeof right)
+                return undefined;
+            const equal = typeof left === 'string' && typeof right === 'string' ? left.toLowerCase() === right.toLowerCase() : left === right;
+            return operator === '==' ? equal : !equal;
+        }
+        return truth(left);
+    }
+    function and() {
+        let result = comparison();
+        while (tokens[cursor] === '&&') {
+            cursor++;
+            const right = comparison();
+            result = result === false || right === false ? false : result === undefined || right === undefined ? undefined : true;
+        }
+        return result;
+    }
+    function or() {
+        let result = and();
+        while (tokens[cursor] === '||') {
+            cursor++;
+            const right = and();
+            result = result === true || right === true ? true : result === undefined || right === undefined ? undefined : false;
+        }
+        return result;
+    }
+    try {
+        const result = or();
+        return cursor === tokens.length ? result : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+
+/***/ }),
+
+/***/ 87989:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.doctorWorkflowMatrix = doctorWorkflowMatrix;
+/** Conservative structural evidence only; never evaluates expressions or expands matrices. */
+function doctorWorkflowMatrix(strategy) {
+    if (strategy === undefined)
+        return true;
+    if (!record(strategy))
+        return undefined;
+    if (!Object.prototype.hasOwnProperty.call(strategy, 'matrix'))
+        return true;
+    const matrix = strategy.matrix;
+    if (!record(matrix))
+        return undefined;
+    const axes = Object.entries(matrix);
+    if (!axes.length || axes.some(([key]) => key === 'include' || key === 'exclude'))
+        return undefined;
+    if (axes.some(([, values]) => Array.isArray(values) && values.length === 0))
+        return false;
+    if (!axes.every(([, values]) => Array.isArray(values) && values.every(value => typeof value === 'string' ? !value.includes('${{')
+        : typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value))))
+        return undefined;
+    let combinations = 1;
+    for (const [, values] of axes) {
+        const length = values.length;
+        // Bound arithmetic before multiplying; do not expand the Cartesian product.
+        if (combinations > 256 / length)
+            return false;
+        combinations *= length;
+    }
+    return true;
+}
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+
+/***/ }),
+
 /***/ 20542:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -44339,6 +44631,292 @@ function resolveGithubExecutionAdmission(input) {
     if (input.isSingleAction && input.validSingleAction)
         return 'execute';
     return 'discard';
+}
+
+
+/***/ }),
+
+/***/ 99566:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validDoctorConfiguration = validDoctorConfiguration;
+exports.doctorRepositoryPrerequisites = doctorRepositoryPrerequisites;
+exports.doctorWorkflowContracts = doctorWorkflowContracts;
+const doctor_workflow_matrix_policy_1 = __nccwpck_require__(87989);
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
+const doctor_workflow_condition_policy_1 = __nccwpck_require__(61833);
+const js_yaml_1 = __nccwpck_require__(783);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+function validDoctorConfiguration(value) {
+    if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
+        || !(0, github_runtime_doctor_1.isDoctorBranchReference)(value.dependencyBranch))
+        return false;
+    try {
+        if ('error' in (0, issue_workflow_profile_1.parseIssueWorkflowProfile)(JSON.stringify(value.profile)))
+            return false;
+        (0, issue_start_policy_1.decideIssueStart)({ labels: [], issueManagedBranches: value.issueManagedBranches, preBranchSdd: value.preBranchSdd });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function doctorRepositoryPrerequisites(read) {
+    if (read.state !== 'available')
+        return 'unavailable';
+    const paths = ['specs/catalog.json', 'specs/_template.md', 'specs/README.md'];
+    if (!completeFileSamples(read, paths) || !Array.isArray(read.trackedFiles) || read.trackedFiles.some(path => typeof path !== 'string'))
+        return 'unavailable';
+    if (paths.some(path => read.files[path].state !== 'present'))
+        return 'blocked';
+    const catalogFile = read.files['specs/catalog.json'];
+    if (catalogFile.state !== 'present')
+        return 'blocked';
+    try {
+        const catalog = object(JSON.parse(catalogFile.text));
+        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities) || catalog.capabilities.length === 0)
+            return 'blocked';
+        const files = new Set(read.trackedFiles);
+        const ids = new Set(), titles = new Set(), specs = new Set();
+        for (const raw of catalog.capabilities) {
+            const capability = object(raw);
+            if (['id', 'title', 'status', 'scope', 'owner', 'lastVerified'].some(field => typeof capability[field] !== 'string' || !capability[field].trim()))
+                return 'blocked';
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(String(capability.id))
+                || ids.has(String(capability.id)) || titles.has(String(capability.title))
+                || !['as-built-baseline', 'implemented', 'proposed', 'deprecated'].includes(String(capability.status))
+                || !validCatalogDate(String(capability.lastVerified)))
+                return 'blocked';
+            ids.add(String(capability.id));
+            titles.add(String(capability.title));
+            for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                const entries = capability[field];
+                if (!Array.isArray(entries) || (field !== 'workflows' && entries.length === 0)
+                    || new Set(entries).size !== entries.length)
+                    return 'blocked';
+                for (const path of entries) {
+                    if (!validCatalogPath(field, path) || !files.has(path))
+                        return 'blocked';
+                    if (field === 'specs') {
+                        if (specs.has(path))
+                            return 'blocked';
+                        specs.add(path);
+                    }
+                }
+            }
+        }
+        const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
+        if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path)))
+            return 'blocked';
+        return paths.slice(1).every(path => {
+            const file = read.files[path];
+            return file.state === 'present' && /^#\s+\S/mu.test(file.text);
+        }) ? 'pass' : 'blocked';
+    }
+    catch {
+        return 'blocked';
+    }
+}
+/** Structural evidence only. YAML is parsed with the JSON schema and never executed. */
+function doctorWorkflowContracts(read) {
+    if (read.state !== 'available')
+        return 'unavailable';
+    const expected = [
+        ['.github/workflows/copilot_issue.yml', 'issues', 'labeled'],
+        ['.github/workflows/copilot_issue_comment.yml', 'issue_comment', 'created'],
+        ['.github/workflows/copilot_pull_request.yml', 'pull_request', 'opened'],
+    ];
+    if (!completeFileSamples(read, expected.map(([path]) => path)))
+        return 'unavailable';
+    let unknown = false;
+    try {
+        for (const [path, event, activity] of expected) {
+            const file = read.files[path];
+            if (file?.state !== 'present')
+                return 'blocked';
+            const document = object((0, js_yaml_1.load)(file.text, { schema: js_yaml_1.JSON_SCHEMA }));
+            const events = document.on;
+            const admitted = typeof events === 'string' ? events === event : Array.isArray(events)
+                ? events.includes(event) : Object.prototype.hasOwnProperty.call(object(events), event);
+            if (!admitted)
+                return 'blocked';
+            const filter = object(object(events)[event]);
+            if (Object.prototype.hasOwnProperty.call(filter, 'types')
+                && (!Array.isArray(filter.types) || filter.types.length === 0
+                    || filter.types.some(type => typeof type !== 'string' || type.length === 0)
+                    || !filter.types.includes(activity)))
+                return 'blocked';
+            let eligible = false;
+            let possible = false;
+            const jobs = object(document.jobs);
+            for (const rawJob of Object.values(jobs)) {
+                const job = object(rawJob);
+                const enabled = (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(job.if, event);
+                if (enabled === false || !Array.isArray(job.steps))
+                    continue;
+                const matrixEnabled = (0, doctor_workflow_matrix_policy_1.doctorWorkflowMatrix)(job.strategy);
+                if (matrixEnabled === false)
+                    continue;
+                const dependenciesEnabled = doctorWorkflowDependencies(job, jobs, event, enabled);
+                if (dependenciesEnabled === false)
+                    continue;
+                for (const rawStep of job.steps) {
+                    const step = object(rawStep);
+                    if (!(step.uses === './' || typeof step.uses === 'string'
+                        && /^vypdev\/copilot@[^\s${}<>]+$/iu.test(step.uses)))
+                        continue;
+                    const stepEnabled = (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(step.if, event);
+                    if (stepEnabled === false)
+                        continue;
+                    if (enabled === true && stepEnabled === true && matrixEnabled === true && dependenciesEnabled === true)
+                        eligible = true;
+                    else
+                        possible = true;
+                }
+            }
+            if (!eligible && !possible)
+                return 'blocked';
+            if (!eligible)
+                unknown = true;
+        }
+        return unknown ? 'unavailable' : 'pass';
+    }
+    catch {
+        return 'blocked';
+    }
+}
+function object(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function validCatalogDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(value))
+        return false;
+    const [year, month, day] = value.split('-').map(Number), date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+function validCatalogPath(field, value) {
+    if (typeof value !== 'string' || value !== value.trim() || value.includes('\\')
+        || value.split('/').some(part => part === '' || part === '.' || part === '..'))
+        return false;
+    const boundaries = {
+        specs: /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/u,
+        workflows: /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/u,
+        entrypoints: /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/u,
+        code: /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/u,
+        tests: /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/u,
+        documentation: /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/u,
+    };
+    return boundaries[field].test(value);
+}
+/** Only a directly skipped prerequisite is proved; runtime success and override expressions stay unknown. */
+function doctorWorkflowDependencies(job, jobs, event, enabled) {
+    if (!Object.prototype.hasOwnProperty.call(job, 'needs'))
+        return true;
+    if (enabled !== true)
+        return undefined;
+    const needs = typeof job.needs === 'string' ? [job.needs] : Array.isArray(job.needs) ? job.needs : undefined;
+    if (!needs || needs.length === 0 || needs.length > 20 || needs.some(name => typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_-]{0,99}$/u.test(name)))
+        return undefined;
+    for (const name of needs) {
+        if (Object.prototype.hasOwnProperty.call(jobs, name) && (0, doctor_workflow_condition_policy_1.doctorWorkflowCondition)(object(jobs[name]).if, event) === false)
+            return false;
+    }
+    return undefined;
+}
+/** Explicit missing evidence differs from an incomplete or malformed provider sample. */
+function completeFileSamples(read, paths) {
+    return read.files !== null && typeof read.files === 'object' && !Array.isArray(read.files)
+        && paths.every(path => {
+            const sample = read.files[path];
+            return sample?.state === 'missing' || sample?.state === 'present' && typeof sample.text === 'string';
+        });
+}
+
+
+/***/ }),
+
+/***/ 2808:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isGithubRuntimeDoctorProjection = isGithubRuntimeDoctorProjection;
+exports.formatGithubRuntimeDoctor = formatGithubRuntimeDoctor;
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
+const publication_message_catalog_1 = __nccwpck_require__(34223);
+const ACTIONS = ['configuration', 'workflow', 'retry', 'issue', 'specifications', 'branch', 'policy', 'declared'];
+const STATES = ['pass', 'warning', 'blocked', 'unavailable', 'not-applicable'];
+function isGithubRuntimeDoctorProjection(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const projection = value;
+    const report = projection.report;
+    if (['serverOrigin', 'revision', 'owner', 'repository'].some(key => {
+        const field = projection[key];
+        return field !== undefined && (typeof field !== 'string' || field.length > 300);
+    }))
+        return false;
+    if (report === undefined)
+        return true;
+    if (!report || typeof report !== 'object' || !report.target || !Number.isSafeInteger(report.target.repositoryId)
+        || report.target.repositoryId < 1 || (report.target.kind !== 'issue' && report.target.kind !== 'pull-request')
+        || !Number.isSafeInteger(report.target.kind === 'issue' ? report.target.issueNumber : report.target.pullNumber)
+        || (report.target.kind === 'issue' ? report.target.issueNumber : report.target.pullNumber) < 1)
+        return false;
+    return STATES.includes(report.severity) && Array.isArray(report.checks) && report.checks.length === 7
+        && report.checks.every((check, index) => check && check.group === github_runtime_doctor_1.GITHUB_RUNTIME_DOCTOR_GROUPS[index] && STATES.includes(check.state))
+        && (report.primaryAction === undefined || ACTIONS.includes(report.primaryAction));
+}
+function formatGithubRuntimeDoctor(projection, locale = 'en-US', catalog = (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(locale).catalog) {
+    if (!isGithubRuntimeDoctorProjection(projection))
+        projection = {};
+    const message = (suffix) => catalog.render(`interaction.doctor.${suffix}`);
+    const severity = projection.report?.severity ?? 'unavailable';
+    const action = projection.report?.primaryAction;
+    const lines = [`## 🩺 ${message('heading')}: ${message(`state.${severity}`)}`, '',
+        message(`summary.${severity}`), '',
+        `**${message('action')}:** ${action && ACTIONS.includes(action) ? message(`action.${action}`)
+            : severity === 'pass' || severity === 'not-applicable' ? message('action.none') : message('action.retry')}`,
+        '', message('readonly'), '', `### ${message('checks')}`, ''];
+    const source = repositorySource(projection);
+    const origin = source?.split('/').slice(0, 5).join('/');
+    for (const group of github_runtime_doctor_1.GITHUB_RUNTIME_DOCTOR_GROUPS) {
+        const state = projection.report?.checks.find(check => check.group === group)?.state ?? 'unavailable';
+        const evidence = projection.report?.checks.find(check => check.group === group)?.evidence?.source;
+        const target = projection.report?.target;
+        const link = origin && target && group === 'pull-request-identity' && target.kind === 'pull-request'
+            ? `${origin}/pull/${target.pullNumber}` : origin && target && target.kind === 'issue'
+            && (group === 'issue-readiness' || group === 'linked-branch-readiness') ? `${origin}/issues/${target.issueNumber}` : undefined;
+        const policySource = group === 'approval-policy' && (evidence === 'repository' || evidence === 'organization' || evidence === 'default-off')
+            ? message(`source.${evidence}`) : undefined;
+        const mode = group === 'approval-prerequisites' && (evidence === 'off' || evidence === 'recommend' || evidence === 'guarded')
+            ? `${message('mode')}: ${evidence}` : undefined;
+        lines.push(`- **${message(`group.${group}`)}:** ${message(`state.${state}`)}${policySource ? ` · ${policySource}` : ''}${mode ? ` · ${mode}` : ''}${link ? ` · [${message(target?.kind === 'pull-request' ? 'sourcePullRequest' : 'sourceIssue')}](${link})` : ''}`);
+    }
+    if (source)
+        lines.push('', `[${message('source')}](${source})`);
+    return lines.join('\n');
+}
+function repositorySource(value) {
+    if (!value.serverOrigin || !value.revision || !/^[a-f0-9]{40}$/u.test(value.revision)
+        || !value.owner || !value.repository || !/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/u.test(value.owner)
+        || !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/u.test(value.repository))
+        return undefined;
+    try {
+        const url = new URL(value.serverOrigin);
+        if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash
+            || url.pathname !== '/' || url.origin !== value.serverOrigin.replace(/\/$/u, ''))
+            return undefined;
+        return `${url.origin}/${value.owner}/${value.repository}/tree/${value.revision}`;
+    }
+    catch {
+        return undefined;
+    }
 }
 
 
@@ -44695,6 +45273,7 @@ function resolveMode(mode, commentId) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveLifecycleState = resolveLifecycleState;
 exports.readLifecycleExternalEvidence = readLifecycleExternalEvidence;
+const git_object_id_1 = __nccwpck_require__(88623);
 const result_1 = __nccwpck_require__(73817);
 const bugbot_result_finding_state_projection_policy_1 = __nccwpck_require__(98117);
 const bugbot_telemetry_projection_policy_1 = __nccwpck_require__(43244);
@@ -44738,6 +45317,9 @@ function resolveLifecycleState(input) {
             return 'reviewing';
         return undefined;
     }
+    if (input.eventName === 'issue_comment' && !input.issueBranchlessHelp
+        && input.results.some(hasCompletedBranchSynchronization))
+        return 'working';
     // A verified branch is evidence even when reconciliation made no label change.
     if (input.eventName === 'issue_comment' && input.results.some(result => result.success && result.executed
         && result.errors.length === 0 && (0, implementation_result_policy_1.readImplementationResult)(result.id, result.payload)))
@@ -44805,6 +45387,24 @@ function hasResult(results, id) {
 }
 function hasSuccessfulResult(results, id) {
     return hasResult(results, id);
+}
+/** Only current application-owned completion facts can recover an issue's working state. */
+function hasCompletedBranchSynchronization(result) {
+    if (result.id !== 'SyncBranchUseCase' || !result.success || result.errors.length !== 0)
+        return false;
+    const payload = (0, result_1.getResultPayload)(result.payload);
+    if (!payload || !(0, git_object_id_1.canonicalGitObjectId)(payload.parentSha) || !(0, git_object_id_1.canonicalGitObjectId)(payload.childSha)
+        || !boundedBranchName(payload.parentBranch) || !boundedBranchName(payload.workingBranch)
+        || payload.parentBranch === payload.workingBranch
+        || !Number.isSafeInteger(payload.verificationCount) || payload.verificationCount < 0)
+        return false;
+    if (payload.outcome === 'already-aligned')
+        return true;
+    return result.executed && (payload.outcome === 'merged-cleanly' || payload.outcome === 'merged-with-agent')
+        && (0, git_object_id_1.canonicalGitObjectId)(payload.commitSha) !== undefined;
+}
+function boundedBranchName(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/u.test(value);
 }
 
 
@@ -45260,6 +45860,31 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.help.command.recheck',
     'interaction.help.command.description',
     'interaction.help.command.status',
+    'interaction.help.command.sddDiff',
+    'interaction.help.command.doctor',
+    'interaction.help.command.history',
+    'interaction.history.fixPushed',
+    'interaction.history.fixNoChanges',
+    'interaction.history.heading',
+    'interaction.history.scope',
+    'interaction.history.empty',
+    'interaction.history.partial',
+    'interaction.history.unavailable',
+    'interaction.history.useConversation',
+    'interaction.history.count',
+    'interaction.history.operation',
+    'interaction.history.outcome',
+    'interaction.history.evidence',
+    'interaction.history.request',
+    'interaction.history.receipt',
+    'interaction.history.commit',
+    'interaction.history.applied',
+    'interaction.history.already-current',
+    'interaction.history.not-applied',
+    'interaction.history.blocked',
+    'interaction.history.failed',
+    'interaction.history.partialOutcome',
+    'interaction.history.unavailableOutcome',
     'interaction.help.command.fixOne',
     'interaction.help.command.fixAll',
     'interaction.help.command.dismiss',
@@ -45287,6 +45912,43 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.branchSync.merged',
     'interaction.branchSync.agentResolution',
     'interaction.branchSync.verification',
+    'interaction.doctor.source.repository',
+    'interaction.doctor.source.organization',
+    'interaction.doctor.source.default-off',
+    'interaction.doctor.mode',
+    'interaction.doctor.heading',
+    'interaction.doctor.action',
+    'interaction.doctor.checks',
+    'interaction.doctor.readonly',
+    'interaction.doctor.source',
+    'interaction.doctor.sourceIssue',
+    'interaction.doctor.sourcePullRequest',
+    'interaction.doctor.group.effective-configuration',
+    'interaction.doctor.group.issue-readiness',
+    'interaction.doctor.group.linked-branch-readiness',
+    'interaction.doctor.group.workflow-contracts',
+    'interaction.doctor.group.approval-policy',
+    'interaction.doctor.group.approval-prerequisites',
+    'interaction.doctor.group.pull-request-identity',
+    'interaction.doctor.action.configuration',
+    'interaction.doctor.action.workflow',
+    'interaction.doctor.action.retry',
+    'interaction.doctor.action.issue',
+    'interaction.doctor.action.specifications',
+    'interaction.doctor.action.branch',
+    'interaction.doctor.action.policy',
+    'interaction.doctor.action.declared',
+    'interaction.doctor.action.none',
+    'interaction.doctor.state.pass',
+    'interaction.doctor.summary.pass',
+    'interaction.doctor.state.blocked',
+    'interaction.doctor.summary.blocked',
+    'interaction.doctor.state.unavailable',
+    'interaction.doctor.summary.unavailable',
+    'interaction.doctor.state.warning',
+    'interaction.doctor.summary.warning',
+    'interaction.doctor.state.not-applicable',
+    'interaction.doctor.summary.not-applicable',
     'interaction.status.heading',
     'interaction.status.repository',
     'interaction.status.target',
@@ -45304,6 +45966,28 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.findings',
     'interaction.status.findingsInvalid',
     'interaction.status.findingCounts',
+    'interaction.status.prReadiness',
+    'interaction.status.prReadiness.unavailable',
+    'interaction.status.prReadiness.pending',
+    'interaction.status.prReadiness.blocked',
+    'interaction.status.prReadiness.satisfied',
+    'interaction.status.prReadiness.not-applicable',
+    'interaction.status.prReadiness.ci',
+    'interaction.status.prReadiness.coverage',
+    'interaction.status.prReadiness.bugbot',
+    'interaction.status.prReadiness.reviews',
+    'interaction.status.prReadiness.revision',
+    'interaction.status.prReadiness.openPr',
+    'interaction.status.prReadiness.next',
+    'interaction.status.prReadiness.action.retry',
+    'interaction.status.prReadiness.action.wait',
+    'interaction.status.prReadiness.action.resolve',
+    'interaction.status.prReadiness.action.human-review',
+    'interaction.status.prReadiness.action.observer',
+    'interaction.status.prReadiness.action.select-pr',
+    'interaction.status.prReadiness.oversize',
+    'interaction.status.prReadiness.countsUnavailable',
+    'interaction.status.prReadiness.humanReview',
     'interaction.status.sddHeading',
     'interaction.status.sddRequirement',
     'interaction.status.sddState',
@@ -45324,6 +46008,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.status.sddNextAnswers',
     'interaction.status.sddNextPublication',
     'interaction.status.sddNextReady',
+    'interaction.status.sddNextHistorical',
     'interaction.status.sddCard',
     'cli.answer',
     'cli.outcome',
@@ -45379,6 +46064,31 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 're-run the review and reconcile findings.',
     'interaction.help.command.description': 'refresh the pull-request description.',
     'interaction.help.command.status': 'show the current automation status.',
+    'interaction.help.command.sddDiff': 'compare verified first and current SDD publications without a model.',
+    'interaction.help.command.doctor': 'check available runtime prerequisites without making repository changes.',
+    'interaction.help.command.history': 'show up to ten supported operations and their verified receipts.',
+    'interaction.history.fixPushed': 'Fix changes were pushed. Findings require an independent review of the pushed revision.',
+    'interaction.history.fixNoChanges': 'The fix produced no changes to push.',
+    'interaction.history.heading': 'Operation history',
+    'interaction.history.scope': 'General conversation comments',
+    'interaction.history.empty': 'No supported requests in this conversation',
+    'interaction.history.partial': 'Partial comment coverage; the latest ten operations cannot be guaranteed. Retry /copilot history if needed.',
+    'interaction.history.unavailable': 'Operation history unavailable; inspect the workflow and retry /copilot history.',
+    'interaction.history.useConversation': 'Post /copilot history in the main conversation of this issue or pull request. Review threads are outside its history scope.',
+    'interaction.history.count': 'Showing {count} supported requests',
+    'interaction.history.operation': 'Operation',
+    'interaction.history.outcome': 'Outcome',
+    'interaction.history.evidence': 'Evidence',
+    'interaction.history.request': 'Request',
+    'interaction.history.receipt': 'Receipt',
+    'interaction.history.commit': 'Commit',
+    'interaction.history.applied': 'Applied',
+    'interaction.history.already-current': 'Already current',
+    'interaction.history.not-applied': 'Not applied',
+    'interaction.history.blocked': 'Blocked',
+    'interaction.history.failed': 'Failed',
+    'interaction.history.partialOutcome': 'Partial',
+    'interaction.history.unavailableOutcome': 'Outcome unavailable',
     'interaction.help.command.fixOne': 'fix one reported finding.',
     'interaction.help.command.fixAll': 'fix all unresolved findings.',
     'interaction.help.command.dismiss': 'dismiss a finding.',
@@ -45418,6 +46128,43 @@ const ENGLISH_MESSAGES = Object.freeze({
         one: '{count} verification check passed.',
         other: '{count} verification checks passed.',
     }),
+    'interaction.doctor.source.repository': "Repository variable",
+    'interaction.doctor.source.organization': "Organization variable",
+    'interaction.doctor.source.default-off': "Verified absence; default off",
+    'interaction.doctor.mode': "Mode",
+    'interaction.doctor.heading': "Runtime doctor",
+    'interaction.doctor.action': "Next action",
+    'interaction.doctor.checks': "Checks",
+    'interaction.doctor.readonly': "This command reads evidence only. Declared approval settings do not prove producer health or write access.",
+    'interaction.doctor.source': "Inspected repository revision",
+    'interaction.doctor.sourceIssue': "Inspected issue",
+    'interaction.doctor.sourcePullRequest': "Inspected pull request",
+    'interaction.doctor.group.effective-configuration': "Effective configuration",
+    'interaction.doctor.group.issue-readiness': "Issue and SDD prerequisites",
+    'interaction.doctor.group.linked-branch-readiness': "Native linked branch",
+    'interaction.doctor.group.workflow-contracts': "Installed workflow structure",
+    'interaction.doctor.group.approval-policy': "Trusted approval policy read",
+    'interaction.doctor.group.approval-prerequisites': "Declared approval prerequisites",
+    'interaction.doctor.group.pull-request-identity': "Exact current PR identity",
+    'interaction.doctor.action.configuration': "Inspect the effective workflow configuration and correct the invalid setting.",
+    'interaction.doctor.action.workflow': "Inspect the linked workflow revision and correct its required structure.",
+    'interaction.doctor.action.retry': "Inspect this workflow run and retry /copilot doctor.",
+    'interaction.doctor.action.issue': "Inspect the issue form and its routing labels.",
+    'interaction.doctor.action.specifications': "Inspect the catalog, template and specification standard at the linked revision.",
+    'interaction.doctor.action.branch': "Inspect the issue’s native linked branch and retry after branch readiness.",
+    'interaction.doctor.action.policy': "Inspect the trusted Actions Variables approval policy source.",
+    'interaction.doctor.action.declared': "Verify the declared producer prerequisites using the approval setup documentation.",
+    'interaction.doctor.action.none': "No action required for the inspected prerequisites.",
+    'interaction.doctor.state.pass': "Pass",
+    'interaction.doctor.summary.pass': "The inspected applicable prerequisites passed.",
+    'interaction.doctor.state.blocked': "Blocked",
+    'interaction.doctor.summary.blocked': "An authoritative read established an invalid required prerequisite.",
+    'interaction.doctor.state.unavailable': "Unavailable",
+    'interaction.doctor.summary.unavailable': "Some prerequisites could not be verified; completed checks remain visible.",
+    'interaction.doctor.state.warning': "Warning",
+    'interaction.doctor.summary.warning': "A prerequisite needs attention or independent verification.",
+    'interaction.doctor.state.not-applicable': "Not applicable",
+    'interaction.doctor.summary.not-applicable': "The inspected prerequisites do not apply to this target.",
     'interaction.status.heading': 'Copilot status',
     'interaction.status.repository': 'Repository',
     'interaction.status.target': 'Target',
@@ -45435,6 +46182,28 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Bugbot findings',
     'interaction.status.findingsInvalid': 'invalid evidence; inspect the workflow result.',
     'interaction.status.findingCounts': '{open} open, {reopened} reopened, {verificationRequired} verification required, {unknown} unknown, {resolved} resolved',
+    'interaction.status.prReadiness': 'Exact-head PR readiness',
+    'interaction.status.prReadiness.unavailable': 'unavailable',
+    'interaction.status.prReadiness.pending': 'pending',
+    'interaction.status.prReadiness.blocked': 'blocked',
+    'interaction.status.prReadiness.satisfied': 'satisfied',
+    'interaction.status.prReadiness.not-applicable': 'not applicable',
+    'interaction.status.prReadiness.ci': 'CI',
+    'interaction.status.prReadiness.coverage': 'Coverage',
+    'interaction.status.prReadiness.bugbot': 'Bugbot',
+    'interaction.status.prReadiness.reviews': 'Native reviews',
+    'interaction.status.prReadiness.revision': 'Commit',
+    'interaction.status.prReadiness.openPr': 'View verified PR',
+    'interaction.status.prReadiness.next': 'Next action',
+    'interaction.status.prReadiness.action.retry': 'Inspect this run and retry status.',
+    'interaction.status.prReadiness.action.wait': 'Wait for the current revision, then retry status.',
+    'interaction.status.prReadiness.action.resolve': 'Resolve the verified prerequisites, then retry status.',
+    'interaction.status.prReadiness.action.human-review': 'Have a maintainer review this exact revision.',
+    'interaction.status.prReadiness.action.observer': 'Inspect the approval observer for this exact revision.',
+    'interaction.status.prReadiness.action.select-pr': 'Run /copilot status in the selected PR conversation.',
+    'interaction.status.prReadiness.countsUnavailable': 'Current finding counts could not be verified.',
+    'interaction.status.prReadiness.oversize': 'Status exceeds the reply budget; current readiness is unavailable.',
+    'interaction.status.prReadiness.humanReview': 'A human review is still required; status never submits a review.',
     'interaction.status.sddHeading': 'SDD readiness',
     'interaction.status.sddRequirement': 'Specification',
     'interaction.status.sddState': 'Status',
@@ -45455,6 +46224,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.status.sddNextAnswers': 'Answer these questions in the issue using their question identifiers.',
     'interaction.status.sddNextPublication': 'Resume SDD preparation to publish the approved specification.',
     'interaction.status.sddNextReady': 'Continue implementation on the linked branch.',
+    'interaction.status.sddNextHistorical': 'This SDD is historical evidence for a closed issue. No implementation or answers are requested.',
     'interaction.status.sddCard': 'Open SDD card',
     'cli.answer': 'Answer',
     'cli.outcome': 'Outcome',
@@ -45507,6 +46277,31 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.help.command.recheck': 'repite la revisión y reconcilia los hallazgos.',
     'interaction.help.command.description': 'actualiza la descripción del pull request.',
     'interaction.help.command.status': 'muestra el estado actual de la automatización.',
+    'interaction.help.command.sddDiff': 'compara las publicaciones inicial y actual verificadas del SDD sin modelo.',
+    'interaction.help.command.doctor': 'comprueba los requisitos disponibles del runtime sin modificar el repositorio.',
+    'interaction.help.command.history': 'muestra hasta diez operaciones compatibles y sus recibos verificables.',
+    'interaction.history.fixPushed': 'Se publicaron los cambios de la corrección. Los hallazgos requieren una revisión independiente de esa revisión.',
+    'interaction.history.fixNoChanges': 'La corrección no produjo cambios que publicar.',
+    'interaction.history.heading': 'Historial de operaciones',
+    'interaction.history.scope': 'Comentarios de la conversación general',
+    'interaction.history.empty': 'No hay solicitudes compatibles en esta conversación',
+    'interaction.history.partial': 'Cobertura parcial de comentarios; no se pueden garantizar las diez operaciones más recientes. Reintenta /copilot history si lo necesitas.',
+    'interaction.history.unavailable': 'Historial de operaciones no disponible; revisa la ejecución y reintenta /copilot history.',
+    'interaction.history.useConversation': 'Publica /copilot history en la conversación principal de esta issue o pull request. Los hilos de revisión quedan fuera del historial.',
+    'interaction.history.count': 'Se muestran {count} solicitudes compatibles',
+    'interaction.history.operation': 'Operación',
+    'interaction.history.outcome': 'Resultado',
+    'interaction.history.evidence': 'Evidencia',
+    'interaction.history.request': 'Solicitud',
+    'interaction.history.receipt': 'Recibo',
+    'interaction.history.commit': 'Commit',
+    'interaction.history.applied': 'Aplicada',
+    'interaction.history.already-current': 'Ya estaba al día',
+    'interaction.history.not-applied': 'No aplicada',
+    'interaction.history.blocked': 'Bloqueada',
+    'interaction.history.failed': 'Fallida',
+    'interaction.history.partialOutcome': 'Parcial',
+    'interaction.history.unavailableOutcome': 'Resultado no disponible',
     'interaction.help.command.fixOne': 'corrige un hallazgo.',
     'interaction.help.command.fixAll': 'corrige todos los hallazgos sin resolver.',
     'interaction.help.command.dismiss': 'descarta un hallazgo.',
@@ -45550,6 +46345,43 @@ const SPANISH_MESSAGES = Object.freeze({
         many: 'Se superaron {count} comprobaciones de verificación.',
         other: 'Se superaron {count} comprobaciones de verificación.',
     }),
+    'interaction.doctor.source.repository': "Variable del repositorio",
+    'interaction.doctor.source.organization': "Variable de la organización",
+    'interaction.doctor.source.default-off': "Ausencia verificada; off por defecto",
+    'interaction.doctor.mode': "Modo",
+    'interaction.doctor.heading': "Diagnóstico del runtime",
+    'interaction.doctor.action': "Siguiente acción",
+    'interaction.doctor.checks': "Comprobaciones",
+    'interaction.doctor.readonly': "Este comando solo lee evidencias. La configuración de aprobación declarada no acredita la salud de los productores ni el acceso de escritura.",
+    'interaction.doctor.source': "Revisión inspeccionada del repositorio",
+    'interaction.doctor.sourceIssue': "Issue inspeccionada",
+    'interaction.doctor.sourcePullRequest': "PR inspeccionado",
+    'interaction.doctor.group.effective-configuration': "Configuración efectiva",
+    'interaction.doctor.group.issue-readiness': "Requisitos de la issue y el SDD",
+    'interaction.doctor.group.linked-branch-readiness': "Rama enlazada nativa",
+    'interaction.doctor.group.workflow-contracts': "Estructura de los workflows instalados",
+    'interaction.doctor.group.approval-policy': "Lectura confiable de la política de aprobación",
+    'interaction.doctor.group.approval-prerequisites': "Requisitos de aprobación declarados",
+    'interaction.doctor.group.pull-request-identity': "Identidad actual exacta del PR",
+    'interaction.doctor.action.configuration': "Revisa la configuración efectiva del workflow y corrige el ajuste inválido.",
+    'interaction.doctor.action.workflow': "Revisa la revisión enlazada de los workflows y corrige la estructura requerida.",
+    'interaction.doctor.action.retry': "Revisa esta ejecución del workflow y vuelve a ejecutar /copilot doctor.",
+    'interaction.doctor.action.issue': "Revisa el formulario de la issue y sus etiquetas de clasificación.",
+    'interaction.doctor.action.specifications': "Revisa el catálogo, la plantilla y el estándar de especificaciones en la revisión enlazada.",
+    'interaction.doctor.action.branch': "Revisa la rama enlazada nativa de la issue y reintenta cuando esté preparada.",
+    'interaction.doctor.action.policy': "Revisa la fuente confiable de la política de aprobación en Actions Variables.",
+    'interaction.doctor.action.declared': "Verifica los requisitos de los productores declarados siguiendo la documentación de aprobación.",
+    'interaction.doctor.action.none': "No se requiere ninguna acción para los requisitos inspeccionados.",
+    'interaction.doctor.state.pass': "Correcto",
+    'interaction.doctor.summary.pass': "Los requisitos aplicables inspeccionados son correctos.",
+    'interaction.doctor.state.blocked': "Bloqueado",
+    'interaction.doctor.summary.blocked': "Una lectura autoritativa confirmó un requisito obligatorio inválido.",
+    'interaction.doctor.state.unavailable': "No disponible",
+    'interaction.doctor.summary.unavailable': "Algunos requisitos no se pudieron verificar; las comprobaciones completadas siguen visibles.",
+    'interaction.doctor.state.warning': "Advertencia",
+    'interaction.doctor.summary.warning': "Un requisito necesita atención o verificación independiente.",
+    'interaction.doctor.state.not-applicable': "No aplicable",
+    'interaction.doctor.summary.not-applicable': "Los requisitos inspeccionados no se aplican a este destino.",
     'interaction.status.heading': 'Estado de Copilot',
     'interaction.status.repository': 'Repositorio',
     'interaction.status.target': 'Destino',
@@ -45567,6 +46399,28 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.findings': 'Hallazgos de Bugbot',
     'interaction.status.findingsInvalid': 'evidencia no válida; revisa el resultado del workflow.',
     'interaction.status.findingCounts': '{open} abiertos, {reopened} reabiertos, {verificationRequired} requieren verificación, {unknown} desconocidos, {resolved} resueltos',
+    'interaction.status.prReadiness': 'Preparación del PR para este commit',
+    'interaction.status.prReadiness.unavailable': 'no disponible',
+    'interaction.status.prReadiness.pending': 'pendiente',
+    'interaction.status.prReadiness.blocked': 'bloqueada',
+    'interaction.status.prReadiness.satisfied': 'cumplida',
+    'interaction.status.prReadiness.not-applicable': 'no aplicable',
+    'interaction.status.prReadiness.ci': 'CI',
+    'interaction.status.prReadiness.coverage': 'Cobertura',
+    'interaction.status.prReadiness.bugbot': 'Bugbot',
+    'interaction.status.prReadiness.reviews': 'Revisiones de GitHub',
+    'interaction.status.prReadiness.revision': 'Commit',
+    'interaction.status.prReadiness.openPr': 'Ver el PR verificado',
+    'interaction.status.prReadiness.next': 'Siguiente acción',
+    'interaction.status.prReadiness.action.retry': 'Consulta esta ejecución y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.wait': 'Espera a la revisión actual y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.resolve': 'Resuelve los requisitos verificados y vuelve a pedir el estado.',
+    'interaction.status.prReadiness.action.human-review': 'Pide a un mantenedor que revise este commit concreto.',
+    'interaction.status.prReadiness.action.observer': 'Consulta el observador de aprobación para este commit concreto.',
+    'interaction.status.prReadiness.action.select-pr': 'Ejecuta /copilot status en la conversación del PR elegido.',
+    'interaction.status.prReadiness.countsUnavailable': 'No se han podido verificar los contadores actuales de hallazgos.',
+    'interaction.status.prReadiness.oversize': 'El estado supera el límite de la respuesta; su preparación actual no está disponible.',
+    'interaction.status.prReadiness.humanReview': 'Aún se requiere revisión humana; el estado nunca envía una revisión.',
     'interaction.status.sddHeading': 'Preparación del SDD',
     'interaction.status.sddRequirement': 'Especificación',
     'interaction.status.sddState': 'Estado',
@@ -45587,6 +46441,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.status.sddNextAnswers': 'Responde estas preguntas en la issue usando sus identificadores.',
     'interaction.status.sddNextPublication': 'Retoma la preparación del SDD para publicar la especificación aprobada.',
     'interaction.status.sddNextReady': 'Continúa la implementación en la rama vinculada.',
+    'interaction.status.sddNextHistorical': 'Este SDD es evidencia histórica de una issue cerrada. No se solicita implementación ni respuestas.',
     'interaction.status.sddCard': 'Abrir tarjeta del SDD',
     'cli.answer': 'Respuesta',
     'cli.outcome': 'Resultado',
@@ -45884,7 +46739,9 @@ function renderApprovalAssessment(input) {
             : `[${spanish ? 'Ver checks' : 'See checks'}](${url}/checks)`,
         '<details>',
         `<summary>${spanish ? 'Evidencia técnica' : 'Technical evidence'}</summary>`,
-        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: \`${escapeMarkdown(decision.code)}\`.`,
+        '',
+        `${spanish ? 'Revisión' : 'Revision'}: \`${evidence.headSha.slice(0, 12)}\`; base: \`${evidence.baseSha.slice(0, 12)}\`; ${spanish ? 'motivo' : 'reason'}: ${escapeMarkdown(decision.code)}.`,
+        '',
         '</details>',
     ];
     return lines.join('\n').slice(0, 1800);
@@ -46149,6 +47006,145 @@ function hasDuplicates(values, locale) {
 }
 function renderList(values) {
     return values.map(value => `- ${value}`).join('\n');
+}
+
+
+/***/ }),
+
+/***/ 79794:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.unavailablePullRequestReadiness = unavailablePullRequestReadiness;
+exports.disabledPullRequestReadiness = disabledPullRequestReadiness;
+exports.projectPullRequestReadiness = projectPullRequestReadiness;
+const pull_request_approval_1 = __nccwpck_require__(8024);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const objectId = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+function unavailablePullRequestReadiness(code = 'evidence-unavailable', action = 'retry') {
+    return Object.freeze({ readiness: 'unavailable', mode: 'unavailable', headSha: '', baseSha: '', code,
+        humanReviewRequired: false, action, evidence: Object.freeze({ ci: 'unavailable', coverage: 'unavailable', bugbot: 'unavailable', reviews: 'unavailable' }) });
+}
+/** A verified disabled policy is independent of whether optional native facts were readable. */
+function disabledPullRequestReadiness() {
+    return Object.freeze({ ...unavailablePullRequestReadiness(), readiness: 'not-applicable', mode: 'off', code: 'disabled',
+        humanReviewRequired: false, action: 'none' });
+}
+function state(decision) {
+    return !decision || decision.status === 'already-approved' ? 'satisfied'
+        : decision.status === 'pending' ? 'pending'
+            : decision.code === 'reviews-unavailable' || decision.code === 'bugbot-incomplete' ? 'unavailable'
+                : decision.status === 'blocked' ? 'blocked'
+                    : decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
+}
+/** Uses the existing decision and the same canonical evidence gates, without an observer or a mutation. */
+function projectPullRequestReadiness(rawPolicy, evidence, final) {
+    if (!Number.isSafeInteger(final.repositoryId) || final.repositoryId <= 0 || !Number.isSafeInteger(final.pullNumber)
+        || final.pullNumber <= 0)
+        return unavailablePullRequestReadiness('identity-unavailable');
+    let policy;
+    try {
+        const finalPolicy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(final.rawPolicy);
+        if (finalPolicy.mode === 'off' && rawPolicy !== final.rawPolicy)
+            return disabledPullRequestReadiness();
+        policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy);
+    }
+    catch {
+        return Object.freeze({ ...unavailablePullRequestReadiness('invalid-policy', 'resolve'), readiness: 'blocked' });
+    }
+    if (policy.mode === 'off' && rawPolicy !== final.rawPolicy)
+        return unavailablePullRequestReadiness('policy-superseded');
+    if (!Number.isSafeInteger(evidence.repositoryId) || evidence.repositoryId <= 0 || !Number.isSafeInteger(evidence.pullNumber)
+        || evidence.pullNumber <= 0 || !objectId(evidence.headSha) || !objectId(evidence.baseSha)
+        || !objectId(final.headSha) || !objectId(final.baseSha))
+        return policy.mode === 'off' ? disabledPullRequestReadiness() : unavailablePullRequestReadiness('identity-unavailable');
+    const sameTarget = evidence.repositoryId === final.repositoryId && evidence.pullNumber === final.pullNumber;
+    if (!sameTarget || evidence.headSha !== final.headSha || evidence.baseSha !== final.baseSha || rawPolicy !== final.rawPolicy) {
+        if (policy.mode === 'off')
+            return disabledPullRequestReadiness();
+        return Object.freeze({ readiness: 'pending', mode: policy.mode, headSha: final.headSha, baseSha: final.baseSha, code: 'superseded',
+            humanReviewRequired: false, action: 'wait', evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+    }
+    const checkBoundary = !policy.producerAttested ? 'blocked'
+        : !evidence.mergeCommitVerified || !objectId(evidence.testedMergeSha) ? 'pending' : undefined;
+    const ci = checkBoundary ?? state((0, pull_request_approval_1.decideApprovalChecks)(policy, evidence));
+    const coverage = policy.coverage.mode === 'check'
+        ? checkBoundary ?? state((0, pull_request_approval_1.decideApprovalChecks)({ ...policy,
+            testChecks: policy.testChecks.filter(check => check.name === policy.coverage.checkName),
+        }, { ...evidence, requiredChecks: [policy.coverage.checkName] }))
+        : !policy.coverage.reporterAttested ? 'blocked' : !evidence.numericCoverage && !(0, pull_request_approval_1.isDocumentationOnlyDiff)(evidence.changedPaths)
+            ? 'unavailable' : state((0, pull_request_approval_1.decideApprovalCoverage)(policy, evidence));
+    const bugbot = evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun ? 'blocked' : state((0, pull_request_approval_1.decideApprovalBugbot)(policy, evidence));
+    const reviews = state((0, pull_request_approval_1.decideApprovalReviews)(policy, evidence));
+    const groups = Object.freeze({ ci, coverage, bugbot, reviews });
+    if (policy.mode === 'off')
+        return Object.freeze({ readiness: 'not-applicable', mode: 'off', headSha: evidence.headSha,
+            baseSha: evidence.baseSha, code: 'disabled', humanReviewRequired: false, action: 'none', evidence: groups });
+    const decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, evidence);
+    let readiness = decision.status === 'pending' ? 'pending' : decision.status === 'blocked' ? 'blocked'
+        : decision.status === 'eligible' || decision.status === 'already-approved' || decision.code === 'recommend-mode' || decision.code === 'human-approved' ? 'satisfied' : 'not-applicable';
+    if (!evidence.filesComplete || Object.values(groups).includes('unavailable'))
+        readiness = 'unavailable';
+    const action = decision.code === 'human-approved' || decision.status === 'already-approved' ? 'none' : readiness === 'unavailable' ? 'retry' : readiness === 'blocked' ? 'resolve' : readiness === 'pending' ? 'wait'
+        : readiness === 'satisfied' && policy.mode === 'guarded' ? 'observer' : 'human-review';
+    return Object.freeze({ readiness, mode: policy.mode, headSha: evidence.headSha, baseSha: evidence.baseSha,
+        code: evidence.filesComplete ? decision.code : 'evidence-unavailable', humanReviewRequired: readiness === 'satisfied' && policy.mode === 'recommend' && decision.code !== 'human-approved', evidence: groups, action });
+}
+
+
+/***/ }),
+
+/***/ 99448:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.appendPullRequestReadiness = appendPullRequestReadiness;
+/** Append exact-head facts and bound the entire combined status, including independent SDD sections. */
+function appendPullRequestReadiness(baseLines, snapshot, catalog) {
+    const lines = [...baseLines];
+    if (snapshot.pullRequestReadiness) {
+        const readiness = snapshot.pullRequestReadiness;
+        const states = ['unavailable', 'pending', 'blocked', 'satisfied', 'not-applicable'];
+        const renderState = (state) => catalog.render(`interaction.status.prReadiness.${states.includes(state) ? state : 'unavailable'}`);
+        const mode = ['off', 'recommend', 'guarded', 'unavailable'].includes(readiness.mode) ? readiness.mode : 'unavailable';
+        const head = /^[a-f0-9]{40}$/u.test(readiness.headSha) ? readiness.headSha.slice(0, 8) : catalog.render('interaction.status.notSet');
+        const code = /^[a-z0-9-]{1,60}$/u.test(readiness.code) ? readiness.code : 'evidence-unavailable';
+        lines.push(`- **${catalog.render('interaction.status.prReadiness')}:** ${renderState(readiness.readiness)} (${mode}; ${catalog.render('interaction.status.prReadiness.revision')} ${head}; ${code})`);
+        if (readiness.evidence)
+            for (const group of ['ci', 'coverage', 'bugbot', 'reviews']) {
+                lines.push(`- **${catalog.render(`interaction.status.prReadiness.${group}`)}:** ${renderState(readiness.evidence[group])}`);
+            }
+        const url = verifiedReadinessLink(snapshot, readiness.pullNumber);
+        if (url)
+            lines.push(`[${catalog.render('interaction.status.prReadiness.openPr')}](${url})`);
+        if (readiness.humanReviewRequired && readiness.readiness === 'satisfied' && mode === 'recommend') {
+            lines.push(catalog.render('interaction.status.prReadiness.humanReview'));
+        }
+        const actions = ['retry', 'wait', 'resolve', 'human-review', 'observer', 'select-pr', 'none'];
+        const action = readiness.action && actions.includes(readiness.action) ? readiness.action : 'retry';
+        if (action !== 'none')
+            lines.push(`${catalog.render('interaction.status.prReadiness.next')}: ${catalog.render(`interaction.status.prReadiness.action.${action}`)}`);
+    }
+    const rendered = lines.join('\n');
+    return snapshot.pullRequestReadiness && rendered.length > 6000
+        ? `${catalog.render('interaction.status.prReadiness.oversize')}\n${catalog.render('interaction.status.prReadiness.action.retry')}` : rendered;
+}
+function verifiedReadinessLink(snapshot, number) {
+    if (!Number.isSafeInteger(number) || !number || number <= 0 || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.owner)
+        || !/^[A-Za-z0-9_.-]+$/u.test(snapshot.repository) || [snapshot.owner, snapshot.repository].some(value => value === '.' || value === '..'))
+        return undefined;
+    try {
+        const url = new URL(snapshot.serverOrigin ?? '');
+        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
+            ? `${url.origin}/${snapshot.owner}/${snapshot.repository}/pull/${number}` : undefined;
+    }
+    catch {
+        return undefined;
+    }
 }
 
 
@@ -46440,6 +47436,75 @@ async function resolveMessageCatalogView(locale, ids, sourceCatalog, bundledCata
 
 /***/ }),
 
+/***/ 93427:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildRetiredProgressComment = buildRetiredProgressComment;
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const archiveStart = '<!-- copilot:progress-archive schema="1" -->';
+const archiveEnd = '<!-- /copilot:progress-archive -->';
+const head = '(?:[a-f0-9]{40}|[a-f0-9]{64})';
+const activeSource = new RegExp(`^head:(${head})$`, 'u');
+const closedSource = new RegExp(`^closed:(?:completed|not_planned|duplicate|unknown):head:(${head})$`, 'u');
+/** Preserve the last assessment as inert history; native closure is a separate fact. */
+function buildRetiredProgressComment(body, locale, reason) {
+    const marker = (0, publication_identity_policy_1.parsePublicationMarker)(body);
+    if (body.length > 28000 || !marker || !body.startsWith('<!-- copilot:publication ')
+        || body.split('<!-- copilot:publication ').length !== 2
+        || marker.identity.topic !== 'progress' || marker.identity.target.kind !== 'issue' || marker.identity.key !== 'work'
+        || !['completed', 'not_planned', 'duplicate', 'unknown'].includes(reason))
+        return undefined;
+    const active = activeSource.exec(marker.sourceVersion);
+    const closed = closedSource.exec(marker.sourceVersion);
+    let archive;
+    if (active) {
+        if (body.length > 12000 || body.includes(archiveStart) || body.includes(archiveEnd))
+            return undefined;
+        const assessment = body.slice(body.indexOf('-->') + 3).trim();
+        if (!assessment)
+            return undefined;
+        archive = (0, github_comment_publication_policy_1.escapeHtml)((0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(assessment, 12000)).split('\n').map(line => `> ${line}`).join('\n');
+    }
+    else if (closed) {
+        if (body.split(archiveStart).length !== 2 || body.split(archiveEnd).length !== 2 || !body.endsWith(archiveEnd))
+            return undefined;
+        archive = body.slice(body.indexOf(archiveStart) + archiveStart.length, body.lastIndexOf(archiveEnd)).trim();
+        if (!archive || !archive.split('\n').every(line => line.startsWith('> ')))
+            return undefined;
+    }
+    else
+        return undefined;
+    const render = (spanish, closedReason) => {
+        const reasons = spanish
+            ? { completed: 'cerrada como completada', not_planned: 'cerrada como no planificada', duplicate: 'cerrada como duplicada', unknown: 'cerrada; motivo no disponible' }
+            : { completed: 'closed as completed', not_planned: 'closed as not planned', duplicate: 'closed as duplicate', unknown: 'closed; reason unavailable' };
+        const sourceVersion = `closed:${closedReason}:head:${(active ?? closed)[1]}`;
+        const retired = (0, publication_identity_policy_1.buildPublicationMarker)({ identity: marker.identity, sourceVersion, digest: (0, publication_identity_policy_1.createSemanticDigest)({ spanish, reason: closedReason, archive }) });
+        return [retired, '', spanish ? '## Issue cerrada — progreso histórico' : '## Issue closed — historical progress', '',
+            spanish ? `**Estado actual:** ${reasons[closedReason]}.` : `**Current status:** ${reasons[closedReason]}.`, '',
+            spanish ? 'La última estimación se conserva abajo como historial. El cierre no certifica un nuevo porcentaje, pruebas ni alineación de ramas.'
+                : 'The last estimate is retained below as history. Closure does not certify a new percentage, tests, or branch alignment.', '',
+            spanish ? '**Acción requerida:** ninguna para esta issue cerrada. Si el trabajo continúa, reabre la issue; una evaluación nueva podrá actualizar esta misma tarjeta.'
+                : '**Action required:** none for this closed issue. If work continues, reopen the issue; a fresh assessment can update this same card.', '',
+            spanish ? '### Última evaluación antes del cierre (histórica)' : '### Last assessment before closure (historical)', '',
+            archiveStart, archive, archiveEnd].join('\n');
+    };
+    for (const spanish of [false, true]) {
+        for (const closedReason of ['completed', 'not_planned', 'duplicate', 'unknown']) {
+            if (render(spanish, closedReason).length > 28000)
+                return undefined;
+        }
+    }
+    return render(locale.toLowerCase().split('-')[0] === 'es', reason);
+}
+
+
+/***/ }),
+
 /***/ 88350:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -46482,6 +47547,198 @@ function selectConfirmedReviewers(requestedMembers, confirmedMembers) {
 }
 function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCount) {
     return Math.max(desiredCount - currentCount - confirmedCount, 0);
+}
+
+
+/***/ }),
+
+/***/ 2230:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_SDD_DIFF_DEFINITION = exports.ENGLISH_SDD_DIFF_DEFINITION = exports.SDD_DIFF_MESSAGE_IDS = void 0;
+exports.resolveSddDiffCatalog = resolveSddDiffCatalog;
+exports.isSddDiffResolvedLocale = isSddDiffResolvedLocale;
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+exports.SDD_DIFF_MESSAGE_IDS = Object.freeze([
+    'sddDiff.heading', 'sddDiff.status', 'sddDiff.action', 'sddDiff.not-applicable', 'sddDiff.no-publication',
+    'sddDiff.initial-only', 'sddDiff.stale', 'sddDiff.pending-revision', 'sddDiff.invalid', 'sddDiff.unavailable',
+    'sddDiff.ambiguous', 'sddDiff.bounded', 'sddDiff.compared', 'sddDiff.none', 'sddDiff.publish', 'sddDiff.refresh',
+    'sddDiff.answer', 'sddDiff.retry', 'sddDiff.choose', 'sddDiff.reduce', 'sddDiff.first', 'sddDiff.current',
+    'sddDiff.historical', 'sddDiff.historicalCurrent', 'sddDiff.card', 'sddDiff.commit', 'sddDiff.compare', 'sddDiff.lines', 'sddDiff.sections', 'sddDiff.omitted', 'sddDiff.structural',
+    'sddDiff.charactersLimit', 'sddDiff.bytesLimit', 'sddDiff.linesLimit', 'sddDiff.workLimit',
+]);
+const EN = Object.freeze({
+    'sddDiff.heading': 'SDD structural comparison', 'sddDiff.status': 'Current status', 'sddDiff.action': 'Next action',
+    'sddDiff.not-applicable': 'An SDD comparison is not applicable to this target.',
+    'sddDiff.no-publication': 'No verified SDD publication is available yet.',
+    'sddDiff.initial-only': 'Only the first publication is verified; there is no revision pair to compare.',
+    'sddDiff.stale': 'Current issue, SDD or branch evidence changed or disagrees. Historical evidence does not certify a current comparison.',
+    'sddDiff.pending-revision': 'The requested SDD revision is pending. Current change counts are unavailable.',
+    'sddDiff.invalid': 'The owning SDD evidence could not be verified.',
+    'sddDiff.unavailable': 'The comparison could not be verified. No current change counts are available.',
+    'sddDiff.ambiguous': 'More than one SDD-eligible issue is linked to this PR.',
+    'sddDiff.bounded': 'The verified documents exceed a fixed comparison limit; exact counts are unavailable.',
+    'sddDiff.compared': 'Compared verified published revisions.', 'sddDiff.none': 'No action is required.',
+    'sddDiff.publish': 'Publish the SDD through the existing issue workflow, then retry this command.',
+    'sddDiff.refresh': 'Retry this command with current evidence; if the issue changed, resume its existing SDD clarification workflow.',
+    'sddDiff.answer': 'Answer the existing SDD questions or resume publication, then retry this command.',
+    'sddDiff.retry': 'Inspect the existing SDD evidence and read access, then retry this command.',
+    'sddDiff.choose': 'Run this command in the intended issue conversation.',
+    'sddDiff.reduce': 'Keep the SDD within the documented fixed limits, then retry this command.',
+    'sddDiff.first': 'First publication', 'sddDiff.current': 'Current publication', 'sddDiff.historical': 'Historical first publication', 'sddDiff.historicalCurrent': 'Historical published revision',
+    'sddDiff.card': 'SDD clarification card', 'sddDiff.commit': 'Publication commit', 'sddDiff.compare': 'Compare publication commits',
+    'sddDiff.lines': 'Added lines: {added}; removed lines: {removed}.', 'sddDiff.sections': 'Changed section titles',
+    'sddDiff.omitted': 'Additional changed titles omitted: {count}.',
+    'sddDiff.charactersLimit': 'Limit: 70,000 characters per document.', 'sddDiff.bytesLimit': 'Limit: 280,000 UTF-8 bytes per document.',
+    'sddDiff.linesLimit': 'Limit: 2,000 content lines per document.', 'sddDiff.workLimit': 'Limit: 2,000,000 line-comparison steps.',
+    'sddDiff.structural': 'This compares structure and content lines; it does not assess semantic requirements.',
+});
+const ES = Object.freeze({
+    'sddDiff.heading': 'Comparación estructural del SDD', 'sddDiff.status': 'Estado actual', 'sddDiff.action': 'Siguiente acción',
+    'sddDiff.not-applicable': 'La comparación de SDD no corresponde a este destino.',
+    'sddDiff.no-publication': 'Todavía no hay una publicación de SDD verificada.',
+    'sddDiff.initial-only': 'Sólo está verificada la primera publicación; no hay dos revisiones que comparar.',
+    'sddDiff.stale': 'La evidencia de la issue, del SDD o de la rama cambió o no coincide. La evidencia histórica no certifica una comparación actual.',
+    'sddDiff.pending-revision': 'La revisión solicitada del SDD está pendiente. No hay recuentos de cambios actuales.',
+    'sddDiff.invalid': 'No se pudo verificar la evidencia del SDD propietario.',
+    'sddDiff.unavailable': 'No se pudo verificar la comparación. No hay recuentos de cambios actuales.',
+    'sddDiff.ambiguous': 'Esta PR enlaza más de una issue apta para comparar SDD.',
+    'sddDiff.bounded': 'Los documentos verificados superan un límite fijo de comparación; no hay recuentos exactos.',
+    'sddDiff.compared': 'Se compararon las revisiones publicadas y verificadas.', 'sddDiff.none': 'No se requiere ninguna acción.',
+    'sddDiff.publish': 'Publica el SDD mediante el flujo existente de la issue y vuelve a ejecutar el comando.',
+    'sddDiff.refresh': 'Vuelve a ejecutar el comando con evidencia actual; si cambió la issue, retoma su flujo existente de aclaraciones del SDD.',
+    'sddDiff.answer': 'Responde las preguntas existentes del SDD o retoma su publicación y vuelve a ejecutar el comando.',
+    'sddDiff.retry': 'Revisa la evidencia existente del SDD y los permisos de lectura y vuelve a ejecutar el comando.',
+    'sddDiff.choose': 'Ejecuta el comando en la conversación de la issue deseada.',
+    'sddDiff.reduce': 'Mantén el SDD dentro de los límites fijos documentados y vuelve a ejecutar el comando.',
+    'sddDiff.first': 'Primera publicación', 'sddDiff.current': 'Publicación actual', 'sddDiff.historical': 'Primera publicación histórica', 'sddDiff.historicalCurrent': 'Revisión publicada histórica',
+    'sddDiff.card': 'Tarjeta de aclaraciones del SDD', 'sddDiff.commit': 'Commit de publicación', 'sddDiff.compare': 'Comparar commits de publicación',
+    'sddDiff.lines': 'Líneas añadidas: {added}; líneas eliminadas: {removed}.', 'sddDiff.sections': 'Títulos de secciones modificadas',
+    'sddDiff.omitted': 'Títulos modificados adicionales omitidos: {count}.',
+    'sddDiff.charactersLimit': 'Límite: 70.000 caracteres por documento.', 'sddDiff.bytesLimit': 'Límite: 280.000 bytes UTF-8 por documento.',
+    'sddDiff.linesLimit': 'Límite: 2.000 líneas de contenido por documento.', 'sddDiff.workLimit': 'Límite: 2.000.000 pasos de comparación de líneas.',
+    'sddDiff.structural': 'La comparación incluye estructura y líneas de contenido; no evalúa requisitos semánticos.',
+});
+exports.ENGLISH_SDD_DIFF_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION, locale: 'en-US', compatibleBaseLanguage: 'en', messages: EN,
+});
+exports.SPANISH_SDD_DIFF_DEFINITION = Object.freeze({
+    version: message_catalog_1.MESSAGE_CATALOG_VERSION, locale: 'es-ES', compatibleBaseLanguage: 'es', messages: ES,
+});
+function resolveSddDiffCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_SDD_DIFF_DEFINITION, [exports.ENGLISH_SDD_DIFF_DEFINITION, exports.SPANISH_SDD_DIFF_DEFINITION]);
+}
+/** Locale admission belongs to the complete bundled catalog boundary. */
+function isSddDiffResolvedLocale(value) {
+    return value === 'en-US' || value === 'es-ES';
+}
+
+
+/***/ }),
+
+/***/ 63302:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderSddDiff = renderSddDiff;
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const STATES = ['not-applicable', 'no-publication', 'initial-only', 'stale', 'pending-revision', 'invalid', 'unavailable', 'ambiguous', 'bounded', 'compared'];
+const ACTIONS = Object.freeze({
+    'not-applicable': 'sddDiff.none', 'no-publication': 'sddDiff.publish', 'initial-only': 'sddDiff.none',
+    stale: 'sddDiff.refresh', 'pending-revision': 'sddDiff.answer', invalid: 'sddDiff.retry', unavailable: 'sddDiff.retry',
+    ambiguous: 'sddDiff.choose', bounded: 'sddDiff.reduce', compared: 'sddDiff.none',
+});
+/** Immutable links are constructed only from a bound server/repository and verified publication facts. */
+function renderSddDiff(snapshot, scope, catalog) {
+    const render = catalog.message;
+    const heading = `## ${render('sddDiff.heading')}`;
+    const fallback = `${heading}\n\n${render('sddDiff.unavailable')}\n\n**${render('sddDiff.action')}:** ${render('sddDiff.retry')}`;
+    const root = repositoryRoot(scope);
+    if (!root || !STATES.includes(snapshot.state))
+        return fallback;
+    const lines = [heading, '', `**${render('sddDiff.status')}:** ${render(`sddDiff.${snapshot.state}`)}`, '',
+        `**${render('sddDiff.action')}:** ${render(ACTIONS[snapshot.state])}`];
+    if ('publication' in snapshot && snapshot.publication) {
+        const publication = snapshot.publication;
+        if (!(0, pre_branch_sdd_1.isSafeSddPath)(publication.path) || !sha(publication.firstSha))
+            return fallback;
+        const historical = snapshot.state === 'stale' || snapshot.state === 'pending-revision';
+        if (historical) {
+            lines.push('', link('sddDiff.historical', publication.firstSha, publication.path));
+            if (publication.currentSha !== undefined) {
+                if (!sha(publication.currentSha))
+                    return fallback;
+                if (publication.currentSha !== publication.firstSha)
+                    lines.push(link('sddDiff.historicalCurrent', publication.currentSha, publication.path));
+            }
+        }
+        else {
+            lines.push('', link('sddDiff.first', publication.firstSha, publication.path));
+            if (snapshot.state !== 'initial-only') {
+                if (!sha(publication.currentSha) || publication.currentSha === publication.firstSha)
+                    return fallback;
+                lines.push(link('sddDiff.current', publication.currentSha, publication.path));
+            }
+        }
+    }
+    else if (snapshot.state === 'initial-only' || snapshot.state === 'compared' || snapshot.state === 'bounded')
+        return fallback;
+    if (snapshot.card && (snapshot.state === 'stale' || snapshot.state === 'pending-revision')) {
+        if (!positive(snapshot.card.issueNumber) || !positive(snapshot.card.commentId))
+            return fallback;
+        lines.push('', `[${render('sddDiff.card')}](${root}/issues/${snapshot.card.issueNumber}#issuecomment-${snapshot.card.commentId})`);
+    }
+    if (snapshot.state === 'compared' || snapshot.state === 'bounded') {
+        const publication = snapshot.publication;
+        lines.push('', `[${render('sddDiff.compare')}](${root}/compare/${publication.firstSha}...${publication.currentSha})`);
+    }
+    if (snapshot.state === 'bounded') {
+        if (!['characters', 'bytes', 'lines', 'work'].includes(snapshot.reason))
+            return fallback;
+        lines.push('', render(`sddDiff.${snapshot.reason}Limit`));
+    }
+    if (snapshot.state === 'compared') {
+        const changes = snapshot.changes;
+        if (changes.state !== 'compared' || !count(changes.addedLines, 2000) || !count(changes.removedLines, 2000)
+            || !count(changes.omittedSections, 4000) || !Array.isArray(changes.sections) || changes.sections.length > 8
+            || changes.sections.some(title => typeof title !== 'string' || title.length > 120))
+            return fallback;
+        lines.push('', render('sddDiff.lines', { added: changes.addedLines, removed: changes.removedLines }), '', render('sddDiff.structural'));
+        if (changes.sections.length)
+            lines.push('', `**${render('sddDiff.sections')}:**`, ...changes.sections.map(title => `- ${escapeTitle(title)}`));
+        if (changes.omittedSections)
+            lines.push('', render('sddDiff.omitted', { count: changes.omittedSections }));
+    }
+    const body = lines.join('\n');
+    return body.length <= 5600 ? body : fallback;
+    function link(label, commit, path) {
+        return `[${render(label)} · ${commit.slice(0, 9)}](${root}/blob/${commit}/${path}) · [${render('sddDiff.commit')}](${root}/commit/${commit})`;
+    }
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function count(value, max) { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= max; }
+function sha(value) { return typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value); }
+function repositoryRoot(scope) {
+    if (scope.serverOrigin.length > 200 || ![scope.owner, scope.repository].every(value => /^[A-Za-z0-9_.-]{1,100}$/u.test(value) && !['.', '..'].includes(value)))
+        return undefined;
+    try {
+        const url = new URL(scope.serverOrigin);
+        return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash
+            ? `${url.origin}/${scope.owner}/${scope.repository}` : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function escapeTitle(value) {
+    return value.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, ' ').replace(/@/gu, '@\u200b')
+        .replace(/([\\`*_{}[\]()<>#|~!])/gu, '\\$1');
 }
 
 
@@ -46606,7 +47863,7 @@ function projectSddStatus(evidence, initial) {
             : evidence.state === 'stale' ? (revisionPending ? 'revision-pending' : 'unverified') : evidence.state === 'invalid' ? 'unverified'
                 : evidence.state === 'published' ? (evidence.verified?.path === evidence.path && /^[a-f0-9]{40}$/u.test(evidence.verified?.currentSha ?? '') ? 'ready' : 'unverified')
                     : revisionPending ? 'revision-pending' : evidence.state;
-    return Object.freeze({ state, required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
+    return Object.freeze({ state, ...(evidence.historical ? { historical: true } : {}), required: state === 'not-required' ? false : state === 'unavailable' ? initial?.required ?? null : true,
         ...(path && !['not-required', 'unavailable', 'unverified'].includes(state) ? { path } : {}),
         ...((state === 'awaiting-answers' || state === 'revision-pending') && evidence.pendingQuestionIds ? { pendingQuestionIds: Object.freeze([...evidence.pendingQuestionIds]) } : {}),
         ...(state === 'ready' && evidence.verified?.currentSha ? { commitSha: evidence.verified.currentSha } : {}),
@@ -46641,7 +47898,7 @@ function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
     const base = safeIssueUrl(issueUrl, issueNumber, identity);
     if (path && !['unavailable', 'unverified'].includes(state))
         lines.push(label('interaction.status.sddOwner', `\`${path}\``));
-    if ((state === 'awaiting-answers' || state === 'revision-pending') && pending?.length)
+    if (!readiness.historical && (state === 'awaiting-answers' || state === 'revision-pending') && pending?.length)
         lines.push(label('interaction.status.sddQuestions', [...new Set(pending)].slice(0, 8).join(', ')));
     if (state === 'ready' && commitSha && path) {
         const evidence = base ? `[\`${commitSha}\`](${base.repository}/blob/${commitSha}/${path})` : `\`${commitSha}\``;
@@ -46651,7 +47908,9 @@ function formatSddStatus(readiness, catalog, issueUrl, issueNumber, identity) {
         const evidence = base ? `[\`${firstCommitSha}\`](${base.repository}/blob/${firstCommitSha}/${path})` : `\`${firstCommitSha}\``;
         lines.push(label('interaction.status.sddFirstCommit', evidence));
     }
-    if (next[state])
+    if (readiness.historical && state !== 'not-required')
+        lines.push('', catalog.render('interaction.status.sddNextHistorical'));
+    else if (next[state])
         lines.push('', catalog.render(next[state]));
     if (base && Number.isSafeInteger(readiness.cardId) && readiness.cardId > 0)
         lines.push(`[${catalog.render('interaction.status.sddCard')}](${base.issue}#issuecomment-${readiness.cardId})`);
@@ -46692,6 +47951,11 @@ exports.hasOwnedPrimaryIssuePublication = hasOwnedPrimaryIssuePublication;
 exports.selectSemanticReplyIntents = selectSemanticReplyIntents;
 exports.renderSemanticReply = renderSemanticReply;
 exports.renderSemanticStatus = renderSemanticStatus;
+const sdd_diff_message_catalog_1 = __nccwpck_require__(2230);
+const github_runtime_doctor_presentation_policy_1 = __nccwpck_require__(2808);
+const copilot_operation_1 = __nccwpck_require__(40221);
+const copilot_history_presentation_policy_1 = __nccwpck_require__(55507);
+const copilot_history_projection_policy_1 = __nccwpck_require__(99186);
 const github_publication_1 = __nccwpck_require__(35793);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const result_1 = __nccwpck_require__(73817);
@@ -46759,6 +48023,17 @@ function selectSemanticReplyIntents(context) {
         const payload = (0, result_1.getResultPayload)(result.payload);
         if (!payload)
             return [];
+        if (result.id === 'CommentAutomation.History' && result.executed) {
+            const history = (0, copilot_history_projection_policy_1.readHistoryProjection)(payload.publication, context.target);
+            if (history)
+                return [replyIntent(context, correlationId, 'copilot-history', history)];
+        }
+        const fixed = (0, result_1.getResultPayload)(payload.publication);
+        if (result.id === 'CommentAutomation.FixReply' && result.executed && fixed?.kind === 'fix-result'
+            && (fixed.outcome === 'changes-pushed' || fixed.outcome === 'no-changes')
+            && Object.keys(fixed).length === 2) {
+            return [replyIntent(context, correlationId, 'fix-result', Object.freeze({ kind: 'fix-result', outcome: fixed.outcome }))];
+        }
         const stateCommand = stateCommandReplyProjection(result.id, payload, context.correlationId);
         if (stateCommand)
             return [replyIntent(context, correlationId, 'state-command-result', stateCommand)];
@@ -46779,6 +48054,11 @@ function selectSemanticReplyIntents(context) {
             return [replyIntent(context, correlationId, 'direct-answer', directAnswer)];
         const publication = (0, result_1.getResultPayload)(payload.publication);
         const kind = publication?.kind;
+        if (kind === 'sdd-diff' && result.id.endsWith('.SddDiff')
+            && typeof publication?.markdown === 'string' && publication.markdown.trim() && publication.markdown.length <= 5600
+            && (0, sdd_diff_message_catalog_1.isSddDiffResolvedLocale)(publication.locale)) {
+            return [replyIntent({ ...context, locale: publication.locale }, correlationId, 'copilot-sdd-diff', Object.freeze({ kind: 'sdd-diff', markdown: publication.markdown }))];
+        }
         if (kind === 'help' || kind === 'welcome') {
             const botLogin = typeof publication?.botLogin === 'string' && publication.botLogin.trim()
                 ? publication.botLogin.trim()
@@ -46788,6 +48068,11 @@ function selectSemanticReplyIntents(context) {
         }
         if (kind === 'access-policy') {
             return [replyIntent(context, correlationId, 'access-policy', Object.freeze({ kind }))];
+        }
+        if (result.id.endsWith('.Doctor') && (0, github_runtime_doctor_presentation_policy_1.isGithubRuntimeDoctorProjection)(payload.doctor)) {
+            return [replyIntent(context, correlationId, 'copilot-doctor', Object.freeze({
+                    kind: 'doctor-command', snapshot: payload.doctor,
+                }))];
         }
         const snapshot = (0, result_1.getResultPayload)(payload.status);
         if (result.id.endsWith('.Status') && isStatusSnapshot(snapshot)) {
@@ -46825,9 +48110,16 @@ function renderSemanticReply(intent, catalog = (0, publication_message_catalog_1
         digest: intent.digest,
     });
     const body = renderReplyBody(intent, catalog);
-    return `${marker}\n\n${body}`;
+    const operation = operationMarker(intent);
+    return `${marker}\n\n${body}${operation ? `\n\n${operation}` : ''}`;
 }
 function renderReplyBody(intent, catalog) {
+    if (intent.projection.kind === 'sdd-diff')
+        return (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(intent.projection.markdown);
+    if (intent.projection.kind === 'history-command')
+        return (0, copilot_history_presentation_policy_1.renderCopilotHistory)(intent.projection, catalog);
+    if (intent.projection.kind === 'fix-result')
+        return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed' ? 'interaction.history.fixPushed' : 'interaction.history.fixNoChanges'));
     if (intent.projection.kind === 'implementation-result') {
         return safeCatalogSentence(catalog.render(intent.projection.outcome === 'changes-pushed'
             ? 'interaction.implementation.pushed' : 'interaction.implementation.noChanges', { branch: inlineRef(intent.projection.branch) }));
@@ -46869,6 +48161,8 @@ function renderReplyBody(intent, catalog) {
     if (intent.projection.kind === 'branch-sync-result') {
         return renderBranchSyncResult(intent.projection, catalog);
     }
+    if (intent.projection.kind === 'doctor-command')
+        return (0, github_runtime_doctor_presentation_policy_1.formatGithubRuntimeDoctor)(intent.projection.snapshot, intent.locale, catalog);
     return (0, status_command_policy_1.formatCopilotStatus)(intent.projection.snapshot, intent.locale, catalog);
 }
 function renderBranchSyncResult(projection, catalog) {
@@ -47163,6 +48457,29 @@ function copyStatusSnapshot(snapshot) {
 }
 function safeDigest(value) {
     return /^[a-f0-9]{8,64}$/u.test(value) ? value : (0, publication_identity_policy_1.createSemanticDigest)(value);
+}
+function operationMarker(intent) {
+    if (!/^comment:[1-9]\d*$/u.test(intent.correlationId))
+        return undefined;
+    const projection = intent.projection;
+    const base = { target: (0, github_publication_1.publicationTargetToken)(intent.target), correlationId: intent.correlationId };
+    if (projection.kind === 'branch-sync-result') {
+        const outcome = projection.outcome === 'already-aligned' ? 'already-current'
+            : projection.outcome.startsWith('dry-run') ? 'not-applied' : 'applied';
+        // This producer proves completed push, but not an independent remote SHA read.
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: 'sync-branch', outcome });
+    }
+    if (projection.kind === 'implementation-result' || projection.kind === 'fix-result') {
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: projection.kind === 'fix-result' ? 'fix' : 'implement',
+            outcome: projection.outcome === 'changes-pushed' ? 'applied' : 'not-applied' });
+    }
+    if (projection.kind === 'state-command-result') {
+        const outcome = projection.outcome === 'not-applied' ? 'not-applied'
+            : projection.command === 'remember' ? projection.outcome === 'already-exists' ? 'already-current' : 'applied'
+                : projection.count === 0 ? 'already-current' : 'applied';
+        return (0, copilot_operation_1.buildOperationEvidenceMarker)({ ...base, command: projection.command, outcome });
+    }
+    return undefined;
 }
 
 
@@ -48494,6 +49811,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
 exports.buildCopilotStatusResult = buildCopilotStatusResult;
 exports.formatCopilotStatus = formatCopilotStatus;
+exports.projectCurrentNativeStatus = projectCurrentNativeStatus;
+const pull_request_readiness_status_policy_1 = __nccwpck_require__(99448);
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const sdd_status_policy_1 = __nccwpck_require__(6853);
 const result_1 = __nccwpck_require__(73817);
@@ -48527,6 +49847,14 @@ function buildCopilotStatusSnapshot(execution) {
     const candidateIssue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.issueNumber)
         ?? (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.issue?.number);
     const issueNumber = candidateIssue === execution.pullRequest?.number ? undefined : candidateIssue;
+    const nativeLifecycle = !execution.isPush && isPullRequestTarget
+        && (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.pullRequest?.number) && execution.pullRequest.nativeState === 'closed'
+        ? execution.pullRequest.isMerged === true ? 'merged' : 'closed'
+        : !execution.isPush && !isPullRequestTarget && issueNumber
+            && issueNumber === (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.issue?.number) && execution.issue.nativeState === 'closed'
+            ? execution.issue.nativeStateReason === 'completed' ? 'completed' : 'closed' : undefined;
+    const currentLifecycle = nativeLifecycle ?? lifecycle;
+    const currentWaitingFor = nativeLifecycle ? undefined : waitingFor;
     return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
@@ -48542,8 +49870,9 @@ function buildCopilotStatusSnapshot(execution) {
         ...(issueNumber ? { issueNumber } : {}),
         ...(execution.pullRequest?.number > 0 ? { pullRequestNumber: execution.pullRequest.number } : {}),
         ...(branch ? { branch } : {}),
-        ...(lifecycle ? { lifecycle } : {}),
-        ...(waitingFor ? { waitingFor } : {}),
+        ...(currentLifecycle ? { lifecycle: currentLifecycle } : {}),
+        ...(currentWaitingFor ? { waitingFor: currentWaitingFor } : {}),
+        lifecycleLabels: Object.freeze({ ...(execution.labels?.lifecycle ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
         issueLabels: Object.freeze(issueLabels),
         pullRequestLabels: Object.freeze(pullRequestLabels),
         ...(findingStates ? { findingStates: Object.freeze({
@@ -48590,14 +49919,34 @@ function formatCopilotStatus(snapshot, locale = 'en-US', catalog = (0, publicati
         label('interaction.status.pullRequestLabels', snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : catalog.render('interaction.status.none')),
     ];
     if (snapshot.findingStateEvidence === 'invalid') {
-        lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
+        lines.push(label('interaction.status.findings', catalog.render(snapshot.pullRequestReadiness ? 'interaction.status.prReadiness.countsUnavailable' : 'interaction.status.findingsInvalid')));
     }
     else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
     if (snapshot.sddReadiness)
         lines.push(...(0, sdd_status_policy_1.formatSddStatus)(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
-    return lines.join('\n');
+    return (0, pull_request_readiness_status_policy_1.appendPullRequestReadiness)(lines, snapshot, catalog);
+}
+/** A fresh native read supersedes event-derived terminal state without obtaining mutation authority. */
+function projectCurrentNativeStatus(status, facts) {
+    const issue = status.target === 'issue';
+    const targetNumber = issue ? status.issueNumber : status.target === 'pull-request' ? status.pullRequestNumber : undefined;
+    if (!(0, positive_integer_policy_1.parsePositiveSafeInteger)(targetNumber) || facts.number !== targetNumber || !['open', 'closed'].includes(facts.state)
+        || (issue ? !('labels' in facts) || !('reason' in facts) : !('merged' in facts) || typeof facts.merged !== 'boolean'))
+        return status;
+    const labels = status.lifecycleLabels ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS;
+    const currentLabels = issue && 'labels' in facts ? facts.labels : status.pullRequestLabels;
+    const state = (0, copilot_lifecycle_1.lifecycleStateFromLabels)(currentLabels, labels);
+    const active = state === 'working' ? 'in-progress' : state;
+    const waiting = currentLabels.includes(labels.awaitingMaintainer) ? 'maintainer'
+        : currentLabels.includes(labels.awaitingIssueAuthor) ? 'issue-author' : undefined;
+    const terminal = facts.state === 'closed'
+        ? issue ? 'reason' in facts && facts.reason === 'completed' ? 'completed' : 'closed'
+            : 'merged' in facts && facts.merged === true ? 'merged' : 'closed'
+        : undefined;
+    return Object.freeze({ ...status, ...(issue ? { issueLabels: Object.freeze([...currentLabels]) } : {}),
+        lifecycle: terminal ?? active, waitingFor: terminal ? undefined : waiting });
 }
 
 
@@ -48638,10 +49987,27 @@ function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, poli
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = void 0;
+exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = void 0;
+/** Closed, untrusted-provider diagnostic hints; no provider text crosses this port. */
+exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'];
 /** Fixed local output rejection cause; never derived by interpolating provider bytes. */
 exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
     'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
+];
+
+
+/***/ }),
+
+/***/ 64921:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DOCTOR_REPOSITORY_PATHS = void 0;
+exports.DOCTOR_REPOSITORY_PATHS = [
+    '.github/workflows/copilot_issue.yml', '.github/workflows/copilot_issue_comment.yml',
+    '.github/workflows/copilot_pull_request.yml', 'specs/catalog.json', 'specs/_template.md', 'specs/README.md',
 ];
 
 
@@ -48771,6 +50137,7 @@ exports.bindSddEvidenceReadPorts = bindSddEvidenceReadPorts;
 /** Retains only read operations, even when composition receives a broader adapter. */
 function bindSddEvidenceReadPorts(ports) {
     return Object.freeze({
+        ...(ports.nativeState ? { nativeState: Object.freeze({ readIssue: ports.nativeState.readIssue.bind(ports.nativeState) }) } : {}),
         comments: Object.freeze({ listIssueComments: ports.comments.listIssueComments.bind(ports.comments) }),
         descriptions: Object.freeze({ getDescription: ports.descriptions.getDescription.bind(ports.descriptions) }),
         titles: Object.freeze({ getTitle: ports.titles.getTitle.bind(ports.titles) }),
@@ -49241,6 +50608,11 @@ const publication_outcome_policy_1 = __nccwpck_require__(79719);
 async function runCheckProgressWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     try {
+        if (!dependencies.publicationSourceQuery.isIssueOpen)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress analysis requires a native issue state query.');
+        if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
+        }
         const analysis = await (0, progress_analysis_workflow_1.analyzeProgress)(param, taskId, dependencies);
         if (analysis.kind === 'failure')
             return [analysis.result];
@@ -49251,7 +50623,8 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
         const { attemptResult, issueNumber, branch, developmentBranch, baseSha, sourceHeadSha } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
-        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)) {
+        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)
+            || await dependencies.publicationSourceQuery.isIssueOpen(issueNumber) !== true) {
             (0, logging_ports_1.logInfo)(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
         }
@@ -50868,6 +52241,7 @@ function projectEvidence(source) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ObserveBranchSyncUseCase = void 0;
+const publication_identity_policy_1 = __nccwpck_require__(45403);
 const result_1 = __nccwpck_require__(73817);
 const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -50875,17 +52249,20 @@ const application_error_1 = __nccwpck_require__(75999);
 const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const transition_notification_workflow_1 = __nccwpck_require__(1725);
 const publication_outcome_policy_1 = __nccwpck_require__(79719);
+const application_error_2 = __nccwpck_require__(75999);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
  * and maintains one stateful notification per issue; no agent is reachable.
  */
 class ObserveBranchSyncUseCase {
-    constructor(dependencies, comparisons, notifications, catalogResolver) {
+    constructor(dependencies, comparisons, notifications, catalogResolver, nativeIssues, retirement) {
         this.dependencies = dependencies;
         this.comparisons = comparisons;
         this.notifications = notifications;
         this.catalogResolver = catalogResolver;
+        this.nativeIssues = nativeIssues;
+        this.retirement = retirement;
         this.taskId = TASK_ID;
     }
     async invoke(context) {
@@ -50898,10 +52275,11 @@ class ObserveBranchSyncUseCase {
                 (0, logging_ports_1.logInfo)(`No open branch dependencies are affected by ${pushedBranch}.`);
                 return [];
             }
-            const messages = await (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver);
+            let catalog;
+            const getMessages = () => catalog ?? (catalog = (0, branch_sync_message_catalog_1.resolveBranchSyncCatalog)(context.locale, context.agentConfiguration, this.catalogResolver));
             const results = [];
             for (const dependency of dependencies) {
-                results.push(await this.reconcileDependency(context, dependency, messages));
+                results.push(await this.reconcileDependency(context, dependency, getMessages));
             }
             return results;
         }
@@ -50910,10 +52288,61 @@ class ObserveBranchSyncUseCase {
             return [failure("Unable to inspect branch synchronization safely.", cause)];
         }
     }
-    async reconcileDependency(context, dependency, messages) {
+    openNotifications(issueNumber) {
+        const assertOpen = async (number) => {
+            if (number !== issueNumber || !this.nativeIssues)
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+            const current = await this.nativeIssues.readIssue(number);
+            if (current.number !== number || current.state !== 'open')
+                throw new application_error_2.ApplicationError('workflow.stale', 'The issue is no longer open.');
+        };
+        return Object.freeze({
+            listIssueComments: (number) => this.notifications.listIssueComments(number),
+            addComment: async (number, body) => {
+                await assertOpen(number);
+                await this.notifications.addComment(number, body);
+            },
+            updateComment: async (number, id, body) => {
+                await assertOpen(number);
+                await this.notifications.updateComment(number, id, body);
+            },
+            removeComment: async (number, id) => {
+                await assertOpen(number);
+                return this.notifications.removeComment(number, id);
+            },
+        });
+    }
+    async reconcileDependency(context, dependency, getMessages) {
         try {
+            if (!this.nativeIssues)
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+            const initial = await this.nativeIssues.readIssue(dependency.issueNumber);
+            if (initial.number !== dependency.issueNumber || !['open', 'closed'].includes(initial.state))
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+            if (initial.state === 'closed') {
+                if (!this.retirement)
+                    throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+                const [result] = await this.retirement.invoke({
+                    issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+                });
+                return result;
+            }
+            const messages = await getMessages();
+            const beforeComparison = await this.nativeIssues.readIssue(dependency.issueNumber);
+            if (beforeComparison.number !== dependency.issueNumber || !['open', 'closed'].includes(beforeComparison.state)) {
+                throw new application_error_2.ApplicationError('workflow.stale', 'Native issue identity is unavailable.');
+            }
+            if (beforeComparison.state === 'closed') {
+                if (!this.retirement)
+                    throw new application_error_2.ApplicationError('workflow.stale', 'Terminal recommendation retirement is unavailable.');
+                const [result] = await this.retirement.invoke({
+                    issueNumber: dependency.issueNumber, locale: context.locale, trustedBotLogin: context.trustedBotLogin,
+                });
+                return result;
+            }
+            const notifications = this.openNotifications(dependency.issueNumber);
             const comparison = await this.comparisons.compare(dependency.parentBranch, dependency.workingBranch);
-            const comments = await this.notifications.listIssueComments(dependency.issueNumber);
+            const comments = await notifications.listIssueComments(dependency.issueNumber);
             const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, context.trustedBotLogin, dependency);
             if (comparison.behindBy > 0) {
                 const comment = (0, branch_sync_notification_policy_1.buildStaleBranchSyncComment)({
@@ -50924,12 +52353,12 @@ class ObserveBranchSyncUseCase {
                     messages,
                 });
                 if (!latest) {
-                    await this.notifications.addComment(dependency.issueNumber, comment);
+                    await notifications.addComment(dependency.issueNumber, comment);
                     return success(dependency, comparison.behindBy, "stale");
                 }
                 const transitionedFromAligned = !(0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body);
                 if (latest.body !== comment) {
-                    await this.notifications.updateComment(dependency.issueNumber, latest.id, comment);
+                    await notifications.updateComment(dependency.issueNumber, latest.id, comment);
                 }
                 if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
                     return success(dependency, comparison.behindBy, "stale");
@@ -50943,7 +52372,7 @@ class ObserveBranchSyncUseCase {
                         intent,
                         message: (0, branch_sync_notification_policy_1.buildBranchSyncTransitionNotification)(dependency, messages, (0, branch_sync_notification_policy_1.buildBranchSyncStatusCommentUrl)(context.repository.owner, context.repository.name, dependency.issueNumber, latest.id)),
                         duplicatePointer: canonicalUrl => (0, branch_sync_notification_policy_1.buildBranchSyncDuplicatePointer)(messages, canonicalUrl),
-                    }, this.notifications);
+                    }, notifications);
                     const cleanup = (0, publication_outcome_policy_1.buildDuplicateCompactionPublicationPayload)(transition.compactedCommentIds);
                     return success(dependency, comparison.behindBy, "stale", {
                         ...(0, publication_outcome_policy_1.buildTransitionPublicationPayload)(intent, transition.effect),
@@ -50954,8 +52383,8 @@ class ObserveBranchSyncUseCase {
                     return failure(`Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`, cause, { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true });
                 }
             }
-            if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
-                await this.notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
+            if (latest && ((0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body) || (0, publication_identity_policy_1.parsePublicationMarker)(latest.body)?.sourceVersion === 'closed:issue')) {
+                await notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
             }
             return success(dependency, 0, "aligned");
         }
@@ -51605,6 +53034,198 @@ function failure(taskId, message, code) {
         executed: true,
         errors: [new application_error_1.ApplicationError(code, message)],
     });
+}
+
+
+/***/ }),
+
+/***/ 74111:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireBranchSyncUseCase = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const result_1 = __nccwpck_require__(73817);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
+const application_error_1 = __nccwpck_require__(75999);
+/** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
+class RetireBranchSyncUseCase {
+    constructor(issues, comments, cardFreshness) {
+        this.issues = issues;
+        this.comments = comments;
+        this.cardFreshness = cardFreshness;
+        this.taskId = 'RetireBranchSyncUseCase';
+    }
+    async invoke(context) {
+        let retired = 0;
+        let nativeClosed = false;
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
+                return [this.result(retired, nativeClosed)];
+            }
+            const initial = await this.issues.readIssue(context.issueNumber);
+            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state))
+                throw stale();
+            if (initial.state !== 'closed')
+                return [this.result(retired, nativeClosed)];
+            nativeClosed = true;
+            const messages = (0, branch_sync_message_catalog_1.resolveStaticBranchSyncCatalog)(context.locale);
+            const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+                return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
+                    && marker.identity.target.number === context.issueNumber && /^dependency:[a-f0-9]{16}$/u.test(marker.identity.key)
+                    && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue')
+                    && Number.isSafeInteger(comment.id) && comment.id > 0
+                    && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
+            });
+            if (cards.length > 20)
+                throw stale();
+            for (const card of cards) {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(card.body);
+                const body = (0, branch_sync_notification_policy_1.buildRetiredBranchSyncComment)(marker.identity, messages);
+                if (card.body === body)
+                    continue;
+                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
+                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
+                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
+                if (!await this.cardFreshness.matches(witness))
+                    throw stale();
+                const fresh = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
+                if (!nativeClosed || fresh.reason !== initial.reason)
+                    throw stale();
+                await this.comments.updateComment(context.issueNumber, card.id, body);
+                retired++;
+            }
+            return [this.result(retired, nativeClosed)];
+        }
+        catch (cause) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
+                    steps: [nativeClosed ? 'Issue closure is retained; synchronization recommendation retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; synchronization recommendations were left unchanged.'],
+                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire synchronization recommendations safely.')],
+                    payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
+        }
+    }
+    result(retired, nativeClosed) {
+        return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
+            steps: [retired ? 'The closed issue’s synchronization recommendations were retired.' : 'No synchronization recommendation required retirement.'],
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+    }
+}
+exports.RetireBranchSyncUseCase = RetireBranchSyncUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned synchronization card changed or is unavailable.');
+}
+
+
+/***/ }),
+
+/***/ 11529:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireClosedIssueCardsUseCase = void 0;
+/** Independent narrow retirements retain each result, including partial failure. */
+class RetireClosedIssueCardsUseCase {
+    constructor(synchronization, progress) {
+        this.synchronization = synchronization;
+        this.progress = progress;
+        this.taskId = 'RetireClosedIssueCardsUseCase';
+    }
+    async invoke(context) {
+        return [...await this.synchronization.invoke(context), ...await this.progress.invoke(context)];
+    }
+}
+exports.RetireClosedIssueCardsUseCase = RetireClosedIssueCardsUseCase;
+
+
+/***/ }),
+
+/***/ 17025:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireProgressUseCase = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const result_1 = __nccwpck_require__(73817);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const retired_progress_presentation_policy_1 = __nccwpck_require__(93427);
+const application_error_1 = __nccwpck_require__(75999);
+/** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
+class RetireProgressUseCase {
+    constructor(issues, comments, cardFreshness) {
+        this.issues = issues;
+        this.comments = comments;
+        this.cardFreshness = cardFreshness;
+        this.taskId = 'RetireProgressUseCase';
+    }
+    async invoke(context) {
+        let retired = 0;
+        let nativeClosed = false;
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
+                return [this.result(retired, nativeClosed)];
+            }
+            const initial = await this.issues.readIssue(context.issueNumber);
+            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason))
+                throw stale();
+            if (initial.state !== 'closed')
+                return [this.result(retired, nativeClosed)];
+            nativeClosed = true;
+            const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+                return marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
+                    && marker.identity.target.number === context.issueNumber && marker.identity.key === 'work'
+                    && (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(comment.body ?? '', context.locale, initial.reason) !== undefined
+                    && Number.isSafeInteger(comment.id) && comment.id > 0
+                    && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
+            });
+            if (cards.length > 20)
+                throw stale();
+            for (const card of cards) {
+                const body = (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(card.body ?? '', context.locale, initial.reason);
+                if (card.body === body)
+                    continue;
+                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
+                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
+                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
+                if (!await this.cardFreshness.matches(witness))
+                    throw stale();
+                const fresh = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
+                if (!nativeClosed || fresh.reason !== initial.reason)
+                    throw stale();
+                await this.comments.updateComment(context.issueNumber, card.id, body);
+                retired++;
+            }
+            return [this.result(retired, nativeClosed)];
+        }
+        catch (cause) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
+                    steps: [nativeClosed ? 'Issue closure is retained; progress card retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; progress cards were left unchanged.'],
+                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire progress cards safely.')],
+                    payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
+        }
+    }
+    result(retired, nativeClosed) {
+        return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
+            steps: [retired ? 'The closed issue’s progress cards were retired.' : 'No progress card required retirement.'],
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+    }
+}
+exports.RetireProgressUseCase = RetireProgressUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned progress card changed or is unavailable.');
 }
 
 
@@ -52351,7 +53972,8 @@ async function runAutofixAction(param, options, intentPayload) {
         context: intentPayload.context,
         branchOverride: intentPayload.branchOverride,
     });
-    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort);
+    let completedOutcome;
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort, outcome => { completedOutcome = outcome; });
     if (resolutionErrors.length > 0) {
         autofixResults.push(new result_1.Result({
             id: `${options.taskId}.AutofixPostflight`,
@@ -52373,6 +53995,9 @@ async function runAutofixAction(param, options, intentPayload) {
         }
         autofixResults.push(...reviewResults);
     }
+    if (completedOutcome)
+        autofixResults.push(new result_1.Result({ id: 'CommentAutomation.FixReply', success: true, executed: true,
+            payload: { publication: Object.freeze({ kind: 'fix-result', outcome: completedOutcome }) } }));
     return autofixResults;
 }
 function isSupersededReviewResult(result) {
@@ -52410,8 +54035,11 @@ async function runDoUserRequestAction(param, options, intentPayload) {
     const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
     if (!committed || commitResults.some(result => !result.success || result.errors.length > 0))
         return results;
+    const outcome = committed.payload?.commitOutcome;
+    if (outcome !== 'changes-pushed' && outcome !== 'no-changes')
+        return results;
     const publication = Object.freeze({
-        kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+        kind: 'implementation-result', outcome, branch: branchOverride,
     });
     return [...results, new result_1.Result({ id: implementation_result_policy_1.IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
             payload: { publication } })];
@@ -52428,6 +54056,10 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
+const sdd_diff_presentation_policy_1 = __nccwpck_require__(63302);
+const sdd_diff_message_catalog_1 = __nccwpck_require__(2230);
+const read_copilot_doctor_workflow_1 = __nccwpck_require__(12416);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const result_1 = __nccwpck_require__(73817);
 const read_copilot_status_workflow_1 = __nccwpck_require__(57206);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
@@ -52441,10 +54073,27 @@ const comment_mutation_target_workflow_1 = __nccwpck_require__(81324);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
+    if (command.name === 'history')
+        return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({
+                owner: param.bugbot.review.repository.owner, repository: param.bugbot.review.repository.name,
+                target: { kind: param.bugbot.review.target.isPullRequest ? 'pr' : 'issue', number: param.language.issueNumber },
+                queryId: param.language.commentId, botLogin: param.trustedBotLogin, locale: param.language.locale, generalConversation: false,
+            })];
     if (command.name === 'help')
         return runHelpCommand(param, options);
+    if (command.name === 'sdd-diff') {
+        const snapshot = param.sddDiff && options.sddDiffQueryPort
+            ? await options.sddDiffQueryPort.read(param.sddDiff) : { state: 'unavailable' };
+        const catalog = (0, sdd_diff_message_catalog_1.resolveSddDiffCatalog)(param.language.locale);
+        const markdown = (0, sdd_diff_presentation_policy_1.renderSddDiff)(snapshot, { owner: param.status.owner, repository: param.status.repository,
+            serverOrigin: options.sddDiffQueryPort?.serverOrigin ?? 'https://github.com' }, catalog);
+        return [new result_1.Result({ id: `${options.taskId}.SddDiff`, success: true, executed: true, stepFormat: 'markdown',
+                steps: [markdown], payload: Object.freeze({ publication: Object.freeze({ kind: 'sdd-diff', markdown, locale: catalog.locale }) }) })];
+    }
+    if (command.name === 'doctor')
+        return [await (0, read_copilot_doctor_workflow_1.readCopilotDoctor)(param, options.taskId, options.doctorReadPorts)];
     if (command.name === 'status')
-        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts, options.sddQueryPort)];
+        return [await (0, read_copilot_status_workflow_1.readCopilotStatus)(param, options.taskId, options.statusReadPorts, options.sddQueryPort, options.nativeStatusReadPort)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember')
@@ -52506,7 +54155,8 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     }
     const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, targetBranch, results, options.bugbotGitMutationPort);
     const committed = commitResults.at(-1);
-    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && committed.executed
+    const commitOutcome = committed?.payload?.commitOutcome;
+    return [...results, ...commitResults, ...(results.every(result => result.success) && committed?.success && commitOutcome === 'changes-pushed'
             ? [stateCommandReceipt('remember', 'saved', { branch: targetBranch })] : [])];
 }
 function rememberFailure(error) {
@@ -52670,6 +54320,22 @@ const copilot_command_1 = __nccwpck_require__(11771);
 function projectCommentAutomationContext(source, language, userComment) {
     const review = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(source);
     return Object.freeze({
+        ...(source.issueWorkflowProfile && typeof source.preBranchSdd === 'boolean'
+            && typeof source.issue.issueManagedBranches === 'boolean' ? { doctorConfiguration: Object.freeze({
+                profile: Object.freeze({ schemaVersion: source.issueWorkflowProfile.schemaVersion,
+                    enabled: Object.freeze([...source.issueWorkflowProfile.enabled]) }),
+                labels: Object.freeze({
+                    feature: Object.freeze([source.labels?.feature, source.labels?.enhancement].filter((value) => typeof value === 'string' && value.length > 0)),
+                    bugfix: Object.freeze([source.labels?.bugfix, source.labels?.bug].filter((value) => typeof value === 'string' && value.length > 0)),
+                    documentation: Object.freeze([source.labels?.documentation, source.labels?.docs].filter((value) => typeof value === 'string' && value.length > 0)),
+                    chore: Object.freeze([source.labels?.chore, source.labels?.maintenance].filter((value) => typeof value === 'string' && value.length > 0)),
+                    help: Object.freeze([source.labels?.help, source.labels?.question].filter((value) => typeof value === 'string' && value.length > 0)),
+                    release: Object.freeze([source.labels?.release].filter((value) => typeof value === 'string' && value.length > 0)),
+                    hotfix: Object.freeze([source.labels?.hotfix].filter((value) => typeof value === 'string' && value.length > 0)),
+                }),
+                preBranchSdd: source.preBranchSdd, issueManagedBranches: source.issue.issueManagedBranches,
+                dependencyBranch: source.currentConfiguration.parentBranch ?? source.branches.development ?? '',
+            }) } : {}),
         actor: source.actor,
         trustedBotLogin: source.tokenUser?.trim() ?? '',
         userComment,
@@ -52686,10 +54352,11 @@ function projectCommentAutomationContext(source, language, userComment) {
         }),
         think: (0, think_workflow_1.projectThinkContext)(source),
         status: (0, status_command_policy_1.buildCopilotStatusSnapshot)(source),
+        ...projectSddDiffRequest(source),
         ...(source.issue?.number > 0 && !(source.pullRequest?.number > 0) ? { sdd: Object.freeze({
                 issueNumber: source.issue.number,
                 admittedKind: issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.find(kind => kind === source.issueWorkflowKind),
-                profileDigest: source.profileDigest,
+                profileDigest: source.issueWorkflowProfileDigest,
                 issueAuthor: source.issue.creator ?? '',
                 trustedBotLogin: source.tokenUser?.trim() ?? '',
                 issueManagedBranches: source.issue.issueManagedBranches,
@@ -52742,6 +54409,29 @@ function withCommentLanguageAdaptation(context, adaptation) {
             }),
         }),
     });
+}
+/** Copies trusted workflow/profile facts; PR issue identity/author come only from the native link query. */
+function projectSddDiffRequest(source) {
+    const status = (0, status_command_policy_1.buildCopilotStatusSnapshot)(source);
+    const repositoryId = source.inputs?.repository?.id;
+    const number = status.target === 'pull-request' ? status.pullRequestNumber : status.issueNumber;
+    if (!Number.isSafeInteger(repositoryId) || !repositoryId || repositoryId < 1 || !number || number < 1
+        || !source.issueWorkflowProfile || typeof source.issue.issueManagedBranches !== 'boolean'
+        || typeof source.preBranchSdd !== 'boolean')
+        return {};
+    const list = (...values) => Object.freeze(values.filter((value) => typeof value === 'string'));
+    const labels = source.labels;
+    return { sddDiff: Object.freeze({
+            target: Object.freeze({ kind: status.target, number }), repositoryId,
+            ...(status.target === 'issue' && source.inputs?.issue?.number === number
+                ? { issueAuthor: source.inputs.issue.user?.login } : {}),
+            profile: Object.freeze({ schemaVersion: source.issueWorkflowProfile.schemaVersion, enabled: Object.freeze([...source.issueWorkflowProfile.enabled]) }),
+            labelConfiguration: Object.freeze({ feature: list(labels.feature, labels.enhancement), bugfix: list(labels.bugfix, labels.bug),
+                documentation: list(labels.documentation, labels.docs), chore: list(labels.chore, labels.maintenance),
+                help: list(labels.help, labels.question), hotfix: list(labels.hotfix), release: list(labels.release) }),
+            profileDigest: source.issueWorkflowProfileDigest, trustedBotLogin: source.tokenUser?.trim() ?? '',
+            issueManagedBranches: source.issue.issueManagedBranches, preBranchSdd: source.preBranchSdd, baseBranch: source.branches?.development,
+        }) };
 }
 
 
@@ -52866,7 +54556,8 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
         const isPublicMetadataCommand = command.kind === 'command'
-            && (command.command.name === 'help' || command.command.name === 'status');
+            && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'sdd-diff'
+                || command.command.name === 'doctor' || command.command.name === 'history');
         if (!isPublicMetadataCommand && param.membersOnly
             && !await actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
@@ -53531,14 +55222,17 @@ function positiveIssueNumberOrUndefined(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const result_1 = __nccwpck_require__(73817);
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const copilot_command_1 = __nccwpck_require__(11771);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, sddQueryPort) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, historyReadPort, sddQueryPort, sddDiffQueryPort, nativeStatusReadPort, doctorReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -53554,17 +55248,32 @@ class IssueCommentUseCase {
         this.preBranchSddContinuation = preBranchSddContinuation;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.historyReadPort = historyReadPort;
         this.sddQueryPort = sddQueryPort;
+        this.sddDiffQueryPort = sddDiffQueryPort;
+        this.nativeStatusReadPort = nativeStatusReadPort;
+        this.doctorReadPorts = doctorReadPorts;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
-        if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+        const historyCommand = (0, copilot_command_1.parseCopilotCommand)(param.issue.commentBody);
+        if (historyCommand.kind === 'invalid')
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
+        if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+            return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
+                    target: param.isPullRequest ? { kind: 'pr', number: param.pullRequest.number } : { kind: 'issue', number: param.issue.number }, queryId: param.issue.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.isPullRequest ? param.locale.pullRequest : param.locale.issue,
+                    generalConversation: param.eventName === 'issue_comment',
+                }, this.historyReadPort)];
+        }
+        const isDoctor = historyCommand.kind === 'command' && historyCommand.command.name === 'doctor';
+        if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
             return [new result_1.Result({
                     id: this.taskId, success: false, executed: true,
                     steps: ['pre-branch-sdd requires issue-managed-branches; correct the Action configuration.'],
                 })];
         }
-        if (this.preBranchSddContinuation
+        if (!isDoctor && this.preBranchSddContinuation
             && param.issueStartDecision.sddRequired
             && (0, pre_branch_sdd_1.isSddAnswerComment)(param.issue.commentBody)
             && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
@@ -53592,7 +55301,10 @@ class IssueCommentUseCase {
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
+            doctorReadPorts: this.doctorReadPorts,
+            nativeStatusReadPort: this.nativeStatusReadPort,
             sddQueryPort: this.sddQueryPort,
+            sddDiffQueryPort: this.sddDiffQueryPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -53637,6 +55349,10 @@ class IssueUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        if (param.inputs?.issue?.state === 'closed') {
+            return [new result_1.Result({ id: this.taskId, success: true, executed: false,
+                    steps: ['The native issue is closed; open-issue branch and SDD preparation were skipped.'] })];
+        }
         if (param.preBranchSdd && !param.issue.issueManagedBranches) {
             const message = 'pre-branch-sdd requires issue-managed-branches; correct the Action configuration before starting work.';
             return [new result_1.Result({
@@ -54374,12 +56090,15 @@ function approvalReviewBody(headSha) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
+const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
+const copilot_command_1 = __nccwpck_require__(11771);
+const read_copilot_history_workflow_1 = __nccwpck_require__(8140);
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, historyReadPort, sddDiffQueryPort, nativeStatusReadPort, doctorReadPorts) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -54394,9 +56113,23 @@ class PullRequestReviewCommentUseCase {
         this.syncBranchUseCase = syncBranchUseCase;
         this.rememberBranchPorts = rememberBranchPorts;
         this.statusReadPorts = statusReadPorts;
+        this.historyReadPort = historyReadPort;
+        this.sddDiffQueryPort = sddDiffQueryPort;
+        this.nativeStatusReadPort = nativeStatusReadPort;
+        this.doctorReadPorts = doctorReadPorts;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
+        const historyCommand = (0, copilot_command_1.parseCopilotCommand)(param.pullRequest.commentBody);
+        if (historyCommand.kind === 'invalid')
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(this.taskId, historyCommand.reason)];
+        if (historyCommand.kind === 'command' && historyCommand.command.name === 'history') {
+            return [await (0, read_copilot_history_workflow_1.readCopilotHistory)({ owner: param.owner, repository: param.repo,
+                    target: { kind: 'pr', number: param.pullRequest.number }, queryId: param.pullRequest.commentId,
+                    botLogin: param.tokenUser ?? '', locale: param.locale.pullRequest,
+                    generalConversation: param.eventName === 'issue_comment',
+                }, this.historyReadPort)];
+        }
         const context = (0, comment_automation_context_1.projectCommentAutomationContext)(param, (0, check_pull_request_comment_language_use_case_1.projectPullRequestCommentLanguageRequest)(param), param.pullRequest.commentBody ?? '');
         return (0, comment_automation_use_case_1.runCommentAutomation)(context, {
             taskId: this.taskId,
@@ -54419,6 +56152,9 @@ class PullRequestReviewCommentUseCase {
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
             statusReadPorts: this.statusReadPorts,
+            sddDiffQueryPort: this.sddDiffQueryPort,
+            doctorReadPorts: this.doctorReadPorts,
+            nativeStatusReadPort: this.nativeStatusReadPort,
             syncBranchUseCase: this.syncBranchUseCase
                 ? { invoke: (options) => this.syncBranchUseCase.invoke({ context: context.branchSync, options }) }
                 : undefined,
@@ -54552,7 +56288,10 @@ async function runPullRequestWorkflow(context, taskId, ports) {
             return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
         }
         if (context.closed && context.merged) {
-            return ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+            const results = await ports.workflowSteps.closeIssueAfterMerging.invoke(ports.sharedContexts.steps.closeIssue);
+            if (ports.workflowSteps.retireBranchSync)
+                results.push(...await ports.workflowSteps.retireBranchSync.invoke(ports.sharedContexts.steps.retireBranchSync));
+            return results;
         }
     }
     catch (cause) {
@@ -54600,6 +56339,7 @@ function logPullRequestState(context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectPullRequestWorkflowStepContexts = projectPullRequestWorkflowStepContexts;
 exports.projectPullRequestDescriptionContext = projectPullRequestDescriptionContext;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
 function projectPullRequestWorkflowStepContexts(source) {
     const projects = (0, issue_workflow_context_1.copyProjects)(source.project.getProjects());
@@ -54633,7 +56373,12 @@ function projectPullRequestWorkflowStepContexts(source) {
             projects,
         }),
         description: projectPullRequestDescriptionContext(source),
+        retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.issue ?? 'en-US', trustedBotLogin: source.tokenUser }),
         closeIssue: Object.freeze({
+            completionLabels: Object.freeze({
+                lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
+                protectedLabels: Object.freeze([...(source.labels.completionProtectedLabels ?? ['branched', 'SDD', 'contract-change'])]),
+            }),
             issueNumber: source.issueNumber,
             pullRequestNumber: source.pullRequest.number,
         }),
@@ -54898,6 +56643,165 @@ function deepFreezeCopy(value) {
 
 /***/ }),
 
+/***/ 12416:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCopilotDoctor = readCopilotDoctor;
+const result_1 = __nccwpck_require__(73817);
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+const context_1 = __nccwpck_require__(14712);
+const github_runtime_doctor_policy_1 = __nccwpck_require__(99566);
+const github_runtime_doctor_presentation_policy_1 = __nccwpck_require__(2808);
+const bugbot_context_request_1 = __nccwpck_require__(98299);
+async function readCopilotDoctor(param, taskId, ports) {
+    const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.bugbot.review.repository.id);
+    const isPull = param.status.target === 'pull-request';
+    const number = (0, positive_integer_policy_1.parsePositiveSafeInteger)(isPull ? param.status.pullRequestNumber : param.status.issueNumber);
+    if (!repositoryId || !number)
+        return doctorResult(taskId, undefined);
+    const target = isPull ? { kind: 'pull-request', repositoryId, pullNumber: number }
+        : { kind: 'issue', repositoryId, issueNumber: number };
+    const checks = [];
+    const put = (group, state, action) => checks.push(Object.freeze({ group, state, evidence: { source: group }, ...(action && state !== 'pass' && state !== 'not-applicable' ? { action: state === 'unavailable' ? 'retry' : action } : {}) }));
+    const configuration = param.doctorConfiguration;
+    const valid = (0, github_runtime_doctor_policy_1.validDoctorConfiguration)(configuration);
+    put('effective-configuration', configuration === undefined ? 'unavailable' : valid ? 'pass' : 'blocked', !valid ? 'configuration' : undefined);
+    const repositoryRead = ports ? await ports.readRepository(repositoryId).catch(() => ({ state: 'unavailable' }))
+        : { state: 'unavailable' };
+    const verifiedRead = repositoryRead.state === 'available'
+        && (repositoryRead.repositoryId !== repositoryId || !/^[a-f0-9]{40}$/u.test(repositoryRead.revision))
+        ? { state: 'unavailable' } : repositoryRead;
+    put('workflow-contracts', (0, github_runtime_doctor_policy_1.doctorWorkflowContracts)(verifiedRead), 'workflow');
+    if (isPull) {
+        // Optional issue context is not guessed from a PR number or event prose.
+        put('issue-readiness', 'not-applicable');
+        put('linked-branch-readiness', 'not-applicable');
+    }
+    else if (!valid || !ports) {
+        put('issue-readiness', 'unavailable', 'retry');
+        put('linked-branch-readiness', 'unavailable', 'retry');
+    }
+    else {
+        try {
+            const issue = await ports.readIssue(number);
+            if (issue.number !== number)
+                throw new Error('Wrong issue identity.');
+            const kindAdmission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(issue.labels, configuration.profile, configuration.labels, undefined, false);
+            // Form completeness cannot make branchless help work require an SDD.
+            // Disabled or conflicting kinds still retain their admission block.
+            const admission = kindAdmission.status === 'eligible' && kindAdmission.kind === 'help' ? kindAdmission
+                : (0, issue_workflow_profile_1.classifyIssueWorkflow)(issue.labels, configuration.profile, configuration.labels, issue.body);
+            if (admission.status !== 'eligible') {
+                put('issue-readiness', admission.status === 'unmanaged' ? 'unavailable' : 'blocked', 'issue');
+                put('linked-branch-readiness', 'not-applicable');
+            }
+            else {
+                const decision = (0, issue_start_policy_1.decideIssueStart)({ kind: admission.kind, labels: issue.labels,
+                    issueManagedBranches: configuration.issueManagedBranches, preBranchSdd: configuration.preBranchSdd });
+                put('issue-readiness', decision.sddRequired ? (0, github_runtime_doctor_policy_1.doctorRepositoryPrerequisites)(verifiedRead) : 'not-applicable', 'specifications');
+                if (!decision.branchRequired)
+                    put('linked-branch-readiness', 'not-applicable');
+                else {
+                    const branch = await ports.readLinkedBranch(number).catch(() => ({ state: 'unavailable' }));
+                    const state = branch.state === 'available' && branch.repositoryId === repositoryId && /^[a-f0-9]{40}$/u.test(branch.headSha)
+                        ? 'pass' : branch.state === 'absent' ? 'warning' : 'unavailable';
+                    put('linked-branch-readiness', state, 'branch');
+                }
+            }
+        }
+        catch {
+            put('issue-readiness', 'unavailable', 'retry');
+            put('linked-branch-readiness', 'unavailable', 'retry');
+        }
+    }
+    const policyRead = ports ? await ports.readApprovalPolicy().catch(() => ({ status: 'unavailable' }))
+        : { status: 'unavailable' };
+    const policy = (0, github_runtime_doctor_1.parseTrustedDoctorApprovalPolicy)(policyRead);
+    put('approval-policy', policy.status === 'valid' ? 'pass' : policy.status === 'invalid' ? 'blocked' : 'unavailable', 'policy');
+    if (policy.status === 'valid' || policyRead.status === 'available')
+        checks[checks.length - 1] = Object.freeze({ ...checks[checks.length - 1],
+            evidence: { source: policyRead.status === 'available' ? policyRead.source : policy.status === 'valid' ? policy.source : 'unavailable' } });
+    put('approval-prerequisites', policy.status !== 'valid' ? 'unavailable' : policy.policy.mode === 'off' ? 'not-applicable' : 'warning', 'declared');
+    if (policy.status === 'valid')
+        checks[checks.length - 1] = Object.freeze({ ...checks[checks.length - 1], evidence: { source: policy.policy.mode } });
+    if (!isPull)
+        put('pull-request-identity', 'not-applicable');
+    else {
+        let state = 'unavailable';
+        try {
+            if (ports) {
+                const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
+                const selection = request.target.pullRequestSelection;
+                if (selection.kind === 'event' && selection.number === number) {
+                    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.pullRequests.getPullRequest(number)], 'event');
+                    if (canonical.kind === 'canonical' && /^[a-f0-9]{40}$/u.test(canonical.pullRequest.headSha)
+                        && await ports.pullRequests.getPullRequestHeadSha(number) === canonical.pullRequest.headSha)
+                        state = 'pass';
+                }
+            }
+        }
+        catch { /* Independent facts remain available. */ }
+        put('pull-request-identity', state, 'retry');
+    }
+    const report = (0, github_runtime_doctor_1.aggregateGithubRuntimeDoctorReport)({ target, checks });
+    return doctorResult(taskId, report, ports?.serverOrigin, verifiedRead.state === 'available' ? verifiedRead.revision : undefined, param.status.owner, param.status.repository);
+}
+function doctorResult(taskId, report, serverOrigin, revision, owner, repository) {
+    const projection = Object.freeze({ report, serverOrigin, revision, owner, repository });
+    return new result_1.Result({ id: `${taskId}.Doctor`, success: true, executed: true, stepFormat: 'markdown',
+        steps: [(0, github_runtime_doctor_presentation_policy_1.formatGithubRuntimeDoctor)(projection)], payload: { doctor: projection } });
+}
+
+
+/***/ }),
+
+/***/ 8140:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCopilotHistory = readCopilotHistory;
+const result_1 = __nccwpck_require__(73817);
+const copilot_history_policy_1 = __nccwpck_require__(14335);
+/** A failed read cannot prove empty history or an operation failure. */
+async function readCopilotHistory(request, ports) {
+    let history = request.generalConversation ? copilot_history_policy_1.HISTORY_UNAVAILABLE : copilot_history_policy_1.HISTORY_UNSUPPORTED_SURFACE;
+    if (ports && request.generalConversation && request.botLogin && Number.isSafeInteger(request.target.number)
+        && request.target.number > 0 && Number.isSafeInteger(request.queryId) && request.queryId > 0) {
+        try {
+            const read = await ports.readComments(request.target.number);
+            const coverage = read.coverage;
+            const counters = [coverage.pagesFetched, coverage.itemsFetched, coverage.itemsRetained, coverage.omittedItems, coverage.truncatedItems];
+            if (counters.some(value => !Number.isSafeInteger(value) || value < 0)
+                || typeof coverage.limitReached !== 'boolean'
+                || (coverage.providerLimitReached !== undefined && typeof coverage.providerLimitReached !== 'boolean'))
+                throw new Error('Invalid history coverage counters.');
+            if (coverage.source !== 'issue-comments' || coverage.itemsRetained !== read.value.length
+                || coverage.itemsFetched < coverage.itemsRetained || !['complete', 'partial'].includes(coverage.status))
+                throw new Error('Invalid history coverage.');
+            history = (0, copilot_history_policy_1.selectCopilotHistory)({ target: `${request.target.kind}:${request.target.number}`, queryId: request.queryId,
+                botLogin: request.botLogin, complete: coverage.status === 'complete' && coverage.omittedItems === 0
+                    && coverage.truncatedItems === 0 && !coverage.limitReached && !coverage.providerLimitReached,
+                comments: read.value.map(comment => Object.freeze({ id: comment.id, body: comment.body,
+                    author: comment.user?.login ?? '', automated: comment.isAutomatedAuthor })) });
+        }
+        catch { /* Provider errors disclose no inferred absence and no raw error. */ }
+    }
+    return new result_1.Result({ id: 'CommentAutomation.History', success: true, executed: true,
+        payload: { publication: Object.freeze({ ...history, owner: request.owner, repository: request.repository,
+                target: Object.freeze({ ...request.target }), serverOrigin: ports?.serverOrigin ?? 'https://github.com' }) } });
+}
+
+
+/***/ }),
+
 /***/ 57206:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54907,48 +56811,262 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readCopilotStatus = readCopilotStatus;
 const sdd_status_policy_1 = __nccwpck_require__(6853);
 const status_command_policy_1 = __nccwpck_require__(3449);
+const read_pull_request_status_readiness_workflow_1 = __nccwpck_require__(18874);
+const application_error_1 = __nccwpck_require__(75999);
+/** Shared read-only status path combines current native state with PR readiness evidence. */
+async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
+    let initialIssue;
+    let initialPull;
+    let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
+    if (nativeStatus && status.target === 'issue' && status.issueNumber) {
+        const facts = await nativeStatus.readIssue(status.issueNumber);
+        if (facts.number !== status.issueNumber)
+            throw unavailableStatus();
+        initialIssue = facts;
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, facts);
+    }
+    else if (nativeStatus && status.target === 'pull-request' && status.pullRequestNumber) {
+        const facts = await nativeStatus.readPullRequest(status.pullRequestNumber);
+        if (facts.number !== status.pullRequestNumber)
+            throw unavailableStatus();
+        initialPull = facts;
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, facts);
+        if (facts.state === 'closed') {
+            await fenceNativePull(nativeStatus, facts);
+            return (0, status_command_policy_1.buildCopilotStatusResult)({ ...status, findingStates: undefined, findingStateEvidence: undefined }, taskId);
+        }
+    }
+    if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
+        const evidence = await sddQuery.read(param.sdd);
+        status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
+    }
+    if (nativeStatus && initialIssue) {
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, await fenceNativeIssue(nativeStatus, initialIssue));
+    }
+    // Setup can attach a canonical PR to an issue conversation. Evaluate that exact PR
+    // directly while retaining the issue's native lifecycle and SDD projection.
+    const readinessStatus = status.target === 'issue' && status.pullRequestNumber
+        ? { ...status, target: 'pull-request' }
+        : status;
+    const result = await (0, read_pull_request_status_readiness_workflow_1.readPullRequestStatusReadiness)({ ...param, status: readinessStatus }, taskId, ports);
+    const resultStatus = result.payload.status;
+    if (nativeStatus && initialPull)
+        await fenceNativePull(nativeStatus, initialPull);
+    if (nativeStatus && initialIssue)
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, await fenceNativeIssue(nativeStatus, initialIssue));
+    if (nativeStatus && initialPull)
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, initialPull);
+    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...resultStatus, target: status.target, lifecycle: status.lifecycle, waitingFor: status.waitingFor,
+        issueLabels: status.issueLabels, pullRequestLabels: status.pullRequestLabels }, taskId);
+}
+function unavailableStatus() {
+    return new application_error_1.ApplicationError('workflow.stale', 'Current native status evidence is unavailable, incomplete or stale. Retry status.');
+}
+async function fenceNativePull(port, original) {
+    const fresh = await port.readPullRequest(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.merged !== original.merged)
+        throw unavailableStatus();
+}
+async function fenceNativeIssue(port, original) {
+    const fresh = await port.readIssue(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.reason !== original.reason
+        || JSON.stringify([...fresh.labels].sort()) !== JSON.stringify([...original.labels].sort()))
+        throw unavailableStatus();
+    return fresh;
+}
+
+
+/***/ }),
+
+/***/ 18874:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readPullRequestStatusReadiness = readPullRequestStatusReadiness;
+const status_command_policy_1 = __nccwpck_require__(3449);
 const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
 const bugbot_review_ownership_policy_1 = __nccwpck_require__(83288);
 const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
 const context_1 = __nccwpck_require__(14712);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
-const application_error_1 = __nccwpck_require__(75999);
-/** Reads the current canonical card, without an agent, diff, rules or workspace mutation. */
-async function readCopilotStatus(param, taskId, ports, sddQuery) {
-    let status = sddQuery ? Object.freeze({ ...param.status, serverOrigin: sddQuery.serverOrigin }) : param.status;
-    if (status.target === 'issue' && param.sdd && status.issueNumber === param.sdd.issueNumber && sddQuery && status.sddReadiness) {
-        const evidence = await sddQuery.read(param.sdd);
-        status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
-    }
-    if (!status.pullRequestNumber || !ports)
-        return (0, status_command_policy_1.buildCopilotStatusResult)(status, taskId);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const pull_request_readiness_policy_1 = __nccwpck_require__(79794);
+const positive = (value) => Number.isSafeInteger(value) && value > 0;
+const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+/** Independent reads retain verified facts. Unknown identity or freshness never becomes a clean snapshot. */
+async function readPullRequestStatusReadiness(param, taskId, ports) {
+    const original = param.status;
+    if (original.target !== 'issue' && original.target !== 'pull-request')
+        return (0, status_command_policy_1.buildCopilotStatusResult)(original, taskId);
+    let snapshot = { ...original, findingStates: undefined, findingStateEvidence: 'invalid', serverOrigin: ports?.serverOrigin ?? original.serverOrigin };
+    const finish = (readiness) => (0, status_command_policy_1.buildCopilotStatusResult)({ ...snapshot, pullRequestReadiness: readiness }, taskId);
+    const fail = (code, action = 'retry') => finish((0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)(code, action));
+    if (!ports)
+        return fail('evidence-adapter-unavailable');
     const request = (0, bugbot_context_request_1.projectBugbotContextRequest)(param.bugbot.review);
-    const selection = request.target.pullRequestSelection;
-    if (selection.kind !== 'event' || selection.number !== status.pullRequestNumber)
-        throw unavailableStatus();
-    const canonical = (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [await ports.getPullRequest(selection.number)], 'event');
-    if (canonical.kind !== 'canonical')
-        throw unavailableStatus();
-    const pull = canonical.pullRequest;
-    const comments = await ports.listIssueComments(pull.number);
-    if (comments.coverage.status !== 'complete')
-        throw unavailableStatus();
-    const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
-        && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
-    if (candidates.length !== 1)
-        throw unavailableStatus();
-    const counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', pull.number, pull.headSha);
-    if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha)
-        throw unavailableStatus();
-    return (0, status_command_policy_1.buildCopilotStatusResult)({ ...param.status,
-        findingStateEvidence: undefined,
-        findingStates: { open: counts.open, reopened: counts.reopened,
-            verificationRequired: counts['verification-required'], unknown: counts.unknown,
-            resolved: counts.fixed + counts.obsolete + counts.dismissed },
-    }, taskId);
-}
-function unavailableStatus() {
-    return new application_error_1.ApplicationError('workflow.stale', 'Current Bugbot status evidence is unavailable, incomplete or stale. Run /copilot recheck and retry status.');
+    const repositoryId = request.target.repository.id;
+    if (!positive(repositoryId) || request.target.repository.owner.toLowerCase() !== original.owner.toLowerCase()
+        || request.target.repository.name.toLowerCase() !== original.repository.toLowerCase())
+        return fail('identity-unavailable');
+    let number;
+    let fromIssue = false;
+    if (original.target === 'issue') {
+        if (!positive(original.issueNumber) || !ports.readLinkedPullRequests)
+            return fail('linkage-unavailable');
+        let links;
+        try {
+            links = await ports.readLinkedPullRequests(original.issueNumber);
+        }
+        catch {
+            return fail('linkage-unavailable');
+        }
+        if (links.state !== 'available' || links.repositoryId !== repositoryId || links.issueNumber !== original.issueNumber
+            || !Array.isArray(links.numbers) || links.numbers.some(value => !positive(value))
+            || new Set(links.numbers).size !== links.numbers.length)
+            return fail('linkage-unavailable');
+        if (links.numbers.length === 0) {
+            snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: undefined };
+            return finish({ readiness: 'not-applicable', mode: 'unavailable', headSha: '', baseSha: '',
+                code: 'unlinked-issue', humanReviewRequired: false, action: 'none' });
+        }
+        if (links.numbers.length !== 1)
+            return fail('ambiguous-linkage', 'select-pr');
+        number = links.numbers[0];
+        fromIssue = true;
+    }
+    else {
+        const selection = request.target.pullRequestSelection;
+        if (!positive(original.pullRequestNumber) || selection.kind !== 'event' || selection.number !== original.pullRequestNumber)
+            return fail('identity-unavailable');
+        number = original.pullRequestNumber;
+    }
+    let pull;
+    try {
+        const target = fromIssue ? { ...request.target, headRef: '', expectedHeadSha: undefined,
+            pullRequestSelection: { kind: 'event', number } } : request.target;
+        const selected = (0, context_1.selectCanonicalBugbotPullRequest)(target, [await ports.getPullRequest(number)], 'event');
+        if (selected.kind !== 'canonical')
+            return fail('identity-unavailable');
+        pull = selected.pullRequest;
+    }
+    catch {
+        return fail('identity-unavailable');
+    }
+    const target = { owner: original.owner, repository: original.repository, repositoryId, pullNumber: number };
+    let rawPolicy;
+    let evidence;
+    let readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('evidence-adapter-unavailable');
+    if (ports.approval) {
+        try {
+            rawPolicy = await ports.approval.readPolicy(target);
+            try {
+                if ((0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(rawPolicy).mode === 'off')
+                    readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+            }
+            catch {
+                readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
+            }
+            if (readiness.code !== 'invalid-policy') {
+                const read = await ports.approval.loadEvidence(target);
+                if (read.repositoryId !== repositoryId || read.pullNumber !== number || !sha(read.headSha) || !sha(read.baseSha)) {
+                    if (readiness.mode !== 'off')
+                        readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('target-mismatch');
+                }
+                else
+                    evidence = read;
+            }
+        }
+        catch {
+            if (readiness.mode !== 'off')
+                readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)();
+        }
+    }
+    // A missing, denied or incomplete Bugbot card cannot erase independent approval evidence.
+    let counts;
+    try {
+        const comments = await ports.listIssueComments(number);
+        if (comments.coverage.status === 'complete') {
+            const candidates = comments.value.filter(comment => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, param.trustedBotLogin)
+                && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body) && comment.body?.includes(bugbot_status_count_marker_policy_1.BUGBOT_STATUS_COUNTS_PREFIX));
+            if (candidates.length === 1)
+                counts = (0, bugbot_status_count_marker_policy_1.readBugbotStatusCounts)(candidates[0].body ?? '', number, pull.headSha);
+        }
+    }
+    catch { /* Retain all independently verified facts. */ }
+    let finalPolicy;
+    let policyVerified = false;
+    if (ports.approval) {
+        try {
+            finalPolicy = await ports.approval.readPolicy(target);
+            try {
+                const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(finalPolicy);
+                policyVerified = true;
+                if (policy.mode === 'off')
+                    readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+                else if (!evidence && rawPolicy !== finalPolicy)
+                    readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('policy-superseded');
+            }
+            catch {
+                readiness = Object.freeze({ ...(0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('invalid-policy', 'resolve'), readiness: 'blocked' });
+            }
+        }
+        catch {
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+        }
+    }
+    let finalHead;
+    try {
+        finalHead = await ports.getPullRequestHeadSha(number);
+    }
+    catch { /* A denied freshness read cannot certify counts or other gates. */ }
+    let observedRevisionHead;
+    if (evidence && ports.approval && policyVerified) {
+        try {
+            // Read both revision identities after policy and the independent head lookup.
+            const revision = await ports.approval.readRevision(target);
+            if (revision.repositoryId !== repositoryId || revision.pullNumber !== number)
+                return fail('target-mismatch');
+            observedRevisionHead = revision.headSha;
+            readiness = (0, pull_request_readiness_policy_1.projectPullRequestReadiness)(rawPolicy, evidence, { ...revision, rawPolicy: finalPolicy });
+            if (pull.headSha !== evidence.headSha)
+                readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : Object.freeze({ ...readiness, readiness: 'pending', code: 'superseded',
+                    action: 'wait', humanReviewRequired: false, evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+        }
+        catch {
+            readiness = readiness.mode === 'off' ? (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)() : (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-evidence-unavailable');
+        }
+    }
+    if (finalHead === pull.headSha && (!observedRevisionHead || observedRevisionHead === finalHead) && counts)
+        snapshot = { ...snapshot, findingStateEvidence: undefined,
+            findingStates: { open: counts.open, reopened: counts.reopened, verificationRequired: counts['verification-required'], unknown: counts.unknown,
+                resolved: counts.fixed + counts.obsolete + counts.dismissed } };
+    if (finalHead !== pull.headSha) {
+        if (readiness.mode === 'off')
+            readiness = (0, pull_request_readiness_policy_1.disabledPullRequestReadiness)();
+        else if (sha(finalHead) && policyVerified && rawPolicy === finalPolicy)
+            readiness = Object.freeze({ ...readiness,
+                readiness: 'pending', code: 'superseded', action: 'wait', headSha: '', baseSha: '', humanReviewRequired: false,
+                evidence: Object.freeze({ ci: 'pending', coverage: 'pending', bugbot: 'pending', reviews: 'pending' }) });
+        else
+            readiness = (0, pull_request_readiness_policy_1.unavailablePullRequestReadiness)('final-identity-unavailable');
+    }
+    if (fromIssue) {
+        try {
+            const final = await ports.readLinkedPullRequests(original.issueNumber);
+            if (final.state !== 'available' || final.repositoryId !== repositoryId || final.issueNumber !== original.issueNumber
+                || final.numbers.length !== 1 || final.numbers[0] !== number) {
+                snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: 'invalid' };
+                return fail('linkage-superseded');
+            }
+        }
+        catch {
+            snapshot = { ...snapshot, findingStates: undefined, findingStateEvidence: 'invalid' };
+            return fail('linkage-unavailable');
+        }
+    }
+    return finish(Object.freeze({ ...readiness, pullNumber: number }));
 }
 
 
@@ -55359,6 +57477,191 @@ function canonicalIssueUrl(context) {
 
 /***/ }),
 
+/***/ 48684:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddDiffQueryUseCase = void 0;
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const pre_branch_sdd_diff_1 = __nccwpck_require__(28558);
+/** Structural comparison over shared verified evidence, with no writer/model capability. */
+class SddDiffQueryUseCase {
+    constructor(ports) {
+        this.ports = Object.freeze({
+            evidence: Object.freeze({ read: ports.evidence.read.bind(ports.evidence) }),
+            links: Object.freeze({ readClosingIssues: ports.links.readClosingIssues.bind(ports.links) }),
+            labels: Object.freeze({ getLabels: ports.labels.getLabels.bind(ports.labels) }),
+            descriptions: Object.freeze({ getDescription: ports.descriptions.getDescription.bind(ports.descriptions) }),
+            documents: Object.freeze({ readSdd: ports.documents.readSdd.bind(ports.documents) }),
+        });
+    }
+    async read(request) {
+        try {
+            if (!positive(request.target.number) || !positive(request.repositoryId)
+                || !['issue', 'pull-request'].includes(request.target.kind))
+                return { state: 'unavailable' };
+            let links;
+            if (request.target.kind === 'pull-request') {
+                const association = await this.ports.links.readClosingIssues(request.target.number);
+                if (association.state !== 'verified' || association.pullNumber !== request.target.number
+                    || association.issueNumbers.length > 100)
+                    return { state: 'unavailable' };
+                links = association;
+            }
+            const result = await this.readSnapshot(request, links);
+            // Every projection, including pending, absent and exempt, belongs to the
+            // association observed at admission. A moved association retains no old links.
+            if (links) {
+                const freshLinks = await this.ports.links.readClosingIssues(request.target.number);
+                if (freshLinks.state !== 'verified' || freshLinks.pullNumber !== request.target.number)
+                    return { state: 'unavailable' };
+                if (associationProof(freshLinks) !== associationProof(links))
+                    return { state: 'stale' };
+            }
+            return Object.freeze(result);
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readSnapshot(request, links) {
+        let issueNumber = request.target.number;
+        let issueAuthor = request.issueAuthor;
+        if (links) {
+            if (links.issueNumbers.length === 0)
+                return { state: 'not-applicable' };
+            const choice = await this.selectEligible(request, links);
+            if (choice.state !== 'selected') {
+                const freshChoice = await this.selectEligible(request, links);
+                return { state: freshChoice.state === choice.state ? choice.state : 'stale' };
+            }
+            issueNumber = choice.context.issueNumber;
+            issueAuthor = choice.context.issueAuthor;
+        }
+        if (!issueAuthor?.trim())
+            return { state: 'unavailable' };
+        const context = await this.context(request, issueNumber, issueAuthor);
+        if (!context)
+            return { state: 'not-applicable' };
+        const original = await this.ports.evidence.read(context);
+        const projection = projectEvidence(original, issueNumber);
+        if (original.state !== 'published' || !original.verified?.currentSha)
+            return projection;
+        if (!/^[a-f0-9]{64}$/u.test(original.authorityDigest ?? ''))
+            return { state: 'unavailable' };
+        if (links && (links.headSha !== original.verified.branchHeadSha || links.headBranch !== original.verified.branchName)) {
+            return historicalStale(original, issueNumber);
+        }
+        const publication = publicationOf(original);
+        let result = { state: 'initial-only', publication };
+        if (original.verified.currentSha !== original.verified.firstSha) {
+            const [before, after] = await Promise.all([
+                this.ports.documents.readSdd(original.verified.firstSha, original.verified.path),
+                this.ports.documents.readSdd(original.verified.currentSha, original.verified.path),
+            ]);
+            if (before === undefined || after === undefined)
+                return { state: 'unavailable' };
+            const changes = (0, pre_branch_sdd_diff_1.compareSddStructure)(before, after);
+            result = changes.state === 'bounded'
+                ? { state: 'bounded', publication, reason: changes.reason }
+                : { state: 'compared', publication, changes };
+        }
+        // Re-admit the exact issue, then re-read the shared fenced authority.
+        let freshContext;
+        if (links) {
+            const choice = await this.selectEligible(request, links);
+            if (choice.state !== 'selected')
+                return { state: choice.state };
+            if (choice.context.issueNumber !== issueNumber)
+                return historicalStale(original, issueNumber);
+            freshContext = choice.context;
+        }
+        else
+            freshContext = await this.context(request, issueNumber, issueAuthor);
+        if (!freshContext || freshContext.admittedKind !== context.admittedKind)
+            return { state: 'stale' };
+        const fresh = await this.ports.evidence.read(freshContext);
+        if (!original.authorityDigest || fresh.authorityDigest !== original.authorityDigest
+            || proofOf(fresh) !== proofOf(original)) {
+            return fresh.state === 'published' ? historicalStale(fresh, issueNumber) : projectEvidence(fresh, issueNumber);
+        }
+        return result;
+    }
+    /** At most the adapter's fixed 100 native candidates; no body/number inference. */
+    async selectEligible(request, links) {
+        let selected;
+        for (const number of links.issueNumbers) {
+            const author = links.issueAuthors[number];
+            if (!author?.trim())
+                throw new Error('Native issue author is unavailable.');
+            const context = await this.context(request, number, author);
+            if (!context)
+                continue;
+            if (selected)
+                return { state: 'ambiguous' };
+            selected = context;
+        }
+        return selected ? { state: 'selected', context: selected } : { state: 'not-applicable' };
+    }
+    async context(request, issueNumber, issueAuthor) {
+        const [labels, body] = await Promise.all([
+            this.ports.labels.getLabels(issueNumber), this.ports.descriptions.getDescription(issueNumber),
+        ]);
+        if (body === undefined)
+            throw new Error('Issue admission is unavailable.');
+        const admission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(labels, request.profile, request.labelConfiguration, body);
+        return admission.status === 'eligible' && (0, issue_start_policy_1.decideIssueStart)({ kind: admission.kind, labels,
+            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
+            profileDigest: request.profileDigest, trustedBotLogin: request.trustedBotLogin,
+            issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch }) : undefined;
+    }
+}
+exports.SddDiffQueryUseCase = SddDiffQueryUseCase;
+function projectEvidence(evidence, issueNumber) {
+    if (evidence.state === 'not-required')
+        return { state: 'not-applicable' };
+    if (evidence.state === 'absent')
+        return { state: 'no-publication' };
+    if (evidence.state === 'invalid' || evidence.state === 'unavailable')
+        return { state: evidence.state };
+    const publication = publicationOf(evidence);
+    if (evidence.state === 'stale')
+        return historicalStale(evidence, issueNumber);
+    if (evidence.state === 'awaiting-answers' || evidence.state === 'publication-pending') {
+        return publication ? { state: 'pending-revision', publication, ...cardOf(evidence, issueNumber) } : { state: 'no-publication' };
+    }
+    if (!publication?.currentSha)
+        return { state: 'invalid' };
+    return publication.currentSha === publication.firstSha ? { state: 'initial-only', publication } : { state: 'unavailable' };
+}
+function publicationOf(evidence) {
+    return evidence.verified ? Object.freeze({ path: evidence.verified.path, firstSha: evidence.verified.firstSha,
+        ...(evidence.verified.currentSha ? { currentSha: evidence.verified.currentSha } : {}) }) : undefined;
+}
+function historicalStale(evidence, issueNumber) {
+    const publication = publicationOf(evidence);
+    return { state: 'stale', ...(publication ? { publication } : {}), ...cardOf(evidence, issueNumber) };
+}
+function cardOf(evidence, issueNumber) {
+    return positive(evidence.cardId) ? { card: Object.freeze({ issueNumber, commentId: evidence.cardId }) } : {};
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function proofOf(evidence) {
+    const verified = evidence.verified;
+    return JSON.stringify([evidence.state, evidence.authorityDigest, evidence.cardId, evidence.path, evidence.pendingQuestionIds,
+        verified?.path, verified?.capabilityId, verified?.branchName, verified?.branchHeadSha, verified?.firstSha, verified?.currentSha]);
+}
+function associationProof(links) {
+    return JSON.stringify([links.pullNumber, links.headSha, links.headBranch,
+        links.issueNumbers.map(number => [number, links.issueAuthors[number].toLowerCase()])]);
+}
+
+
+/***/ }),
+
 /***/ 39893:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -55366,6 +57669,7 @@ function canonicalIssueUrl(context) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SddEvidenceQueryUseCase = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
@@ -55385,9 +57689,11 @@ class SddEvidenceQueryUseCase {
             if (context.admittedKind === 'help' || !context.preBranchSdd)
                 return { state: 'not-required' };
             const facts = await this.readFacts(context.issueNumber);
-            if (!this.required(context, facts.labels))
-                return { state: 'not-required' };
             const selection = (0, sdd_query_card_policy_1.selectOwnedSddCard)(facts.comments, context.issueNumber, context.trustedBotLogin);
+            const historical = facts.nativeState === 'closed' && selection.state === 'valid'
+                && fullSha(selection.record.commitSha) && this.historicalEligible(context, facts.labels);
+            if (!this.required(context, facts.labels) && !historical)
+                return { state: 'not-required' };
             if (selection.state !== 'valid')
                 return { state: selection.state };
             const { record, id: cardId } = selection;
@@ -55395,9 +57701,12 @@ class SddEvidenceQueryUseCase {
             const stale = digest !== record.issueDigest;
             const result = await this.inspectRecord(context, facts, record, cardId, stale, new Map());
             if (!['invalid', 'unavailable'].includes(result.state)
-                && !await this.fence(context, facts, selection.body, cardId, record, result.verified))
+                && !await this.fence(context, facts, selection.body, cardId, record, result.verified, historical))
                 return { state: 'stale' };
-            return Object.freeze(result);
+            return Object.freeze({ ...result, ...(!['invalid', 'unavailable'].includes(result.state) ? {
+                    authorityDigest: (0, node_crypto_1.createHash)('sha256').update(JSON.stringify([cardId, selection.body, digest, canonicalLabels(facts.labels),
+                        record.phase === 'awaiting-answer' ? facts.comments : null])).digest('hex'),
+                } : {}), ...(historical ? { historical: true } : {}) });
         }
         catch {
             return { state: 'unavailable' };
@@ -55504,13 +57813,14 @@ class SddEvidenceQueryUseCase {
         }
         return authorization;
     }
-    async fence(context, original, cardBody, cardId, record, verified) {
+    async fence(context, original, cardBody, cardId, record, verified, historical = false) {
         const fresh = await this.readFacts(context.issueNumber);
         const card = (0, sdd_query_card_policy_1.selectOwnedSddCard)(fresh.comments, context.issueNumber, context.trustedBotLogin);
         if (card.state !== 'valid' || card.id !== cardId || card.body !== cardBody
             || this.digest(context, fresh, record.baseSha) !== this.digest(context, original, record.baseSha)
             || canonicalLabels(fresh.labels) !== canonicalLabels(original.labels)
-            || !this.required(context, fresh.labels))
+            || fresh.nativeState !== original.nativeState
+            || !(this.required(context, fresh.labels) || historical && fresh.nativeState === 'closed' && this.historicalEligible(context, fresh.labels)))
             return false;
         // Answer arrivals or edits must not let a stale question projection become current.
         if (record.phase === 'awaiting-answer'
@@ -55529,6 +57839,9 @@ class SddEvidenceQueryUseCase {
             return false;
         return true;
     }
+    historicalEligible(context, labels) {
+        return context.admittedKind === 'feature' || labels.some(label => label.toLowerCase() === 'contract-change');
+    }
     required(context, labels) {
         return (0, issue_start_policy_1.decideIssueStart)({ kind: context.admittedKind, labels,
             issueManagedBranches: context.issueManagedBranches, preBranchSdd: context.preBranchSdd }).sddRequired;
@@ -55538,15 +57851,18 @@ class SddEvidenceQueryUseCase {
             admittedKind: context.admittedKind, profileDigest: context.profileDigest }, baseSha);
     }
     async readFacts(issueNumber) {
-        const [title, body, labels, comments] = await Promise.all([
+        const [title, body, labels, comments, native] = await Promise.all([
             this.ports.titles.getTitle(issueNumber), this.ports.descriptions.getDescription(issueNumber),
-            this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+            this.ports.nativeState ? Promise.resolve([]) : this.ports.labels.getLabels(issueNumber), this.ports.comments.listIssueComments(issueNumber),
+            this.ports.nativeState?.readIssue(issueNumber),
         ]);
         if (title === undefined || body === undefined || comments.coverage.source !== 'issue-comments'
             || comments.coverage.status !== 'complete' || comments.coverage.limitReached || comments.coverage.providerLimitReached
             || comments.coverage.omittedItems !== 0 || comments.coverage.truncatedItems !== 0)
             throw new Error('Incomplete SDD authority.');
-        return { title, body, labels, comments: comments.value };
+        if (native && native.number !== issueNumber)
+            throw new Error('Foreign native SDD subject.');
+        return { title, body, labels: native?.labels ?? labels, comments: comments.value, ...(native ? { nativeState: native.state } : {}) };
     }
 }
 exports.SddEvidenceQueryUseCase = SddEvidenceQueryUseCase;
@@ -57279,6 +59595,8 @@ function normalizedObjectId(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushPreflight = runCommitAndPushPreflight;
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 const logging_ports_1 = __nccwpck_require__(6152);
 const git_branch_checkout_1 = __nccwpck_require__(68549);
 const verify_command_policy_1 = __nccwpck_require__(96031);
@@ -57291,6 +59609,15 @@ async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort))) {
         return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
     }
+    let excludedBeforeVerification = [];
+    if (options.workspacePaths) {
+        try {
+            excludedBeforeVerification = (await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort)).filter(path => !options.workspacePaths.includes(path));
+        }
+        catch (error) {
+            return { status: "failure", error: (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Pre-verification workspace could not be verified.').message };
+        }
+    }
     const verification = await runVerification(context, gitCommitPort);
     if (verification)
         return { status: "failure", error: verification };
@@ -57299,6 +59626,15 @@ async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     }
     if (options.workspacePaths && options.workspacePaths.length === 0) {
         return { status: "failure", error: "No safe workspace paths to commit." };
+    }
+    if (options.workspacePaths) {
+        try {
+            const final = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(gitCommitPort, excludedBeforeVerification, 'Automated commit verification');
+            return { status: "ready", workspacePaths: final.workspacePaths };
+        }
+        catch (error) {
+            return { status: "failure", error: (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Post-verification workspace could not be verified.').message };
+        }
     }
     return { status: "ready" };
 }
@@ -57343,8 +59679,9 @@ async function runCommitAndPushWorkflow(context, options, gitCommitPort) {
         const { name, email } = await gitCommitPort.getAuthenticatedUserDetails();
         await gitCommitPort.configureAuthor(name, email);
         (0, logging_ports_1.logDebugInfo)(`Git author set to ${name} <${email}>.`);
-        if (options.workspacePaths) {
-            await gitCommitPort.stagePaths(options.workspacePaths);
+        const workspacePaths = preflight.workspacePaths ?? options.workspacePaths;
+        if (workspacePaths) {
+            await gitCommitPort.stagePaths(workspacePaths);
         }
         else {
             await gitCommitPort.stageAll();
@@ -57374,7 +59711,7 @@ exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort) {
+async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort, onCompleted) {
     const lastAutofix = autofixResults.at(-1);
     if (!lastAutofix?.success) {
         (0, logging_ports_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
@@ -57393,6 +59730,7 @@ async function commitAutofixAndResolveFindings(context, payload, autofixResults,
         (0, logging_ports_1.logInfo)(`Bugbot autofix commit failed: ${message}`);
         return [new Error(message)];
     }
+    onCompleted?.(commitResult.committed ? 'changes-pushed' : 'no-changes');
     if (commitResult.committed && payload.context) {
         (0, logging_ports_1.logInfo)(`Committed autofix for ${payload.targetFindingIds.length} ${payload.targetFindingIds.length === 1 ? 'finding' : 'findings'}. `
             + 'Findings remain open until a fresh review verifies the pushed revision.');
@@ -57498,6 +59836,7 @@ async function commitUserRequestIfSuccessful(context, branchOverride, results, g
             id: 'DoUserRequestCommitAndPush',
             success: true,
             executed: commitResult.committed,
+            payload: Object.freeze({ commitOutcome: commitResult.committed ? 'changes-pushed' : 'no-changes' }),
             steps: [commitResult.committed ? 'User request changes committed and pushed.' : 'No changes were produced by the user request.'],
         })];
 }
@@ -60481,14 +62820,14 @@ async function finalizeWorkspaceMutation(gitCommitPort, before, operation) {
     const workspacePathsAfter = await inspectWorkspace(gitCommitPort, `after ${operation}`);
     const unsafePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
     if (unsafePaths.length > 0) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`);
+        throw new application_error_1.ApplicationError('workflow.failed', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`, { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
     }
     const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)([...before], workspacePathsAfter);
     if (workspacePaths.length === 0) {
         throw new application_error_1.ApplicationError('agent.failed', `${operation} produced no safe workspace paths to commit.`);
     }
     if (workspacePaths.length > exports.MAX_AUTOMATED_CHANGED_PATHS) {
-        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`);
+        throw new application_error_1.ApplicationError('workflow.failed', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`, { retryable: false, recovery: { id: 'workspace-changes-rejected', variables: {} } });
     }
     return { workspacePaths };
 }
@@ -60693,14 +63032,17 @@ class CommentLanguageTranslationWorkflow {
             if (responseTarget !== targetLocale) {
                 return [failedAdaptation(context, targetLocale, 'The language adapter returned a mismatched target locale.')];
             }
-            if (status === 'matches' || status === 'ambiguous') {
-                return [adaptationResult(context, targetLocale, status, context.commentBody, this.optionalStringProperty(response, 'sourceLocale'), reasonCode)];
+            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
+            const redundantTranslation = status === 'translated' && reasonCode === 'none' && sourceLocale !== undefined
+                && (0, locale_1.localeLanguagesMatch)(sourceLocale, targetLocale)
+                && new Intl.Locale(sourceLocale).maximize().script === new Intl.Locale(targetLocale).maximize().script;
+            if (status === 'matches' || status === 'ambiguous' || redundantTranslation) {
+                return [adaptationResult(context, targetLocale, redundantTranslation ? 'matches' : status, context.commentBody, sourceLocale, reasonCode)];
             }
             if (status !== 'translated') {
                 return [failedAdaptation(context, targetLocale, `Language adaptation ended with ${status || 'an invalid status'}.`)];
             }
             const adaptedText = this.stringProperty(response, 'adaptedText');
-            const sourceLocale = this.optionalStringProperty(response, 'sourceLocale');
             const restoredProse = (0, comment_translation_policy_1.restoreLanguageAdaptationOutput)(input, adaptedText);
             const interpretedComment = (0, comment_translation_policy_1.rebuildAdaptedComment)(input, adaptedText);
             if (restoredProse === undefined || interpretedComment === undefined) {
@@ -61234,15 +63576,16 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const publish_resume_workflow_1 = __nccwpck_require__(55340);
 class PublishResultUseCase {
-    constructor(comments, catalogResolver, sourceQuery) {
+    constructor(comments, catalogResolver, sourceQuery, requestRead) {
         this.comments = comments;
         this.catalogResolver = catalogResolver;
         this.sourceQuery = sourceQuery;
+        this.requestRead = requestRead;
         this.taskId = 'PublishResultUseCase';
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        return (0, publish_resume_workflow_1.runPublishResume)(param, this.taskId, this.comments, this.catalogResolver, this.sourceQuery);
+        return (0, publish_resume_workflow_1.runPublishResume)(param, this.taskId, this.comments, this.catalogResolver, this.sourceQuery, this.requestRead);
     }
 }
 exports.PublishResultUseCase = PublishResultUseCase;
@@ -61258,6 +63601,7 @@ exports.PublishResultUseCase = PublishResultUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectPublishResultContext = projectPublishResultContext;
 exports.runPublishResume = runPublishResume;
+const reply_request_digest_1 = __nccwpck_require__(47971);
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
@@ -61269,6 +63613,7 @@ const publication_message_catalog_1 = __nccwpck_require__(34223);
 const publication_outcome_policy_1 = __nccwpck_require__(79719);
 function projectPublishResultContext(source) {
     const target = publicationTarget(source);
+    const requestSource = requestSnapshot(source, target);
     return Object.freeze({
         owner: source.owner,
         repository: source.repo,
@@ -61276,6 +63621,7 @@ function projectPublishResultContext(source) {
         locale: source.isPullRequest ? source.locale.pullRequest : source.locale.issue,
         ...(target ? { target } : {}),
         requestCorrelationId: requestCorrelationId(source, target),
+        ...(requestSource ? { requestSource } : {}),
         results: Object.freeze(source.currentConfiguration.results.map(copyResult)),
         ...(source.ai ? { languageConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) } : {}),
     });
@@ -61285,7 +63631,7 @@ function projectPublishResultContext(source) {
  * GitHub; steps, reminders, errors, and debug logs remain operator
  * evidence in the Job Summary and logs.
  */
-async function runPublishResume(param, taskId, comments, catalogResolver, sourceQuery) {
+async function runPublishResume(param, taskId, comments, catalogResolver, sourceQuery, requestRead) {
     try {
         const semanticContext = {
             locale: param.locale,
@@ -61304,7 +63650,9 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
             (0, logging_ports_1.logInfo)('Conversation publication omitted: the configured bot identity is unavailable.');
             return undefined;
         }
-        const catalog = await (0, publication_message_catalog_1.resolvePublicationCatalog)(param.locale, param.languageConfiguration, catalogResolver);
+        const catalog = statuses.length === 0 && replies.every(intent => intent.projection.kind === 'sdd-diff')
+            ? (0, publication_message_catalog_1.resolveStaticPublicationCatalog)(replies[0].locale).catalog
+            : await (0, publication_message_catalog_1.resolvePublicationCatalog)(param.locale, param.languageConfiguration, catalogResolver);
         let staleSourceEvidence;
         const compactedCommentIds = [];
         for (const intent of replies) {
@@ -61314,7 +63662,8 @@ async function runPublishResume(param, taskId, comments, catalogResolver, source
                 botLogin: param.botLogin,
                 intent,
                 catalog,
-            }, comments);
+                ...(param.requestSource ? { requestSource: param.requestSource } : {}),
+            }, comments, requestRead);
             (0, logging_ports_1.logInfo)(`Semantic ${intent.messageKey} reply ${outcome.effect}; `
                 + `duplicates removed=${outcome.duplicatesRemoved}; compacted=${outcome.duplicatesCompacted}.`);
             compactedCommentIds.push(...outcome.compactedCommentIds);
@@ -61369,7 +63718,8 @@ function publicationTarget(source) {
     return positiveInteger(issueNumber) ? Object.freeze({ kind: 'issue', number: issueNumber }) : undefined;
 }
 function requestCorrelationId(source, target) {
-    const reviewCommentId = source.inputs?.pull_request_review_comment?.id;
+    const reviewCommentId = source.inputs?.pull_request_review_comment?.id
+        ?? (source.eventName === 'pull_request_review_comment' ? source.inputs?.comment?.id : undefined);
     if (positiveInteger(reviewCommentId)) {
         return `comment:pull_request_review_comment:${reviewCommentId}`;
     }
@@ -61406,6 +63756,17 @@ function copyPayload(payload) {
     }
     return payload;
 }
+function requestSnapshot(source, target) {
+    const review = source.eventName === 'pull_request_review_comment';
+    if (!target || !['issue_comment', 'pull_request_review_comment'].includes(source.eventName ?? ''))
+        return undefined;
+    const comment = review ? source.inputs?.pull_request_review_comment ?? source.inputs?.comment : source.inputs?.comment;
+    if (!positiveInteger(comment?.id) || typeof comment.body !== 'string' || comment.body.length > 70000
+        || typeof comment.user?.login !== 'string' || !comment.user.login.trim())
+        return undefined;
+    return Object.freeze({ surface: review ? 'review-comment' : 'issue-comment', commentId: comment.id,
+        author: comment.user.login, bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(comment.body), target: Object.freeze({ ...target }) });
+}
 
 
 /***/ }),
@@ -61423,14 +63784,33 @@ const publication_identity_policy_1 = __nccwpck_require__(45403);
 const publication_message_catalog_1 = __nccwpck_require__(34223);
 const semantic_result_publication_policy_1 = __nccwpck_require__(81985);
 const duplicate_comment_cleanup_workflow_1 = __nccwpck_require__(79544);
-/** Publishes an explicit reply at most once for a trusted request correlation. */
-async function reconcileReply(context, comments) {
+/** Publishes trusted correlated replies and refreshes verified read-only projections. */
+async function reconcileReply(context, comments, requestRead) {
     if (!context.botLogin.trim())
         return unchangedOutcome();
     const target = context.intent.target;
+    const witness = context.requestSource ? Object.freeze({ ...context.requestSource,
+        target: Object.freeze({ ...context.requestSource.target }) }) : undefined;
+    const refreshable = {
+        'application-error': 'application-error', 'copilot-status': 'status-command', 'copilot-help': 'help',
+        'copilot-doctor': 'doctor-command', 'copilot-history': 'history-command', 'copilot-sdd-diff': 'sdd-diff',
+    };
+    const canRefresh = Boolean(witness && refreshable[context.intent.messageKey] === context.intent.projection.kind);
+    const sourceMatches = async () => {
+        if (!witness)
+            return !context.intent.correlationId.startsWith('comment:');
+        const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
+        return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
+            && witness.target.kind === target.kind && witness.target.number === target.number
+            && await requestRead.matches(witness));
+    };
+    if (!await sourceMatches())
+        return unchangedOutcome();
     let owned = matchingReplies(await comments.listIssueComments(target.number), context);
     let effect = 'unchanged';
     if (owned.length === 0) {
+        if (!await sourceMatches())
+            return unchangedOutcome();
         await comments.addComment(target.number, (0, semantic_result_publication_policy_1.renderSemanticReply)(context.intent, context.catalog));
         effect = 'created';
         owned = matchingReplies(await comments.listIssueComments(target.number), context);
@@ -61441,10 +63821,23 @@ async function reconcileReply(context, comments) {
         });
     }
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
+    if (!await sourceMatches())
+        return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });
+    if (canRefresh) {
+        const rendered = (0, semantic_result_publication_policy_1.renderSemanticReply)(context.intent, context.catalog);
+        if (canonical.body !== rendered) {
+            if (!await sourceMatches())
+                return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });
+            await comments.updateComment(target.number, canonical.id, rendered);
+            effect = 'updated';
+        }
+    }
     let duplicatesRemoved = 0;
     let duplicatesCompacted = 0;
     const compactedCommentIds = [];
     for (const duplicate of duplicates) {
+        if (!await sourceMatches())
+            break;
         const cleanup = await (0, duplicate_comment_cleanup_workflow_1.cleanupDuplicateComment)({
             issueNumber: target.number,
             duplicateCommentId: duplicate.id,
@@ -61575,7 +63968,13 @@ async function sourceIsCurrent(intent, sourceQuery) {
     if (!sourceQuery) {
         throw new application_error_1.ApplicationError('configuration.unsupported', 'Commit-derived status publication requires an authoritative source query.');
     }
-    return await sourceQuery.getBranchHeadSha(guard.branch) === guard.sha;
+    if (await sourceQuery.getBranchHeadSha(guard.branch) !== guard.sha)
+        return false;
+    if (intent.projection.kind !== 'progress')
+        return true;
+    if (!sourceQuery.isIssueOpen)
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress publication requires a native issue state query.');
+    return await sourceQuery.isIssueOpen(intent.identity.target.number) === true;
 }
 function staleSourceOutcome(canonicalCommentId, effect = 'unchanged', duplicatesRemoved = 0, duplicatesCompacted = 0, compactedCommentIds = []) {
     return Object.freeze({
@@ -62690,67 +65089,92 @@ exports.CheckPriorityIssueSizeUseCase = CheckPriorityIssueSizeUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseIssueAfterMergingUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logging_ports_1 = __nccwpck_require__(6152);
-const task_emoji_1 = __nccwpck_require__(46103);
+const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+/** Native completion first, selective metadata second; retained effects survive partial failures. */
 class CloseIssueAfterMergingUseCase {
-    constructor(issueRepository) {
-        this.issueRepository = issueRepository;
+    constructor(issues) {
+        this.issues = issues;
         this.taskId = 'CloseIssueAfterMergingUseCase';
     }
     async invoke(param) {
-        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const result = [];
-        const linkedIssueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
-        if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
-            (0, logging_ports_1.logDebugInfo)('CloseIssueAfterMerging: no issue was inferred from the pull-request branch; skipping issue closure.');
-            return [new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: false,
-                    steps: ['No linked issue was found; the pull request was not used to close an issue.'],
-                })];
-        }
+        const number = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+        const pullNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.pullRequestNumber);
+        if (!number || !pullNumber || number === pullNumber)
+            return [new result_1.Result({ id: this.taskId, success: true, executed: false,
+                    steps: ['No separate safe linked issue and pull request were found; issue closure was skipped.'] })];
+        let closedThisRun = false;
+        let nativeClosed = false;
+        let labelsChanged = 0;
         try {
-            const closed = await this.issueRepository.closeIssue(linkedIssueNumber);
-            if (closed) {
-                (0, logging_ports_1.logInfo)(`Issue #${linkedIssueNumber} closed after merging PR #${param.pullRequestNumber}.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `#${linkedIssueNumber} was automatically closed after merging this pull request.`
-                    ]
-                }));
+            const pull = await this.issues.readPullRequest(pullNumber);
+            if (pull.number !== pullNumber || pull.state !== 'closed' || pull.merged !== true)
+                throw stale();
+            const target = this.issues.forIssue(number);
+            const read = async () => {
+                const current = await target.read();
+                if (current.number === number && ['open', 'closed'].includes(current.state))
+                    nativeClosed = current.state === 'closed';
+                if (current.number !== number || (0, issue_completion_1.planIssueCompletion)(current, param.completionLabels).kind === 'invalid')
+                    throw stale();
+                return current;
+            };
+            let facts = await read();
+            if (facts.state === 'open' && facts.reason === 'reopened')
+                throw stale();
+            if (facts.state === 'open') {
+                closedThisRun = await target.close();
+                facts = await read();
             }
-            else {
-                (0, logging_ports_1.logDebugInfo)(`Issue #${linkedIssueNumber} was already closed or close failed after merge.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: false,
-                }));
+            nativeClosed = facts.state === 'closed';
+            if (!nativeClosed || closedThisRun && facts.reason !== 'completed')
+                throw stale();
+            const fence = async () => {
+                const freshFacts = await read();
+                const freshPlan = (0, issue_completion_1.planIssueCompletion)(freshFacts, param.completionLabels);
+                if (freshPlan.kind !== 'closed' || freshFacts.reason !== facts.reason)
+                    throw stale();
+                return freshPlan;
+            };
+            const plan = (0, issue_completion_1.planIssueCompletion)(facts, param.completionLabels);
+            if (plan.kind !== 'closed')
+                throw stale();
+            for (const label of plan.remove) {
+                const fresh = await fence();
+                if (fresh.remove.includes(label)) {
+                    await target.removeLabel(label);
+                    labelsChanged++;
+                }
             }
+            for (const label of plan.add) {
+                const fresh = await fence();
+                if (fresh.add.includes(label)) {
+                    await target.addLabel(label);
+                    labelsChanged++;
+                }
+            }
+            const final = await fence();
+            if (final.remove.length || final.add.length)
+                throw stale();
+            return [new result_1.Result({ id: this.taskId, success: true, executed: closedThisRun || labelsChanged > 0,
+                    steps: [`Issue #${number} is closed and its completion metadata was verified after PR #${pullNumber} merged.`],
+                    payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reason: facts.reason, reconciled: true }) } })];
         }
         catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to close issue #${linkedIssueNumber}.`);
-            (0, logging_ports_1.logError)(semanticError);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                steps: [
-                    `Tried to close issue #${linkedIssueNumber}, but there was a problem.`,
-                ],
-                errors: [semanticError],
-            }));
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', nativeClosed
+                ? 'The issue is closed, but completion metadata could not be fully verified. Retry the verified merged-PR operation.'
+                : 'Native issue completion could not be verified. Inspect the linked run before retrying.');
+            return [new result_1.Result({ id: this.taskId, success: false, executed: closedThisRun || labelsChanged > 0,
+                    steps: [nativeClosed ? 'The native issue closure was retained; completion metadata remains unverified.' : 'Native issue completion remains unverified.'],
+                    errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reconciled: false }) } })];
         }
-        return result;
     }
 }
 exports.CloseIssueAfterMergingUseCase = CloseIssueAfterMergingUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The verified native issue or merged pull-request state changed or is unavailable.');
+}
 
 
 /***/ }),
@@ -64699,6 +67123,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'workspace-changes-rejected',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -64890,6 +67315,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'workspace-changes-rejected': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
     if (!recovery)
@@ -65435,6 +67861,11 @@ exports.Labels = void 0;
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 class Labels {
+    get completionProtectedLabels() {
+        return Object.freeze([...new Set([this.bug, this.bugfix, this.hotfix, this.enhancement, this.feature,
+                this.release, this.question, this.help, this.docs, this.documentation, this.chore, this.maintenance,
+                this.deploy, this.deployed, ...this.sizeLabels, ...this.priorityLabels, issue_start_policy_1.BRANCH_READY_LABEL, 'SDD', 'contract-change'])]);
+    }
     get isMandatoryBranchedLabel() {
         return this.isHotfix || this.isRelease;
     }
@@ -66649,11 +69080,13 @@ class AgentCliClient {
         });
         const runStartedAt = Date.now();
         try {
-            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal);
+            let toolDiagnostic;
+            const output = await (0, agent_cli_execution_1.runAgentCli)(plan, request.prompt, request.signal, diagnostic => { toolDiagnostic = diagnostic; });
             observeSafely(this.observer, {
                 state: 'completed', phase: 'run', provider: plan.provider, capability: plan.capability,
                 durationMilliseconds: Date.now() - runStartedAt,
                 outputBytes: Buffer.byteLength(output, 'utf8'),
+                ...(toolDiagnostic ? { toolDiagnostic } : {}),
             });
             return output;
         }
@@ -66741,7 +69174,7 @@ const windows_runtime_acl_1 = __nccwpck_require__(55362);
 const agent_executable_file_1 = __nccwpck_require__(87997);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const MAX_STDERR_BYTES = 8 * 1024;
-function runAgentCli(plan, prompt, signal) {
+function runAgentCli(plan, prompt, signal, onToolDiagnostic) {
     return new Promise((resolve, reject) => {
         let runtimeDirectory;
         try {
@@ -66780,7 +69213,7 @@ function runAgentCli(plan, prompt, signal) {
         })();
         if (!child)
             return;
-        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
+        const lifecycle = createAgentProcessLifecycle(child, plan, signal, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); }, onToolDiagnostic);
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
         child.stdin.once('error', lifecycle.onStdinError);
@@ -66792,7 +69225,7 @@ function runAgentCli(plan, prompt, signal) {
         child.stdin.end(plan.promptMode === 'stdin' ? prompt : undefined);
     });
 }
-function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
+function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToolDiagnostic) {
     const stdoutChunks = [];
     let stderrBytes = 0;
     const stderrChunks = [];
@@ -66878,6 +69311,13 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject) {
             return;
         }
         try {
+            const toolDiagnostic = (0, agent_cli_exit_diagnostic_1.classifyAgentCliToolDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'));
+            if (toolDiagnostic) {
+                try {
+                    onToolDiagnostic?.(toolDiagnostic);
+                }
+                catch { /* Diagnostic observers cannot change execution semantics. */ }
+            }
             finishResolve(decodeAgentCliOutput(plan.outputProtocol, Buffer.concat(stdoutChunks).toString('utf8')));
         }
         catch (error) {
@@ -67046,9 +69486,18 @@ function signalProcessTree(child, signal) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyAgentCliToolDiagnostic = classifyAgentCliToolDiagnostic;
 exports.classifyAgentCliExitDiagnostic = classifyAgentCliExitDiagnostic;
+/** A provider-reported tool hint, independent of the CLI's process exit status. */
+function classifyAgentCliToolDiagnostic(stderr) {
+    return /\b(?:Failed to create unified exec process|windows sandbox failed):\s*helper_unknown_error:\s*open sandbox setup mutex\b/iu.test(stderr)
+        ? 'reported-sandbox-setup-mutex' : undefined;
+}
 /** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
 function classifyAgentCliExitDiagnostic(stderr) {
+    const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
+    if (toolDiagnostic)
+        return toolDiagnostic;
     if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {
         return 'reported-authentication';
     }
@@ -70331,6 +72780,185 @@ function requireObject(data, operation) {
 
 /***/ }),
 
+/***/ 25282:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RuntimeDoctorRepository = void 0;
+const github = __importStar(__nccwpck_require__(78227));
+const github_runtime_doctor_ports_1 = __nccwpck_require__(64921);
+const pull_request_approval_repository_1 = __nccwpck_require__(23001);
+const SHA = /^[a-f0-9]{40}$/u;
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
+/** SDK DTOs and diagnostics terminate here; no mutation, provisioning, or filesystem API. */
+class RuntimeDoctorRepository {
+    constructor(owner, repository, token) {
+        this.owner = owner;
+        this.repository = repository;
+        this.client = github.getOctokit(token);
+    }
+    async readRepository(repositoryId) {
+        try {
+            const repo = await this.client.rest.repos.get({ owner: this.owner, repo: this.repository });
+            if (repo.data.id !== repositoryId || !(0, github_runtime_doctor_1.isDoctorBranchReference)(repo.data.default_branch))
+                return { state: 'unavailable' };
+            const ref = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
+            const revision = ref.data.object.sha;
+            if (!SHA.test(revision) || ref.data.object.type !== 'commit')
+                return { state: 'unavailable' };
+            const trackedPaths = this.readTrackedPaths(revision);
+            const pathType = (path) => trackedPaths.then(paths => paths.get(path));
+            const [values, inventory] = await Promise.all([
+                Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision, pathType)])), trackedPaths,
+            ]);
+            const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
+            if (final.data.object.type !== 'commit' || final.data.object.sha !== revision)
+                return { state: 'unavailable' };
+            return Object.freeze({ state: 'available', repositoryId, revision,
+                trackedFiles: Object.freeze([...inventory].filter(([, type]) => type === 'file').map(([path]) => path)),
+                files: Object.freeze(Object.fromEntries(values)) });
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readFile(path, revision, pathType) {
+        try {
+            const response = await this.client.rest.repos.getContent({ owner: this.owner, repo: this.repository, path, ref: revision });
+            const data = response.data;
+            if (Array.isArray(data) || data.type !== 'file' || data.path !== path || !('content' in data)
+                || data.encoding !== 'base64' || typeof data.content !== 'string' || data.content.length > 300000
+                || !/^[A-Za-z0-9+/=\r\n]*$/u.test(data.content))
+                throw new Error('Malformed bounded file response.');
+            if (await pathType(path) !== 'file')
+                throw new Error('The pinned path is not a regular repository file.');
+            const bytes = Buffer.from(data.content, 'base64');
+            const text = bytes.toString('utf8');
+            if (bytes.toString('base64') !== data.content.replace(/[\r\n]/gu, '')
+                || bytes.length > 200000 || !Buffer.from(text, 'utf8').equals(bytes))
+                throw new Error('Malformed bounded file content.');
+            return Object.freeze({ state: 'present', text });
+        }
+        catch (error) {
+            if (status(error) === 404 && (await pathType(path)) === undefined)
+                return Object.freeze({ state: 'missing' });
+            throw error;
+        }
+    }
+    /** A content 404 alone is ambiguous. Only a complete immutable tree proves absence. */
+    async readTrackedPaths(revision) {
+        const commit = await this.client.rest.git.getCommit({ owner: this.owner, repo: this.repository, commit_sha: revision });
+        if (commit.data.sha !== revision || !SHA.test(commit.data.tree.sha))
+            throw new Error('Unverified repository tree identity.');
+        const response = await this.client.rest.git.getTree({ owner: this.owner, repo: this.repository, tree_sha: commit.data.tree.sha, recursive: '1' });
+        const tree = response.data;
+        if (tree.sha !== commit.data.tree.sha || tree.truncated !== false || !Array.isArray(tree.tree) || tree.tree.length > 10000)
+            throw new Error('Incomplete bounded repository tree.');
+        const paths = new Map();
+        for (const entry of tree.tree) {
+            const path = entry.path;
+            if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || path.includes('\\')
+                || Array.from(path).some(character => character.charCodeAt(0) < 32) || path.split('/').includes('..') || paths.has(path)
+                || !['blob', 'tree', 'commit'].includes(entry.type ?? '') || !SHA.test(entry.sha ?? ''))
+                throw new Error('Malformed repository tree evidence.');
+            paths.set(path, entry.type === 'blob' && ['100644', '100755'].includes(entry.mode ?? '') ? 'file' : 'other');
+        }
+        return paths;
+    }
+    async readIssue(issueNumber) {
+        const response = await this.client.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber });
+        const issue = response.data;
+        if (issue.number !== issueNumber || issue.pull_request || (issue.body !== null && typeof issue.body !== 'string') || (issue.body?.length ?? 0) > 70000
+            || typeof issue.title !== 'string' || issue.title.length > 256 || !Array.isArray(issue.labels) || issue.labels.length > 100)
+            throw new Error('Malformed bounded issue response.');
+        const labels = issue.labels.map((label) => typeof label === 'string' ? label : label.name);
+        if (labels.some((label) => typeof label !== 'string' || label.length > 120))
+            throw new Error('Malformed issue labels.');
+        return Object.freeze({ number: issue.number, title: issue.title, body: issue.body ?? '', labels: Object.freeze(labels) });
+    }
+    async readLinkedBranch(issueNumber) {
+        try {
+            const result = await this.client.graphql(`query RuntimeDoctorLinkedBranch($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){
+                  databaseId nameWithOwner issue(number:$number){number linkedBranches(first:100){
+                    pageInfo{hasNextPage} nodes{ref{name target{oid} repository{databaseId nameWithOwner}}}}}}}`, { owner: this.owner, repo: this.repository, number: issueNumber });
+            const repo = result.repository;
+            const links = repo?.issue?.linkedBranches;
+            const expected = `${this.owner}/${this.repository}`.toLowerCase();
+            if (!repo || !Number.isSafeInteger(repo.databaseId) || (repo.databaseId ?? 0) <= 0 || repo.nameWithOwner?.toLowerCase() !== expected
+                || repo.issue?.number !== issueNumber || links?.pageInfo?.hasNextPage !== false || !Array.isArray(links.nodes))
+                return { state: 'unavailable' };
+            const refs = links.nodes.flatMap((node) => node?.ref ? [node.ref] : []);
+            if (refs.length !== links.nodes.length)
+                return { state: 'unavailable' };
+            if (refs.length === 0)
+                return { state: 'absent' };
+            if (refs.length !== 1)
+                return { state: 'unavailable' };
+            const branch = refs[0];
+            if (!branch.name || !(0, github_runtime_doctor_1.isDoctorBranchReference)(branch.name) || !branch.target?.oid || !SHA.test(branch.target.oid)
+                || branch.repository?.databaseId !== repo.databaseId || branch.repository?.nameWithOwner?.toLowerCase() !== expected)
+                return { state: 'unavailable' };
+            const live = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${branch.name}` });
+            return live.data.object.type === 'commit' && live.data.object.sha === branch.target.oid
+                ? Object.freeze({ state: 'available', repositoryId: repo.databaseId, name: branch.name, headSha: branch.target.oid }) : { state: 'unavailable' };
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readApprovalPolicy() {
+        try {
+            const value = await (0, pull_request_approval_repository_1.readEffectiveApprovalPolicy)(this.client, { owner: this.owner, repository: this.repository });
+            return value ? Object.freeze({ status: 'available', ...value }) : Object.freeze({ status: 'absent' });
+        }
+        catch {
+            return Object.freeze({ status: 'unavailable' });
+        }
+    }
+}
+exports.RuntimeDoctorRepository = RuntimeDoctorRepository;
+function status(error) {
+    return error && typeof error === 'object' && 'status' in error && typeof error.status === 'number' ? error.status : undefined;
+}
+
+
+/***/ }),
+
 /***/ 52644:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -70564,6 +73192,114 @@ class IssueClosureRepository {
     }
 }
 exports.IssueClosureRepository = IssueClosureRepository;
+
+
+/***/ }),
+
+/***/ 70791:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueCompletionRepository = void 0;
+const issue_completion_1 = __nccwpck_require__(31147);
+const application_error_1 = __nccwpck_require__(75999);
+/** Exact repository/subject reads and selective writes. Never replaces a label inventory. */
+class IssueCompletionRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = binding;
+    }
+    parameters(number) {
+        if (!Number.isSafeInteger(number) || number < 1)
+            throw invalid();
+        return { owner: this.binding.owner, repo: this.binding.repository, issue_number: number, request: { redirect: 'error' } };
+    }
+    apiPath(path) {
+        const base = new URL(this.binding.apiBaseUrl);
+        if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash)
+            throw invalid();
+        return `${base.href.replace(/\/$/u, '')}/repos/${encodeURIComponent(this.binding.owner)}/${encodeURIComponent(this.binding.repository)}${path}`;
+    }
+    exactUrl(value, path) {
+        return typeof value === 'string' && value.toLowerCase() === this.apiPath(path).toLowerCase();
+    }
+    async readIssue(number) {
+        try {
+            const response = await this.client.getClient(this.binding.token).rest.issues.get(this.parameters(number));
+            const data = object(response.data);
+            if (!this.exactUrl(response.url, `/issues/${number}`) || data.number !== number || 'pull_request' in data
+                || !this.exactUrl(data.repository_url, '') || !['open', 'closed'].includes(data.state)
+                || !(data.state_reason === null || ['completed', 'not_planned', 'duplicate', 'reopened'].includes(data.state_reason))
+                || !Array.isArray(data.labels) || data.labels.length > issue_completion_1.ISSUE_COMPLETION_LABEL_LIMIT)
+                throw invalid();
+            const labels = data.labels.map(value => typeof value === 'string' ? value : object(value).name);
+            if (labels.some(value => !(0, issue_completion_1.isIssueCompletionLabelName)(value))
+                || new Set(labels.map(value => value.toLowerCase())).size !== labels.length)
+                throw invalid();
+            return Object.freeze({ number, state: data.state,
+                reason: data.state_reason === null ? 'unknown' : data.state_reason,
+                labels: Object.freeze(labels) });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Current native issue completion facts could not be verified.');
+        }
+    }
+    async readPullRequest(number) {
+        try {
+            const parameters = this.parameters(number);
+            delete parameters.issue_number;
+            const response = await this.client.getClient(this.binding.token).rest.pulls.get({ ...parameters, pull_number: number });
+            const data = object(response.data);
+            const repo = object(object(data.base).repo);
+            if (!this.exactUrl(response.url, `/pulls/${number}`) || data.number !== number
+                || !this.exactUrl(repo.url, '') || !['open', 'closed'].includes(data.state)
+                || typeof data.merged !== 'boolean')
+                throw invalid();
+            return Object.freeze({ number, state: data.state, merged: data.merged });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Current native pull-request state could not be verified.');
+        }
+    }
+    async closeIssue(number) {
+        if ((await this.readIssue(number)).state === 'closed')
+            return false;
+        try {
+            await this.client.getClient(this.binding.token).rest.issues.update({ ...this.parameters(number), state: 'closed', state_reason: 'completed' });
+            return true;
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The native issue close request failed.');
+        }
+    }
+    async addLabel(number, label) {
+        try {
+            await this.client.getClient(this.binding.token).rest.issues.addLabels({ ...this.parameters(number), labels: [label] });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'A completion label could not be added.');
+        }
+    }
+    async removeLabel(number, label) {
+        try {
+            await this.client.getClient(this.binding.token).rest.issues.removeLabel({ ...this.parameters(number), name: label });
+        }
+        catch (error) {
+            throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'A stale completion label could not be removed.');
+        }
+    }
+}
+exports.IssueCompletionRepository = IssueCompletionRepository;
+function object(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw invalid();
+    return value;
+}
+function invalid() {
+    return new application_error_1.ApplicationError('provider.contract-invalid', 'Native completion facts do not match the verified repository and subject.');
+}
 
 
 /***/ }),
@@ -72078,9 +74814,27 @@ async function findProjectItem(client, project, itemId, fieldName) {
         if (item)
             return item;
     }
-    const message = `Project item ${itemId} was not found while updating field '${fieldName}'.`;
-    (0, logger_1.logError)(message);
-    throw new Error(message);
+    const result = await client.graphql(`query($itemId: ID!, $fieldName: String!) {
+        node(id: $itemId) {
+            id __typename
+            ... on ProjectV2Item {
+                project { id }
+                fieldValueByName(name: $fieldName) {
+                    ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                }
+            }
+        }
+    }`, { itemId, fieldName });
+    const item = result.node;
+    if (item?.id !== itemId || item.__typename !== 'ProjectV2Item' || item.project?.id !== project.id
+        || !Object.prototype.hasOwnProperty.call(item, 'fieldValueByName')) {
+        throw new Error(`Project item ${itemId} has no verified field evidence in project ${project.id}.`);
+    }
+    const value = item.fieldValueByName;
+    if (value !== null && (typeof value?.optionId !== 'string' || !value.optionId.trim())) {
+        throw new Error('The direct Project item single-select value is malformed.');
+    }
+    return { id: itemId, fieldValues: { nodes: value === null ? [] : [{ field: { name: fieldName }, optionId: value.optionId }] } };
 }
 
 
@@ -72159,6 +74913,41 @@ async function findProjectItemId(client, project, contentId) {
         const item = page.nodes.find((candidate) => candidate.content?.id === contentId);
         if (item)
             return item.id;
+    }
+    return findContentSideProjectItemId(client, project, contentId);
+}
+/** Recover a missing board-list entry from the exact content's own memberships. */
+async function findContentSideProjectItemId(client, project, contentId) {
+    for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
+        const result = await client.graphql(`query($contentId: ID!, $after: String) {
+        node(id: $contentId) {
+          id __typename
+          ... on Issue { projectItems(first: 100, after: $after, includeArchived: true) {
+            pageInfo { hasNextPage endCursor }
+            nodes { id project { id } content { ... on Issue { id } ... on PullRequest { id } } }
+          } }
+          ... on PullRequest { projectItems(first: 100, after: $after, includeArchived: true) {
+            pageInfo { hasNextPage endCursor }
+            nodes { id project { id } content { ... on Issue { id } ... on PullRequest { id } } }
+          } }
+        }
+      }`, { contentId, after });
+        const node = result.node;
+        const membership = node?.projectItems;
+        if (node?.id !== contentId || !['Issue', 'PullRequest'].includes(node.__typename ?? '')
+            || !membership || !Array.isArray(membership.nodes)
+            || typeof membership.pageInfo?.hasNextPage !== 'boolean'
+            || !(membership.pageInfo.endCursor === null || typeof membership.pageInfo.endCursor === 'string')) {
+            throw new Error('The content-side Project membership evidence is unavailable or malformed.');
+        }
+        return membership;
+    }, { description: 'content-side project membership', maxPages: 2 })) {
+        const item = page.nodes.find(candidate => candidate.project?.id === project.id && candidate.content?.id === contentId);
+        if (item) {
+            if (typeof item.id !== 'string' || !item.id.trim())
+                throw new Error('The content-side Project item identity is malformed.');
+            return item.id;
+        }
     }
     return undefined;
 }
@@ -72368,6 +75157,28 @@ exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
 
 /***/ }),
 
+/***/ 68742:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCurrentBaseRevision = readCurrentBaseRevision;
+/** PR base metadata can lag a parent push; read the exact native branch ref. */
+async function readCurrentBaseRevision(port, target, baseRef) {
+    if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
+        || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
+        throw new Error('The PR base ref is invalid.');
+    const { data } = await port.getRef({ owner: target.owner, repo: target.repository, ref: `heads/${baseRef}` });
+    if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
+        || !/^[a-f0-9]{40}$/u.test(data.object.sha))
+        throw new Error('The PR base ref cannot be verified.');
+    return data.object.sha;
+}
+
+
+/***/ }),
+
 /***/ 23001:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -72408,6 +75219,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
+exports.readEffectiveApprovalPolicy = readEffectiveApprovalPolicy;
+const current_base_revision_query_1 = __nccwpck_require__(68742);
 const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
@@ -72422,32 +75235,21 @@ class PullRequestApprovalRepository {
         this.octokit = github.getOctokit(token);
         this.checkOctokit = settings.githubToken ? github.getOctokit(settings.githubToken) : undefined;
     }
+    /** Read-only source evidence; failure never consults an injected policy value. */
+    async readPolicyEvidence(target) {
+        try {
+            const read = await this.readEffectivePolicy(target);
+            return Object.freeze(read ? { status: 'available', ...read } : { status: 'absent' });
+        }
+        catch {
+            return Object.freeze({ status: 'unavailable' });
+        }
+    }
     async readPolicy(target) {
-        try {
-            const response = await this.octokit.rest.actions.getRepoVariable({
-                owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY',
-            });
-            return response.data.value;
-        }
-        catch (error) {
-            if (statusOf(error) !== 404) {
-                reportPolicyReadFailure('repository-variable', error);
-                throw error;
-            }
-        }
-        // A repository Variable takes precedence over an accessible organization Variable.
-        try {
-            const response = await this.octokit.rest.actions.getOrgVariable({
-                org: target.owner, name: 'PR_APPROVAL_POLICY',
-            });
-            return response.data.value;
-        }
-        catch (error) {
-            if (statusOf(error) === 404)
-                return undefined;
-            reportPolicyReadFailure('organization-variable', error);
-            throw error;
-        }
+        return (await this.readEffectivePolicy(target))?.value;
+    }
+    async readEffectivePolicy(target) {
+        return readEffectiveApprovalPolicy(this.octokit, target);
     }
     async loadEvidence(target) {
         const { data: pull } = await this.octokit.rest.pulls.get({
@@ -72671,18 +75473,8 @@ class PullRequestApprovalRepository {
             }
         }
     }
-    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
     async readCurrentBaseSha(target, baseRef) {
-        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
-            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
-            throw new Error('The PR base ref is invalid.');
-        const { data } = await this.octokit.rest.git.getRef({
-            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
-        });
-        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
-            || !/^[a-f0-9]{40}$/u.test(data.object.sha))
-            throw new Error('The PR base ref cannot be verified.');
-        return data.object.sha;
+        return (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, target, baseRef);
     }
     async effectiveRules(owner, repo, branch) {
         try {
@@ -72774,6 +75566,34 @@ function record(value) {
     return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 }
 function array(value) { return Array.isArray(value) ? value : []; }
+/** Canonical repository-over-organization read shared with the physically read-only doctor binding. */
+async function readEffectiveApprovalPolicy(octokit, target) {
+    const admit = (source, value) => {
+        if (typeof value !== 'string' || value.length > 65536)
+            throw new Error('Approval policy response is malformed or unbounded.');
+        return { source, value };
+    };
+    try {
+        const response = await octokit.rest.actions.getRepoVariable({ owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY' });
+        return admit('repository', response.data.value);
+    }
+    catch (error) {
+        if (statusOf(error) !== 404) {
+            reportPolicyReadFailure('repository-variable', error);
+            throw error;
+        }
+    }
+    try {
+        const response = await octokit.rest.actions.getOrgVariable({ org: target.owner, name: 'PR_APPROVAL_POLICY' });
+        return admit('organization', response.data.value);
+    }
+    catch (error) {
+        if (statusOf(error) === 404)
+            return undefined;
+        reportPolicyReadFailure('organization-variable', error);
+        throw error;
+    }
+}
 
 
 /***/ }),
@@ -73797,6 +76617,103 @@ exports.PullRequestReviewerRepository = PullRequestReviewerRepository;
 
 /***/ }),
 
+/***/ 1328:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PullRequestStatusQueryRepository = void 0;
+const current_base_revision_query_1 = __nccwpck_require__(68742);
+const github = __importStar(__nccwpck_require__(78227));
+const integer = (value) => Number.isSafeInteger(value) && value > 0;
+const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
+/** Bounded native linkage and fresh identity reads. No mutations or provider DTOs cross this boundary. */
+class PullRequestStatusQueryRepository {
+    constructor(owner, repository, token) {
+        this.owner = owner;
+        this.repository = repository;
+        this.octokit = github.getOctokit(token);
+    }
+    async readLinkedPullRequests(issueNumber) {
+        if (!integer(issueNumber))
+            return { state: 'unavailable' };
+        try {
+            const response = await this.octokit.graphql(`query ($owner: String!, $repository: String!, $issue: Int!) {
+                repository(owner: $owner, name: $repository) { databaseId nameWithOwner issue(number: $issue) { number
+                    closedByPullRequestsReferences(first: 100, includeClosedPrs: false) {
+                        totalCount pageInfo { hasNextPage } nodes { number state repository { databaseId } headRepository { databaseId } }
+                    } } } }`, { owner: this.owner, repository: this.repository, issue: issueNumber });
+            const repo = response.repository;
+            const issue = repo?.issue;
+            const links = issue?.closedByPullRequestsReferences;
+            if (!integer(repo?.databaseId) || repo?.nameWithOwner?.toLowerCase() !== `${this.owner}/${this.repository}`.toLowerCase()
+                || issue?.number !== issueNumber || !links || !Array.isArray(links.nodes) || links.nodes.length > 100
+                || links.pageInfo?.hasNextPage !== false || links.totalCount !== links.nodes.length)
+                return { state: 'unavailable' };
+            const numbers = [];
+            for (const pull of links.nodes) {
+                if (!pull || !integer(pull.number) || pull.state !== 'OPEN' || pull.repository?.databaseId !== repo.databaseId
+                    || pull.headRepository?.databaseId !== repo.databaseId || numbers.includes(pull.number))
+                    return { state: 'unavailable' };
+                numbers.push(pull.number);
+            }
+            return Object.freeze({ state: 'available', repositoryId: repo.databaseId, issueNumber, numbers: Object.freeze(numbers) });
+        }
+        catch {
+            return { state: 'unavailable' };
+        }
+    }
+    async readRevision(target) {
+        if (target.owner.toLowerCase() !== this.owner.toLowerCase() || target.repository.toLowerCase() !== this.repository.toLowerCase()
+            || !integer(target.repositoryId) || !integer(target.pullNumber))
+            throw new Error('Status target unavailable.');
+        const { data: pull } = await this.octokit.rest.pulls.get({ owner: this.owner, repo: this.repository, pull_number: target.pullNumber });
+        if (pull.state !== 'open' || pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
+            || !sha(pull.head.sha) || !sha(pull.base.sha))
+            throw new Error('Status revision unavailable.');
+        const baseSha = await (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, { owner: this.owner, repository: this.repository }, pull.base.ref);
+        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha });
+    }
+}
+exports.PullRequestStatusQueryRepository = PullRequestStatusQueryRepository;
+
+
+/***/ }),
+
 /***/ 96578:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -74276,6 +77193,58 @@ function releaseIdAsString(id) {
 
 /***/ }),
 
+/***/ 2879:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReplyRequestRepository = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const github_user_policy_1 = __nccwpck_require__(84403);
+/** Provider identity and diagnostics terminate here. Requests forbid redirects. */
+class ReplyRequestRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = Object.freeze({ ...binding });
+    }
+    async matches(snapshot) {
+        try {
+            const base = new URL(this.binding.apiBaseUrl);
+            if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash
+                || !Number.isSafeInteger(snapshot.commentId) || snapshot.commentId < 1
+                || !Number.isSafeInteger(snapshot.target.number) || snapshot.target.number < 1
+                || !['issue', 'pull-request'].includes(snapshot.target.kind)
+                || !['issue-comment', 'review-comment'].includes(snapshot.surface)
+                || snapshot.surface === 'review-comment' && snapshot.target.kind !== 'pull-request'
+                || !/^[a-f0-9]{64}$/u.test(snapshot.bodyDigest) || !snapshot.author)
+                return false;
+            const root = base.href.replace(/\/$/u, '') + '/repos/' + encodeURIComponent(this.binding.owner) + '/' + encodeURIComponent(this.binding.repository);
+            const parameters = { owner: this.binding.owner, repo: this.binding.repository, comment_id: snapshot.commentId,
+                request: { redirect: 'error' } };
+            const review = snapshot.surface === 'review-comment';
+            const response = review ? await this.client.rest.pulls.getReviewComment(parameters) : await this.client.rest.issues.getComment(parameters);
+            const data = record(response.data), user = record(data.user);
+            if (response.url !== root + (review ? '/pulls/comments/' : '/issues/comments/') + snapshot.commentId
+                || data.id !== snapshot.commentId || typeof data.body !== 'string' || data.body.length > 70000
+                || typeof user.login !== 'string' || !(0, github_user_policy_1.githubUsersMatch)(user.login, snapshot.author)
+                || data[review ? 'pull_request_url' : 'issue_url'] !== root + (review ? '/pulls/' : '/issues/') + snapshot.target.number)
+                return false;
+            return (0, reply_request_digest_1.replyRequestBodyDigest)(data.body) === snapshot.bodyDigest;
+        }
+        catch {
+            return false;
+        }
+    }
+}
+exports.ReplyRequestRepository = ReplyRequestRepository;
+function record(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
 /***/ 28493:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -74344,6 +77313,85 @@ class RepositorySecretsCommandRepository {
     }
 }
 exports.RepositorySecretsCommandRepository = RepositorySecretsCommandRepository;
+
+
+/***/ }),
+
+/***/ 85885:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddDiffLinkRepository = void 0;
+const QUERY = `query SddDiffClosingIssues($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    databaseId nameWithOwner
+    pullRequest(number: $number) {
+      number headRefOid headRefName headRepository { databaseId nameWithOwner } repository { databaseId nameWithOwner }
+      closingIssuesReferences(first: 100) {
+        totalCount pageInfo { hasNextPage }
+        nodes { number author { login } repository { databaseId nameWithOwner } }
+      }
+    }
+  }
+}`;
+/** One bounded native read; absent, incomplete or conflicting identities never become guessed links. */
+class SddDiffLinkRepository {
+    constructor(client, binding) {
+        this.client = client;
+        this.binding = Object.freeze({ ...binding });
+    }
+    async readClosingIssues(pullNumber) {
+        const unavailable = Object.freeze({ state: 'unavailable' });
+        const binding = this.binding;
+        if (!positive(pullNumber) || !positive(binding.repositoryId)
+            || ![binding.owner, binding.repository].every(value => /^[A-Za-z0-9_.-]{1,100}$/u.test(value) && !['.', '..'].includes(value)))
+            return unavailable;
+        try {
+            const response = object(await this.client.getClient(binding.token).graphql(QUERY, {
+                owner: binding.owner, repo: binding.repository, number: pullNumber,
+            }));
+            const repository = object(response?.repository);
+            const pull = object(repository?.pullRequest);
+            const links = object(pull?.closingIssuesReferences);
+            const page = object(links?.pageInfo);
+            if (!sameRepository(repository, binding) || !sameRepository(object(pull?.repository), binding)
+                || !sameRepository(object(pull?.headRepository), binding)
+                || typeof pull?.headRefName !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,249}$/u.test(pull.headRefName)
+                || pull?.number !== pullNumber || typeof pull.headRefOid !== 'string' || !/^[a-f0-9]{40}$/u.test(pull.headRefOid)
+                || page?.hasNextPage !== false || !Array.isArray(links?.nodes)
+                || !Number.isSafeInteger(links.totalCount) || links.totalCount !== links.nodes.length || links.nodes.length > 100)
+                return unavailable;
+            const numbers = [];
+            const authors = {};
+            for (const value of links.nodes) {
+                const issue = object(value);
+                const author = object(issue?.author);
+                if (typeof author?.login !== 'string' || !author.login.trim() || author.login.length > 100
+                    || !positive(issue?.number) || !sameRepository(object(issue?.repository), binding)
+                    || numbers.includes(issue.number))
+                    return unavailable;
+                numbers.push(issue.number);
+                authors[issue.number] = author.login;
+            }
+            return Object.freeze({ state: 'verified', pullNumber, headSha: pull.headRefOid, headBranch: pull.headRefName,
+                issueNumbers: Object.freeze(numbers.sort((left, right) => left - right)), issueAuthors: Object.freeze(authors) });
+        }
+        catch {
+            return unavailable;
+        }
+    }
+}
+exports.SddDiffLinkRepository = SddDiffLinkRepository;
+function object(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function sameRepository(value, binding) {
+    return value?.databaseId === binding.repositoryId && typeof value.nameWithOwner === 'string'
+        && value.nameWithOwner.toLowerCase() === `${binding.owner}/${binding.repository}`.toLowerCase();
+}
 
 
 /***/ }),
@@ -74654,6 +77702,33 @@ exports.WORKFLOW_ACTIVE_STATUSES = [
 
 /***/ }),
 
+/***/ 25911:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveJsonInput = resolveJsonInput;
+exports.resolveActionInput = resolveActionInput;
+/**
+ * Resolves one action input without coupling the caller to a specific lifecycle.
+ * Explicit runtime parameters always override YAML/environment defaults.
+ */
+function resolveJsonInput(inputVarsJson, key) {
+    if (!inputVarsJson) {
+        return undefined;
+    }
+    const inputVars = JSON.parse(inputVarsJson);
+    const value = inputVars[`INPUT_${key.toUpperCase()}`];
+    return value === undefined ? undefined : String(value);
+}
+function resolveActionInput(additionalParams, actionInputs, key) {
+    return (additionalParams[key] ?? actionInputs[key]);
+}
+
+
+/***/ }),
+
 /***/ 89040:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74785,7 +77860,7 @@ exports.admittedBranchSyncValidationCode = admittedBranchSyncValidationCode;
 exports.BRANCH_SYNC_VALIDATION_CODES = Object.freeze([
     'merge-state-mismatch', 'head-changed', 'merge-parent-changed',
     'unresolved-conflicts', 'unexpected-paths', 'unstaged-changes',
-    'protected-index-changed', 'sdd-catalog-invalid', 'staging-failed',
+    'protected-index-changed', 'sdd-catalog-invalid', 'communication-budget-invalid', 'staging-failed',
     'whitespace-or-conflict-markers', 'parent-head-changed', 'working-head-changed',
     'unclassified',
 ]);
@@ -75317,6 +78392,9 @@ exports.COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'sdd-diff',
+    'doctor',
+    'history',
     'description',
     'explain',
     'diagnose',
@@ -75364,6 +78442,9 @@ function parseCopilotCommand(raw) {
     if (!name || !exports.COPILOT_COMMAND_NAMES.includes(name)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${exports.COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
+    if (name === 'status' && tokens.length > 0) {
+        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
+    }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
@@ -75375,8 +78456,16 @@ function parseCopilotCommand(raw) {
         && name !== 'remember') {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
+    if (name === 'sdd-diff' && argumentsList.length > 0)
+        return { kind: 'invalid', reason: '/copilot sdd-diff does not accept arguments.' };
+    if (name === 'doctor' && argumentsList.length > 0) {
+        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
+    }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+    }
+    if (name === 'history' && argumentsList.length) {
+        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
     }
     return {
         kind: 'command',
@@ -75556,6 +78645,70 @@ function waitingStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LAB
 function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
     return lifecycleLabelDefinitions(labels).find(definition => normalized.has(definition.name.trim().toLowerCase()))?.state;
+}
+
+
+/***/ }),
+
+/***/ 40221:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OPERATION_MARKER_PREFIX = exports.OPERATION_OUTCOMES = exports.HISTORY_COMMANDS = void 0;
+exports.isHistoryCommand = isHistoryCommand;
+exports.readOperationEvidence = readOperationEvidence;
+exports.validateOperationEvidence = validateOperationEvidence;
+exports.buildOperationEvidenceMarker = buildOperationEvidenceMarker;
+const git_object_id_1 = __nccwpck_require__(88623);
+exports.HISTORY_COMMANDS = ['sync-branch', 'remember', 'dismiss', 'implement', 'fix'];
+exports.OPERATION_OUTCOMES = ['applied', 'already-current', 'not-applied', 'blocked', 'partial', 'failed', 'unavailable'];
+exports.OPERATION_MARKER_PREFIX = '<!-- copilot:operation:v1 ';
+function isHistoryCommand(value) {
+    return exports.HISTORY_COMMANDS.includes(value);
+}
+function readOperationEvidence(body) {
+    if (body.split('<!-- copilot:operation:').length !== 2)
+        return undefined;
+    const match = body.match(/<!-- copilot:operation:v1 ([\s\S]{1,1200}?) -->/u);
+    if (!match)
+        return undefined;
+    try {
+        return validateOperationEvidence(JSON.parse(match[1]));
+    }
+    catch {
+        return undefined;
+    }
+}
+function validateOperationEvidence(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return undefined;
+    const item = value;
+    if (Object.keys(item).some(key => !['version', 'target', 'correlationId', 'command', 'outcome', 'commitSha'].includes(key))
+        || item.version !== 1 || !validIdentity(item.target, /^(?:issue|pr):([1-9]\d*)$/u)
+        || !validIdentity(item.correlationId, /^comment:([1-9]\d*)$/u)
+        || !isHistoryCommand(item.command) || !exports.OPERATION_OUTCOMES.includes(item.outcome)
+        || ('commitSha' in item && (typeof item.commitSha !== 'string' || (0, git_object_id_1.canonicalGitObjectId)(item.commitSha) !== item.commitSha || item.outcome !== 'applied')))
+        return undefined;
+    return Object.freeze({ version: 1, target: item.target, correlationId: item.correlationId,
+        command: item.command, outcome: item.outcome,
+        ...('commitSha' in item ? { commitSha: item.commitSha } : {}) });
+}
+/** Only trusted finalized producers call this; a SHA requires independent post-push agreement. */
+function buildOperationEvidenceMarker(evidence, pushedRevision) {
+    const sha = pushedRevision && (0, git_object_id_1.canonicalGitObjectId)(pushedRevision.localSha);
+    const value = validateOperationEvidence({ version: 1, ...evidence,
+        ...(sha && pushedRevision?.remoteSha === sha && evidence.outcome === 'applied' ? { commitSha: sha } : {}) });
+    if (!value)
+        throw new Error('Invalid operation evidence.');
+    return `${exports.OPERATION_MARKER_PREFIX}${JSON.stringify(value)} -->`;
+}
+function validIdentity(value, pattern) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(pattern);
+    return Boolean(match && Number.isSafeInteger(Number(match[1])));
 }
 
 
@@ -76107,6 +79260,85 @@ function publicationTargetToken(target) {
 
 /***/ }),
 
+/***/ 20413:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GITHUB_RUNTIME_DOCTOR_GROUPS = void 0;
+exports.parseTrustedDoctorApprovalPolicy = parseTrustedDoctorApprovalPolicy;
+exports.aggregateGithubRuntimeDoctorReport = aggregateGithubRuntimeDoctorReport;
+exports.isDoctorBranchReference = isDoctorBranchReference;
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+// Domain contracts and trusted policy parsing for the issue/PR runtime doctor.
+/** The fixed, ordered evidence groups in the GitHub runtime doctor contract. */
+exports.GITHUB_RUNTIME_DOCTOR_GROUPS = [
+    'effective-configuration',
+    'issue-readiness',
+    'linked-branch-readiness',
+    'workflow-contracts',
+    'approval-policy',
+    'approval-prerequisites',
+    'pull-request-identity',
+];
+/**
+ * Parses only a successful trusted effective read. Verified absence preserves the
+ * established off default; read failure is unavailable and never consults an injected value.
+ */
+function parseTrustedDoctorApprovalPolicy(read) {
+    if (read.status === 'unavailable')
+        return { status: 'unavailable' };
+    if (read.status === 'absent') {
+        return { status: 'valid', source: 'default-off', policy: pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY };
+    }
+    if (typeof read.value !== 'string')
+        return { status: 'unavailable' };
+    if (!read.value.trim())
+        return { status: 'invalid' };
+    try {
+        return { status: 'valid', source: read.source, policy: (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(read.value) };
+    }
+    catch {
+        // Do not leak parser/provider text into a report or user-facing surface.
+        return { status: 'invalid' };
+    }
+}
+/** Aggregate explicit independent evidence. Missing groups are unavailable, never assumed healthy. */
+function aggregateGithubRuntimeDoctorReport(input) {
+    const byGroup = new Map();
+    for (const check of input.checks) {
+        if (!exports.GITHUB_RUNTIME_DOCTOR_GROUPS.includes(check.group))
+            throw new Error('Unknown GitHub runtime doctor group.');
+        if (byGroup.has(check.group))
+            throw new Error(`Duplicate GitHub runtime doctor group: ${check.group}.`);
+        byGroup.set(check.group, Object.freeze({ ...check, ...(check.evidence ? { evidence: Object.freeze({ ...check.evidence }) } : {}) }));
+    }
+    const checks = exports.GITHUB_RUNTIME_DOCTOR_GROUPS.map(group => byGroup.get(group)
+        ?? Object.freeze({ group, state: 'unavailable' }));
+    const priority = ['blocked', 'unavailable', 'warning', 'pass'];
+    const applicable = checks.filter(check => check.state !== 'not-applicable');
+    const severity = applicable.length === 0 ? 'not-applicable'
+        : priority.find(state => applicable.some(check => check.state === state)) ?? 'unavailable';
+    const primaryAction = applicable.find(check => check.state === severity && check.action)?.action;
+    return Object.freeze({
+        target: Object.freeze({ ...input.target }),
+        checks: Object.freeze(checks),
+        severity,
+        ...(primaryAction ? { primaryAction } : {}),
+    });
+}
+/** Bounded literal Git branch names: never revisions, options or reflog expressions. */
+function isDoctorBranchReference(value) {
+    return typeof value === 'string'
+        && /^(?!-|.*\.\.)[A-Za-z0-9._/-]{1,200}$/u.test(value)
+        && value.split('/').every(part => part.length > 0 && !part.startsWith('.')
+            && !part.endsWith('.') && !part.endsWith('.lock'));
+}
+
+
+/***/ }),
+
 /***/ 84403:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -76189,6 +79421,69 @@ function isRecord(value) {
 }
 function hasOnlyKeys(value, allowed) {
     return Object.keys(value).every(key => allowed.includes(key));
+}
+
+
+/***/ }),
+
+/***/ 83592:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseDelimitedValues = parseDelimitedValues;
+function parseDelimitedValues(value) {
+    return String(value ?? '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => item.length > 0);
+}
+
+
+/***/ }),
+
+/***/ 31147:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isIssueCompletionLabelName = exports.ISSUE_COMPLETION_LABEL_LIMIT = void 0;
+exports.planIssueCompletion = planIssueCompletion;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
+const issue_start_policy_1 = __nccwpck_require__(90332);
+exports.ISSUE_COMPLETION_LABEL_LIMIT = 1000;
+const canonicalProgress = /^(?:0|[1-9][0-9]?|100)%$/u;
+const isIssueCompletionLabelName = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
+    && Array.from(value).every(character => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127);
+exports.isIssueCompletionLabelName = isIssueCompletionLabelName;
+const labelsValid = (value) => Array.isArray(value) && value.length <= exports.ISSUE_COMPLETION_LABEL_LIMIT
+    && value.every(exports.isIssueCompletionLabelName) && new Set(value.map(label => label.toLowerCase())).size === value.length;
+/** Native closure owns completion; labels alone cannot produce a write plan. */
+function planIssueCompletion(facts, configuration) {
+    if (!Number.isSafeInteger(facts?.number) || facts.number < 1)
+        return Object.freeze({ kind: 'invalid', code: 'invalid-identity' });
+    if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'duplicate', 'reopened', 'unknown'].includes(facts.reason)
+        || !labelsValid(facts.labels)
+        || facts.state === 'open' && ['completed', 'not_planned', 'duplicate'].includes(facts.reason)
+        || facts.state === 'closed' && facts.reason === 'reopened')
+        return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
+    const keys = Object.keys(copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS);
+    if (!configuration?.lifecycle || !keys.every(key => (0, exports.isIssueCompletionLabelName)(configuration.lifecycle[key]) && !canonicalProgress.test(configuration.lifecycle[key]))
+        || !labelsValid(configuration.protectedLabels))
+        return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
+    const managed = new Set([issue_start_policy_1.ISSUE_START_LABEL, ...keys.map(key => configuration.lifecycle[key])].map(name => name.toLowerCase()));
+    if (configuration.protectedLabels.some(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name))) {
+        return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
+    }
+    if (facts.state === 'open')
+        return Object.freeze({ kind: 'open' });
+    const completed = facts.reason === 'completed';
+    return Object.freeze({ kind: 'closed', reason: facts.reason,
+        remove: Object.freeze(facts.labels.filter(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name) && (!completed || name !== '100%'))),
+        add: Object.freeze(completed && !facts.labels.includes('100%') ? ['100%'] : []),
+    });
 }
 
 
@@ -77368,6 +80663,153 @@ function isRecord(value) {
 
 /***/ }),
 
+/***/ 28558:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_DIFF_LIMITS = void 0;
+exports.compareSddStructure = compareSddStructure;
+exports.SDD_DIFF_LIMITS = Object.freeze({
+    characters: 70000, bytes: 280000, lines: 2000, comparisons: 2000000,
+    sectionTitles: 8, titleCharacters: 120,
+});
+class ComparisonBudgetExceeded extends Error {
+}
+/** Exact line counts with Hirschberg's linear-memory LCS; every equality consumes bounded work. */
+function compareSddStructure(before, after) {
+    for (const text of [before, after]) {
+        if (Buffer.byteLength(text, 'utf8') > exports.SDD_DIFF_LIMITS.bytes)
+            return Object.freeze({ state: 'bounded', reason: 'bytes' });
+        if (text.length > exports.SDD_DIFF_LIMITS.characters)
+            return Object.freeze({ state: 'bounded', reason: 'characters' });
+    }
+    const left = documentLines(before);
+    const right = documentLines(after);
+    if (left.length > exports.SDD_DIFF_LIMITS.lines || right.length > exports.SDD_DIFF_LIMITS.lines) {
+        return Object.freeze({ state: 'bounded', reason: 'lines' });
+    }
+    const leftMatches = new Uint8Array(left.length);
+    const rightMatches = new Uint8Array(right.length);
+    let comparisons = 0;
+    let common = 0;
+    const equal = (a, b) => {
+        if (comparisons === exports.SDD_DIFF_LIMITS.comparisons)
+            throw new ComparisonBudgetExceeded();
+        comparisons++;
+        return a === b;
+    };
+    const match = (a, b) => { leftMatches[a] = 1; rightMatches[b] = 1; common++; };
+    const row = (ls, le, rs, re, reverse) => {
+        let previous = new Uint16Array(re - rs + 1);
+        let current = new Uint16Array(re - rs + 1);
+        for (let i = 0; i < le - ls; i++) {
+            current[0] = 0;
+            for (let j = 1; j <= re - rs; j++) {
+                current[j] = equal(left[reverse ? le - i - 1 : ls + i], right[reverse ? re - j : rs + j - 1])
+                    ? previous[j - 1] + 1 : Math.max(previous[j], current[j - 1]);
+            }
+            [previous, current] = [current, previous];
+        }
+        return previous;
+    };
+    // Row arrays leave scope before recursion; no quadratic trace is retained.
+    const split = (ls, middle, le, rs, re) => {
+        const forward = row(ls, middle, rs, re, false);
+        const backward = row(middle, le, rs, re, true);
+        let best = -1;
+        let offset = 0;
+        for (let j = 0; j <= re - rs; j++) {
+            const score = forward[j] + backward[re - rs - j];
+            if (score > best) {
+                best = score;
+                offset = j;
+            }
+        }
+        return rs + offset;
+    };
+    const align = (ls, le, rs, re) => {
+        if (ls === le || rs === re)
+            return;
+        if (le - ls === 1) {
+            for (let j = rs; j < re; j++)
+                if (equal(left[ls], right[j])) {
+                    match(ls, j);
+                    break;
+                }
+            return;
+        }
+        const middle = ls + Math.floor((le - ls) / 2);
+        const rightMiddle = split(ls, middle, le, rs, re);
+        align(ls, middle, rs, rightMiddle);
+        align(middle, le, rightMiddle, re);
+    };
+    try {
+        let start = 0;
+        let leftEnd = left.length;
+        let rightEnd = right.length;
+        while (start < leftEnd && start < rightEnd && equal(left[start], right[start])) {
+            match(start, start);
+            start++;
+        }
+        while (start < leftEnd && start < rightEnd && equal(left[leftEnd - 1], right[rightEnd - 1])) {
+            match(--leftEnd, --rightEnd);
+        }
+        align(start, leftEnd, start, rightEnd);
+    }
+    catch (error) {
+        if (!(error instanceof ComparisonBudgetExceeded))
+            throw error;
+        return Object.freeze({ state: 'bounded', reason: 'work' });
+    }
+    const titles = new Set();
+    collectChangedSections(right, rightMatches, titles);
+    collectChangedSections(left, leftMatches, titles);
+    return Object.freeze({ state: 'compared', addedLines: right.length - common, removedLines: left.length - common,
+        sections: Object.freeze([...titles].slice(0, exports.SDD_DIFF_LIMITS.sectionTitles).map(boundedTitle)),
+        omittedSections: Math.max(0, titles.size - exports.SDD_DIFF_LIMITS.sectionTitles) });
+}
+/** CRLF and terminal newline markers do not count as added/removed content lines. */
+function documentLines(text) {
+    if (!text)
+        return [];
+    const lines = text.split(/\r?\n/u);
+    if (text.endsWith('\n'))
+        lines.pop();
+    return lines;
+}
+function collectChangedSections(lines, matches, titles) {
+    let fence;
+    let title;
+    for (let index = 0; index < lines.length; index++) {
+        const boundary = lines[index].match(/^ {0,3}(`{3,}|~{3,})(.*)$/u);
+        if (boundary) {
+            if (!fence && (boundary[1][0] !== '`' || !boundary[2].includes('`')))
+                fence = boundary[1];
+            else if (fence && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
+                && /^[ \t]*$/u.test(boundary[2]))
+                fence = undefined;
+        }
+        else if (!fence) {
+            const heading = lines[index].match(/^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$/u);
+            if (heading)
+                title = heading[1];
+        }
+        if (matches[index] === 0 && title)
+            titles.add(title);
+    }
+}
+function boundedTitle(title) {
+    let value = title.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, ' ').slice(0, exports.SDD_DIFF_LIMITS.titleCharacters);
+    if (/[\uD800-\uDBFF]$/u.test(value))
+        value = value.slice(0, -1);
+    return value;
+}
+
+
+/***/ }),
+
 /***/ 8024:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -77376,6 +80818,10 @@ function isRecord(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.decidePullRequestApproval = decidePullRequestApproval;
 exports.isDocumentationOnlyDiff = isDocumentationOnlyDiff;
+exports.decideApprovalChecks = decideApprovalChecks;
+exports.decideApprovalBugbot = decideApprovalBugbot;
+exports.decideApprovalCoverage = decideApprovalCoverage;
+exports.decideApprovalReviews = decideApprovalReviews;
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 /** Pure, intentionally conservative decision. Every unknown provider fact blocks mutation. */
 function decidePullRequestApproval(policy, evidence) {
@@ -77417,6 +80863,37 @@ function decidePullRequestApproval(policy, evidence) {
     if (evidence.bugbotSeverity !== 'info' || evidence.bugbotDryRun) {
         return stop('blocked', 'bugbot-configuration', 'Bugbot must run with info severity and dry-run disabled.');
     }
+    const ciDecision = decideApprovalChecks(policy, evidence);
+    if (ciDecision)
+        return ciDecision;
+    const bugbotDecision = decideApprovalBugbot(policy, evidence);
+    if (bugbotDecision)
+        return bugbotDecision;
+    const coverageDecision = decideApprovalCoverage(policy, evidence);
+    if (coverageDecision)
+        return coverageDecision;
+    const reviewDecision = decideApprovalReviews(policy, evidence);
+    if (reviewDecision)
+        return reviewDecision;
+    if (policy.mode === 'recommend')
+        return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
+    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
+}
+function isDocumentationOnlyDiff(paths) {
+    return paths.length > 0 && paths.every(path => /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
+        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
+}
+function matchesGlob(path, glob) {
+    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
+        .replace(/\*\*/gu, '\u0000')
+        .replace(/\*/gu, '[^/]*')
+        .replace(/\?/gu, '[^/]')
+        .split('\u0000').join('.*');
+    return new RegExp(`^${escaped}$`, 'u').test(path);
+}
+/** Canonical checks gate shared by approval and read-only status. */
+function decideApprovalChecks(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     const selected = [...policy.testChecks];
     const required = new Set([...evidence.requiredChecks, ...selected.map(check => check.name)]);
     for (const name of required) {
@@ -77441,6 +80918,11 @@ function decidePullRequestApproval(policy, evidence) {
         if (latest.conclusion !== 'success')
             return stop('blocked', 'check-failed', `Check ${name} did not succeed.`);
     }
+    return undefined;
+}
+/** Canonical bugbot gate shared by approval and read-only status. */
+function decideApprovalBugbot(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     const bugbot = evidence.bugbot;
     if (!bugbot || bugbot.headSha !== evidence.headSha)
         return stop('pending', 'bugbot-missing', 'Waiting for a complete Bugbot review of this head.');
@@ -77451,6 +80933,11 @@ function decidePullRequestApproval(policy, evidence) {
         || (!policy.allowHumanDismissed && bugbot.dismissed > 0)) {
         return stop('blocked', 'bugbot-findings', 'Bugbot has unresolved, unknown, or policy-blocked dismissed findings.');
     }
+    return undefined;
+}
+/** Canonical coverage gate shared by approval and read-only status. */
+function decideApprovalCoverage(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     // A complete, explicitly classified documentation-only diff has no
     // measurable executable lines. It still needs every declared CI and
     // Bugbot gate above; a zero-line code diff is never exempt.
@@ -77466,6 +80953,11 @@ function decidePullRequestApproval(policy, evidence) {
             return stop('blocked', 'coverage-low', 'Diff coverage is below the configured threshold.');
         }
     }
+    return undefined;
+}
+/** Canonical reviews gate shared by approval and read-only status. */
+function decideApprovalReviews(policy, evidence) {
+    const stop = (status, code, detail) => ({ status, code, detail });
     if (!evidence.reviewHistoryComplete)
         return stop('blocked', 'reviews-unavailable', 'Native review history is incomplete.');
     const botReviewsForHead = evidence.reviews.filter(review => review.userId === evidence.botUserId && review.commitId === evidence.headSha);
@@ -77485,21 +80977,7 @@ function decidePullRequestApproval(policy, evidence) {
     if (policy.skipWhenHumanApproved && [...latestByUser.values()].some(review => review.userId !== evidence.botUserId && review.state === 'APPROVED' && review.commitId === evidence.headSha)) {
         return stop('recommend', 'human-approved', 'A human has already approved this revision.');
     }
-    if (policy.mode === 'recommend')
-        return stop('recommend', 'recommend-mode', 'Evidence passed; a human reviewer must decide.');
-    return stop('eligible', 'eligible', 'Current-revision evidence and safety rules permit one native approval.');
-}
-function isDocumentationOnlyDiff(paths) {
-    return paths.length > 0 && paths.every(path => /^(?:docs\/|documentation\/)[A-Za-z0-9._/-]+\.(?:md|mdx|txt)$/iu.test(path)
-        || /^(?:README|CHANGELOG|CONTRIBUTING)\.md$/iu.test(path));
-}
-function matchesGlob(path, glob) {
-    const escaped = glob.replace(/[.+^${}()|[\]\\]/gu, '\\$&')
-        .replace(/\*\*/gu, '\u0000')
-        .replace(/\*/gu, '[^/]*')
-        .replace(/\?/gu, '[^/]')
-        .split('\u0000').join('.*');
-    return new RegExp(`^${escaped}$`, 'u').test(path);
+    return undefined;
 }
 
 
@@ -77743,6 +81221,22 @@ function mergeManagedPullRequestDescription(currentBody, generated) {
 }
 function shouldAutomaticallyUpdatePullRequestDescription(mode) {
     return mode === 'replace' || mode === 'append';
+}
+
+
+/***/ }),
+
+/***/ 47971:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.replyRequestBodyDigest = replyRequestBodyDigest;
+const node_crypto_1 = __nccwpck_require__(6005);
+/** Private complete request witness; public reply-marker identities stay unchanged. */
+function replyRequestBodyDigest(body) {
+    return (0, node_crypto_1.createHash)('sha256').update(body, 'utf8').digest('hex');
 }
 
 
@@ -79178,6 +82672,93 @@ exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
 
 /***/ }),
 
+/***/ 99786:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COMMUNICATION_BUDGET_PATH = void 0;
+exports.refreshBranchSyncCommunicationBudget = refreshBranchSyncCommunicationBudget;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const logging_ports_1 = __nccwpck_require__(6152);
+exports.COMMUNICATION_BUDGET_PATH = 'src/architecture/github_communication_test_budget.json';
+const MAX_BYTES = 512 * 1024;
+const SPEC_PATHS = ['specs/semantic-github-publication-and-notification.md', 'specs/repository-locale-and-localization.md'];
+// Execute only the Action's bundled validator; merged branch scripts are never loaded.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const validator = __nccwpck_require__(71110);
+/** Derives totals only within an already-authorized ledger conflict; never changes evidence or minimums. */
+function refreshBranchSyncCommunicationBudget(repositoryRoot) {
+    let phase = 'workspace-boundary';
+    try {
+        const root = (0, node_fs_1.realpathSync)(repositoryRoot);
+        for (const directory of ['src', 'src/architecture']) {
+            const stat = (0, node_fs_1.lstatSync)((0, node_path_1.join)(root, directory));
+            if (!stat.isDirectory() || stat.isSymbolicLink())
+                return reject(phase);
+        }
+        phase = 'ledger-file-boundary';
+        const path = (0, node_path_1.join)(root, exports.COMMUNICATION_BUDGET_PATH);
+        if (!boundedFile(root, path))
+            return reject(phase);
+        phase = 'metadata-json';
+        const source = (0, node_fs_1.readFileSync)(path, 'utf8');
+        if (/^(?:<{7}|={7}|>{7})(?: |$)/m.test(source))
+            phase = 'metadata-conflict-markers';
+        const value = JSON.parse(source);
+        phase = 'metadata-shape';
+        if (!isLedger(value))
+            return reject(phase);
+        phase = 'evidence-path-boundary';
+        for (const file of [...SPEC_PATHS, ...value.budgets.flatMap(budget => budget.files.map(entry => entry.path))]) {
+            if (!boundedFile(root, (0, node_path_1.join)(root, file)))
+                return reject(phase);
+        }
+        const normalized = { ...value, budgets: value.budgets.map(budget => ({ ...budget,
+                allocatedCases: budget.files.reduce((sum, entry) => sum + entry.qualifyingCases, 0),
+            })) };
+        phase = 'ledger-contract';
+        if (validator.validateCommunicationTestBudget(root, normalized).length > 0)
+            return reject(phase);
+        phase = 'ledger-output';
+        const output = JSON.stringify(normalized, null, 2) + '\n';
+        if (Buffer.byteLength(output, 'utf8') > MAX_BYTES)
+            return reject(phase);
+        if (value.budgets.some((budget, index) => budget.allocatedCases !== normalized.budgets[index].allocatedCases)) {
+            (0, node_fs_1.writeFileSync)(path, output, 'utf8');
+        }
+        return true;
+    }
+    catch {
+        return reject(phase);
+    }
+}
+function isLedger(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const budgets = value.budgets;
+    return Array.isArray(budgets) && budgets.length === 2 && budgets.every(budget => budget && Number.isSafeInteger(budget.allocatedCases) && budget.allocatedCases >= 0
+        && Array.isArray(budget.files) && budget.files.length > 0 && budget.files.length <= 256
+        && budget.files.every((entry) => entry && typeof entry.path === 'string'
+            && /^src\/.+\.test\.ts$/u.test(entry.path) && !entry.path.split('/').includes('..')
+            && Number.isSafeInteger(entry.qualifyingCases) && entry.qualifyingCases > 0 && entry.qualifyingCases <= 10000));
+}
+function boundedFile(root, file) {
+    const stat = (0, node_fs_1.lstatSync)(file);
+    const target = (0, node_path_1.relative)(root, (0, node_fs_1.realpathSync)(file));
+    return stat.isFile() && !stat.isSymbolicLink() && stat.size <= MAX_BYTES
+        && target !== '..' && !target.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(target);
+}
+function reject(phase) {
+    (0, logging_ports_1.logInfo)(`Branch synchronization communication budget rejected (${phase}).`);
+    return false;
+}
+
+
+/***/ }),
+
 /***/ 88632:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -79268,8 +82849,13 @@ function rejectCatalog(phase) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchSyncWorkspaceAdapter = void 0;
+const branch_sync_communication_budget_1 = __nccwpck_require__(99786);
+const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_changes_1 = __nccwpck_require__(93370);
 const branch_sync_sdd_catalog_1 = __nccwpck_require__(88632);
+// ncc output includes vendor/webpack whitespace. Keep conflict-marker checks
+// on these exact artifacts; source and every other path retain strict checks.
+const GENERATED_BUNDLES = ['build/cli/index.js', 'build/api/index.js', 'build/github_action/index.js'];
 /** Owns Git's merge state while keeping credentials confined to fetch/push subprocesses. */
 class BranchSyncWorkspaceAdapter {
     constructor(git, repositoryRoot = process.cwd()) {
@@ -79341,8 +82927,11 @@ class BranchSyncWorkspaceAdapter {
         if (unresolved.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unresolved.length > 0)) {
             return invalid("Unresolved merge conflicts remain.", "unresolved-conflicts");
         }
-        if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths))
+        const currentPaths = await this.listWorkspacePaths();
+        if (!sameSet(currentPaths, snapshot.workspacePaths)) {
+            reportWorkspacePathRejection(snapshot, currentPaths, this.resolutionValidated ? 'verification' : 'resolution');
             return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+        }
         const unstaged = await this.readPaths(["diff", "--name-only", "-z"]);
         if (unstaged.some(path => !conflictPaths.includes(path)) || (this.resolutionValidated && unstaged.length > 0)) {
             return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
@@ -79353,10 +82942,13 @@ class BranchSyncWorkspaceAdapter {
                 return invalid(`The agent changed non-conflicted path ${path}.`, "protected-index-changed");
         }
         try {
+            if (!this.resolutionValidated && conflictPaths.includes(branch_sync_communication_budget_1.COMMUNICATION_BUDGET_PATH)
+                && !(0, branch_sync_communication_budget_1.refreshBranchSyncCommunicationBudget)(this.repositoryRoot))
+                return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
                 && !(0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalog)(this.repositoryRoot))
                 return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
-            await this.git.execute("git", ["diff", "--check"]);
+            await this.checkResolvedDiff(false);
             // The agent edits files without Git write authority. Only this trusted
             // adapter stages the verified original conflict set, once before checks.
             if (unresolved.length > 0) {
@@ -79373,13 +82965,33 @@ class BranchSyncWorkspaceAdapter {
             if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0) {
                 return invalid("The prepared merge contains unstaged changes.", "unstaged-changes");
             }
-            await this.git.execute("git", ["diff", "--cached", "--check"]);
+            await this.checkResolvedDiff(true);
         }
         catch {
             return invalid("The resolution contains whitespace errors or conflict markers.", "whitespace-or-conflict-markers");
         }
+        if (!this.resolutionValidated) {
+            // Trusted staging can remove an original conflict from status when its
+            // resolution equals the child bytes (or the child's deletion). Freeze
+            // that resolved path set before checks; added paths and disappearance of
+            // non-conflicted parent changes remain invalid.
+            const resolvedPaths = await this.listWorkspacePaths();
+            if (resolvedPaths.some(path => !snapshot.workspacePaths.includes(path))
+                || snapshot.workspacePaths.some(path => !resolvedPaths.includes(path) && !snapshot.conflictPaths.includes(path))) {
+                reportWorkspacePathRejection(snapshot, resolvedPaths, 'trusted-staging');
+                return invalid("The agent changed paths outside the prepared merge.", "unexpected-paths");
+            }
+            this.snapshot = { ...snapshot, workspacePaths: resolvedPaths };
+        }
         this.resolutionValidated = true;
         return { valid: true };
+    }
+    async checkResolvedDiff(cached) {
+        const diff = ['diff', ...(cached ? ['--cached'] : []), '--check', '--'];
+        await this.git.execute('git', [...diff, '.', ...GENERATED_BUNDLES.map(path => `:(exclude)${path}`)]);
+        // Git detects conflict markers independently of its whitespace settings.
+        await this.git.execute('git', ['-c', 'core.whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab',
+            ...diff, ...GENERATED_BUNDLES]);
     }
     async assertRemoteHeadsUnchanged(parentBranch, parentSha, workingBranch, childSha, token) {
         await this.git.fetch(parentBranch, token);
@@ -79406,7 +83018,19 @@ class BranchSyncWorkspaceAdapter {
         if (!this.mergeInProgress)
             return;
         try {
-            await this.git.execute("git", ["merge", "--abort"]);
+            try {
+                await this.git.execute("git", ["merge", "--abort"]);
+            }
+            catch (error) {
+                // Verification may change a tracked resolution after trusted staging,
+                // preventing Git's normal abort. Restore only our originally clean,
+                // still-identical prepared merge; never reset a moved HEAD or parent.
+                const snapshot = this.snapshot;
+                if (!snapshot || await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha
+                    || await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha)
+                    throw error;
+                await this.git.execute("git", ["reset", "--hard", snapshot.childSha]);
+            }
         }
         finally {
             this.snapshot = undefined;
@@ -79449,6 +83073,14 @@ class BranchSyncWorkspaceAdapter {
     }
 }
 exports.BranchSyncWorkspaceAdapter = BranchSyncWorkspaceAdapter;
+/** Counts and fixed phases only; never disclose private workspace path names. */
+function reportWorkspacePathRejection(snapshot, current, phase) {
+    const added = current.filter(path => !snapshot.workspacePaths.includes(path));
+    const removed = snapshot.workspacePaths.filter(path => !current.includes(path));
+    const conflicts = removed.filter(path => snapshot.conflictPaths.includes(path)).length;
+    const bundles = added.filter(path => GENERATED_BUNDLES.includes(path)).length;
+    (0, logging_ports_1.logInfo)(`Branch synchronization workspace rejected (${phase}; added=${added.length}; removed-conflicts=${conflicts}; removed-protected=${removed.length - conflicts}; generated-bundles=${bundles}).`);
+}
 function sameSet(left, right) {
     return left.length === right.length && left.every((value) => right.includes(value));
 }
@@ -79679,6 +83311,7 @@ exports.BugbotScmPortFactory = BugbotScmPortFactory;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCheckProgressCompositionRoot = createCheckProgressCompositionRoot;
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const progress_diff_repository_1 = __nccwpck_require__(24958);
 const github_branch_client_factory_1 = __nccwpck_require__(30144);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
@@ -79699,7 +83332,7 @@ function createCheckProgressCompositionRoot(binding) {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const content = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const diff = new progress_diff_repository_1.ProgressDiffRepository((0, github_branch_client_factory_1.createBranchComparisonClient)());
-    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), Object.freeze({ getDiff: (baseSha, headSha) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }));
+    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding)), Object.freeze({ getDiff: (baseSha, headSha) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }));
 }
 
 
@@ -79716,6 +83349,21 @@ const copilot_evidence_repository_1 = __nccwpck_require__(92351);
 const octokit_checks_adapters_1 = __nccwpck_require__(79177);
 function createCopilotEvidenceCompositionRoot() {
     return new copilot_evidence_repository_1.CopilotEvidenceRepository(new octokit_checks_adapters_1.OctokitChecksClientAdapter());
+}
+
+
+/***/ }),
+
+/***/ 12321:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCopilotHistoryReadPort = createCopilotHistoryReadPort;
+/** Project only the existing bounded general-comment query, preserving its receiver. */
+function createCopilotHistoryReadPort(source, serverOrigin = 'https://github.com') {
+    return Object.freeze({ serverOrigin, readComments: (number) => source.listIssueComments(number) });
 }
 
 
@@ -79937,6 +83585,29 @@ exports.createRepositoryVersionTagsClient = createRepositoryVersionTagsClient;
 
 /***/ }),
 
+/***/ 36459:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGithubRuntimeDoctorPorts = createGithubRuntimeDoctorPorts;
+const runtime_doctor_repository_1 = __nccwpck_require__(25282);
+function createGithubRuntimeDoctorPorts(binding, pullRequests) {
+    const repository = new runtime_doctor_repository_1.RuntimeDoctorRepository(binding.owner, binding.repository, binding.token);
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        readRepository: (id) => repository.readRepository(id),
+        readIssue: (number) => repository.readIssue(number),
+        readLinkedBranch: (number) => repository.readLinkedBranch(number),
+        readApprovalPolicy: () => repository.readApprovalPolicy(),
+        pullRequests: Object.freeze({ getPullRequest: (number) => pullRequests.getPullRequest(number),
+            getPullRequestHeadSha: (number) => pullRequests.getPullRequestHeadSha(number) }),
+    });
+}
+
+
+/***/ }),
+
 /***/ 29839:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -79994,6 +83665,43 @@ exports.composeInitialSetupUseCase = composeInitialSetupUseCase;
 const initial_setup_use_case_1 = __nccwpck_require__(84837);
 function composeInitialSetupUseCase(...dependencies) {
     return new initial_setup_use_case_1.InitialSetupUseCase(...dependencies);
+}
+
+
+/***/ }),
+
+/***/ 63719:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bindIssueCompletion = bindIssueCompletion;
+exports.bindNativeStatusRead = bindNativeStatusRead;
+exports.createIssueCompletionRepository = createIssueCompletionRepository;
+exports.createNativeStatusReadPort = createNativeStatusReadPort;
+const issue_completion_repository_1 = __nccwpck_require__(70791);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+function bindIssueCompletion(repository) {
+    return Object.freeze({ readPullRequest: (number) => repository.readPullRequest(number), forIssue: (number) => {
+            if (!Number.isSafeInteger(number) || number < 1)
+                throw new Error('A safe issue number is required.');
+            return Object.freeze({
+                read: () => repository.readIssue(number), close: () => repository.closeIssue(number),
+                addLabel: (label) => repository.addLabel(number, label),
+                removeLabel: (label) => repository.removeLabel(number, label),
+            });
+        } });
+}
+function bindNativeStatusRead(repository) {
+    return Object.freeze({ readIssue: (number) => repository.readIssue(number),
+        readPullRequest: (number) => repository.readPullRequest(number) });
+}
+function createIssueCompletionRepository(binding) {
+    return new issue_completion_repository_1.IssueCompletionRepository({ getClient: token => (0, octokit_client_resolver_1.getOctokitClient)(token) }, Object.freeze({ ...binding, apiBaseUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com' }));
+}
+function createNativeStatusReadPort(binding) {
+    return bindNativeStatusRead(createIssueCompletionRepository(binding));
 }
 
 
@@ -80362,6 +84070,15 @@ exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseComp
 exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const sdd_diff_composition_root_1 = __nccwpck_require__(83434);
+const pull_request_status_composition_root_1 = __nccwpck_require__(49891);
+const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
+const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
+const retire_progress_use_case_1 = __nccwpck_require__(17025);
+const retire_closed_issue_cards_use_case_1 = __nccwpck_require__(11529);
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
@@ -80448,7 +84165,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgres
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), createClosedIssueRetirementUseCase(binding)), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -80466,6 +84183,7 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         catalogResolver,
     });
 }
+const copilot_history_port_factory_1 = __nccwpck_require__(12321);
 function createIssueCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
@@ -80480,7 +84198,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context, (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -80496,7 +84214,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), bugbot.scm.context);
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -80550,6 +84268,14 @@ function rememberBranchPorts(binding, pullRequests) {
             getLinkedBranch: (issueNumber, branchName) => repository.getLinkedBranch(binding.owner, binding.repository, issueNumber, branchName, binding.token),
         },
     };
+}
+/** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
+function createClosedIssueRetirementUseCase(binding) {
+    const comments = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
+    const native = (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding);
+    const cards = (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding));
+    const freshness = (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding);
+    return new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase(native, cards, freshness), new retire_progress_use_case_1.RetireProgressUseCase(native, cards, freshness));
 }
 
 
@@ -80610,6 +84336,40 @@ function createPullRequestReviewerCompositionRoot() {
 
 /***/ }),
 
+/***/ 49891:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPullRequestStatusReadPorts = createPullRequestStatusReadPorts;
+const pull_request_status_query_repository_1 = __nccwpck_require__(1328);
+const pull_request_approval_repository_1 = __nccwpck_require__(23001);
+const github_action_input_1 = __nccwpck_require__(57581);
+const input_values_policy_1 = __nccwpck_require__(83592);
+/** Physically narrow facade: constructing a query cannot expose the observer's write operations. */
+function createPullRequestStatusReadPorts(binding, context) {
+    const query = new pull_request_status_query_repository_1.PullRequestStatusQueryRepository(binding.owner, binding.repository, binding.token);
+    const approval = new pull_request_approval_repository_1.PullRequestApprovalRepository(binding.token, {
+        mainBranch: (0, github_action_input_1.getGithubActionInput)('main-branch') || 'master', developmentBranch: (0, github_action_input_1.getGithubActionInput)('development-branch') || 'develop',
+        branchPrefixes: { feature: (0, github_action_input_1.getGithubActionInput)('feature-tree') || 'feature', bugfix: (0, github_action_input_1.getGithubActionInput)('bugfix-tree') || 'bugfix',
+            documentation: (0, github_action_input_1.getGithubActionInput)('docs-tree') || 'docs', chore: (0, github_action_input_1.getGithubActionInput)('chore-tree') || 'chore' },
+        bugbotSeverity: (0, github_action_input_1.getGithubActionInput)('bugbot-severity') || 'low', bugbotDryRun: (0, github_action_input_1.getGithubActionInput)('bugbot-dry-run') === 'true',
+        bugbotIgnorePatterns: (0, input_values_policy_1.parseDelimitedValues)((0, github_action_input_1.getGithubActionInput)('ai-ignore-files')),
+        githubToken: process.env.COPILOT_APPROVAL_CHECK_TOKEN,
+    });
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        getPullRequest: (number) => context.getPullRequest(number), listIssueComments: (number) => context.listIssueComments(number),
+        getPullRequestHeadSha: (number) => context.getPullRequestHeadSha(number),
+        readLinkedPullRequests: (number) => query.readLinkedPullRequests(number),
+        approval: Object.freeze({ readPolicy: (target) => approval.readPolicy(target), loadEvidence: (target) => approval.loadEvidence(target),
+            readRevision: (target) => query.readRevision(target) }),
+    });
+}
+
+
+/***/ }),
+
 /***/ 24:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -80632,6 +84392,12 @@ function composePullRequestUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const reply_request_composition_root_1 = __nccwpck_require__(99065);
+const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
+const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
+const retire_progress_use_case_1 = __nccwpck_require__(17025);
+const retire_closed_issue_cards_use_case_1 = __nccwpck_require__(11529);
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const github_project_client_factory_1 = __nccwpck_require__(23691);
@@ -80647,10 +84413,8 @@ const link_pull_request_project_use_case_1 = __nccwpck_require__(57169);
 const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(89085);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_assignment_repository_1 = __nccwpck_require__(75023);
-const issue_closure_repository_1 = __nccwpck_require__(23231);
 const issue_content_repository_1 = __nccwpck_require__(2313);
 const issue_label_repository_1 = __nccwpck_require__(45725);
-const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
 const issue_metadata_repository_1 = __nccwpck_require__(11333);
 const issue_title_repository_1 = __nccwpck_require__(10121);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
@@ -80666,7 +84430,6 @@ const actor_authorization_composition_root_1 = __nccwpck_require__(233);
 const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 const lifecycle_capability_port_binding_1 = __nccwpck_require__(85785);
 function createPullRequestUseCaseCompositionRoot(binding) {
-    const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const pullRequestLifecycle = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
@@ -80675,7 +84438,6 @@ function createPullRequestUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const issueTitle = new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata);
     const projectContent = (0, shared_capability_port_binding_1.bindProjectContent)(issueMetadata, projectBoard.command, projectBoard.link, binding);
-    const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
     const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
     const pullRequestLabels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const pullRequestReviewer = (0, pull_request_reviewer_composition_root_1.createPullRequestReviewerCompositionRoot)();
@@ -80692,7 +84454,8 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
-        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, lifecycle_capability_port_binding_1.bindIssueClosure)(issueClosure, binding)),
+        retireBranchSync: new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)), new retire_progress_use_case_1.RetireProgressUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding))),
+        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
 }
@@ -80736,6 +84499,7 @@ exports.bindIssueTypes = bindIssueTypes;
 exports.bindSetupVariables = bindSetupVariables;
 exports.bindSetupSecrets = bindSetupSecrets;
 exports.bindSetupRemoteConfiguration = bindSetupRemoteConfiguration;
+exports.bindBranchSyncRetirementComments = bindBranchSyncRetirementComments;
 function bindManagedPullRequests(port, binding) {
     return Object.freeze({
         findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
@@ -80926,6 +84690,63 @@ function bindSetupSecrets(port, binding) {
 function bindSetupRemoteConfiguration(port, binding) {
     return Object.freeze({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
 }
+/** Physically restrict retirement to reading and updating existing comments. */
+function bindBranchSyncRetirementComments(comments) {
+    return Object.freeze({
+        listIssueComments: comments.listIssueComments.bind(comments),
+        updateComment: comments.updateComment.bind(comments),
+    });
+}
+
+
+/***/ }),
+
+/***/ 99065:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createReplyRequestReadPort = createReplyRequestReadPort;
+const reply_request_repository_1 = __nccwpck_require__(2879);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+function createReplyRequestReadPort(binding) {
+    const captured = Object.freeze({ ...binding, apiBaseUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com' });
+    const repository = new reply_request_repository_1.ReplyRequestRepository((0, octokit_client_resolver_1.getOctokitClient)(captured.token), captured);
+    return Object.freeze({ matches: (snapshot) => repository.matches(snapshot) });
+}
+
+
+/***/ }),
+
+/***/ 83434:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSddDiffQueryPort = createSddDiffQueryPort;
+const sdd_evidence_query_use_case_1 = __nccwpck_require__(39893);
+const sdd_diff_query_use_case_1 = __nccwpck_require__(48684);
+const sdd_diff_link_repository_1 = __nccwpck_require__(85885);
+const pre_branch_sdd_workspace_adapter_1 = __nccwpck_require__(35849);
+const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+/** No agent, provisioning, approval or lifecycle writer is supplied. */
+function createSddDiffQueryPort(binding, comments) {
+    const bound = Object.freeze({ ...binding });
+    const reads = (0, sdd_evidence_composition_root_1.createSddEvidenceReadPorts)(bound, comments);
+    const evidence = new sdd_evidence_query_use_case_1.SddEvidenceQueryUseCase(reads);
+    const documents = new pre_branch_sdd_workspace_adapter_1.PreBranchSddWorkspaceAdapter(process.cwd(), bound.token);
+    const client = (0, github_project_client_factory_1.createGraphqlTransportClient)();
+    return Object.freeze({ serverOrigin: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+        read: (request) => new sdd_diff_query_use_case_1.SddDiffQueryUseCase({ evidence: Object.freeze({ read: evidence.read.bind(evidence) }),
+            links: new sdd_diff_link_repository_1.SddDiffLinkRepository(client, { ...bound, repositoryId: request.repositoryId }),
+            labels: reads.labels, descriptions: reads.descriptions,
+            documents: Object.freeze({ readSdd: documents.readSdd.bind(documents) }),
+        }).read(request),
+    });
+}
 
 
 /***/ }),
@@ -80938,6 +84759,7 @@ function bindSetupRemoteConfiguration(port, binding) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSddEvidenceReadPorts = createSddEvidenceReadPorts;
 exports.createSddEvidenceQueryPort = createSddEvidenceQueryPort;
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_query_use_case_1 = __nccwpck_require__(39893);
 const sdd_evidence_read_ports_1 = __nccwpck_require__(94752);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
@@ -80955,6 +84777,7 @@ function createSddEvidenceReadPorts(binding, comments) {
     const branches = new linked_branch_readiness_repository_1.LinkedBranchReadinessRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
     return (0, sdd_evidence_read_ports_1.bindSddEvidenceReadPorts)({
         comments,
+        nativeState: (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding),
         descriptions: (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding),
         titles: { getTitle: issueNumber => titles.getTitle(binding.owner, binding.repository, issueNumber, binding.token) },
         labels: (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
@@ -80986,9 +84809,14 @@ exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
 exports.bindIssueTitle = bindIssueTitle;
 exports.bindProjectContent = bindProjectContent;
 const project_detail_1 = __nccwpck_require__(33428);
-function bindPublicationSourceQuery(port, binding) {
+function bindPublicationSourceQuery(port, binding, native) {
+    const readIssue = native?.readIssue.bind(native);
     return Object.freeze({
         getBranchHeadSha: (branch) => port.getBranchHeadSha(binding.owner, binding.repository, branch, binding.token),
+        ...(readIssue ? { isIssueOpen: async (number) => {
+                const facts = await readIssue(number);
+                return facts.number === number && facts.state === 'open';
+            } } : {}),
     });
 }
 function bindOrganizationMembers(port, binding) {
@@ -81856,6 +85684,70 @@ exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
 
 /***/ }),
 
+/***/ 57581:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getGithubActionInput = getGithubActionInput;
+const core = __importStar(__nccwpck_require__(75855));
+const action_input_source_1 = __nccwpck_require__(25911);
+const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
+function getGithubActionInput(key, options) {
+    let value;
+    try {
+        const inputVarsJson = process.env.INPUT_VARS_JSON;
+        value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
+    }
+    catch (error) {
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
+    }
+    value = (value ?? core.getInput(key, options)).trim();
+    if (options?.required && value.length === 0)
+        throw new Error(`Input required and not supplied: ${key}`);
+    if (key.toLowerCase() === 'token' && value)
+        core.setSecret(value);
+    return value;
+}
+
+
+/***/ }),
+
 /***/ 83725:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -81938,7 +85830,11 @@ class LoggerAgentExecutionObserverAdapter {
             return;
         }
         if (observation.state === 'completed') {
-            (0, logger_1.logInfo)('Agent execution completed.', false, { agentExecution: observation });
+            const toolDiagnostic = agent_execution_observation_ports_1.AGENT_EXECUTION_TOOL_DIAGNOSTICS.find(code => code === observation.toolDiagnostic);
+            const message = toolDiagnostic
+                ? `Agent CLI completed; provider reported a sandbox tool failure (${toolDiagnostic}). Inspect the runner sandbox setup.`
+                : 'Agent execution completed.';
+            (0, logger_1.logInfo)(message, false, { agentExecution: { ...observation, toolDiagnostic } });
             return;
         }
         if (observation.state === 'admitted') {
@@ -82953,7 +86849,7 @@ Working branch: {{workingBranch}}
 Files with merge conflicts:
 {{conflictPaths}}
 
-Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. Run focused checks when useful, then give a concise summary of the decisions you made.`;
+Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers, but do not stage files or modify the Git index. If specs/CATALOG.md is listed, it is a derived index: preserve the full owning metadata in specs/catalog.json; do not invent path counts or discard either branch's evidence. Trusted Action code regenerates the listed index with its bundled validator before checks and stages only the original conflicted files. If canonical generated bundles are in the conflict list, regenerate them with the existing offline repository build before returning; do not concatenate or hand-edit generated conflict hunks. Inspect the resulting changes and preserve the original conflict-path boundary: do not change or stage a non-listed file. The trusted Action stages your completed resolution before its verification commands; those commands must reproduce the same bundle bytes without any worktree changes. A build changing files outside the admitted conflict list means the resolution is incomplete and must be reported, not silently accepted. Before returning, run existing offline tests for the affected source modules and the repository typecheck when their toolchains are available. Preserve behavior for missing optional adapters and for both issue and pull-request entrypoints. A compilation or test failure means the resolution is incomplete: correct only the listed conflicted files. Do not claim checks passed when tools are unavailable. Then give a concise summary of the decisions and checks you made.`;
 function getBranchSyncConflictsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, params);
 }
@@ -85139,6 +89035,164 @@ module.exports = require("tls");
 
 "use strict";
 module.exports = require("util");
+
+/***/ }),
+
+/***/ 71110:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+/* module decorator */ module = __nccwpck_require__.nmd(module);
+
+const fs = __nccwpck_require__(87561);
+const path = __nccwpck_require__(49411);
+const { execFileSync } = __nccwpck_require__(17718);
+
+const DEFAULT_ROOT = path.resolve(__dirname, '..');
+const LEDGER_PATH = 'src/architecture/github_communication_test_budget.json';
+const EXPECTED_BUDGETS = Object.freeze({
+  'semantic-github-publication': Object.freeze({
+    requiredCases: 135,
+    spec: 'specs/semantic-github-publication-and-notification.md',
+  }),
+  'repository-locale-localization': Object.freeze({
+    requiredCases: 146,
+    spec: 'specs/repository-locale-and-localization.md',
+  }),
+});
+const TEST_DECLARATION = /^\s*(?:it|test)(?:\.each)?\s*\(/gmu;
+const ADDED_TEST_DECLARATION = /^\+\s*(?:it|test)(?:\.each)?\s*\(/gmu;
+
+function readLedger(root = DEFAULT_ROOT) {
+  return JSON.parse(fs.readFileSync(path.join(root, LEDGER_PATH), 'utf8'));
+}
+
+function validateCommunicationTestBudget(root, ledger) {
+  const errors = [];
+  if (!ledger || typeof ledger !== 'object' || Array.isArray(ledger)) {
+    return ['communication test-budget ledger must be a JSON object.'];
+  }
+  if (ledger.version !== 1) errors.push('communication test-budget ledger version must be 1.');
+  if (ledger.baseline !== '0bb83b75^') errors.push('communication test-budget baseline must remain 0bb83b75^.');
+  if (!gitObjectExists(root, `${ledger.baseline}^{commit}`)) {
+    errors.push(`communication test-budget baseline is unavailable: ${String(ledger.baseline)}.`);
+  }
+  if (!Array.isArray(ledger.budgets)) return [...errors, 'communication test-budget ledger must declare budgets.'];
+  if (ledger.budgets.length !== Object.keys(EXPECTED_BUDGETS).length) {
+    errors.push(`communication test-budget ledger must contain exactly ${Object.keys(EXPECTED_BUDGETS).length} budgets.`);
+  }
+
+  const seenBudgets = new Set();
+  const seenFiles = new Set();
+  for (const budget of ledger.budgets) {
+    const expected = EXPECTED_BUDGETS[budget?.id];
+    if (!expected) {
+      errors.push(`unknown communication test budget: ${String(budget?.id)}.`);
+      continue;
+    }
+    if (seenBudgets.has(budget.id)) errors.push(`duplicate communication test budget: ${budget.id}.`);
+    seenBudgets.add(budget.id);
+    if (budget.spec !== expected.spec) errors.push(`${budget.id} must reference ${expected.spec}.`);
+    if (budget.requiredCases !== expected.requiredCases) {
+      errors.push(`${budget.id} must require exactly ${expected.requiredCases} cases.`);
+    }
+    const specPath = path.join(root, expected.spec);
+    if (!fs.existsSync(specPath)
+      || !fs.readFileSync(specPath, 'utf8').includes(`at least **${expected.requiredCases} distinct`)) {
+      errors.push(`${budget.id} specification does not declare its ${expected.requiredCases}-case budget.`);
+    }
+    if (!Array.isArray(budget.files) || budget.files.length === 0) {
+      errors.push(`${budget.id} must allocate cases to at least one test file.`);
+      continue;
+    }
+    let allocatedCases = 0;
+    for (const entry of budget.files) {
+      if (!isTestPath(entry?.path)) {
+        errors.push(`${budget.id} has an invalid test path: ${String(entry?.path)}.`);
+        continue;
+      }
+      if (seenFiles.has(entry.path)) {
+        errors.push(`${entry.path} is allocated to more than one communication budget.`);
+      }
+      seenFiles.add(entry.path);
+      if (!Number.isSafeInteger(entry.qualifyingCases) || entry.qualifyingCases <= 0) {
+        errors.push(`${budget.id} has an invalid qualifying-case count for ${entry.path}.`);
+        continue;
+      }
+      allocatedCases += entry.qualifyingCases;
+      const testPath = path.join(root, entry.path);
+      if (!fs.existsSync(testPath) || !fs.statSync(testPath).isFile()) {
+        errors.push(`${budget.id} test file does not exist: ${entry.path}.`);
+        continue;
+      }
+      const qualifyingDeclarations = countQualifyingDeclarations(root, ledger.baseline, entry.path);
+      if (qualifyingDeclarations < entry.qualifyingCases) {
+        errors.push(`${entry.path} has ${qualifyingDeclarations} qualifying test declarations since ${ledger.baseline}, below its allocation of ${entry.qualifyingCases}.`);
+      }
+    }
+    if (budget.allocatedCases !== allocatedCases) {
+      errors.push(`${budget.id} allocatedCases is ${String(budget.allocatedCases)} but its file allocation totals ${allocatedCases}.`);
+    }
+    if (allocatedCases < expected.requiredCases) {
+      errors.push(`${budget.id} allocates ${allocatedCases} cases, below its required ${expected.requiredCases}.`);
+    }
+  }
+  for (const budgetId of Object.keys(EXPECTED_BUDGETS)) {
+    if (!seenBudgets.has(budgetId)) errors.push(`missing communication test budget: ${budgetId}.`);
+  }
+  return errors;
+}
+
+function countQualifyingDeclarations(root, baseline, testPath) {
+  if (!gitObjectExists(root, `${baseline}:${testPath}`)) {
+    return (fs.readFileSync(path.join(root, testPath), 'utf8').match(TEST_DECLARATION) ?? []).length;
+  }
+  const diff = execFileSync(
+    'git',
+    ['diff', baseline, '--unified=0', '--', testPath],
+    { cwd: root, encoding: 'utf8' },
+  );
+  return (diff.match(ADDED_TEST_DECLARATION) ?? []).length;
+}
+
+function gitObjectExists(root, object) {
+  try {
+    execFileSync('git', ['cat-file', '-e', object], { cwd: root, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isTestPath(value) {
+  return typeof value === 'string'
+    && /^src\/.+(?:__tests__\/.+\.test\.ts|\.test\.ts)$/u.test(value)
+    && value === path.posix.normalize(value)
+    && !value.split('/').includes('..');
+}
+
+function main() {
+  const ledger = readLedger(DEFAULT_ROOT);
+  const errors = validateCommunicationTestBudget(DEFAULT_ROOT, ledger);
+  if (errors.length > 0) {
+    console.error(errors.map(error => `- ${error}`).join('\n'));
+    process.exitCode = 1;
+    return;
+  }
+  const summary = ledger.budgets
+    .map(budget => `${budget.id}=${budget.allocatedCases}/${budget.requiredCases}`)
+    .join(', ');
+  console.log(`GitHub communication test budgets: PASS (${summary}; no file is double-counted)`);
+}
+
+if (__nccwpck_require__.c[__nccwpck_require__.s] === module) main();
+
+module.exports = {
+  LEDGER_PATH,
+  countQualifyingDeclarations,
+  readLedger,
+  validateCommunicationTestBudget,
+};
+
 
 /***/ }),
 

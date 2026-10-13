@@ -33,3 +33,13 @@ Deployment labels, tags, releases, and workflow dispatches require explicit auth
 ## Setup options
 
 Use `--agent-guidance prompt` to insert or reconcile only the bounded root pointer, `create-if-missing` to create `AGENTS.md` only when absent, or `disabled` to retire only hash-proven setup-owned artifacts into backups. Interactive setup defaults to `prompt`; unattended setup defaults to `create-if-missing` unless the flag or config explicitly selects `prompt`. Existing text outside the marker block is preserved.
+
+
+## Verification hooks in a worktree
+
+After installing dependencies, refresh the repository hooks with
+`node scripts/install-git-hooks.cjs` if needed. Linked worktrees store `.git`
+as a file; the installer resolves their native local and shared metadata and
+installs the repository checks in both locations. It preserves your configured
+hook path and global chain. Normal commits run the repository build, tests and
+lint through that chain. Nongit package installations remain unchanged.

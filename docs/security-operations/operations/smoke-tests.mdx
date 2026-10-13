@@ -13,3 +13,20 @@ Reply with exactly READY. Do not inspect or modify files.
 ```
 
 Run with read-only workspace controls, the explicit qualified model, bounded output, and no write permissions. Record only provider, CLI version, exit code, and sanitized output. Cursor MUST remain untested until `CURSOR_API_KEY` is supplied through a secure mechanism and the test is authorized.
+
+## Model and tool evidence
+
+The `READY` prompt deliberately invokes no tools. It proves only that the
+selected account/model responded. A CLI exit of 0 can still accompany failed
+sandbox tools; it is not tool acceptance.
+
+For an authorized tool check, use a disposable fixture on macOS or Ubuntu and
+require a bounded read of a known file with a verifiable hash. A fixer check
+also requires the expected fixture edit and trusted post-execution validation.
+Record model and tool outcomes separately. Preserve the normal sandbox,
+network denial, and credential boundaries.
+
+**Codex no soportado en runners Windows ejecutados como servicio.** Do not run
+new Codex integration checks on those services. This limitation does not claim
+that Codex fails in an interactive Windows session. See
+[Codex runtime support](/agents/codex-openai).

@@ -7,58 +7,232 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 179,
+      "allocatedCases": 292,
       "files": [
-        { "path": "src/domain/__tests__/github_publication.test.ts", "qualifyingCases": 5 },
-        { "path": "src/domain/__tests__/git_object_id.test.ts", "qualifyingCases": 2 },
-        { "path": "src/domain/__tests__/implementation_plan.test.ts", "qualifyingCases": 2 },
-        { "path": "src/application/policies/__tests__/publication_identity_policy.test.ts", "qualifyingCases": 14 },
-        { "path": "src/application/policies/__tests__/publication_outcome_policy.test.ts", "qualifyingCases": 7 },
-        { "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts", "qualifyingCases": 33 },
-        { "path": "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts", "qualifyingCases": 16 },
-        { "path": "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts", "qualifyingCases": 8 },
-        { "path": "src/application/usecases/steps/common/__tests__/transition_notification_workflow.test.ts", "qualifyingCases": 10 },
-        { "path": "src/application/usecases/steps/common/__tests__/duplicate_comment_cleanup_workflow.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts", "qualifyingCases": 21 },
-        { "path": "src/application/usecases/steps/common/__tests__/publication_concurrency.integration.test.ts", "qualifyingCases": 3 },
-        { "path": "src/application/usecases/actions/__tests__/observe_branch_sync_use_case.test.ts", "qualifyingCases": 7 },
-        { "path": "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts", "qualifyingCases": 7 },
-        { "path": "src/application/usecases/actions/__tests__/close_inactive_issues_use_case.test.ts", "qualifyingCases": 6 },
-        { "path": "src/application/usecases/__tests__/issue_use_case.test.ts", "qualifyingCases": 8 },
-        { "path": "src/architecture/__tests__/github_publication_boundaries.test.ts", "qualifyingCases": 11 },
-        { "path": "src/application/policies/__tests__/action_summary_policy.test.ts", "qualifyingCases": 4 },
-        { "path": "src/data/repository/__tests__/progress_diff_repository.test.ts", "qualifyingCases": 10 }
+        {
+          "path": "src/domain/__tests__/github_publication.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/domain/__tests__/git_object_id.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/domain/__tests__/implementation_plan.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/application/policies/__tests__/publication_identity_policy.test.ts",
+          "qualifyingCases": 14
+        },
+        {
+          "path": "src/application/policies/__tests__/publication_outcome_policy.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
+          "qualifyingCases": 33
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts",
+          "qualifyingCases": 16
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/reply_publication_workflow.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/transition_notification_workflow.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/duplicate_comment_cleanup_workflow.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/publish_resume_use_case.test.ts",
+          "qualifyingCases": 21
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/publication_concurrency.integration.test.ts",
+          "qualifyingCases": 3
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/observe_branch_sync_use_case.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/close_inactive_issues_use_case.test.ts",
+          "qualifyingCases": 6
+        },
+        {
+          "path": "src/application/usecases/__tests__/issue_use_case.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/architecture/__tests__/github_publication_boundaries.test.ts",
+          "qualifyingCases": 11
+        },
+        {
+          "path": "src/application/policies/__tests__/action_summary_policy.test.ts",
+          "qualifyingCases": 4
+        },
+        {
+          "path": "src/domain/__tests__/copilot_operation.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/policies/__tests__/copilot_history_policy.test.ts",
+          "qualifyingCases": 19
+        },
+        {
+          "path": "src/application/policies/__tests__/copilot_history_presentation_policy.test.ts",
+          "qualifyingCases": 13
+        },
+        {
+          "path": "src/application/policies/__tests__/copilot_operation_publication.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/usecases/__tests__/copilot_history_route.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/usecases/__tests__/copilot_history_workflow.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/infrastructure/composition/__tests__/copilot_history_port_factory.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/data/repository/__tests__/progress_diff_repository.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/application/policies/__tests__/retired_progress_presentation_policy.test.ts",
+          "qualifyingCases": 13
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/retire_progress_use_case.test.ts",
+          "qualifyingCases": 22
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/retire_closed_issue_cards_use_case.test.ts",
+          "qualifyingCases": 1
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/retired_progress_publication.integration.test.ts",
+          "qualifyingCases": 6
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_native_closure.test.ts",
+          "qualifyingCases": 3
+        }
       ]
     },
     {
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
       "requiredCases": 146,
-      "allocatedCases": 149,
+      "allocatedCases": 153,
       "files": [
-        { "path": "src/actions/__tests__/github_action_locale_inputs.test.ts", "qualifyingCases": 4 },
-        { "path": "src/application/policies/__tests__/action_summary_message_catalog.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/policies/__tests__/agent_output_locale_policy.test.ts", "qualifyingCases": 4 },
-        { "path": "src/application/policies/__tests__/application_error_message_catalog.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/policies/__tests__/bugbot_message_catalog.test.ts", "qualifyingCases": 4 },
-        { "path": "src/application/policies/__tests__/comment_translation_policy.test.ts", "qualifyingCases": 18 },
-        { "path": "src/application/policies/__tests__/deployment_message_catalog.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/policies/__tests__/inactivity_message_catalog.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/policies/__tests__/publication_message_catalog.test.ts", "qualifyingCases": 6 },
-        { "path": "src/application/policies/__tests__/pull_request_description_content_policy.test.ts", "qualifyingCases": 7 },
-        { "path": "src/application/policies/__tests__/resolved_message_catalog_policy.test.ts", "qualifyingCases": 2 },
-        { "path": "src/application/policies/__tests__/setup_doctor_message_catalog.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/policies/__tests__/setup_doctor_report_policy.test.ts", "qualifyingCases": 5 },
-        { "path": "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts", "qualifyingCases": 18 },
-        { "path": "src/application/usecases/localization/__tests__/resolve_message_catalog_use_case.test.ts", "qualifyingCases": 8 },
-        { "path": "src/application/usecases/setup/__tests__/doctor_use_case.test.ts", "qualifyingCases": 4 },
-        { "path": "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts", "qualifyingCases": 1 },
-        { "path": "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts", "qualifyingCases": 14 },
-        { "path": "src/architecture/__tests__/agent_output_locale_boundaries.test.ts", "qualifyingCases": 2 },
-        { "path": "src/cli/__tests__/setup_prompt_rendering.test.ts", "qualifyingCases": 2 },
-        { "path": "src/domain/__tests__/locale.test.ts", "qualifyingCases": 12 },
-        { "path": "src/domain/__tests__/message_catalog.test.ts", "qualifyingCases": 10 },
-        { "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts", "qualifyingCases": 3 }
+        {
+          "path": "src/actions/__tests__/github_action_locale_inputs.test.ts",
+          "qualifyingCases": 4
+        },
+        {
+          "path": "src/application/policies/__tests__/action_summary_message_catalog.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/policies/__tests__/agent_output_locale_policy.test.ts",
+          "qualifyingCases": 4
+        },
+        {
+          "path": "src/application/policies/__tests__/application_error_message_catalog.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/policies/__tests__/bugbot_message_catalog.test.ts",
+          "qualifyingCases": 4
+        },
+        {
+          "path": "src/application/policies/__tests__/comment_translation_policy.test.ts",
+          "qualifyingCases": 18
+        },
+        {
+          "path": "src/application/policies/__tests__/deployment_message_catalog.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/policies/__tests__/inactivity_message_catalog.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/policies/__tests__/publication_message_catalog.test.ts",
+          "qualifyingCases": 6
+        },
+        {
+          "path": "src/application/policies/__tests__/pull_request_description_content_policy.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/policies/__tests__/resolved_message_catalog_policy.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/application/policies/__tests__/setup_doctor_message_catalog.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/policies/__tests__/setup_doctor_report_policy.test.ts",
+          "qualifyingCases": 5
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/recommend_steps_use_case.test.ts",
+          "qualifyingCases": 18
+        },
+        {
+          "path": "src/application/usecases/localization/__tests__/resolve_message_catalog_use_case.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
+          "qualifyingCases": 4
+        },
+        {
+          "path": "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts",
+          "qualifyingCases": 1
+        },
+        {
+          "path": "src/application/usecases/steps/common/__tests__/comment_language_translation_workflow.test.ts",
+          "qualifyingCases": 18
+        },
+        {
+          "path": "src/architecture/__tests__/agent_output_locale_boundaries.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/cli/__tests__/setup_prompt_rendering.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/domain/__tests__/locale.test.ts",
+          "qualifyingCases": 12
+        },
+        {
+          "path": "src/domain/__tests__/message_catalog.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
+          "qualifyingCases": 3
+        }
       ]
     }
   ]

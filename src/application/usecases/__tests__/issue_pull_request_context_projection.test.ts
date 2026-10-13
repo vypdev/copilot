@@ -200,3 +200,11 @@ function expectDataOnly(value: unknown): void {
   visit(value);
   expect(JSON.stringify(value)).not.toContain('secret-value');
 }
+
+
+it('retires issue cards using the issue locale independently of PR presentation', () => {
+  const source = { ...pullRequestSource(), locale: { issue: 'es-ES', pullRequest: 'en-US' } };
+  const context = projectPullRequestWorkflowStepContexts(source).retireBranchSync;
+  source.locale.issue = 'en-US';
+  expect(context.locale).toBe('es-ES'); expect(context.issueNumber).toBe(42);
+});

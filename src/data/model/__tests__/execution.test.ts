@@ -75,6 +75,8 @@ import { Workflows } from '../workflows';
 import { ExecutionBranchVersionResolver } from '../../../application/usecases/execution/execution_branch_version_resolver';
 import { SetupExecutionUseCase } from '../../../application/usecases/execution/setup_execution_use_case';
 import { applySetupExecutionResult, projectSetupExecutionContext } from '../../../actions/setup_execution_boundary';
+import { projectCommentAutomationContext } from '../../../application/usecases/comment_automation_context';
+import { projectCommentLanguageRequest } from '../../../application/usecases/steps/common/comment_language_translation_workflow';
 
 function makeLabels(): Labels {
   return new Labels(
@@ -178,6 +180,7 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
   pullRequest: PullRequest;
   labels: Labels;
   branches: Branches;
+  issueWorkflowProfileDigest: string;
 }>): Execution {
   const labels = overrides?.labels ?? makeLabels();
   const branches = overrides?.branches ?? makeBranches();
@@ -199,6 +202,7 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
     hotfix: new Hotfix(),
     workflows: new Workflows('release-wf', 'hotfix-wf'),
     projects: new Projects([new ProjectDetail({})], '', '', '', ''),
+    issueWorkflowProfileDigest: overrides?.issueWorkflowProfileDigest,
     inputs: inputs as never,
   });
 }
@@ -243,6 +247,49 @@ describe('Execution', () => {
   });
 
   describe('getters (inputs override)', () => {
+    const nativeStatusContext = (execution: Execution) => projectCommentAutomationContext(execution,
+      projectCommentLanguageRequest({ commentBody: '/copilot status', locale: 'en-US', issueNumber: 42, commentId: 99, configuration: undefined }),
+      '/copilot status').sdd;
+
+    it.each(['a'.repeat(64), undefined])('preserves the native Execution profile digest in the SDD query: %s', digest => {
+      const execution = buildExecution({ eventName: 'issue_comment', issue: { number: 42 } },
+        { issueWorkflowProfileDigest: digest });
+      expect(nativeStatusContext(execution)).toMatchObject({ issueNumber: 42 });
+      expect(nativeStatusContext(execution)?.profileDigest).toBe(digest);
+    });
+
+    it('does not substitute an unrelated profileDigest property for the native runtime profile', () => {
+      const execution = Object.assign(buildExecution({ eventName: 'issue_comment', issue: { number: 42 } }),
+        { profileDigest: 'b'.repeat(64) });
+      expect(nativeStatusContext(execution)?.profileDigest).toBeUndefined();
+    });
+
+    it('binds SDD diff to the actual native repository ID, issue author and runtime profile', () => {
+      const execution = buildExecution({ eventName: 'issue_comment', repo: { owner: 'acme', repo: 'demo' }, repository: { id: 17 },
+        issue: { number: 42, user: { login: 'native-author' } } }, { issueWorkflowProfileDigest: 'a'.repeat(64) });
+      const projected = projectCommentAutomationContext(execution,
+        projectCommentLanguageRequest({ commentBody: '/copilot sdd-diff', locale: 'en-US', issueNumber: 42, commentId: 99, configuration: undefined }), '/copilot sdd-diff');
+      expect(projected.sddDiff).toMatchObject({ repositoryId: 17, issueAuthor: 'native-author', profileDigest: 'a'.repeat(64), target: { kind: 'issue', number: 42 } });
+      expect(Object.isFrozen(projected.sddDiff)).toBe(true);
+      expect(Object.isFrozen(projected.sddDiff?.profile.enabled)).toBe(true);
+      expect(Object.isFrozen(projected.sddDiff?.labelConfiguration.feature)).toBe(true);
+    });
+
+    it.each([undefined, 0, Number.MAX_SAFE_INTEGER + 1])('withholds SDD diff without a native repository identity: %s', repositoryId => {
+      const execution = buildExecution({ eventName: 'issue_comment', repository: { id: repositoryId }, issue: { number: 42 } });
+      expect(projectCommentAutomationContext(execution,
+        projectCommentLanguageRequest({ commentBody: '/copilot sdd-diff', locale: 'en-US', issueNumber: 42, commentId: 99, configuration: undefined }), '/copilot sdd-diff').sddDiff).toBeUndefined();
+    });
+
+    it('does not pass a PR author as the linked SDD issue author', () => {
+      const execution = buildExecution({ eventName: 'issue_comment', repo: { owner: 'acme', repo: 'demo' }, repository: { id: 17 },
+        issue: { number: 99, user: { login: 'pr-author' }, pull_request: {} }, pull_request: { number: 99, head: { ref: 'feature/42' } } });
+      const request = projectCommentAutomationContext(execution,
+        projectCommentLanguageRequest({ commentBody: '/copilot sdd-diff', locale: 'en-US', issueNumber: 99, commentId: 99, configuration: undefined }), '/copilot sdd-diff').sddDiff;
+      expect(request?.target).toEqual({ kind: 'pull-request', number: 99 });
+      expect(request).not.toHaveProperty('issueAuthor');
+    });
+
     it('eventName returns inputs.eventName when set', () => {
       const e = buildExecution({ eventName: 'issues' });
       expect(e.eventName).toBe('issues');

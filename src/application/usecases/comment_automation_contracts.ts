@@ -1,3 +1,6 @@
+import type { SddDiffQueryPort } from '../ports/sdd_diff_read_ports';
+import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
+import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
 import type { Result } from "../../data/model/result";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
@@ -37,7 +40,10 @@ export interface RememberBranchQueryPorts {
 
 export interface CommentAutomationOptions {
   readonly statusReadPorts?: CopilotStatusReadPorts;
+  readonly doctorReadPorts?: GithubRuntimeDoctorPorts;
+  readonly nativeStatusReadPort?: BoundNativeStatusReadPort;
   readonly sddQueryPort?: SddEvidenceQueryPort;
+  readonly sddDiffQueryPort?: SddDiffQueryPort;
   readonly taskId: string;
   readonly languageUseCase: ParamUseCase<CommentLanguageRequest, Result[]>;
   readonly intentUseCase: ParamUseCase<BugbotFixIntentContext, Result[]>;

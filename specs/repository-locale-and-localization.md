@@ -1083,7 +1083,7 @@ The implementation requires at least **146 distinct new or materially rewritten
 test cases**. Semantic message timing/count/idempotency belongs to the companion
 SDD and is not double-counted here.
 
-`src/architecture/github_communication_test_budget.json` records 149 qualifying
+`src/architecture/github_communication_test_budget.json` records 153 qualifying
 localization cases from the implementation diff against the specification
 baseline. No listed test file appears in the semantic allocation, and the
 contract is enforced by `pnpm run validate:specifications`.
@@ -1376,3 +1376,9 @@ implementation change.
   safely.
 
 Live dogfooding on PR #460 (2026-10-10) exposed a translated command expanding beyond the fixed 20-argument grammar. Reconstructed commands must pass the same 2,000-character/20-argument parser before intent, answer, or mutation; failure retains the source and publishes locale.translation-failed. Invalid adapter-produced commands also fail before natural-language routing. Context projection retains the trusted bot login so translated mentions preserve their original admission authority. Three additional conservative test declarations cover grammar rejection and both application paths; parameterized length/argument boundaries count once.
+
+### Suppress same-language translation disclosures (2026-10-12)
+
+Native read probes `6128129885` and `6128130253` returned correct command hashes but unnecessarily rewrote English requests and published “Request interpreted from American English” disclosures with source `en` and target `en-US`. A schema-valid provider `translated` decision does not require a disclosure when the verified source and target primary language and maximized writing script already match and the reason code is `none`. The application MUST preserve the exact original authorized comment and project `matches`, discarding the unsolicited rewrite. Provider classification still uses one call. Target-locale mismatch, unknown/failed decisions, protected operands, native command limits, membership authority and foreign-language behavior remain unchanged.
+
+Mixed-language reasons and differing writing scripts remain eligible for translation; this prevents an English-dominant mixed request or Simplified-to-Traditional Chinese request from being incorrectly skipped. Four conservative test declarations cover generic/exact English (two parameter rows count once), explicit English region, mixed prose and differing scripts. The qualifying localization inventory is 153; the original 146-case minimum and all coverage gates remain unchanged. A fresh native English/Spanish acceptance remains required after publication.

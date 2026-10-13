@@ -31,6 +31,27 @@ function fixture() {
 }
 
 describe('read-only SDD authority and publication query', () => {
+    it('returns only a stable opaque authority digest without exposing the card or issue contents', async () => {
+        const f = fixture();
+        const firstRead = await f.query.read(f.context);
+        const replay = await f.query.read(f.context);
+        expect(firstRead.authorityDigest).toMatch(/^[a-f0-9]{64}$/u);
+        expect(replay.authorityDigest).toBe(firstRead.authorityDigest);
+        expect(JSON.stringify(firstRead)).not.toContain('Human requirements');
+        expect(JSON.stringify(firstRead)).not.toContain(f.record.plan.reason);
+    });
+    it('changes authority after a card edit even when all publication projections remain identical', async () => {
+        const f = fixture();
+        const original = await f.query.read(f.context);
+        const updated = { ...f.record, plan: { ...f.record.plan, reason: 'Updated decision explanation with the same immutable publications.' } };
+        const inventory = await f.comments();
+        f.comments.mockResolvedValue({ ...inventory, value: [f.comment(renderSddGateRecord(updated))] });
+        const edited = await f.query.read(f.context);
+        expect(edited.state).toBe('published');
+        expect(edited.verified).toEqual(original.verified);
+        expect(edited.cardId).toBe(original.cardId);
+        expect(edited.authorityDigest).not.toBe(original.authorityDigest);
+    });
     it.each(['string specs', 'duplicate capability id'])('rejects malformed immutable catalog: %s', async scenario => {
         const f = fixture(); const snapshot = f.snapshot(first);
         if (scenario === 'string specs') (snapshot.capabilities[0] as unknown as { specs: unknown }).specs = 'specs/feature.md';
@@ -293,5 +314,43 @@ describe('complete owned SDD-card identity loss across query fences', () => {
         else f.comments.mockResolvedValueOnce(complete).mockResolvedValue(damaged);
         expect(await f.query.read(f.context)).toEqual({ state: stage === 'initial read' ? 'invalid' : 'stale' });
         if (stage === 'initial read') expect(f.ports.workspace.verifyPublication).not.toHaveBeenCalled();
+    });
+});
+
+describe('historical SDD for native closed work', () => {
+    function closedFixture() {
+        const f = fixture(); const facts = { number: 42, state: 'closed' as const, reason: 'completed' as const, labels: ['feature', 'SDD'] };
+        const nativeState = { readIssue: jest.fn().mockResolvedValue(facts) };
+        return { ...f, facts, nativeState, query: new SddEvidenceQueryUseCase({ ...f.ports, nativeState }) };
+    }
+    it('retains immutable published evidence after completion removes in-progress', async () => {
+        const f = closedFixture(); expect(await f.query.read(f.context)).toMatchObject({ state: 'published', historical: true, verified: { firstSha: first, currentSha: first } });
+        expect(f.ports.labels.getLabels).not.toHaveBeenCalled();
+        expect(f.nativeState.readIssue).toHaveBeenCalledTimes(2);
+    });
+    it('does not invent a required historical SDD for closed unstarted work without publication', async () => {
+        const f = closedFixture(); f.comments.mockResolvedValue({ value: [], coverage: { source: 'issue-comments', status: 'complete',
+            pagesFetched: 1, itemsFetched: 0, itemsRetained: 0, omittedItems: 0, truncatedItems: 0, limitReached: false } });
+        expect(await f.query.read(f.context)).toEqual({ state: 'not-required' });
+        expect(f.ports.workspace.verifyPublication).not.toHaveBeenCalled();
+    });
+    it('retains a verified contract-change artifact for a closed non-feature', async () => {
+        const f = closedFixture(); const context = { ...f.context, admittedKind: 'bugfix' as const };
+        Object.assign(f.record, { branchName: 'bugfix/42', issueDigest: buildSddIssueDigest({ issueNumber: 42, issueTitle: 'Feature', issueBody: 'Human requirements', admittedKind: 'bugfix', profileDigest: 'profile' }, base) });
+        f.ports.branches.getLinkedBranch.mockResolvedValue({ name: 'bugfix/42', headSha: head });
+        f.nativeState.readIssue.mockResolvedValue({ ...f.facts, labels: ['bugfix', 'contract-change', 'SDD'] });
+        expect(await f.query.read(context)).toMatchObject({ state: 'published', historical: true });
+    });
+    it('keeps help exempt even when a closed issue happens to retain a publication marker', async () => {
+        const f = closedFixture(); expect(await f.query.read({ ...f.context, admittedKind: 'help' })).toEqual({ state: 'not-required' });
+        expect(f.nativeState.readIssue).not.toHaveBeenCalled();
+    });
+    it('does not reuse closed-history eligibility after a current reopening', async () => {
+        const f = closedFixture(); f.nativeState.readIssue.mockResolvedValue({ ...f.facts, state: 'open', reason: 'reopened' });
+        expect(await f.query.read(f.context)).toEqual({ state: 'not-required' });
+    });
+    it('rejects historical evidence if native closure changes during the final read', async () => {
+        const f = closedFixture(); f.nativeState.readIssue.mockResolvedValueOnce(f.facts).mockResolvedValue({ ...f.facts, state: 'open', reason: 'reopened' });
+        expect(await f.query.read(f.context)).toEqual({ state: 'stale' });
     });
 });
