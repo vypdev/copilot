@@ -56,18 +56,29 @@ async function runAutofixAction(
       payload: { dryRun: true },
     })];
   }
+  let branchOverride: string;
+  try {
+    branchOverride = await resolveCommentMutationBranch(param, options);
+    if (!branchOverride || (intentPayload.branchOverride && intentPayload.branchOverride !== branchOverride)) {
+      throw new ApplicationError('workflow.stale', 'Autofix requires the exact current conversation branch.');
+    }
+  } catch (error) {
+    return [new Result({ id: `${options.taskId}.Autofix`, success: false, executed: false,
+      errors: [toApplicationError(error, 'provider.unavailable', 'The autofix branch could not be verified.')] })];
+  }
+  const verifiedIntent = { ...intentPayload, branchOverride };
   logInfo("Running bugbot autofix.");
   const autofixResults = await options.autofixUseCase.invoke({
     operation: param.bugbot.autofix,
     targetFindingIds: intentPayload.targetFindingIds,
     userComment: param.userComment,
     context: intentPayload.context,
-    branchOverride: intentPayload.branchOverride,
+    branchOverride,
   });
   let completedOutcome: 'changes-pushed' | 'no-changes' | undefined;
   const resolutionErrors = await commitAutofixAndResolveFindings(
     param.bugbot.commit,
-    intentPayload,
+    verifiedIntent,
     autofixResults,
     options.bugbotGitMutationPort,
     outcome => { completedOutcome = outcome; },

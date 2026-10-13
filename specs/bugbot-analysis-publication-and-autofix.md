@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-11
+- Last updated: 2026-10-13
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-11 on `master`
+- Last verified: 2026-10-13; canonical autofix branch correction tracked in #494
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -439,7 +439,7 @@ screen reader, and controlled live model samples.
 
 ## 19. Definition of Done
 
-- [ ] The 217-case budget, coverage, quality eval, and architecture gates pass.
+- [ ] The baseline and explicitly allocated extension budgets, coverage, quality eval, and architecture gates pass.
 - [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.
@@ -518,3 +518,72 @@ Native fixer `83a80a52` omitted generated bundles; CI `38344489789` rejected the
 The final scoped inventory combines the already-authorized agent paths with safe paths newly introduced during verification. Paths that were already changed but not authorized before verification remain excluded; this preserves the existing unrelated-file contract. All final paths still undergo the same sensitive/count checks.
 
 The required changed-module coverage gate exposed the missing original-inventory failure contract. A fifth new case denies the scope read before verification and proves that verification, staging and pushing are withheld. The autofix allocation is now six (one cache + five workspace cases), and the three-capability correction totals **70**. The 95%/90% gate is retained. `BUGBOT_AUTOFIX_VERIFY_COMMANDS` in this repository now begins with `pnpm run build`, followed by the five existing commands; no gate was removed.
+
+
+### Dogfooding correction: canonical branch reaches autofix commit — #494
+
+[Native run 38446979968](https://github.com/vypdev/copilot/actions/runs/38446979968)
+verified and checked out PR #493's exact branch, completed official Codex 0.162.1
+execution, and accepted two safe paths. Commit then failed with “No branch to
+commit to”: an ordinary PR comment supplied no commit branch, and the separately
+verified preflight head had not reached the commit request. No remote fix was
+published. A successful model/CLI/edit is independent of verification and push.
+
+```text
+accepted authorized fix request -> exact current conversation branch read
+ -> matching same-repository PR or verified issue link -> guarded autofix
+ -> same verified branch passed to commit -> existing verification/freshness/push
+ -> independent review -> correlated fix result
+```
+
+The text equivalent is: resolve native branch authority before the fixer and
+carry that exact value through both the edit request and trusted commit request.
+Autofix MUST use the same existing resolver as implementation and learned-rule
+commands. Ordinary PR comments need not supply a branch: a bounded exact-number
+current PR read proves its open identity, full head SHA and same base/head
+repository. An intent override MUST match that result. Missing capability,
+closed/foreign/forked identity, missing or empty head, denied read, or invalid
+issue link MUST fail before the agent, workspace mutation or commit. No Git HEAD,
+default branch, broad PR search or unverified intent can fill a missing target.
+Existing authorization, dry-run, canonical preflight and trusted commit head
+checks remain required. A resolved name does not disable subsequent stale-head
+or workspace safety checks.
+
+This is application routing repair using already bound semantic readers and the
+existing domain canonical-selection policy. No SDK, provider DTO, credentials,
+new persistence/configuration/permission or mutable Execution enters the route.
+Composition and read-only query contracts are unchanged. Public trigger syntax,
+fixed request budgets, verify commands, path limit and independent review remain
+unchanged. Consumer workflows accepting ordinary PR comments require their
+existing contents write grant for file-changing commands. Rollback restores the
+known post-edit failure for comments without a branch; retained unpublished
+runner changes are not reused as evidence or automatically published.
+
+Product UI uses existing localized correlated outcomes: pending waits for the
+linked run; an invalid target reports that the request was not completed and
+retains prior state; a later verify/push failure retains edits without claiming
+publication; pushed changes point to independent finding status; no-change
+outcomes say no additional commit was needed. There is no new initial branch
+success notification, invented commit hash or optimistic finding resolution.
+Retry the current authorized fix command after repairing branch evidence; do not
+manually push the retained edits from a failed run.
+
+Allocate **12 additional distinct route regressions**, owned only here: **three
+successful branch transfers** (PR without a branch hint, linked issue and matching
+explicit override) and **nine refusal contracts** (override mismatch, fork owner,
+fork repository, closed PR, wrong PR number, absent readers, denied read, lost
+issue link and empty head ref). Existing post-push review/replay/dry-run cases use
+realistic native-reader fakes and remain unchanged in count. No live provider,
+model, real sleep or gate reduction is used in these tests. Global 90/90/88/82
+and changed-runtime 95% lines/statements, 90% branches/functions remain mandatory;
+no new pure policy is introduced.
+
+Acceptance and traceability: the 12 route cases prove exact branch transfer and
+pre-edit refusal; existing preflight/commit tests prove checkout and freshness;
+`docs/bugbot/autofix.mdx` documents ordinary PR comments, failed publication and
+retry. Current native `/copilot fix all` on PR #493 must execute real repository
+tools, verify, commit and push to its exact Action ref, then independently verify
+finding status. The owning SDD/catalog, generated catalog, documentation,
+architecture contracts, bundles, full suite/coverage and current-head CI/review
+must pass before this correction is complete. Native acceptance remains pending
+until the retry actually publishes and its review establishes current state.
