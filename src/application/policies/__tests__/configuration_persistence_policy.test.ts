@@ -51,3 +51,17 @@ describe('read-only request persistence', () => {
         expect(shouldPersistConfiguration({ ...base, eventName: 'issue_comment', inputs: { comment: { body } } })).toBe(true);
     });
 });
+
+
+describe('closed issue retirement persistence', () => {
+    it.each(['closed', 'labeled'])('does not rewrite execution configuration on a native closed issue %s callback', action => {
+        expect(shouldPersistConfiguration({ isSingleAction: false, eventName: 'issues', inputs: { action, issue: { state: 'closed' } },
+            singleAction: { isRecommendStepsAction: false } } as never)).toBe(false);
+    });
+});
+
+
+it.each(['open', undefined])('retains normal persistence without native closed evidence (%s)', state => {
+    expect(shouldPersistConfiguration({ isSingleAction: false, eventName: 'issues', inputs: { issue: { state } },
+        singleAction: { isRecommendStepsAction: false } })).toBe(true);
+});

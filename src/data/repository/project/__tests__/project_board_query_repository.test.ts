@@ -72,6 +72,9 @@ function createHarness(options: HarnessOptions = {}) {
           ? { user: { projectV2: projectData } }
           : { organization: { projectV2: projectData } };
       }
+      if (document.includes("projectItems(first:")) {
+        return { node: { id: options.contentId ?? "CONTENT_1", __typename: 'Issue', projectItems: terminalPage([]) } };
+      }
       if (document.includes("issueOrPullRequest(number:")) {
         return {
           repository: options.contentMissing

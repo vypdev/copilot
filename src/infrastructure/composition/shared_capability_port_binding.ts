@@ -1,3 +1,4 @@
+import type { BoundIssueCompletionReadPort } from '../../application/ports/issue_completion_ports';
 import type { BoundIssueDescriptionQueryPort } from '../../application/ports/issue_description_ports';
 import type {
   BoundIssueCommentQueryPort,
@@ -35,7 +36,9 @@ export interface RepositoryCredentialBinding {
 export function bindPublicationSourceQuery(
   port: PublicationSourceQueryPort,
   binding: RepositoryCredentialBinding,
+  native?: BoundIssueCompletionReadPort,
 ): BoundPublicationSourceQueryPort {
+  const readIssue = native?.readIssue.bind(native);
   return Object.freeze({
     getBranchHeadSha: (branch: string) => port.getBranchHeadSha(
       binding.owner,
@@ -43,6 +46,10 @@ export function bindPublicationSourceQuery(
       branch,
       binding.token,
     ),
+    ...(readIssue ? { isIssueOpen: async (number: number) => {
+      const facts = await readIssue(number);
+      return facts.number === number && facts.state === 'open';
+    } } : {}),
   });
 }
 

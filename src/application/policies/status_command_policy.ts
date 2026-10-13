@@ -1,3 +1,4 @@
+import { appendPullRequestReadiness } from './pull_request_readiness_status_policy';
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS, lifecycleStateFromLabels } from '../../domain/copilot_lifecycle';
 import type { NativeIssueCompletionFacts } from '../../domain/issue_completion';
 import type { NativePullRequestCompletionFacts } from '../ports/issue_completion_ports';
@@ -7,6 +8,7 @@ import { Result } from '../../data/model/result';
 import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 import { projectBugbotResultFindingStates } from './bugbot_result_finding_state_projection_policy';
+import type { PullRequestReadinessSnapshot } from './pull_request_readiness_policy';
 import {
     resolveStaticPublicationCatalog,
     type PublicationMessageCatalog,
@@ -66,10 +68,11 @@ export interface CopilotStatusSnapshot {
         resolved: number;
     };
     readonly findingStateEvidence?: 'invalid';
+    readonly pullRequestReadiness?: PullRequestReadinessSnapshot;
+    readonly serverOrigin?: string;
     readonly pullRequestDescriptionMode: string;
     readonly sddReadiness?: SddStatusReadiness;
     readonly issueUrl?: string;
-    readonly serverOrigin?: string;
     readonly lifecycleLabels?: Readonly<CopilotLifecycleLabels>;
 }
 
@@ -180,12 +183,12 @@ export function formatCopilotStatus(
         label('interaction.status.pullRequestLabels', snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : catalog.render('interaction.status.none')),
     ];
     if (snapshot.findingStateEvidence === 'invalid') {
-        lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingsInvalid')));
+        lines.push(label('interaction.status.findings', catalog.render(snapshot.pullRequestReadiness ? 'interaction.status.prReadiness.countsUnavailable' : 'interaction.status.findingsInvalid')));
     } else if (snapshot.findingStates) {
         lines.push(label('interaction.status.findings', catalog.render('interaction.status.findingCounts', snapshot.findingStates)));
     }
     if (snapshot.sddReadiness) lines.push(...formatSddStatus(snapshot.sddReadiness, catalog, snapshot.issueUrl, snapshot.issueNumber, { owner: snapshot.owner, repository: snapshot.repository, serverOrigin: snapshot.serverOrigin }));
-    return lines.join('\n');
+    return appendPullRequestReadiness(lines, snapshot, catalog);
 }
 
 /** A fresh native read supersedes event-derived terminal state without obtaining mutation authority. */

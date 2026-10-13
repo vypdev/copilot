@@ -538,3 +538,41 @@ describe('live native base ref instead of cached PR base metadata', () => {
     expect(f.pat.rest.git.getRef).not.toHaveBeenCalled();
   });
 });
+
+
+describe('read-only doctor policy source', () => {
+  it('returns the repository source and does not read an organization fallback', async () => {
+    const client = patOctokit(); jest.mocked(github.getOctokit).mockReturnValue(client as never);
+    const read = await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target);
+    expect(read).toEqual({ status: 'available', source: 'repository', value: 'repository' });
+    expect(Object.isFrozen(read)).toBe(true);
+    expect(client.rest.actions.getOrgVariable).not.toHaveBeenCalled();
+  });
+  it('returns the organization source only after verified repository absence', async () => {
+    const client = patOctokit(); client.rest.actions.getRepoVariable.mockRejectedValue({ status: 404 });
+    jest.mocked(github.getOctokit).mockReturnValue(client as never);
+    expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'available', source: 'organization', value: 'organization' });
+  });
+  it('establishes effective absence only after both trusted reads establish absence', async () => {
+    const client = patOctokit(); client.rest.actions.getRepoVariable.mockRejectedValue({ status: 404 }); client.rest.actions.getOrgVariable.mockRejectedValue({ status: 404 });
+    jest.mocked(github.getOctokit).mockReturnValue(client as never);
+    expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'absent' });
+  });
+  it('retains unavailable repository policy instead of falling back after a denied read', async () => {
+    const client = patOctokit(); client.rest.actions.getRepoVariable.mockRejectedValue({ status: 403, message: 'private provider diagnostic' });
+    jest.mocked(github.getOctokit).mockReturnValue(client as never);
+    expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'unavailable' });
+    expect(client.rest.actions.getOrgVariable).not.toHaveBeenCalled();
+  });
+  it('retains unavailable effective policy when organization lookup fails', async () => {
+    const client = patOctokit(); client.rest.actions.getRepoVariable.mockRejectedValue({ status: 404 }); client.rest.actions.getOrgVariable.mockRejectedValue({ status: 403 });
+    jest.mocked(github.getOctokit).mockReturnValue(client as never);
+    expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'unavailable' });
+  });
+  it.each([null, 'x'.repeat(65_537)])('rejects malformed or unbounded provider values without an organization fallback', async value => {
+    const client = patOctokit(); client.rest.actions.getRepoVariable.mockResolvedValue({ data: { value } } as never);
+    jest.mocked(github.getOctokit).mockReturnValue(client as never);
+    expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'unavailable' });
+    expect(client.rest.actions.getOrgVariable).not.toHaveBeenCalled();
+  });
+});

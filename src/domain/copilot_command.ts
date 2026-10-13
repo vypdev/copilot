@@ -8,6 +8,8 @@ export const COPILOT_COMMAND_NAMES = [
     'test-plan',
     'status',
     'sdd-diff',
+    'doctor',
+    'history',
     'description',
     'explain',
     'diagnose',
@@ -71,6 +73,9 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (!name || !COPILOT_COMMAND_NAMES.includes(name as CopilotCommandName)) {
         return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${COPILOT_COMMAND_NAMES.join(', ')}.` };
     }
+    if (name === 'status' && tokens.length > 0) {
+        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
+    }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
@@ -83,8 +88,14 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
     if (name === 'sdd-diff' && argumentsList.length > 0) return { kind: 'invalid', reason: '/copilot sdd-diff does not accept arguments.' };
+    if (name === 'doctor' && argumentsList.length > 0) {
+        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
+    }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+    }
+    if (name === 'history' && argumentsList.length) {
+        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
     }
     return {
         kind: 'command',

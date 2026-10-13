@@ -11,6 +11,8 @@ import type {
 } from '../../application/ports/branch_sync_ports';
 import type {
   BoundIssueCommentPublicationPort,
+  BoundIssueCommentQueryPort,
+  BoundIssueCommentUpdatePort,
   BoundIssueReopenPort,
   IssueCommentPublicationPort,
   IssueNotificationPort,
@@ -436,3 +438,13 @@ export function bindSetupRemoteConfiguration(
   return Object.freeze<BoundSetupRemoteConfigurationReadPort>({ inspect: () => port.inspect(binding.owner, binding.repository, binding.token) });
 }
 import type { LatestTagQueryPort, RepositoryVersionTagsQueryPort } from '../../application/ports/branch_tag_ports';
+
+/** Physically restrict retirement to reading and updating existing comments. */
+export function bindBranchSyncRetirementComments(
+  comments: BoundIssueCommentPublicationPort,
+): BoundIssueCommentQueryPort & BoundIssueCommentUpdatePort {
+  return Object.freeze({
+    listIssueComments: comments.listIssueComments.bind(comments),
+    updateComment: comments.updateComment.bind(comments),
+  });
+}

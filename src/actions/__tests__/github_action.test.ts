@@ -210,6 +210,19 @@ describe('runGitHubAction', () => {
     expect(core.summary.write).not.toHaveBeenCalled();
   });
 
+  it.each([['closed', 42, true], ['closed', 0, false], ['labeled', 42, false]] as const)(
+    'admits only a safe native closed bot issue event (%s, %s)', async (action, number, allowed) => {
+      mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
+      github.context.eventName = 'issues';
+      github.context.payload = { action, issue: { number, state: 'closed' } };
+      mockMainRun.mockResolvedValue([]);
+      await runGitHubAction();
+      expect(mockMainRun).toHaveBeenCalledTimes(allowed ? 1 : 0);
+      expect(mockReviewOnly).not.toHaveBeenCalled(); expect(mockProvision).not.toHaveBeenCalled();
+      expect(mockLanguageQuery).not.toHaveBeenCalled(); expect(mockStoreInvoke).not.toHaveBeenCalled();
+    },
+  );
+
   it('discards an unaddressed comment before project, AI, runtime, or result work', async () => {
     github.context.eventName = 'issue_comment';
     github.context.payload = {

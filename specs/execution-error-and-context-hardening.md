@@ -791,3 +791,16 @@ contracts, two EN/ES stage contracts and one bilingual retained-state recovery
 contract. Source read/publication cases
 belong only to semantic communication, and the real Git cache case only to
 autofix. Full coverage and native replay remain pending.
+
+
+### Closed-event persistence boundary (2026-10-13)
+
+Closed-issue card retirement has no execution configuration to persist. A regular
+`issues` event with trusted native issue state `closed` MUST skip hidden
+configuration writes, including label callbacks on an already-closed issue.
+Open or missing state retains the existing normal-event persistence behavior;
+single-action and argument-valid query rules remain unchanged. Four new distinct
+pure cases cover native closure, closed label callbacks, open state and missing
+state. They belong only to this owner: the #474 extension is now 15 execution
+cases, separate from 56 semantic publication and six autofix cases. Terminal
+routing/bot-event tests belong to branch synchronization and are not recounted.

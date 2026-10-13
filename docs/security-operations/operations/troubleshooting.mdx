@@ -328,6 +328,17 @@ directory. The lock contains no PAT or other credential.
     - Failed workflow runs
 
     **Solutions:**
+    The hosted Windows verification-environment fixture reports a fixed
+    `verification-powershell` stage with the child status and error code when
+    its real PowerShell command fails. Use that evidence to distinguish command
+    failure from a timeout; `exit 2` alone does not identify a cause. This
+    literal-argv fixture also retries only the removal of its own temporary
+    root up to five times when the filesystem reports a retryable error; an
+    exhausted cleanup still fails the test. The PowerShell
+    fixture imports the trusted system hash/path modules explicitly and keeps
+    the existing execution deadlines. Its success certifies the fixture only,
+    and does not certify real Codex tools in Windows services.
+
     1. **Timeouts:** Identify the phase before changing a job timeout. A pending
        promotion, environment approval, merge queue, or reconciliation PR is an
        external GitHub wait and has no release runner to extend. npm visibility

@@ -8,6 +8,7 @@ import { createSetupExecutionUseCase } from '../infrastructure/composition/execu
 import { applySetupExecutionResult, projectSetupExecutionContext } from './setup_execution_boundary';
 import {
     createMainRunRouteCompositionRoot,
+    createClosedIssueRetirementUseCase,
     type MainRunCompositionSurface,
 } from '../infrastructure/composition/main_run_route_composition_root';
 import { requireRepositoryCoordinates } from './repository_context';
@@ -73,6 +74,15 @@ export async function mainRun(
     clearAccumulatedLogs();
 
     logDebugInfo(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
+
+    if (!execution.isSingleAction && execution.isIssue && execution.eventName === 'issues'
+        && execution.inputs?.issue?.state === 'closed') {
+        // Later edits and label callbacks must not restart closed work or retry
+        // lifecycle cleanup. Only the native close action retires existing cards.
+        if (execution.inputs.action !== 'closed') return [];
+        return createClosedIssueRetirementUseCase({ owner: repository.owner, repository: repository.repo, token: execution.tokens.token })
+            .invoke({ issueNumber: execution.issueNumber, locale: execution.locale.issue, trustedBotLogin: execution.tokenUser });
+    }
 
     const runtimeDecision = decideIssueWorkflowRuntime({
         admission: execution.currentIssueWorkflowAdmission,

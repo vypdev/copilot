@@ -853,6 +853,34 @@ describe("runCommentAutomation", () => {
     });
   });
 
+  it('keeps doctor deterministic and reports unavailable evidence without invoking language or agent capabilities', async () => {
+    const language = { invoke: jest.fn() };
+    const think = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: {} as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot doctor',
+        bugbotGitMutationPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+    );
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.Doctor', success: true, executed: true,
+    });
+    expect(results[0].errors).toEqual([]);
+    expect(results[0].steps.join('\n')).toContain('Unavailable');
+    expect(results[0].steps.join('\n')).not.toContain('token');
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
   it('rejects an invalid explicit command without invoking an agent', async () => {
     const think = { invoke: jest.fn() };
     const results = await runCommentAutomation(

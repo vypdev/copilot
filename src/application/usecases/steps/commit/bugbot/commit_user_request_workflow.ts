@@ -39,6 +39,7 @@ export async function commitUserRequestIfSuccessful(
         id: 'DoUserRequestCommitAndPush',
         success: true,
         executed: commitResult.committed,
+        payload: Object.freeze({ commitOutcome: commitResult.committed ? 'changes-pushed' : 'no-changes' }),
         steps: [commitResult.committed ? 'User request changes committed and pushed.' : 'No changes were produced by the user request.'],
     })];
 }

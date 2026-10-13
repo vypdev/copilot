@@ -64,11 +64,13 @@ async function runAutofixAction(
     context: intentPayload.context,
     branchOverride: intentPayload.branchOverride,
   });
+  let completedOutcome: 'changes-pushed' | 'no-changes' | undefined;
   const resolutionErrors = await commitAutofixAndResolveFindings(
     param.bugbot.commit,
     intentPayload,
     autofixResults,
     options.bugbotGitMutationPort,
+    outcome => { completedOutcome = outcome; },
   );
   if (resolutionErrors.length > 0) {
     autofixResults.push(
@@ -99,6 +101,8 @@ async function runAutofixAction(
     }
     autofixResults.push(...reviewResults);
   }
+  if (completedOutcome) autofixResults.push(new Result({ id: 'CommentAutomation.FixReply', success: true, executed: true,
+    payload: { publication: Object.freeze({ kind: 'fix-result', outcome: completedOutcome }) } }));
   return autofixResults;
 }
 
@@ -144,8 +148,10 @@ async function runDoUserRequestAction(
   const results = [...doResults, ...commitResults];
   const committed = commitResults.find(result => result.id === 'DoUserRequestCommitAndPush');
   if (!committed || commitResults.some(result => !result.success || result.errors.length > 0)) return results;
+  const outcome = (committed.payload as { commitOutcome?: unknown } | undefined)?.commitOutcome;
+  if (outcome !== 'changes-pushed' && outcome !== 'no-changes') return results;
   const publication: ImplementationResultProjection = Object.freeze({
-    kind: 'implementation-result', outcome: committed.executed ? 'changes-pushed' : 'no-changes', branch: branchOverride,
+    kind: 'implementation-result', outcome, branch: branchOverride,
   });
   return [...results, new Result({ id: IMPLEMENTATION_REPLY_RESULT_ID, success: true, executed: true,
     payload: { publication } })];

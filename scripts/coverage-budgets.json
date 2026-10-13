@@ -539,6 +539,27 @@
           ],
           "mode": "each",
           "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/application/usecases/read_pull_request_status_readiness_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/application/policies/pull_request_readiness_status_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/pull_request/current_base_revision_query.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
         }
       ],
       "successMessage": "canonical PR status coverage: PASS (marker policy 100%; read workflow 95% lines/statements, 90% branches/functions)"
@@ -581,6 +602,20 @@
         }
       ],
       "successMessage": "Git hook verification environment coverage: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Doctor matrix eligibility",
+      "missingEntryLabel": "doctor matrix eligibility",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/doctor_workflow_matrix_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "doctor matrix eligibility coverage: PASS (100% all metrics)"
     },
     {
       "name": "Reply request freshness",
@@ -629,6 +664,20 @@
       "successMessage": "native issue completion coverage: PASS (pure planner 100%; guarded application, adapter and binding 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Terminal branch synchronization retirement",
+      "missingEntryLabel": "terminal branch synchronization retirement",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/actions/retire_branch_sync_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "terminal branch synchronization retirement coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Post-verification workspace capture",
       "missingEntryLabel": "post-verification workspace capture",
       "rules": [
@@ -642,6 +691,28 @@
         }
       ],
       "successMessage": "post-verification workspace capture coverage: PASS (each changed module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Closed issue progress retirement",
+      "missingEntryLabel": "closed issue progress retirement",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/retired_progress_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/retire_progress_use_case.ts",
+            "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "closed issue progress retirement coverage: PASS (presentation 100%; guarded retirement and coordination 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

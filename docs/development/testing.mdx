@@ -136,6 +136,10 @@ The reproducible `metrics:architecture` collector is the full evidence
 workflow; it requires a clean working tree and writes reports outside the
 repository.
 
+Architecture fixtures that resolve TypeScript symbols should share one compiler
+program containing production sources and isolated fixture modules. Retain the
+real bindings and every assertion; rebuilding the whole project for each fixture
+can exhaust a Jest worker during full platform verification.
 The raw-error boundary suite shares one real TypeScript compiler graph across
 the repository scan and its six fixture modules. It keeps all seven assertions
 and checks the real logger/sanitizer declarations. This reduces repeated

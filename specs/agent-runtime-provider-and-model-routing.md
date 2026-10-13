@@ -1202,3 +1202,36 @@ The extension adds 14 distinct cases: three closed classifier cases; one real CL
 Acceptance: exact recognized stderr and valid CLI-0 output returns the unchanged output and a completed observation carrying only the fixed hint; stdout-only mentions, unknown/truncated diagnostics and forged logger values cannot produce or leak a hint. Native Windows acceptance must still prove an actual sandboxed read and write after operator recovery. A model completion alone remains insufficient.
 
 Local verification passed all 578 suites and 7,830 tests with 35 configured platform skips (7,865 total). All existing budgets passed. The changed client has 100% lines/statements/functions and 96.77% branches; classifier and terminal logger have 100% all four metrics. Those changed paths are now explicit per-file coverage gates. Build, types, lint, documentation, specifications/catalog and graph update passed. Native hint acceptance remains pending publication.
+
+### Hosted verification-environment fixture follow-up (2026-10-13)
+
+Hosted Windows job `115329566454` on `e462afe5` failed the real standalone
+PowerShell fixture after approximately 61 seconds. Its nested script converted
+all child failures to exit 2, so the log did not prove the child error code.
+This is not evidence about real Codex tool execution in Windows services.
+
+The existing fixture now uses explicit absolute system Utility and Management
+manifests with automatic module discovery disabled, matching the trusted probes
+above. It still resolves the exact trusted system root, starts real PowerShell,
+hashes the same system executable, checks checkout cleanliness and private
+cache cleanup, and preserves the 60/70/75-second child/parent/test boundaries.
+The fixture MUST expose only a fixed stage, child status, error code and closed
+failure category on failure; raw child stderr, credentials and paths are not
+printed by that diagnostic. Success still requires exit zero and `verified`.
+
+No production runtime capability, platform selection, sandbox, permission,
+configuration or numeric test floor changes. One existing native acceptance case
+is strengthened; no additional case is allocated or counted. The existing full
+coverage, hooks and hosted Windows job remain mandatory. Replaying the original
+failed head is separate evidence from acceptance of this changed fixture, and
+must not be conflated. Codex-on-Windows-services remains unsupported; hosted
+Node/PowerShell and isolated fake-agent coverage stays enabled.
+
+The same follow-up also covers hosted job `115329838256`: all isolated runtime
+fixtures passed, but the full suite's literal-argv fixture failed with `EPERM`
+while deleting its unique temporary root after execution assertions. Its cleanup
+now uses five finite retries with 100-ms linear backoff, matching the existing
+Windows fixture pattern and [Node's rmSync contract](https://nodejs.org/api/fs.html#fsrmsyncpath-options).
+It still fails if cleanup cannot complete; no error is swallowed, fixture is
+skipped, or child/agent deadline is extended. The lock's owner remains unknown.
+This strengthens a second existing case without adding a counted case.

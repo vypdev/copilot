@@ -3,7 +3,7 @@ import { isAgentConfigurationReady } from '../../domain/agent';
 import { parseCopilotCommand, type CopilotCommandName } from '../../domain/copilot_command';
 import { parseBranchSyncCommandArguments } from '../../domain/branch_sync_command';
 
-const DETERMINISTIC_COMMENT_COMMANDS: ReadonlySet<CopilotCommandName> = new Set(['help', 'status', 'sdd-diff', 'dismiss', 'remember']);
+const DETERMINISTIC_COMMENT_COMMANDS: ReadonlySet<CopilotCommandName> = new Set(['help', 'status', 'sdd-diff', 'doctor', 'history', 'dismiss', 'remember']);
 
 export type AgentActivityRoute =
     | 'single-action'
