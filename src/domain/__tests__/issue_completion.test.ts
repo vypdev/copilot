@@ -82,3 +82,9 @@ describe('completion boundary validation', () => {
         expect(planIssueCompletion(facts(), { ...configuration, protectedLabels: ['100%'] })).toMatchObject({ kind: 'invalid', code: 'invalid-configuration' });
     });
 });
+
+
+it.each(['100%', '0%'])('rejects configured lifecycle progress collision %s before any completion delta', working => {
+    expect(planIssueCompletion(facts({ labels: [working] }), { ...configuration, lifecycle: { ...configuration.lifecycle, working } }))
+        .toEqual({ kind: 'invalid', code: 'invalid-configuration' });
+});

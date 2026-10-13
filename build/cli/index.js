@@ -82425,7 +82425,7 @@ function planIssueCompletion(facts, configuration) {
         || !labelsValid(facts.labels))
         return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
     const keys = Object.keys(copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS);
-    if (!configuration?.lifecycle || !keys.every(key => (0, exports.isIssueCompletionLabelName)(configuration.lifecycle[key]))
+    if (!configuration?.lifecycle || !keys.every(key => (0, exports.isIssueCompletionLabelName)(configuration.lifecycle[key]) && !canonicalProgress.test(configuration.lifecycle[key]))
         || !labelsValid(configuration.protectedLabels))
         return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
     const managed = new Set([issue_start_policy_1.ISSUE_START_LABEL, ...keys.map(key => configuration.lifecycle[key])].map(name => name.toLowerCase()));

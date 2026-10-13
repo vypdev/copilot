@@ -508,3 +508,19 @@ budget passes, including the new pure planner at 100% and each guarded runtime
 module at 95% lines/statements and 90% branches/functions. Generated artifacts,
 normal hooks, current-head review and real closure/replay acceptance remain
 pending. This checkpoint does not declare the correction complete.
+
+
+### Native review: lifecycle/progress collision (2026-10-13)
+
+Finding `4253765568` reproduced a completed issue losing `100%` when a configured
+lifecycle label had that same name. All configured lifecycle names MUST reject
+canonical progress names (`0%` through `100%`) before any mutation plan, alongside
+the existing protected-label collision boundary. Two distinct endpoint cases
+failed before the fix and now cover this configuration refusal; valid completed
+metadata retains its marker. The completion inventory is now 98 (96 + 2); eight
+historical-SDD cases remain allocated only to the status companion, for 106 new
+cases overall. Full verification and native closure/replay remain pending.
+
+The attempted native fixer run `38331274938` completed Codex execution but
+refused generated Jest caches before committing. No native fix or push is claimed
+by that run; its postflight/cache/reporting defects are tracked separately.

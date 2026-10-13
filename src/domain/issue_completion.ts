@@ -30,7 +30,7 @@ export function planIssueCompletion(facts: NativeIssueCompletionFacts, configura
     if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'reopened', 'unknown'].includes(facts.reason)
         || !labelsValid(facts.labels)) return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
     const keys = Object.keys(DEFAULT_COPILOT_LIFECYCLE_LABELS) as (keyof typeof DEFAULT_COPILOT_LIFECYCLE_LABELS)[];
-    if (!configuration?.lifecycle || !keys.every(key => isIssueCompletionLabelName(configuration.lifecycle[key]))
+    if (!configuration?.lifecycle || !keys.every(key => isIssueCompletionLabelName(configuration.lifecycle[key]) && !canonicalProgress.test(configuration.lifecycle[key]))
         || !labelsValid(configuration.protectedLabels)) return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
     const managed = new Set([ISSUE_START_LABEL, ...keys.map(key => configuration.lifecycle[key])].map(name => name.toLowerCase()));
     if (configuration.protectedLabels.some(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name))) {
