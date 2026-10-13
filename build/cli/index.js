@@ -54840,7 +54840,7 @@ function projectPullRequestWorkflowStepContexts(source) {
             projects,
         }),
         description: projectPullRequestDescriptionContext(source),
-        retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.pullRequest, trustedBotLogin: source.tokenUser }),
+        retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.issue ?? 'en-US', trustedBotLogin: source.tokenUser }),
         closeIssue: Object.freeze({
             completionLabels: Object.freeze({
                 lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS) }),

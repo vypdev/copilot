@@ -335,8 +335,8 @@ that information. The phase is captured by trusted validation before abort.
 | Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
 | Adapters/workflow contracts | 55 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
-| Integration/security/cutover | 28 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **285** | no double counting |
+| Integration/security/cutover | 29 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **286** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 285-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 286-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -629,3 +629,13 @@ using its bot exception on an ordinary comment workflow. The validator requires
 the exact narrow exception only for issue lifecycle templates; all other actor
 and fork gates retain their previous expressions. This brings the owning budget
 to 285 (237 + 48). The four persistence cases above remain disjoint.
+
+
+Native finding `4256491077` identified issue cards retired using the PR locale.
+Merged-PR retirement MUST capture the issue locale, with complete English
+fallback when a legacy partial context omits it. A distinct mixed-locale
+projection case failed before the correction and verifies the immutable captured
+issue locale; the budget is now 286 (237 + 49). CI `38370750425` also exposed
+three new route fixtures inheriting live workflow identity after the existing
+suite restored its environment. Their before/after hooks now isolate and
+restore those four variables; the same tests and queue/runtime gates remain.

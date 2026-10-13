@@ -881,8 +881,14 @@ describe('mainRun', () => {
 
 
 describe('terminal issue lifecycle route', () => {
+  afterAll(() => {
+    restoreEnvironmentVariable('GITHUB_RUN_ID', originalRunId); restoreEnvironmentVariable('GITHUB_WORKFLOW', originalWorkflow);
+    restoreEnvironmentVariable('GITHUB_WORKFLOW_REF', originalWorkflowRef); restoreEnvironmentVariable('GITHUB_ACTIONS', originalGithubActions);
+  });
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env.GITHUB_RUN_ID; delete process.env.GITHUB_WORKFLOW;
+    delete process.env.GITHUB_WORKFLOW_REF; delete process.env.GITHUB_ACTIONS;
     mockSetupExecutionInvoke.mockImplementation(async context => unresolvedSetupResult(context));
   });
   it.each([true, false])('retires closed work without agent/lifecycle/open-work effects, including failure (%s)', async success => {

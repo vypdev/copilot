@@ -102,7 +102,7 @@ export interface PullRequestWorkflowContextSource {
     getAiMembersOnly(): boolean;
     getAgentConfiguration(task: 'planner'): AgentConfiguration;
   };
-  readonly locale: { readonly pullRequest: string };
+  readonly locale: { readonly pullRequest: string; readonly issue?: string };
 }
 
 export function projectPullRequestWorkflowStepContexts(
@@ -139,7 +139,7 @@ export function projectPullRequestWorkflowStepContexts(
       projects,
     }),
     description: projectPullRequestDescriptionContext(source),
-    retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.pullRequest, trustedBotLogin: source.tokenUser }),
+    retireBranchSync: Object.freeze({ issueNumber: source.issueNumber, locale: source.locale.issue ?? 'en-US', trustedBotLogin: source.tokenUser }),
     closeIssue: Object.freeze({
       completionLabels: Object.freeze({
         lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
