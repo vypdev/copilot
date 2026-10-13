@@ -49,6 +49,8 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
                 }
             }
         }
+        const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
+        if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path))) return 'blocked';
         return paths.slice(1).every(path => {
             const file = read.files[path]; return file.state === 'present' && /^#\s+\S/mu.test(file.text);
         }) ? 'pass' : 'blocked';

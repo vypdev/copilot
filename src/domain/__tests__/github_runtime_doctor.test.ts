@@ -1,5 +1,6 @@
 import {
     aggregateGithubRuntimeDoctorReport,
+    isDoctorBranchReference,
     GITHUB_RUNTIME_DOCTOR_GROUPS,
     parseTrustedDoctorApprovalPolicy,
     type TrustedApprovalPolicyRead,
@@ -85,4 +86,14 @@ describe('parseTrustedDoctorApprovalPolicy', () => {
                 .toEqual({ status: 'invalid' });
         },
     );
+});
+
+describe('trusted policy presence and branch alphabet', () => {
+    it.each(['', ' \t\r\n'])('rejects a present empty policy %j rather than claiming verified absence', value => {
+        expect(parseTrustedDoctorApprovalPolicy({ status: 'available', source: 'repository', value })).toEqual({ status: 'invalid' });
+    });
+    it('keeps a malformed non-string trusted read unavailable', () => {
+        expect(parseTrustedDoctorApprovalPolicy({ status: 'available', source: 'repository', value: undefined } as unknown as TrustedApprovalPolicyRead)).toEqual({ status: 'unavailable' });
+    });
+    it('already rejects the single-at branch outside the permitted literal alphabet', () => expect(isDoctorBranchReference('@')).toBe(false));
 });

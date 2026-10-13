@@ -42065,6 +42065,9 @@ function doctorRepositoryPrerequisites(read) {
                 }
             }
         }
+        const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
+        if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path)))
+            return 'blocked';
         return paths.slice(1).every(path => {
             const file = read.files[path];
             return file.state === 'present' && /^#\s+\S/mu.test(file.text);
@@ -84503,6 +84506,10 @@ function parseTrustedDoctorApprovalPolicy(read) {
     if (read.status === 'absent') {
         return { status: 'valid', source: 'default-off', policy: pull_request_approval_policy_1.DISABLED_PULL_REQUEST_APPROVAL_POLICY };
     }
+    if (typeof read.value !== 'string')
+        return { status: 'unavailable' };
+    if (!read.value.trim())
+        return { status: 'invalid' };
     try {
         return { status: 'valid', source: read.source, policy: (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(read.value) };
     }

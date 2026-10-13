@@ -130,3 +130,12 @@ describe('help SDD applicability independent of form completeness', () => {
         expect(ports.readLinkedBranch).not.toHaveBeenCalled();
     });
 });
+
+describe('present empty policy report', () => {
+    it.each(['', ' \t'])('blocks a verified empty policy %j while retaining independent facts', async value => {
+        const { context, ports } = doctorFixture(); ports.readApprovalPolicy.mockResolvedValue({ status: 'available', source: 'repository', value });
+        const result = await readCopilotDoctor(context, 'Issue', ports);
+        expect(check(result, 'approval-policy')).toBe('blocked'); expect(check(result, 'approval-prerequisites')).toBe('unavailable');
+        expect(check(result, 'workflow-contracts')).toBe('pass'); expect(projection(result).report?.severity).toBe('blocked');
+    });
+});

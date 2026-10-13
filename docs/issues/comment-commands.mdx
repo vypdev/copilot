@@ -488,3 +488,11 @@ conflicting kind labels still show their admission block. For simple literal
 workflow matrices, Doctor checks the product against GitHub's 256-job matrix
 limit; it does not expand or execute jobs. Dynamic axes and include/exclude
 transformations remain unavailable rather than receiving a guessed Pass.
+
+Doctor keeps an explicitly absent approval policy separate from a present empty
+value: verified absence retains the off default, while a present empty or
+whitespace value is invalid. A malformed provider value is unavailable. SDD
+catalog prerequisites require every tracked product specification, including
+nested Markdown files, to have a catalog owner; the three top-level standard
+documents are excluded. Independent successful checks remain visible when a
+policy or specification check is blocked.

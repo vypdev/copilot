@@ -64,6 +64,8 @@ export function parseTrustedDoctorApprovalPolicy(read: TrustedApprovalPolicyRead
     if (read.status === 'absent') {
         return { status: 'valid', source: 'default-off', policy: DISABLED_PULL_REQUEST_APPROVAL_POLICY };
     }
+    if (typeof read.value !== 'string') return { status: 'unavailable' };
+    if (!read.value.trim()) return { status: 'invalid' };
     try {
         return { status: 'valid', source: read.source, policy: parsePullRequestApprovalPolicy(read.value) };
     } catch {

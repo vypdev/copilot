@@ -600,3 +600,40 @@ shows Not applicable for branch/SDD; disabled/conflicting kinds remain Blocked.
 catalog paths already own the three changed suites and two implementations.
 Completion still requires current-head full checks and native review, followed
 by issue/PR EN/ES and quiet-replay browser acceptance after promotion.
+
+### Present policy and complete specification ownership (2026-10-13)
+
+Native review of `b205cec1` exposed `4258008714` (orphan specification) and
+`4258030525` (present empty policy). The related `4258008697` claim about `@`
+was disproved: the current literal branch alphabet already excludes `@`, and
+both the pure predicate and effective configuration reject it without a
+production change. Native finding dismissal must remain explicit and inspectable.
+
+A trusted read marked Available with an empty or whitespace-only string MUST
+be Invalid/Blocked. Only the explicit Absent result proves the existing off
+default. A malformed non-string provider value remains Unavailable and cannot
+silently choose off. Other successful groups survive either result; read scope
+or permission failure is not inferred from a malformed value. This correction
+changes Doctor diagnostics, not the shared approval engine's public empty-input
+configuration semantics or any policy variable stored in GitHub.
+
+The pinned regular-file inventory MUST prove ownership for every tracked
+`specs/**/*.md` product specification, including nested specifications, matching
+the canonical validator's recursive discovery. Only the exact three top-level
+standard documents `specs/README.md`, `specs/_template.md`, `specs/CATALOG.md`
+are excluded; a nested README is still a product specification. Existing catalog
+path/metadata/duplicate-owner and complete-tree requirements remain mandatory.
+The check uses the already bounded immutable tree, not extra provider reads,
+filesystem execution or guessed paths. Orphan files make the prerequisite
+Blocked; unavailable inventories remain Unavailable.
+
+Eleven distinct regressions add four domain cases, five catalog/configuration
+cases and two full-report cases: empty/whitespace Available, malformed value,
+the existing single-at rejection, root/nested/nested-README orphans, the three
+standard exclusions, effective single-at rejection and retained independent
+report facts. Eight failed against `b205cec1`; the two single-at assertions and
+standard-document exclusion passed already. The dedicated inventory becomes
+258 + 11 = **269**. All pure and module coverage requirements remain intact.
+Native review and live command/replay acceptance remain required before merge
+and promotion. Documentation explains present-invalid versus verified-absent
+and complete recursive catalog ownership; no input or permission is added.

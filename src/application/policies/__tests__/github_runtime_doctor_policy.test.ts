@@ -129,3 +129,15 @@ describe('complete workflow matrix job ceiling', () => {
         expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml', yaml))).toBe(expected);
     });
 });
+
+describe('complete tracked specification ownership', () => {
+    it.each(['specs/orphan.md', 'specs/nested/orphan.md', 'specs/nested/README.md'])('blocks the unregistered product specification %s', path => {
+        const snapshot = doctorRepositoryFixture();
+        expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles: [...snapshot.trackedFiles, path] })).toBe('blocked');
+    });
+    it('excludes only the three top-level standard documents from ownership discovery', () => {
+        const snapshot = doctorRepositoryFixture();
+        expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles: [...snapshot.trackedFiles, 'specs/README.md', 'specs/_template.md', 'specs/CATALOG.md', 'docs/guide.md'] })).toBe('pass');
+    });
+    it('already blocks single-at effective dependency configuration', () => expect(validDoctorConfiguration({ ...config, dependencyBranch: '@' })).toBe(false));
+});
