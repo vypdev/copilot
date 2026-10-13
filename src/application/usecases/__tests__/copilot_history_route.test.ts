@@ -78,3 +78,13 @@ describe('PR main conversation history routing', () => {
         expect(forbidden.invoke).not.toHaveBeenCalled();
     });
 });
+
+
+it('withholds PR history reads when no authoritative bot identity is available', async () => {
+    const f = setup('issue');
+    Object.assign(f.input, { isPullRequest: true, tokenUser: undefined, issue: { number: 75, commentId: 100, commentBody: '/copilot history' } });
+    const [result] = await f.useCase.invoke(f.input);
+    expect(f.readComments).not.toHaveBeenCalled();
+    expect(result.payload).toMatchObject({ publication: { target: { kind: 'pr', number: 75 }, state: 'unavailable' } });
+    expect(forbidden.invoke).not.toHaveBeenCalled();
+});

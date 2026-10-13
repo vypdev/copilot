@@ -427,3 +427,11 @@ cases remain unchanged; source-witness, no-SDD/no-agent/no-write, ten-row and
 marker-schema boundaries remain. Acceptance requires the original PR source
 comment to produce its bounded main-conversation report after promotion, with
 no hidden configuration/label changes and a quiet replay.
+
+
+A third boundary case covers the real PR shortcut without an authoritative bot
+identity: it MUST withhold comment reads and return unavailable for the exact PR,
+without guessing ownership. This closes the partial patch branch reported by
+Codecov on #481 while preserving its 80% patch target and every existing gate.
+The owning feature inventory is now 171; the two native-target cases above
+remain unchanged.
