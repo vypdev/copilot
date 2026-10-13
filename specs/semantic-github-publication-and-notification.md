@@ -1492,3 +1492,5 @@ its earlier message in the same reply; replay without another comment; move the
 request during reads and observe no stale writes. Verify EN/ES postflight
 recovery, query refresh and retained mutation receipts. Full gates and fresh
 native replay remain pending.
+
+Native CI `38341893282` passed all 7,881 cases but exposed an environment-dependent binding fixture: hosted runners define `GITHUB_API_URL`, so the default branch was untested. The two existing binding cases now explicitly isolate and restore that environment variable, proving both the absent default and captured Enterprise override on every host. No case is added, and the 64-case allocation and coverage thresholds are unchanged. Fresh native verification is required before integration.

@@ -3,9 +3,14 @@ import { replyRequestBodyDigest } from '../../../domain/reply_request_digest';
 const mockGet = jest.fn();
 const mockClient = { rest: { issues: { getComment: mockGet }, pulls: { getReviewComment: jest.fn() } }, write: jest.fn() };
 jest.mock('../../github/octokit_client_resolver', () => ({ getOctokitClient: () => mockClient }));
+const originalApiUrl = process.env.GITHUB_API_URL;
+afterEach(() => {
+    if (originalApiUrl === undefined) delete process.env.GITHUB_API_URL;
+    else process.env.GITHUB_API_URL = originalApiUrl;
+});
 const snapshot = { surface: 'issue-comment' as const, commentId: 41, author: 'developer', bodyDigest: replyRequestBodyDigest('/copilot status'),
     target: { kind: 'issue' as const, number: 7 } };
-beforeEach(() => { jest.resetAllMocks(); mockGet.mockResolvedValue({ url: 'https://api.github.com/repos/acme/widgets/issues/comments/41',
+beforeEach(() => { delete process.env.GITHUB_API_URL; jest.resetAllMocks(); mockGet.mockResolvedValue({ url: 'https://api.github.com/repos/acme/widgets/issues/comments/41',
     data: { id: 41, body: '/copilot status', user: { login: 'developer' }, issue_url: 'https://api.github.com/repos/acme/widgets/issues/7' } }); });
 describe('frozen native request read authority', () => {
     it('binds only matches without publication or mutation capability', async () => {
