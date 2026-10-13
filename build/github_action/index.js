@@ -47345,22 +47345,28 @@ function buildRetiredProgressComment(body, locale, reason) {
     }
     else
         return undefined;
-    const spanish = locale.toLowerCase().split('-')[0] === 'es';
-    const reasons = spanish
-        ? { completed: 'cerrada como completada', not_planned: 'cerrada como no planificada', duplicate: 'cerrada como duplicada', unknown: 'cerrada; motivo no disponible' }
-        : { completed: 'closed as completed', not_planned: 'closed as not planned', duplicate: 'closed as duplicate', unknown: 'closed; reason unavailable' };
-    const reasonKey = reason;
-    const sourceVersion = `closed:${reason}:head:${(active ?? closed)[1]}`;
-    const retired = (0, publication_identity_policy_1.buildPublicationMarker)({ identity: marker.identity, sourceVersion, digest: (0, publication_identity_policy_1.createSemanticDigest)({ spanish, reason, archive }) });
-    const rendered = [retired, '', spanish ? '## Issue cerrada — progreso histórico' : '## Issue closed — historical progress', '',
-        spanish ? `**Estado actual:** ${reasons[reasonKey]}.` : `**Current status:** ${reasons[reasonKey]}.`, '',
-        spanish ? 'La última estimación se conserva abajo como historial. El cierre no certifica un nuevo porcentaje, pruebas ni alineación de ramas.'
-            : 'The last estimate is retained below as history. Closure does not certify a new percentage, tests, or branch alignment.', '',
-        spanish ? '**Acción requerida:** ninguna para esta issue cerrada. Si el trabajo continúa, reabre la issue; una evaluación nueva podrá actualizar esta misma tarjeta.'
-            : '**Action required:** none for this closed issue. If work continues, reopen the issue; a fresh assessment can update this same card.', '',
-        spanish ? '### Última evaluación antes del cierre (histórica)' : '### Last assessment before closure (historical)', '',
-        archiveStart, archive, archiveEnd].join('\n');
-    return rendered.length <= 28000 ? rendered : undefined;
+    const render = (spanish, closedReason) => {
+        const reasons = spanish
+            ? { completed: 'cerrada como completada', not_planned: 'cerrada como no planificada', duplicate: 'cerrada como duplicada', unknown: 'cerrada; motivo no disponible' }
+            : { completed: 'closed as completed', not_planned: 'closed as not planned', duplicate: 'closed as duplicate', unknown: 'closed; reason unavailable' };
+        const sourceVersion = `closed:${closedReason}:head:${(active ?? closed)[1]}`;
+        const retired = (0, publication_identity_policy_1.buildPublicationMarker)({ identity: marker.identity, sourceVersion, digest: (0, publication_identity_policy_1.createSemanticDigest)({ spanish, reason: closedReason, archive }) });
+        return [retired, '', spanish ? '## Issue cerrada — progreso histórico' : '## Issue closed — historical progress', '',
+            spanish ? `**Estado actual:** ${reasons[closedReason]}.` : `**Current status:** ${reasons[closedReason]}.`, '',
+            spanish ? 'La última estimación se conserva abajo como historial. El cierre no certifica un nuevo porcentaje, pruebas ni alineación de ramas.'
+                : 'The last estimate is retained below as history. Closure does not certify a new percentage, tests, or branch alignment.', '',
+            spanish ? '**Acción requerida:** ninguna para esta issue cerrada. Si el trabajo continúa, reabre la issue; una evaluación nueva podrá actualizar esta misma tarjeta.'
+                : '**Action required:** none for this closed issue. If work continues, reopen the issue; a fresh assessment can update this same card.', '',
+            spanish ? '### Última evaluación antes del cierre (histórica)' : '### Last assessment before closure (historical)', '',
+            archiveStart, archive, archiveEnd].join('\n');
+    };
+    for (const spanish of [false, true]) {
+        for (const closedReason of ['completed', 'not_planned', 'duplicate', 'unknown']) {
+            if (render(spanish, closedReason).length > 28000)
+                return undefined;
+        }
+    }
+    return render(locale.toLowerCase().split('-')[0] === 'es', reason);
 }
 
 

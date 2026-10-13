@@ -1624,19 +1624,19 @@ the existing canonical identity.
 
 ### Numeric test and documentation budget
 
-The correction allocates **43 conservative new Jest declarations** (parameterized
+The correction allocates **45 conservative new Jest declarations** (parameterized
 rows count once in the communication ledger), independently of the prior 247
 semantic allocations. All five new files belong solely to this semantic budget;
 they are not counted in the localization or branch-synchronization ledgers.
 
 | Area | Minimum declarations | Required behavior |
 |---|---:|---|
-| Pure presentation and safe archive | 11 | four reasons, EN/ES/fallback, SHA-256, replay, reason changes, content controls, malformed/oversized bodies |
+| Pure presentation and safe archive | 13 | four reasons, EN/ES/fallback, SHA-256, replay, reason changes, content controls, malformed/oversized bodies |
 | Guarded retirement | 22 | exact identity/author/body, native races, bounded inventory, targeted witnesses, partial effects, provider denial, quiet replay |
 | Coordination | 1 | success and retained partial result order |
 | Publication integration | 6 | closed/denied/missing native query, per-mutation races, same-card reopening, frozen exact-issue facade |
 | Analysis integration | 3 | closed/denied before model, closure during analysis, missing native capability |
-| **Total** | **43** | Conservative declarations; runtime rows are reported separately |
+| **Total** | **45** | Conservative declarations; runtime rows are reported separately |
 
 Global 90% lines/statements, 88% functions and 82% branches remain mandatory.
 New presentation has 100% lines/statements/functions/branches; retirement and
@@ -1663,7 +1663,7 @@ addition to automated semantic content assertions.
 | Quiet replay and same-card fresh reopening | retirement and publication integration suites, native dogfooding | historical estimates |
 | Bounds, locale fallback, safe quoted history | pure policy suite and coverage budget | closed-card locale/limits |
 
-Completion requires every row above, the 43-declaration ledger, module/global
+Completion requires every row above, the 45-declaration ledger, module/global
 coverage, generated catalog and bundle validation, documentation, current-head
 native checks/review, and the native closure/replay/reopening UX evidence. No
 readiness decision is delegated to an old percentage or a successful model-only
@@ -1693,3 +1693,12 @@ integration, 4 analysis integration), conservatively allocated as 43 declaration
 The prior 83-case evidence above remains historical; current full/native checks
 and closure/replay/reopening acceptance remain mandatory. All pure/global/module
 budgets and provider-read limits stay unchanged.
+
+Native finding `4259131469` additionally reproduced an accepted English archive
+at the output boundary that could not be rerendered in Spanish. Acceptance now
+checks all eight fixed English/Spanish closure-reason renderings before updating
+any card, so later supported locale/reason changes retain the same archive within
+the unchanged 28,000-unit ceiling. Two additional cases cover withholding the
+unsafe boundary and all safe near-limit replays; one failed before correction.
+The current inventory is 89 runtime cases (39 pure, 33 retirement, 2 coordination,
+11 publication and 4 analysis) and 45 conservative declarations.

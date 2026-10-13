@@ -79,3 +79,24 @@ describe('retired output remains within its replay envelope', () => {
     expect(buildRetiredProgressComment(retired, 'es-ES', 'not_planned')).toContain('no planificada');
   });
 });
+
+
+describe('archive capacity across native reason and locale changes', () => {
+  it('withholds an English archive that cannot fit a later Spanish native reason', () => {
+    const overhead = buildRetiredProgressComment(marker + '\n\nA', 'en-US', 'completed')!.length - 1;
+    const body = marker + '\n\n' + '&'.repeat(5_400) + 'x'.repeat(28_000 - overhead - 27_000);
+    expect(body.length).toBeLessThan(12_000);
+    expect(buildRetiredProgressComment(body, 'en-US', 'completed')).toBeUndefined();
+  });
+  it('keeps every accepted near-limit archive renderable in both locales and every closed reason', () => {
+    const body = marker + '\n\n' + '&'.repeat(5_390);
+    const archive = buildRetiredProgressComment(body, 'en-US', 'completed')!;
+    for (const locale of ['en-US', 'es-ES']) {
+      for (const reason of ['completed', 'not_planned', 'duplicate', 'unknown'] as const) {
+        const replay = buildRetiredProgressComment(archive, locale, reason)!;
+        expect(replay).toBeDefined(); expect(replay.length).toBeLessThanOrEqual(28_000);
+        expect(buildRetiredProgressComment(replay, locale, reason)).toBe(replay);
+      }
+    }
+  });
+});
