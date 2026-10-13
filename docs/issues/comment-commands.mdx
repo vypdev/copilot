@@ -119,7 +119,9 @@ missing or stale evidence. Read-only status and description queries preserve
 existing lifecycle and waiting labels.
 
 In a PR conversation, status reads that exact PR and evaluates its current head
-and base using the approval policy's existing evidence rules. It shows CI,
+and base using the approval policy's existing evidence rules. The final base
+reading follows the current repository branch reference. A parent push is
+visible even while GitHub retains an earlier base SHA in the PR snapshot. It shows CI,
 numeric coverage, Bugbot, and native review states independently. Missing a
 Bugbot counts card does not discard verified CI or approval evidence. In an
 issue conversation it uses native GitHub links to open PRs: zero links means not

@@ -285,11 +285,11 @@ Minimum budget: 40 distinct risk-derived cases, exceeding the requested floor of
 |---|---:|---|
 | Domain/configuration/pure planning | 62 | Canonical gates, states, policy modes, provenance, numeric coverage, documentation exemption, policy and revision fences, independent native facts in off mode |
 | State/application/idempotency/races | 49 | Exact event identity; complete zero/one/multiple native links; denied reads; head/base/policy/association races; independent finding evidence, final policy/head movement and already-pending invalidation |
-| Adapters/provider contracts | 19 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
+| Adapters/provider contracts | 25 | Complete native pagination and counts; repository/PR identity; canonical narrow revision; denied provider reads |
 | Workflows/setup/schema | 5 | Two real route contracts plus credential/configuration/default composition contracts |
 | UI/UX/localization/sanitization | 24 | Textual states; EN/ES/atomic fallback; trusted GitHub Enterprise link; untrusted code/revision; one action; bounded reply; counts availability |
 | Integration/security/migration | 9 | Seven command/security contracts plus two physically frozen port/receiver contracts |
-| **Total** | **168** | No double counting; minimum acceptance floor remains 40 |
+| **Total** | **174** | No double counting; minimum acceptance floor remains 40 |
 
 The existing approval, parser, generic reply-correlation and status tests are retained as compatibility checks and are not counted in this new-case budget. Composition cases are divided between workflow and integration rows, never counted twice.
 
@@ -498,3 +498,31 @@ inventory is **168 distinct cases** (62 policy,49 application,19 provider,
 all coverage/freshness/identity guards remain unchanged. Native parent
 integration, fresh review and live command acceptance still require evidence
 on the final published head.
+
+
+### Fence the current native base branch (2026-10-13)
+
+A live read of PR #467 returned cached `base.sha` and GraphQL `baseRefOid`
+`36ea0e0bad579e72cda9070c715351a4ea76098e`, while both the native develop ref
+and `baseRef.target.oid` were `45bda38e2b7a5fece4866b38b73795d8c9507bac`.
+The approval evidence adapter already read the current base ref; the feature's
+final revision adapter still returned the cached PR field. This could report a
+stable revision as superseded or miss an actual parent push during collection.
+
+Final revision reads MUST resolve the exact native base branch in the bound
+repository, reject denied/deleted/malformed/foreign-ref evidence and never fall
+back to cached PR base metadata. The approval observer and status adapter share
+one data-layer current-ref reader with the original validation rules. Existing
+canonical repository/PR/head and policy/linkage fences stay authoritative. The
+read-only status facade exposes no observer mutation. This adds one bounded
+native ref read to a final revision operation, with existing read permissions,
+no cache, new configuration, model call, retry loop or durable state.
+
+Six additional provider cases failed before correction: stale cached base,
+403 denial, 404 deletion, another ref, successive parent movement and malformed
+current commit evidence. The own inventory is **174 distinct cases**
+(62 policy,49 application,25 provider,5 workflow,24 presentation,9 integration).
+The existing approval adapter tests protect the shared reader without being
+counted again. Its new explicit coverage gate is 100% in every dimension; no
+existing gate is lowered. Combined validation, fresh native review and live
+status acceptance on the final published head remain required.

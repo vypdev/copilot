@@ -72717,6 +72717,28 @@ exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
 
 /***/ }),
 
+/***/ 68742:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readCurrentBaseRevision = readCurrentBaseRevision;
+/** PR base metadata can lag a parent push; read the exact native branch ref. */
+async function readCurrentBaseRevision(port, target, baseRef) {
+    if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
+        || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
+        throw new Error('The PR base ref is invalid.');
+    const { data } = await port.getRef({ owner: target.owner, repo: target.repository, ref: `heads/${baseRef}` });
+    if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
+        || !/^[a-f0-9]{40}$/u.test(data.object.sha))
+        throw new Error('The PR base ref cannot be verified.');
+    return data.object.sha;
+}
+
+
+/***/ }),
+
 /***/ 23001:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -72757,6 +72779,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
+const current_base_revision_query_1 = __nccwpck_require__(68742);
 const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
@@ -73020,18 +73043,8 @@ class PullRequestApprovalRepository {
             }
         }
     }
-    /** Pull-request base metadata may lag a parent push; only the native ref is current authority. */
     async readCurrentBaseSha(target, baseRef) {
-        if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
-            || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
-            throw new Error('The PR base ref is invalid.');
-        const { data } = await this.octokit.rest.git.getRef({
-            owner: target.owner, repo: target.repository, ref: `heads/${baseRef}`,
-        });
-        if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
-            || !/^[a-f0-9]{40}$/u.test(data.object.sha))
-            throw new Error('The PR base ref cannot be verified.');
-        return data.object.sha;
+        return (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, target, baseRef);
     }
     async effectiveRules(owner, repo, branch) {
         try {
@@ -74186,6 +74199,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestStatusQueryRepository = void 0;
+const current_base_revision_query_1 = __nccwpck_require__(68742);
 const github = __importStar(__nccwpck_require__(78227));
 const integer = (value) => Number.isSafeInteger(value) && value > 0;
 const sha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
@@ -74233,7 +74247,8 @@ class PullRequestStatusQueryRepository {
         if (pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
             || !sha(pull.head.sha) || !sha(pull.base.sha))
             throw new Error('Status revision unavailable.');
-        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha: pull.base.sha });
+        const baseSha = await (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, { owner: this.owner, repository: this.repository }, pull.base.ref);
+        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha });
     }
 }
 exports.PullRequestStatusQueryRepository = PullRequestStatusQueryRepository;

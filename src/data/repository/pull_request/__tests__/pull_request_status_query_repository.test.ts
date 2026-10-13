@@ -1,15 +1,42 @@
 import * as github from '@actions/github';
 import { PullRequestStatusQueryRepository } from '../pull_request_status_query_repository';
-const mockGraphql=jest.fn(), mockGet=jest.fn();
-jest.mock('@actions/github', () => ({ getOctokit: jest.fn(() => ({ graphql: mockGraphql, rest: { pulls: { get: mockGet } } })) }));
+const mockGraphql=jest.fn(), mockGet=jest.fn(), mockGetRef=jest.fn();
+jest.mock('@actions/github', () => ({ getOctokit: jest.fn(() => ({ graphql: mockGraphql, rest: { pulls: { get: mockGet }, git: { getRef: mockGetRef } } })) }));
 const head='a'.repeat(40), base='b'.repeat(40);
 const node=() => ({ number: 11, state: 'OPEN', repository: { databaseId: 1 }, headRepository: { databaseId: 1 } });
 function links() { return { repository: { databaseId: 1, nameWithOwner: 'o/r', issue: { number: 7,
     closedByPullRequestsReferences: { totalCount: 1, pageInfo: { hasNextPage: false }, nodes: [node()] } } } }; }
 const target={ owner: 'o', repository: 'r', repositoryId: 1, pullNumber: 11 };
 beforeEach(() => { jest.clearAllMocks(); mockGraphql.mockResolvedValue(links());
-    mockGet.mockResolvedValue({ data: { number: 11, base: { sha: base, repo: { id: 1 } }, head: { sha: head, repo: { id: 1 } } } }); });
+    mockGetRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: base } } });
+    mockGet.mockResolvedValue({ data: { number: 11, base: { sha: base, ref: 'develop', repo: { id: 1 } }, head: { sha: head, repo: { id: 1 } } } }); });
 describe('bounded native PR status query', () => {
+    it('uses the current base branch instead of the cached PR base SHA', async () => {
+        const advanced = 'c'.repeat(40);
+        mockGetRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: advanced } } });
+        expect(await new PullRequestStatusQueryRepository('o','r','t').readRevision(target)).toMatchObject({ headSha: head, baseSha: advanced });
+        expect(mockGetRef).toHaveBeenCalledWith({ owner: 'o', repo: 'r', ref: 'heads/develop' });
+    });
+    it.each([403, 404])('does not fall back to the cached base after a current-ref read fails with %s', async status => {
+        mockGetRef.mockRejectedValue({ status });
+        await expect(new PullRequestStatusQueryRepository('o','r','t').readRevision(target)).rejects.toBeDefined();
+    });
+    it('rejects current-base evidence for another branch', async () => {
+        mockGetRef.mockResolvedValue({ data: { ref: 'refs/heads/master', object: { type: 'commit', sha: base } } });
+        await expect(new PullRequestStatusQueryRepository('o','r','t').readRevision(target)).rejects.toThrow();
+    });
+    it('observes base movement across final revision reads even when PR metadata stays cached', async () => {
+        const advanced = 'c'.repeat(40), newer = 'd'.repeat(40);
+        mockGetRef.mockResolvedValueOnce({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: advanced } } })
+            .mockResolvedValueOnce({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: newer } } });
+        const repository = new PullRequestStatusQueryRepository('o','r','t');
+        expect((await repository.readRevision(target)).baseSha).toBe(advanced);
+        expect((await repository.readRevision(target)).baseSha).toBe(newer);
+    });
+    it('rejects malformed current-base commit evidence despite a valid cached PR base', async () => {
+        mockGetRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: 'abc' } } });
+        await expect(new PullRequestStatusQueryRepository('o','r','t').readRevision(target)).rejects.toThrow();
+    });
     it('uses only the bound runtime credential', () => {
         new PullRequestStatusQueryRepository('o','r','runtime-token'); expect(github.getOctokit).toHaveBeenCalledWith('runtime-token');
     });

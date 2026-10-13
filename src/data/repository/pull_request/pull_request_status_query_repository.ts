@@ -1,3 +1,4 @@
+import { readCurrentBaseRevision } from './current_base_revision_query';
 import * as github from '@actions/github';
 import type { LinkedStatusPullRequests } from '../../../application/ports/pull_request_status_read_ports';
 import type { ApprovalObservationTarget } from '../../../application/ports/pull_request_approval_ports';
@@ -38,6 +39,8 @@ export class PullRequestStatusQueryRepository {
         const { data: pull } = await this.octokit.rest.pulls.get({ owner: this.owner, repo: this.repository, pull_number: target.pullNumber });
         if (pull.number !== target.pullNumber || pull.base.repo?.id !== target.repositoryId || pull.head.repo?.id !== target.repositoryId
             || !sha(pull.head.sha) || !sha(pull.base.sha)) throw new Error('Status revision unavailable.');
-        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha: pull.base.sha });
+        const baseSha = await readCurrentBaseRevision(this.octokit.rest.git,
+            { owner: this.owner, repository: this.repository }, pull.base.ref);
+        return Object.freeze({ repositoryId: target.repositoryId, pullNumber: target.pullNumber, headSha: pull.head.sha, baseSha });
     }
 }
