@@ -1,3 +1,4 @@
+import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import { ProgressDiffRepository } from '../../data/repository/progress_diff_repository';
 import { createBranchClient, createBranchComparisonClient } from './github_branch_client_factory';
 import { createIssueContentClient, createIssueLabelsClient } from './github_issue_client_factory';
@@ -31,7 +32,7 @@ export function createCheckProgressCompositionRoot(binding: RepositoryCredential
         bindBranchListQuery(new BranchLifecycleRepository(createBranchClient()), binding),
         bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
         createFindingsQueryPort(),
-        bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding),
+        bindPublicationSourceQuery(new GithubPublicationSourceRepository(createBranchClient()), binding, createNativeStatusReadPort(binding)),
         Object.freeze({ getDiff: (baseSha: string, headSha: string) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }),
     );
 }

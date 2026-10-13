@@ -26,6 +26,10 @@ export async function runCheckProgressWorkflow(
     logInfo(`${getTaskEmoji(taskId)} Executing ${taskId}.`);
 
     try {
+        if (!dependencies.publicationSourceQuery.isIssueOpen) throw new ApplicationError('configuration.unsupported', 'Progress analysis requires a native issue state query.');
+        if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
+            throw new ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
+        }
         const analysis = await analyzeProgress(param, taskId, dependencies);
         if (analysis.kind === 'failure') return [analysis.result];
         if (analysis.kind === 'stale-source') {
@@ -37,7 +41,8 @@ export async function runCheckProgressWorkflow(
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
 
-        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)) {
+        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)
+          || await dependencies.publicationSourceQuery.isIssueOpen(issueNumber) !== true) {
             logInfo(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
         }
