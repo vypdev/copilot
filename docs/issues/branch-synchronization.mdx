@@ -258,3 +258,11 @@ verify the issue or its existing card, the run reports the incomplete cleanup
 and retains native closure and any updates already completed. Retry the verified
 merged-PR operation after resolving the provider error. Retirement does not
 create branches, run a fixer, change labels or publish another notification.
+
+
+Manual closures and the inactivity bot use the same retirement rule through the
+closed-issue event. If that cleanup fails, retry the closed event or verified
+merged-PR operation. Cleanup preserves other metadata and does not launch open
+work, change labels, run a model or rewrite hidden configuration. Reopening
+allows the next branch observation to replace historical closure with its fresh
+aligned or stale comparison.

@@ -1609,7 +1609,9 @@
       ],
       "workflows": [
         ".github/workflows/copilot_branch_sync.yml",
-        "setup/workflows/copilot_branch_sync.yml"
+        "setup/workflows/copilot_branch_sync.yml",
+        ".github/workflows/copilot_issue.yml",
+        "setup/workflows/copilot_issue.yml"
       ],
       "entrypoints": [
         "src/application/usecases/branch_sync/sync_branch_use_case.ts",
@@ -1641,7 +1643,10 @@
         "src/application/ports/issue_completion_ports.ts",
         "src/application/usecases/pull_request_workflow.ts",
         "src/application/usecases/pull_request_workflow_context.ts",
-        "src/infrastructure/composition/pull_request_use_case_composition_root.ts"
+        "src/infrastructure/composition/pull_request_use_case_composition_root.ts",
+        "src/actions/common_action.ts",
+        "src/actions/github_action.ts",
+        "scripts/validate-workflow-contract.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1663,7 +1668,10 @@
         "src/infrastructure/__tests__/branch_sync_resolved_workspace.test.ts",
         "src/infrastructure/__tests__/branch_sync_communication_budget.test.ts",
         "src/application/usecases/actions/__tests__/retire_branch_sync_use_case.test.ts",
-        "src/application/usecases/__tests__/pull_request_use_case.test.ts"
+        "src/application/usecases/__tests__/pull_request_use_case.test.ts",
+        "src/actions/__tests__/common_action.test.ts",
+        "src/actions/__tests__/github_action.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

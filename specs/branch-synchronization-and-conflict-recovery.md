@@ -333,10 +333,10 @@ that information. The phase is captured by trusted validation before abort.
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 59 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
-| Adapters/workflow contracts | 53 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
+| Adapters/workflow contracts | 55 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
-| Integration/security/cutover | 22 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **277** | no double counting |
+| Integration/security/cutover | 28 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **285** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 277-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 285-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -592,3 +592,40 @@ card. Retirement composition also supplies a physically frozen read/update-only
 comment facade, excluding create/delete methods and capturing original bound
 operations. Two capability cases verify that boundary and mutable-alias safety.
 These five distinct cases complete the 277-case budget without changing any gate.
+
+
+### Closed-issue lifecycle entrypoint (2026-10-13)
+
+Native finding `4255769345` correctly observed that already-closed issues cannot
+be discovered through the open-dependency query. Push-time retirement is a
+race fence, not a historical closed-issue scan. Both installed and distributed
+issue workflows MUST subscribe to `closed`, including bot-authored native
+closures. Only exact `issues:closed` with native closed state and a positive
+safe issue number bypasses the PAT-user loop gate; bot label/comment/other
+feedback remains discarded and single actions retain their existing admission.
+
+After the ordinary queue/setup reads, a trusted closed issue callback MUST enter
+a dedicated retirement route before workflow admission or runtime preparation.
+It receives only the existing-card retirement use case. It MUST NOT invoke
+open-work routes, agents, lifecycle/activity label writers, branch/SDD preparation
+or hidden configuration persistence, even when retirement fails or current
+workflow labels are unmanaged. The same fresh native/card fences and replay
+budget apply; normal open or unknown-state events retain their previous behavior.
+Manually closed and inactivity-bot closed issues therefore retire their cards
+without requiring a merged PR. Existing unrelated metadata is preserved.
+
+Six additional distinct integration cases cover successful/failed terminal
+routing, unmanaged closed work and the narrow bot-event positive/unsafe-ID/
+feedback boundaries, extending this capability to 283 cases (237 + 46). Four
+closed/open/unknown-state persistence cases belong only to execution lifecycle
+and are not counted here. Existing workflow structural validation covers both
+templates; runner, timeout and permission contracts remain unchanged.
+Acceptance requires a real non-PR closure to update its existing owned card with
+no branch, SDD, label, model or configuration effects, followed by quiet replay.
+
+
+Two further structural workflow cases enforce the closed subscription and reject
+using its bot exception on an ordinary comment workflow. The validator requires
+the exact narrow exception only for issue lifecycle templates; all other actor
+and fork gates retain their previous expressions. This brings the owning budget
+to 285 (237 + 48). The four persistence cases above remain disjoint.

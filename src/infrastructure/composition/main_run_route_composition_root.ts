@@ -160,7 +160,7 @@ export function createSingleActionUseCaseCompositionRoot(
       bindIssueCommentPublication(issueDescriptionQueryPort, binding),
       catalogResolver,
       createNativeStatusReadPort(binding),
-      new RetireBranchSyncUseCase(createNativeStatusReadPort(binding), bindBranchSyncRetirementComments(bindIssueCommentPublication(issueDescriptionQueryPort, binding))),
+      createClosedIssueRetirementUseCase(binding),
     ),
     deploymentOrchestration,
   );
@@ -387,4 +387,11 @@ function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBr
       ),
     },
   };
+}
+
+/** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
+export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): RetireBranchSyncUseCase {
+  const comments = createIssueContentCompositionRoot();
+  return new RetireBranchSyncUseCase(createNativeStatusReadPort(binding),
+    bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding)));
 }

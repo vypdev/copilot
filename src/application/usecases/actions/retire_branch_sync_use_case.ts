@@ -58,7 +58,7 @@ export class RetireBranchSyncUseCase implements ParamUseCase<RetireBranchSyncCon
       return [this.result(retired, nativeClosed)];
     } catch (cause) {
       return [new Result({ id: this.taskId, success: false, executed: retired > 0,
-        steps: [nativeClosed ? 'Issue closure is retained; synchronization recommendation retirement could not be fully verified. Retry the merged-PR operation.' : 'Native issue closure could not be verified; synchronization recommendations were left unchanged.'],
+        steps: [nativeClosed ? 'Issue closure is retained; synchronization recommendation retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; synchronization recommendations were left unchanged.'],
         errors: [toApplicationError(cause, 'provider.unavailable', 'Unable to retire synchronization recommendations safely.')],
         payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
     }

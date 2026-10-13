@@ -87,10 +87,11 @@ function expectMutationRejected(
 }
 
 const validWorkflow = {
+  on: { issues: { types: ['opened', 'closed'] } },
   name: 'Copilot - Issue',
   jobs: {
     'copilot-issues': {
-      if: "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}",
+      if: "${{ (github.event.action == 'closed' && github.event.issue.state == 'closed') || vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}",
       'runs-on': ['self-hosted', 'codex'],
       'timeout-minutes': MIN_QUEUE_JOB_TIMEOUT_MINUTES,
       steps: [{ uses: './', with: {} }],
@@ -1339,4 +1340,19 @@ describe('workflow contract validator', () => {
       }
     },
   );
+});
+
+
+describe('closed issue workflow admission contract', () => {
+  it('rejects a workflow that loses the native closure subscription', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_issue.yml');
+    workflow.on.issues.types = workflow.on.issues.types.filter((value: string) => value !== 'closed');
+    expect(() => assertQueueWorkflow(file, workflow)).toThrow('must subscribe to native closed');
+  });
+  it('does not permit the closed-issue bot exception on an ordinary comment workflow', () => {
+    const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_issue_comment.yml');
+    const job = Object.values(workflow.jobs)[0];
+    job.if = validWorkflow.jobs['copilot-issues'].if;
+    expect(() => assertQueueWorkflow(file, workflow)).toThrow('required bot actor');
+  });
 });
