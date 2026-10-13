@@ -351,6 +351,10 @@ describe('current native lifecycle projection', () => {
         const result = projectCurrentNativeStatus({ ...issue(), lifecycle: 'completed' }, { ...facts, state: 'open', reason: 'reopened', labels: ['state:working', 'state:awaiting-issue-author'] });
         expect(result).toMatchObject({ lifecycle: 'in-progress', waitingFor: 'issue-author' });
     });
+    it('projects a native duplicate as closed without completed or waiting guidance', () => {
+        expect(projectCurrentNativeStatus({ ...issue(), waitingFor: 'maintainer' }, { ...facts, reason: 'duplicate' }))
+            .toMatchObject({ lifecycle: 'closed', waitingFor: undefined });
+    });
     it('keeps an unknown closure reason closed without asserting completed', () => {
         expect(projectCurrentNativeStatus(issue(), { ...facts, reason: 'unknown' })).toMatchObject({ lifecycle: 'closed' });
     });

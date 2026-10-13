@@ -64,3 +64,9 @@ Configured lifecycle names must be distinct from canonical progress labels
 (`0%` through `100%`) and protected kind/artifact labels. Invalid configuration
 produces no completion metadata writes; keep the native state and correct the
 configuration before retrying.
+
+
+Native duplicate closure is distinct from completed closure: obsolete progress
+and activity are removed without adding `100%`. Inconsistent state/reason pairs
+stop reconciliation before writes. A reopened issue is never re-closed by an old
+merged-PR delivery.

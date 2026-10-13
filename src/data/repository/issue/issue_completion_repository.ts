@@ -29,7 +29,7 @@ export class IssueCompletionRepository {
             const data = object(response.data);
             if (!this.exactUrl(response.url, `/issues/${number}`) || data.number !== number || 'pull_request' in data
                 || !this.exactUrl(data.repository_url, '') || !['open', 'closed'].includes(data.state as string)
-                || !(data.state_reason === null || ['completed', 'not_planned', 'reopened'].includes(data.state_reason as string))
+                || !(data.state_reason === null || ['completed', 'not_planned', 'duplicate', 'reopened'].includes(data.state_reason as string))
                 || !Array.isArray(data.labels) || data.labels.length > ISSUE_COMPLETION_LABEL_LIMIT) throw invalid();
             const labels = data.labels.map(value => typeof value === 'string' ? value : object(value).name);
             if (labels.some(value => !isIssueCompletionLabelName(value))

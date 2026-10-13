@@ -77,3 +77,9 @@ describe('completion write failures', () => {
         await expect(call).rejects.not.toMatchObject({ message: expect.stringContaining('private-token') });
     });
 });
+
+it('accepts GitHub native duplicate closure as distinct from completed', async () => {
+    const f = fixture(); f.issue.state_reason = 'duplicate';
+    await expect(f.repository.readIssue(42)).resolves.toMatchObject({ state: 'closed', reason: 'duplicate' });
+    expect(f.update).not.toHaveBeenCalled();
+});

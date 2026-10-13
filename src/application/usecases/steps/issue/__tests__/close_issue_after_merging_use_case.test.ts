@@ -5,7 +5,7 @@ import type { NativeIssueCompletionFacts } from '../../../../../domain/issue_com
 const configuration = { lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS, protectedLabels: ['bugfix', 'branched', 'SDD'] };
 function fixture(open = false, initialLabels = ['in-progress', 'state:working', '55%', 'bugfix', 'branched', 'SDD', 'external']) {
     let state: NativeIssueCompletionFacts['state'] = open ? 'open' : 'closed';
-    let reason: NativeIssueCompletionFacts['reason'] = 'completed';
+    let reason: NativeIssueCompletionFacts['reason'] = open ? 'unknown' : 'completed';
     const labels = new Set(initialLabels);
     const read = jest.fn(async (): Promise<NativeIssueCompletionFacts> => ({ number: 42, state, reason, labels: [...labels] }));
     const close = jest.fn(async () => { state = 'closed'; reason = 'completed'; return true; });
@@ -133,4 +133,17 @@ it('does not reclose intentionally reopened work when an older merged-PR deliver
     const f = fixture(true); f.setReason('reopened');
     expect((await f.invoke())[0]).toMatchObject({ success: false, executed: false, payload: { issueCompletion: { nativeClosed: false } } });
     expect(f.close).not.toHaveBeenCalled(); expect(f.removeLabel).not.toHaveBeenCalled(); expect(f.addLabel).not.toHaveBeenCalled();
+});
+
+
+it('does not close an open subject with a contradictory completed reason', async () => {
+    const f = fixture(true); f.setReason('completed');
+    expect((await f.invoke())[0]).toMatchObject({ success: false, executed: false });
+    expect(f.close).not.toHaveBeenCalled(); expect(f.addLabel).not.toHaveBeenCalled(); expect(f.removeLabel).not.toHaveBeenCalled();
+});
+it('does not claim retained closure when a fresh open state has an invalid reason', async () => {
+    const f = fixture(), original = f.read.getMockImplementation()!;
+    f.read.mockImplementationOnce(original).mockImplementationOnce(async () => { f.setState('open'); f.setReason('completed'); return original(); });
+    expect((await f.invoke())[0]).toMatchObject({ success: false, payload: { issueCompletion: { nativeClosed: false, reconciled: false } } });
+    expect(f.close).not.toHaveBeenCalled(); expect(f.removeLabel).not.toHaveBeenCalled();
 });

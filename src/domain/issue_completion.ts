@@ -4,7 +4,7 @@ import { ISSUE_START_LABEL } from './issue_start_policy';
 export interface NativeIssueCompletionFacts {
     readonly number: number;
     readonly state: 'open' | 'closed';
-    readonly reason: 'completed' | 'not_planned' | 'reopened' | 'unknown';
+    readonly reason: 'completed' | 'not_planned' | 'duplicate' | 'reopened' | 'unknown';
     readonly labels: readonly string[];
 }
 
@@ -27,8 +27,10 @@ const labelsValid = (value: unknown): value is readonly string[] => Array.isArra
 /** Native closure owns completion; labels alone cannot produce a write plan. */
 export function planIssueCompletion(facts: NativeIssueCompletionFacts, configuration: IssueCompletionLabelConfiguration): IssueCompletionPlan {
     if (!Number.isSafeInteger(facts?.number) || facts.number < 1) return Object.freeze({ kind: 'invalid', code: 'invalid-identity' });
-    if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'reopened', 'unknown'].includes(facts.reason)
-        || !labelsValid(facts.labels)) return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
+    if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'duplicate', 'reopened', 'unknown'].includes(facts.reason)
+        || !labelsValid(facts.labels)
+        || facts.state === 'open' && ['completed', 'not_planned', 'duplicate'].includes(facts.reason)
+        || facts.state === 'closed' && facts.reason === 'reopened') return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
     const keys = Object.keys(DEFAULT_COPILOT_LIFECYCLE_LABELS) as (keyof typeof DEFAULT_COPILOT_LIFECYCLE_LABELS)[];
     if (!configuration?.lifecycle || !keys.every(key => isIssueCompletionLabelName(configuration.lifecycle[key]) && !canonicalProgress.test(configuration.lifecycle[key]))
         || !labelsValid(configuration.protectedLabels)) return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });

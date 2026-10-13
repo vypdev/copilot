@@ -62850,8 +62850,11 @@ class CloseIssueAfterMergingUseCase {
                 throw stale();
             const target = this.issues.forIssue(number);
             const read = async () => {
-                const current = await this.read(target, number, param.completionLabels);
-                nativeClosed = current.state === 'closed';
+                const current = await target.read();
+                if (current.number === number && ['open', 'closed'].includes(current.state))
+                    nativeClosed = current.state === 'closed';
+                if (current.number !== number || (0, issue_completion_1.planIssueCompletion)(current, param.completionLabels).kind === 'invalid')
+                    throw stale();
                 return current;
             };
             let facts = await read();
@@ -62903,12 +62906,6 @@ class CloseIssueAfterMergingUseCase {
                     steps: [nativeClosed ? 'The native issue closure was retained; completion metadata remains unverified.' : 'Native issue completion remains unverified.'],
                     errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reconciled: false }) } })];
         }
-    }
-    async read(target, number, configuration) {
-        const facts = await target.read();
-        if (facts.number !== number || (0, issue_completion_1.planIssueCompletion)(facts, configuration).kind === 'invalid')
-            throw stale();
-        return facts;
     }
 }
 exports.CloseIssueAfterMergingUseCase = CloseIssueAfterMergingUseCase;
@@ -70790,7 +70787,7 @@ class IssueCompletionRepository {
             const data = object(response.data);
             if (!this.exactUrl(response.url, `/issues/${number}`) || data.number !== number || 'pull_request' in data
                 || !this.exactUrl(data.repository_url, '') || !['open', 'closed'].includes(data.state)
-                || !(data.state_reason === null || ['completed', 'not_planned', 'reopened'].includes(data.state_reason))
+                || !(data.state_reason === null || ['completed', 'not_planned', 'duplicate', 'reopened'].includes(data.state_reason))
                 || !Array.isArray(data.labels) || data.labels.length > issue_completion_1.ISSUE_COMPLETION_LABEL_LIMIT)
                 throw invalid();
             const labels = data.labels.map(value => typeof value === 'string' ? value : object(value).name);
@@ -76510,8 +76507,10 @@ const labelsValid = (value) => Array.isArray(value) && value.length <= exports.I
 function planIssueCompletion(facts, configuration) {
     if (!Number.isSafeInteger(facts?.number) || facts.number < 1)
         return Object.freeze({ kind: 'invalid', code: 'invalid-identity' });
-    if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'reopened', 'unknown'].includes(facts.reason)
-        || !labelsValid(facts.labels))
+    if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'duplicate', 'reopened', 'unknown'].includes(facts.reason)
+        || !labelsValid(facts.labels)
+        || facts.state === 'open' && ['completed', 'not_planned', 'duplicate'].includes(facts.reason)
+        || facts.state === 'closed' && facts.reason === 'reopened')
         return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
     const keys = Object.keys(copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS);
     if (!configuration?.lifecycle || !keys.every(key => (0, exports.isIssueCompletionLabelName)(configuration.lifecycle[key]) && !canonicalProgress.test(configuration.lifecycle[key]))

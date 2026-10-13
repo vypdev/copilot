@@ -524,3 +524,28 @@ cases overall. Full verification and native closure/replay remain pending.
 The attempted native fixer run `38331274938` completed Codex execution but
 refused generated Jest caches before committing. No native fix or push is claimed
 by that run; its postflight/cache/reporting defects are tracked separately.
+
+
+### Native state/reason verification (2026-10-13)
+
+Finding `4253942474` showed that independent enum checks could authorize closure
+from contradictory facts. Native Help fixtures #475/#476 verify the provider
+contract with API version 2022-11-28: initial open/null; close/completed; reopening
+with a supplied completed reason returns open/reopened; closing/reopened is
+rejected with HTTP 422. A canonical duplicate reference produces closed/duplicate.
+Both fixtures were closed after verification and #475 has no linked branch.
+Primary source: https://docs.github.com/en/rest/issues/issues#update-an-issue.
+
+The planner MUST reject open/completed, open/not_planned, open/duplicate and
+closed/reopened before writes. Verified null remains unknown. Duplicate is a
+recognized non-completed closure: remove obsolete activity/progress without
+adding 100%, and project closed without waiting guidance. A fresh known open
+state MUST clear retained-closure claims even when its reason is invalid.
+
+Nine distinct new contracts cover four inconsistent pairs, duplicate planning,
+provider normalization, status projection and two guarded closure cases. The
+completion inventory is now 107 (98 + 9); eight historical-SDD contracts remain
+allocated only to their companion, for 115 new cases overall. The fixture's open
+default was corrected from synthetic completed to the provider's unknown/null.
+Focused verification passes 122 cases; full gates and native acceptance remain
+pending.

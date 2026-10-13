@@ -88,3 +88,13 @@ it.each(['100%', '0%'])('rejects configured lifecycle progress collision %s befo
     expect(planIssueCompletion(facts({ labels: [working] }), { ...configuration, lifecycle: { ...configuration.lifecycle, working } }))
         .toEqual({ kind: 'invalid', code: 'invalid-configuration' });
 });
+
+
+it.each([['open', 'completed'], ['open', 'not_planned'], ['open', 'duplicate'], ['closed', 'reopened']] as const)('rejects contradictory native %s/%s facts before authorizing writes', (state, reason) => {
+    expect(planIssueCompletion(facts({ state, reason }), configuration)).toEqual({ kind: 'invalid', code: 'invalid-metadata' });
+});
+
+it('clears obsolete progress for native duplicate closure without certifying completion', () => {
+    expect(planIssueCompletion(facts({ reason: 'duplicate', labels: ['100%', '55%', 'state:working', 'SDD'] }), configuration))
+        .toEqual({ kind: 'closed', reason: 'duplicate', remove: ['100%', '55%', 'state:working'], add: [] });
+});

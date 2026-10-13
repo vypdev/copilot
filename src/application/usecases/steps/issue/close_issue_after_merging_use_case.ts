@@ -1,6 +1,6 @@
 import { Result } from '../../../../data/model/result';
-import type { BoundIssueCompletionPort, IssueCompletionTargetPort } from '../../../ports/issue_completion_ports';
-import { planIssueCompletion, type NativeIssueCompletionFacts, type IssueCompletionLabelConfiguration } from '../../../../domain/issue_completion';
+import type { BoundIssueCompletionPort } from '../../../ports/issue_completion_ports';
+import { planIssueCompletion } from '../../../../domain/issue_completion';
 import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import type { CloseIssueAfterMergeContext } from '../../issue_workflow_context';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
@@ -24,8 +24,9 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             if (pull.number !== pullNumber || pull.state !== 'closed' || pull.merged !== true) throw stale();
             const target = this.issues.forIssue(number);
             const read = async () => {
-                const current = await this.read(target, number, param.completionLabels);
-                nativeClosed = current.state === 'closed';
+                const current = await target.read();
+                if (current.number === number && ['open', 'closed'].includes(current.state)) nativeClosed = current.state === 'closed';
+                if (current.number !== number || planIssueCompletion(current, param.completionLabels).kind === 'invalid') throw stale();
                 return current;
             };
             let facts = await read();
@@ -65,11 +66,6 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
                 steps: [nativeClosed ? 'The native issue closure was retained; completion metadata remains unverified.' : 'Native issue completion remains unverified.'],
                 errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reconciled: false }) } })];
         }
-    }
-    private async read(target: IssueCompletionTargetPort, number: number, configuration: IssueCompletionLabelConfiguration): Promise<NativeIssueCompletionFacts> {
-        const facts = await target.read();
-        if (facts.number !== number || planIssueCompletion(facts, configuration).kind === 'invalid') throw stale();
-        return facts;
     }
 
 }
