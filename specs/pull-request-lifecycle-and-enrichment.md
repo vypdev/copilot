@@ -616,3 +616,55 @@ command does not perform implicit recovery writes. This observed limitation
 does not authorize clearing another active run's label or weakening a sync
 guard. Native History interruption `38179714921` retained its prior remote
 head without a success receipt or push.
+
+## 21. Live Project item visibility recovery (2026-10-13)
+
+Live PR [#485](https://github.com/vypdev/copilot/pull/485) was added to the
+Project and its Status initialized from the returned item, but subsequent
+priority and concurrent commit-size reads could not see that same PR in the
+board listing. Runs 38402185354 and 38402175824 failed on attempt 1 and succeeded
+on exact replay. Membership was retained; these failures did not invalidate the
+completed code review or imply a different PR base.
+
+The adapter MUST preserve the existing bounded board lookup. Only complete
+absence triggers an independent read of the exact content node's Project
+memberships, at most two pages of 100 items. Identity, content type, Project and
+item ID MUST match before a recovered ID is accepted. Exhausted pagination,
+malformed evidence and permission errors MUST remain failures rather than
+successful absence. A complete empty membership permits the existing missing
+item outcome. No retry timer, new permission, persistent cache or public input
+is added; these read bounds are fixed.
+
+```text
+board lookup -> exact content memberships (only if absent) -> verified item ID
+field list -> direct verified item/field (only if absent) -> unchanged or update
+```
+
+A field update whose known item is absent from the board listing MUST read that
+exact item once, verify its Project and native type, and read the named field.
+An explicit null means unset; missing/malformed field evidence blocks writes.
+An equal option remains a quiet no-op on replay. Retained project membership and
+other completed mutations are never undone to repair visibility.
+
+The existing semantic error/result UI remains: completed linkage stays visible;
+a persistent unavailable item reports failed enrichment and asks the operator to
+inspect/retry the run. Recovery adds no conversation comment or model call, and
+works identically with either locale. Recommended setup/Projects permissions
+remain unchanged. Rollback restores previous lookup behavior; no data migration
+or cleanup is required.
+
+An additional **22 adapter/security cases**, separate from the existing 164
+budget, cover Issue/PR recovery, second-page membership, truthful absence,
+malformed/foreign identity, exhausted reads, permission denial, direct field
+recovery, matching-value replay and six no-write evidence failures. Thirteen
+cases reproduced the old missing-item behavior; nine were negative controls.
+Global and changed-module gates remain in force. The tests map each MUST above
+to `project_board_visibility_recovery.test.ts`; user/operator documentation is
+`docs/issues/assignees-and-projects.mdx`. Live acceptance requires opening the
+managed correction PR, confirming Project/priority/size and current checks,
+then replaying without duplicate membership or reset Status. Unknown provider
+propagation timing is not asserted as a guaranteed consistency SLA.
+
+Primary schema references: [Issue projectItems](https://docs.github.com/en/graphql/reference/issues),
+[PullRequest projectItems](https://docs.github.com/en/graphql/reference/pulls),
+and [ProjectV2Item](https://docs.github.com/en/graphql/reference/projects).
