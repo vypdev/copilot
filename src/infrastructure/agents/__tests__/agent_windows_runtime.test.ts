@@ -51,12 +51,13 @@ windowsIt('runs exact Windows system-root validation and PowerShell under the ve
     try {
         execFileSync('git', ['init', '-q', root], { stdio: 'ignore' });
         const modulePath = join(__dirname, '..', 'windows_system_root.cjs');
-        const script = `const {spawnSync}=require('node:child_process');const {join}=require('node:path');const root=require(${JSON.stringify(modulePath)}).trustedWindowsSystemRoot();const result=spawnSync(join(root,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',"$ErrorActionPreference='Stop'; Get-FileHash -LiteralPath (Join-Path $env:SystemRoot 'System32/whoami.exe') | Out-Null; Start-Sleep -Seconds 1; Write-Output 'verified'"],{env:process.env,encoding:'utf8',timeout:60000,windowsHide:true});if(result.error||result.status!==0)process.exit(2);process.stdout.write(result.stdout.trim());`;
+        const command = "$ErrorActionPreference='Stop'; $PSModuleAutoLoadingPreference='None'; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Utility','Microsoft.PowerShell.Utility.psd1')) -ErrorAction Stop; Import-Module -Name ([IO.Path]::Combine($env:SystemRoot,'System32','WindowsPowerShell','v1.0','Modules','Microsoft.PowerShell.Management','Microsoft.PowerShell.Management.psd1')) -ErrorAction Stop; Get-FileHash -LiteralPath ([IO.Path]::Combine($env:SystemRoot,'System32','whoami.exe')) | Out-Null; Start-Sleep -Seconds 1; Write-Output 'verified'";
+        const script = `const {spawnSync}=require('node:child_process');const {join}=require('node:path');const root=require(${JSON.stringify(modulePath)}).trustedWindowsSystemRoot();const result=spawnSync(join(root,'System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-Command',${JSON.stringify(command)}],{env:process.env,encoding:'utf8',timeout:60000,windowsHide:true});if(result.error||result.status!==0){process.stderr.write(JSON.stringify({stage:'verification-powershell',status:result.status,errorCode:result.error?.code??null,kind:/CommandNotFoundException/.test(result.stderr||'')?'command-not-found':'process-failed'}));process.exit(2);}process.stdout.write(result.stdout.trim());`;
         const result = spawnSync(process.execPath, ['-e', script], {
             cwd: root, env: environment.environment, encoding: 'utf8', timeout: 70_000, windowsHide: true,
         });
         expect(result.error).toBeUndefined();
-        expect(result.status).toBe(0);
+        expect({ status: result.status, diagnostic: result.stderr.trim() }).toEqual({ status: 0, diagnostic: '' });
         expect(result.stdout).toBe('verified');
         expect(execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: root, encoding: 'utf8' })).toBe('');
         expect(existsSync(join(root, 'Microsoft'))).toBe(false);
