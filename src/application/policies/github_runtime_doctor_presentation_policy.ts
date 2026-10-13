@@ -46,7 +46,7 @@ export function formatGithubRuntimeDoctor(projection: GithubRuntimeDoctorProject
             ? message(`source.${evidence}`) : undefined;
         const mode = group === 'approval-prerequisites' && (evidence === 'off' || evidence === 'recommend' || evidence === 'guarded')
             ? `${message('mode')}: ${evidence}` : undefined;
-        lines.push(`- **${message(`group.${group}`)}:** ${message(`state.${state}`)}${policySource ? ` · ${policySource}` : ''}${mode ? ` · ${mode}` : ''}${link ? ` · [${message('source')}](${link})` : ''}`);
+        lines.push(`- **${message(`group.${group}`)}:** ${message(`state.${state}`)}${policySource ? ` · ${policySource}` : ''}${mode ? ` · ${mode}` : ''}${link ? ` · [${message(target?.kind === 'pull-request' ? 'sourcePullRequest' : 'sourceIssue')}](${link})` : ''}`);
     }
     if (source) lines.push('', `[${message('source')}](${source})`);
     return lines.join('\n');

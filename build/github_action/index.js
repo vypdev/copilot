@@ -44976,7 +44976,7 @@ function formatGithubRuntimeDoctor(projection, locale = 'en-US', catalog = (0, p
             ? message(`source.${evidence}`) : undefined;
         const mode = group === 'approval-prerequisites' && (evidence === 'off' || evidence === 'recommend' || evidence === 'guarded')
             ? `${message('mode')}: ${evidence}` : undefined;
-        lines.push(`- **${message(`group.${group}`)}:** ${message(`state.${state}`)}${policySource ? ` · ${policySource}` : ''}${mode ? ` · ${mode}` : ''}${link ? ` · [${message('source')}](${link})` : ''}`);
+        lines.push(`- **${message(`group.${group}`)}:** ${message(`state.${state}`)}${policySource ? ` · ${policySource}` : ''}${mode ? ` · ${mode}` : ''}${link ? ` · [${message(target?.kind === 'pull-request' ? 'sourcePullRequest' : 'sourceIssue')}](${link})` : ''}`);
     }
     if (source)
         lines.push('', `[${message('source')}](${source})`);
@@ -46000,6 +46000,8 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.doctor.checks',
     'interaction.doctor.readonly',
     'interaction.doctor.source',
+    'interaction.doctor.sourceIssue',
+    'interaction.doctor.sourcePullRequest',
     'interaction.doctor.group.effective-configuration',
     'interaction.doctor.group.issue-readiness',
     'interaction.doctor.group.linked-branch-readiness',
@@ -46191,6 +46193,8 @@ const ENGLISH_MESSAGES = Object.freeze({
     'interaction.doctor.checks': "Checks",
     'interaction.doctor.readonly': "This command reads evidence only. Declared approval settings do not prove producer health or write access.",
     'interaction.doctor.source': "Inspected repository revision",
+    'interaction.doctor.sourceIssue': "Inspected issue",
+    'interaction.doctor.sourcePullRequest': "Inspected pull request",
     'interaction.doctor.group.effective-configuration': "Effective configuration",
     'interaction.doctor.group.issue-readiness': "Issue and SDD prerequisites",
     'interaction.doctor.group.linked-branch-readiness': "Native linked branch",
@@ -46383,6 +46387,8 @@ const SPANISH_MESSAGES = Object.freeze({
     'interaction.doctor.checks': "Comprobaciones",
     'interaction.doctor.readonly': "Este comando solo lee evidencias. La configuración de aprobación declarada no acredita la salud de los productores ni el acceso de escritura.",
     'interaction.doctor.source': "Revisión inspeccionada del repositorio",
+    'interaction.doctor.sourceIssue': "Issue inspeccionada",
+    'interaction.doctor.sourcePullRequest': "PR inspeccionado",
     'interaction.doctor.group.effective-configuration': "Configuración efectiva",
     'interaction.doctor.group.issue-readiness': "Requisitos de la issue y el SDD",
     'interaction.doctor.group.linked-branch-readiness': "Rama enlazada nativa",
