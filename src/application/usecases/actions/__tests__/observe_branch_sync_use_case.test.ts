@@ -1,6 +1,11 @@
+import { replyRequestBodyDigest } from '../../../../domain/reply_request_digest';
+import type { ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
+import { RetireBranchSyncUseCase } from '../retire_branch_sync_use_case';
 import type { Execution } from "../../../../data/model/execution";
 import {
   buildAlignedBranchSyncComment,
+  buildRetiredBranchSyncComment,
+  branchSyncPublicationIdentity,
   buildBranchSyncTransitionIntent,
   buildStaleBranchSyncComment,
 } from "../../../policies/branch_sync_notification_policy";
@@ -65,12 +70,18 @@ function setup(input: {
       return 'removed' as const;
     }),
   };
+  const nativeIssues = { readIssue: jest.fn().mockResolvedValue({ number: 42, state: 'open', reason: 'unknown', labels: [] }) };
   return {
+    nativeIssues,
     dependencies,
     comparisons,
     notifications,
     stored,
-    useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver),
+    useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver, nativeIssues, new RetireBranchSyncUseCase(nativeIssues, notifications, { matches: async (witness: ReplyRequestSnapshot) => {
+      const card = stored.find(comment => comment.id === witness.commentId);
+      return witness.target.kind === 'issue' && witness.target.number === 42 && card?.user?.login === witness.author
+        && replyRequestBodyDigest(card?.body ?? '') === witness.bodyDigest;
+    } })),
   };
 }
 
@@ -286,4 +297,128 @@ describe("ObserveBranchSyncUseCase", () => {
     expect(results[0].steps[0]).toBe("Unable to inspect branch synchronization safely.");
     expect(JSON.stringify(results)).not.toContain("secret discovery detail");
   });
+});
+
+
+describe('native terminal observation', () => {
+  it('retires an existing warning for a closed issue without comparing or alerting', async () => {
+    const f = setup({ comments: [{ id: 8, body: staleBody(), user: { login: 'vypbot' } }] });
+    f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: ['100%'] });
+    const [result] = await f.useCase.invoke(execution());
+    expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+    expect(f.notifications.updateComment).toHaveBeenCalledWith(42, 8, expect.stringContaining('Issue closed'));
+    expect(result).toMatchObject({ success: true, payload: { state: 'closed' } });
+  });
+  it('checks native closure before requesting an unsupported-locale catalog', async () => {
+    const resolve = jest.fn().mockRejectedValue(new Error('No model should be reached for closed work'));
+    const f = setup({ resolver: { resolve }, comments: [{ id: 8, body: staleBody(), user: { login: 'vypbot' } }] });
+    f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+    const [result] = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(resolve).not.toHaveBeenCalled(); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: true, payload: { state: 'closed' } });
+    expect(f.stored[0].body).toContain('Issue closed');
+  });
+  it('retires without comparison if closure happens while resolving the open-work locale', async () => {
+    const resolve = jest.fn().mockImplementation(async () => {
+      f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback' as const, messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages };
+    });
+    const f = setup({ resolver: { resolve }, comments: [{ id: 8, body: staleBody(), user: { login: 'vypbot' } }] });
+    const [result] = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(resolve).toHaveBeenCalledTimes(1); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: true, payload: { state: 'closed' } });
+  });
+  it.each(['foreign-target', 'denied'])('withholds comparison if the post-localization native read is %s', async kind => {
+    const resolve = jest.fn().mockImplementation(async () => {
+      if (kind === 'denied') f.nativeIssues.readIssue.mockRejectedValue(new Error('private fresh issue diagnostic'));
+      else f.nativeIssues.readIssue.mockResolvedValue({ number: 43, state: 'open', reason: 'unknown', labels: [] });
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback' as const, messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages };
+    });
+    const f = setup({ resolver: { resolve } });
+    const [result] = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(result.success).toBe(false); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(f.notifications.addComment).not.toHaveBeenCalled(); expect(JSON.stringify(result)).not.toContain('private fresh issue diagnostic');
+  });
+  it('shares one catalog request across multiple admitted open dependencies', async () => {
+    const resolve = jest.fn().mockResolvedValue({ requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback', messages: ENGLISH_BRANCH_SYNC_DEFINITION.messages });
+    const f = setup({ resolver: { resolve } });
+    f.dependencies.listOpenDependencies.mockResolvedValue([dependency, { ...dependency, issueNumber: 43, workingBranch: 'feature/43' }]);
+    f.nativeIssues.readIssue.mockImplementation(async (number: number) => ({ number, state: 'open', reason: 'unknown', labels: [] }));
+    const results = await f.useCase.invoke(execution({ locale: { issue: 'fr-FR' } }));
+    expect(results).toHaveLength(2); expect(results.every(result => result.success)).toBe(true);
+    expect(resolve).toHaveBeenCalledTimes(1); expect(f.comparisons.compare).toHaveBeenCalledTimes(2);
+    expect(f.notifications.addComment).toHaveBeenCalledTimes(2);
+  });
+  it('does not create a warning when the issue closes during comparison', async () => {
+    const f = setup();
+    f.comparisons.compare.mockImplementation(async () => {
+      f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+      return { aheadBy: 1, behindBy: 2 };
+    });
+    const [result] = await f.useCase.invoke(execution());
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+  });
+  it('does not overwrite a retired card when closure happens during comment loading', async () => {
+    const f = setup({ comments: [{ id: 8, body: staleBody(0, 1), user: { login: 'vypbot' } }] });
+    f.notifications.listIssueComments.mockImplementation(async () => {
+      f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+      return f.stored;
+    });
+    const [result] = await f.useCase.invoke(execution());
+    expect(f.notifications.updateComment).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+  });
+  it('fails closed on a denied native read without publishing provider diagnostics', async () => {
+    const f = setup();
+    f.nativeIssues.readIssue.mockRejectedValue(new Error('private native read'));
+    const [result] = await f.useCase.invoke(execution());
+    expect(result.success).toBe(false);
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain('private native read');
+  });
+});
+
+
+describe('terminal observation publication fences', () => {
+  it('withholds a transition alert if closure follows the status-card update', async () => {
+    const f = setup({ comments: [{ id: 8, body: buildAlignedBranchSyncComment(dependency, messages), user: { login: 'vypbot' } }] });
+    f.notifications.updateComment.mockImplementation(async () => {
+      f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: [] });
+    });
+    const [result] = await f.useCase.invoke(execution({ inputs: { after: 'a'.repeat(40) } }));
+    expect(f.notifications.updateComment).toHaveBeenCalledTimes(1);
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: false, payload: { statusUpdated: true } });
+  });
+  it('does not compare or publish for a foreign native issue identity', async () => {
+    const f = setup(); f.nativeIssues.readIssue.mockResolvedValue({ number: 43, state: 'open', reason: 'unknown', labels: [] });
+    const [result] = await f.useCase.invoke(execution());
+    expect(result.success).toBe(false); expect(f.comparisons.compare).not.toHaveBeenCalled();
+    expect(f.notifications.addComment).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('reopened synchronization card', () => {
+  it.each([0, 2])('replaces terminal copy with a fresh open comparison (%s behind)', async behindBy => {
+    const body = buildRetiredBranchSyncComment(branchSyncPublicationIdentity(dependency), messages);
+    const f = setup({ behindBy, comments: [{ id: 8, body, user: { login: 'vypbot' } }] });
+    f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'open', reason: 'reopened', labels: [] });
+    const [result] = await f.useCase.invoke(execution({ inputs: { after: 'a'.repeat(40) } }));
+    expect(f.notifications.updateComment).toHaveBeenCalledWith(42, 8, expect.stringContaining(behindBy ? 'Action required' : 'Branch synchronized'));
+    expect(f.stored[0].body).not.toContain('Issue closed');
+    expect(result).toMatchObject({ success: true, payload: { state: behindBy ? 'stale' : 'aligned' } });
+  });
+});
+
+
+it('keeps an already aligned reopened card unchanged', async () => {
+  const body = buildAlignedBranchSyncComment(dependency, messages);
+  const f = setup({ behindBy: 0, comments: [{ id: 8, body, user: { login: 'vypbot' } }] });
+  f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'open', reason: 'reopened', labels: [] });
+  await f.useCase.invoke(execution());
+  expect(f.notifications.updateComment).not.toHaveBeenCalled(); expect(f.notifications.addComment).not.toHaveBeenCalled();
 });

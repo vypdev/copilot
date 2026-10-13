@@ -73,7 +73,10 @@ export async function runGitHubAction(): Promise<void> {
         repositoryId: github.context.payload.repository?.id,
         pullRequest: eventInputs.pull_request,
     });
-    if (admission.decision === 'discard' && !botAnalysisOnly) {
+    const botClosedIssueOnly = !singleAction.enabledSingleAction && eventInputs.eventName === 'issues'
+        && eventInputs.action === 'closed' && eventInputs.issue?.state === 'closed'
+        && typeof eventInputs.issue.number === 'number' && Number.isSafeInteger(eventInputs.issue.number) && eventInputs.issue.number > 0;
+    if (admission.decision === 'discard' && !botAnalysisOnly && !botClosedIssueOnly) {
         logInfo('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
         return;
     }

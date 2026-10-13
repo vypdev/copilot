@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last verified: 2026-10-11
+- Last verified: 2026-10-13
 - Owners: Copilot maintainers
 - Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
 - Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
@@ -331,12 +331,12 @@ that information. The phase is captured by trusted validation before abort.
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
-| State/idempotency/races | 50 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
-| Use cases/workspace | 74 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
-| Adapters/workflow contracts | 51 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
-| UX/localization/sanitization | 19 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
-| Integration/security/cutover | 19 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
-| **Total** | **237** | no double counting |
+| State/idempotency/races | 59 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
+| Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
+| Adapters/workflow contracts | 55 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
+| UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
+| Integration/security/cutover | 29 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
+| **Total** | **286** | no double counting |
 
 Global thresholds remain; dependency/eligibility policies SHOULD reach 95%
 branch coverage. Fake git/GitHub/timers replace live services and waits. Tests
@@ -401,7 +401,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 ## 19. Definition of Done
 
-- [x] The current 206-case budget, coverage, architecture, and workflow gates pass.
+- [x] The current 286-case budget, coverage, architecture, and workflow gates pass.
 - [x] Clean/conflict/dry-run/replay/race/abort paths retain correct state.
 - [x] Agent, verify, and credentials remain in separate trust boundaries.
 - [x] Card/transition states, links, localization, accessibility, and noise budgets pass.
@@ -520,3 +520,168 @@ sync/fixer retry is an acceptance requirement. General Windows fixtures and
 coverage budgets remain. Failed verification preserves the managed remote
 head, and model/CLI success is not proof of real tools. See the authoritative
 [service retirement and six-case routing budget](./agent-runtime-provider-and-model-routing.md).
+
+
+### Retire synchronization advice after native closure (2026-10-13, issue #478)
+
+Native PR #473 merged and closed issue #472 with verified `100%` and Project
+Done, while its existing card `6132289120` still requested synchronization.
+The parent-push observer had read the issue while it was open; no closure step
+retired the card. Native closure and Git alignment are independent facts.
+
+```text
+parent push -> discover dependency -> fresh native issue -> open: compare + fenced writes
+                                                   -> closed: retire owned existing cards
+merged PR -> native closure + selective metadata -> fresh closure -> retire owned cards
+reopen/change/denied read -> retain current comments, report verification unavailable
+```
+
+The observer MUST verify the exact native issue before comparing and immediately
+before every card, transition and duplicate mutation. A closed issue MUST NOT
+receive new synchronization advice. The merged-PR route MUST run independent
+retirement after completion reconciliation, including retained native closure
+with a metadata failure. Retirement only reads native issue state and comments
+and updates existing bot-owned shared-envelope branch-sync cards for that exact
+issue and dependency key. It MUST NOT create/delete comments, mutate labels,
+change branches, run a model or claim alignment/completion from closure alone.
+Unknown/malformed envelopes, foreign users/targets, and immutable transition
+notifications remain untouched. At most twenty matching status cards are
+admitted per run; a larger set fails before writes. This fixed boundary has no
+configuration or permission expansion.
+
+Before each update the original card body and author MUST still match and a
+fresh native sample MUST remain closed with the same reason. Reopening, changed
+ownership/body/reason, denied reads and invalid identity stop publication.
+Earlier completed updates survive a later failure and the result reports their
+count; replay performs no unchanged writes. GitHub does not provide a joint
+issue/comment conditional transaction: the fresh read bounds the race but cannot
+make those separate provider operations atomic. A later closure reconciliation
+repairs the card. Reopened work becomes eligible for fresh normal observation.
+
+Representative English card: **Issue closed: synchronization recommendation
+retired. No branch synchronization is required for this closed issue. The
+previous recommendation is historical. Issue closure does not certify that the
+branches are synchronized.** Spanish uses the complete equivalent catalog.
+The original comment ID/link and marker identity remain; obsolete command and
+comparison guidance disappear. Previous short transition alerts remain
+historical and their status link now points to the retired card.
+
+Forty distinct new cases extend the prior 237 to 277: nine observer
+closure/denial/race cases, twenty-four retirement ownership/replay/provider/
+partial-effect/limit cases, two complete English/Spanish presentations, and
+three merged/unmerged workflow sequencing cases and two physical comment-facade cases. The new retirement use case
+requires 95% lines/statements and 90% branches/functions; global and existing
+module thresholds remain. Publication-writer architecture evidence explicitly
+records the one retirement updater and fresh-open mutation wrappers.
+
+Acceptance: merging an open managed PR closes its linked issue, retains native
+completion metadata, and changes an existing status card to historical closure
+without another alert or Git operation. Replaying that closed PR performs no
+unchanged update. A concurrent reopen/changed card/provider denial leaves the
+current card untouched and preserves earlier effects. User documentation in
+`docs/issues/branch-synchronization.mdx` describes history, retry and reopening.
+Native browser evidence must verify the existing link and retired copy after
+promotion; local tests alone do not certify the provider lifecycle.
+
+
+Native finding `4255545522` exposed a reopened issue whose aligned branch retained
+the `closed:issue` card. Two explicit reopened comparisons verify terminal copy
+is replaced by the fresh aligned/stale result; the aligned case failed before
+the fix. A third case preserves quiet replay of an already aligned reopened
+card. Retirement composition also supplies a physically frozen read/update-only
+comment facade, excluding create/delete methods and capturing original bound
+operations. Two capability cases verify that boundary and mutable-alias safety.
+These five distinct cases complete the 277-case budget without changing any gate.
+
+
+### Closed-issue lifecycle entrypoint (2026-10-13)
+
+Native finding `4255769345` correctly observed that already-closed issues cannot
+be discovered through the open-dependency query. Push-time retirement is a
+race fence, not a historical closed-issue scan. Both installed and distributed
+issue workflows MUST subscribe to `closed`, including bot-authored native
+closures. Only exact `issues:closed` with native closed state and a positive
+safe issue number bypasses the PAT-user loop gate; bot label/comment/other
+feedback remains discarded and single actions retain their existing admission.
+
+After the ordinary queue/setup reads, a trusted closed issue callback MUST enter
+a dedicated retirement route before workflow admission or runtime preparation.
+It receives only the existing-card retirement use case. It MUST NOT invoke
+open-work routes, agents, lifecycle/activity label writers, branch/SDD preparation
+or hidden configuration persistence, even when retirement fails or current
+workflow labels are unmanaged. The same fresh native/card fences and replay
+budget apply; normal open or unknown-state events retain their previous behavior.
+Manually closed and inactivity-bot closed issues therefore retire their cards
+without requiring a merged PR. Existing unrelated metadata is preserved.
+
+Six additional distinct integration cases cover successful/failed terminal
+routing, unmanaged closed work and the narrow bot-event positive/unsafe-ID/
+feedback boundaries, extending this capability to 283 cases (237 + 46). Four
+closed/open/unknown-state persistence cases belong only to execution lifecycle
+and are not counted here. Existing workflow structural validation covers both
+templates; runner, timeout and permission contracts remain unchanged.
+Acceptance requires a real non-PR closure to update its existing owned card with
+no branch, SDD, label, model or configuration effects, followed by quiet replay.
+
+
+Two further structural workflow cases enforce the closed subscription and reject
+using its bot exception on an ordinary comment workflow. The validator requires
+the exact narrow exception only for issue lifecycle templates; all other actor
+and fork gates retain their previous expressions. This brings the owning budget
+to 285 (237 + 48). The four persistence cases above remain disjoint.
+
+
+Native finding `4256491077` identified issue cards retired using the PR locale.
+Merged-PR retirement MUST capture the issue locale, with complete English
+fallback when a legacy partial context omits it. A distinct mixed-locale
+projection case failed before the correction and verifies the immutable captured
+issue locale; the budget is now 286 (237 + 49). CI `38370750425` also exposed
+three new route fixtures inheriting live workflow identity after the existing
+suite restored its environment. Their before/after hooks now isolate and
+restore those four variables; the same tests and queue/runtime gates remain.
+
+
+Native finding `4256651462` exposed retirement running on later edits or label
+callbacks whose issue was already closed. Only exact `issues:closed` enters
+retirement; other native closed-issue callbacks MUST be quiet no-ops before
+runtime, open-work, retirement or lifecycle/activity mutations. This preserves
+the earlier artifact-label protection while avoiding unsolicited cleanup
+retries. Two distinct edit/label integration regressions failed before the
+correction and raise this capability to 288 cases (237 + 51); the four separate
+configuration-persistence cases remain owned by execution lifecycle.
+
+
+Native finding `4256913955` exposed repeated full-history enumeration before each
+card update. Retirement MUST enumerate the existing inventory once and use at
+most twenty targeted native comment reads before updates. The shared physically
+read-only native witness adapter verifies exact repository endpoint, comment ID,
+issue URL, bot author and private SHA-256 body identity without redirects or
+returning comment prose. The witness and target are frozen. Denied, unavailable,
+changed or malformed native facts preserve closure and prevent that update;
+previously completed updates remain reported. Existing native witness security
+cases retain their own ownership and are not counted twice. One twenty-card
+call-budget regression failed before the correction; two distinct targeted
+reader rejection cases extend branch synchronization to 291 (237 + 54). Four
+execution-persistence cases remain disjoint.
+
+
+Retirement's no-model boundary intentionally differs from active observation:
+English and Spanish use bundled complete copy, while other configured issue
+locales MUST receive complete English fallback without a catalog-generation
+request. Native finding `4257093263` interpreted the active-observation locale
+paragraph as a promise for closure too. User documentation now makes the
+retirement boundary explicit. One distinct unsupported-locale application case
+verifies fallback, retained card identity and the narrow read budget; the owning
+inventory becomes 292 (237 + 55), with four execution cases still separate.
+
+
+Native review `38379114626` identified catalog resolution occurring before the
+fresh native closure read. The observer MUST admit a currently open dependency
+before requesting its locale catalog and MUST re-read native state after that
+await before comparing branches. Closed dependencies enter static retirement
+without invoking the catalog resolver. A dependency closing during localization
+is retired without comparison or a new alert. One catalog promise remains shared
+across admitted open dependencies. Five distinct order/race/call-budget cases cover initial closure (failed before
+the correction), closure during localization, denied/foreign final native reads
+and one shared catalog across two admitted dependencies. The owning inventory
+is now 297 (237 + 60), plus four separately owned configuration-persistence cases.

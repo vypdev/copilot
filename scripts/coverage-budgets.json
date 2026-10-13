@@ -604,6 +604,20 @@
       "successMessage": "native issue completion coverage: PASS (pure planner 100%; guarded application, adapter and binding 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Terminal branch synchronization retirement",
+      "missingEntryLabel": "terminal branch synchronization retirement",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/actions/retire_branch_sync_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "terminal branch synchronization retirement coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Post-verification workspace capture",
       "missingEntryLabel": "post-verification workspace capture",
       "rules": [

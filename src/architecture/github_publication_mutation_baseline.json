@@ -7,9 +7,10 @@
     },
     {
       "file": "src/application/usecases/actions/observe_branch_sync_use_case.ts",
-      "addComment": 1,
-      "updateComment": 2,
-      "reason": "Reconciles the feature-owned branch synchronization card and delegates actionable transitions to the shared publisher."
+      "addComment": 2,
+      "updateComment": 3,
+      "reason": "Reconciles branch synchronization cards and wraps each card/transition/duplicate mutation in a fresh native-open issue fence.",
+      "removeComment": 1
     },
     {
       "file": "src/application/usecases/actions/publish_issue_comment_workflow.ts",
@@ -68,6 +69,11 @@
       "file": "src/application/usecases/steps/common/transition_notification_workflow.ts",
       "addComment": 1,
       "reason": "Creates one fingerprinted action notification and selects exact bot-owned duplicates for cleanup."
+    },
+    {
+      "file": "src/application/usecases/actions/retire_branch_sync_use_case.ts",
+      "updateComment": 1,
+      "reason": "Retires only existing exact bot-owned branch-sync status cards after fresh native closure and unchanged-card checks; has no create/delete, Git, label or agent authority."
     }
   ]
 }
