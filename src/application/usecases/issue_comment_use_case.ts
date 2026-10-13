@@ -1,5 +1,5 @@
+import type { GithubRuntimeDoctorPorts } from '../ports/github_runtime_doctor_ports';
 import { invalidCommentCommandResult } from './comment_automation_command_workflow';
-import { parseCopilotCommand } from '../../domain/copilot_command';
 import { readCopilotHistory } from './read_copilot_history_workflow';
 import type { CopilotHistoryReadPort } from '../ports/copilot_history_ports';
 import type { BoundNativeStatusReadPort } from '../ports/issue_completion_ports';
@@ -28,6 +28,7 @@ import { projectIssueCommentLanguageRequest } from './steps/issue_comment/check_
 import { projectCommentAutomationContext } from './comment_automation_context';
 import { projectPullRequestDescriptionContext } from './pull_request_workflow_context';
 import { isSddAnswerComment } from '../../domain/pre_branch_sdd';
+import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
   taskId = "IssueCommentUseCase";
@@ -54,6 +55,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly historyReadPort?: CopilotHistoryReadPort,
     private readonly sddQueryPort?: SddEvidenceQueryPort,
     private readonly nativeStatusReadPort?: BoundNativeStatusReadPort,
+    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -66,13 +68,14 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         generalConversation: param.eventName === 'issue_comment',
       }, this.historyReadPort)];
     }
-    if (param.preBranchSdd && !param.issue.issueManagedBranches) {
+    const isDoctor = historyCommand.kind === 'command' && historyCommand.command.name === 'doctor';
+    if (!isDoctor && param.preBranchSdd && !param.issue.issueManagedBranches) {
       return [new Result({
         id: this.taskId, success: false, executed: true,
         steps: ['pre-branch-sdd requires issue-managed-branches; correct the Action configuration.'],
       })];
     }
-    if (this.preBranchSddContinuation
+    if (!isDoctor && this.preBranchSddContinuation
       && param.issueStartDecision.sddRequired
       && isSddAnswerComment(param.issue.commentBody)
       && param.issue.commentAuthor.toLowerCase() !== param.tokenUser?.toLowerCase()) {
@@ -106,6 +109,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
         rememberBranchPorts: this.rememberBranchPorts,
         statusReadPorts: this.statusReadPorts,
+        doctorReadPorts: this.doctorReadPorts,
         nativeStatusReadPort: this.nativeStatusReadPort,
         sddQueryPort: this.sddQueryPort,
         syncBranchUseCase: this.syncBranchUseCase

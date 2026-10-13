@@ -1,3 +1,4 @@
+import { readCopilotDoctor } from './read_copilot_doctor_workflow';
 import { readCopilotHistory } from './read_copilot_history_workflow';
 import { Result } from '../../data/model/result';
 import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
@@ -32,6 +33,7 @@ export async function runExplicitCommentCommand(
         queryId: param.language.commentId, botLogin: param.trustedBotLogin, locale: param.language.locale, generalConversation: false,
     })];
     if (command.name === 'help') return runHelpCommand(param, options);
+    if (command.name === 'doctor') return [await readCopilotDoctor(param, options.taskId, options.doctorReadPorts)];
     if (command.name === 'status') return [await readCopilotStatus(param, options.taskId, options.statusReadPorts, options.sddQueryPort, options.nativeStatusReadPort)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);

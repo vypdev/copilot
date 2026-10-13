@@ -1,5 +1,6 @@
 import { logInfo } from '../../../application/ports/logging_ports';
 import * as github from '@actions/github';
+import type { TrustedApprovalPolicyRead } from '../../../domain/github_runtime_doctor';
 import type {
     ApprovalBugbotFact,
     ApprovalCheckFact,
@@ -46,29 +47,20 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         this.checkOctokit = settings.githubToken ? github.getOctokit(settings.githubToken) : undefined;
     }
 
+    /** Read-only source evidence; failure never consults an injected policy value. */
+    async readPolicyEvidence(target: Pick<ApprovalObservationTarget, 'owner' | 'repository'>): Promise<TrustedApprovalPolicyRead> {
+        try {
+            const read = await this.readEffectivePolicy(target);
+            return Object.freeze(read ? { status: 'available', ...read } : { status: 'absent' });
+        } catch { return Object.freeze({ status: 'unavailable' }); }
+    }
+
     async readPolicy(target: ApprovalObservationTarget): Promise<string | undefined> {
-        try {
-            const response = await this.octokit.rest.actions.getRepoVariable({
-                owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY',
-            });
-            return response.data.value;
-        } catch (error) {
-            if (statusOf(error) !== 404) {
-                reportPolicyReadFailure('repository-variable', error);
-                throw error;
-            }
-        }
-        // A repository Variable takes precedence over an accessible organization Variable.
-        try {
-            const response = await this.octokit.rest.actions.getOrgVariable({
-                org: target.owner, name: 'PR_APPROVAL_POLICY',
-            });
-            return response.data.value;
-        } catch (error) {
-            if (statusOf(error) === 404) return undefined;
-            reportPolicyReadFailure('organization-variable', error);
-            throw error;
-        }
+        return (await this.readEffectivePolicy(target))?.value;
+    }
+
+    private async readEffectivePolicy(target: Pick<ApprovalObservationTarget, 'owner' | 'repository'>) {
+        return readEffectiveApprovalPolicy(this.octokit, target);
     }
 
     async loadEvidence(target: ApprovalObservationTarget): Promise<ApprovalEvidence> {
@@ -388,3 +380,29 @@ function record(value: unknown): Record<string, unknown> | undefined {
 }
 
 function array(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
+
+/** Canonical repository-over-organization read shared with the physically read-only doctor binding. */
+export async function readEffectiveApprovalPolicy(octokit: ReturnType<typeof github.getOctokit>,
+    target: Pick<ApprovalObservationTarget, 'owner' | 'repository'>): Promise<{ source: 'repository' | 'organization'; value: string } | undefined> {
+    const admit = (source: 'repository' | 'organization', value: unknown) => {
+        if (typeof value !== 'string' || value.length > 65_536) throw new Error('Approval policy response is malformed or unbounded.');
+        return { source, value };
+    };
+    try {
+        const response = await octokit.rest.actions.getRepoVariable({ owner: target.owner, repo: target.repository, name: 'PR_APPROVAL_POLICY' });
+        return admit('repository', response.data.value);
+    } catch (error) {
+        if (statusOf(error) !== 404) {
+            reportPolicyReadFailure('repository-variable', error);
+            throw error;
+        }
+    }
+    try {
+        const response = await octokit.rest.actions.getOrgVariable({ org: target.owner, name: 'PR_APPROVAL_POLICY' });
+        return admit('organization', response.data.value);
+    } catch (error) {
+        if (statusOf(error) === 404) return undefined;
+        reportPolicyReadFailure('organization-variable', error);
+        throw error;
+    }
+}

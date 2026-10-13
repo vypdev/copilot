@@ -1,3 +1,4 @@
+import { formatGithubRuntimeDoctor, isGithubRuntimeDoctorProjection, type GithubRuntimeDoctorProjection } from './github_runtime_doctor_presentation_policy';
 import { buildOperationEvidenceMarker } from '../../domain/copilot_operation';
 import { renderCopilotHistory, type HistoryProjection } from './copilot_history_presentation_policy';
 import { readHistoryProjection } from './copilot_history_projection_policy';
@@ -104,7 +105,8 @@ export type SemanticReplyProjection =
     | BranchSyncReplyProjection
     | ImplementationResultProjection
     | { readonly kind: 'access-policy' }
-    | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot };
+    | { readonly kind: 'status-command'; readonly snapshot: CopilotStatusSnapshot }
+    | { readonly kind: 'doctor-command'; readonly snapshot: GithubRuntimeDoctorProjection };
 export type SemanticReplyIntent = ReplyPublicationIntent<SemanticReplyProjection>;
 
 type StateCommandReplyProjection =
@@ -211,6 +213,11 @@ export function selectSemanticReplyIntents(context: SemanticPublicationContext):
         if (kind === 'access-policy') {
             return [replyIntent(context, correlationId, 'access-policy', Object.freeze({ kind }))];
         }
+        if (result.id.endsWith('.Doctor') && isGithubRuntimeDoctorProjection(payload.doctor)) {
+            return [replyIntent(context, correlationId, 'copilot-doctor', Object.freeze({
+                kind: 'doctor-command', snapshot: payload.doctor,
+            }))];
+        }
         const snapshot = getResultPayload(payload.status);
         if (result.id.endsWith('.Status') && isStatusSnapshot(snapshot)) {
             const projection = Object.freeze({
@@ -297,6 +304,7 @@ function renderReplyBody(intent: SemanticReplyIntent, catalog: PublicationMessag
     if (intent.projection.kind === 'branch-sync-result') {
         return renderBranchSyncResult(intent.projection, catalog);
     }
+    if (intent.projection.kind === 'doctor-command') return formatGithubRuntimeDoctor(intent.projection.snapshot, intent.locale, catalog);
     return formatCopilotStatus(intent.projection.snapshot, intent.locale, catalog);
 }
 

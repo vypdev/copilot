@@ -119,6 +119,15 @@ describe("main run route composition root", () => {
     expect(call.slice(0, 15)).toEqual([
       ...Array.from({ length: 14 }, () => expect.anything()), mockContext,
     ]);
+    const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
+    expect(doctor).toMatchObject({
+      readRepository: expect.any(Function),
+      readApprovalPolicy: expect.any(Function),
+      pullRequests: expect.objectContaining({
+        getPullRequest: expect.any(Function),
+        getPullRequestHeadSha: expect.any(Function),
+      }),
+    });
     const query = call.find(value => value && typeof value === 'object' && 'read' in value && 'serverOrigin' in value);
     expect(query).toMatchObject({ read: expect.any(Function) });
     expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
@@ -134,9 +143,19 @@ describe("main run route composition root", () => {
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
-    expect(jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0].slice(0, 14)).toEqual([
+    const call = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0];
+    expect(call.slice(0, 14)).toEqual([
       ...Array.from({ length: 13 }, () => expect.anything()), mockContext,
     ]);
+    const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
+    expect(doctor).toMatchObject({
+      readRepository: expect.any(Function),
+      readApprovalPolicy: expect.any(Function),
+      pullRequests: expect.objectContaining({
+        getPullRequest: expect.any(Function),
+        getPullRequestHeadSha: expect.any(Function),
+      }),
+    });
     const historyPort = jest.mocked(PullRequestReviewCommentUseCase).mock.calls[0][14];
     expect(historyPort).toMatchObject({ readComments: expect.any(Function) });
     expect(Object.keys(historyPort!)).toEqual(['serverOrigin', 'readComments']);
