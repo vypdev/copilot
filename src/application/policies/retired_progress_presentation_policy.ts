@@ -35,7 +35,7 @@ export function buildRetiredProgressComment(body: string, locale: string, reason
   const reasonKey = reason as keyof typeof reasons;
   const sourceVersion = `closed:${reason}:head:${(active ?? closed)![1]}`;
   const retired = buildPublicationMarker({ identity: marker.identity, sourceVersion, digest: createSemanticDigest({ spanish, reason, archive }) });
-  return [retired, '', spanish ? '## Issue cerrada — progreso histórico' : '## Issue closed — historical progress', '',
+  const rendered = [retired, '', spanish ? '## Issue cerrada — progreso histórico' : '## Issue closed — historical progress', '',
     spanish ? `**Estado actual:** ${reasons[reasonKey]}.` : `**Current status:** ${reasons[reasonKey]}.`, '',
     spanish ? 'La última estimación se conserva abajo como historial. El cierre no certifica un nuevo porcentaje, pruebas ni alineación de ramas.'
       : 'The last estimate is retained below as history. Closure does not certify a new percentage, tests, or branch alignment.', '',
@@ -43,4 +43,5 @@ export function buildRetiredProgressComment(body: string, locale: string, reason
       : '**Action required:** none for this closed issue. If work continues, reopen the issue; a fresh assessment can update this same card.', '',
     spanish ? '### Última evaluación antes del cierre (histórica)' : '### Last assessment before closure (historical)', '',
     archiveStart, archive, archiveEnd].join('\n');
+  return rendered.length <= 28_000 ? rendered : undefined;
 }

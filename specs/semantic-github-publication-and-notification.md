@@ -1624,19 +1624,19 @@ the existing canonical identity.
 
 ### Numeric test and documentation budget
 
-The correction allocates **40 conservative new Jest declarations** (parameterized
+The correction allocates **43 conservative new Jest declarations** (parameterized
 rows count once in the communication ledger), independently of the prior 247
 semantic allocations. All five new files belong solely to this semantic budget;
 they are not counted in the localization or branch-synchronization ledgers.
 
 | Area | Minimum declarations | Required behavior |
 |---|---:|---|
-| Pure presentation and safe archive | 9 | four reasons, EN/ES/fallback, SHA-256, replay, reason changes, content controls, malformed/oversized bodies |
-| Guarded retirement | 21 | exact identity/author/body, native races, bounded inventory, targeted witnesses, partial effects, provider denial, quiet replay |
+| Pure presentation and safe archive | 11 | four reasons, EN/ES/fallback, SHA-256, replay, reason changes, content controls, malformed/oversized bodies |
+| Guarded retirement | 22 | exact identity/author/body, native races, bounded inventory, targeted witnesses, partial effects, provider denial, quiet replay |
 | Coordination | 1 | success and retained partial result order |
 | Publication integration | 6 | closed/denied/missing native query, per-mutation races, same-card reopening, frozen exact-issue facade |
 | Analysis integration | 3 | closed/denied before model, closure during analysis, missing native capability |
-| **Total** | **40** | Conservative declarations; runtime rows are reported separately |
+| **Total** | **43** | Conservative declarations; runtime rows are reported separately |
 
 Global 90% lines/statements, 88% functions and 82% branches remain mandatory.
 New presentation has 100% lines/statements/functions/branches; retirement and
@@ -1663,7 +1663,7 @@ addition to automated semantic content assertions.
 | Quiet replay and same-card fresh reopening | retirement and publication integration suites, native dogfooding | historical estimates |
 | Bounds, locale fallback, safe quoted history | pure policy suite and coverage budget | closed-card locale/limits |
 
-Completion requires every row above, the 40-declaration ledger, module/global
+Completion requires every row above, the 43-declaration ledger, module/global
 coverage, generated catalog and bundle validation, documentation, current-head
 native checks/review, and the native closure/replay/reopening UX evidence. No
 readiness decision is delegated to an old percentage or a successful model-only
@@ -1676,3 +1676,20 @@ declarations above. The full integrated run passed 598 suites / 8,333 tests with
 35 pre-existing skips; new presentation coverage reached 100% in all four
 metrics and every unchanged global/module budget passed. Native acceptance
 remains a separate gate and is not implied by these automated results.
+
+Native finding `4258834299` on the Action-integrated `fb30b066` exposed HTML
+escaping and blockquote-prefix expansion exceeding the 28,000-unit retirement
+ceiling even when the active input was within 12,000. The final rendered body
+MUST also be within 28,000 UTF-16 units before publication; otherwise the card
+remains inert and unchanged rather than receiving an archive its own replay
+cannot read. A retained large safe archive MUST remain replayable, including a
+verified closure-reason and locale change. No limit is raised and no last
+estimate is invented or silently truncated.
+Four distinct cases add escaped-HTML and newline expansion rejection, retained
+large replay and guarded no-update behaviour. Three failed before correction;
+the large-safe replay control already passed. The runtime inventory is now
+**87 cases** (37 pure, 33 guarded retirement, 2 coordination, 11 publication
+integration, 4 analysis integration), conservatively allocated as 43 declarations.
+The prior 83-case evidence above remains historical; current full/native checks
+and closure/replay/reopening acceptance remain mandatory. All pure/global/module
+budgets and provider-read limits stay unchanged.

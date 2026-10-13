@@ -64,3 +64,18 @@ describe('historical progress presentation', () => {
   });
   it('rejects an open-only reason', () => expect(buildRetiredProgressComment(active, 'en-US', 'reopened')).toBeUndefined());
 });
+
+describe('retired output remains within its replay envelope', () => {
+  it.each(['escaped-html', 'line-prefixes'])('withholds an archive whose %s expansion exceeds 28000 units', kind => {
+    const assessment = kind === 'escaped-html' ? '&'.repeat(8_000) : 'First\n' + '\n'.repeat(10_000) + 'Last';
+    const body = marker + '\n\n## Progress: 96% — in progress\n\n' + assessment;
+    expect(body.length).toBeLessThanOrEqual(12_000);
+    expect(buildRetiredProgressComment(body, 'en-US', 'completed')).toBeUndefined();
+  });
+  it('retains a large safe archive and allows a verified reason change on replay', () => {
+    const body = marker + '\n\n## Progress: 96% — in progress\n\n' + '&'.repeat(5_000);
+    const retired = buildRetiredProgressComment(body, 'en-US', 'completed')!;
+    expect(retired.length).toBeLessThanOrEqual(28_000); expect(retired).toContain('96%');
+    expect(buildRetiredProgressComment(retired, 'es-ES', 'not_planned')).toContain('no planificada');
+  });
+});

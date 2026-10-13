@@ -149,3 +149,10 @@ describe('terminal progress retirement', () => {
     });
   });
 });
+
+it('leaves an owned nonrenderable archive unchanged without claiming retirement', async () => {
+  const original = warning + '&'.repeat(8_000); const f = fixture(original);
+  const [result] = await f.useCase.invoke(context);
+  expect(result).toMatchObject({ success: true, executed: false, payload: { nativeClosed: true, retiredCards: 0 } });
+  expect(f.comments.updateComment).not.toHaveBeenCalled(); expect(f.stored[0].body).toBe(original);
+});

@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 287,
+      "allocatedCases": 290,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -115,11 +115,11 @@
         },
         {
           "path": "src/application/policies/__tests__/retired_progress_presentation_policy.test.ts",
-          "qualifyingCases": 9
+          "qualifyingCases": 11
         },
         {
           "path": "src/application/usecases/actions/__tests__/retire_progress_use_case.test.ts",
-          "qualifyingCases": 21
+          "qualifyingCases": 22
         },
         {
           "path": "src/application/usecases/actions/__tests__/retire_closed_issue_cards_use_case.test.ts",

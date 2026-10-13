@@ -68,7 +68,9 @@ Retirement uses bundled English or Spanish according to the issue locale, with
 complete English fallback for other locales and no model call. It introduces no
 new input or permission. It updates at most 20 exact bot-owned cards from one
 inventory and retains bounded, safe historical content. Foreign, malformed,
-unknown-source and oversized cards remain untouched.
+unknown-source and oversized cards remain untouched. The final escaped archive
+ must also fit its 28,000-unit replay envelope; content expansion cannot bypass
+ that bound or cause a later retry to publish an unreadable historical card.
 
 If native state or ownership cannot be verified, the affected card is left
 unchanged and the Job Summary reports the failure. Earlier successful updates
