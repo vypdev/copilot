@@ -401,3 +401,7 @@ Replies to comment commands require a valid captured request and a fresh native
 source check. If the event lacks that request evidence, the Action withholds
 creation, updates and duplicate cleanup instead of assuming freshness. Initial
 help answers from non-comment events retain their ordinary immutable reply.
+
+SDD comparison replies require the exact source comment witness before they are
+created, refreshed or deduplicated. If that proof is missing or changes, the
+existing reply remains unchanged; use a valid new query after checking the source.

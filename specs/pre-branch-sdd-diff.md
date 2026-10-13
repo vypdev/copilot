@@ -473,3 +473,22 @@ pending history remains visible. This adds eleven cases exactly once (229 + 11 =
 Native findings `4254268292` and `4254268297` exposed two gaps. A PR with no selected eligible issue MUST re-admit its candidates before returning exemption or ambiguity; changed outcomes become stale and denied reads become unavailable. Stable native PR associations alone cannot certify candidate eligibility. Stale or pending replies MUST retain each verified distinct publication as explicitly historical, including the published revision; they MUST withhold current comparison/counts and reject malformed revision proof atomically.
 
 Ten additional distinct cases cover three candidate outcomes (exempt becomes eligible, ambiguous becomes selected, denied final re-admission) and seven historical presentation outcomes (both states in both locales, no revision, duplicate immutable SHA, malformed revision). The dedicated inventory becomes 240 + 10 = **250**; shared companion cases remain allocated only to their owner. English/Spanish labels distinguish historical first publication and historical published revision. Documentation and all existing bounds/coverage thresholds remain in force.
+
+
+### Request witness after shared publication integration (2026-10-13)
+
+The Action-managed Core integration at `94653aa5` retained a feature-only
+refresh exception for `copilot-sdd-diff` when no source reader was supplied.
+Publication MUST fail closed before inventory or any create/update/delete/
+compaction when its request witness or reader is absent or the source is denied.
+The special fallback is removed; normal SDD comparison replies use the shared
+correlated source witness and refresh path. The witness remains private and
+adds no model, permission or public input. Positive publication fixtures now
+provide the same physically bound evidence expected in production.
+
+Four distinct cases cover missing witness/reader creation, missing-evidence
+refresh and duplicate cleanup, reader absence with a witness, and source denial.
+Two reproduced the bypass before correction; two are retained negative controls.
+The comparison inventory is **254** (250 + 4); the independently allocated
+shared authority inventory is unchanged. Global/module coverage and native
+reply replay and revision-change acceptance remain required.
