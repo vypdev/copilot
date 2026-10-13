@@ -212,14 +212,18 @@ describe("IssueCommentUseCase", () => {
     const model = jest.fn();
     const mutation = jest.fn();
     const authorization = jest.fn();
-    const routed = new IssueCommentUseCase(
-      { invoke: model } as never, { invoke: model } as never,
-      { invoke: model } as never, { invoke: model } as never,
-      { invoke: model } as never, { isActorAllowedToModifyFiles: authorization,
-        isActorAllowedToUseMemberOnlyAutomation: authorization } as never,
-      { execute: mutation } as never, undefined, undefined, undefined, undefined, undefined,
-      { invoke: continuation } as never, undefined, undefined, undefined, fixture.ports,
-    );
+    const capabilities: unknown[] = [
+      { invoke: model }, { invoke: model }, { invoke: model }, { invoke: model },
+      { invoke: model }, { isActorAllowedToModifyFiles: authorization,
+        isActorAllowedToUseMemberOnlyAutomation: authorization },
+      { execute: mutation }, undefined, undefined, undefined, undefined, undefined,
+      { invoke: continuation },
+    ];
+    // Doctor is appended after existing optional readers. Preserve the forbidden
+    // capabilities while allowing parent integration to retain its own readers.
+    while (capabilities.length < IssueCommentUseCase.length - 1) capabilities.push(undefined);
+    capabilities.push(fixture.ports);
+    const routed = Reflect.construct(IssueCommentUseCase, capabilities) as IssueCommentUseCase;
     const execution = baseExecution({
       preBranchSdd: true, issueWorkflowProfile: { schemaVersion: 1, enabled: ['feature', 'help'] },
       branches: { development: 'develop' } as never,

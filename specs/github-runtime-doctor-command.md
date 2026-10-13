@@ -545,3 +545,13 @@ assuming the newest port's position. Existing Doctor entrypoint fixtures follow
 the appended argument; the 246-case Doctor budget remains unchanged. Parent
 integration must also retain existing History and native-status arguments and
 pass their real entrypoint suites before publication.
+
+
+Native retry `38377919836` still rejected a merge that displaced the parent
+History reader and the Doctor test's fixed positional slot. The Doctor-only
+entrypoint fixture now supplies the appended Doctor capability in the final
+constructor position, preserving all forbidden model, mutation, authorization
+and SDD-continuation spies. Its behavioral assertions remain unchanged; parent
+readers can occupy their retained positions without requiring edits to an
+automatically merged test outside the fixer's original conflict boundary. The
+246-case budget and exact production composition checks remain unchanged.
