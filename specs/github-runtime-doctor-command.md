@@ -667,3 +667,25 @@ force; existing catalog evidence already owns this policy and suite. User docs
 explain dependency limitations and the Unknown-versus-Blocked distinction.
 Current-head native review and post-promotion command/replay acceptance remain
 mandatory before completion.
+
+### Incomplete samples are not proved absence (2026-10-13)
+
+Native finding `4258345307` on `d5b5f74e` reproduced omitted or malformed file
+entries being treated like an explicit missing-file result. Each prerequisite
+and workflow group MUST first validate its relevant three entries as explicit
+Present with string content or Missing. Omitted/null/unknown-state/non-string
+entries are Unavailable; an explicit Missing entry remains Blocked. SDD tree
+inventory MUST also be an array of strings; malformed inventory is Unavailable.
+A present string containing invalid catalog/YAML stays a proved invalid
+contract, independently of this provider-shape check. Successful unrelated
+policy, workflow or issue facts are preserved; no permission or absence is
+inferred from incomplete evidence. The six fixed content reads and tree bounds
+are unchanged, with no additional provider request or runtime/model work.
+
+Sixteen distinct cases add two explicit-absence controls, eight malformed
+samples across the two groups, three malformed tree inventories and three malformed whole file maps. Eleven of the first thirteen
+failed against the prior implementation; the two absence controls already
+passed. The three whole-map cases additionally cover defensive shape branches and are not claimed as failed-before evidence. The Doctor inventory becomes 284 + 16 = **300**. Existing pure/module
+coverage, normal hooks and all native platform gates remain mandatory.
+Documentation distinguishes missing from incomplete evidence. Current-head
+review and post-promotion commands/replay/browser acceptance remain required.

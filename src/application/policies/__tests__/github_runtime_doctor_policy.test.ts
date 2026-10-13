@@ -167,3 +167,33 @@ describe('conservative workflow prerequisite eligibility', () => {
         expect(doctorWorkflowContracts({ ...snapshot, files: { ...snapshot.files, '.github/workflows/copilot_issue.yml': { state: 'present', text: yaml } } })).toBe(expected);
     });
 });
+
+describe('incomplete provider samples versus proved missing files', () => {
+    it.each(['specifications', 'workflows'] as const)('retains an explicitly missing %s file as blocked', group => {
+        const path = group === 'specifications' ? 'specs/catalog.json' : '.github/workflows/copilot_issue.yml';
+        const sample = changed(path);
+        expect(group === 'specifications' ? doctorRepositoryPrerequisites(sample) : doctorWorkflowContracts(sample)).toBe('blocked');
+    });
+    it.each(['specifications', 'workflows'].flatMap(group => ['omitted', 'null', 'unknown-state', 'non-string-text'].map(kind => [group, kind])))('keeps malformed %s / %s evidence unavailable', (group, kind) => {
+        const snapshot = doctorRepositoryFixture();
+        const path = group === 'specifications' ? 'specs/catalog.json' : '.github/workflows/copilot_issue.yml';
+        const files: Record<string, unknown> = { ...snapshot.files };
+        if (kind === 'omitted') delete files[path];
+        if (kind === 'null') files[path] = null;
+        if (kind === 'unknown-state') files[path] = { state: 'future' };
+        if (kind === 'non-string-text') files[path] = { state: 'present', text: 42 };
+        const sample = { ...snapshot, files } as unknown as typeof snapshot;
+        expect(group === 'specifications' ? doctorRepositoryPrerequisites(sample) : doctorWorkflowContracts(sample)).toBe('unavailable');
+    });
+    it.each(['omitted', 'null', 'non-string-path'])('keeps a malformed %s tree inventory unavailable', kind => {
+        const snapshot = doctorRepositoryFixture();
+        const sample = { ...snapshot, trackedFiles: kind === 'omitted' ? undefined : kind === 'null' ? null : [...snapshot.trackedFiles, 42] } as unknown as typeof snapshot;
+        expect(doctorRepositoryPrerequisites(sample)).toBe('unavailable');
+    });
+});
+
+it.each(['omitted', 'null', 'array'])('keeps a malformed whole files map (%s) unavailable in both groups', kind => {
+    const snapshot = doctorRepositoryFixture();
+    const sample = { ...snapshot, files: kind === 'omitted' ? undefined : kind === 'null' ? null : [] } as unknown as typeof snapshot;
+    expect(doctorRepositoryPrerequisites(sample)).toBe('unavailable'); expect(doctorWorkflowContracts(sample)).toBe('unavailable');
+});

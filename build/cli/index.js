@@ -42027,7 +42027,9 @@ function doctorRepositoryPrerequisites(read) {
     if (read.state !== 'available')
         return 'unavailable';
     const paths = ['specs/catalog.json', 'specs/_template.md', 'specs/README.md'];
-    if (paths.some(path => read.files[path]?.state !== 'present'))
+    if (!completeFileSamples(read, paths) || !Array.isArray(read.trackedFiles) || read.trackedFiles.some(path => typeof path !== 'string'))
+        return 'unavailable';
+    if (paths.some(path => read.files[path].state !== 'present'))
         return 'blocked';
     const catalogFile = read.files['specs/catalog.json'];
     if (catalogFile.state !== 'present')
@@ -42086,6 +42088,8 @@ function doctorWorkflowContracts(read) {
         ['.github/workflows/copilot_issue_comment.yml', 'issue_comment', 'created'],
         ['.github/workflows/copilot_pull_request.yml', 'pull_request', 'opened'],
     ];
+    if (!completeFileSamples(read, expected.map(([path]) => path)))
+        return 'unavailable';
     let unknown = false;
     try {
         for (const [path, event, activity] of expected) {
@@ -42180,6 +42184,14 @@ function doctorWorkflowDependencies(job, jobs, event, enabled) {
             return false;
     }
     return undefined;
+}
+/** Explicit missing evidence differs from an incomplete or malformed provider sample. */
+function completeFileSamples(read, paths) {
+    return read.files !== null && typeof read.files === 'object' && !Array.isArray(read.files)
+        && paths.every(path => {
+            const sample = read.files[path];
+            return sample?.state === 'missing' || sample?.state === 'present' && typeof sample.text === 'string';
+        });
 }
 
 

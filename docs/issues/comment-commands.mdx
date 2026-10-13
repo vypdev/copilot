@@ -503,3 +503,8 @@ success, dependency chains, cycles or unsupported override conditions cannot
 be established by the bounded structural inspection. Another independent
 eligible Action job can still satisfy the workflow contract. Doctor does not
 execute jobs or predict their runtime success.
+
+An explicit missing-file result is blocked; an omitted or malformed provider
+entry is unavailable evidence. Doctor never treats an incomplete sample as proof
+that a file or permission is missing. Successful independent checks remain
+visible, and the report points to the run and read-access guidance for retry.
