@@ -57346,6 +57346,8 @@ function normalizedObjectId(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushPreflight = runCommitAndPushPreflight;
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 const logging_ports_1 = __nccwpck_require__(6152);
 const git_branch_checkout_1 = __nccwpck_require__(68549);
 const verify_command_policy_1 = __nccwpck_require__(96031);
@@ -57358,6 +57360,15 @@ async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort))) {
         return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
     }
+    let excludedBeforeVerification = [];
+    if (options.workspacePaths) {
+        try {
+            excludedBeforeVerification = (await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort)).filter(path => !options.workspacePaths.includes(path));
+        }
+        catch (error) {
+            return { status: "failure", error: (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Pre-verification workspace could not be verified.').message };
+        }
+    }
     const verification = await runVerification(context, gitCommitPort);
     if (verification)
         return { status: "failure", error: verification };
@@ -57366,6 +57377,15 @@ async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     }
     if (options.workspacePaths && options.workspacePaths.length === 0) {
         return { status: "failure", error: "No safe workspace paths to commit." };
+    }
+    if (options.workspacePaths) {
+        try {
+            const final = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(gitCommitPort, excludedBeforeVerification, 'Automated commit verification');
+            return { status: "ready", workspacePaths: final.workspacePaths };
+        }
+        catch (error) {
+            return { status: "failure", error: (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Post-verification workspace could not be verified.').message };
+        }
     }
     return { status: "ready" };
 }
@@ -57410,8 +57430,9 @@ async function runCommitAndPushWorkflow(context, options, gitCommitPort) {
         const { name, email } = await gitCommitPort.getAuthenticatedUserDetails();
         await gitCommitPort.configureAuthor(name, email);
         (0, logging_ports_1.logDebugInfo)(`Git author set to ${name} <${email}>.`);
-        if (options.workspacePaths) {
-            await gitCommitPort.stagePaths(options.workspacePaths);
+        const workspacePaths = preflight.workspacePaths ?? options.workspacePaths;
+        if (workspacePaths) {
+            await gitCommitPort.stagePaths(workspacePaths);
         }
         else {
             await gitCommitPort.stageAll();
@@ -61521,9 +61542,9 @@ async function reconcileReply(context, comments, requestRead) {
         'application-error': 'application-error', 'copilot-status': 'status-command', 'copilot-help': 'help',
         'copilot-doctor': 'doctor-command', 'copilot-history': 'history-command', 'copilot-sdd-diff': 'sdd-diff',
     };
-    const guarded = witness && refreshable[context.intent.messageKey] === context.intent.projection.kind;
+    const canRefresh = Boolean(witness && refreshable[context.intent.messageKey] === context.intent.projection.kind);
     const sourceMatches = async () => {
-        if (!guarded)
+        if (!witness)
             return true;
         const correlation = witness.surface === 'review-comment' ? 'comment:pull_request_review_comment:' : 'comment:';
         return Boolean(requestRead && context.intent.correlationId === correlation + witness.commentId
@@ -61549,7 +61570,7 @@ async function reconcileReply(context, comments, requestRead) {
     const [canonical, ...duplicates] = owned.sort((left, right) => left.id - right.id);
     if (!await sourceMatches())
         return Object.freeze({ ...unchangedOutcome(), effect, canonicalCommentId: canonical.id });
-    if (guarded) {
+    if (canRefresh) {
         const rendered = (0, semantic_result_publication_policy_1.renderSemanticReply)(context.intent, context.catalog);
         if (canonical.body !== rendered) {
             if (!await sourceMatches())

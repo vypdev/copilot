@@ -579,6 +579,21 @@
         }
       ],
       "successMessage": "reply request freshness coverage: PASS (private digest 100%; native read, binding and guarded publication 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Post-verification workspace capture",
+      "missingEntryLabel": "post-verification workspace capture",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+            "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "post-verification workspace capture coverage: PASS (each changed module 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

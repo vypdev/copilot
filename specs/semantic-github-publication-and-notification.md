@@ -1478,12 +1478,12 @@ REST has no transaction across source reads and reply writes; the last verified
 read and existing workflow queue bound that interval rather than claiming atomic
 provider compare-and-swap. Ownership remains valid bot author plus exact marker.
 
-New disjoint allocation: **52 cases** belong to this capability: 30 native
-read/identity/error/enterprise cases, 20 publication and witness-projection cases,
+New disjoint allocation: **53 cases** belong to this capability: 30 native
+read/identity/error/enterprise cases, 21 publication and witness-projection cases,
 and two physical binding cases. Eight read-only persistence and three contextual
 recovery cases belong only to execution lifecycle; the real Git cache/security
-case belongs only to autofix. The cross-capability extension therefore totals
-64, with no case counted twice. The private digest requires 100% coverage and
+case and five verification-workspace cases belong only to autofix. The cross-capability extension therefore totals
+70, with no case counted twice. The private digest requires 100% coverage and
 each native reader, binding and changed reply workflow keeps 95% lines/statements
 and 90% branches/functions. Existing global budgets remain unchanged.
 
@@ -1494,3 +1494,5 @@ recovery, query refresh and retained mutation receipts. Full gates and fresh
 native replay remain pending.
 
 Native CI `38341893282` passed all 7,881 cases but exposed an environment-dependent binding fixture: hosted runners define `GITHUB_API_URL`, so the default branch was untested. The two existing binding cases now explicitly isolate and restore that environment variable, proving both the absent default and captured Enterprise override on every host. No case is added, and the 64-case allocation and coverage thresholds are unchanged. Fresh native verification is required before integration.
+
+Native fixer run `38343394796` on Mac published `83a80a52` and completed its configured checks. Its additional source-freshness regression belongs to this capability, bringing publication allocation to 53. Mutation receipts require a matching supplied witness before creation/cleanup while remaining immutable after publication. No model answer or CLI exit alone is used as tool/push evidence. Five workspace-verification cases belong only to autofix; the cross-capability total is now 70 (53 + 11 + 6).
