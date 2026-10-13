@@ -5,4 +5,6 @@ export interface PublicationSourceQueryPort {
 /** Repository-credential-bound authoritative source lookup for publication guards. */
 export interface BoundPublicationSourceQueryPort {
     getBranchHeadSha(branch: string): Promise<string>;
+    /** Required for progress: fresh native issue identity and open state. */
+    isIssueOpen?(issueNumber: number): Promise<boolean>;
 }

@@ -36922,6 +36922,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runGitHubAction = runGitHubAction;
 exports.runGitHubActionEntry = runGitHubActionEntry;
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const core = __importStar(__nccwpck_require__(75855));
 const github = __importStar(__nccwpck_require__(78227));
 const configuration_handler_1 = __nccwpck_require__(40188);
@@ -37087,7 +37088,7 @@ async function runGitHubAction() {
             ...repositoryBinding,
             issueNumber: context.issueNumber,
         }, context),
-    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding));
+    }, (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)(), new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(languageRuntimeAvailable ? (0, agent_capability_composition_root_1.createLanguageQueryPort)() : undefined), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), repositoryBinding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(repositoryBinding)));
 }
 /**
  * Runs the action entrypoint without forcing a successful process exit.
@@ -47308,6 +47309,75 @@ async function resolveMessageCatalogView(locale, ids, sourceCatalog, bundledCata
 
 /***/ }),
 
+/***/ 93427:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildRetiredProgressComment = buildRetiredProgressComment;
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const archiveStart = '<!-- copilot:progress-archive schema="1" -->';
+const archiveEnd = '<!-- /copilot:progress-archive -->';
+const head = '(?:[a-f0-9]{40}|[a-f0-9]{64})';
+const activeSource = new RegExp(`^head:(${head})$`, 'u');
+const closedSource = new RegExp(`^closed:(?:completed|not_planned|duplicate|unknown):head:(${head})$`, 'u');
+/** Preserve the last assessment as inert history; native closure is a separate fact. */
+function buildRetiredProgressComment(body, locale, reason) {
+    const marker = (0, publication_identity_policy_1.parsePublicationMarker)(body);
+    if (body.length > 28000 || !marker || !body.startsWith('<!-- copilot:publication ')
+        || body.split('<!-- copilot:publication ').length !== 2
+        || marker.identity.topic !== 'progress' || marker.identity.target.kind !== 'issue' || marker.identity.key !== 'work'
+        || !['completed', 'not_planned', 'duplicate', 'unknown'].includes(reason))
+        return undefined;
+    const active = activeSource.exec(marker.sourceVersion);
+    const closed = closedSource.exec(marker.sourceVersion);
+    let archive;
+    if (active) {
+        if (body.length > 12000 || body.includes(archiveStart) || body.includes(archiveEnd))
+            return undefined;
+        const assessment = body.slice(body.indexOf('-->') + 3).trim();
+        if (!assessment)
+            return undefined;
+        archive = (0, github_comment_publication_policy_1.escapeHtml)((0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(assessment, 12000)).split('\n').map(line => `> ${line}`).join('\n');
+    }
+    else if (closed) {
+        if (body.split(archiveStart).length !== 2 || body.split(archiveEnd).length !== 2 || !body.endsWith(archiveEnd))
+            return undefined;
+        archive = body.slice(body.indexOf(archiveStart) + archiveStart.length, body.lastIndexOf(archiveEnd)).trim();
+        if (!archive || !archive.split('\n').every(line => line.startsWith('> ')))
+            return undefined;
+    }
+    else
+        return undefined;
+    const render = (spanish, closedReason) => {
+        const reasons = spanish
+            ? { completed: 'cerrada como completada', not_planned: 'cerrada como no planificada', duplicate: 'cerrada como duplicada', unknown: 'cerrada; motivo no disponible' }
+            : { completed: 'closed as completed', not_planned: 'closed as not planned', duplicate: 'closed as duplicate', unknown: 'closed; reason unavailable' };
+        const sourceVersion = `closed:${closedReason}:head:${(active ?? closed)[1]}`;
+        const retired = (0, publication_identity_policy_1.buildPublicationMarker)({ identity: marker.identity, sourceVersion, digest: (0, publication_identity_policy_1.createSemanticDigest)({ spanish, reason: closedReason, archive }) });
+        return [retired, '', spanish ? '## Issue cerrada — progreso histórico' : '## Issue closed — historical progress', '',
+            spanish ? `**Estado actual:** ${reasons[closedReason]}.` : `**Current status:** ${reasons[closedReason]}.`, '',
+            spanish ? 'La última estimación se conserva abajo como historial. El cierre no certifica un nuevo porcentaje, pruebas ni alineación de ramas.'
+                : 'The last estimate is retained below as history. Closure does not certify a new percentage, tests, or branch alignment.', '',
+            spanish ? '**Acción requerida:** ninguna para esta issue cerrada. Si el trabajo continúa, reabre la issue; una evaluación nueva podrá actualizar esta misma tarjeta.'
+                : '**Action required:** none for this closed issue. If work continues, reopen the issue; a fresh assessment can update this same card.', '',
+            spanish ? '### Última evaluación antes del cierre (histórica)' : '### Last assessment before closure (historical)', '',
+            archiveStart, archive, archiveEnd].join('\n');
+    };
+    for (const spanish of [false, true]) {
+        for (const closedReason of ['completed', 'not_planned', 'duplicate', 'unknown']) {
+            if (render(spanish, closedReason).length > 28000)
+                return undefined;
+        }
+    }
+    return render(locale.toLowerCase().split('-')[0] === 'es', reason);
+}
+
+
+/***/ }),
+
 /***/ 88350:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -50210,6 +50280,11 @@ const publication_outcome_policy_1 = __nccwpck_require__(79719);
 async function runCheckProgressWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     try {
+        if (!dependencies.publicationSourceQuery.isIssueOpen)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress analysis requires a native issue state query.');
+        if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
+        }
         const analysis = await (0, progress_analysis_workflow_1.analyzeProgress)(param, taskId, dependencies);
         if (analysis.kind === 'failure')
             return [analysis.result];
@@ -50220,7 +50295,8 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
         const { attemptResult, issueNumber, branch, developmentBranch, baseSha, sourceHeadSha } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
-        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)) {
+        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)
+            || await dependencies.publicationSourceQuery.isIssueOpen(issueNumber) !== true) {
             (0, logging_ports_1.logInfo)(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
         }
@@ -52716,6 +52792,112 @@ class RetireBranchSyncUseCase {
 exports.RetireBranchSyncUseCase = RetireBranchSyncUseCase;
 function stale() {
     return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned synchronization card changed or is unavailable.');
+}
+
+
+/***/ }),
+
+/***/ 11529:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireClosedIssueCardsUseCase = void 0;
+/** Independent narrow retirements retain each result, including partial failure. */
+class RetireClosedIssueCardsUseCase {
+    constructor(synchronization, progress) {
+        this.synchronization = synchronization;
+        this.progress = progress;
+        this.taskId = 'RetireClosedIssueCardsUseCase';
+    }
+    async invoke(context) {
+        return [...await this.synchronization.invoke(context), ...await this.progress.invoke(context)];
+    }
+}
+exports.RetireClosedIssueCardsUseCase = RetireClosedIssueCardsUseCase;
+
+
+/***/ }),
+
+/***/ 17025:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetireProgressUseCase = void 0;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const result_1 = __nccwpck_require__(73817);
+const github_user_policy_1 = __nccwpck_require__(84403);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const retired_progress_presentation_policy_1 = __nccwpck_require__(93427);
+const application_error_1 = __nccwpck_require__(75999);
+/** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
+class RetireProgressUseCase {
+    constructor(issues, comments, cardFreshness) {
+        this.issues = issues;
+        this.comments = comments;
+        this.cardFreshness = cardFreshness;
+        this.taskId = 'RetireProgressUseCase';
+    }
+    async invoke(context) {
+        let retired = 0;
+        let nativeClosed = false;
+        try {
+            if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
+                return [this.result(retired, nativeClosed)];
+            }
+            const initial = await this.issues.readIssue(context.issueNumber);
+            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason))
+                throw stale();
+            if (initial.state !== 'closed')
+                return [this.result(retired, nativeClosed)];
+            nativeClosed = true;
+            const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
+                const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+                return marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
+                    && marker.identity.target.number === context.issueNumber && marker.identity.key === 'work'
+                    && (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(comment.body ?? '', context.locale, initial.reason) !== undefined
+                    && Number.isSafeInteger(comment.id) && comment.id > 0
+                    && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
+            });
+            if (cards.length > 20)
+                throw stale();
+            for (const card of cards) {
+                const body = (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(card.body ?? '', context.locale, initial.reason);
+                if (card.body === body)
+                    continue;
+                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
+                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
+                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
+                if (!await this.cardFreshness.matches(witness))
+                    throw stale();
+                const fresh = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
+                if (!nativeClosed || fresh.reason !== initial.reason)
+                    throw stale();
+                await this.comments.updateComment(context.issueNumber, card.id, body);
+                retired++;
+            }
+            return [this.result(retired, nativeClosed)];
+        }
+        catch (cause) {
+            return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
+                    steps: [nativeClosed ? 'Issue closure is retained; progress card retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; progress cards were left unchanged.'],
+                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire progress cards safely.')],
+                    payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
+        }
+    }
+    result(retired, nativeClosed) {
+        return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
+            steps: [retired ? 'The closed issue’s progress cards were retired.' : 'No progress card required retirement.'],
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+    }
+}
+exports.RetireProgressUseCase = RetireProgressUseCase;
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned progress card changed or is unavailable.');
 }
 
 
@@ -63052,7 +63234,13 @@ async function sourceIsCurrent(intent, sourceQuery) {
     if (!sourceQuery) {
         throw new application_error_1.ApplicationError('configuration.unsupported', 'Commit-derived status publication requires an authoritative source query.');
     }
-    return await sourceQuery.getBranchHeadSha(guard.branch) === guard.sha;
+    if (await sourceQuery.getBranchHeadSha(guard.branch) !== guard.sha)
+        return false;
+    if (intent.projection.kind !== 'progress')
+        return true;
+    if (!sourceQuery.isIssueOpen)
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'Progress publication requires a native issue state query.');
+    return await sourceQuery.isIssueOpen(intent.identity.target.number) === true;
 }
 function staleSourceOutcome(canonicalCommentId, effect = 'unchanged', duplicatesRemoved = 0, duplicatesCompacted = 0, compactedCommentIds = []) {
     return Object.freeze({
@@ -81914,6 +82102,7 @@ exports.BugbotScmPortFactory = BugbotScmPortFactory;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCheckProgressCompositionRoot = createCheckProgressCompositionRoot;
+const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const progress_diff_repository_1 = __nccwpck_require__(24958);
 const github_branch_client_factory_1 = __nccwpck_require__(30144);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
@@ -81934,7 +82123,7 @@ function createCheckProgressCompositionRoot(binding) {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const content = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const diff = new progress_diff_repository_1.ProgressDiffRepository((0, github_branch_client_factory_1.createBranchComparisonClient)());
-    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), Object.freeze({ getDiff: (baseSha, headSha) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }));
+    return new check_progress_use_case_1.CheckProgressUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(content, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)(labels, binding), (0, push_single_action_capability_port_binding_1.bindIssueProgress)(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(content, labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), binding), (0, push_single_action_capability_port_binding_1.bindBranchListQuery)(new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)(), (0, shared_capability_port_binding_1.bindPublicationSourceQuery)(new github_publication_source_repository_1.GithubPublicationSourceRepository((0, github_branch_client_factory_1.createBranchClient)()), binding, (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding)), Object.freeze({ getDiff: (baseSha, headSha) => diff.getDiff(binding.owner, binding.repository, baseSha, headSha, binding.token) }));
 }
 
 
@@ -82676,6 +82865,8 @@ exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
 const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
 const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
+const retire_progress_use_case_1 = __nccwpck_require__(17025);
+const retire_closed_issue_cards_use_case_1 = __nccwpck_require__(11529);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const sdd_evidence_composition_root_1 = __nccwpck_require__(51671);
 const linked_branch_readiness_repository_1 = __nccwpck_require__(79421);
@@ -82870,7 +83061,10 @@ function rememberBranchPorts(binding, pullRequests) {
 /** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
 function createClosedIssueRetirementUseCase(binding) {
     const comments = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding));
+    const native = (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding);
+    const cards = (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding));
+    const freshness = (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding);
+    return new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase(native, cards, freshness), new retire_progress_use_case_1.RetireProgressUseCase(native, cards, freshness));
 }
 
 
@@ -82956,6 +83150,8 @@ exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompos
 const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const push_single_action_capability_port_binding_1 = __nccwpck_require__(49417);
 const retire_branch_sync_use_case_1 = __nccwpck_require__(74111);
+const retire_progress_use_case_1 = __nccwpck_require__(17025);
+const retire_closed_issue_cards_use_case_1 = __nccwpck_require__(11529);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const pull_request_changes_repository_1 = __nccwpck_require__(71564);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
@@ -83013,7 +83209,7 @@ function createPullRequestUseCaseCompositionRoot(binding) {
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(boundPullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase((0, lifecycle_capability_port_binding_1.bindIssueLabels)(pullRequestLabels, binding)),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(boundProjectBoard),
-        retireBranchSync: new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)),
+        retireBranchSync: new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)), new retire_progress_use_case_1.RetireProgressUseCase((0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding)), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding))),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase((0, issue_completion_composition_root_1.bindIssueCompletion)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))),
     };
     return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(pullRequestLifecycle, binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)())), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding));
@@ -83336,9 +83532,14 @@ exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
 exports.bindIssueTitle = bindIssueTitle;
 exports.bindProjectContent = bindProjectContent;
 const project_detail_1 = __nccwpck_require__(33428);
-function bindPublicationSourceQuery(port, binding) {
+function bindPublicationSourceQuery(port, binding, native) {
+    const readIssue = native?.readIssue.bind(native);
     return Object.freeze({
         getBranchHeadSha: (branch) => port.getBranchHeadSha(binding.owner, binding.repository, branch, binding.token),
+        ...(readIssue ? { isIssueOpen: async (number) => {
+                const facts = await readIssue(number);
+                return facts.number === number && facts.state === 'open';
+            } } : {}),
     });
 }
 function bindOrganizationMembers(port, binding) {

@@ -37,7 +37,7 @@ function ports(initial: Array<{ id: number; body: string | null; user?: { login?
 const context = (value = intent()) => ({ owner: 'acme', repository: 'widgets', botLogin: 'vypbot', intent: value });
 const currentSource = (...heads: string[]) => {
   const remaining = [...heads];
-  return { getBranchHeadSha: jest.fn(async () => remaining.shift() ?? SOURCE_HEAD) };
+  return { isIssueOpen: jest.fn(async () => true), getBranchHeadSha: jest.fn(async () => remaining.shift() ?? SOURCE_HEAD) };
 };
 
 describe('status card publication workflow', () => {

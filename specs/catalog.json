@@ -144,7 +144,10 @@
         "src/application/ports/reply_request_read_ports.ts",
         "src/data/repository/reply_request_repository.ts",
         "src/infrastructure/composition/reply_request_composition_root.ts",
-        "src/infrastructure/github/ports/github_reply_request_client.ts"
+        "src/infrastructure/github/ports/github_reply_request_client.ts",
+        "src/application/policies/retired_progress_presentation_policy.ts",
+        "src/application/usecases/actions/retire_progress_use_case.ts",
+        "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -231,7 +234,12 @@
         "src/application/policies/__tests__/agent_activity_policy.test.ts",
         "src/data/repository/__tests__/reply_request_repository.test.ts",
         "src/application/usecases/steps/common/__tests__/reply_request_publication.test.ts",
-        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts",
+        "src/application/policies/__tests__/retired_progress_presentation_policy.test.ts",
+        "src/application/usecases/actions/__tests__/retire_progress_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/retire_closed_issue_cards_use_case.test.ts",
+        "src/application/usecases/steps/common/__tests__/retired_progress_publication.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_native_closure.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
