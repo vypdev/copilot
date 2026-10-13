@@ -55031,11 +55031,7 @@ async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
         status = Object.freeze({ ...status, sddReadiness: (0, sdd_status_policy_1.projectSddStatus)(evidence, status.sddReadiness) });
     }
     if (nativeStatus && initialIssue) {
-        const final = await nativeStatus.readIssue(initialIssue.number);
-        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason
-            || JSON.stringify([...final.labels].sort()) !== JSON.stringify([...initialIssue.labels].sort()))
-            throw unavailableStatus();
-        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, final);
+        status = (0, status_command_policy_1.projectCurrentNativeStatus)(status, await fenceNativeIssue(nativeStatus, initialIssue));
     }
     if (!status.pullRequestNumber || !ports)
         return (0, status_command_policy_1.buildCopilotStatusResult)(status, taskId);
@@ -55059,6 +55055,8 @@ async function readCopilotStatus(param, taskId, ports, sddQuery, nativeStatus) {
         throw unavailableStatus();
     if (nativeStatus && initialPull)
         await fenceNativePull(nativeStatus, initialPull);
+    if (nativeStatus && initialIssue)
+        await fenceNativeIssue(nativeStatus, initialIssue);
     return (0, status_command_policy_1.buildCopilotStatusResult)({ ...status,
         findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened,
@@ -55073,6 +55071,13 @@ async function fenceNativePull(port, original) {
     const fresh = await port.readPullRequest(original.number);
     if (fresh.number !== original.number || fresh.state !== original.state || fresh.merged !== original.merged)
         throw unavailableStatus();
+}
+async function fenceNativeIssue(port, original) {
+    const fresh = await port.readIssue(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.reason !== original.reason
+        || JSON.stringify([...fresh.labels].sort()) !== JSON.stringify([...original.labels].sort()))
+        throw unavailableStatus();
+    return fresh;
 }
 
 

@@ -173,6 +173,18 @@ describe('status after current native reads', () => {
         expect((await readCopilotStatus(f.issueContext, 'Status', undefined, undefined, f.native)).payload)
             .toMatchObject({ status: { lifecycle: 'completed' } });
     });
+    it.each(['reopening', 'labels'] as const)('rejects native issue %s during linked PR count collection', async scenario => {
+        const f = nativeFixture(), list = f.ports.listIssueComments.getMockImplementation()!;
+        f.ports.listIssueComments.mockImplementation(async number => {
+            const comments = await list(number);
+            f.native.readIssue.mockResolvedValue(scenario === 'reopening'
+                ? { ...f.current, state: 'open', reason: 'reopened' }
+                : { ...f.current, labels: ['SDD'] });
+            return comments;
+        });
+        const context = { ...f.issueContext, status: { ...f.issueContext.status, pullRequestNumber: 11 } };
+        await expect(readCopilotStatus(context, 'Status', f.ports, undefined, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });
+    });
     it('rejects changed closure reason at the final native fence', async () => {
         const f = nativeFixture(); f.native.readIssue.mockResolvedValueOnce(f.current).mockResolvedValue({ ...f.current, reason: 'not_planned' });
         await expect(readCopilotStatus(f.issueContext, 'Status', undefined, undefined, f.native)).rejects.toMatchObject({ code: 'workflow.stale' });

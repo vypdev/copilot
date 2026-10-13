@@ -41,10 +41,7 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
         status = Object.freeze({ ...status, sddReadiness: projectSddStatus(evidence, status.sddReadiness) });
     }
     if (nativeStatus && initialIssue) {
-        const final = await nativeStatus.readIssue(initialIssue.number);
-        if (final.number !== initialIssue.number || final.state !== initialIssue.state || final.reason !== initialIssue.reason
-            || JSON.stringify([...final.labels].sort()) !== JSON.stringify([...initialIssue.labels].sort())) throw unavailableStatus();
-        status = projectCurrentNativeStatus(status, final);
+        status = projectCurrentNativeStatus(status, await fenceNativeIssue(nativeStatus, initialIssue));
     }
     if (!status.pullRequestNumber || !ports) return buildCopilotStatusResult(status, taskId);
     const request = projectBugbotContextRequest(param.bugbot.review);
@@ -61,6 +58,7 @@ export async function readCopilotStatus(param: CommentAutomationContext, taskId:
     const counts = readBugbotStatusCounts(candidates[0].body ?? '', pull.number, pull.headSha);
     if (!counts || await ports.getPullRequestHeadSha(pull.number) !== pull.headSha) throw unavailableStatus();
     if (nativeStatus && initialPull) await fenceNativePull(nativeStatus, initialPull);
+    if (nativeStatus && initialIssue) await fenceNativeIssue(nativeStatus, initialIssue);
     return buildCopilotStatusResult({ ...status,
         findingStateEvidence: undefined,
         findingStates: { open: counts.open, reopened: counts.reopened,
@@ -76,4 +74,11 @@ function unavailableStatus(): ApplicationError {
 async function fenceNativePull(port: BoundNativeStatusReadPort, original: NativePullRequestCompletionFacts): Promise<void> {
     const fresh = await port.readPullRequest(original.number);
     if (fresh.number !== original.number || fresh.state !== original.state || fresh.merged !== original.merged) throw unavailableStatus();
+}
+
+async function fenceNativeIssue(port: BoundNativeStatusReadPort, original: NativeIssueCompletionFacts): Promise<NativeIssueCompletionFacts> {
+    const fresh = await port.readIssue(original.number);
+    if (fresh.number !== original.number || fresh.state !== original.state || fresh.reason !== original.reason
+        || JSON.stringify([...fresh.labels].sort()) !== JSON.stringify([...original.labels].sort())) throw unavailableStatus();
+    return fresh;
 }
