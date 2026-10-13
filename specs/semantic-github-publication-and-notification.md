@@ -1668,3 +1668,11 @@ coverage, generated catalog and bundle validation, documentation, current-head
 native checks/review, and the native closure/replay/reopening UX evidence. No
 readiness decision is delegated to an old percentage or a successful model-only
 response.
+
+Automated correction evidence: the five new suites contain **83 runtime cases**
+(34 pure presentation, 32 guarded retirement, 2 coordination, 11 publication
+integration and 4 analysis integration), represented conservatively by the 40
+declarations above. The full integrated run passed 598 suites / 8,333 tests with
+35 pre-existing skips; new presentation coverage reached 100% in all four
+metrics and every unchanged global/module budget passed. Native acceptance
+remains a separate gate and is not implied by these automated results.
