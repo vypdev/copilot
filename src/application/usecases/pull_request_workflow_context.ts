@@ -3,6 +3,7 @@ import type { AgentConfiguration } from '../../domain/agent';
 import type { PullRequestDescriptionMode } from '../../domain/pull_request_description';
 import type { AssignmentContext, CloseIssueAfterMergeContext, PrioritySizeContext } from './issue_workflow_context';
 import { copyProjects, projectAssignmentContext } from './issue_workflow_context';
+import type { ProjectReference } from '../ports/project_board_link_ports';
 
 export interface AssignReviewersContext {
   readonly pullRequestNumber: number;
@@ -21,6 +22,8 @@ export interface SyncPullRequestLabelsContext {
   readonly issueNumber: number;
   readonly pullRequestNumber: number;
   readonly sizeLabels: readonly string[];
+  readonly projects: readonly ProjectReference[];
+  readonly projectSizeByLabel: Readonly<Record<string, string>>;
 }
 
 export interface PullRequestDescriptionContext {
@@ -88,6 +91,12 @@ export interface PullRequestWorkflowContextSource {
   readonly branches: { readonly defaultBranch: string };
   readonly labels: {
     readonly sizeLabels: readonly string[];
+    readonly sizeXxl?: string;
+    readonly sizeXl?: string;
+    readonly sizeL?: string;
+    readonly sizeM?: string;
+    readonly sizeS?: string;
+    readonly sizeXs?: string;
     readonly lifecycle?: CopilotLifecycleLabels;
     readonly completionProtectedLabels?: readonly string[];
     readonly priorityLabelOnIssue?: string;
@@ -126,6 +135,12 @@ export function projectPullRequestWorkflowStepContexts(
       issueNumber: source.issueNumber,
       pullRequestNumber: source.pullRequest.number,
       sizeLabels: Object.freeze([...source.labels.sizeLabels]),
+      projects,
+      projectSizeByLabel: Object.freeze(Object.fromEntries([
+        [source.labels.sizeXxl, 'XL'], [source.labels.sizeXl, 'XL'],
+        [source.labels.sizeL, 'L'], [source.labels.sizeM, 'M'],
+        [source.labels.sizeS, 'S'], [source.labels.sizeXs, 'XS'],
+      ].filter(([label]) => typeof label === 'string' && label.length > 0))),
     }),
     priority: Object.freeze({
       contentNumber: source.pullRequest.number,

@@ -2,11 +2,13 @@ import type { ProjectReference } from '../../../ports/project_board_link_ports';
 import type { BoundIssueLabelsPort } from '../../../ports/issue_management_ports';
 import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
 import type { BoundPullRequestBranchQueryPort } from '../../../ports/pull_request_branch_ports';
+import type { BoundProjectBoardMembershipQueryPort } from '../../../ports/project_board_query_ports';
 
 interface ChangeSizeLabelPorts {
     readonly issueLabelsPort: BoundIssueLabelsPort;
     readonly projectBoardCommandPort: BoundProjectBoardCommandPort;
     readonly pullRequestBranchQueryPort: BoundPullRequestBranchQueryPort;
+    readonly projectMembershipQueryPort: BoundProjectBoardMembershipQueryPort;
 }
 
 export interface ChangeSizeLabelRequest {
@@ -22,6 +24,7 @@ export interface ChangeSizeLabelRequest {
 export interface ChangeSizeLabelResult {
     issueLabelNames: string[];
     openPullRequestNumbers: readonly number[];
+    pendingProjectSizes: readonly { pullRequestNumber: number; projectId: string }[];
 }
 
 export function replaceSizeLabel(currentLabels: readonly string[], sizeLabels: readonly string[], nextSize: string): string[] {
@@ -47,21 +50,21 @@ async function updateOpenPullRequestSize(
     request: ChangeSizeLabelRequest,
     pullRequestNumber: number,
     ports: ChangeSizeLabelPorts,
-): Promise<void> {
+): Promise<{ pullRequestNumber: number; projectId: string }[]> {
     const pullRequestLabels = await ports.issueLabelsPort.getLabels(
         pullRequestNumber,
     );
     const pullRequestLabelNames = replaceSizeLabel(pullRequestLabels, request.sizeLabels, request.size);
-    await ports.issueLabelsPort.setLabels(
-        pullRequestNumber,
-        pullRequestLabelNames,
-    );
-    await updateProjectSize(
-        request.projects,
-        pullRequestNumber,
-        request.githubSize,
-        ports.projectBoardCommandPort,
-    );
+    if (!sameLabels(pullRequestLabels, pullRequestLabelNames)) {
+        await ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames);
+    }
+    const pending: { pullRequestNumber: number; projectId: string }[] = [];
+    for (const project of request.projects) {
+        if (await ports.projectMembershipQueryPort.isContentLinked(project, pullRequestNumber)) {
+            await ports.projectBoardCommandPort.setTaskSize(project, pullRequestNumber, request.githubSize);
+        } else pending.push({ pullRequestNumber, projectId: project.id });
+    }
+    return pending;
 }
 
 export async function updateIssueAndRelatedPullRequests(
@@ -69,10 +72,9 @@ export async function updateIssueAndRelatedPullRequests(
     ports: ChangeSizeLabelPorts,
 ): Promise<ChangeSizeLabelResult> {
     const issueLabelNames = replaceSizeLabel(request.currentIssueLabels, request.sizeLabels, request.size);
-    await ports.issueLabelsPort.setLabels(
-        request.issueNumber,
-        issueLabelNames,
-    );
+    if (!sameLabels(request.currentIssueLabels, issueLabelNames)) {
+        await ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames);
+    }
     await updateProjectSize(
         request.projects,
         request.issueNumber,
@@ -83,9 +85,14 @@ export async function updateIssueAndRelatedPullRequests(
     const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(
         request.headBranch,
     );
+    const pendingProjectSizes: { pullRequestNumber: number; projectId: string }[] = [];
     for (const pullRequestNumber of openPullRequestNumbers) {
-        await updateOpenPullRequestSize(request, pullRequestNumber, ports);
+        pendingProjectSizes.push(...await updateOpenPullRequestSize(request, pullRequestNumber, ports));
     }
 
-    return { issueLabelNames, openPullRequestNumbers };
+    return { issueLabelNames, openPullRequestNumbers, pendingProjectSizes };
+}
+
+function sameLabels(current: readonly string[], next: readonly string[]): boolean {
+    return current.length === next.length && current.every(label => next.includes(label));
 }

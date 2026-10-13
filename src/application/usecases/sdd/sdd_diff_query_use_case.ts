@@ -116,10 +116,19 @@ export class SddDiffQueryUseCase {
     ]);
     if (body === undefined) throw new Error('Issue admission is unavailable.');
     const admission = classifyIssueWorkflow(labels, request.profile, request.labelConfiguration, body);
-    return admission.status === 'eligible' && decideIssueStart({ kind: admission.kind, labels,
-      issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired ? Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
+    if (admission.status !== 'eligible' || !request.issueManagedBranches || !request.preBranchSdd
+      || admission.kind === 'help' || admission.kind !== 'feature' && !labels.some(label => label.toLowerCase() === 'contract-change')) return undefined;
+    const context = Object.freeze({ issueNumber, admittedKind: admission.kind, issueAuthor,
       profileDigest: request.profileDigest, trustedBotLogin: request.trustedBotLogin,
-      issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch }) : undefined;
+      issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd, baseBranch: request.baseBranch });
+    if (decideIssueStart({ kind: admission.kind, labels,
+      issueManagedBranches: request.issueManagedBranches, preBranchSdd: request.preBranchSdd }).sddRequired) return context;
+    // Completion legitimately removes the start label. Only the shared native,
+    // immutable-publication proof can admit that historical scope again.
+    const historical = await this.ports.evidence.read(context);
+    if (historical.historical === true) return context;
+    if (historical.state !== 'not-required') throw new Error('Historical SDD eligibility could not be verified.');
+    return undefined;
   }
 }
 

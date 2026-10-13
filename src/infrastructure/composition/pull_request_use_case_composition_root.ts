@@ -1,4 +1,5 @@
 import { createReplyRequestReadPort } from './reply_request_composition_root';
+import { createChangeSizeProjectMembershipQueryPort } from './change_size_project_membership_composition_root';
 import { bindIssueCommentPublication, bindBranchSyncRetirementComments } from './push_single_action_capability_port_binding';
 import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
 import { RetireProgressUseCase } from '../../application/usecases/actions/retire_progress_use_case';
@@ -105,6 +106,8 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
     ),
     syncSizeAndProgressLabels: new SyncSizeAndProgressLabelsFromIssueToPrUseCase(
       bindIssueLabels(pullRequestLabels, binding),
+      Object.freeze({ setTaskSize: boundProjectBoard.setTaskSize }),
+      createChangeSizeProjectMembershipQueryPort(binding),
     ),
     checkPriorityPullRequestSize: new CheckPriorityPullRequestSizeUseCase(
       boundProjectBoard,

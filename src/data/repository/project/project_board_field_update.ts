@@ -123,10 +123,10 @@ export async function setProjectBoardSingleSelectField(
         return false;
     }
     const updated = await updateProjectBoardSingleSelectField(client, project, contentId, target);
-    if (fieldName !== 'Status') return updated;
     if (!updated) {
         throw new Error(`Project item ${contentId} was not returned after updating field '${fieldName}'.`);
     }
+    if (fieldName !== 'Status') return true;
     const updatedItem = await findProjectItem(client, project, contentId, fieldName);
     const updatedValue = updatedItem.fieldValues?.nodes.find(
         (value) => value.field?.name === fieldName,
@@ -198,7 +198,7 @@ async function updateProjectBoardSingleSelectField(
         fieldId: target.fieldId,
         optionId: target.optionId,
     });
-    return Boolean(mutationResult.updateProjectV2ItemFieldValue?.projectV2Item);
+    return mutationResult.updateProjectV2ItemFieldValue?.projectV2Item?.id === projectItemId;
 }
 
 async function findFieldOption(

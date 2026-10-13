@@ -1,6 +1,6 @@
 import { getOctokitClient } from '../../github/octokit_client_resolver';
 jest.mock('../../github/octokit_client_resolver', () => ({ getOctokitClient: jest.fn() }));
-import { bindIssueCompletion, bindNativeStatusRead, createNativeStatusReadPort, createIssueCompletionRepository } from '../issue_completion_composition_root';
+import { bindIssueCompletion, bindNativeStatusRead, createNativeStatusReadPort, createIssueCompletionRepository, bindIssueCompletionMetadata } from '../issue_completion_composition_root';
 import { IssueCompletionRepository } from '../../../data/repository/issue/issue_completion_repository';
 import { CloseIssueAfterMergingUseCase } from '../../../application/usecases/steps/issue/close_issue_after_merging_use_case';
 import { projectPullRequestWorkflowStepContexts } from '../../../application/usecases/pull_request_workflow_context';
@@ -24,6 +24,18 @@ function fixture(apiBase = 'https://api.github.com') {
     return { repository, labels, get, update, addLabels, removeLabel, getPull };
 }
 describe('physical issue completion authority', () => {
+    it('exposes frozen per-issue label repair without native state or publication authority', async () => {
+        const f = fixture(); const port = bindIssueCompletionMetadata(f.repository); const target = port.forIssue(42);
+        expect(Object.isFrozen(port)).toBe(true); expect(Object.isFrozen(target)).toBe(true);
+        expect(Object.keys(target).sort()).toEqual(['addLabel', 'read', 'removeLabel']);
+        expect(target).not.toHaveProperty('close'); expect(target).not.toHaveProperty('setLabels'); expect(target).not.toHaveProperty('addComment');
+        await target.read(); await target.removeLabel('55%'); await target.addLabel('100%');
+        expect(f.update).not.toHaveBeenCalled(); expect(f.getPull).not.toHaveBeenCalled();
+    });
+    it('rejects an unsafe metadata target before obtaining provider authority', () => {
+        const f = fixture(); expect(() => bindIssueCompletionMetadata(f.repository).forIssue(0)).toThrow('safe issue number');
+        expect(f.get).not.toHaveBeenCalled(); expect(f.update).not.toHaveBeenCalled();
+    });
     it('freezes a per-issue target with exactly four state/label capabilities', () => {
         const f = fixture(); const port = bindIssueCompletion(f.repository); const target = port.forIssue(42);
         expect(Object.isFrozen(port)).toBe(true); expect(Object.isFrozen(target)).toBe(true);

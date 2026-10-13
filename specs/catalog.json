@@ -360,7 +360,7 @@
       "status": "implemented",
       "scope": "Fail-closed validation of required checks and merge-group workflow support",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-15",
+      "lastVerified": "2026-10-14",
       "specs": [
         "specs/merge-queue-readiness.md"
       ],
@@ -485,7 +485,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-14",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -544,7 +544,13 @@
         "src/infrastructure/composition/lifecycle_state_composition_root.ts",
         "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
         "src/infrastructure/composition/main_run_route_composition_root.ts",
-        "src/application/policies/configuration_persistence_policy.ts"
+        "src/application/policies/configuration_persistence_policy.ts",
+        "src/application/ports/project_board_query_ports.ts",
+        "src/application/usecases/steps/commit/check_changes_issue_size_use_case.ts",
+        "src/application/usecases/steps/commit/check_changes_issue_size_workflow.ts",
+        "src/application/usecases/steps/commit/update_change_size_labels.ts",
+        "src/data/repository/project/project_board_item_query.ts",
+        "src/infrastructure/composition/change_size_project_membership_composition_root.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -577,7 +583,11 @@
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts",
-        "src/application/policies/__tests__/configuration_persistence_policy.test.ts"
+        "src/application/policies/__tests__/configuration_persistence_policy.test.ts",
+        "src/application/usecases/steps/commit/__tests__/check_changes_issue_size_use_case.test.ts",
+        "src/application/usecases/steps/commit/__tests__/update_change_size_labels.test.ts",
+        "src/data/repository/project/__tests__/project_board_visibility_recovery.test.ts",
+        "src/infrastructure/composition/__tests__/change_size_project_membership_composition_root.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -586,7 +596,8 @@
         "docs/security-operations/operations/troubleshooting.mdx",
         "docs/bugbot/quality-observability.mdx",
         "docs/bugbot/failure-scenarios.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "docs/issues/assignees-and-projects.mdx"
       ]
     },
     {
@@ -1415,7 +1426,9 @@
         "src/infrastructure/composition/main_run_route_composition_root.ts",
         "scripts/coverage-budgets.json",
         "src/application/usecases/steps/issue/resume_issue_project_use_case.ts",
-        "src/data/repository/project/project_board_field_update.ts"
+        "src/data/repository/project/project_board_field_update.ts",
+        "src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts",
+        "src/application/usecases/actions/reconcile_closed_issue_use_case.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1438,7 +1451,9 @@
         "src/application/policies/__tests__/status_command_policy.test.ts",
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
         "src/application/usecases/steps/issue/__tests__/resume_issue_project_use_case.test.ts",
-        "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/issue_use_case_composition_root.test.ts",
+        "src/application/usecases/actions/__tests__/reconcile_closed_issue_metadata_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/reconcile_closed_issue_use_case.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1872,7 +1887,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-14",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"

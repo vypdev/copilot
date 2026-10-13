@@ -728,6 +728,40 @@
         }
       ],
       "successMessage": "reopened issue Project state coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Concurrent PR Project sizing",
+      "missingEntryLabel": "concurrent PR Project sizing",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/steps/commit/check_changes_issue_size_workflow.ts",
+            "src/application/usecases/steps/commit/update_change_size_labels.ts",
+            "src/application/usecases/steps/pull_request/sync_size_and_progress_labels_from_issue_to_pr_use_case.ts",
+            "src/data/repository/project/project_board_field_update.ts",
+            "src/data/repository/project/project_board_item_query.ts",
+            "src/infrastructure/composition/change_size_project_membership_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "concurrent PR Project sizing coverage: PASS (each changed module 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Native closed-issue metadata",
+      "missingEntryLabel": "native closed-issue metadata",
+      "rules": [
+        {
+          "files": [
+            "src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts",
+            "src/application/usecases/actions/reconcile_closed_issue_use_case.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "native closed-issue metadata coverage: PASS (each new module 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

@@ -7,6 +7,9 @@ import { mergeSizeAndProgressLabels, selectSizeAndProgressLabels } from './sync_
 import { toApplicationError } from '../../../errors/application_error';
 import type { SyncPullRequestLabelsContext } from '../../pull_request_workflow_context';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
+import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
+import type { BoundProjectBoardMembershipQueryPort } from '../../../ports/project_board_query_ports';
+import { ApplicationError } from '../../../errors/application_error';
 
 /**
  * Copies size and progress labels from the linked issue to the PR.
@@ -16,7 +19,9 @@ import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_po
 export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCase<SyncPullRequestLabelsContext, Result[]> {
     taskId: string = 'SyncSizeAndProgressLabelsFromIssueToPrUseCase';
 
-    constructor(private readonly issueLabelsPort: BoundIssueLabelsPort) {}
+    constructor(private readonly issueLabelsPort: BoundIssueLabelsPort,
+        private readonly projectSizes?: Pick<BoundProjectBoardCommandPort, 'setTaskSize'>,
+        private readonly membership?: BoundProjectBoardMembershipQueryPort) {}
 
     async invoke(param: SyncPullRequestLabelsContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
@@ -38,6 +43,8 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
             }
 
             const issueLabels = await this.issueLabelsPort.getLabels(linkedIssueNumber);
+            const sizes = issueLabels.filter(label => Object.prototype.hasOwnProperty.call(param.projectSizeByLabel, label));
+            if (sizes.length > 1) throw new ApplicationError('validation.invalid-input', 'The linked issue has ambiguous configured size labels.');
             const sizeAndProgressFromIssue = selectSizeAndProgressLabels(issueLabels, param.sizeLabels);
             if (sizeAndProgressFromIssue.length === 0) {
                 logDebugInfo(`Issue #${linkedIssueNumber} has no size or progress labels. Nothing to sync.`);
@@ -56,7 +63,19 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
             const prLabels = await this.issueLabelsPort.getLabels(prNumber);
             const nextPrLabels = mergeSizeAndProgressLabels(prLabels, sizeAndProgressFromIssue, param.sizeLabels);
 
-            await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
+            if (prLabels.length !== nextPrLabels.length || prLabels.some(label => !nextPrLabels.includes(label))) {
+                await this.issueLabelsPort.setLabels(prNumber, nextPrLabels);
+            }
+            if (sizes.length === 1 && param.projects.length > 0) {
+                if (!this.projectSizes || !this.membership) throw new ApplicationError('provider.unavailable', 'PR Project size reconciliation authority is unavailable.');
+                for (const project of param.projects) {
+                    if (!await this.membership.isContentLinked(project, prNumber)) {
+                        throw new ApplicationError('provider.unavailable', 'The PR Project link remains unverified after lifecycle linking.');
+                    }
+                    // The adapter returns false for an already-correct field; failures throw.
+                    await this.projectSizes.setTaskSize(project, prNumber, param.projectSizeByLabel[sizes[0]]);
+                }
+            }
             logDebugInfo(`Synced size/progress labels from issue #${linkedIssueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
 
             result.push(

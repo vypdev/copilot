@@ -3,6 +3,7 @@ import type { ProjectReference, ProjectStatusInitialization } from './project_bo
 
 export interface ProjectBoardCommandPort {
     setTaskPriority(project: ProjectDetail, owner: string, repository: string, issueOrPullRequestNumber: number, priorityLabel: string, token: string): Promise<boolean>;
+    /** False means the exact field already matches; provider/mutation failures throw. */
     setTaskSize(project: ProjectDetail, owner: string, repository: string, issueOrPullRequestNumber: number, sizeLabel: string, token: string): Promise<boolean>;
     moveIssueToColumn(project: ProjectDetail, owner: string, repository: string, issueOrPullRequestNumber: number, columnName: string, token: string): Promise<boolean>;
     moveProjectItemToColumn(project: ProjectDetail, projectItemId: string, columnName: string, token: string): Promise<boolean>;

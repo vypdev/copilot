@@ -1038,8 +1038,9 @@ change process permissions, ACL policy, sandboxing or verification requirements.
 This investigation tool makes no feature-readiness claim and does not replace
 the mandatory smoke fixtures. Its six live probes are operational evidence,
 not additional unit cases or a completed acceptance gate. The default workflow
-behavior and coverage export stay unchanged; probe-only dispatch does not start
-self-hosted smoke jobs or export coverage.
+behavior described here is historical; the manual fixture contract below
+supersedes the hosted dispatch selection. Probe-only dispatch does not start
+full fixture jobs or export coverage.
 
 Initial diagnostic run 38150007571 on master 4575bbc3 proved that a minimal
 PowerShell command times out in the isolated ACL environment both before and
@@ -1235,3 +1236,78 @@ Windows fixture pattern and [Node's rmSync contract](https://nodejs.org/api/fs.h
 It still fails if cleanup cannot complete; no error is swallowed, fixture is
 skipped, or child/agent deadline is extended. The lock's owner remains unknown.
 This strengthens a second existing case without adding a counted case.
+
+### Complete manual platform dogfooding (2026-10-13)
+
+Observed defect: issue [#496](https://github.com/vypdev/copilot/issues/496)
+records that ordinary `Setup Platform Smoke` dispatch skipped all three hosted
+fixture jobs unless Windows coverage export was requested. A temporary
+Ubuntu-only self-hosted matrix also lacked explicit evidence of a maintainer
+exception. On 2026-10-14 the maintainer authorized temporary Ubuntu-only
+self-hosted routing because the four eligible Apple Intel runners are offline.
+Hosted macOS remains mandatory. Restore the supported macOS self-hosted row
+when an eligible runner returns; until then its native acceptance is pending.
+Existing runtime support boundaries, coverage and acceptance budgets remain in
+force.
+
+The workflow MUST implement this bounded selection contract:
+
+| Entrypoint/inputs | Hosted Ubuntu/Windows/macOS | Self-hosted Ubuntu (temporarily) | PowerShell probe | Codecov export |
+|---|---|---|---|---|
+| PR opened/synchronized | Run | Skip | Skip | Skip |
+| Manual `master`, default inputs | Run | Run | Skip | Skip |
+| Manual `master`, export only | Run | Run | Skip | After hosted success |
+| Manual, probe only | Skip | Skip | Run | Skip |
+| Manual, probe and export | Run | Skip | Run | After hosted success |
+| Manual branch other than `master`, default inputs | Run | Skip | Skip | Skip |
+
+Flow: select an entrypoint -> evaluate fixed boolean inputs -> run every
+selected platform independently -> inspect each job -> report only complete
+verified platform evidence. Export remains opt-in (`false` by default) and is
+never a prerequisite for fixture verification. The probe remains opt-in
+(`false` by default), isolated and bounded at five minutes. No new input,
+schema, runtime policy or credential is introduced. Existing in-flight runs
+keep their selected workflow revision; retry on current `master` for the new
+selection.
+
+Operator views use the native run/job states: **Queued: macOS runner required;
+restore a runner with `self-hosted`, `codex`, `macOS` labels.** **Running: inspect
+individual platform jobs; no action required.** **Partial: hosted jobs passed,
+self-hosted macOS remains unverified; restore its runner and rerun.**
+**Failed/canceled: retain completed jobs as evidence, repair the named failure
+and rerun without dropping platforms.** **Complete for the temporary selection:
+all four selected platform jobs passed; self-hosted macOS acceptance remains
+pending runner recovery; coverage was exported only if requested.** These are textual
+operational examples, not new comments or notifications. Each state links to
+its native run and platform job. Existing GitHub accessibility and locale
+behavior remains; no custom presentation is added.
+
+Architecture ownership stays in `.github/workflows/setup_platform_smoke.yml`
+for dispatch/routing and `scripts/validate-workflow-contract.cjs` for executable
+structural invariants. The matrix MUST use `fail-fast: false`, retain package,
+full coverage, acceptance and documentation checks, require Ubuntu in either
+the complete macOS/Ubuntu matrix or the authorized temporary Ubuntu-only
+matrix, and reject Windows service Codex routing. Least-privilege
+read-only checkout and protected-master self-hosted dispatch stay unchanged.
+Reruns are isolated fixture operations and do not deploy or mutate releases.
+
+Additional risk-derived floor: **8 distinct deterministic cases** in
+`src/tooling/__tests__/validate_workflow_contract.test.ts`: six event/probe/export
+selection cases (PR, ordinary manual, export-only, probe-only, combined,
+unrelated push), one temporary-selection/restoration case retaining hosted
+macOS, and one Ubuntu-removal rejection case. Existing
+structural dispatch, export opt-in, trusted-ref, package, coverage and validator
+cases remain; these eight cases are counted once. No coverage threshold or
+setup acceptance row is lowered. Native acceptance MUST inspect the default
+manual run and all three hosted plus the selected self-hosted jobs. The
+temporary selection has one self-hosted Ubuntu job; complete platform
+acceptance additionally requires self-hosted macOS after runner recovery.
+Queued or omitted platform evidence cannot be declared successful.
+
+Traceability: dispatch state table -> workflow guards -> six selection cases;
+platform preservation -> bounded matrix validator -> selection/removal cases; protected
+runner and publication boundaries -> retained structural tests. Operator docs
+in `docs/development/testing.mdx` MUST explain defaults, isolated probe,
+publication opt-in, runner recovery and partial evidence. Run full coverage,
+`validate:workflows`, `validate:documentation`, `validate:specifications` and the
+native platform smoke before declaring complete cross-platform acceptance.

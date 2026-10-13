@@ -245,6 +245,17 @@ function assertRepoWiseTemporaryCleanup(relativeFile, job) {
     || job.steps.indexOf(cleanup) <= job.steps.indexOf(upload)) {
     throw new Error(`${relativeFile} must select complete Python, isolate RepoWise files, and remove them after artifact upload.`);
   }
+  const reports = (job.steps ?? []).find(step => step?.name === 'Generate RepoWise reports');
+  if (job.env?.REPOWISE_BASE_SHA !== "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}"
+    || job.env?.REPOWISE_EVENT_NAME !== '${{ github.event_name }}'
+    || !reports?.run?.includes('[[ "$REPOWISE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]')
+    || !reports.run.includes('git cat-file -e "$REPOWISE_BASE_SHA^{commit}"')
+    || !reports.run.includes('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD')
+    || !reports.run.includes('--since "$REPOWISE_BASE_SHA" --to HEAD')
+    || !reports.run.includes('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]')
+    || !reports.run.includes('security: incomplete (event base unavailable or not an ancestor)')) {
+    throw new Error(`${relativeFile} must verify and report event-scoped security history; only manual dispatch may scan full history.`);
+  }
 }
 
 function assertPlatformCoverageAndValidators(relativeFile, job) {
@@ -348,10 +359,10 @@ function assertRunner(file, workflow) {
       }
       if (jobId === 'setup-platform-smoke') {
         const platforms = job.strategy?.matrix?.os;
-        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}"
+        if (job.if !== "${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}"
           || job['runs-on'] !== '${{ matrix.os }}'
           || JSON.stringify(platforms) !== JSON.stringify(['ubuntu-latest', 'windows-latest', 'macos-latest'])) {
-          throw new Error(`${relativeFile} must use the PR or explicit Windows coverage Ubuntu, Windows and macOS setup fixture matrix.`);
+          throw new Error(`${relativeFile} must use the PR or ordinary manual Ubuntu, Windows and macOS setup fixture matrix, independently of coverage export.`);
         }
         assertPlatformCoverageAndValidators(relativeFile, job);
         const hostedCoverage = (job.steps ?? []).find(step => step?.name === 'Full platform coverage and acceptance budgets');
@@ -380,7 +391,7 @@ function assertRunner(file, workflow) {
           || ![expectedMatrix, [expectedMatrix[1]]].some(matrix =>
             JSON.stringify(job.strategy?.matrix?.include) === JSON.stringify(matrix))
           || job.strategy?.['fail-fast'] !== false) {
-          throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners; Windows services are unsupported.`);
+          throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners or the authorized temporary Ubuntu-only selection; Windows services are unsupported.`);
         }
         if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}") {
           throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch from protected master.`);

@@ -75,6 +75,27 @@ export async function getProjectItemIdByContentId(
   return findProjectItemId(graphqlClient, project, contentId);
 }
 
+/** Distinguish a verified pending link from unavailable Project evidence. */
+export async function isProjectContentLinked(
+  client: GithubGraphqlTransportClient,
+  project: ProjectDetail,
+  owner: string,
+  repo: string,
+  contentNumber: number,
+): Promise<boolean> {
+  if (!Number.isSafeInteger(contentNumber) || contentNumber < 1) {
+    throw new Error('A safe content identity is required before reading Project membership.');
+  }
+  const result = await client.graphql<{
+    repository: { issueOrPullRequest?: { id: string } | null } | null;
+  }>(CONTENT_QUERY, { owner, repo, number: contentNumber });
+  const contentId = result.repository?.issueOrPullRequest?.id;
+  if (typeof contentId !== 'string' || !contentId.trim()) {
+    throw new Error('The repository content identity is unavailable while reading Project membership.');
+  }
+  return Boolean(await findProjectItemId(client, project, contentId));
+}
+
 async function findProjectItemId(
   client: GithubGraphqlTransportClient,
   project: ProjectDetail,

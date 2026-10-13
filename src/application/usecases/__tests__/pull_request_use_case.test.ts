@@ -150,6 +150,7 @@ describe("PullRequestUseCase", () => {
     }));
     expect(mockLinkIssueInvoke).toHaveBeenCalledWith(expect.objectContaining({ pullRequestNumber: 7 }));
     expect(mockSyncLabelsInvoke).toHaveBeenCalledWith(expect.objectContaining({ pullRequestNumber: 7 }));
+    expect(mockLinkProjectInvoke.mock.invocationCallOrder[0]).toBeLessThan(mockSyncLabelsInvoke.mock.invocationCallOrder[0]);
     expect(mockCheckPriorityInvoke).toHaveBeenCalledWith(expect.objectContaining({ contentNumber: 7 }));
   });
 

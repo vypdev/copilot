@@ -12,6 +12,7 @@ const mockSetLabels = jest.fn();
 const mockGetLabels = jest.fn();
 const mockSetTaskSize = jest.fn();
 const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
+const mockIsContentLinked = jest.fn();
 
 
 function baseParam(overrides: Record<string, unknown> = {}) {
@@ -47,9 +48,13 @@ describe('CheckChangesIssueSizeUseCase', () => {
       { setLabels: mockSetLabels, getLabels: mockGetLabels } as any,
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch } as any,
       { getSizeCategoryAndReason: mockGetSizeCategoryAndReason } as any,
+      { isContentLinked: mockIsContentLinked },
     );
     mockGetSizeCategoryAndReason.mockReset();
     mockSetLabels.mockReset();
+    mockSetTaskSize.mockReset();
+    mockGetLabels.mockReset();
+    mockIsContentLinked.mockReset().mockResolvedValue(true);
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
   });
 
@@ -167,5 +172,41 @@ describe('CheckChangesIssueSizeUseCase', () => {
       99,
       'L',
     );
+  });
+
+  it('retains successful issue and PR labels while a newly opened PR awaits Project linkage', async () => {
+    mockGetSizeCategoryAndReason.mockResolvedValue({ size: 'size: L', githubSize: 'L', reason: 'Many lines' });
+    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([99]);
+    mockGetLabels.mockResolvedValue(['feature']);
+    mockIsContentLinked.mockResolvedValue(false);
+    const results = await useCase.invoke(baseParam({ project: { getProjects: () => [{ id: 'proj1' }] } }));
+    expect(results[0].success).toBe(true);
+    expect(results[0].payload).toEqual({ changeSize: { pendingProjectSizes: [{ pullRequestNumber: 99, projectId: 'proj1' }] } });
+    expect(results[0].steps?.join(' ')).toContain('pending');
+    expect(mockSetTaskSize).toHaveBeenCalledTimes(1);
+    expect(mockSetTaskSize).toHaveBeenCalledWith({ id: 'proj1' }, 42, 'L');
+    expect(mockSetLabels).toHaveBeenCalledWith(99, ['feature', 'size: L']);
+  });
+
+  it('retries PR Project size after linkage even when the issue already has the computed size', async () => {
+    mockGetSizeCategoryAndReason.mockResolvedValue({ size: 'size: M', githubSize: 'M', reason: 'Within limits' });
+    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([99]);
+    mockGetLabels.mockResolvedValue(['feature', 'size: M']);
+    const results = await useCase.invoke(baseParam({ project: { getProjects: () => [{ id: 'proj1' }] } }));
+    expect(results[0].success).toBe(true);
+    expect(mockSetLabels).not.toHaveBeenCalled();
+    expect(mockSetTaskSize).toHaveBeenCalledWith({ id: 'proj1' }, 99, 'M');
+    expect(results[0].payload).toEqual({ changeSize: { pendingProjectSizes: [] } });
+  });
+
+  it('reports unavailable membership as failure rather than claiming a pending link', async () => {
+    mockGetSizeCategoryAndReason.mockResolvedValue({ size: 'size: L', githubSize: 'L', reason: 'Many lines' });
+    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([99]);
+    mockGetLabels.mockResolvedValue(['feature']);
+    mockIsContentLinked.mockRejectedValue(new Error('403 forbidden'));
+    const results = await useCase.invoke(baseParam({ project: { getProjects: () => [{ id: 'proj1' }] } }));
+    expect(results[0].success).toBe(false);
+    expect(results[0].steps?.join(' ')).not.toContain('pending');
+    expect(mockSetTaskSize).not.toHaveBeenCalledWith({ id: 'proj1' }, 99, expect.anything());
   });
 });

@@ -25,6 +25,8 @@ jobs:
     env:
       REPOWISE_VENV_NAME: repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health
       REPOWISE_REPORT_NAME: repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health
+      REPOWISE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}
+      REPOWISE_EVENT_NAME: ${{ github.event_name }}
     steps:
       - name: Verify Ubuntu runner
         shell: bash
@@ -88,7 +90,18 @@ jobs:
             fi
           }
           advisory_scan dead-code "$repowise_bin" dead-code --safe-only --no-workspace --format json .
-          advisory_scan security "$repowise_bin" security scan --history --path . --format json
+          if [ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]; then
+            echo 'security scope: full reachable history (manual dispatch)' >> "$report_dir/advisory-status.txt"
+            advisory_scan security "$repowise_bin" security scan --history --path . --format json
+          elif [[ "$REPOWISE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] \
+            && git cat-file -e "$REPOWISE_BASE_SHA^{commit}" \
+            && git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD; then
+            printf 'security scope: %s..%s\n' "$REPOWISE_BASE_SHA" "$(git rev-parse HEAD)" >> "$report_dir/advisory-status.txt"
+            advisory_scan security "$repowise_bin" security scan --history --since "$REPOWISE_BASE_SHA" --to HEAD --path . --format json
+          else
+            echo 'security: incomplete (event base unavailable or not an ancestor)' >> "$report_dir/advisory-status.txt"
+            echo '::warning::RepoWise security advisory scope could not be verified; no full-history fallback was attempted.'
+          fi
           {
             echo '## RepoWise code health'
             echo

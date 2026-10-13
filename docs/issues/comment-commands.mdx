@@ -629,3 +629,16 @@ Comment-triggered replies require a verified native source comment before
 publication, including repeated read-only queries and immutable operation
 receipts. If the source witness or its reader is unavailable, Copilot keeps
 existing replies and performs no comment creation, update or duplicate cleanup.
+
+### SDD comparison after completion
+
+`/copilot sdd-diff` can inspect a completed feature or contract-change issue's
+verified published SDD history after completion clears `in-progress`. Use the
+original issue conversation; do not reopen it or restore a start label just to
+read history. The comparison still verifies immutable publications, native
+state, branch/card authority and its final fence before showing counts.
+
+An open paused issue or a closed issue without verified publication history
+does not acquire historical scope. Unreadable history remains unavailable;
+multiple native historical candidates remain ambiguous. No labels, branches or
+SDD publications are changed by this command.

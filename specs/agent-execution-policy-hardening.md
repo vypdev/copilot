@@ -762,3 +762,23 @@ Issue #463 run `38144699470` on `ubuntu-runner-3` rejected agent output as `prov
 Run `38270745319` completed full macOS and Ubuntu verification, but Windows was canceled by GitHub with the explicit annotation `The job has exceeded the maximum execution time of 30m0s`. This is a confirmed job deadline, distinct from the earlier CI cancellation whose cause remains unconfirmed. The installed manual self-hosted smoke has a 60-minute deadline for each of its original Windows, macOS and Ubuntu jobs. Platform selectors, fail-fast behavior, coverage and acceptance budgets, tests and validators remain unchanged. This workflow-only timing correction adds no claimed test cases and does not certify native Windows agent tool access. This historical three-platform Codex service request is superseded by the
 2026-10-12 retirement above. General hosted three-platform coverage remains
 required; new Codex integration runs target macOS and Ubuntu only.
+
+### Complete manual fixture selection (2026-10-13)
+
+Dogfooding issue [#496](https://github.com/vypdev/copilot/issues/496) found that
+ordinary manual dispatch omitted hosted fixtures unless Windows Codecov export
+was also selected, and that a temporary Ubuntu-only self-hosted matrix was
+accepted without an explicit recovery exception. The intentional fixture
+contract MUST retain hosted Ubuntu, Windows and macOS. On 2026-10-14 the
+maintainer authorized temporary Ubuntu-only self-hosted routing while the four
+eligible Apple Intel runners are offline. Installed operational jobs retain
+their existing Linux selector. Restore the supported macOS/Ubuntu self-hosted
+matrix once an eligible Apple runner returns; this exception does not waive
+macOS fixture acceptance or permit Windows service Codex execution.
+
+The companion runtime SDD defines the closed dispatch state table, eight-case
+regression budget, operator journey and documentation. Structural validation
+MUST accept only the complete supported matrix or the explicitly authorized
+temporary Ubuntu-only matrix, reject removal of Ubuntu, and preserve full
+package, coverage, acceptance and documentation checks. This change introduces
+no model request, new Action input, credentials, deployment or support claim.

@@ -18,6 +18,15 @@ export interface BoundIssueCompletionReadPort {
     readIssue(number: number): Promise<NativeIssueCompletionFacts>;
 }
 
+/** Closed-event repair cannot reopen/close issues, replace labels, or publish. */
+export interface BoundIssueCompletionMetadataPort {
+    forIssue(number: number): {
+        read(): Promise<NativeIssueCompletionFacts>;
+        addLabel(label: string): Promise<void>;
+        removeLabel(label: string): Promise<void>;
+    };
+}
+
 export interface NativePullRequestCompletionFacts {
     readonly number: number;
     readonly state: 'open' | 'closed';

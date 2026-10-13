@@ -5,6 +5,9 @@ import { createReplyRequestReadPort } from './reply_request_composition_root';
 import { RetireBranchSyncUseCase } from '../../application/usecases/actions/retire_branch_sync_use_case';
 import { RetireProgressUseCase } from '../../application/usecases/actions/retire_progress_use_case';
 import { RetireClosedIssueCardsUseCase } from '../../application/usecases/actions/retire_closed_issue_cards_use_case';
+import { ReconcileClosedIssueMetadataUseCase } from '../../application/usecases/actions/reconcile_closed_issue_metadata_use_case';
+import { ReconcileClosedIssueUseCase } from '../../application/usecases/actions/reconcile_closed_issue_use_case';
+import { bindIssueCompletionMetadata, createIssueCompletionRepository } from './issue_completion_composition_root';
 import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import type { RememberBranchQueryPorts } from '../../application/usecases/comment_automation_contracts';
 import { createSddEvidenceQueryPort } from './sdd_evidence_composition_root';
@@ -22,6 +25,7 @@ import { PublishGithubActionUseCase } from "../../application/usecases/actions/p
 import { PublishIssueCommentUseCase } from "../../application/usecases/actions/publish_issue_comment_use_case";
 import { RecommendStepsUseCase } from "../../application/usecases/actions/recommend_steps_use_case";
 import { CheckChangesIssueSizeUseCase } from "../../application/usecases/steps/commit/check_changes_issue_size_use_case";
+import { createChangeSizeProjectMembershipQueryPort } from './change_size_project_membership_composition_root';
 import { BugbotAutofixUseCase } from "../../application/usecases/steps/commit/bugbot/bugbot_autofix_use_case";
 import { DetectBugbotFixIntentUseCase } from "../../application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_use_case";
 import { DismissBugbotFindingsUseCase } from "../../application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case";
@@ -333,6 +337,7 @@ export function createCommitUseCaseCompositionRoot(
       bindIssueLabels(createIssueLabelRepository(), binding),
       bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
       bindBranchChangeSize(new BranchCompareRepository(createBranchComparisonClient()), binding),
+      createChangeSizeProjectMembershipQueryPort(binding),
     ),
     createDetectPotentialProblemsUseCase(binding),
     createCheckProgressCompositionRoot(binding),
@@ -403,12 +408,13 @@ function rememberBranchPorts(binding: BugbotScmBinding, pullRequests: RememberBr
   };
 }
 
-/** Closed-event path exposes only existing-card retirement; no normal route/runtime. */
-export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): RetireClosedIssueCardsUseCase {
+/** Closed-event path exposes guarded metadata repair and existing-card retirement. */
+export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): ReconcileClosedIssueUseCase {
   const comments = createIssueContentCompositionRoot();
   const native = createNativeStatusReadPort(binding);
   const cards = bindBranchSyncRetirementComments(bindIssueCommentPublication(comments, binding));
   const freshness = createReplyRequestReadPort(binding);
-  return new RetireClosedIssueCardsUseCase(new RetireBranchSyncUseCase(native, cards, freshness),
-    new RetireProgressUseCase(native, cards, freshness));
+  return new ReconcileClosedIssueUseCase(
+    new ReconcileClosedIssueMetadataUseCase(bindIssueCompletionMetadata(createIssueCompletionRepository(binding))),
+    new RetireClosedIssueCardsUseCase(new RetireBranchSyncUseCase(native, cards, freshness), new RetireProgressUseCase(native, cards, freshness)));
 }

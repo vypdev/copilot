@@ -108,6 +108,13 @@ The required `RepoWise code health` workflow publishes its index and health
 reports. Its dead-code and history-security scans have separate time and memory limits;
 the Job Summary and artifact status identify an incomplete advisory scan
 instead of claiming that it passed.
+For PRs, pushes and merge groups, history-security scans cover the native event
+base through the checked-out HEAD, including commits that introduced and then
+removed a finding. The base must be a valid commit and an ancestor of HEAD;
+missing or unrelated evidence produces an incomplete advisory result. The
+artifact records both immutable bounds. Manual dispatch scans the complete
+reachable history within the same limits; a successful event-range scan is
+not evidence of a complete historical audit.
 Repository-owned PRs, pushes and merge groups run RepoWise and `CI Check` on
 self-hosted Ubuntu `codex` runners. Fork PRs use GitHub-hosted Ubuntu for
 these checks. The automatic setup fixture matrix remains hosted on three
@@ -190,11 +197,35 @@ semantic assertions when changing component content or controls.
 ## Temporary self-hosted runner selection
 
 This repository currently selects `[self-hosted, codex, Linux]` for Copilot
-operations while the four Apple runners are unstable. Its manually dispatched
-self-hosted Codex smoke matrix also selects Ubuntu only. Mac support remains
-available; restore the shared pool and macOS smoke row when those runners are
-stable. Consumer setup templates retain their existing runner configuration.
+operations while the four Apple runners are unstable. Mac support remains
+available. The maintainer has authorized temporarily selecting only Ubuntu for
+the manually dispatched self-hosted smoke while all four Apple Intel runners
+are offline. Restore its explicit macOS row when a runner with `self-hosted`,
+`codex` and `macOS` is available. Consumer setup templates retain their existing
+runner configuration.
 
 Hosted Ubuntu, Windows and macOS fixture jobs retain their full coverage and
 acceptance checks. The workflow validator accepts the original supported pool
-and its narrower Linux selection, and rejects Windows service Codex routing.
+and its narrower Linux selection for operational jobs, and rejects Windows
+service Codex routing. The smoke matrix accepts the supported macOS/Ubuntu pool
+and this temporary Ubuntu-only selection; Ubuntu cannot be removed.
+
+## Manual platform verification
+
+Run **Setup Platform Smoke** on `master` with the default inputs to validate the
+full hosted Ubuntu, Windows and macOS matrix and the current self-hosted Ubuntu
+matrix. Every selected platform keeps package checks, full coverage, acceptance
+budgets and contract validators. Native macOS self-hosted acceptance remains
+pending until the operator restores the Apple Intel runners and macOS row;
+hosted macOS results cannot substitute for that evidence.
+
+`upload_windows_coverage` defaults to `false`. Coverage export is a separate
+explicit opt-in, never a prerequisite for hosted fixture validation. Set
+`windows_startup_probe=true` with coverage export disabled for the isolated
+five-minute hosted PowerShell diagnostic; both full fixture matrices are then
+skipped. Selecting the probe together with coverage export runs the diagnostic
+and hosted fixtures/export, while self-hosted fixtures remain skipped.
+
+Inspect the run's individual platform jobs before claiming full success. A
+queued, canceled or failed job is missing evidence, even if other jobs passed.
+Fixtures do not prove authenticated agent tool execution.

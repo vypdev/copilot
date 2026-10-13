@@ -677,3 +677,85 @@ This one new post-write mismatch case belongs only to this extension's 29-case
 allocation, and its existing missing-mutation case now asserts refusal. The
 changed Status adapter joins the same 95%/90% runtime gate. Live #454 Project
 resumption/replay acceptance remains pending until promotion.
+
+## Native close-event completion metadata — dogfooding #496/#497 (2026-10-13)
+
+Evidence: Help [#497](https://github.com/vypdev/copilot/issues/497) was natively
+closed as completed, and [closed run 38471735084](https://github.com/vypdev/copilot/actions/runs/38471735084)
+succeeded while `in-progress` and `state:working` remained. Its correlated
+status correctly said completed, exposing contradictory labels. Existing
+completion cleanup ran only through a verified merged PR; the native closed
+route retired cards but did not reconcile metadata.
+
+The native `issues:closed` route MUST now apply the existing pure completion
+planner through a separate label-only bound capability before independently
+retiring existing progress/synchronization cards. It MUST NOT enter the normal
+issue route, prepare a model/runtime, create or delete a branch, change Project
+Status, close/reopen the issue, create a comment, or replace a label inventory.
+The configured managed labels and fixed start label are removed selectively;
+canonical obsolete progress is replaced with 100% only for verified native
+completed closure. Not-planned, duplicate and unknown closure clear obsolete
+progress without asserting 100%. Historical kind/priority/size, branch/SDD and
+unrelated labels remain protected by the existing planner contract.
+
+```text
+native closed event -> read current exact closed issue and reason
+ -> validate configured/protected labels -> native fence before each label write
+ -> final native/metadata verification -> independently retire existing cards
+```
+
+Text equivalent: the event selects cleanup, while fresh native reads authorize
+only completion metadata. Each write rechecks identity/state/reason, and the
+final read verifies the intended delta. A reopening, changed reason, unavailable
+read, configuration conflict or newly stale managed label stops repair. Earlier
+successful changes remain; the issue is never reclosed. Card retirement retains
+its independent results even when metadata fails. A duplicate valid close run
+becomes a no-write replay. Closed edited/labeled callbacks remain ignored, so
+label mutation webhooks cannot loop back into cleanup or enrichment.
+
+Architecture: `BoundIssueCompletionMetadataPort` physically exposes only frozen
+per-issue `read`, `addLabel` and `removeLabel` closures. Repository/credential
+binding stays in infrastructure. `ReconcileClosedIssueMetadataUseCase` uses the
+existing domain planner and semantic native adapter; `ReconcileClosedIssueUseCase`
+coordinates metadata and existing card cleanup. No Execution, SDK, token, broad
+replacement, publication or native state authority crosses the leaf boundary.
+The trusted route copies/freezes configured lifecycle/protected names once.
+Existing architecture/import, credential, workflow and callback guards remain.
+
+Operator states: **Complete: the issue is closed, active labels are cleared and
+native completion progress is verified; no action required.** **Pending:
+closed-event cleanup is running; inspect its run.** **Unavailable/failed:
+closure remains authoritative, metadata could not be verified; inspect and
+retry the native closed workflow.** **Partial: completed selective label changes
+remain, later repair or card retirement failed; inspect the retained result and
+retry.** **Reopened during repair: native work remains open; cleanup stops and
+creates no completion claim.** Native issue/run/status provide links and plain
+text state. There are zero new timeline comments, labels, inputs or translated
+messages; existing localized semantic error recovery and native status apply.
+
+Additional risk-derived floor: **25 distinct cases**, counted only here:
+**21** guarded metadata cases (four reasons, replay, two unsafe identities,
+three invalid native states, denied read/removal/addition, before-write reopening
+and reason movement, missing facts, concurrent removed/unrelated/managed labels,
+configuration conflict and partial reopening); **two** physical capability cases;
+and **two** independent cleanup coordination cases. Strengthen the existing
+closed-route and callback tests without counting them again. Each new runtime
+module MUST pass 95% lines/statements and 90% branches/functions; repository
+coverage and all preceding completion/retirement budgets remain unchanged.
+
+Traceability: reason/label policy -> existing pure planner and 21 guarded cases;
+per-write native fences and retained effects -> race/failure cases; no native
+state/publication authority -> two capability cases; independent card cleanup ->
+two coordinator cases; closed-only entrypoint and callback suppression ->
+existing strengthened route tests. User/operator docs in
+`docs/issues/notifications-and-auto-close.mdx` MUST cover native manual closure,
+label cleanup, replay and retained partial recovery. No schema/data migration or
+external Project workflow change is needed. Rollback retains native closure but
+restores stale active labels and requires manual metadata repair.
+
+Native acceptance MUST close the branchless Help fixture on promoted code,
+verify only the expected label delta, inspect a no-write rerun, then reopen it
+without stale completion guidance and close it after the fixture. Full coverage,
+new module gates, build/bundles, lint/types, documentation/specifications/workflow
+validators, Graphify and current-head CI/review/platform jobs remain mandatory.
+No completed acceptance is claimed before native evidence is recorded.

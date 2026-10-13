@@ -818,25 +818,56 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('Ubuntu, Windows and macOS setup fixture matrix');
   });
 
-  it('reserves hosted setup fixtures for PRs and explicit Windows coverage exports', () => {
+  it.each([
+    ['pull_request', false, false, true],
+    ['workflow_dispatch', false, false, true],
+    ['workflow_dispatch', false, true, true],
+    ['workflow_dispatch', true, false, false],
+    ['workflow_dispatch', true, true, true],
+    ['push', false, false, false],
+  ] as const)('selects hosted setup fixtures for %s with probe=%s and export=%s', (eventName, windowsStartupProbe, uploadWindowsCoverage, expected) => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const expression = workflow.jobs['setup-platform-smoke'].if;
+    expect(runInNewContext(expression.slice(4, -3), {
+      github: { event_name: eventName },
+      inputs: { windows_startup_probe: windowsStartupProbe, upload_windows_coverage: uploadWindowsCoverage },
+    })).toBe(expected);
+  });
+
+  it('requires ordinary hosted manual fixtures independently of coverage export', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const hosted = workflow.jobs['setup-platform-smoke'];
     const expression = hosted.if;
-    expect(expression).toBe("${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_windows_coverage == true) }}");
-    for (const [eventName, uploadWindowsCoverage, expected] of [
-      ['pull_request', false, true],
-      ['workflow_dispatch', false, false],
-      ['workflow_dispatch', true, true],
-    ] as const) {
-      expect(runInNewContext(expression.slice(4, -3), {
-        github: { event_name: eventName }, inputs: { upload_windows_coverage: uploadWindowsCoverage },
-      })).toBe(expected);
-    }
+    expect(expression).toBe("${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.windows_startup_probe != true || inputs.upload_windows_coverage == true)) }}");
     delete hosted.if;
-    expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
+    expect(() => assertRunner(file, workflow)).toThrow('independently of coverage export');
     hosted.if = "${{ github.event_name == 'pull_request' }}";
-    expect(() => assertRunner(file, workflow)).toThrow('PR or explicit Windows coverage');
+    expect(() => assertRunner(file, workflow)).toThrow('independently of coverage export');
+  });
+
+  it('retains hosted macOS during the authorized temporary Ubuntu-only self-hosted selection', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(workflow.jobs['setup-platform-smoke'].strategy.matrix.os).toContain('macos-latest');
+    expect(workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include).toEqual([
+      { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
+    ]);
+    expect(() => assertRunner(file, workflow)).not.toThrow();
+    workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.unshift({
+      platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'],
+    });
+    expect(() => assertRunner(file, workflow)).not.toThrow();
+  });
+
+  it('rejects removing Ubuntu from the supported self-hosted fixture selection', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include =
+      workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include
+        .filter((row: { platform: string }) => row.platform !== 'Ubuntu');
+    expect(() => assertRunner(file, workflow)).toThrow('self-hosted macOS and Ubuntu');
   });
 
   it('rejects explicit dependency-cache backup on persistent smoke runners', () => {
@@ -857,7 +888,7 @@ describe('workflow contract validator', () => {
     expect(hosted.with.cache).toBe('pnpm');
   });
 
-  it('requires isolated fixtures on both supported manually dispatched Codex runner platforms', () => {
+  it('requires isolated fixtures on the supported manually dispatched Codex runner selection', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
@@ -1156,6 +1187,21 @@ describe('workflow contract validator', () => {
     expect(reports.run).toContain('incomplete (exit %s)');
     expect(upload.if).toBe('${{ always() }}');
   });
+
+  it.each(['event-base', 'ancestry', 'range', 'manual-only'] as const)(
+    'rejects loss of the RepoWise history scope boundary: %s', (boundary) => {
+      const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      const job = workflow.jobs['code-health'];
+      const reports = job.steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
+      if (boundary === 'event-base') job.env.REPOWISE_BASE_SHA = '${{ github.sha }}';
+      else if (boundary === 'ancestry') reports.run = reports.run.replace('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD', 'true');
+      else if (boundary === 'range') reports.run = reports.run.replace('--since "$REPOWISE_BASE_SHA" --to HEAD', '');
+      else reports.run = reports.run.replace('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]', 'true');
+      expect(() => validateWorkflow(file, workflow)).toThrow('event-scoped security history');
+    },
+  );
 
   it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
