@@ -1,3 +1,4 @@
+import { DEFAULT_COPILOT_LIFECYCLE_LABELS, type CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import type { AgentConfiguration } from '../../domain/agent';
 import type { PullRequestDescriptionMode } from '../../domain/pull_request_description';
 import type { AssignmentContext, CloseIssueAfterMergeContext, PrioritySizeContext } from './issue_workflow_context';
@@ -85,6 +86,8 @@ export interface PullRequestWorkflowContextSource {
   readonly branches: { readonly defaultBranch: string };
   readonly labels: {
     readonly sizeLabels: readonly string[];
+    readonly lifecycle?: CopilotLifecycleLabels;
+    readonly completionProtectedLabels?: readonly string[];
     readonly priorityLabelOnIssue?: string;
     readonly priorityLabelOnIssueProcessable: boolean;
     readonly priorityHigh: string;
@@ -135,6 +138,10 @@ export function projectPullRequestWorkflowStepContexts(
     }),
     description: projectPullRequestDescriptionContext(source),
     closeIssue: Object.freeze({
+      completionLabels: Object.freeze({
+        lifecycle: Object.freeze({ ...(source.labels.lifecycle ?? DEFAULT_COPILOT_LIFECYCLE_LABELS) }),
+        protectedLabels: Object.freeze([...(source.labels.completionProtectedLabels ?? ['branched', 'SDD', 'contract-change'])]),
+      }),
       issueNumber: source.issueNumber,
       pullRequestNumber: source.pullRequest.number,
     }),

@@ -313,3 +313,36 @@ same issue identity; an untrusted or mismatched URL is shown without navigation.
 When the detected request language and writing script already match the target,
 Copilot keeps the original wording and omits a redundant translation disclosure.
 Mixed-language requests and different writing scripts can still be translated.
+
+## Native completion and historical SDDs
+
+`status` reads the current native issue or PR after queueing. A completed native
+issue is shown as completed even if old active labels remain; a closed issue
+without a completed reason is shown as closed. A PR is shown as merged only
+when its current native `merged` flag is true. Reopening supersedes a queued
+closed event. These reads do not mutate labels or call an agent.
+
+After a linked PR merges, Copilot verifies the exact native PR and issue, closes
+only when needed, and reconciles completion labels with selective writes. It
+removes obsolete configured active/waiting/activity labels and canonical old
+percentages, preserves kind/priority/size/branched/SDD and unrelated labels, and
+adds `100%` only for verified completed closure. Already-correct replay performs
+no write. Deliberately reopened work is never reclosed by an older delivery.
+
+If a read or label write fails, the run reports retained native closure separately
+from unverified metadata. Inspect the linked run and retry the verified merged-PR
+operation after resolving the cause; do not manually invent completion evidence.
+Known state or reason movement stops further metadata writes. GitHub updates are
+not atomic, so concurrent changes may require another verified retry.
+
+For closed issues, a previously published SDD remains read-only historical
+evidence after `in-progress` is removed. Immutable publication, ownership, branch
+and final-state proofs still apply. Historical ready or pending artifacts do not
+ask for implementation or answers to old questions. Without a verified first
+publication, closing unstarted work does not create a fictitious required SDD.
+
+Closing an issue does not verify its SDD. Unavailable or unverified evidence keeps its inspection guidance; only the verified query result can establish historical publication.
+
+Status rejects an issue snapshot if its labels change between the initial and final native reads, so SDD eligibility and the displayed metadata describe the same verified sample. Label ordering alone does not invalidate a sample.
+
+When issue status also collects linked PR findings, it repeats the native issue fence after those asynchronous reads before returning the combined result.
