@@ -1,6 +1,7 @@
 import { Result } from '../../../../data/model/result';
 import type { BoundBranchChangeSizePort } from '../../../ports/branch_change_ports';
 import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
+import type { BoundProjectBoardMembershipQueryPort } from '../../../ports/project_board_query_ports';
 import type { BoundIssueLabelsPort } from '../../../ports/issue_management_ports';
 import type { BoundPullRequestBranchQueryPort } from '../../../ports/pull_request_branch_ports';
 import type { ChangeSizeContext } from '../../push_single_action_contexts';
@@ -13,6 +14,7 @@ export interface CheckChangesIssueSizeDependencies {
     issueRepository: BoundIssueLabelsPort;
     pullRequestRepository: BoundPullRequestBranchQueryPort;
     branchChangeSizePort: BoundBranchChangeSizePort;
+    projectMembershipQueryPort: BoundProjectBoardMembershipQueryPort;
 }
 
 export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId: string, dependencies: CheckChangesIssueSizeDependencies): Promise<Result[]> {
@@ -27,10 +29,6 @@ export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId:
             headBranch, baseBranch, param.thresholds, param.labels,
         );
         logSize(size.size, size.githubSize, size.reason, param.currentSize);
-        if (param.currentSize === size.size) {
-            logDebugInfo('The issue is already at the correct size.');
-            return [new Result({ id: taskId, success: true, executed: true })];
-        }
         const update = await updateIssueAndRelatedPullRequests({
             issueNumber: param.issueNumber,
             headBranch,
@@ -43,6 +41,7 @@ export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId:
             issueLabelsPort: dependencies.issueRepository,
             projectBoardCommandPort: dependencies.projectBoardCommandPort,
             pullRequestBranchQueryPort: dependencies.pullRequestRepository,
+            projectMembershipQueryPort: dependencies.projectMembershipQueryPort,
         });
         logDebugInfo(`Updated labels on issue #${param.issueNumber}:`);
         logDebugInfo(`Labels: ${update.issueLabelNames}`);
@@ -50,7 +49,14 @@ export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId:
             id: taskId,
             success: true,
             executed: true,
-            steps: [`${size.reason}, so the issue was resized to ${size.size}.` + (update.openPullRequestNumbers.length > 0 ? ` Same label applied to ${update.openPullRequestNumbers.length} open PR(s).` : '')],
+            steps: [
+                param.currentSize === size.size ? `The issue size remains ${size.size}; related pull requests were reconciled.`
+                    : `${size.reason}, so the issue was resized to ${size.size}.`,
+                ...(update.openPullRequestNumbers.length > 0 ? [`Same label applied to ${update.openPullRequestNumbers.length} open PR(s).`] : []),
+                ...(update.pendingProjectSizes.length > 0
+                    ? ['Pull-request Project size remains pending until its lifecycle workflow links the item; existing labels and issue Project updates were retained.'] : []),
+            ],
+            payload: { changeSize: { pendingProjectSizes: update.pendingProjectSizes } },
         })];
     } catch (error) {
         const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to check the size of the changes.');

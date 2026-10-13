@@ -22,6 +22,7 @@ import { PublishGithubActionUseCase } from "../../application/usecases/actions/p
 import { PublishIssueCommentUseCase } from "../../application/usecases/actions/publish_issue_comment_use_case";
 import { RecommendStepsUseCase } from "../../application/usecases/actions/recommend_steps_use_case";
 import { CheckChangesIssueSizeUseCase } from "../../application/usecases/steps/commit/check_changes_issue_size_use_case";
+import { createChangeSizeProjectMembershipQueryPort } from './change_size_project_membership_composition_root';
 import { BugbotAutofixUseCase } from "../../application/usecases/steps/commit/bugbot/bugbot_autofix_use_case";
 import { DetectBugbotFixIntentUseCase } from "../../application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_use_case";
 import { DismissBugbotFindingsUseCase } from "../../application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case";
@@ -333,6 +334,7 @@ export function createCommitUseCaseCompositionRoot(
       bindIssueLabels(createIssueLabelRepository(), binding),
       bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
       bindBranchChangeSize(new BranchCompareRepository(createBranchComparisonClient()), binding),
+      createChangeSizeProjectMembershipQueryPort(binding),
     ),
     createDetectPotentialProblemsUseCase(binding),
     createCheckProgressCompositionRoot(binding),

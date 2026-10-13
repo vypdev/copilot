@@ -65566,11 +65566,12 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const check_changes_issue_size_workflow_1 = __nccwpck_require__(43250);
 class CheckChangesIssueSizeUseCase {
-    constructor(projectBoardCommandPort, issueRepository, pullRequestRepository, branchChangeSizePort) {
+    constructor(projectBoardCommandPort, issueRepository, pullRequestRepository, branchChangeSizePort, projectMembershipQueryPort) {
         this.projectBoardCommandPort = projectBoardCommandPort;
         this.issueRepository = issueRepository;
         this.pullRequestRepository = pullRequestRepository;
         this.branchChangeSizePort = branchChangeSizePort;
+        this.projectMembershipQueryPort = projectMembershipQueryPort;
         this.taskId = 'CheckChangesIssueSizeUseCase';
     }
     async invoke(param) {
@@ -65580,6 +65581,7 @@ class CheckChangesIssueSizeUseCase {
             issueRepository: this.issueRepository,
             pullRequestRepository: this.pullRequestRepository,
             branchChangeSizePort: this.branchChangeSizePort,
+            projectMembershipQueryPort: this.projectMembershipQueryPort,
         });
     }
 }
@@ -65609,10 +65611,6 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
         const headBranch = param.headBranch;
         const size = await dependencies.branchChangeSizePort.getSizeCategoryAndReason(headBranch, baseBranch, param.thresholds, param.labels);
         logSize(size.size, size.githubSize, size.reason, param.currentSize);
-        if (param.currentSize === size.size) {
-            (0, logging_ports_1.logDebugInfo)('The issue is already at the correct size.');
-            return [new result_1.Result({ id: taskId, success: true, executed: true })];
-        }
         const update = await (0, update_change_size_labels_1.updateIssueAndRelatedPullRequests)({
             issueNumber: param.issueNumber,
             headBranch,
@@ -65625,6 +65623,7 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
             issueLabelsPort: dependencies.issueRepository,
             projectBoardCommandPort: dependencies.projectBoardCommandPort,
             pullRequestBranchQueryPort: dependencies.pullRequestRepository,
+            projectMembershipQueryPort: dependencies.projectMembershipQueryPort,
         });
         (0, logging_ports_1.logDebugInfo)(`Updated labels on issue #${param.issueNumber}:`);
         (0, logging_ports_1.logDebugInfo)(`Labels: ${update.issueLabelNames}`);
@@ -65632,7 +65631,14 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
                 id: taskId,
                 success: true,
                 executed: true,
-                steps: [`${size.reason}, so the issue was resized to ${size.size}.` + (update.openPullRequestNumbers.length > 0 ? ` Same label applied to ${update.openPullRequestNumbers.length} open PR(s).` : '')],
+                steps: [
+                    param.currentSize === size.size ? `The issue size remains ${size.size}; related pull requests were reconciled.`
+                        : `${size.reason}, so the issue was resized to ${size.size}.`,
+                    ...(update.openPullRequestNumbers.length > 0 ? [`Same label applied to ${update.openPullRequestNumbers.length} open PR(s).`] : []),
+                    ...(update.pendingProjectSizes.length > 0
+                        ? ['Pull-request Project size remains pending until its lifecycle workflow links the item; existing labels and issue Project updates were retained.'] : []),
+                ],
+                payload: { changeSize: { pendingProjectSizes: update.pendingProjectSizes } },
             })];
     }
     catch (error) {
@@ -66202,18 +66208,34 @@ async function updateProjectSize(projects, issueOrPullRequestNumber, githubSize,
 async function updateOpenPullRequestSize(request, pullRequestNumber, ports) {
     const pullRequestLabels = await ports.issueLabelsPort.getLabels(pullRequestNumber);
     const pullRequestLabelNames = replaceSizeLabel(pullRequestLabels, request.sizeLabels, request.size);
-    await ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames);
-    await updateProjectSize(request.projects, pullRequestNumber, request.githubSize, ports.projectBoardCommandPort);
+    if (!sameLabels(pullRequestLabels, pullRequestLabelNames)) {
+        await ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames);
+    }
+    const pending = [];
+    for (const project of request.projects) {
+        if (await ports.projectMembershipQueryPort.isContentLinked(project, pullRequestNumber)) {
+            await ports.projectBoardCommandPort.setTaskSize(project, pullRequestNumber, request.githubSize);
+        }
+        else
+            pending.push({ pullRequestNumber, projectId: project.id });
+    }
+    return pending;
 }
 async function updateIssueAndRelatedPullRequests(request, ports) {
     const issueLabelNames = replaceSizeLabel(request.currentIssueLabels, request.sizeLabels, request.size);
-    await ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames);
+    if (!sameLabels(request.currentIssueLabels, issueLabelNames)) {
+        await ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames);
+    }
     await updateProjectSize(request.projects, request.issueNumber, request.githubSize, ports.projectBoardCommandPort);
     const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.headBranch);
+    const pendingProjectSizes = [];
     for (const pullRequestNumber of openPullRequestNumbers) {
-        await updateOpenPullRequestSize(request, pullRequestNumber, ports);
+        pendingProjectSizes.push(...await updateOpenPullRequestSize(request, pullRequestNumber, ports));
     }
-    return { issueLabelNames, openPullRequestNumbers };
+    return { issueLabelNames, openPullRequestNumbers, pendingProjectSizes };
+}
+function sameLabels(current, next) {
+    return current.length === next.length && current.every(label => next.includes(label));
 }
 
 
@@ -82669,6 +82691,7 @@ async function findProjectItem(client, project, itemId, fieldName) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getProjectItemId = getProjectItemId;
 exports.getProjectItemIdByContentId = getProjectItemIdByContentId;
+exports.isProjectContentLinked = isProjectContentLinked;
 const project_board_provider_limits_1 = __nccwpck_require__(96997);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_adapter_1 = __nccwpck_require__(2761);
@@ -82716,6 +82739,18 @@ async function getProjectItemId(graphqlClient, project, owner, repo, issueOrPull
 }
 async function getProjectItemIdByContentId(graphqlClient, project, contentId) {
     return findProjectItemId(graphqlClient, project, contentId);
+}
+/** Distinguish a verified pending link from unavailable Project evidence. */
+async function isProjectContentLinked(client, project, owner, repo, contentNumber) {
+    if (!Number.isSafeInteger(contentNumber) || contentNumber < 1) {
+        throw new Error('A safe content identity is required before reading Project membership.');
+    }
+    const result = await client.graphql(CONTENT_QUERY, { owner, repo, number: contentNumber });
+    const contentId = result.repository?.issueOrPullRequest?.id;
+    if (typeof contentId !== 'string' || !contentId.trim()) {
+        throw new Error('The repository content identity is unavailable while reading Project membership.');
+    }
+    return Boolean(await findProjectItemId(client, project, contentId));
 }
 async function findProjectItemId(client, project, contentId) {
     for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
@@ -90965,6 +91000,27 @@ exports.BugbotScmPortFactory = BugbotScmPortFactory;
 
 /***/ }),
 
+/***/ 99375:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createChangeSizeProjectMembershipQueryPort = createChangeSizeProjectMembershipQueryPort;
+const project_detail_1 = __nccwpck_require__(33428);
+const project_board_item_query_1 = __nccwpck_require__(63552);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+/** Bind credentials outside the application's physically read-only facade. */
+function createChangeSizeProjectMembershipQueryPort(binding) {
+    const client = (0, github_project_client_factory_1.createGraphqlTransportClient)().getClient(binding.token);
+    return Object.freeze({
+        isContentLinked: (project, contentNumber) => (0, project_board_item_query_1.isProjectContentLinked)(client, new project_detail_1.ProjectDetail(project), binding.owner, binding.repository, contentNumber),
+    });
+}
+
+
+/***/ }),
+
 /***/ 21531:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -91750,6 +91806,7 @@ const publish_github_action_use_case_1 = __nccwpck_require__(68891);
 const publish_issue_comment_use_case_1 = __nccwpck_require__(61313);
 const recommend_steps_use_case_1 = __nccwpck_require__(73746);
 const check_changes_issue_size_use_case_1 = __nccwpck_require__(28356);
+const change_size_project_membership_composition_root_1 = __nccwpck_require__(99375);
 const bugbot_autofix_use_case_1 = __nccwpck_require__(45446);
 const detect_bugbot_fix_intent_use_case_1 = __nccwpck_require__(76234);
 const dismiss_bugbot_findings_use_case_1 = __nccwpck_require__(37685);
@@ -91875,7 +91932,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_1.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
-    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, change_size_project_membership_composition_root_1.createChangeSizeProjectMembershipQueryPort)(binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress) {
     let singleAction;

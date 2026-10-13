@@ -1,4 +1,4 @@
-import { getProjectItemId, getProjectItemIdByContentId } from '../project_board_item_query';
+import { getProjectItemId, getProjectItemIdByContentId, isProjectContentLinked } from '../project_board_item_query';
 import { setProjectBoardSingleSelectField } from '../project_board_field_update';
 import { ProjectDetail } from '../../../model/project_detail';
 import type { GithubGraphqlTransportClient } from '../../../../infrastructure/github/ports/github_graphql_transport_port';
@@ -65,6 +65,39 @@ describe('bounded content-side project membership recovery', () => {
   it('does not accept membership in a different Project or for different content', async () => {
     const h = queryHarness(source('Issue', page([{ ...linked, project: { id: 'OTHER' } }, { ...linked, content: { id: 'OTHER' } }])));
     await expect(getProjectItemIdByContentId(h.client, project, 'CONTENT_exact')).resolves.toBeUndefined();
+  });
+});
+
+describe('read-only membership for a newly opened PR', () => {
+  it('recognizes a linked PR from the recovered exact content membership', async () => {
+    const h = queryHarness();
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', 99)).resolves.toBe(true);
+  });
+  it('returns false only after both bounded membership views prove absence', async () => {
+    const h = queryHarness(source('PullRequest', page([])));
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', 99)).resolves.toBe(false);
+    expect(h.graphql).toHaveBeenCalledTimes(3);
+  });
+  it('rejects missing repository content rather than inventing pending membership', async () => {
+    const h = queryHarness(); h.graphql.mockResolvedValue({ repository: { issueOrPullRequest: null } } as never);
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', 99)).rejects.toThrow('content identity');
+  });
+  it('propagates denied membership reads', async () => {
+    const h = queryHarness(); h.graphql.mockRejectedValue(new Error('403 forbidden'));
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', 99)).rejects.toThrow('403 forbidden');
+  });
+  it('rejects malformed content-side membership rather than treating it as absent', async () => {
+    const h = queryHarness(source('PullRequest', { nodes: [], pageInfo: null }));
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', 99)).rejects.toThrow('malformed');
+  });
+  it.each([0, Number.NaN])('refuses unsafe native content identity %s before reading', async number => {
+    const h = queryHarness();
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', number)).rejects.toThrow('safe content identity');
+    expect(h.graphql).not.toHaveBeenCalled();
+  });
+  it('does not claim membership from a different Project or content', async () => {
+    const h = queryHarness(source('PullRequest', page([{ ...linked, project: { id: 'OTHER' } }, { ...linked, content: { id: 'OTHER' } }])));
+    await expect(isProjectContentLinked(h.client, project, 'owner', 'repo', 99)).resolves.toBe(false);
   });
 });
 

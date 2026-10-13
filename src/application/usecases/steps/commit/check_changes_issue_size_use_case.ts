@@ -1,6 +1,7 @@
 import type { Result } from '../../../../data/model/result';
 import type { BoundBranchChangeSizePort } from '../../../ports/branch_change_ports';
 import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
+import type { BoundProjectBoardMembershipQueryPort } from '../../../ports/project_board_query_ports';
 import type { BoundIssueLabelsPort } from '../../../ports/issue_management_ports';
 import type { BoundPullRequestBranchQueryPort } from '../../../ports/pull_request_branch_ports';
 import type { ChangeSizeContext } from '../../push_single_action_contexts';
@@ -17,6 +18,7 @@ export class CheckChangesIssueSizeUseCase implements ParamUseCase<ChangeSizeCont
         private readonly issueRepository: BoundIssueLabelsPort,
         private readonly pullRequestRepository: BoundPullRequestBranchQueryPort,
         private readonly branchChangeSizePort: BoundBranchChangeSizePort,
+        private readonly projectMembershipQueryPort: BoundProjectBoardMembershipQueryPort,
     ) {}
 
     async invoke(param: ChangeSizeContext): Promise<Result[]> {
@@ -26,6 +28,7 @@ export class CheckChangesIssueSizeUseCase implements ParamUseCase<ChangeSizeCont
             issueRepository: this.issueRepository,
             pullRequestRepository: this.pullRequestRepository,
             branchChangeSizePort: this.branchChangeSizePort,
+            projectMembershipQueryPort: this.projectMembershipQueryPort,
         });
     }
 }

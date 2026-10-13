@@ -478,3 +478,77 @@ credential-shaped application requests.
   service locators, credential fields, dual writers, and feature-flag rollout.
 - Follow-up: P2-G performs the exact allowlist and alias-bypass closure audit; it
   may remove additional approved entries but cannot add one.
+
+### Concurrent PR creation and push sizing — dogfooding #496 (2026-10-13)
+
+Native [push run 38470723291](https://github.com/vypdev/copilot/actions/runs/38470723291)
+updated issue #496 and PR #498 size labels, then failed because the PR was not
+yet linked to Project #2. The PR-opened workflow was queued. Push and PR events
+have separate queues, so a newly visible PR cannot be assumed to have completed
+Project linkage. Repeating the push also previously skipped all reconciliation
+once the issue's size label matched, retaining partial Project state.
+
+The push size capability MUST distinguish verified missing PR membership from
+unavailable reads. It retains issue size updates and related PR labels, checks
+exact configured Project membership through a physically read-only bound port,
+and writes PR Project size only when membership is verified. An absent item
+returns pending linkage; the PR lifecycle remains the owner of linking and
+initial Status. The push MUST NOT create/link a Project item or alter Status.
+Denied, malformed or incomplete evidence and write failures remain failures,
+never pending. Existing successful mutations remain retained.
+
+```text
+push -> compute size -> reconcile issue label/Project size -> read related PRs
+ -> reconcile PR labels -> verify each PR/Project membership
+ -> linked: update size | verified absent: retain pending linkage
+ -> PR lifecycle links item -> rerun push: reconcile even if labels match
+```
+
+Text equivalent: native membership is a prerequisite for PR Project size.
+Ordinary PR-opened handling eventually links and sizes the PR using current
+issue labels; replaying a push repairs missing size without requiring a label
+change. Already-correct issue/PR labels MUST NOT be rewritten solely for replay.
+No new retry loop, timing sleep, public input, permission, model request or
+persisted schema is introduced. A Project item removed between query and write
+causes the existing retained-state failure; GitHub has no atomic membership and
+field-write operation.
+
+Architecture: `BoundProjectBoardMembershipQueryPort` exposes only
+`isContentLinked(project, number)`; infrastructure binds repository/token and
+converts semantic Project references. The adapter resolves exact repository
+content and uses the existing bounded board/content-side membership queries.
+Unknown or foreign evidence cannot certify linkage. Application workflows
+receive no SDK, mutable Execution, credential, link or Status authority.
+Dependency/import ratchets and strict TypeScript compilation enforce those
+boundaries.
+
+Representative operator states: **Running: issue and PR size labels are being
+reconciled; no action required.** **Pending: PR Project size awaits its lifecycle
+link; labels and issue Project updates were retained.** **Complete: labels and
+all verified linked Project sizes are reconciled.** **Unavailable/failed:
+completed updates remain; inspect the linked run and retry after Project
+permissions/linkage are verified.** Native run, issue and PR provide inspection
+links. This adds zero conversation comments or notifications; existing semantic
+progress/error publication and locales remain. Internal pending identities are
+bounded result evidence, not a new user configuration or public Markdown schema.
+
+Additional risk-derived floor: **18 distinct cases**, counted only here: three
+use-case states (pending, same-size repair, denied read), six mutation/replay
+cases (mixed Projects, linkage race/retry, unchanged labels, multiple PRs,
+no Project, item-write failure), eight membership adapter cases (linked,
+verified absent, missing content, denied read, malformed evidence, two unsafe
+numbers, foreign membership), and one composition authority case. Each changed
+runtime module MUST retain at least 95% lines/statements and 90% branches/functions;
+repository thresholds remain unchanged. The module coverage gate names the
+changed workflow/helper, membership adapter and composition explicitly.
+
+Traceability: pending/failed distinction -> adapter and guarded workflow cases;
+replay repair and quiet labels -> mutation/use-case cases; bounded authority ->
+composition case and architecture ratchets. `docs/issues/assignees-and-projects.mdx`
+MUST explain concurrent PR creation, pending linkage and same-size repair.
+Native acceptance requires a successful current-head push, PR-opened linkage,
+and an unchanged-size retry; old failure evidence remains historical. Full
+coverage, build/bundles, lint/types, documentation/specification/workflow checks,
+Graphify update and hosted platform validation remain required. Rollback
+restores the observed race and needs manual PR sizing repair; no data migration
+or external Project workflow change is required.
