@@ -112,3 +112,24 @@ SDD card. Invalid or unavailable authority cannot certify a comparison. Repeatin
 the same source comment refreshes one reply; it never regenerates the SDD or
 changes the branch. See [comment commands](./comment-commands.mdx) for exact PR
 link rules, fixed limits and the English/Spanish fallback contract.
+
+
+## Reopening after a merged PR
+
+Reopening an issue does not reopen its merged PR or restore GitHub's direct
+issue-to-branch connection. If that connection is absent, the retained branch
+needs a new open, same-repository PR linked to the issue before Copilot can
+verify current SDD readiness. A retained branch name and its historical SDD
+commits alone cannot establish that live relationship.
+
+For follow-up work, contribute a normal commit on the existing Action-managed
+branch and open a follow-up PR linked to the same issue. Let the Action finish
+linking it, then rerun the failed issue workflow and `/copilot sdd-diff`. The PR
+head name and commit must match the live remote branch; the original verified
+first and revision SDD commits remain immutable. Keep branch synchronization
+with the Action's `/copilot sync-branch` command.
+
+If there is no follow-up work, leave the issue completed and use its immutable
+historical SDD links. A closed issue without `in-progress` reports that a current
+comparison is not applicable. Do not treat an unavailable relationship as proof
+that the saved SDD documents were lost.
