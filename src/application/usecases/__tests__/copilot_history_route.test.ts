@@ -1,3 +1,6 @@
+import { selectSemanticReplyIntents } from '../../policies/semantic_result_publication_policy';
+import { PublishResultUseCase } from '../steps/common/publish_resume_use_case';
+import { replyRequestBodyDigest } from '../../../domain/reply_request_digest';
 import { IssueCommentUseCase } from '../issue_comment_use_case';
 import { PullRequestReviewCommentUseCase } from '../pull_request_review_comment_use_case';
 import { parseCopilotCommand } from '../../../domain/copilot_command';
@@ -40,4 +43,38 @@ describe('real history command entrypoints', () => {
             expect(forbidden.invoke).not.toHaveBeenCalled();
         });
     it('activates no model role for a history query', () => expect(activeAgentTasks({ eventName: 'issue_comment', comment: { body: '/copilot history' } } as never, { enabledSingleAction: false } as never, 'vypbot')).toEqual([]));
+});
+
+
+describe('PR main conversation history routing', () => {
+    beforeEach(() => forbidden.invoke.mockClear());
+    function mainPr() {
+        const f = setup('issue');
+        Object.assign(f.input, { isPullRequest: true, issueNumber: 42, issue: { number: 75, commentId: 100, commentBody: '/copilot history' } });
+        return f;
+    }
+    it('selects the verified PR target instead of its linked issue or issue-shaped event payload', async () => {
+        const f = mainPr(); const results = await f.useCase.invoke(f.input);
+        expect(f.readComments).toHaveBeenCalledWith(75);
+        expect(results[0].payload).toMatchObject({ publication: { target: { kind: 'pr', number: 75 } } });
+        expect(selectSemanticReplyIntents({ locale: 'en-US', target: { kind: 'pull-request', number: 75 },
+            correlationId: 'comment:100', results })).toHaveLength(1);
+        expect(forbidden.invoke).not.toHaveBeenCalled();
+    });
+    it('publishes the route result through the real verified-source reply boundary in the PR conversation', async () => {
+        const f = mainPr(), results = await f.useCase.invoke(f.input);
+        const stored: Array<{ id: number; body: string; user: { login: string } }> = [];
+        const comments = { listIssueComments: jest.fn(async () => stored),
+            addComment: jest.fn(async (_number: number, body: string) => { stored.push({ id: 101, body, user: { login: 'vypbot' } }); }),
+            updateComment: jest.fn(async () => undefined), removeComment: jest.fn(async () => 'removed' as const) };
+        const target = { kind: 'pull-request' as const, number: 75 };
+        await new PublishResultUseCase(comments, undefined, undefined, { matches: async () => true }).invoke({
+            owner: 'acme', repository: 'widget', botLogin: 'vypbot', locale: 'en-US', target,
+            requestCorrelationId: 'comment:100', results, requestSource: { surface: 'issue-comment', commentId: 100,
+                author: 'developer', target, bodyDigest: replyRequestBodyDigest('/copilot history') },
+        });
+        expect(comments.addComment).toHaveBeenCalledWith(75, expect.stringContaining('target="pr:75"'));
+        expect(stored).toHaveLength(1); expect(stored[0].body).toContain('## Operation history');
+        expect(forbidden.invoke).not.toHaveBeenCalled();
+    });
 });

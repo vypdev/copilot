@@ -407,3 +407,23 @@ valid empty scope refusal and rejection of invented rows. The own inventory is
 now **168** (164 + 4), with those four allocated only to UI/publication. Shared
 locale/communication ledgers are regenerated from their actual cases. Full
 gates and live replay of the corrected recovery remain pending.
+
+
+### Main PR conversation target correction (2026-10-13, bug #480)
+
+Native run `38364486930` accepted `/copilot history` in the main conversation of
+PR #468 but produced no semantic reply: the early issue-comment route labeled
+the PR-shaped event as an issue, so the publication target did not match.
+The entrypoint MUST choose the verified current PR number and `pr` history
+identity for PR conversations, independently of its linked issue number or the
+issue-shaped webhook payload. Ordinary issues retain their exact issue target.
+PR requests use the PR locale; the existing parser still rejects history
+arguments before any provider/model/mutation capability.
+
+Two new distinct regressions failed before correction: exact PR routing with a
+different linked issue and a real route-to-verified-publication sequence. They
+extend the owning feature inventory from 168 to **170**. Existing invalid-argument
+cases remain unchanged; source-witness, no-SDD/no-agent/no-write, ten-row and
+marker-schema boundaries remain. Acceptance requires the original PR source
+comment to produce its bounded main-conversation report after promotion, with
+no hidden configuration/label changes and a quiet replay.
