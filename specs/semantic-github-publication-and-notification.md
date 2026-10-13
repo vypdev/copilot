@@ -1439,3 +1439,72 @@ The live source head and development base are checked again after analysis, befo
 The repair owns **30 distinct cases**: 26 provider-bound immutable-comparison cases and four application outcomes (wrong base, wrong head, unavailable comparison, and a changed base during analysis). The existing head-race and prompt cases are retained, with explicit supplied-evidence and no-shell assertions. The conservative semantic ledger adds ten declarations rather than counting parameterized rows again. User documentation and catalog evidence change with implementation. Live acceptance must prove a supplied-source assessment and retained state on incomplete evidence; successful offline tests alone do not close that acceptance.
 
 Live human doctor push `38162035628`, head `25950008`, exposed a second comparison-boundary problem: 39 files contained 248,563 raw source-patch bytes, including 89,186 bytes of the generated specification index; JSON escaping exceeded the unchanged 256,000-byte budget. The exact generated `specs/CATALOG.md` path now carries metadata only, alongside build outputs. The editable `specs/catalog.json` still requires its full patch. Two distinct provider contracts cover the generated index and its source. Bounds/incomplete data now report `provider.unavailable`; only invalid or contradictory object identity uses `workflow.stale`, so the Job Summary does not falsely claim the branch advanced. Fresh live acceptance remains pending.
+
+
+### Current request reply recovery: dogfooding #474 (2026-10-13)
+
+Native run `38331274938` failed after actual Codex execution, but its source
+comment `6135920461` retained the earlier validation-error reply. The existing
+correlation matcher kept any owned response unchanged. Error and read-only query
+replies MUST now refresh the same owned comment when their current result differs;
+mutation receipts and terminal action notifications retain their immutable effect
+record. Public schema-1 markers, message keys and transport namespaces do not
+change. Real SDK review-comment payloads use their separate review namespace even
+when GitHub supplies the standard `comment` field rather than an internal alias.
+
+```mermaid
+flowchart LR
+    E[Exact event request] --> W[Frozen private request witness]
+    W --> N[Verify current native comment and parent]
+    N --> R[Create or refresh one owned reply]
+    N --> S[Withhold stale or unverifiable writes]
+```
+
+Text equivalent: capture the source ID, transport, author, target and full private
+SHA-256 body witness; verify the exact native request; publish one current reply
+or retain existing state when the request cannot be verified. No request prose
+or credentials enter the witness or its presentation. Source identity, parent,
+author, HTTPS API binding, response URL and body are verified, redirects are
+refused, and reads have a fixed 70,000-character ceiling. Enterprise API prefixes
+are captured once. The provider port exposes only `matches`, without mutation.
+
+Creation, refresh and duplicate cleanup MUST revalidate the source immediately
+before their writes. A changed, foreign, denied or missing source MUST cause no
+new write. An already-created reply remains a retained effect if the source moves
+after creation. The same rendered result is a no-op replay. Without an event
+witness/reader, legacy replies remain immutable rather than assuming freshness.
+The GitHub completion entrypoint supplies the bound reader in production.
+REST has no transaction across source reads and reply writes; the last verified
+read and existing workflow queue bound that interval rather than claiming atomic
+provider compare-and-swap. Ownership remains valid bot author plus exact marker.
+
+New disjoint allocation: **56 cases** belong to this capability: 30 native
+read/identity/error/enterprise cases, 24 publication and witness-projection cases,
+and two physical binding cases. Eight read-only persistence and three contextual
+recovery cases belong only to execution lifecycle; the real Git cache/security
+case and five verification-workspace cases belong only to autofix. The cross-capability extension therefore totals
+73, with no case counted twice. The private digest requires 100% coverage and
+each native reader, binding and changed reply workflow keeps 95% lines/statements
+and 90% branches/functions. Existing global budgets remain unchanged.
+
+Acceptance: edit the failed native request, observe the current error replacing
+its earlier message in the same reply; replay without another comment; move the
+request during reads and observe no stale writes. Verify EN/ES postflight
+recovery, query refresh and retained mutation receipts. Full gates and fresh
+native replay remain pending.
+
+Native CI `38341893282` passed all 7,881 cases but exposed an environment-dependent binding fixture: hosted runners define `GITHUB_API_URL`, so the default branch was untested. The two existing binding cases now explicitly isolate and restore that environment variable, proving both the absent default and captured Enterprise override on every host. No case is added, and the 64-case allocation and coverage thresholds are unchanged. Fresh native verification is required before integration.
+
+Native fixer run `38343394796` on Mac published `83a80a52` and completed its configured checks. Its additional source-freshness regression belongs to this capability, bringing publication allocation to 53. Mutation receipts require a matching supplied witness before creation/cleanup while remaining immutable after publication. No model answer or CLI exit alone is used as tool/push evidence. Five workspace-verification cases belong only to autofix; the cross-capability total is now 70 (53 + 11 + 6).
+
+
+Native review `38355934012` found that an absent witness could still authorize a
+comment-correlated reply. Three new regressions reproduced both issue/review
+transport omissions and an immutable mutation receipt. Every `comment:`
+correlation MUST now fail closed before comment reads or writes when its witness
+is absent. Non-comment event replies, including initial branchless help answers,
+retain their existing immutable behavior. Existing positive publication and
+concurrent-create fixtures now supply actual event witnesses and bound read-only
+verification; no test case, gate or namespace was removed. The current allocation
+is 56 semantic-publication cases and 73 across the three capabilities
+(56 + 11 + 6); earlier totals above describe their historical snapshots.

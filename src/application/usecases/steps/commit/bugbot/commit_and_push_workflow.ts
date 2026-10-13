@@ -35,8 +35,9 @@ export async function runCommitAndPushWorkflow(
         const { name, email } = await gitCommitPort.getAuthenticatedUserDetails();
         await gitCommitPort.configureAuthor(name, email);
         logDebugInfo(`Git author set to ${name} <${email}>.`);
-        if (options.workspacePaths) {
-            await gitCommitPort.stagePaths(options.workspacePaths);
+        const workspacePaths = preflight.workspacePaths ?? options.workspacePaths;
+        if (workspacePaths) {
+            await gitCommitPort.stagePaths(workspacePaths);
         } else {
             await gitCommitPort.stageAll();
         }
