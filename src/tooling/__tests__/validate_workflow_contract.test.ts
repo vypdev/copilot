@@ -20,6 +20,7 @@ interface ContractModule {
   assertAgentInstallationPrerequisites(file: string, workflow: Record<string, unknown>): void;
   assertRepositoryLocaleInputs(file: string, workflow: Record<string, unknown>): void;
   assertRepositoryBugbotContextExclusions(file: string, workflow: Record<string, unknown>): void;
+  assertIssueBranchConfigurationInputs(file: string, workflow: Record<string, unknown>): void;
   assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES: number;
@@ -46,6 +47,7 @@ const {
   assertAgentInstallationPrerequisites,
   assertRepositoryLocaleInputs,
   assertRepositoryBugbotContextExclusions,
+  assertIssueBranchConfigurationInputs,
   assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
@@ -97,6 +99,36 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it('keeps branch and SDD configuration consistent across issue, PR, review and push callbacks', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      for (const fileName of ['copilot_issue.yml', 'copilot_issue_comment.yml', 'copilot_commit.yml',
+        'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml', 'copilot_pull_request_comment.yml']) {
+        const { file, workflow } = loadMutationWorkflow(directory, fileName);
+        expect(() => assertIssueBranchConfigurationInputs(file, workflow)).not.toThrow();
+      }
+    }
+  });
+
+  it.each(['issue-managed-branches', 'pre-branch-sdd'])(
+    'rejects a PR comment callback that omits or disables the installed %s policy', input => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_pull_request_comment.yml');
+      const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses === './');
+      delete action.with[input];
+      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+      action.with[input] = false;
+      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+    },
+  );
+
+  it('rejects a distributed callback that enables the SDD gate instead of inheriting its configured default', () => {
+    const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_pull_request_comment.yml');
+    const action = workflow.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
+    );
+    action.with['pre-branch-sdd'] = "${{ vars.PRE_BRANCH_SDD || 'true' }}";
+    expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+  });
+
   it('rejects installed and generated PR workflows that omit the draft-to-ready event', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
