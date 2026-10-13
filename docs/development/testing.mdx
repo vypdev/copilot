@@ -191,23 +191,26 @@ semantic assertions when changing component content or controls.
 
 This repository currently selects `[self-hosted, codex, Linux]` for Copilot
 operations while the four Apple runners are unstable. Mac support remains
-available. The manually dispatched smoke matrix retains explicit macOS and
-Ubuntu rows; if a required runner is unavailable, its job stays queued and the
-operator restores that runner. Consumer setup templates retain their existing
+available. The maintainer has authorized temporarily selecting only Ubuntu for
+the manually dispatched self-hosted smoke while all four Apple Intel runners
+are offline. Restore its explicit macOS row when a runner with `self-hosted`,
+`codex` and `macOS` is available. Consumer setup templates retain their existing
 runner configuration.
 
 Hosted Ubuntu, Windows and macOS fixture jobs retain their full coverage and
 acceptance checks. The workflow validator accepts the original supported pool
 and its narrower Linux selection for operational jobs, and rejects Windows
-service Codex routing. The smoke matrix requires both macOS and Ubuntu.
+service Codex routing. The smoke matrix accepts the supported macOS/Ubuntu pool
+and this temporary Ubuntu-only selection; Ubuntu cannot be removed.
 
 ## Manual platform verification
 
 Run **Setup Platform Smoke** on `master` with the default inputs to validate the
-full hosted Ubuntu, Windows and macOS matrix and the self-hosted macOS/Ubuntu
-matrix. Every platform keeps package checks, full coverage, acceptance budgets
-and contract validators. An unavailable self-hosted runner leaves only its own
-job queued; retain the platform and ask the operator to bring it back online.
+full hosted Ubuntu, Windows and macOS matrix and the current self-hosted Ubuntu
+matrix. Every selected platform keeps package checks, full coverage, acceptance
+budgets and contract validators. Native macOS self-hosted acceptance remains
+pending until the operator restores the Apple Intel runners and macOS row;
+hosted macOS results cannot substitute for that evidence.
 
 `upload_windows_coverage` defaults to `false`. Coverage export is a separate
 explicit opt-in, never a prerequisite for hosted fixture validation. Set

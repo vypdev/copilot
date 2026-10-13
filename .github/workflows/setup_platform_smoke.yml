@@ -122,13 +122,13 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}
     name: Setup package and local session (self-hosted ${{ matrix.platform }} codex)
     runs-on: ${{ matrix.labels }}
+    # Maintainer-authorized temporary Ubuntu-only routing while Apple Intel
+    # runners are offline. Hosted Ubuntu/Windows/macOS coverage remains required.
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: macOS
-            labels: [self-hosted, codex, macOS]
           - platform: Ubuntu
             labels: [self-hosted, codex, Linux]
     steps:

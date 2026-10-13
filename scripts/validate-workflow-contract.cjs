@@ -377,9 +377,10 @@ function assertRunner(file, workflow) {
         ];
         if (job['runs-on'] !== '${{ matrix.labels }}'
           || job.name !== 'Setup package and local session (self-hosted ${{ matrix.platform }} codex)'
-          || JSON.stringify(job.strategy?.matrix?.include) !== JSON.stringify(expectedMatrix)
+          || ![expectedMatrix, [expectedMatrix[1]]].some(matrix =>
+            JSON.stringify(job.strategy?.matrix?.include) === JSON.stringify(matrix))
           || job.strategy?.['fail-fast'] !== false) {
-          throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners; Windows services are unsupported.`);
+          throw new Error(`${relativeFile} must target self-hosted macOS and Ubuntu codex runners or the authorized temporary Ubuntu-only selection; Windows services are unsupported.`);
         }
         if (job.if !== "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' && inputs.windows_startup_probe != true }}") {
           throw new Error(`${relativeFile} must reserve self-hosted codex runners for manual dispatch from protected master.`);

@@ -793,7 +793,6 @@ describe('workflow contract validator', () => {
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(workflow.jobs['setup-platform-smoke'].strategy.matrix.os).toContain('windows-latest');
     expect(workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include).toEqual([
-      { platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'] },
       { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
     ]);
     workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.push({
@@ -848,12 +847,26 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('independently of coverage export');
   });
 
-  it.each(['macOS', 'Ubuntu'])('rejects removing self-hosted %s fixture coverage', platform => {
+  it('retains hosted macOS during the authorized temporary Ubuntu-only self-hosted selection', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    expect(workflow.jobs['setup-platform-smoke'].strategy.matrix.os).toContain('macos-latest');
+    expect(workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include).toEqual([
+      { platform: 'Ubuntu', labels: ['self-hosted', 'codex', 'Linux'] },
+    ]);
+    expect(() => assertRunner(file, workflow)).not.toThrow();
+    workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include.unshift({
+      platform: 'macOS', labels: ['self-hosted', 'codex', 'macOS'],
+    });
+    expect(() => assertRunner(file, workflow)).not.toThrow();
+  });
+
+  it('rejects removing Ubuntu from the supported self-hosted fixture selection', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include =
       workflow.jobs['setup-self-hosted-codex-smoke'].strategy.matrix.include
-        .filter((row: { platform: string }) => row.platform !== platform);
+        .filter((row: { platform: string }) => row.platform !== 'Ubuntu');
     expect(() => assertRunner(file, workflow)).toThrow('self-hosted macOS and Ubuntu');
   });
 
@@ -875,7 +888,7 @@ describe('workflow contract validator', () => {
     expect(hosted.with.cache).toBe('pnpm');
   });
 
-  it('requires isolated fixtures on both supported manually dispatched Codex runner platforms', () => {
+  it('requires isolated fixtures on the supported manually dispatched Codex runner selection', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'setup_platform_smoke.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     expect(() => validateWorkflow(file, workflow)).not.toThrow();

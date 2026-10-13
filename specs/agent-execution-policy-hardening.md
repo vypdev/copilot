@@ -768,15 +768,17 @@ required; new Codex integration runs target macOS and Ubuntu only.
 Dogfooding issue [#496](https://github.com/vypdev/copilot/issues/496) found that
 ordinary manual dispatch omitted hosted fixtures unless Windows Codecov export
 was also selected, and that a temporary Ubuntu-only self-hosted matrix was
-accepted. The intentional fixture contract MUST retain hosted Ubuntu, Windows
-and macOS, plus explicit self-hosted macOS and Ubuntu rows. Missing runners
-produce queued/unverified evidence; operators restore runners rather than
-removing platforms. Installed operational jobs MAY retain their existing Linux
-selector while Apple runner recovery is pending; this does not waive macOS
-fixture acceptance or permit Windows service Codex execution.
+accepted without an explicit recovery exception. The intentional fixture
+contract MUST retain hosted Ubuntu, Windows and macOS. On 2026-10-14 the
+maintainer authorized temporary Ubuntu-only self-hosted routing while the four
+eligible Apple Intel runners are offline. Installed operational jobs retain
+their existing Linux selector. Restore the supported macOS/Ubuntu self-hosted
+matrix once an eligible Apple runner returns; this exception does not waive
+macOS fixture acceptance or permit Windows service Codex execution.
 
 The companion runtime SDD defines the closed dispatch state table, eight-case
 regression budget, operator journey and documentation. Structural validation
-MUST reject removal of either supported self-hosted row and preserve full
+MUST accept only the complete supported matrix or the explicitly authorized
+temporary Ubuntu-only matrix, reject removal of Ubuntu, and preserve full
 package, coverage, acceptance and documentation checks. This change introduces
 no model request, new Action input, credentials, deployment or support claim.
