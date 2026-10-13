@@ -1,3 +1,4 @@
+import { isDoctorBranchReference } from '../../domain/github_runtime_doctor';
 import { doctorWorkflowCondition } from './doctor_workflow_condition_policy';
 import { load, JSON_SCHEMA } from 'js-yaml';
 import { parseIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
@@ -6,8 +7,7 @@ import type { DoctorConfiguration, DoctorRepositoryRead, DoctorRepositoryPath } 
 
 export function validDoctorConfiguration(value: DoctorConfiguration | undefined): value is DoctorConfiguration {
     if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
-        || typeof value.dependencyBranch !== 'string'
-        || !/^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u.test(value.dependencyBranch)) return false;
+        || !isDoctorBranchReference(value.dependencyBranch)) return false;
     try {
         if ('error' in parseIssueWorkflowProfile(JSON.stringify(value.profile))) return false;
         decideIssueStart({ labels: [], issueManagedBranches: value.issueManagedBranches, preBranchSdd: value.preBranchSdd });
@@ -24,13 +24,29 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
     try {
         const catalog = object(JSON.parse(catalogFile.text));
         if (catalog.version !== 1 || !Array.isArray(catalog.capabilities) || catalog.capabilities.length === 0) return 'blocked';
-        const ids = new Set<string>();
+        const files = new Set(read.trackedFiles);
+        const ids = new Set<string>(), titles = new Set<string>(), specs = new Set<string>();
         for (const raw of catalog.capabilities) {
             const capability = object(raw);
-            if (typeof capability.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(capability.id)
-                || ids.has(capability.id) || !Array.isArray(capability.specs) || capability.specs.length === 0
-                || capability.specs.some(path => typeof path !== 'string' || !/^specs\/[a-z0-9_-]+\.md$/u.test(path))) return 'blocked';
-            ids.add(capability.id);
+            if (['id', 'title', 'status', 'scope', 'owner', 'lastVerified'].some(field =>
+                typeof capability[field] !== 'string' || !capability[field].trim())) return 'blocked';
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(String(capability.id))
+                || ids.has(String(capability.id)) || titles.has(String(capability.title))
+                || !['as-built-baseline', 'implemented', 'proposed', 'deprecated'].includes(String(capability.status))
+                || !validCatalogDate(String(capability.lastVerified))) return 'blocked';
+            ids.add(String(capability.id)); titles.add(String(capability.title));
+            for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                const entries = capability[field];
+                if (!Array.isArray(entries) || (field !== 'workflows' && entries.length === 0)
+                    || new Set(entries).size !== entries.length) return 'blocked';
+                for (const path of entries) {
+                    if (!validCatalogPath(field, path) || !files.has(path)) return 'blocked';
+                    if (field === 'specs') {
+                        if (specs.has(path)) return 'blocked';
+                        specs.add(path);
+                    }
+                }
+            }
         }
         return paths.slice(1).every(path => {
             const file = read.files[path]; return file.state === 'present' && /^#\s+\S/mu.test(file.text);
@@ -85,4 +101,23 @@ export function doctorWorkflowContracts(read: DoctorRepositoryRead): 'pass' | 'b
 }
 function object(value: unknown): Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function validCatalogDate(value: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+    const [year, month, day] = value.split('-').map(Number), date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+function validCatalogPath(field: string, value: unknown): value is string {
+    if (typeof value !== 'string' || value !== value.trim() || value.includes('\\')
+        || value.split('/').some(part => part === '' || part === '.' || part === '..')) return false;
+    const boundaries: Record<string, RegExp> = {
+        specs: /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/u,
+        workflows: /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/u,
+        entrypoints: /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/u,
+        code: /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/u,
+        tests: /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/u,
+        documentation: /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/u,
+    };
+    return boundaries[field].test(value);
 }

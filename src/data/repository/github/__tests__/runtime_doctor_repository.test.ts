@@ -1,7 +1,7 @@
 import { RuntimeDoctorRepository } from '../runtime_doctor_repository';
 import { DOCTOR_REPOSITORY_PATHS } from '../../../../application/ports/github_runtime_doctor_ports';
 const HEAD = 'a'.repeat(40), TREE = 'c'.repeat(40);
-const trackedTree = (paths: readonly string[] = DOCTOR_REPOSITORY_PATHS) => ({ data: { sha: TREE, truncated: false, tree: paths.map(path => ({ path, type: 'blob', sha: 'd'.repeat(40) })) } });
+const trackedTree = (paths: readonly string[] = DOCTOR_REPOSITORY_PATHS) => ({ data: { sha: TREE, truncated: false, tree: paths.map(path => ({ path, type: 'blob', mode: '100644', sha: 'd'.repeat(40) })) } });
 const mockClient = { rest: { repos: { get: jest.fn(), getContent: jest.fn() }, git: { getRef: jest.fn(), getCommit: jest.fn(), getTree: jest.fn() },
     issues: { get: jest.fn() }, actions: { getRepoVariable: jest.fn(), getOrgVariable: jest.fn() } }, graphql: jest.fn() };
 jest.mock('@actions/github', () => ({ getOctokit: () => mockClient }));
@@ -167,5 +167,31 @@ describe('bounded SDK doctor reads', () => {
     it('never invents a policy source after permission or network failure', async () => {
         mockClient.rest.actions.getRepoVariable.mockRejectedValue(new Error('SECRET')); expect(await new RuntimeDoctorRepository('o', 'r', 't').readApprovalPolicy()).toEqual({ status: 'unavailable' });
         expect(mockClient.rest.actions.getOrgVariable).not.toHaveBeenCalled();
+    });
+});
+
+
+describe('immutable regular-file prerequisites and branch names', () => {
+    it('reads the complete file inventory even when all six content reads succeed', async () => {
+        const tree = trackedTree(['specs/safe.md', 'specs/directory', 'specs/link.md']);
+        tree.data.tree[1].type = 'tree'; tree.data.tree[1].mode = '040000'; tree.data.tree[2].mode = '120000';
+        mockClient.rest.git.getTree.mockResolvedValue(tree);
+        expect(await new RuntimeDoctorRepository('o', 'r', 't').readRepository(42)).toMatchObject({ state: 'available', trackedFiles: ['specs/safe.md'] });
+        expect(mockClient.rest.git.getTree).toHaveBeenCalledTimes(1);
+    });
+    it('keeps a denied catalog file-inventory proof unavailable despite successful content reads', async () => {
+        mockClient.rest.git.getTree.mockRejectedValue({ status: 403, message: 'PRIVATE' });
+        expect(await new RuntimeDoctorRepository('o', 'r', 't').readRepository(42)).toEqual({ state: 'unavailable' });
+    });
+    it('rejects invalid default branch components before reading the repository', async () => {
+        mockClient.rest.repos.get.mockResolvedValue({ data: { id: 42, default_branch: 'master/' } });
+        expect(await new RuntimeDoctorRepository('o', 'r', 't').readRepository(42)).toEqual({ state: 'unavailable' });
+        expect(mockClient.rest.git.getRef).not.toHaveBeenCalled();
+    });
+    it('rejects invalid native linked branch components before a live ref read', async () => {
+        const linked = links(); linked.repository.issue.linkedBranches.nodes = [{ ref: { ...branch(), name: 'feature//7' } }];
+        mockClient.graphql.mockResolvedValue(linked);
+        expect(await new RuntimeDoctorRepository('o', 'r', 't').readLinkedBranch(7)).toEqual({ state: 'unavailable' });
+        expect(mockClient.rest.git.getRef).not.toHaveBeenCalled();
     });
 });

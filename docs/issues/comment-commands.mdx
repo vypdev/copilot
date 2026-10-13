@@ -150,8 +150,13 @@ default-branch revision, linked in the report. A moved default head makes that
 sample unavailable. Native linked branches require complete same-repository
 association and a matching live ref. A null or missing linked ref remains
 unavailable; only a complete empty page proves that no branch is linked.
-Specification prerequisites require a non-empty capability catalog and effective
-dependency branches must be text values. A PR request checks only its exact event
+Specification prerequisites require canonical catalog metadata and evidence
+arrays, supported status/date values, unique ownership and regular referenced
+files in the same complete immutable tree (at most 10,000 entries). Doctor keeps
+six bounded content reads; full as-built document contents and uncatalogued
+specification discovery remain CI checks. Denied or incomplete tree evidence is
+unavailable. Effective dependency, default and linked branches must be valid
+bounded literal Git branch names, including every path component. A PR request checks only its exact event
 PR and fences its current head; optional issue context is not inferred from
 an equal conversation number. Reports use the repository locale in English or
 Spanish with atomic fallback and one correlated reply per source comment.

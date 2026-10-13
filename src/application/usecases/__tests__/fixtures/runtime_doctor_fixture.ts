@@ -4,9 +4,12 @@ export const DOCTOR_HEAD = 'a'.repeat(40);
 export function doctorRepositoryFixture(): Extract<DoctorRepositoryRead, { state: 'available' }> {
     const events = ['issues', 'issue_comment', 'pull_request'];
     return { state: 'available', repositoryId: 42, revision: DOCTOR_HEAD,
+        trackedFiles: ['specs/safe.md', 'src/actions/github_action.ts', 'src/domain/locale.ts', 'src/domain/__tests__/locale.test.ts', 'README.md'],
         files: Object.fromEntries(DOCTOR_REPOSITORY_PATHS.map((path, index) => [path, { state: 'present', text:
             index < 3 ? `on: ${events[index]}\njobs:\n  action:\n    steps:\n      - uses: ./\n`
-                : path.endsWith('.json') ? JSON.stringify({ version: 1, capabilities: [{ id: 'safe-owner', specs: ['specs/safe.md'] }] })
+                : path.endsWith('.json') ? JSON.stringify({ version: 1, capabilities: [{ id: 'safe-owner', title: 'Safe owner', status: 'implemented', scope: 'Fixture', owner: 'maintainer', lastVerified: '2026-10-13',
+                    specs: ['specs/safe.md'], workflows: [], entrypoints: ['src/actions/github_action.ts'], code: ['src/domain/locale.ts'],
+                    tests: ['src/domain/__tests__/locale.test.ts'], documentation: ['README.md'] }] })
                     : '# Repository specification standard\n' }])) as Extract<DoctorRepositoryRead, { state: 'available' }>['files'] };
 }
 export function doctorFixture() {

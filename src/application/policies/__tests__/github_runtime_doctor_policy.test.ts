@@ -66,3 +66,59 @@ describe('required workflow entry activities', () => {
         expect(doctorWorkflowContracts(changed(path, text(required)))).toBe('pass');
     });
 });
+
+
+describe('strict prerequisite regressions from live review', () => {
+    it.each(['develop/', 'develop//main', 'develop/.', '/develop', '.hidden/main', 'feature/topic.lock/child', 'develop.', 'feature/@{previous}'])('rejects an invalid Git branch component %s', dependencyBranch => {
+        expect(validDoctorConfiguration({ ...config, dependencyBranch })).toBe(false);
+    });
+    it.each(['title', 'status', 'scope', 'owner', 'lastVerified'] as const)('does not certify a catalog without canonical %s metadata', field => {
+        const snapshot = doctorRepositoryFixture();
+        const file = snapshot.files['specs/catalog.json']; if (file.state !== 'present') throw new Error('Fixture unavailable');
+        const catalog = JSON.parse(file.text); delete catalog.capabilities[0][field];
+        expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', JSON.stringify(catalog)))).toBe('blocked');
+    });
+    it('does not certify a catalog whose specification is absent from the verified file inventory', () => {
+        const snapshot = doctorRepositoryFixture();
+        expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles: [] } as DoctorRepositoryRead)).toBe('blocked');
+    });
+});
+
+
+describe('bounded canonical catalog structure', () => {
+    function catalogChange(edit: (capabilities: Record<string, unknown>[]) => void) {
+        const snapshot = doctorRepositoryFixture(), file = snapshot.files['specs/catalog.json'];
+        if (file.state !== 'present') throw new Error('Fixture unavailable');
+        const catalog = JSON.parse(file.text); edit(catalog.capabilities);
+        return changed('specs/catalog.json', JSON.stringify(catalog));
+    }
+    it.each(['unsupported status', 'invalid date syntax', 'impossible date', 'non-text metadata', 'blank metadata',
+        'duplicate title', 'duplicate spec owner', 'missing evidence array', 'empty required evidence', 'duplicate evidence',
+        'wrong evidence boundary', 'unsafe normalized path', 'missing non-spec file'] as const)('blocks %s', scenario => {
+        expect(doctorRepositoryPrerequisites(catalogChange(capabilities => {
+            const c = capabilities[0];
+            if (scenario === 'unsupported status') c.status = 'done';
+            if (scenario === 'invalid date syntax') c.lastVerified = '13/10/2026';
+            if (scenario === 'impossible date') c.lastVerified = '2026-02-29';
+            if (scenario === 'non-text metadata') c.owner = 42;
+            if (scenario === 'blank metadata') c.title = '   ';
+            if (scenario === 'duplicate title') capabilities.push({ ...c, id: 'other', specs: ['specs/other.md'] });
+            if (scenario === 'duplicate spec owner') capabilities.push({ ...c, id: 'other', title: 'Other' });
+            if (scenario === 'missing evidence array') delete c.code;
+            if (scenario === 'empty required evidence') c.documentation = [];
+            if (scenario === 'duplicate evidence') c.documentation = ['README.md', 'README.md'];
+            if (scenario === 'wrong evidence boundary') c.documentation = ['src/domain/locale.ts'];
+            if (scenario === 'unsafe normalized path') c.specs = ['specs/../safe.md'];
+            if (scenario === 'missing non-spec file') c.documentation = ['docs/missing.mdx'];
+        }))).toBe('blocked');
+    });
+    it('accepts the actual canonical catalog with all verified referenced files and nested specification paths', () => {
+        const canonical = require('../../../infrastructure/specification_catalog_validator.cjs');
+        const catalog = canonical.readCatalog(process.cwd());
+        expect(canonical.validateCatalog(process.cwd(), catalog)).toEqual([]);
+        const snapshot = changed('specs/catalog.json', JSON.stringify(catalog));
+        const trackedFiles = catalog.capabilities.flatMap((c: Record<string, unknown>) =>
+            ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation'].flatMap(field => c[field] as string[]));
+        expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles })).toBe('pass');
+    });
+});

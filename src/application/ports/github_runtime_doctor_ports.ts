@@ -9,7 +9,9 @@ export const DOCTOR_REPOSITORY_PATHS = [
 export type DoctorRepositoryPath = typeof DOCTOR_REPOSITORY_PATHS[number];
 export type DoctorFile = { readonly state: 'present'; readonly text: string } | { readonly state: 'missing' };
 export type DoctorRepositoryRead = { readonly state: 'available'; readonly repositoryId: number; readonly revision: string;
-    readonly files: Readonly<Record<DoctorRepositoryPath, DoctorFile>> } | { readonly state: 'unavailable' };
+    readonly files: Readonly<Record<DoctorRepositoryPath, DoctorFile>>;
+    /** Complete regular-file inventory from the same bounded immutable Git tree. */
+    readonly trackedFiles: readonly string[] } | { readonly state: 'unavailable' };
 export interface DoctorConfiguration {
     readonly profile: IssueWorkflowProfile;
     readonly labels?: IssueWorkflowLabelConfiguration;

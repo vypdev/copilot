@@ -97,3 +97,12 @@ export function aggregateGithubRuntimeDoctorReport(input: {
         ...(primaryAction ? { primaryAction } : {}),
     });
 }
+
+
+/** Bounded literal Git branch names: never revisions, options or reflog expressions. */
+export function isDoctorBranchReference(value: unknown): value is string {
+    return typeof value === 'string'
+        && /^(?!-|.*\.\.)[A-Za-z0-9._/-]{1,200}$/u.test(value)
+        && value.split('/').every(part => part.length > 0 && !part.startsWith('.')
+            && !part.endsWith('.') && !part.endsWith('.lock'));
+}

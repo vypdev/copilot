@@ -467,3 +467,38 @@ the original 52-case floor and all coverage guards remain in force.
 conservative dynamic-condition limitation. Primary event semantics:
 https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows.
 Native current-head review and live promotion remain pending.
+
+
+### Catalog prerequisites and literal branch references (2026-10-13)
+
+Finding `4253464300` remained valid after being automatically marked obsolete:
+a catalog with missing canonical metadata or nonexistent specifications could
+still pass. Finding `4253483689` also showed invalid Git branch components such
+as `develop/`, `develop//main` and `develop/.` being certified. Thirteen of the
+14 initial regressions failed before the correction; focused verification now
+passes 148 cases across configuration, catalog, provider, use case and domain.
+
+Prerequisites MUST require the canonical nonempty id/title/status/scope/owner/date
+metadata, supported status and real calendar date, unique capability identities
+and titles, six evidence arrays with required nonempty values except workflows,
+normalized paths inside their declared boundaries, and unique specification
+ownership. Every referenced evidence path MUST resolve to a regular file in the
+complete immutable Git-tree inventory at the same default revision. Tree or
+symlink entries cannot certify a file. This is bounded structural/evidence
+validation; as-built document contents and uncatalogued specification discovery
+remain the full repository validator's responsibility rather than a six-file
+remote content claim.
+
+The complete tree proof is now required for successful catalog evidence as well
+as ambiguous content 404s. It retains the fixed six content reads, 200,000-byte
+per-file budget and 10,000-entry tree ceiling. Truncation, denied proof, malformed
+identity or moved default head remain unavailable. Configuration, default branch
+and linked branch use one pure bounded literal-reference decision, rejecting
+empty, dot-prefixed, dot-terminated and `.lock` path components. No process or
+sandbox invocation is added to doctor.
+
+The own inventory is **224 distinct feature cases**: 192 retained + 14 initial
+regressions + 14 canonical-structure/real-catalog contracts + four inventory/ref
+adapter cases. No shared cases are counted again. Full gates, native review and
+live acceptance remain pending; a structural pass still cannot certify model or
+tool execution, runner availability, or write permissions.

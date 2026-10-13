@@ -4,7 +4,7 @@ import { DOCTOR_REPOSITORY_PATHS, type DoctorRepositoryRead, type DoctorFile, ty
 import type { TrustedApprovalPolicyRead } from '../../../domain/github_runtime_doctor';
 import { readEffectiveApprovalPolicy } from '../pull_request/pull_request_approval_repository';
 const SHA = /^[a-f0-9]{40}$/u;
-const SAFE_REF = /^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u;
+import { isDoctorBranchReference } from '../../../domain/github_runtime_doctor';
 
 /** SDK DTOs and diagnostics terminate here; no mutation, provisioning, or filesystem API. */
 export class RuntimeDoctorRepository {
@@ -15,16 +15,19 @@ export class RuntimeDoctorRepository {
     async readRepository(repositoryId: number): Promise<DoctorRepositoryRead> {
         try {
             const repo = await this.client.rest.repos.get({ owner: this.owner, repo: this.repository });
-            if (repo.data.id !== repositoryId || !SAFE_REF.test(repo.data.default_branch)) return { state: 'unavailable' };
+            if (repo.data.id !== repositoryId || !isDoctorBranchReference(repo.data.default_branch)) return { state: 'unavailable' };
             const ref = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             const revision = ref.data.object.sha;
             if (!SHA.test(revision) || ref.data.object.type !== 'commit') return { state: 'unavailable' };
-            let trackedPaths: Promise<ReadonlySet<string>> | undefined;
-            const proveAbsent = (path: string) => (trackedPaths ??= this.readTrackedPaths(revision)).then(paths => !paths.has(path));
-            const values = await Promise.all(DOCTOR_REPOSITORY_PATHS.map(async path => [path, await this.readFile(path, revision, proveAbsent)] as const));
+            const trackedPaths = this.readTrackedPaths(revision);
+            const proveAbsent = (path: string) => trackedPaths.then(paths => !paths.has(path));
+            const [values, inventory] = await Promise.all([
+                Promise.all(DOCTOR_REPOSITORY_PATHS.map(async path => [path, await this.readFile(path, revision, proveAbsent)] as const)), trackedPaths,
+            ]);
             const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             if (final.data.object.type !== 'commit' || final.data.object.sha !== revision) return { state: 'unavailable' };
             return Object.freeze({ state: 'available', repositoryId, revision,
+                trackedFiles: Object.freeze([...inventory].filter(([, type]) => type === 'file').map(([path]) => path)),
                 files: Object.freeze(Object.fromEntries(values)) as Extract<DoctorRepositoryRead, { state: 'available' }>['files'] });
         } catch { return { state: 'unavailable' }; }
     }
@@ -46,21 +49,21 @@ export class RuntimeDoctorRepository {
         }
     }
     /** A content 404 alone is ambiguous. Only a complete immutable tree proves absence. */
-    private async readTrackedPaths(revision: string): Promise<ReadonlySet<string>> {
+    private async readTrackedPaths(revision: string): Promise<ReadonlyMap<string, 'file' | 'other'>> {
         const commit = await this.client.rest.git.getCommit({ owner: this.owner, repo: this.repository, commit_sha: revision });
         if (commit.data.sha !== revision || !SHA.test(commit.data.tree.sha)) throw new Error('Unverified repository tree identity.');
         const response = await this.client.rest.git.getTree({ owner: this.owner, repo: this.repository, tree_sha: commit.data.tree.sha, recursive: '1' });
         const tree = response.data;
         if (tree.sha !== commit.data.tree.sha || tree.truncated !== false || !Array.isArray(tree.tree) || tree.tree.length > 10_000)
             throw new Error('Incomplete bounded repository tree.');
-        const paths = new Set<string>();
+        const paths = new Map<string, 'file' | 'other'>();
         for (const entry of tree.tree) {
             const path = entry.path;
             if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || path.includes('\\')
                 || Array.from(path).some(character => character.charCodeAt(0) < 32) || path.split('/').includes('..') || paths.has(path)
                 || !['blob', 'tree', 'commit'].includes(entry.type ?? '') || !SHA.test(entry.sha ?? ''))
                 throw new Error('Malformed repository tree evidence.');
-            paths.add(path);
+            paths.set(path, entry.type === 'blob' && ['100644', '100755'].includes(entry.mode ?? '') ? 'file' : 'other');
         }
         return paths;
     }
@@ -94,7 +97,7 @@ export class RuntimeDoctorRepository {
             if (refs.length === 0) return { state: 'absent' };
             if (refs.length !== 1) return { state: 'unavailable' };
             const branch = refs[0];
-            if (!branch.name || !SAFE_REF.test(branch.name) || !branch.target?.oid || !SHA.test(branch.target.oid)
+            if (!branch.name || !isDoctorBranchReference(branch.name) || !branch.target?.oid || !SHA.test(branch.target.oid)
                 || branch.repository?.databaseId !== repo.databaseId || branch.repository?.nameWithOwner?.toLowerCase() !== expected) return { state: 'unavailable' };
             const live = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${branch.name}` });
             return live.data.object.type === 'commit' && live.data.object.sha === branch.target.oid

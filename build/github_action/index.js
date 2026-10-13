@@ -44461,14 +44461,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validDoctorConfiguration = validDoctorConfiguration;
 exports.doctorRepositoryPrerequisites = doctorRepositoryPrerequisites;
 exports.doctorWorkflowContracts = doctorWorkflowContracts;
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
 const doctor_workflow_condition_policy_1 = __nccwpck_require__(61833);
 const js_yaml_1 = __nccwpck_require__(783);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const issue_start_policy_1 = __nccwpck_require__(90332);
 function validDoctorConfiguration(value) {
     if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
-        || typeof value.dependencyBranch !== 'string'
-        || !/^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u.test(value.dependencyBranch))
+        || !(0, github_runtime_doctor_1.isDoctorBranchReference)(value.dependencyBranch))
         return false;
     try {
         if ('error' in (0, issue_workflow_profile_1.parseIssueWorkflowProfile)(JSON.stringify(value.profile)))
@@ -44493,14 +44493,34 @@ function doctorRepositoryPrerequisites(read) {
         const catalog = object(JSON.parse(catalogFile.text));
         if (catalog.version !== 1 || !Array.isArray(catalog.capabilities) || catalog.capabilities.length === 0)
             return 'blocked';
-        const ids = new Set();
+        const files = new Set(read.trackedFiles);
+        const ids = new Set(), titles = new Set(), specs = new Set();
         for (const raw of catalog.capabilities) {
             const capability = object(raw);
-            if (typeof capability.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(capability.id)
-                || ids.has(capability.id) || !Array.isArray(capability.specs) || capability.specs.length === 0
-                || capability.specs.some(path => typeof path !== 'string' || !/^specs\/[a-z0-9_-]+\.md$/u.test(path)))
+            if (['id', 'title', 'status', 'scope', 'owner', 'lastVerified'].some(field => typeof capability[field] !== 'string' || !capability[field].trim()))
                 return 'blocked';
-            ids.add(capability.id);
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(String(capability.id))
+                || ids.has(String(capability.id)) || titles.has(String(capability.title))
+                || !['as-built-baseline', 'implemented', 'proposed', 'deprecated'].includes(String(capability.status))
+                || !validCatalogDate(String(capability.lastVerified)))
+                return 'blocked';
+            ids.add(String(capability.id));
+            titles.add(String(capability.title));
+            for (const field of ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation']) {
+                const entries = capability[field];
+                if (!Array.isArray(entries) || (field !== 'workflows' && entries.length === 0)
+                    || new Set(entries).size !== entries.length)
+                    return 'blocked';
+                for (const path of entries) {
+                    if (!validCatalogPath(field, path) || !files.has(path))
+                        return 'blocked';
+                    if (field === 'specs') {
+                        if (specs.has(path))
+                            return 'blocked';
+                        specs.add(path);
+                    }
+                }
+            }
         }
         return paths.slice(1).every(path => {
             const file = read.files[path];
@@ -44572,6 +44592,26 @@ function doctorWorkflowContracts(read) {
 }
 function object(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+function validCatalogDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(value))
+        return false;
+    const [year, month, day] = value.split('-').map(Number), date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+function validCatalogPath(field, value) {
+    if (typeof value !== 'string' || value !== value.trim() || value.includes('\\')
+        || value.split('/').some(part => part === '' || part === '.' || part === '..'))
+        return false;
+    const boundaries = {
+        specs: /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/u,
+        workflows: /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/u,
+        entrypoints: /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/u,
+        code: /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/u,
+        tests: /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/u,
+        documentation: /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/u,
+    };
+    return boundaries[field].test(value);
 }
 
 
@@ -71009,7 +71049,7 @@ const github = __importStar(__nccwpck_require__(78227));
 const github_runtime_doctor_ports_1 = __nccwpck_require__(64921);
 const pull_request_approval_repository_1 = __nccwpck_require__(23001);
 const SHA = /^[a-f0-9]{40}$/u;
-const SAFE_REF = /^(?!-|.*(?:\.\.|[\s~^:?*[\]\\]))[A-Za-z0-9._/-]{1,200}$/u;
+const github_runtime_doctor_1 = __nccwpck_require__(20413);
 /** SDK DTOs and diagnostics terminate here; no mutation, provisioning, or filesystem API. */
 class RuntimeDoctorRepository {
     constructor(owner, repository, token) {
@@ -71020,19 +71060,22 @@ class RuntimeDoctorRepository {
     async readRepository(repositoryId) {
         try {
             const repo = await this.client.rest.repos.get({ owner: this.owner, repo: this.repository });
-            if (repo.data.id !== repositoryId || !SAFE_REF.test(repo.data.default_branch))
+            if (repo.data.id !== repositoryId || !(0, github_runtime_doctor_1.isDoctorBranchReference)(repo.data.default_branch))
                 return { state: 'unavailable' };
             const ref = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             const revision = ref.data.object.sha;
             if (!SHA.test(revision) || ref.data.object.type !== 'commit')
                 return { state: 'unavailable' };
-            let trackedPaths;
-            const proveAbsent = (path) => (trackedPaths ?? (trackedPaths = this.readTrackedPaths(revision))).then(paths => !paths.has(path));
-            const values = await Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision, proveAbsent)]));
+            const trackedPaths = this.readTrackedPaths(revision);
+            const proveAbsent = (path) => trackedPaths.then(paths => !paths.has(path));
+            const [values, inventory] = await Promise.all([
+                Promise.all(github_runtime_doctor_ports_1.DOCTOR_REPOSITORY_PATHS.map(async (path) => [path, await this.readFile(path, revision, proveAbsent)])), trackedPaths,
+            ]);
             const final = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${repo.data.default_branch}` });
             if (final.data.object.type !== 'commit' || final.data.object.sha !== revision)
                 return { state: 'unavailable' };
             return Object.freeze({ state: 'available', repositoryId, revision,
+                trackedFiles: Object.freeze([...inventory].filter(([, type]) => type === 'file').map(([path]) => path)),
                 files: Object.freeze(Object.fromEntries(values)) });
         }
         catch {
@@ -71069,14 +71112,14 @@ class RuntimeDoctorRepository {
         const tree = response.data;
         if (tree.sha !== commit.data.tree.sha || tree.truncated !== false || !Array.isArray(tree.tree) || tree.tree.length > 10000)
             throw new Error('Incomplete bounded repository tree.');
-        const paths = new Set();
+        const paths = new Map();
         for (const entry of tree.tree) {
             const path = entry.path;
             if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || path.includes('\\')
                 || Array.from(path).some(character => character.charCodeAt(0) < 32) || path.split('/').includes('..') || paths.has(path)
                 || !['blob', 'tree', 'commit'].includes(entry.type ?? '') || !SHA.test(entry.sha ?? ''))
                 throw new Error('Malformed repository tree evidence.');
-            paths.add(path);
+            paths.set(path, entry.type === 'blob' && ['100644', '100755'].includes(entry.mode ?? '') ? 'file' : 'other');
         }
         return paths;
     }
@@ -71110,7 +71153,7 @@ class RuntimeDoctorRepository {
             if (refs.length !== 1)
                 return { state: 'unavailable' };
             const branch = refs[0];
-            if (!branch.name || !SAFE_REF.test(branch.name) || !branch.target?.oid || !SHA.test(branch.target.oid)
+            if (!branch.name || !(0, github_runtime_doctor_1.isDoctorBranchReference)(branch.name) || !branch.target?.oid || !SHA.test(branch.target.oid)
                 || branch.repository?.databaseId !== repo.databaseId || branch.repository?.nameWithOwner?.toLowerCase() !== expected)
                 return { state: 'unavailable' };
             const live = await this.client.rest.git.getRef({ owner: this.owner, repo: this.repository, ref: `heads/${branch.name}` });
@@ -76946,6 +76989,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GITHUB_RUNTIME_DOCTOR_GROUPS = void 0;
 exports.parseTrustedDoctorApprovalPolicy = parseTrustedDoctorApprovalPolicy;
 exports.aggregateGithubRuntimeDoctorReport = aggregateGithubRuntimeDoctorReport;
+exports.isDoctorBranchReference = isDoctorBranchReference;
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 // Domain contracts and trusted policy parsing for the issue/PR runtime doctor.
 /** The fixed, ordered evidence groups in the GitHub runtime doctor contract. */
@@ -76999,6 +77043,13 @@ function aggregateGithubRuntimeDoctorReport(input) {
         severity,
         ...(primaryAction ? { primaryAction } : {}),
     });
+}
+/** Bounded literal Git branch names: never revisions, options or reflog expressions. */
+function isDoctorBranchReference(value) {
+    return typeof value === 'string'
+        && /^(?!-|.*\.\.)[A-Za-z0-9._/-]{1,200}$/u.test(value)
+        && value.split('/').every(part => part.length > 0 && !part.startsWith('.')
+            && !part.endsWith('.') && !part.endsWith('.lock'));
 }
 
 
