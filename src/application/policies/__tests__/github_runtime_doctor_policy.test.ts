@@ -122,3 +122,10 @@ describe('bounded canonical catalog structure', () => {
         expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles })).toBe('pass');
     });
 });
+
+describe('complete workflow matrix job ceiling', () => {
+    it.each([[256, 'pass'], [257, 'blocked']] as const)('reports a %s-row Action job as %s', (count, expected) => {
+        const yaml = `on: issues\njobs:\n  action:\n    strategy:\n      matrix:\n        version: [${Array.from({ length: count }, (_, i) => i).join(', ')}]\n    steps:\n      - uses: ./\n`;
+        expect(doctorWorkflowContracts(changed('.github/workflows/copilot_issue.yml', yaml))).toBe(expected);
+    });
+});

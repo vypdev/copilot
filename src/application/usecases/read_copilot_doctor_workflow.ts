@@ -40,7 +40,11 @@ export async function readCopilotDoctor(param: CommentAutomationContext, taskId:
         try {
             const issue = await ports.readIssue(number);
             if (issue.number !== number) throw new Error('Wrong issue identity.');
-            const admission = classifyIssueWorkflow(issue.labels, configuration.profile, configuration.labels, issue.body);
+            const kindAdmission = classifyIssueWorkflow(issue.labels, configuration.profile, configuration.labels, undefined, false);
+            // Form completeness cannot make branchless help work require an SDD.
+            // Disabled or conflicting kinds still retain their admission block.
+            const admission = kindAdmission.status === 'eligible' && kindAdmission.kind === 'help' ? kindAdmission
+                : classifyIssueWorkflow(issue.labels, configuration.profile, configuration.labels, issue.body);
             if (admission.status !== 'eligible') {
                 put('issue-readiness', admission.status === 'unmanaged' ? 'unavailable' : 'blocked', 'issue');
                 put('linked-branch-readiness', 'not-applicable');

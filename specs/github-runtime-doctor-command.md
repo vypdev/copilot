@@ -555,3 +555,48 @@ and SDD-continuation spies. Its behavioral assertions remain unchanged; parent
 readers can occupy their retained positions without requiring edits to an
 automatically merged test outside the fixer's original conflict boundary. The
 246-case budget and exact production composition checks remain unchanged.
+
+### Static matrix ceiling and help applicability (2026-10-13)
+
+Native review `38388018066` on the Action-integrated head `aa573118` published
+findings `4257865633` and `4257865647`. The first exposed static matrices that
+exceed GitHub's [256-job matrix ceiling](https://docs.github.com/en/actions/reference/limits);
+the second exposed incomplete help forms being shown as blocked SDD readiness.
+Both are real diagnostic false positives/negatives, distinct from execution
+failure or lack of bot token permissions.
+
+The pure matrix policy MUST certify only supported literal axes with a nonzero
+Cartesian product at most 256. It computes a bounded product without expanding
+jobs, evaluating expressions or executing workflow content; compare against
+256 divided by the next length before multiplication to avoid overflow. Exact
+256 remains eligible, 257 or a multi-axis product above 256 is blocked, and
+unsupported dynamic/transformed evidence remains unavailable even if another
+axis looks excessive. Another independently eligible job retains its existing
+meaning. The ceiling is a provider contract, not a user-configurable limit or a
+change to runner capacity, platform selection, concurrency or heap size.
+
+A unique enabled help kind MUST make branch and SDD checks not applicable before
+validating its form content, because that work is branchless. Missing, duplicate
+or empty question headings do not create an SDD obligation. Disabled help and
+conflicting help/feature labels MUST retain their existing admission block;
+invalid branch-bearing forms remain blocked. Effective configuration and all
+independent workflow/policy facts remain available. No query gains model,
+label, branch, configuration or source-comment mutation authority.
+
+Twelve new distinct cases extend the dedicated Doctor inventory from 246 to
+**258**, without counting parent History/native-closure cases: five pure matrix
+ceiling/dynamic cases, two complete workflow projections and five help
+applicability/admission cases. Six new cases failed against the previous
+implementation (two oversized pure matrices, the complete 257-row workflow,
+and three malformed help forms); exact-limit, dynamic, disabled and conflicting
+cases preserve existing behaviour. Pure matrix coverage stays 100% and all
+repository/module thresholds remain mandatory. Existing bounded YAML/content,
+provider-read, identity and reply-witness contracts stay unchanged.
+
+Acceptance: a verified 256-row static Action workflow reports its normal
+structural result; 257 rows cannot produce Pass; malformed unique enabled help
+shows Not applicable for branch/SDD; disabled/conflicting kinds remain Blocked.
+`docs/issues/comment-commands.mdx` explains these diagnostic limits. Existing
+catalog paths already own the three changed suites and two implementations.
+Completion still requires current-head full checks and native review, followed
+by issue/PR EN/ES and quiet-replay browser acceptance after promotion.

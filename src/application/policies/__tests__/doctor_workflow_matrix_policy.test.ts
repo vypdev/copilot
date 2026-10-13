@@ -21,3 +21,15 @@ describe('conservative runnable matrix evidence', () => {
         expect(doctorWorkflowMatrix(strategy)).toBe(expected);
     });
 });
+
+describe('GitHub static matrix job ceiling', () => {
+    it.each([
+        [{ matrix: { version: Array.from({ length: 256 }, (_, i) => i) } }, true],
+        [{ matrix: { version: Array.from({ length: 257 }, (_, i) => i) } }, false],
+        [{ matrix: { os: Array.from({ length: 16 }, (_, i) => i), version: Array.from({ length: 16 }, (_, i) => i) } }, true],
+        [{ matrix: { os: Array.from({ length: 17 }, (_, i) => i), version: Array.from({ length: 16 }, (_, i) => i) } }, false],
+        [{ matrix: { os: Array.from({ length: 257 }, (_, i) => i), version: '${{ vars.VERSION }}' } }, undefined],
+    ] as const)('proves the static product within 256 without evaluating dynamic shapes (%j)', (strategy, expected) => {
+        expect(doctorWorkflowMatrix(strategy)).toBe(expected);
+    });
+});

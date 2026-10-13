@@ -111,3 +111,22 @@ describe('independent bounded runtime doctor workflow', () => {
         expect(projection(result).report).toBeUndefined(); expect(ports.readRepository).not.toHaveBeenCalled();
     });
 });
+
+describe('help SDD applicability independent of form completeness', () => {
+    it.each(['missing-heading', 'duplicate-heading', 'empty-question'])('keeps %s help branch and SDD checks not applicable', async kind => {
+        const { context, ports } = doctorFixture();
+        const heading = '### Describe your problem or question';
+        const body = kind === 'missing-heading' ? 'Question' : kind === 'empty-question' ? heading : `${heading}\nOne\n${heading}\nTwo`;
+        ports.readIssue.mockResolvedValue({ number: 7, title: 'Help', labels: ['help'], body });
+        const result = await readCopilotDoctor(context, 'Issue', ports);
+        expect(check(result, 'issue-readiness')).toBe('not-applicable');
+        expect(check(result, 'linked-branch-readiness')).toBe('not-applicable'); expect(ports.readLinkedBranch).not.toHaveBeenCalled();
+    });
+    it.each(['disabled', 'conflicting-kind'])('retains the %s admission block', async kind => {
+        const { context, ports } = doctorFixture();
+        const current = kind === 'disabled' ? { ...context, doctorConfiguration: { ...context.doctorConfiguration!, profile: { schemaVersion: 1 as const, enabled: ['feature' as const] } } } : context;
+        ports.readIssue.mockResolvedValue({ number: 7, title: 'Help', labels: kind === 'disabled' ? ['help'] : ['help', 'feature'], body: 'Question' });
+        expect(check(await readCopilotDoctor(current, 'Issue', ports), 'issue-readiness')).toBe('blocked');
+        expect(ports.readLinkedBranch).not.toHaveBeenCalled();
+    });
+});

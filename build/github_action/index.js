@@ -44555,8 +44555,18 @@ function doctorWorkflowMatrix(strategy) {
         return undefined;
     if (axes.some(([, values]) => Array.isArray(values) && values.length === 0))
         return false;
-    return axes.every(([, values]) => Array.isArray(values) && values.every(value => typeof value === 'string' ? !value.includes('${{')
-        : typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value))) ? true : undefined;
+    if (!axes.every(([, values]) => Array.isArray(values) && values.every(value => typeof value === 'string' ? !value.includes('${{')
+        : typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value))))
+        return undefined;
+    let combinations = 1;
+    for (const [, values] of axes) {
+        const length = values.length;
+        // Bound arithmetic before multiplying; do not expand the Cartesian product.
+        if (combinations > 256 / length)
+            return false;
+        combinations *= length;
+    }
+    return true;
 }
 function record(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -56092,7 +56102,11 @@ async function readCopilotDoctor(param, taskId, ports) {
             const issue = await ports.readIssue(number);
             if (issue.number !== number)
                 throw new Error('Wrong issue identity.');
-            const admission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(issue.labels, configuration.profile, configuration.labels, issue.body);
+            const kindAdmission = (0, issue_workflow_profile_1.classifyIssueWorkflow)(issue.labels, configuration.profile, configuration.labels, undefined, false);
+            // Form completeness cannot make branchless help work require an SDD.
+            // Disabled or conflicting kinds still retain their admission block.
+            const admission = kindAdmission.status === 'eligible' && kindAdmission.kind === 'help' ? kindAdmission
+                : (0, issue_workflow_profile_1.classifyIssueWorkflow)(issue.labels, configuration.profile, configuration.labels, issue.body);
             if (admission.status !== 'eligible') {
                 put('issue-readiness', admission.status === 'unmanaged' ? 'unavailable' : 'blocked', 'issue');
                 put('linked-branch-readiness', 'not-applicable');
