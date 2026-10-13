@@ -241,8 +241,8 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     createIssueUseCaseCompositionRoot(binding),
     rememberBranchPorts(binding, bugbot.scm.context),
     bugbot.scm.context,
-    createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
     createSddEvidenceQueryPort(binding, bugbot.scm.context),
+    createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
   );
 }
 

@@ -119,7 +119,8 @@ describe("main run route composition root", () => {
     expect(call.slice(0, 15)).toEqual([
       ...Array.from({ length: 14 }, () => expect.anything()), mockContext,
     ]);
-    expect(call[15]).toMatchObject({
+    const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
+    expect(doctor).toMatchObject({
       readRepository: expect.any(Function),
       readApprovalPolicy: expect.any(Function),
       pullRequests: expect.objectContaining({
@@ -127,7 +128,7 @@ describe("main run route composition root", () => {
         getPullRequestHeadSha: expect.any(Function),
       }),
     });
-    const query = call[16];
+    const query = call.find(value => value && typeof value === 'object' && 'read' in value && 'serverOrigin' in value);
     expect(query).toMatchObject({ read: expect.any(Function) });
     expect(Object.keys(query!)).toEqual(['read', 'serverOrigin']);
     expect(Object.isFrozen(query)).toBe(true);
@@ -142,7 +143,8 @@ describe("main run route composition root", () => {
     expect(call.slice(0, 14)).toEqual([
       ...Array.from({ length: 13 }, () => expect.anything()), mockContext,
     ]);
-    expect(call[14]).toMatchObject({
+    const doctor = call.find(value => value && typeof value === 'object' && 'readRepository' in value && 'readLinkedBranch' in value);
+    expect(doctor).toMatchObject({
       readRepository: expect.any(Function),
       readApprovalPolicy: expect.any(Function),
       pullRequests: expect.objectContaining({

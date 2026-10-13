@@ -218,7 +218,7 @@ describe("IssueCommentUseCase", () => {
       { invoke: model } as never, { isActorAllowedToModifyFiles: authorization,
         isActorAllowedToUseMemberOnlyAutomation: authorization } as never,
       { execute: mutation } as never, undefined, undefined, undefined, undefined, undefined,
-      { invoke: continuation } as never, undefined, undefined, fixture.ports,
+      { invoke: continuation } as never, undefined, undefined, undefined, fixture.ports,
     );
     const execution = baseExecution({
       preBranchSdd: true, issueWorkflowProfile: { schemaVersion: 1, enabled: ['feature', 'help'] },

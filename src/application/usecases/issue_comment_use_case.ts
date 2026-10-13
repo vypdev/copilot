@@ -48,8 +48,8 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly preBranchSddContinuation?: ParamUseCase<Execution, Result[]>,
     private readonly rememberBranchPorts?: RememberBranchQueryPorts,
     private readonly statusReadPorts?: CopilotStatusReadPorts,
-    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
     private readonly sddQueryPort?: SddEvidenceQueryPort,
+    private readonly doctorReadPorts?: GithubRuntimeDoctorPorts,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {

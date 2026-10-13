@@ -533,3 +533,15 @@ requires a static empty matrix to withhold Pass, dynamic/transformed matrices to
 withhold certification, and ordinary nonmatrix/static eligible jobs to retain
 their existing structural result. Native review and integrated live commands
 remain required before completion.
+
+
+Native parent synchronization `38373281279` rejected an incomplete constructor
+merge: the Doctor port displaced existing optional read capabilities and two
+suites failed, without publication. New Doctor dependencies MUST be appended
+after existing optional adapters, preserving their positional call contracts.
+Composition assertions identify the distinct frozen semantic port by its
+capabilities, preserving exact capability and immutability checks without
+assuming the newest port's position. Existing Doctor entrypoint fixtures follow
+the appended argument; the 246-case Doctor budget remains unchanged. Parent
+integration must also retain existing History and native-status arguments and
+pass their real entrypoint suites before publication.
