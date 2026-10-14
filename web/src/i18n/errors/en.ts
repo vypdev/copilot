@@ -1,4 +1,5 @@
 export const sessionErrorsEn = {
+  'Could not close the local session. Check the terminal before trying again.': 'The local session could not be confirmed closed. The result is retained. Check the terminal before trying again.',
   'The local setup session is unavailable.': 'The local setup session is unavailable. Check the terminal; you may need to restart setup.',
   'Connection lost. The CLI may have stopped. Check the terminal before trying again.': 'Connection lost. The CLI may have stopped. Check the terminal before trying again.',
   'Could not join this local session.': 'Could not join this local session. Check the terminal and pair again.',

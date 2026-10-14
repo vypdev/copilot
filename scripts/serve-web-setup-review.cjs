@@ -35,7 +35,8 @@ function view() {
   return {
     revision: 1, repository: 'fixture-owner/fixture-repo',
     journey: { repository: 'fixture-owner/fixture-repo', position: selected === 'pending' ? 4 : 6,
-      total: 6, current, complete: ['Repository', 'Setup choices', 'Setup PAT'], pending: [],
+      total: 6, current, complete: ['Repository', 'Setup choices', 'Setup PAT',
+        ...(selected === 'pending' ? [] : ['Plan', 'Bot PAT & credentials'])], pending: [],
       mutationStarted, choiceReviewPass: 1, ...(outcome ? { outcome } : {}) },
     ...(selected === 'action-required' ? { promptRevision: 1, prompt: {
       kind: 'confirm', title: 'Apply this setup now?', copyId: 'apply.confirm',
@@ -76,7 +77,7 @@ const server = createServer((request, response) => {
     request.on('data', chunk => { body += chunk; if (body.length > 1024) request.destroy(); });
     request.on('end', () => {
       try { return reply(response, JSON.parse(body).code === code ? 200 : 403,
-        JSON.parse(body).code === code ? { sessionKey: key } : { error: 'Use the fixture code printed in the terminal.' }); }
+        JSON.parse(body).code === code ? { sessionKey: key } : { error: 'Incorrect pairing code. Check the terminal.' }); }
       catch { return reply(response, 400, { error: 'Invalid fixture request.' }); }
     });
     return;

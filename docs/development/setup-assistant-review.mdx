@@ -2,8 +2,8 @@
 
 The [350-case acceptance ledger](../../specs/local-web-setup-assistant-acceptance.json)
 is the source of truth for case status. Automated tests establish structural
-and behavioral facts. The 40 human rows remain **open** until a reviewer
-records the environment and observation for each row. Do not infer a visual,
+and behavioral facts. The 40 manual-review rows require a named reviewer, provenance, environment
+and direct observation for each pass. Do not infer a visual,
 linguistic, assistive-technology, or operating-system pass from Jest, SSR HTML,
 or a screenshot alone.
 
@@ -105,7 +105,7 @@ For each human row, record:
 | Field | Required content |
 |---|---|
 | Case ID | Exact `U` or `I` ID from the ledger |
-| Reviewer and date | Person who performed the observation and local date |
+| Reviewer and date | Reviewer who performed the observation, explicit human/agent provenance, and local date |
 | Environment | OS/version, browser/version, viewport, zoom, palette, locale, screen reader/version when relevant |
 | Fixture | One of the seven states and the local build/commit ID |
 | Observation | What was read, announced, focused or blocked; include the expected next action |
@@ -133,3 +133,66 @@ macOS browser pass does not establish Windows/Linux or screen-reader approval.
 Archive and inspect generated workflows, forms and collaborator guidance after
 each setup iteration, then discard those generated changes. Never commit the
 dogfooding output over this repository's checked-in configuration baseline.
+
+## Interactive journey fixture
+
+After building, run `node scripts/serve-web-setup-journey.cjs`. Pair using its
+printed code. Both masked credential fields accept only the literal
+`fixture-value`; never enter a real credential. The fixture uses the production
+bridge, loopback transport, compiled UI and question explanations, with scripted
+prompts and no GitHub or filesystem mutation adapters. Its six-stage journey
+ends in a preview with skipped resources. Inspect the official PAT-settings
+link without following it, then close the session. Restart the fixture to
+repeat a locale, viewport or theme; restart it after rebuilding assets.
+
+Use Tab, Shift+Tab, Space and Enter to inspect focus order, recovery from an
+incorrect pairing code, field labels, expanded plan inventories and the final
+receipt. Keep a narrow or tablet width fixed through an entire replay, rather
+than relying only on resizing an already completed desktop journey. A server
+close must preserve the rendered result, remove controller actions and change
+the active session indicator. A rejected close must display recovery guidance
+without replacing the receipt or claiming the server stopped.
+
+The progress rail shows only the completed facts supplied by setup. Its current
+position does not independently prove completion of earlier stages. Unknown
+causes also do not erase known completed-resource receipts. Long repository
+names wrap completely in the header so the target remains inspectable in a
+narrow result view.
+
+## Dogfooding observations 2026-10-14
+
+The [ledger](../../specs/local-web-setup-assistant-acceptance.json) records
+**28 additional direct interactive observations**, attributed explicitly to
+**Codex, an agent reviewer authorized by the maintainer**. This provenance is
+recorded in `reviewerType`; the historical `human` evidence category groups
+manual observations. These records establish the named UI/keyboard/layout
+observations and do not claim independent human linguistic approval or
+assistive-technology speech. The release acceptance and live-provider gates
+remain separate.
+
+| Cases | Observed environment and result |
+|---|---|
+| U041–U054 | Seven compiled fixture states, English, light/dark, macOS 27.0.1, Codex in-app browser; 320×740, 768×740 and 1280×740 at 100%. Status, retained facts, next action, complete repository identity and keyboard focus were inspected. No horizontal overflow or header collision. |
+| U075/U080/U085/U090 | Full six-stage presentation journeys in all four locales using Tab/Space/Enter. Incorrect-code recovery focused the cleared field; decisions/results focused their named headings. Inventories expanded in page flow, role-separated fields remained masked, preview receipts and cleanup links remained accessible, and confirmed close retained the result. |
+| U078/U083/U088/U093 | Separate full replays with 320×740 fixed from pairing through close. All 40 sampled phase/focus checkpoints stayed inside the viewport; page width remained 320. |
+| U079/U084/U089/U094 | Separate full replays with 768×740 fixed from pairing through close. All 40 sampled phase/focus checkpoints stayed inside the viewport; page width remained 768. |
+| I037/I038 | Extracted @vypdev/copilot@3.3.1 tarball, Node v24.20.0, disposable fixture/setup-manual checkout on develop. Native opener created Chrome 155.0.8059.41; a test-only opener failure left usable CLI fallback instructions. Browser pairing, cancellation and closure were directly observed; both processes exited 0 and the checkouts stayed clean. |
+
+The in-app browser is Chromium-based; its exact engine version was unavailable
+in this observation interface. Screenshots supplement the recorded actions and
+focus observations. Fixture observations do not prove real PAT grants or setup
+writes. No real credential was submitted and no real setup plan was applied.
+
+Four screen-reader cases remain open: VoiceOver activation was observed in
+System Settings, but this connection could not expose actual spoken/caption
+announcements. VoiceOver was restored off. Four complete-zoom cases remain open:
+native Chrome's View menu established actual 200% zoom on the packaged
+repository-confirmation phase (CSS viewport 1728→864; devicePixelRatio 2→4),
+but client-blocked automated navigation prevented a complete scripted journey.
+In-app shortcut attempts did not change zoom. A narrower viewport is not zoom
+approval. Linux/Windows desktop observation and the two specific Windows-service
+symlink assertions also remain open. Hosted test success does not replace them.
+
+The aggregate is **336/350 passed, 14 open**. Preserve the 350 IDs and all platform
+requirements when continuing review. Record new evidence on its exact case;
+keep unavailable or partial observations open.

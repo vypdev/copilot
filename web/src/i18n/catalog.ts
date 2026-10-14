@@ -24,5 +24,8 @@ const stageKeys: Record<string, SetupMessageKey> = {
   Plan: 'plan', 'Bot PAT & credentials': 'botPat', Apply: 'apply', Preparation: 'gettingReady',
 };
 export function stageLabel(stage: string | undefined, language: SetupLocale): string {
-  return tr(stageKeys[stage ?? ''] ?? 'gettingReady', language);
+  return tr(stageKey(stage), language);
+}
+export function stageKey(stage: string | undefined): SetupMessageKey {
+  return stageKeys[stage ?? ''] ?? 'gettingReady';
 }

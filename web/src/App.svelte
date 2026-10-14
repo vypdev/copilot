@@ -15,6 +15,7 @@
   import { setupLocale } from './i18n/localeStore';
   import { localizedMessage } from './i18n/messageCopy';
   import { localizedSessionError } from './i18n/sessionErrors';
+  import { focusOnRevision } from './lib/focusOnRevision';
 
   const session = createSetupSession();
   onMount(() => {
@@ -23,7 +24,7 @@
       document.documentElement.dir = 'ltr';
       document.title = `Copilot · ${tr('studio', language)}`;
     });
-    const interval = window.setInterval(() => { if ($session.paired && !$session.view?.outcome) void session.poll(); }, 900);
+    const interval = window.setInterval(() => { if ($session.paired && !$session.closed && !$session.view?.outcome) void session.poll(); }, 900);
     return () => { window.clearInterval(interval); unsubscribe(); };
   });
 
@@ -49,7 +50,7 @@
 <div class="shell">
   <SetupSidebar journey={$session.view?.journey} management={$session.view?.surface === 'management'} />
   <main class="main">
-    <SetupHeader repository={$session.view?.repository} />
+    <SetupHeader repository={$session.view?.repository} closed={$session.closed === true} />
     <div class="content">
       {#if $setupLocale !== 'en'}
         <StatusBanner tone="warning" title={tr('translationPreviewTitle', $setupLocale)} message={tr('translationPreviewBody', $setupLocale)} />
@@ -58,7 +59,10 @@
       {#if $session.view?.journey?.choiceReviewPass && $session.view.journey.choiceReviewPass > 1 && !$session.view.outcome}
         <div class="review-pass" role="status"><span aria-hidden="true">↺</span> {tr('reviewPass', $setupLocale, { pass: String($session.view.journey.choiceReviewPass) })}</div>
       {/if}
-      {#if !$session.controller && $session.view}
+      {#if $session.closed}
+        <section tabindex="-1" aria-label={tr('sessionClosed', $setupLocale)} use:focusOnRevision={1}><StatusBanner tone="success" title={tr('sessionClosed', $setupLocale)} message={tr('sessionClosedBody', $setupLocale)} /></section>
+      {/if}
+      {#if !$session.closed && !$session.controller && $session.view}
         <StatusBanner tone="warning" title={tr('readOnly', $setupLocale)} message={tr('readOnlyBody', $setupLocale)} />
         <PairingPanel mode="takeover" busy={$session.busy} onPair={session.takeOver} />
       {/if}

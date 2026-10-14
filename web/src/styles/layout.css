@@ -19,11 +19,11 @@
 .sidebar-note strong { font-size: 12px; }
 .sidebar-note p { color: #afcabe; font-size: 11px; line-height: 1.6; margin: 6px 0 0; }
 .main { min-width: 0; }
-.topbar { height: 80px; border-bottom: 1px solid var(--line); background: var(--surface); display: flex; justify-content: space-between; align-items: center; padding: 0 clamp(24px, 4vw, 70px); gap: 16px; }
-.breadcrumb { display: flex; align-items: center; gap: 12px; font-size: 12px; min-width: 0; }
+.topbar { min-height: 80px; border-bottom: 1px solid var(--line); background: var(--surface); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 20px clamp(24px, 4vw, 70px); gap: 16px; }
+.breadcrumb { display: flex; flex: 1 1 240px; align-items: center; gap: 12px; font-size: 12px; min-width: 0; }
 .breadcrumb span:first-child { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .14em; }
 .breadcrumb span:nth-child(2) { color: var(--muted); }
-.breadcrumb strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.breadcrumb strong { min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .top-actions { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
 .local-pill { color: var(--accent-strong); background: var(--accent-tint); padding: 8px 11px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
 .pulse-dot { width: 6px; height: 6px; display: inline-block; margin-right: 5px; border-radius: 50%; background: currentColor; }

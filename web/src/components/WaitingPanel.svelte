@@ -6,4 +6,4 @@
   export let effects: NonNullable<WebSetupView['resultDetail']>['effects'] = undefined;
 </script>
 
-<section class="card waiting-card"><div class="spinner" aria-hidden="true"></div><h2>{tr('working', $setupLocale)}</h2><p>{tr('workingBody', $setupLocale)}</p>{#if effects?.length}<ResourceProgress {effects} />{/if}</section>
+<section class="card waiting-card" role="status" aria-live="polite"><div class="spinner" aria-hidden="true"></div><h2>{tr('working', $setupLocale)}</h2><p>{tr('workingBody', $setupLocale)}</p>{#if effects?.length}<ResourceProgress {effects} />{/if}</section>

@@ -39,6 +39,7 @@ describe('web setup presentation helpers', () => {
     const action = focusOnRevision({ isConnected: true, focus }, 1);
     await Promise.resolve();
     expect(focus).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: false });
     action.update(1);
     await Promise.resolve();
     expect(focus).toHaveBeenCalledTimes(1);
@@ -55,6 +56,19 @@ describe('web setup presentation helpers', () => {
     expect(checkConclusionLabel('future-state', 'fr')).toBe('Résultat inconnu');
     expect(featureName('credentialHealth', 'pt')).toBe('Estado das credenciais');
     expect(featureName('future-capability', 'en')).toBe('future-capability');
+  });
+  test('decision focus names the current heading and scrolls it into view after a long plan', async () => {
+    const heading = { isConnected: true, focus: jest.fn(), setAttribute: jest.fn() };
+    const container = { isConnected: true, focus: jest.fn(), querySelector: jest.fn(() => heading) };
+    const action = focusOnRevision(container, 1);
+    await Promise.resolve();
+    expect(heading.setAttribute).toHaveBeenCalledWith('tabindex', '-1');
+    expect(heading.focus).toHaveBeenCalledWith({ preventScroll: false });
+    expect(container.focus).not.toHaveBeenCalled();
+    action.update(1);
+    await Promise.resolve();
+    expect(heading.focus).toHaveBeenCalledTimes(1);
+    action.destroy();
   });
   test.each([
     ['en', 'Stale', 'Failed to start'],

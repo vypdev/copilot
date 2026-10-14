@@ -136,11 +136,14 @@ describe('local web setup architecture', () => {
 
   test('browser presenters cannot acquire transport, provider, or persistent-secret responsibilities', () => {
     const browser = join(root, 'web', 'src');
+    const sessionTransport = join(browser, 'session', 'setupCommandTransport.ts');
+    const sessionCoordinator = join(browser, 'session', 'setupSession.ts');
     for (const path of browserSources(browser)) {
       const ui = readFileSync(path, 'utf8');
       expect(ui).not.toMatch(/setup_token_permission_policy|github_identity|runLocalAction|setup_credentials_use_case|localStorage|sessionStorage/);
-      if (!path.endsWith(join('session', 'setupSession.ts'))) {
+      if (path !== sessionCoordinator && path !== sessionTransport) {
         expect(ui).not.toMatch(/\bfetch\s*\(|\/api\/|X-Setup-Capability/);
+        expect(ui).not.toMatch(/setupCommandTransport/);
       }
       if (path.endsWith('.svelte')) {
         expect(ui).not.toMatch(/from ['"](?:node:|.*(?:infrastructure|cli\/commands|cli\/web_setup_server))/);

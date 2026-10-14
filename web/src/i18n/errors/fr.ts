@@ -1,6 +1,7 @@
 import type { sessionErrorsEn } from './en';
 
 export const sessionErrorsFr: Readonly<Record<keyof typeof sessionErrorsEn, string>> = {
+  'Could not close the local session. Check the terminal before trying again.': 'La fermeture de la session locale n’a pas pu être confirmée. Le résultat est conservé. Consultez le terminal avant de réessayer.',
   'The local setup session is unavailable.': 'La session locale est indisponible. Vérifiez le terminal ; vous devrez peut-être relancer la configuration.',
   'Connection lost. The CLI may have stopped. Check the terminal before trying again.': 'Connexion perdue. Le CLI s’est peut-être arrêté. Vérifiez le terminal avant de réessayer.',
   'Could not join this local session.': 'Impossible de rejoindre cette session locale. Vérifiez le terminal et associez de nouveau le navigateur.',

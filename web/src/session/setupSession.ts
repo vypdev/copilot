@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import type { WebSetupView } from '../../../src/application/contracts/web_setup_view';
+import { postSetupCommand, type SetupCommandPath, type SetupBootstrap } from './setupCommandTransport';
 
 interface SessionState {
   view?: WebSetupView;
@@ -7,11 +8,7 @@ interface SessionState {
   controller: boolean;
   busy: boolean;
   error: string;
-}
-
-interface Bootstrap {
-  controller: boolean;
-  capability?: string;
+  closed?: boolean;
 }
 
 export function createSetupSession(initialSessionKey?: string) {
@@ -27,25 +24,26 @@ export function createSetupSession(initialSessionKey?: string) {
   }
 
   async function refresh(preserveError = false): Promise<void> {
-    if (loading || !sessionKey) return;
+    if (loading || !sessionKey || current.closed) return;
     loading = true;
     try {
       const response = await fetch('/api/state', { cache: 'no-store', headers: { 'X-Setup-Session-Key': sessionKey } } as RequestInit);
       if (!response.ok) throw new Error('The local setup session is unavailable.');
-      set({ view: await response.json() as WebSetupView, ...(preserveError ? {} : { error: '' }) });
+      const view = await response.json() as WebSetupView;
+      if (!current.closed) set({ view, ...(preserveError ? {} : { error: '' }) });
     } catch {
-      set({ view: undefined, error: 'Connection lost. The CLI may have stopped. Check the terminal before trying again.' });
+      if (!current.closed) set({ view: undefined, error: 'Connection lost. The CLI may have stopped. Check the terminal before trying again.' });
     } finally {
       loading = false;
     }
   }
   const poll = (): Promise<void> => refresh(true);
   async function connect(): Promise<void> {
-    if (!sessionKey) return;
+    if (!sessionKey || current.closed) return;
     try {
       const response = await fetch('/api/bootstrap', { cache: 'no-store', headers: { 'X-Setup-Session-Key': sessionKey } } as RequestInit);
       if (!response.ok) throw new Error('Could not join this local session.');
-      const bootstrap = await response.json() as Bootstrap;
+      const bootstrap = await response.json() as SetupBootstrap;
       capability = bootstrap.capability;
       set({ controller: bootstrap.controller, error: '' });
       await refresh();
@@ -75,17 +73,8 @@ export function createSetupSession(initialSessionKey?: string) {
       set({ busy: false });
     }
   }
-  async function post(path: string, body: Record<string, unknown>, authorized = true): Promise<Record<string, unknown>> {
-    const response = await fetch(path, {
-      method: 'POST', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'X-Setup-Session-Key': sessionKey,
-        ...(authorized && capability ? { 'X-Setup-Capability': capability } : {}) },
-      body: JSON.stringify(body),
-    } as RequestInit);
-    const data = await response.json() as Record<string, unknown>;
-    if (!response.ok) throw new Error(String(data.error ?? 'The request was rejected.'));
-    return data;
-  }
+  const post = (path: SetupCommandPath, body: Record<string, unknown>, authorized = true) =>
+    postSetupCommand(path, body, { sessionKey, capability: authorized ? capability : undefined });
   async function recoverMutation(cause: unknown, fallback: string): Promise<void> {
     const message = cause instanceof Error ? cause.message : fallback;
     set({ error: message });
@@ -148,7 +137,7 @@ export function createSetupSession(initialSessionKey?: string) {
   }
 
   async function takeOver(code: string): Promise<void> {
-    if (current.busy || !current.paired || current.controller) return;
+    if (current.busy || current.closed || !current.paired || current.controller) return;
     set({ busy: true, error: '' });
     try {
       const result = await post('/api/takeover', { code: code.trim().toLowerCase() }, false);
@@ -164,12 +153,21 @@ export function createSetupSession(initialSessionKey?: string) {
   }
 
   async function close(): Promise<void> {
-    try { await post('/api/close', {}); }
-    catch { /* The CLI can also be stopped in the terminal. */ }
+    if (current.busy || current.closed || !current.controller || !current.view?.outcome) return;
+    set({ busy: true, error: '' });
+    try {
+      const result = await post('/api/close', {});
+      if (result.closed !== true) throw new Error('Could not close the local session. Check the terminal before trying again.');
+      sessionKey = undefined;
+      capability = undefined;
+      set({ closed: true, controller: false, error: '' });
+    } catch {
+      set({ error: 'Could not close the local session. Check the terminal before trying again.' });
+    } finally { set({ busy: false }); }
   }
 
   async function runDoctor(): Promise<void> {
-    if (current.busy || !current.controller || current.view?.outcome !== 'complete') return;
+    if (current.busy || current.closed || !current.controller || current.view?.outcome !== 'complete') return;
     set({ busy: true, error: '', view: { ...current.view, doctor: { status: 'running' } } });
     try { await post('/api/doctor', {}); }
     catch (cause) { set({ error: cause instanceof Error ? cause.message : 'Read-only verification failed.' }); }

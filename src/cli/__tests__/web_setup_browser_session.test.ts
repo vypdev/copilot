@@ -554,9 +554,87 @@ describe('browser session transport', () => {
     expect(latest).toMatchObject({ controller: false, busy: false });
   });
 
-  test('failure to close the browser session can be handled in the terminal', async () => {
-    globalThis.fetch = jest.fn(async () => { throw new Error('CLI stopped'); }) as typeof fetch;
-    await expect(createSetupSession(TEST_SESSION_KEY).close()).resolves.toBeUndefined();
+  test.each([
+    ['unpaired', undefined, false], ['unfinished', view, true], ['read-only', { ...view, outcome: 'complete' }, false],
+  ] as const)('cannot close an %s session', async (_, snapshot, controller) => {
+    globalThis.fetch = jest.fn(async (path: string) => path === '/api/bootstrap'
+      ? response({ controller, capability: 'controller' }) : response(snapshot)) as typeof fetch;
+    const session = createSetupSession(snapshot ? TEST_SESSION_KEY : undefined);
+    await session.connect();
+    (globalThis.fetch as jest.Mock).mockClear();
+    await session.close();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  test.each(['rejected', 'invalid receipt', 'transport error'])('%s close keeps the receipt and exposes a safe recovery error', async failure => {
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller' });
+      if (path === '/api/state') return response({ ...view, outcome: 'complete' });
+      if (failure === 'transport error') throw new Error('private provider token');
+      return failure === 'rejected' ? response({ error: 'private provider token' }, 403) : response({ closed: false });
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { view?: WebSetupView; closed?: boolean; error: string; busy: boolean };
+    session.subscribe(next => { latest = next; });
+    await session.connect();
+    await session.close();
+    expect(latest).toMatchObject({ view: { outcome: 'complete' }, busy: false });
+    expect(latest.closed).not.toBe(true);
+    expect(latest.error).toContain('Check the terminal');
+    expect(JSON.stringify(latest)).not.toContain('private provider token');
+  });
+
+  test('confirmed close is serialized, retains the receipt and invalidates browser authority', async () => {
+    let finishClose!: (value: Response) => void;
+    const pending = new Promise<Response>(resolve => { finishClose = resolve; });
+    const requests: string[] = [];
+    globalThis.fetch = jest.fn(async (path: string) => {
+      requests.push(path);
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller' });
+      if (path === '/api/state') return response({ ...view, outcome: 'complete' });
+      if (path === '/api/close') return pending;
+      throw new Error('Unexpected route');
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { view?: WebSetupView; closed?: boolean; controller: boolean; busy: boolean };
+    session.subscribe(next => { latest = next; });
+    await session.connect();
+    const first = session.close();
+    await session.close();
+    expect(requests.filter(path => path === '/api/close')).toHaveLength(1);
+    finishClose(response({ closed: true }));
+    await first;
+    expect(latest).toMatchObject({ closed: true, controller: false, busy: false, view: { outcome: 'complete' } });
+    const count = requests.length;
+    await session.close();
+    await session.connect();
+    await session.poll();
+    await session.takeOver('0123456789abcdef');
+    await session.runDoctor();
+    expect(requests).toHaveLength(count);
+    expect(JSON.stringify(latest)).not.toContain(TEST_SESSION_KEY);
+  });
+
+  test.each(['late result', 'late failure'])('confirmed close ignores an in-flight poll %s', async late => {
+    let settlePoll!: (value: Response) => void;
+    let rejectPoll!: (error: Error) => void;
+    const pending = new Promise<Response>((resolve, reject) => { settlePoll = resolve; rejectPoll = reject; });
+    let reads = 0;
+    globalThis.fetch = jest.fn(async (path: string) => {
+      if (path === '/api/bootstrap') return response({ controller: true, capability: 'controller' });
+      if (path === '/api/state') return ++reads === 1 ? response({ ...view, outcome: 'complete' }) : pending;
+      return response({ closed: true });
+    }) as typeof fetch;
+    const session = createSetupSession(TEST_SESSION_KEY);
+    let latest = {} as { view?: WebSetupView; closed?: boolean; error: string };
+    session.subscribe(next => { latest = next; });
+    await session.connect();
+    const poll = session.poll();
+    await session.close();
+    if (late === 'late failure') rejectPoll(new Error('Server closed'));
+    else settlePoll(response({ ...view, outcome: 'blocked' }));
+    await poll;
+    expect(latest).toMatchObject({ closed: true, view: { outcome: 'complete' }, error: '' });
   });
 
   test('read-only doctor is available only after success to the controller, refreshes redacted results, and cannot run twice concurrently', async () => {

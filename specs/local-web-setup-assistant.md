@@ -3,7 +3,7 @@
 - Status: Implementation in progress — target contract, not yet release acceptance
 - Date: 2026-09-28
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: 2026-10-07 (PR #402 merge baseline, fixture follow-up and isolated permission-denial evidence are recorded below; no setup plan was applied by the agent)
+- Last verified: 2026-10-14 (interactive agent observations and remaining acceptance gates recorded below; no live setup plan was applied)
 - Owners: Copilot maintainers; product, security, and accessibility reviewers
 - Scope: optional, local Svelte-based presentation of the existing repository setup journey, sharing its policy, credential, and application engine with the terminal
 - Related issues/PRs: [merged PR #402](https://github.com/vypdev/copilot/pull/402) established the baseline; this follow-up starts from its merge on `develop`. No test issue or Action is created.
@@ -2697,3 +2697,68 @@ lint, documentation/workflow/specification validation, bundle synchronization
 and the AST graph update pass. Native CI remains independent evidence.
 
 Native branch synchronization run `38350277408` on Ubuntu 4 timed out in the renderer's cold-start `beforeAll` at the default 5-second Jest hook deadline. The one-compiler-per-suite fixture now bounds only cold startup at 20 seconds; all 147 semantic component cases, each render's assertion timeout, worker count, platforms and coverage thresholds remain unchanged. This corrects a bootstrap budget rather than accepting mocked/cached HTML or skipping native verification. A fresh native synchronization remains required. No OS OOM cause is inferred.
+
+### Interactive setup dogfooding — 2026-10-14
+
+The maintainer requested direct interactive review of the 42 remaining ledger
+cases and authorized normal commits to `master` with `develop` aligned.
+The ledger now records **336/350 passed and 14 open**. The 28 new observations
+name **Codex as an interactive agent reviewer**; they do not impersonate a human
+reviewer or establish fluent human language approval, screen-reader speech,
+real PAT grants, or a live setup application. The capability remains in progress.
+
+The compiled UI was operated through pairing, all six presentation stages,
+masked fixture credentials, plan inventories, a skipped-resource preview
+receipt and session closure in English, Spanish, French and Portuguese.
+Separate complete replays kept 320×740 or 768×740 fixed throughout navigation;
+all focused targets stayed inside the viewport and no horizontal overflow was
+observed. Seven result states were inspected in both palettes at 320, 768 and
+1280 pixels. Native extracted-package macOS launch and a controlled opener
+failure both paired, cancelled and closed with exit 0 and a clean disposable
+checkout. See the [observation record](../docs/development/setup-assistant-review.mdx#dogfooding-observations-2026-10-14).
+
+Observed defects and the resulting contract:
+
+| Trigger | Previous behavior | Required behavior |
+|---|---|---|
+| Incorrect pairing code | focus fell back to the document | clear the code and focus its correction field after the request settles |
+| Next decision after a long plan | focus could remain outside the visible viewport | focus the current decision/result heading and scroll it into view; ordinary polls MUST NOT steal focus |
+| Waiting for the next decision | no explicit progress announcement region | expose localized waiting content as a polite status region; actual speech remains a separate gate |
+| Close rejected or transport uncertain | failure was swallowed | preserve the receipt and display localized terminal-inspection guidance; do not claim closure |
+| Close confirmed | active session indicator and controls remained | accept only a positive close receipt, serialize requests, release in-memory browser authority, suppress later reads/takeover/doctor, retain the result and explicitly state that GitHub PATs still exist |
+| Poll finishes after close | could replace the retained result | ignore late poll results and failures after confirmed closure |
+| Partial result with unknown cause | denied knowledge of completed changes despite an itemized receipt | distinguish an unknown cause from known resource effects and direct inspection to the receipt |
+| Narrow layout or native 200% zoom | repository identity was truncated or collapsed into an overlapping column | wrap the full identity and header controls into normal page flow without clipping or collision |
+| Progress position ahead of recorded facts | intermediate stages were marked completed without consulting `journey.complete` | render completion only from the application-reported facts; absent or unknown facts MUST NOT become inferred completion |
+
+Text equivalent for closure: a finished result requests Close once. A confirmed
+receipt ends browser authority and keeps the result visible. A failed or
+uncertain request keeps the result and directs terminal inspection. An older
+poll cannot change either fact after confirmed closure. Closing never revokes a
+GitHub PAT and does not prove remote resource health.
+
+State ownership remains in `setupSession.ts`. The stateless
+`setupCommandTransport.ts` owns JSON command requests over a closed set of
+same-origin API paths and receives credentials per request. Presenters cannot
+import this transport directly; the architecture test exempts exactly these
+two transport/session files from the fetch prohibition and retains its 180-line
+session and 100-line shell budgets. There is no new public configuration,
+provider adapter, permission grant, or persistent browser storage.
+
+The supplemental regression budget is **11 net additional cases**, outside the
+unchanged 350-case ledger: nine focused close/authority/race assertions replace
+one legacy close assertion (net eight), one heading-focus assertion, and two
+reported/missing progress-fact assertions. Existing localized partial-result
+and waiting assertions are strengthened without being counted again. The
+repository and module coverage gates are unchanged. User review instructions,
+catalog evidence and generated web assets are updated together.
+
+The 14 remaining IDs are `U076/U081/U086/U091` (actual screen-reader
+announcements), `U077/U082/U087/U092` (complete journeys at actual 200% zoom),
+`I039–I042` (Linux/Windows desktop launch/fallback observation), and `X023/X026`
+(the specific Windows service account's file-symlink capability). Native Chrome
+200% repository-confirmation evidence exposed the header defect; it is not a
+full zoom journey. Client-blocked fixture navigation and unavailable speech
+capture are recorded as limitations, not passes. Self-hosted remains Ubuntu-only
+under the maintainer's temporary instruction; hosted Ubuntu, Windows and macOS
+coverage is retained. No unavailable platform is reclassified as verified.

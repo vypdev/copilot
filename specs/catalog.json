@@ -920,7 +920,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-14",
       "specs": [
         "specs/local-web-setup-assistant.md",
         "specs/setup-configuration-management.md"
@@ -1055,7 +1055,22 @@
         "web/src/components/QuickSettingPrompt.svelte",
         "web/src/i18n/managementCopy.ts",
         "web/src/styles/management.css",
-        "scripts/coverage-budgets.json"
+        "scripts/coverage-budgets.json",
+        "web/src/session/setupCommandTransport.ts",
+        "scripts/serve-web-setup-journey.cjs",
+        "web/src/components/SetupHeader.svelte",
+        "web/src/components/WaitingPanel.svelte",
+        "web/src/styles/layout.css",
+        "web/src/i18n/en.ts",
+        "web/src/i18n/es.ts",
+        "web/src/i18n/fr.ts",
+        "web/src/i18n/pt.ts",
+        "web/src/i18n/sessionErrors.ts",
+        "web/src/i18n/errors/en.ts",
+        "web/src/i18n/errors/es.ts",
+        "web/src/i18n/errors/fr.ts",
+        "web/src/i18n/errors/pt.ts",
+        "web/src/components/SetupSidebar.svelte"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",

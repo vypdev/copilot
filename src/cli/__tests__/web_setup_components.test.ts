@@ -327,15 +327,17 @@ describe('web setup component semantics', () => {
   });
 
   test.each([
-    ['en', 'which changes completed', 'before Apply'],
-    ['es', 'qué cambios se completaron', 'antes de aplicar cambios'],
-    ['fr', 'modifications effectuées', 'avant l’application'],
-    ['pt', 'quais alterações foram concluídas', 'antes de aplicar'],
-  ])('%s partial result with unknown cause does not claim Apply never started', async (locale, expected, falseClaim) => {
+    ['en', 'resource receipt', 'which changes completed', 'before Apply'],
+    ['es', 'recibo de recursos', 'qué cambios se completaron', 'antes de aplicar cambios'],
+    ['fr', 'reçu des ressources', 'modifications effectuées', 'avant l’application'],
+    ['pt', 'recibo de recursos', 'quais alterações foram concluídas', 'antes de aplicar'],
+  ])('%s partial result with unknown cause preserves known effects without claiming Apply never started', async (locale, expected, falseReceiptClaim, falseClaim) => {
     const html = (await markup('ResultPanel', { outcome: 'partial', controller: true, onClose: noOp,
       detail: { reasonCode: 'unknown', stoppedStage: 'Apply', mutationStarted: true,
-        effects: [{ id: 'secrets', state: 'needs-inspection', scope: 'repository' }] } }, locale));
+        effects: [{ id: 'files', state: 'completed', scope: 'local' }, { id: 'secrets', state: 'needs-inspection', scope: 'repository' }] } }, locale));
     expect(html).toContain(expected);
+    expect(html).not.toContain(falseReceiptClaim);
+    expect(html).toContain('result-effects');
     expect(html).not.toContain(falseClaim);
   });
 
@@ -571,6 +573,20 @@ describe('web setup component semantics', () => {
     expect(html).toContain('aria-current="step"');
     expect(html).toContain('Setup PAT');
   });
+  test('progress sidebar marks only the completed stages reported by setup', async () => {
+    const html = await markup('SetupSidebar', { journey: { position: 6,
+      complete: ['Repository', 'Setup choices', 'Setup PAT'] } });
+    const items = [...html.matchAll(/<li\b[^>]*>.*?<\/li>/gsu)].map(item => item[0]);
+    expect(items.filter(item => /class="[^"]*completed/u.test(item))).toHaveLength(3);
+    expect(items[3]).not.toContain('completed');
+    expect(items[4]).not.toContain('completed');
+    expect(items[5]).toContain('aria-current="step"');
+  });
+  test('progress sidebar does not invent completed facts when their evidence is absent', async () => {
+    const html = await markup('SetupSidebar', { journey: { position: 4 } });
+    expect(html).not.toMatch(/class="[^"]*completed/u);
+    expect(html).toContain('aria-current="step"');
+  });
 
   test('permissions context distinguishes the setup PAT from bot PAT', async () => {
     const base = { revision: 1, repository: 'owner/repo', permissions: {
@@ -737,5 +753,8 @@ describe('web setup component semantics', () => {
   test('waiting state never implies that setup has completed', async () => {
     const html = (await markup('WaitingPanel', {}));
     expect(html).not.toContain('Setup completed');
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
   });
+
 });
